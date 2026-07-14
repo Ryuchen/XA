@@ -70,6 +70,43 @@ pnpm run build:all        # 三端全部构建
 
 老板端 `apps/boss-miniapp/` 的构建产物按平台隔离：微信小程序输出到 `dist/`，H5 输出到 `dist-h5/`。微信开发者工具应导入 `apps/boss-miniapp/project.config.json` 所在目录，不要直接导入 `dist-h5/`。
 
+## 容器化部署
+
+### 后端全栈
+
+见上文「Docker Compose 一键启动后端全栈」。
+
+### 前端三端（各自独立镜像，便于分开部署）
+
+三端各带独立 `Dockerfile` 与 `nginx.conf`，均为多阶段构建（node 构建静态产物 → nginx 托管），可单独构建、单独部署：
+
+```bash
+# 运营后台（Vue SPA）
+docker build -t xa-admin-web ./apps/admin-web
+docker run -d -p 8080:80 -e BACKEND_ORIGIN=http://后端地址:8000 xa-admin-web
+
+# 老板端 H5（build:h5）
+docker build -t xa-boss-h5 ./apps/boss-miniapp
+docker run -d -p 8081:80 -e BACKEND_ORIGIN=http://后端地址:8000 xa-boss-h5
+
+# 陪玩端 H5（build:h5）
+docker build -t xa-provider-h5 ./apps/provider-miniapp
+docker run -d -p 8082:80 -e BACKEND_ORIGIN=http://后端地址:8000 xa-provider-h5
+```
+
+`BACKEND_ORIGIN` 为后端地址（默认 `http://backend:8000`），nginx 启动时注入，负责把 `/api`、`/media`、`/ws` 反代到后端，实现同源访问。
+
+> 注意：两个小程序端的 **微信小程序形态无法容器化运行**，容器化的是它们的 **H5 形态**。需要小程序时仍执行 `pnpm run boss:build` / `pnpm run provider:build` 并导入微信开发者工具。
+
+### 一键启动「后端 + 三端 H5/Web」
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.web.yml up -d --build
+```
+
+启动后访问：运营后台 `http://127.0.0.1:8080`、老板端 H5 `http://127.0.0.1:8081`、陪玩端 H5 `http://127.0.0.1:8082`，后端 `http://127.0.0.1:8000`。
+
 ## 文档
 
 - 产品现状、三端功能与业务规则：[docs/PRODUCT_DOCUMENTATION.md](docs/PRODUCT_DOCUMENTATION.md)

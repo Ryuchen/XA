@@ -78,7 +78,9 @@ class CustomUser(AbstractUser):
         default=Role.CUSTOMER,
         db_index=True,
     )
-    openid = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    # 同一微信身份只能绑定一个系统账号。MySQL 的 UNIQUE 允许存在多个 NULL，
+    # 因此后台预建但尚未绑定微信的老板仍可正常保留。
+    openid = models.CharField(max_length=100, blank=True, null=True, unique=True)
     phone = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     avatar = models.ImageField(upload_to='customers/avatars/', blank=True, null=True)
     avatar_url = models.URLField(blank=True, null=True)

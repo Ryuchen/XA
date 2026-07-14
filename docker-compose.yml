@@ -17,6 +17,9 @@ x-backend: &backend
     MYSQL_PORT: 3306
     REDIS_HOST: redis
     REDIS_PORT: 6379
+    WECHAT_APPID: ${WECHAT_APPID:-}
+    WECHAT_SECRET: ${WECHAT_SECRET:-}
+    WECHAT_MOCK_LOGIN: ${WECHAT_MOCK_LOGIN:-true}
   volumes:
     # 开发模式：挂载源码实现热更新；media 持久化到命名卷。
     - ./services/backend:/app

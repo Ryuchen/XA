@@ -102,6 +102,44 @@ class WechatLoginView(APIView):
     permission_classes = [AllowAny]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
+    @staticmethod
+    def _resolve_customer(openid, phone, defaults, allow_phone_binding):
+        """按稳定微信身份解析老板，手机号仅用于真实微信登录的首次绑定。
+
+        匹配顺序固定为：openid -> 唯一手机号老板 -> 新建。手机号冲突时不
+        猜测归属，交由后台人工整理，避免把两个历史老板错误合并。
+        """
+        with transaction.atomic():
+            user = User.objects.select_for_update().filter(openid=openid).first()
+            if user is not None:
+                return user, False, 'openid'
+
+            if allow_phone_binding and phone:
+                candidates = list(
+                    User.objects.select_for_update()
+                    .filter(role=User.Role.CUSTOMER, phone=phone)
+                    .order_by('id')[:2]
+                )
+                if len(candidates) > 1:
+                    raise ValueError('该手机号关联了多个老板账号，请联系客服处理')
+                if candidates:
+                    user = candidates[0]
+                    user.openid = openid
+                    user.is_openid_bound = True
+                    user.is_phone_verified = True
+                    user.save(update_fields=[
+                        'openid', 'is_openid_bound', 'is_phone_verified', 'updated_at',
+                    ])
+                    return user, False, 'phone'
+
+            try:
+                user = User.objects.create(openid=openid, **defaults)
+                return user, True, 'created'
+            except IntegrityError:
+                # 唯一约束处理两个并发 code2session 请求的竞态。
+                user = User.objects.select_for_update().get(openid=openid)
+                return user, False, 'openid'
+
     def post(self, request):
         code = request.data.get('code')
         phone_code = (request.data.get('phoneCode') or '').strip()
@@ -115,27 +153,37 @@ class WechatLoginView(APIView):
             openid = f"wx_mock_{code[:10]}"
             phone = f"138{code[:8].zfill(8)[-8:]}" if phone_code else ''
         else:
+            if not settings.WECHAT_MINIAPP_APPID or not settings.WECHAT_MINIAPP_SECRET:
+                return Response({'code': 503, 'msg': '微信登录尚未完成配置，请联系管理员'})
             try:
                 openid = _wechat_code2session(code)
                 phone = _wechat_get_phone(phone_code) if phone_code else ''
             except (ValueError, urllib.error.URLError) as exc:
                 return Response({'code': 400, 'msg': f'微信登录失败：{exc}'})
 
-        user, created = User.objects.get_or_create(
-            openid=openid,
-            defaults={
+        try:
+            user, created, bind_status = self._resolve_customer(
+                openid=openid,
+                phone=phone,
+                allow_phone_binding=not settings.WECHAT_MOCK_LOGIN,
+                defaults={
                 'username': f"xa_{uuid.uuid4().hex[:8]}",
                 'role': User.Role.CUSTOMER,
                 'phone': phone,
                 'nickname': nickname,
                 'is_phone_verified': bool(phone),
                 'is_openid_bound': True,
-            }
-        )
+                },
+            )
+        except ValueError as exc:
+            return Response({'code': 409, 'msg': str(exc)})
 
         # 老板端仅允许老板登录：已存在的非老板账号（陪玩/客服/管理员）拒绝从此入口进入。
         if not created and user.role != User.Role.CUSTOMER:
             return Response({'code': 403, 'msg': '该微信号非老板账号，请使用对应端登录'})
+
+        if not user.is_active or not user.can_login:
+            return Response({'code': 403, 'msg': '该老板账号已被禁用，请联系客服'})
 
         updated_fields = []
         if phone and user.phone != phone:
@@ -178,7 +226,7 @@ class WechatLoginView(APIView):
                     'openid': user.openid,
                     'phone': user.phone,
                     'bindCode': None,
-                    'bindStatus': 'direct',
+                    'bindStatus': bind_status,
                 }
             }
         })

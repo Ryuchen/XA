@@ -80,7 +80,10 @@ class CrossEndOrderLifecycleTest(APITestCase):
 
         self.client.force_authenticate(self.customer)
         completed = self.client.get('/api/orders/orders/?status=completed')
-        self.assertEqual(completed.data['data'][0]['allowed_actions'], ['EVALUATE'])
+        self.assertEqual(
+            completed.data['data'][0]['allowed_actions'],
+            ['EVALUATE', 'TIP'],
+        )
 
     def test_customer_cannot_spoof_provider_pool_with_query_parameter(self):
         mine = make_order(

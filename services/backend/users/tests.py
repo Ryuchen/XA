@@ -769,7 +769,7 @@ class WechatLoginMockTest(APITestCase):
         data = res.data['data']
         self.assertTrue(data['token'])
         self.assertEqual(data['userInfo']['role'], 'customer')
-        self.assertEqual(data['userInfo']['bindStatus'], 'direct')
+        self.assertEqual(data['userInfo']['bindStatus'], 'created')
         user = User.objects.get(openid='wx_mock_wxcode0001')
         self.assertEqual(user.role, User.Role.CUSTOMER)
 
@@ -810,7 +810,11 @@ class WechatLoginMockTest(APITestCase):
         )
 
 
-@override_settings(WECHAT_MOCK_LOGIN=False)
+@override_settings(
+    WECHAT_MOCK_LOGIN=False,
+    WECHAT_MINIAPP_APPID='test-appid',
+    WECHAT_MINIAPP_SECRET='test-secret',
+)
 class WechatLoginRealTest(APITestCase):
     """微信登录（生产分支）：patch 掉对微信服务器的 HTTP 调用。"""
 
@@ -836,6 +840,59 @@ class WechatLoginRealTest(APITestCase):
         )
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data']['userInfo']['phone'], '13800001111')
+
+    @patch('users.views._wechat_get_phone', return_value='13800002222')
+    @patch('users.views._wechat_code2session', return_value='openid_bound_existing')
+    def test_real_login_binds_existing_customer_by_phone(self, _mock_session, _mock_phone):
+        existing = make_user(
+            role=User.Role.CUSTOMER,
+            openid=None,
+            phone='13800002222',
+        )
+
+        res = self.client.post(
+            self.URL,
+            {'code': 'bind-existing', 'phoneCode': 'pc'},
+            format='json',
+        )
+
+        self.assertEqual(res.data['code'], 0)
+        self.assertEqual(res.data['data']['userInfo']['id'], str(existing.id))
+        self.assertEqual(res.data['data']['userInfo']['bindStatus'], 'phone')
+        existing.refresh_from_db()
+        self.assertEqual(existing.openid, 'openid_bound_existing')
+        self.assertTrue(existing.is_openid_bound)
+        self.assertEqual(User.objects.filter(phone='13800002222').count(), 1)
+
+    @patch('users.views._wechat_get_phone', return_value='13800003333')
+    @patch('users.views._wechat_code2session', return_value='openid_phone_conflict')
+    def test_real_login_rejects_ambiguous_phone(self, _mock_session, _mock_phone):
+        make_user(role=User.Role.CUSTOMER, openid=None, phone='13800003333')
+        make_user(role=User.Role.CUSTOMER, openid=None, phone='13800003333')
+
+        res = self.client.post(
+            self.URL,
+            {'code': 'ambiguous', 'phoneCode': 'pc'},
+            format='json',
+        )
+
+        self.assertEqual(res.data['code'], 409)
+        self.assertEqual(User.objects.filter(openid='openid_phone_conflict').count(), 0)
+
+    @override_settings(WECHAT_MINIAPP_APPID='', WECHAT_MINIAPP_SECRET='')
+    def test_real_login_requires_credentials(self):
+        res = self.client.post(self.URL, {'code': 'realcode'}, format='json')
+        self.assertEqual(res.data['code'], 503)
+
+    @patch('users.views._wechat_code2session', return_value='openid_disabled')
+    def test_disabled_customer_cannot_login(self, _mock):
+        make_user(
+            role=User.Role.CUSTOMER,
+            openid='openid_disabled',
+            can_login=False,
+        )
+        res = self.client.post(self.URL, {'code': 'disabled'}, format='json')
+        self.assertEqual(res.data['code'], 403)
 
     @patch(
         'users.views._wechat_code2session',

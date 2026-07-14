@@ -1,0 +1,51 @@
+# 整合编排：一键启动「后端全栈 + 三端 H5/Web」。
+#   docker compose -f docker-compose.web.yml up -d --build
+#
+# 通过 include 复用根 docker-compose.yml 的后端全栈（db/redis/web/celery），
+# 再叠加三端静态站点。后端 Web 服务名为 web，故各端反代目标为 http://web:8000。
+#
+# 注意：两个 miniapp 端此处构建/运行的是 H5 形态；微信小程序形态无法容器化，
+# 需在各自目录执行 pnpm run build:weapp 后导入微信开发者工具。
+include:
+  - docker-compose.yml
+
+services:
+  boss-h5:
+    build:
+      context: ./apps/boss-miniapp
+      args:
+        TARO_APP_API: /api
+    image: xa-boss-h5:dev
+    container_name: xa_boss_h5
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8081:80"
+    depends_on:
+      - web
+
+  provider-h5:
+    build:
+      context: ./apps/provider-miniapp
+      args:
+        TARO_APP_API: /api
+    image: xa-provider-h5:dev
+    container_name: xa_provider_h5
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8082:80"
+    depends_on:
+      - web
+
+  admin-web:
+    build:
+      context: ./apps/admin-web
+    image: xa-admin-web:dev
+    container_name: xa_admin_web
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
