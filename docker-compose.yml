@@ -1,3 +1,32 @@
+# 后端公共环境：Web / worker / beat 共享同一套变量与镜像。
+# 使用 x- 扩展字段作锚点，compose 不会把它当真实服务启动。
+# 数据库与 Redis 主机名指向 compose 服务名，走容器内网。
+x-backend: &backend
+  build:
+    context: ./services/backend
+  image: xa-backend:dev
+  environment:
+    DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-xa-local-development-key-change-before-production}
+    DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+    CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-true}
+    MYSQL_DATABASE: ${MYSQL_DATABASE:-xa_db}
+    MYSQL_USER: ${MYSQL_USER:-root}
+    MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-xa_dev_password}
+    MYSQL_HOST: db
+    MYSQL_PORT: 3306
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+  volumes:
+    # 开发模式：挂载源码实现热更新；media 持久化到命名卷。
+    - ./services/backend:/app
+    - backend_media:/app/media
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
 services:
   db:
     image: mysql:8.0
@@ -21,6 +50,58 @@ services:
     container_name: xa_django_redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 迁移初始化：一次性任务，Web / worker 启动前完成建表。
+  migrate:
+    <<: *backend
+    container_name: xa_backend_migrate
+    command: python manage.py migrate --noinput
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    <<: *backend
+    container_name: xa_backend_web
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  celery-worker:
+    <<: *backend
+    container_name: xa_backend_worker
+    command: celery -A config worker -l info
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  celery-beat:
+    <<: *backend
+    container_name: xa_backend_beat
+    command: celery -A config beat -l info
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   mysql_data:
+  backend_media:

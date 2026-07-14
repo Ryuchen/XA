@@ -27,17 +27,29 @@ XA/
 
 ## 本地启动
 
-### 1. 基础设施
+### 方式一：Docker Compose 一键启动后端全栈（推荐）
 
-复制 `.env.example` 为 `.env`，启动 MySQL 与 Redis：
+复制 `.env.example` 为 `.env`，然后启动全部后端服务（MySQL、Redis、Django Web、Celery worker/beat）：
 
 ```bash
-docker compose up -d
+cp .env.example .env
+docker compose up -d --build
 ```
 
-### 2. 后端
+启动后自动完成数据库迁移，后端可通过 `http://127.0.0.1:8000` 访问。常用操作：
 
 ```bash
+docker compose logs -f web                        # 查看 Web 日志
+docker compose exec web python manage.py createsuperuser
+docker compose down                               # 停止（保留数据卷）
+```
+
+compose 管理的服务：`db`、`redis`、`migrate`（一次性迁移）、`web`（daphne，HTTP + WebSocket）、`celery-worker`、`celery-beat`。开发模式下 `services/backend/` 源码以卷挂载，改动即时生效。
+
+### 方式二：仅用容器起基础设施，本地跑后端
+
+```bash
+docker compose up -d db redis
 cd services/backend
 cp .env.example .env
 python -m venv venv && source venv/bin/activate
@@ -46,7 +58,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-### 3. 前端（在仓库根统一安装依赖）
+### 前端（在仓库根统一安装依赖）
 
 ```bash
 pnpm install
