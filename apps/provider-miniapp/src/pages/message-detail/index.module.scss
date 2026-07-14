@@ -1,0 +1,10 @@
+@use '@/styles/variables.scss' as *;
+.page { min-height: 100vh; box-sizing: border-box; padding: $spacing-lg $page-padding; background: $color-bg-page; }
+.card { padding: 34rpx 28rpx; border-radius: 28rpx; background:#fff; box-shadow:$shadow-card; }
+.title, .time, .preview, .paragraph, .empty { display: block; }
+.title { color: $color-text-primary; font-size: 40rpx; font-weight: $font-weight-bold; line-height: 1.35; }
+.time { margin-top: $spacing-sm; color: $color-text-tertiary; font-size: $font-size-xs; }
+.divider { height: 2rpx; margin: $spacing-lg 0; background: $color-divider; }
+.preview { color: $color-text-primary; font-size: $font-size-md; font-weight: $font-weight-semibold; line-height: $line-height-normal; }
+.paragraph { margin-top: $spacing-md; color: $color-text-secondary; font-size: $font-size-md; line-height: 1.8; }
+.empty { padding: 160rpx 0; text-align: center; color: $color-text-tertiary; }

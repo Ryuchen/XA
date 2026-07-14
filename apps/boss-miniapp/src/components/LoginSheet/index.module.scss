@@ -1,0 +1,133 @@
+@use '@/styles/variables.scss' as *;
+
+.mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  background: $color-bg-card;
+  border-radius: $radius-lg $radius-lg 0 0;
+  padding: $spacing-md $spacing-lg calc($spacing-xl + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  @include slide-up;
+}
+
+.handle {
+  width: 72rpx;
+  height: 8rpx;
+  border-radius: 4rpx;
+  background: $color-border;
+  margin: 0 auto $spacing-md;
+}
+
+.title {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  text-align: center;
+  margin-bottom: $spacing-sm;
+}
+
+.tip {
+  display: block;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+  text-align: center;
+  margin-bottom: $spacing-lg;
+}
+
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.avatarBtn {
+  @include button-reset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 140rpx;
+  background: transparent;
+  @include press-feedback(0.98);
+
+  &::after {
+    border: none;
+  }
+}
+
+.avatarImg {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: $color-bg-hover;
+}
+
+.avatarTip {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.nicknameInput {
+  flex: 1;
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+}
+
+.loginBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  color: $color-text-white;
+  background: $color-gradient-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 2rpx;
+  box-shadow: $shadow-glow;
+  @include press-feedback(0.98);
+}
+
+.devLoginBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  margin-top: $spacing-md;
+  border-radius: $radius-button;
+  color: $color-text-secondary;
+  background: $color-bg-hover;
+  border: 2rpx dashed $color-text-tertiary;
+  font-size: $font-size-sm;
+  @include press-feedback(0.98);
+}
+
+.cancelBtn {
+  display: block;
+  margin-top: $spacing-md;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}

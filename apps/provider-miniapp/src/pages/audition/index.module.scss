@@ -1,0 +1,21 @@
+@use '@/styles/variables.scss' as *;
+
+.container { min-height: 100vh; padding:0 $page-padding 80rpx; background: $color-bg-page; box-sizing:border-box; }
+.center { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: $color-bg-page; }
+.hero { margin-top:24rpx; padding: 38rpx 34rpx; border-radius:36rpx; color: $color-text-white; background:linear-gradient(145deg,#17171c,#393440 62%,#51455b); box-shadow:0 18rpx 44rpx rgba(30,25,36,.19); }
+.tag { display: inline-block; padding: 4rpx 16rpx; border-radius: $radius-round; font-size: $font-size-xs; background: rgba(255,255,255,.2); }
+.title { display: block; margin-top: $spacing-md; font-size: 44rpx; font-weight: $font-weight-bold; }
+.remark { display: block; margin-top: $spacing-sm; font-size: $font-size-sm; line-height: $line-height-normal; color: rgba(255,255,255,.9); }
+.expire { display: block; margin-top: $spacing-md; font-size: $font-size-xs; color: rgba(255,255,255,.75); }
+.card { margin: 18rpx 0 0; padding: 28rpx; border-radius:28rpx; background:#fff; box-shadow:$shadow-card; }
+.sectionTitle { display: block; margin-bottom: $spacing-md; font-size: $font-size-lg; font-weight: $font-weight-bold; color: $color-text-primary; }
+.notice { display: block; font-size: $font-size-sm; line-height: $line-height-normal; color: $color-text-secondary; }
+.label { display: block; margin: $spacing-md 0 $spacing-xs; font-size: $font-size-sm; color: $color-text-secondary; }
+.input, .textarea { width: 100%; padding: 18rpx 22rpx; border-radius: 18rpx; font-size: $font-size-md; color: $color-text-primary; background: $color-bg-page; box-sizing: border-box; }
+.textarea { min-height: 112rpx; line-height: $line-height-normal; }
+.primaryButton { @include primary-control-state; margin-top: $spacing-lg; border:none; border-radius: 22rpx; font-size: $font-size-md; &::after{border:none} }
+.record { display: flex; justify-content: space-between; gap: $spacing-sm; padding: $spacing-sm 0; border-bottom: 2rpx solid $color-divider; &:last-child { border-bottom: 0; } }
+.recordTitle, .recordSub { display: block; }
+.recordTitle { font-size: $font-size-md; color: $color-text-primary; }
+.recordSub { margin-top: 4rpx; font-size: $font-size-xs; color: $color-text-tertiary; }
+.status { flex-shrink: 0; font-size: $font-size-sm; color: $color-primary; }

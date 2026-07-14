@@ -1,0 +1,256 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 30rpx $page-padding 150rpx;
+  background: $color-bg-page;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 34rpx;
+  border-radius: 36rpx;
+  background: linear-gradient(145deg,#17171c,#393440 62%,#51455b);
+  box-shadow: 0 18rpx 44rpx rgba(30,25,36,.19);
+}
+
+.avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
+}
+
+.userDetail {
+  flex: 1;
+  margin-left: $spacing-md;
+  min-width: 0;
+}
+
+.nickname {
+  display: block;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+.sub {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  margin-top: $spacing-xs;
+}
+
+.statusSwitch {
+  font-size: $font-size-xs;
+  padding: 4rpx 16rpx;
+  margin-right: $spacing-sm;
+  border-radius: $radius-round;
+  color: $color-text-white;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.badgeVerified {
+  font-size: $font-size-xs;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+  color: $color-text-white;
+  background: rgba(52, 199, 89, 0.86);
+}
+
+.badgeUnverified {
+  font-size: $font-size-xs;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+  color: $color-text-white;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.statsCard {
+  @include card-base;
+  display: flex;
+  margin: 22rpx 0 0;
+  padding: 26rpx 0;
+  border-radius: 28rpx;
+}
+
+.statItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.statValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.statLabel {
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.card {
+  @include card-base;
+  margin: 18rpx 0 0;
+  padding: 26rpx;
+  border-radius: 28rpx;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.cardTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.cardAction {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.depositRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-xs 0;
+}
+
+.depositLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.depositValue {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.depositRemaining {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-price;
+}
+
+.menuCard {
+  @include card-base;
+  margin: 18rpx 0 0;
+  padding: 0 26rpx;
+  border-radius: 28rpx;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  min-height: 86rpx;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.menuIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  margin-right: 16rpx;
+  border-radius: 17rpx;
+  font-size: 29rpx;
+  background: $color-bg-page;
+}
+
+.menuText {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.menuArrow {
+  font-size: $font-size-lg;
+  color: $color-text-tertiary;
+}
+
+.menuBadge {
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  margin-right: $spacing-sm;
+  border-radius: $radius-round;
+  color: $color-text-white;
+  background: $color-price;
+  font-size: $font-size-xs;
+  line-height: 32rpx;
+  text-align: center;
+}
+
+.evalItem {
+  padding: $spacing-sm 0;
+  border-bottom: 2rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.evalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-xs;
+}
+
+.evalName {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.evalScore {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-price;
+}
+
+.evalContent {
+  display: block;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.evalReply {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.evalReplyBtn {
+  display: inline-block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+@media(min-width:960px){.container{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360PX,.85fr);gap:18PX;padding:0;background:transparent}.header{grid-column:1/-1;padding:28PX 32PX;border-radius:24PX}.statsCard{grid-column:1;margin:0;padding:24PX;border-radius:20PX}.card{grid-column:1;margin:0;padding:24PX;border-radius:20PX}.menuCard{grid-column:2;grid-row:2/span 4;margin:0;padding:8PX 24PX;border-radius:20PX}.menuItem{min-height:68PX}.avatar{width:88PX;height:88PX}.nickname{font-size:24PX}}

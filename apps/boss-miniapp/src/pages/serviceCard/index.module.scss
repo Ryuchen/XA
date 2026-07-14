@@ -1,0 +1,207 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding: $page-padding;
+  @include safe-area-bottom($spacing-lg);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: $spacing-xl;
+}
+
+.headerIcon {
+  @include flex-center;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: $radius-round;
+  background: rgba($color-primary, 0.1);
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  letter-spacing: $letter-spacing-tight;
+  margin-bottom: $spacing-sm;
+}
+
+.subtitle {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+}
+
+.card {
+  width: 100%;
+  @include card-base;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  @include slide-up;
+}
+
+.serviceInfo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-lg;
+  padding-bottom: $spacing-lg;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-primary;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  display: block;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.company {
+  display: block;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.wechatId {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+  background: rgba($color-primary, 0.1);
+}
+
+.wechatIdText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-primary;
+}
+
+.qrcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: $spacing-lg;
+}
+
+.qrcodeTitle {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-md;
+}
+
+.qrcodeImage {
+  width: 400rpx;
+  height: 400rpx;
+  border-radius: $radius-lg;
+  border: 1rpx solid $color-border;
+  margin: 0 auto;
+}
+
+.tips {
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+}
+
+.tipsHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.tipsTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.tipsItem {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.tipsIcon {
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.tipsText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.btnText {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.copyBtn {
+  @include button-reset;
+  gap: $spacing-sm;
+  width: 100%;
+  height: $button-height-lg;
+  background: $color-primary;
+  box-shadow: $shadow-glow;
+  border-radius: $radius-button;
+  color: $color-text-white;
+  @include press-feedback(0.98);
+}
+
+.addWechatBtn {
+  @include button-reset;
+  gap: $spacing-sm;
+  width: 100%;
+  height: $button-height-lg;
+  background: $color-bg-card;
+  border: 2rpx solid $color-primary;
+  border-radius: $radius-button;
+  color: $color-primary;
+  @include press-feedback(0.98);
+}
+
+.closeBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  background: transparent;
+  color: $color-text-tertiary;
+  font-size: $font-size-md;
+  margin-top: $spacing-xs;
+}

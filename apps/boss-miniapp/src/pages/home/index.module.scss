@@ -1,0 +1,886 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 130rpx;
+}
+
+.header {
+  margin: 30rpx $page-padding 0;
+  padding: 34rpx;
+  background: linear-gradient(145deg,#17171c,#393440 62%,#51455b);
+  border-radius: 36rpx;
+  box-shadow: 0 18rpx 44rpx rgba(30,25,36,.19);
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.brandLogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.headerTitle {
+  display: block;
+  color: $color-text-white;
+  font-size: $font-size-display;
+  font-weight: $font-weight-bold;
+  letter-spacing: $letter-spacing-tight;
+  line-height: $line-height-tight;
+}
+
+.headerSubtitle {
+  display: block;
+  margin-top: $spacing-sm;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: $font-size-sm;
+  line-height: 1.6;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  margin-top: $spacing-xl;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-round;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1rpx solid rgba(255, 255, 255, 0.14);
+  gap: $spacing-sm;
+}
+
+.searchIcon {
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  color: $color-text-white;
+  font-size: $font-size-md;
+}
+
+// Banner 轮播（固定尺寸 750×320px → 750×320rpx）
+.bannerSwiper {
+  width: 100%;
+  height: 320rpx;
+  margin-top: $spacing-lg;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+}
+
+.bannerImage {
+  width: 100%;
+  height: 320rpx;
+  border-radius: $radius-lg;
+}
+
+.section {
+  padding: 0 $page-padding $spacing-xl;
+}
+
+/* ===== 老板消费风云榜 · 独立金色板块 ===== */
+.bossRank {
+  position: relative;
+  padding: $spacing-lg;
+  border-radius: $radius-xl;
+  overflow: hidden;
+  background: linear-gradient(150deg, #4A3418 0%, #7A5B22 42%, #B8893B 100%);
+  box-shadow: 0 8rpx 32rpx rgba(122, 91, 34, 0.35);
+}
+
+.bossHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.bossTitleWrap {
+  display: flex;
+  align-items: center;
+}
+
+.bossCrown {
+  margin-right: $spacing-sm;
+}
+
+.bossTitle {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #FFE9B8;
+  letter-spacing: 1rpx;
+}
+
+.bossSubtitle {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: rgba(255, 233, 184, 0.7);
+}
+
+.bossMore {
+  display: flex;
+  align-items: center;
+  @include press-feedback(0.94);
+}
+
+.bossMoreText {
+  font-size: 24rpx;
+  color: #FFE9B8;
+  opacity: 0.85;
+}
+
+.bossPeriods {
+  display: inline-flex;
+  padding: 4rpx;
+  margin-bottom: $spacing-lg;
+  border-radius: 999rpx;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.bossPeriod {
+  padding: 8rpx 28rpx;
+  border-radius: 999rpx;
+  @include press-feedback(0.94);
+}
+
+.bossPeriodActive {
+  background: linear-gradient(135deg, #FFE9B8 0%, #F5C761 100%);
+}
+
+.bossPeriodText {
+  font-size: 24rpx;
+  color: rgba(255, 233, 184, 0.75);
+
+  .bossPeriodActive & {
+    color: #5A3E12;
+    font-weight: 700;
+  }
+}
+
+.bossPodium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  margin-bottom: $spacing-lg;
+}
+
+.bossPodiumItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.bossFirst {
+  transform: translateY(-12rpx);
+}
+
+.bossAvatarWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bossPodiumCrown {
+  position: absolute;
+  top: -32rpx;
+  z-index: 2;
+}
+
+.bossAvatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  border: 4rpx solid #FFE9B8;
+
+  .bossSecond & { width: 84rpx; height: 84rpx; }
+  .bossThird & { width: 84rpx; height: 84rpx; }
+}
+
+.bossRankNo {
+  position: absolute;
+  bottom: -8rpx;
+  min-width: 34rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #5A3E12;
+  background: linear-gradient(135deg, #FFE9B8 0%, #F5C761 100%);
+}
+
+.bossName {
+  max-width: 150rpx;
+  margin-top: $spacing-sm;
+  font-size: 24rpx;
+  color: #FFF3DC;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bossAmount {
+  margin-top: 4rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #FFD980;
+}
+
+.bossList {
+  padding-top: $spacing-md;
+  border-top: 1px solid rgba(255, 233, 184, 0.18);
+}
+
+.bossListItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-sm 0;
+}
+
+.bossListNo {
+  width: 44rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: rgba(255, 233, 184, 0.7);
+}
+
+.bossListAvatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  margin-right: $spacing-sm;
+}
+
+.bossListName {
+  flex: 1;
+  font-size: 26rpx;
+  color: #FFF3DC;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bossListAmount {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #FFD980;
+}
+
+.bossEmpty {
+  padding: $spacing-2xl 0;
+  text-align: center;
+}
+
+.bossEmptyText {
+  font-size: 26rpx;
+  color: rgba(255, 233, 184, 0.75);
+}
+
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  @include section-title;
+}
+
+.sectionDesc {
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.sectionMore {
+  display: flex;
+  align-items: center;
+  gap: 2rpx;
+  @include press-feedback(0.94);
+}
+
+.chipScroll {
+  white-space: nowrap;
+}
+
+.chipRow {
+  display: inline-flex;
+  gap: $spacing-sm;
+}
+
+.playerList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.playerCard {
+  display: flex;
+  gap: $spacing-md;
+  padding: $spacing-lg;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+  border: 1rpx solid $color-border;
+  @include slide-up;
+  @include press-feedback(0.98);
+}
+
+.avatar {
+  width: 132rpx;
+  height: 132rpx;
+  border-radius: $radius-md;
+  flex-shrink: 0;
+}
+
+.playerMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.nickname {
+  color: $color-text-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.status {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+}
+
+.online {
+  color: $color-success;
+  background: rgba(52, 199, 89, 0.12);
+}
+
+.busy {
+  color: $color-warning;
+  background: rgba(255, 149, 0, 0.12);
+}
+
+.offline {
+  color: $color-text-tertiary;
+  background: rgba(174, 174, 178, 0.14);
+}
+
+.rank {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.metaStar {
+  flex-shrink: 0;
+}
+
+.metaRating {
+  color: $color-text-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.intro {
+  margin-top: $spacing-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.6;
+  @include text-ellipsis-multi(2);
+}
+
+.bottomRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.priceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.price {
+  color: $color-price;
+  font-size: 36rpx;
+  font-weight: $font-weight-bold;
+}
+
+.priceUnit {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.actionRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.primaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 132rpx;
+  height: 64rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-round;
+  background: $color-gradient-primary;
+  @include press-feedback(0.94);
+}
+
+.primaryBtnText {
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+.emptyLoginBtn { padding:15rpx 30rpx; border-radius:18rpx; color:#fff; font-size:24rpx; font-weight:650; background:$color-primary; }
+
+// 快捷下单
+.quickRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.quickCard {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-lg;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, #0A84FF 0%, #007AFF 100%);
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  @include press-feedback(0.96);
+}
+
+.quickCardAlt {
+  background: #fff;
+  border: 1rpx solid $color-border;
+  box-shadow: $shadow-card;
+}
+.quickCardAlt .quickTitle { color:$color-text-primary; }
+.quickCardAlt .quickDesc { color:$color-text-tertiary; }
+
+.quickIcon {
+  margin-bottom: $spacing-md;
+}
+
+.quickArrow {
+  position: absolute;
+  right: $spacing-md;
+  bottom: $spacing-md;
+}
+
+.quickTitle {
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+}
+
+.quickDesc {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: $font-size-xs;
+}
+
+// 成就馆
+.achievementRow {
+  display: inline-flex;
+  gap: $spacing-md;
+}
+
+.achievementCard {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 200rpx;
+  padding: $spacing-md $spacing-sm;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+  white-space: normal;
+  opacity: 0.55;
+  filter: grayscale(0.6);
+}
+
+.achievementUnlocked {
+  opacity: 1;
+  filter: none;
+  border: 2rpx solid rgba($color-primary, 0.3);
+}
+
+.achievementIcon {
+  font-size: 56rpx;
+}
+
+.achievementTitle {
+  margin-top: $spacing-sm;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.achievementDesc {
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.achievementProgress {
+  margin-top: $spacing-xs;
+  color: $color-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+// 最新公告（广播轮播）
+.announceBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+}
+
+.announceBadge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+  background: rgba($color-primary, 0.12);
+}
+
+.announceBadgeText {
+  color: $color-primary;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.announceSwiper {
+  flex: 1;
+  height: 48rpx;
+  min-width: 0;
+}
+
+.announceSwiperItem {
+  display: flex;
+  align-items: center;
+  height: 48rpx;
+}
+
+.announceSwiperText {
+  flex: 1;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  @include text-ellipsis;
+}
+
+.announceMore {
+  flex-shrink: 0;
+}
+
+// 优惠专区
+.couponRow {
+  display: inline-flex;
+  gap: $spacing-md;
+}
+
+.couponCard {
+  display: inline-flex;
+  align-items: stretch;
+  width: 420rpx;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+  white-space: normal;
+}
+
+.couponLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 180rpx;
+  padding: $spacing-md $spacing-sm;
+  background: $color-gradient-primary;
+}
+
+.couponAmount {
+  color: $color-text-white;
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+}
+
+.couponThreshold {
+  margin-top: $spacing-xs;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: $font-size-xs;
+}
+
+.couponRight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: $spacing-md;
+  min-width: 0;
+}
+
+.couponName {
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  @include text-ellipsis-multi(2);
+}
+
+.couponBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: $spacing-sm;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: $color-gradient-primary;
+}
+
+.couponBtnDisabled {
+  background: $color-bg-hover;
+}
+
+.couponBtnText {
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.couponBtnDisabled .couponBtnText {
+  color: $color-text-disabled;
+}
+
+// 陪玩接单榜：刻意采用比老板榜更克制的系统列表样式
+.providerRankCard {
+  overflow: hidden;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+}
+
+.providerRankHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-lg $spacing-md $spacing-md;
+}
+
+.providerRankTitle {
+  display: block;
+  color: $color-text-primary;
+  font-size: 30rpx;
+  font-weight: $font-weight-semibold;
+}
+
+.providerRankSubtitle {
+  display: block;
+  margin-top: 4rpx;
+  color: $color-text-tertiary;
+  font-size: 22rpx;
+}
+
+.rankPeriods {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4rpx;
+  padding: 4rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.rankPeriod {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+}
+
+.rankPeriodActive {
+  background: $color-bg-card;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.08);
+}
+
+.rankPeriodText {
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.rankPeriodActive .rankPeriodText {
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.rankList {
+  display: flex;
+  flex-direction: column;
+  border-top: 1rpx solid $color-border;
+}
+
+.rankListHeader {
+  display: flex;
+  align-items: center;
+  padding: 12rpx $spacing-md;
+  background: $color-bg-hover;
+
+  .rankColNo,
+  .rankColName,
+  .rankColOrders,
+  .rankColTitle {
+    color: $color-text-tertiary;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
+  }
+}
+
+.rankItem {
+  display: flex;
+  align-items: center;
+  min-height: 92rpx;
+  padding: 8rpx $spacing-md;
+  border-top: 1rpx solid $color-border;
+  background: $color-bg-card;
+
+  &:first-of-type {
+    border-top: none;
+  }
+}
+
+.rankColNo {
+  width: 72rpx;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.rankTopNo {
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.rankColName {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 0;
+}
+
+.rankColTitle {
+  width: 84rpx;
+  text-align: right;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.rankColOrders {
+  width: 84rpx;
+  text-align: right;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.rankAvatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: $radius-round;
+  flex-shrink: 0;
+}
+
+.rankName {
+  flex: 1;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  @include text-ellipsis;
+}
+
+.rankEmpty {
+  padding: $spacing-xl $spacing-lg;
+  border-top: 1rpx solid $color-border;
+  background: $color-bg-hover;
+  text-align: center;
+}
+
+.rankEmptyText {
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.emptyState {
+  padding: $spacing-xl $spacing-md;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  text-align: center;
+}
+
+.emptyTitle {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.emptyText {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}

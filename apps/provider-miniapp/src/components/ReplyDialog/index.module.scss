@@ -1,0 +1,26 @@
+@use '@/styles/variables.scss' as *;
+
+.mask { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.38); backdrop-filter: blur(8rpx); }
+.dialog { width: 100%; box-sizing: border-box; padding: 14rpx $page-padding calc(30rpx + env(safe-area-inset-bottom)); border-radius: 36rpx 36rpx 0 0; background: #fff; box-shadow: 0 -16rpx 50rpx rgba(0,0,0,.12); }
+.handle { width: 72rpx; height: 8rpx; margin: 0 auto 24rpx; border-radius: 8rpx; background: #d1d1d6; }
+.header, .meta { display: flex; align-items: center; justify-content: space-between; }
+.title { font-size: $font-size-xl; font-weight: 700; color: $color-text-primary; }
+.close { padding: 12rpx 0 12rpx 24rpx; font-size: $font-size-sm; color: $color-primary; }
+.textarea { display: block; width: 100%; height: 240rpx; box-sizing: border-box; margin-top: 24rpx; padding: 22rpx; border: 2rpx solid transparent; border-radius: 22rpx; font-size: $font-size-md; line-height: 1.55; color: $color-text-primary; background: $color-bg-page; transition: border-color .18s ease, background .18s ease; }
+.textarea:focus { border-color: rgba(0,122,255,.42); background: #fff; outline: none; }
+.meta { margin-top: 10rpx; }
+.hint, .counter { font-size: $font-size-xs; color: $color-text-tertiary; }
+.submit { @include primary-control-state; height: 88rpx; margin-top: 24rpx; border: none; border-radius: 22rpx; font-size: $font-size-md; font-weight: 650; line-height: 88rpx; }
+.submit::after { border: none; }
+
+@media (min-width: 960px) {
+  .mask { align-items: center; padding: 32PX; }
+  .dialog { width: 560PX; padding: 24PX 26PX 26PX; border-radius: 24PX; box-shadow: 0 24PX 70PX rgba(0,0,0,.2); }
+  .handle { display: none; }
+  .title { font-size: 22PX; }
+  .close { padding: 8PX 0 8PX 20PX; font-size: 14PX; cursor: pointer; }
+  .textarea { height: 180PX; margin-top: 20PX; padding: 16PX; border-width: 1PX; border-radius: 14PX; font-size: 15PX; }
+  .meta { margin-top: 8PX; }
+  .hint, .counter { font-size: 12PX; }
+  .submit { height: 46PX; margin-top: 20PX; border-radius: 13PX; font-size: 15PX; line-height: 46PX; cursor: pointer; }
+}

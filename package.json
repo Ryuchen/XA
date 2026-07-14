@@ -1,0 +1,21 @@
+{
+  "name": "xa-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "XA 游戏陪玩管理系统 —— 单仓多端（老板端 / 陪玩端 / 运营后台 / 后端服务）",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "boss:build": "pnpm --filter xa-boss-miniapp run build:weapp",
+    "boss:build:h5": "pnpm --filter xa-boss-miniapp run build:h5",
+    "provider:build": "pnpm --filter xa-provider-miniapp run build:weapp",
+    "provider:build:h5": "pnpm --filter xa-provider-miniapp run build:h5",
+    "admin:dev": "pnpm --filter xa-admin-web run dev",
+    "admin:build": "pnpm --filter xa-admin-web run build",
+    "build:mini": "pnpm run boss:build && pnpm run provider:build",
+    "build:all": "pnpm run build:mini && pnpm run admin:build"
+  }
+}

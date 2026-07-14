@@ -1,0 +1,190 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+}
+
+// iOS 分段控件：灰底容器 + 白色激活卡片
+.tabRow {
+  display: flex;
+  gap: $spacing-xs;
+  margin: $spacing-lg $page-padding 0;
+  padding: 6rpx;
+  background: $color-bg-page;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-md;
+}
+
+.tab {
+  flex: 1;
+  height: 64rpx;
+  @include flex-center;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-sm;
+  transition: color $transition-base, background $transition-base;
+  @include press-feedback(0.97);
+}
+
+.tabActive {
+  color: $color-text-primary;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+}
+
+.list {
+  padding: $spacing-lg $page-padding;
+}
+
+// 票券卡片：左右分区 + 虚线分隔 + 上下缺口
+.card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  margin-bottom: $spacing-md;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+  @include slide-up;
+}
+
+.cardDisabled {
+  opacity: 0.6;
+
+  .amount {
+    color: $color-text-tertiary;
+  }
+}
+
+// 票券左右分割处的上下半圆缺口
+.notchTop,
+.notchBottom {
+  position: absolute;
+  left: 200rpx;
+  width: 24rpx;
+  height: 24rpx;
+  background: $color-bg-page;
+  border-radius: $radius-round;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.notchTop {
+  top: -12rpx;
+}
+
+.notchBottom {
+  bottom: -12rpx;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 200rpx;
+  flex-shrink: 0;
+  padding: $spacing-lg $spacing-sm;
+}
+
+.amount {
+  color: $color-price;
+  font-size: 60rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+  letter-spacing: $letter-spacing-tight;
+}
+
+.amountSymbol {
+  font-size: 28rpx;
+  font-weight: $font-weight-semibold;
+  vertical-align: top;
+}
+
+.threshold {
+  margin-top: $spacing-sm;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+// 虚线分隔线
+.divider {
+  align-self: stretch;
+  margin: $spacing-md 0;
+  border-left: 2rpx dashed $color-border;
+}
+
+.right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: $spacing-md;
+}
+
+.name {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  @include text-ellipsis;
+}
+
+.valid {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.statusTag {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  padding-right: $spacing-md;
+}
+
+.statusText {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+// 空态：柔和居中留白
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-3xl 0;
+  @include fade-in;
+}
+
+.emptyIcon {
+  @include flex-center;
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: $spacing-lg;
+  border-radius: $radius-round;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+}
+
+.emptyTitle {
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.emptyDesc {
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}

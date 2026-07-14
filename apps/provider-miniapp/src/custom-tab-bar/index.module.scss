@@ -1,0 +1,56 @@
+@use '@/styles/variables.scss' as *;
+
+.tabBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  height: 112rpx;
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: $color-bg-card;
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1rpx solid rgba(60, 60, 67, 0.16);
+  box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(28rpx) saturate(180%);
+}
+
+.tabItem {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  height: 100%;
+  gap: 4rpx;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 52rpx;
+  border-radius: 14rpx;
+  transition: background $transition-fast, transform $transition-fast;
+}
+
+.tabText {
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: #8E8E93;
+  transition: color $transition-fast;
+}
+
+.tabTextActive {
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.tabItemActive .iconWrap {
+  background: rgba(0, 122, 255, 0.1);
+}

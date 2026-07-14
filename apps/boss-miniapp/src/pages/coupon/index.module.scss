@@ -1,0 +1,188 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: $spacing-lg $page-padding;
+  background: $color-bg-page;
+}
+
+// ===== 优惠券票券卡片 =====
+.card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  margin-bottom: $spacing-md;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+  @include slide-up;
+}
+
+// 票券中部的圆形缺口（虚线分界两端），营造撕票造型
+.notchTop,
+.notchBottom {
+  position: absolute;
+  left: 208rpx;
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: $radius-round;
+  background: $color-bg-page;
+}
+
+.notchTop {
+  top: 0;
+  transform: translate(-50%, -50%);
+}
+
+.notchBottom {
+  bottom: 0;
+  transform: translate(-50%, 50%);
+}
+
+.left {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 208rpx;
+  padding: $spacing-lg $spacing-sm;
+  background: rgba($color-price, 0.09);
+}
+
+.amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  color: $color-price;
+  font-size: 60rpx;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+.currency {
+  margin-right: 2rpx;
+  font-size: 30rpx;
+  font-weight: $font-weight-semibold;
+}
+
+.threshold {
+  margin-top: $spacing-sm;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  text-align: center;
+}
+
+.right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-md;
+  border-left: 2rpx dashed $color-border;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  @include text-ellipsis;
+}
+
+.valid {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  min-width: 132rpx;
+  height: 64rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-round;
+  background: $color-gradient-primary;
+  box-shadow: $shadow-card;
+  @include press-feedback(0.94);
+}
+
+.btnDisabled {
+  background: $color-bg-page;
+  box-shadow: none;
+
+  .btnText {
+    color: $color-text-tertiary;
+  }
+
+  &:active {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.btnText {
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+// ===== 空态 / 错误态 =====
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-3xl $spacing-lg;
+}
+
+.emptyIcon {
+  @include flex-center;
+  width: 128rpx;
+  height: 128rpx;
+  margin-bottom: $spacing-md;
+  border-radius: $radius-round;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+}
+
+.emptyTitle {
+  color: $color-text-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.emptyDesc {
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.retryBtn {
+  margin-top: $spacing-lg;
+  padding: $spacing-xs $spacing-lg;
+  border-radius: $radius-round;
+  color: $color-primary;
+  font-size: $font-size-md;
+  border: 1rpx solid $color-primary;
+  @include press-feedback(0.96);
+}

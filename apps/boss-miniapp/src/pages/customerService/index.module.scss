@@ -1,0 +1,142 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: $color-bg-page;
+}
+
+.msgList {
+  flex: 1;
+  padding: 24rpx 32rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.msgRow {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 16rpx;
+  margin-bottom: 32rpx;
+}
+
+.rowLeft {
+  justify-content: flex-start;
+}
+
+.rowRight {
+  justify-content: flex-end;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 68rpx;
+  height: 68rpx;
+  border-radius: 50%;
+  background: $color-gradient-header;
+  box-shadow: $shadow-card;
+  @include flex-center;
+}
+
+.bubbleWrap {
+  max-width: 76%;
+  display: flex;
+  flex-direction: column;
+}
+
+.rowRight .bubbleWrap {
+  align-items: flex-end;
+}
+
+.msgTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: 8rpx;
+  text-align: center;
+}
+
+.bubble {
+  padding: 20rpx 28rpx;
+  border-radius: $radius-lg;
+  word-break: break-all;
+  box-shadow: $shadow-card;
+}
+
+.bubbleLeft {
+  background: $color-bg-card;
+  color: $color-text-primary;
+  border-bottom-left-radius: 8rpx;
+}
+
+.bubbleRight {
+  background: $color-primary;
+  color: $color-text-white;
+  border-bottom-right-radius: 8rpx;
+}
+
+.bubbleText {
+  font-size: $font-size-md;
+  line-height: 1.5;
+}
+
+.bubbleLeft .bubbleText {
+  color: $color-text-primary;
+}
+
+.bubbleRight .bubbleText {
+  color: $color-text-white;
+}
+
+.msgImage {
+  width: 320rpx;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+}
+
+.inputBar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  background: $color-bg-card;
+  border-top: 1rpx solid $color-border;
+  gap: 16rpx;
+  @include safe-area-bottom(16rpx);
+}
+
+.imageBtn {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  @include flex-center;
+  @include press-feedback(0.9);
+}
+
+.input {
+  flex: 1;
+  height: 72rpx;
+  padding: 0 28rpx;
+  background: $color-bg-page;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-round;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.sendBtn {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: $color-text-tertiary;
+  @include flex-center;
+  @include press-feedback(0.9);
+}
+
+.sendActive {
+  background: $color-primary;
+  box-shadow: $shadow-card;
+}

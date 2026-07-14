@@ -1,0 +1,80 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: $spacing-lg $page-padding $spacing-2xl;
+  background: $color-bg-page;
+  box-sizing: border-box;
+}
+
+.header {
+  padding: $spacing-sm 0 $spacing-lg;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  height: 52rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-round;
+  background: rgba($color-primary, 0.1);
+}
+
+.badgeText {
+  color: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  line-height: 1;
+}
+
+.title {
+  display: block;
+  margin-top: $spacing-md;
+  @include section-title;
+  font-size: $font-size-xxl;
+  line-height: $line-height-tight;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $spacing-xs;
+  margin-top: $spacing-md;
+}
+
+.author {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.authorName {
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.dot {
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.time {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.card {
+  @include card-base;
+  padding: $card-padding;
+}
+
+.content {
+  display: block;
+  color: $color-text-secondary;
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+  white-space: pre-wrap;
+}

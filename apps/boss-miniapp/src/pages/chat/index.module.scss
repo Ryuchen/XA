@@ -1,0 +1,179 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding: 30rpx $page-padding 150rpx;
+  @include safe-area-bottom($spacing-lg);
+}
+
+.hero { display:flex; align-items:center; justify-content:space-between; padding:34rpx; margin-bottom:22rpx; border-radius:36rpx; color:#fff; background:linear-gradient(145deg,#17171c,#393440 62%,#51455b); box-shadow:0 18rpx 44rpx rgba(30,25,36,.18); }
+.eyebrow { display:block; font-size:20rpx; font-weight:650; letter-spacing:2rpx; color:rgba(255,255,255,.5); }
+.heroTitle { display:block; margin-top:7rpx; font-size:42rpx; line-height:1.2; font-weight:720; }
+.heroSub { display:block; margin-top:7rpx; font-size:21rpx; color:rgba(255,255,255,.62); }
+.unreadPill { flex:none; margin-left:18rpx; padding:10rpx 16rpx; border-radius:$radius-round; font-size:21rpx; color:rgba(255,255,255,.82); background:rgba(255,255,255,.1); }
+
+.quickActions {
+  display: flex;
+  justify-content: space-around;
+  padding: 22rpx $spacing-sm;
+  @include card-base;
+  margin-bottom: $spacing-lg;
+}
+
+.actionItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  @include press-feedback(0.94);
+}
+
+.actionIcon {
+  width: 82rpx;
+  height: 82rpx;
+  border-radius: 23rpx;
+  @include flex-center;
+}
+
+.actionLabel {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.messageSection {
+  @include card-base;
+  overflow: hidden;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-md $page-padding;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.sectionTitle {
+  @include section-title;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+.filters {
+  width: 100%;
+  padding: 12rpx 22rpx;
+  border-bottom: 1rpx solid $color-divider;
+  box-sizing: border-box;
+}
+
+.filterTrack {
+  display: flex;
+  width: 100%;
+  padding: 5rpx;
+  border-radius: 18rpx;
+  background: rgba(118, 118, 128, 0.12);
+  box-sizing: border-box;
+}
+
+.filterItem {
+  flex: 1;
+  min-width: 0;
+  padding: 11rpx 4rpx;
+  border-radius: 14rpx;
+  color: $color-text-secondary;
+  font-size: 23rpx;
+  text-align: center;
+}
+.filterActive { color:$color-primary; font-weight:650; background:#fff; box-shadow:0 3rpx 10rpx rgba(0,0,0,.08); }
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  @include press-feedback(0.94);
+}
+
+.clearBtnText {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-primary;
+}
+
+.messageList {
+  padding: 0 $page-padding;
+}
+
+.messageItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md 0;
+  border-bottom: 1rpx solid $color-border;
+  @include press-feedback(0.98);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.msgIcon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: $radius-round;
+  @include flex-center;
+  margin-right: $spacing-md;
+  flex-shrink: 0;
+}
+
+.msgContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.msgHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xs;
+}
+
+.msgTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.msgTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.msgBody {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.msgText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  @include text-ellipsis;
+  margin-right: $spacing-sm;
+}
+
+.unreadBadge {
+  min-width: 32rpx;
+  height: 32rpx;
+  background: $color-error;
+  border-radius: $radius-round;
+  @include flex-center;
+  padding: 0 8rpx;
+  flex-shrink: 0;
+}
+
+.unreadText {
+  font-size: 20rpx;
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+.loginBtn { padding:15rpx 30rpx; border-radius:18rpx; color:#fff; font-size:24rpx; font-weight:650; background:$color-primary; }

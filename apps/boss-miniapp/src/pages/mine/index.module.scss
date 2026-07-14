@@ -1,0 +1,346 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding: 30rpx $page-padding 150rpx;
+}
+
+.header {
+  background: linear-gradient(145deg,#17171c,#393440 62%,#51455b);
+  padding: 34rpx;
+  border-radius: 36rpx;
+  box-shadow: 0 18rpx 44rpx rgba(30,25,36,.19);
+}
+.eyebrow { display:block; margin-bottom:18rpx; font-size:20rpx; font-weight:650; letter-spacing:2rpx; color:rgba(255,255,255,.5); }
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-lg;
+  color: $color-text-white;
+  flex: 1;
+  min-width: 0;
+}
+
+.settingsBtn {
+  flex-shrink: 0;
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-round;
+  @include press-feedback(0.9);
+
+  &:active {
+    background: rgba(255, 255, 255, 0.18);
+  }
+}
+
+.avatar {
+  width: 136rpx;
+  height: 136rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid rgba(255, 255, 255, 0.6);
+  box-shadow: $shadow-card-hover;
+  flex-shrink: 0;
+}
+
+.userDetail {
+  flex: 1;
+  min-width: 0;
+}
+
+.nickname {
+  display: block;
+  font-size: $font-size-display;
+  font-weight: $font-weight-bold;
+  letter-spacing: $letter-spacing-tight;
+  margin-bottom: $spacing-xs;
+  @include text-ellipsis;
+}
+
+.userId {
+  display: block;
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.memberBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-top: $spacing-sm;
+  padding: 4rpx $spacing-sm;
+  border-radius: $radius-sm;
+  background: rgba(255,255,255,.13);
+}
+
+.memberBadgeText {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: #fff;
+  line-height: 1;
+}
+
+.walletCard {
+  margin: $spacing-xl 0 0;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: none;
+  border: 1rpx solid rgba(255,255,255,.16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  @include press-feedback(0.98);
+}
+
+.walletMain {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.walletLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.walletAmount {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-price;
+  margin-top: $spacing-xs;
+}
+
+.walletAction {
+  padding: $spacing-sm $spacing-lg;
+  background: $color-gradient-primary;
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  flex-shrink: 0;
+}
+
+.orderCard {
+  margin: 22rpx 0 0;
+  background: $color-bg-card;
+  border-radius: 28rpx;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.orderTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.viewAll {
+  display: flex;
+  align-items: center;
+  gap: 2rpx;
+  flex-shrink: 0;
+}
+
+.viewAllText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.orderStats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: $spacing-sm;
+}
+
+.orderStatItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  @include press-feedback(0.92);
+}
+
+.orderIconWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orderBadge {
+  position: absolute;
+  top: -8rpx;
+  right: -14rpx;
+  min-width: 30rpx;
+  height: 30rpx;
+  padding: 0 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-round;
+  background: $color-error;
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  line-height: 1;
+}
+
+.orderLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.profileCard {
+  margin: 18rpx 0 0;
+  background: $color-bg-card;
+  border-radius: 28rpx;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.profileTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.profileAction {
+  font-size: $font-size-sm;
+  color: $color-primary;
+}
+
+.profileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm 0;
+
+  & + & {
+    border-top: 1rpx solid $color-divider;
+  }
+}
+
+.profileLabel {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.profileValue {
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.serviceCard {
+  margin: 18rpx 0 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+}
+
+.serviceItem {
+  background: $color-bg-card;
+  border-radius: 28rpx;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+  @include press-feedback(0.97);
+}
+
+.serviceName {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  margin-bottom: $spacing-xs;
+}
+
+.serviceDesc {
+  display: block;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+  line-height: 1.4;
+}
+
+.menuCard {
+  margin: 18rpx 0 0;
+  background: $color-bg-card;
+  border-radius: 28rpx;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  padding: $spacing-lg;
+  border-bottom: 1rpx solid $color-divider;
+  transition: background $transition-fast;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:active {
+    background: $color-bg-hover;
+  }
+}
+
+.menuIcon {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-md;
+  background: rgba(0, 122, 255, 0.08);
+  border-radius: $radius-md;
+  flex-shrink: 0;
+}
+
+.menuText {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.menuArrow {
+  flex-shrink: 0;
+  margin-left: $spacing-sm;
+}

@@ -1,0 +1,301 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding: 0 0 $spacing-2xl;
+}
+
+.header {
+  padding: $spacing-xl $page-padding $spacing-2xl;
+  text-align: center;
+  background: $color-gradient-header;
+  color: $color-text-white;
+  border-bottom-left-radius: $radius-xl;
+  border-bottom-right-radius: $radius-xl;
+}
+
+.headerTop {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-lg;
+}
+
+.headerTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  letter-spacing: $letter-spacing-tight;
+}
+
+.headerLabel {
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.balance {
+  display: block;
+  font-size: 88rpx;
+  font-weight: $font-weight-bold;
+  letter-spacing: $letter-spacing-tight;
+  line-height: 1.1;
+  margin-top: $spacing-sm;
+}
+
+.balanceUnit {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  opacity: 0.9;
+}
+
+.totalIncome {
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.section {
+  padding: $spacing-lg $page-padding 0;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  @include section-title;
+  margin-bottom: $spacing-md;
+}
+
+.sectionHeader .sectionTitle {
+  margin-bottom: 0;
+}
+
+.rechargeCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.rechargeIntro {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.rechargeIcon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 22rpx;
+  background: rgba(0, 122, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rechargeCopy { flex: 1; }
+.rechargeTitle { display: block; font-size: $font-size-md; font-weight: $font-weight-bold; color: $color-text-primary; }
+.rechargeDesc { display: block; margin-top: 6rpx; font-size: $font-size-sm; color: $color-primary; }
+
+.exchangeExamples {
+  display: flex;
+  gap: $spacing-xs;
+  margin: $spacing-md 0;
+}
+
+.exchangeChip {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 6rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.rechargeButton {
+  height: 88rpx;
+  border-radius: $radius-md;
+  background: $color-primary;
+  color: $color-text-white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+  @include press-feedback(0.97);
+}
+
+.rechargeHint { display: block; margin-top: $spacing-sm; text-align: center; font-size: $font-size-xs; color: $color-text-tertiary; line-height: 1.5; }
+
+.tabRow {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 20rpx;
+  gap: 20rpx;
+}
+
+.tab {
+  padding: 10rpx 30rpx;
+  border-radius: 20rpx;
+  background: $color-bg-hover;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  @include press-feedback(0.94);
+
+  &.active {
+    background: $color-primary;
+    color: $color-text-white;
+  }
+}
+
+.txList {
+  @include card-base;
+  padding: $spacing-xs $spacing-md;
+}
+
+.txItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.txIcon {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.txIconIncome {
+  background: rgba(52, 199, 89, 0.12);
+}
+
+.txIconExpense {
+  background: $color-bg-hover;
+}
+
+.txInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.txType {
+  display: block;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.txRemark {
+  display: block;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.txAmount {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+
+  &.positive {
+    color: $color-success;
+  }
+
+  &.negative {
+    color: $color-text-primary;
+  }
+}
+
+.clearBtn {
+  margin-left: auto;
+  color: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+.formLabel {
+  display: block;
+  margin: 20rpx 0 10rpx;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.formInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18rpx 24rpx;
+  background: $color-bg-card;
+  border: 2rpx solid $color-border;
+  border-radius: 12rpx;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.methodRow {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+}
+
+.methodItem {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  border-radius: 12rpx;
+  border: 2rpx solid $color-border;
+  background: $color-bg-card;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  @include press-feedback(0.96);
+}
+
+.methodActive {
+  border-color: $color-primary;
+  color: $color-primary;
+  font-weight: $font-weight-bold;
+}
+
+.withdrawList {
+  margin-top: 24rpx;
+  background: $color-bg-card;
+  border-radius: 16rpx;
+  padding: 20rpx;
+}
+
+.withdrawStatus {
+  flex-shrink: 0;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+.status_PENDING {
+  color: $color-warning;
+}
+
+.status_APPROVED {
+  color: $color-success;
+}
+
+.status_REJECTED {
+  color: $color-error;
+}

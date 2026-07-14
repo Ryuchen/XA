@@ -1,0 +1,19 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  @include card-base;
+  padding: $spacing-md;
+}
+
+.noPadding {
+  padding: 0;
+  overflow: hidden;
+}
+
+.pressable {
+  @include press-feedback;
+}
+
+.animated {
+  @include slide-up;
+}

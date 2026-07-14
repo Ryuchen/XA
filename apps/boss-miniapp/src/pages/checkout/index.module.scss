@@ -1,0 +1,458 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+}
+
+.content {
+  height: calc(100vh - 140rpx);
+  padding: $spacing-md $spacing-md $spacing-xl;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200rpx;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.section {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+}
+
+.sectionTitle {
+  display: block;
+  @include section-title;
+  margin-bottom: $spacing-md;
+}
+
+.serviceModeBox {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  border: 2rpx solid transparent;
+  margin-bottom: $spacing-md;
+  @include press-feedback(0.98);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.serviceModeBoxActive {
+  border-color: $color-primary;
+  background: rgba($color-primary, 0.06);
+}
+
+.serviceModeMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.serviceModeCheck {
+  flex-shrink: 0;
+}
+
+.lockedSelection {
+  flex-shrink: 0;
+  padding: 6rpx 14rpx;
+  border-radius: $radius-round;
+  color: $color-primary;
+  background: rgba($color-primary, 0.1);
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.serviceModeName {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-lg;
+  font-weight: 600;
+}
+
+.serviceModeDesc {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+}
+
+.price {
+  display: block;
+  margin-top: $spacing-sm;
+  color: $color-price;
+  font-size: $font-size-xl;
+  font-weight: 700;
+}
+
+.dispatchOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  border: 2rpx solid transparent;
+  margin-bottom: $spacing-md;
+  @include press-feedback(0.98);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.dispatchOptionActive {
+  border-color: $color-primary;
+  background: rgba($color-primary, 0.06);
+}
+
+.dispatchMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.dispatchHead {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.dispatchName {
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: 600;
+}
+
+.dispatchBadge {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  flex-shrink: 0;
+  padding: 4rpx 14rpx;
+  border-radius: $radius-round;
+  background: $color-primary;
+}
+
+.dispatchBadgeText {
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  font-weight: 500;
+}
+
+.dispatchDesc {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+}
+
+.dispatchReselect {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.dispatchReselectText {
+  color: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: 600;
+}
+
+.formItem {
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.formLabel {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: 600;
+  margin-bottom: $spacing-sm;
+}
+
+.formInput {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  border: none;
+  box-sizing: border-box;
+}
+
+.stepperRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.stepperRow .formLabel {
+  margin-bottom: 0;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: $color-bg-card;
+}
+
+.stepperBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  @include press-feedback(0.9);
+}
+
+.stepperBtnDisabled {
+  opacity: 0.5;
+
+  &:active {
+    transform: none;
+  }
+}
+
+.stepperInput {
+  width: 88rpx;
+  height: 72rpx;
+  text-align: center;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: 500;
+  border-left: 1rpx solid $color-border;
+  border-right: 1rpx solid $color-border;
+  box-sizing: border-box;
+}
+
+.couponTitleRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.couponTitleRow .sectionTitle {
+  margin-bottom: 0;
+}
+
+.couponEmpty {
+  display: block;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.couponOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  border: 2rpx solid transparent;
+  margin-bottom: $spacing-md;
+  @include press-feedback(0.98);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.couponOptionActive {
+  border-color: $color-primary;
+  background: rgba($color-primary, 0.06);
+}
+
+.couponOptionMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.couponOptionName {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: 600;
+}
+
+.couponOptionDesc {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.couponOptionAmount {
+  flex-shrink: 0;
+  color: $color-error;
+  font-size: $font-size-lg;
+  font-weight: 700;
+}
+
+.couponOptionCheck {
+  flex-shrink: 0;
+}
+
+.remark {
+  width: 100%;
+  min-height: 160rpx;
+  padding: $spacing-md;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  line-height: 1.6;
+  border: none;
+  box-sizing: border-box;
+}
+
+.priceSummaryHead,
+.priceLine,
+.priceLineDiscount,
+.balanceLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.priceSummaryHead .sectionTitle {
+  margin-bottom: 0;
+}
+
+.quoteState {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.priceLine,
+.priceLineDiscount {
+  margin-top: $spacing-md;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.priceLineDiscount {
+  color: $color-error;
+}
+
+.balanceLine {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-border;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: 600;
+}
+
+.balanceEnough {
+  color: $color-success;
+}
+
+.balanceInsufficient,
+.quoteError {
+  color: $color-error;
+}
+
+.quoteError {
+  display: block;
+  margin-top: $spacing-md;
+  font-size: $font-size-sm;
+}
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: $spacing-md $spacing-lg;
+  @include safe-area-bottom($spacing-md);
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.95);
+  border-top: 1rpx solid $color-border;
+  box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.totalBlock {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.totalLabel {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  margin-right: $spacing-xs;
+}
+
+.totalPrice {
+  color: $color-price;
+  font-size: 44rpx;
+  font-weight: 700;
+}
+
+.discountText {
+  margin-left: $spacing-sm;
+  color: $color-error;
+  font-size: $font-size-xs;
+}
+
+.submitBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 240rpx;
+  height: 96rpx;
+  padding: 0 $spacing-xl;
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: 600;
+  border: none;
+  border-radius: $radius-round;
+  background: $color-primary;
+  box-shadow: $shadow-glow;
+  @include press-feedback(0.96);
+}
+
+.submitBtnDisabled {
+  opacity: 0.6;
+
+  &:active {
+    transform: none;
+  }
+}

@@ -1,0 +1,34 @@
+@use '@/styles/variables.scss' as *;
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: 64rpx 0;
+}
+
+.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 999;
+}
+
+.spinner {
+  width: 56rpx;
+  height: 56rpx;
+  border: 6rpx solid $color-divider;
+  border-top-color: $color-primary;
+  border-radius: $radius-round;
+  animation: spin 0.7s linear infinite;
+}
+
+.text {
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}

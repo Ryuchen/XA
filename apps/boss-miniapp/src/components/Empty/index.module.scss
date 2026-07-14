@@ -1,0 +1,42 @@
+@use '@/styles/variables.scss' as *;
+
+.empty {
+  @include fade-in;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 96rpx $spacing-lg;
+}
+
+.iconWrap {
+  @include flex-center;
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: $spacing-md;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.icon {
+  font-size: 80rpx;
+  line-height: 1;
+}
+
+.title {
+  color: $color-text-secondary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+.desc {
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  text-align: center;
+  line-height: $line-height-normal;
+}
+
+.action {
+  margin-top: $spacing-lg;
+}

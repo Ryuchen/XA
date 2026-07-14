@@ -1,0 +1,48 @@
+@use '@/styles/variables.scss' as *;
+
+.container { min-height: 100vh; background: $color-bg-page; }
+
+.progress {
+  display: flex;
+  padding: $spacing-lg $page-padding;
+  background: $color-bg-card;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.progressItem { position: relative; display: flex; flex: 1; flex-direction: column; align-items: center; }
+.progressNo { z-index: 1; display: flex; align-items: center; justify-content: center; width: 44rpx; height: 44rpx; border-radius: 50%; color: $color-text-tertiary; background: $color-bg-hover; font-size: 22rpx; }
+.progressNoActive { color: #fff; background: $color-primary; }
+.progressText { margin-top: 8rpx; color: $color-text-tertiary; font-size: 20rpx; }
+.progressTextActive { color: $color-text-primary; font-weight: 600; }
+.progressLine { position: absolute; top: 21rpx; left: calc(50% + 22rpx); right: calc(-50% + 22rpx); height: 2rpx; background: $color-border; }
+.progressLineActive { background: $color-primary; }
+
+.content { height: calc(100vh - 258rpx); padding: $spacing-lg $page-padding; box-sizing: border-box; }
+.heading { margin-bottom: $spacing-lg; }
+.title { display: block; color: $color-text-primary; font-size: 36rpx; font-weight: 700; }
+.subtitle { display: block; margin-top: 6rpx; color: $color-text-secondary; font-size: $font-size-sm; }
+
+.optionGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: $spacing-md; }
+.optionList { display: flex; flex-direction: column; gap: $spacing-md; }
+.gameCard, .serviceCard, .platformCard, .providerCard, .contactCard {
+  display: flex; align-items: center; gap: $spacing-md; padding: $spacing-lg;
+  border: 2rpx solid transparent; border-radius: $radius-lg; background: $color-bg-card; box-shadow: $shadow-card;
+}
+.gameCard { min-height: 150rpx; flex-wrap: wrap; }
+.selected { border-color: $color-primary; background: rgba($color-primary, .055); }
+.gameIcon, .platformIcon { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $radius-md; background: $color-bg-hover; }
+.gameName { flex: 1; color: $color-text-primary; font-size: $font-size-md; font-weight: 600; }
+.optionHint { width: 100%; color: $color-text-tertiary; font-size: $font-size-xs; }
+.serviceImage { width: 116rpx; height: 116rpx; flex-shrink: 0; border-radius: $radius-md; }
+.providerAvatar, .contactAvatar { width: 88rpx; height: 88rpx; flex-shrink: 0; border-radius: 50%; }
+.optionMain { flex: 1; min-width: 0; }
+.optionName { display: block; color: $color-text-primary; font-size: $font-size-md; font-weight: 600; }
+.optionDesc { display: block; margin-top: 6rpx; color: $color-text-secondary; font-size: $font-size-sm; line-height: 1.4; }
+.price { display: block; margin-top: 8rpx; color: $color-price; font-size: $font-size-sm; font-weight: 600; }
+
+.footer { position: fixed; right: 0; bottom: 0; left: 0; display: flex; gap: $spacing-md; padding: $spacing-md $page-padding calc($spacing-md + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1rpx solid $color-border; }
+.backButton, .nextButton { display: flex; align-items: center; justify-content: center; height: 84rpx; border-radius: $radius-md; font-size: $font-size-md; font-weight: 600; }
+.backButton { width: 180rpx; color: $color-text-primary; background: $color-bg-hover; }
+.nextButton { flex: 1; color: #fff; background: $color-primary; }
+.backButtonDisabled { color: $color-text-disabled; }
+.nextButtonDisabled { opacity: .45; }

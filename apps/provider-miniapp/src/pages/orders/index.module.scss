@@ -1,0 +1,79 @@
+@use '@/styles/variables.scss' as *;
+
+.container { min-height: 100vh; box-sizing: border-box; padding: 30rpx $page-padding 150rpx; background: $color-bg-page; }
+.dashboard { padding: 34rpx 34rpx 30rpx; border-radius: 36rpx; color: #fff; background: linear-gradient(145deg,#17171c,#393440 62%,#51455b); box-shadow: 0 18rpx 44rpx rgba(30,25,36,.19); }
+.dashboardTop, .dashboardBottom, .passCard, .passTitleRow, .cardHeader, .chips, .infoRow, .cardFooter, .actions { display: flex; align-items: center; }
+.dashboardTop, .cardHeader, .infoRow, .cardFooter { justify-content: space-between; }
+.eyebrow, .metricLabel { display: block; font-size: 22rpx; color: rgba(255,255,255,.56); }
+.todayValue { display: block; margin-top: 5rpx; font-size: 58rpx; line-height: 1.15; font-weight: 700; }
+.todayUnit { font-size: $font-size-sm; font-weight: 500; color: rgba(255,255,255,.65); }
+.liveBadge { display: flex; align-items: center; padding: 10rpx 16rpx; border-radius: $radius-round; font-size: 22rpx; color: rgba(255,255,255,.82); background: rgba(255,255,255,.1); }
+.liveDot { width: 12rpx; height: 12rpx; margin-right: 9rpx; border-radius: 50%; background: #30d158; box-shadow: 0 0 0 6rpx rgba(48,209,88,.14); }
+.dashboardBottom { gap: 76rpx; margin-top: 30rpx; padding-top: 24rpx; border-top: 1rpx solid rgba(255,255,255,.12); }
+.metricValue { display: block; margin-top: 5rpx; font-size: $font-size-md; font-weight: 650; }
+.passCard { @include press-feedback; margin-top: 22rpx; padding: 22rpx 24rpx; border-radius: 28rpx; background: #fff; box-shadow: $shadow-card; }
+.passActive { background: linear-gradient(110deg,#fffdf7,#fff8e8); }
+.passEmblem { flex: none; display: flex; align-items: center; justify-content: center; width: 70rpx; height: 70rpx; margin-right: 18rpx; border-radius: 21rpx; font-size: 27rpx; font-weight: 750; color: #805b0a; background: linear-gradient(145deg,#fff0b5,#e8be55); box-shadow: inset 0 0 0 1rpx rgba(128,91,10,.1); }
+.passInfo { flex: 1; min-width: 0; }
+.passTitleRow { gap: 10rpx; }
+.passName { font-size: $font-size-md; font-weight: 650; color: $color-text-primary; }
+.passPill { padding: 3rpx 10rpx; border-radius: $radius-round; font-size: 19rpx; color: #8a6200; background: rgba(232,190,85,.18); }
+.passMeta { @include text-ellipsis; display: block; max-width: 420rpx; margin-top: 7rpx; font-size: 21rpx; color: $color-text-tertiary; }
+.passAction { flex: none; margin-left: 14rpx; font-size: $font-size-sm; font-weight: 600; color: $color-primary; }
+.passAction text { margin-left: 5rpx; font-size: $font-size-lg; font-weight: 400; }
+.tabs { position: sticky; top: 0; z-index: 10; display: flex; margin: 28rpx 0 18rpx; padding: 6rpx; border-radius: 20rpx; background: rgba(118,118,128,.12); backdrop-filter: blur(20rpx); }
+.tabItem { @include press-feedback(.99); flex: 1; display: flex; align-items: center; justify-content: center; padding: 14rpx 0; border-radius: 16rpx; cursor:pointer; transition: all .18s ease; }
+.tabItemActive { background: #fff; box-shadow: 0 3rpx 10rpx rgba(0,0,0,.08); pointer-events:none; }
+.tabText { font-size: $font-size-sm; color: $color-text-secondary; }
+.tabItemActive .tabText { color: $color-primary; font-weight: 650; }
+.list { width: 100%; }
+.orderCard { margin-bottom: 18rpx; padding: 26rpx 26rpx 22rpx; border: 1rpx solid rgba(0,0,0,.035); border-radius: 28rpx; background: #fff; box-shadow: $shadow-card; }
+.cardHeader { align-items: flex-start; }
+.serviceBlock, .priceBlock { display: flex; flex-direction: column; min-width: 0; }
+.serviceBlock { flex: 1; }
+.serviceName { @include text-ellipsis; max-width: 400rpx; font-size: $font-size-lg; font-weight: 680; color: $color-text-primary; }
+.orderNo { margin-top: 6rpx; font-size: 20rpx; color: $color-text-tertiary; }
+.priceBlock { flex: none; align-items: flex-end; margin-left: 16rpx; }
+.pricePrefix { font-size: 19rpx; color: $color-text-tertiary; }
+.amountValue { margin-top: 2rpx; font-size: 36rpx; line-height: 1.2; font-weight: 720; color: $color-text-primary; }
+.chips { flex-wrap: wrap; gap: 10rpx; margin: 20rpx 0; }
+.chip, .statusTag { padding: 6rpx 13rpx; border-radius: $radius-round; font-size: 20rpx; }
+.chip { color: $color-text-secondary; background: $color-bg-page; }
+.statusTag { color: $color-primary; background: rgba(0,122,255,.1); }
+.status_IN_SERVICE { color: #9a6700; background: rgba(255,149,0,.12); }
+.status_COMPLETED { color: $color-success; background: rgba(52,199,89,.11); }
+.status_CANCELLED { color: $color-text-tertiary; background: rgba(118,118,128,.1); }
+.infoRow { min-height: 46rpx; padding: 5rpx 0; }
+.infoLabel { flex: none; margin-right: 24rpx; font-size: $font-size-sm; color: $color-text-tertiary; }
+.infoValue { @include text-ellipsis-multi(2); max-width: 68%; text-align: right; font-size: $font-size-sm; line-height: 1.4; color: $color-text-primary; }
+.incomePanel { display: flex; align-items: center; justify-content: space-between; margin-top: 16rpx; padding: 20rpx 22rpx; border-radius: 20rpx; background: rgba(52,199,89,.08); }
+.incomeLabel, .incomeHint { display: block; }
+.incomeLabel { font-size: $font-size-sm; font-weight: 600; color: $color-text-primary; }
+.incomeHint { margin-top: 4rpx; font-size: 19rpx; color: $color-text-tertiary; }
+.incomeValue { font-size: 36rpx; font-weight: 720; color: $color-success; }
+.requirement { margin-top: 16rpx; padding: 20rpx 22rpx; border-radius: 20rpx; background: $color-bg-page; }
+.requirementLabel, .requirementText { display: block; }
+.requirementLabel { font-size: 21rpx; font-weight: 600; color: $color-text-secondary; }
+.requirementText { margin-top: 8rpx; font-size: $font-size-sm; line-height: 1.55; color: $color-text-primary; }
+.requirementEmpty { color: $color-text-tertiary; }
+.cardFooter { margin-top: 18rpx; padding-top: 18rpx; border-top: 1rpx solid $color-divider; }
+.time { font-size: 20rpx; color: $color-text-tertiary; }
+.actions { justify-content: flex-end; margin-left: auto; }
+.actionBtn { @include button-reset; height: 66rpx; min-width: 142rpx; padding: 0 26rpx; margin-left: 12rpx; border: none; border-radius: 18rpx; font-size: $font-size-sm; font-weight: 650; line-height: 66rpx; }
+.actionBtn::after, .replyButton::after { border: none; }
+.primaryBtn { @include primary-control-state; box-shadow: 0 5rpx 14rpx rgba(0,122,255,.18); }
+.rejectBtn { @include secondary-control-state; color: $color-text-secondary; border: 1rpx solid $color-border; background: #fff; box-shadow: none; }
+.evaluation { margin-top: 16rpx; padding: 20rpx 22rpx; border: 1rpx solid rgba(255,149,0,.12); border-radius: 20rpx; background: rgba(255,149,0,.055); }
+.evaluationHead { display: flex; align-items: center; justify-content: space-between; }
+.evaluationTitle { font-size: $font-size-sm; font-weight: 650; color: $color-text-primary; }
+.evaluationScore { font-size: 22rpx; font-weight: 600; color: $color-warning; }
+.evaluationContent { display: block; margin-top: 10rpx; font-size: $font-size-sm; line-height: 1.5; color: $color-text-secondary; }
+.myReply { margin-top: 14rpx; padding-top: 14rpx; border-top: 1rpx solid rgba(0,0,0,.06); }
+.replyLabel, .replyText { display: block; }
+.replyLabel { font-size: 20rpx; font-weight: 600; color: $color-primary; }
+.replyText { margin-top: 5rpx; font-size: $font-size-sm; line-height: 1.5; color: $color-text-primary; }
+.replyButton { @include button-reset; @include primary-control-state; width: 100%; height: 64rpx; margin-top: 16rpx; border: none; border-radius: 17rpx; font-size: $font-size-sm; font-weight: 650; line-height: 64rpx; box-shadow: 0 5rpx 14rpx rgba(0,122,255,.16); }
+.awaitingReview { display: flex; align-items: center; justify-content: space-between; margin-top: 16rpx; padding: 18rpx 22rpx; border-radius: 20rpx; background: $color-bg-page; }
+.awaitingReview text:first-child { font-size: $font-size-sm; font-weight: 600; color: $color-text-secondary; }
+.awaitingReview text:last-child { font-size: 20rpx; color: $color-text-tertiary; }
+@media (min-width:960px){.container{padding:0;background:transparent}.dashboard{padding:26PX 30PX;border-radius:24PX}.passCard{margin-top:16PX;padding:16PX 20PX;border-radius:18PX}.tabs{position:relative;margin:22PX 0 16PX;padding:4PX;border-radius:14PX}.tabItem{padding:10PX 0;border-radius:11PX}.list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16PX;overflow:visible}.orderCard{margin:0;padding:22PX;border-radius:20PX}.serviceName{font-size:18PX}.amountValue,.incomeValue{font-size:25PX}.cardFooter{min-height:44PX}}

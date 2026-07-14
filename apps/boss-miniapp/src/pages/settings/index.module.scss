@@ -1,0 +1,130 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding: $spacing-lg $page-padding;
+  background: $color-bg-page;
+}
+
+.section {
+  margin-bottom: $spacing-xl;
+  @include slide-up;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: 0 $spacing-xs $spacing-sm;
+}
+
+.sectionTitle {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  letter-spacing: $letter-spacing-tight;
+}
+
+.sectionHint {
+  display: block;
+  margin: -#{$spacing-xs} $spacing-xs $spacing-sm;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.gameTabs {
+  width: 100%;
+  margin-bottom: $spacing-sm;
+  white-space: nowrap;
+}
+
+.gameTabTrack {
+  display: inline-flex;
+  gap: $spacing-sm;
+  padding: 2rpx $spacing-xs;
+}
+
+.gameTab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 128rpx;
+  height: 60rpx;
+  padding: 0 $spacing-md;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-round;
+  color: $color-text-secondary;
+  background: $color-bg-card;
+  font-size: $font-size-sm;
+}
+
+.gameTabActive {
+  border-color: $color-primary;
+  color: $color-text-white;
+  background: $color-primary;
+  box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.18);
+}
+
+.emptyGames {
+  display: block;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  color: $color-text-tertiary;
+  background: $color-bg-hover;
+  font-size: $font-size-sm;
+  text-align: center;
+}
+
+.card {
+  overflow: hidden;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: $shadow-card;
+}
+
+.formRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $card-padding;
+  min-height: 100rpx;
+  box-sizing: border-box;
+
+  & + & {
+    border-top: 1rpx solid $color-border;
+  }
+}
+
+.formLabel {
+  flex-shrink: 0;
+  width: 140rpx;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+}
+
+.formInput {
+  flex: 1;
+  min-width: 0;
+  height: 60rpx;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  text-align: right;
+}
+
+.saveBtn {
+  @include flex-center;
+  gap: $spacing-xs;
+  height: $button-height-md;
+  margin-top: $spacing-lg;
+  border-radius: $radius-round;
+  background: $color-gradient-primary;
+  box-shadow: $shadow-glow;
+  @include press-feedback(0.97);
+}
+
+.saveBtnText {
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}

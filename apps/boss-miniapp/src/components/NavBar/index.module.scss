@@ -1,0 +1,65 @@
+@use '@/styles/variables.scss' as *;
+
+.navbar {
+  position: relative;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1rpx solid $color-border;
+}
+
+.transparent {
+  background: transparent;
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  padding: 0 $page-padding;
+}
+
+.back {
+  @include flex-center;
+  @include press-feedback(0.9);
+  position: absolute;
+  left: $spacing-sm;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-round;
+}
+
+.backIcon {
+  font-size: 56rpx;
+  line-height: 1;
+  color: $color-text-primary;
+}
+
+.title {
+  max-width: 60%;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.extra {
+  position: absolute;
+  right: $page-padding;
+  display: flex;
+  align-items: center;
+}
+
+// 浅色模式（沉浸式头图/渐变头部，文字图标转白）
+.light {
+  .title,
+  .backIcon {
+    color: $color-text-white;
+  }
+
+  .back {
+    background: rgba(255, 255, 255, 0.18);
+  }
+}

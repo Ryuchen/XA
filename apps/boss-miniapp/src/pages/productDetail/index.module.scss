@@ -1,0 +1,310 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 180rpx;
+}
+
+.swiper {
+  height: 620rpx;
+  background: $color-bg-card;
+}
+
+.swiperImage {
+  width: 100%;
+  height: 100%;
+}
+
+.info {
+  @include card-base;
+  position: relative;
+  margin: -40rpx $spacing-lg $spacing-md;
+  padding: $card-padding;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.price {
+  font-size: 64rpx;
+  line-height: 1;
+  font-weight: $font-weight-bold;
+  color: $color-price;
+  letter-spacing: $letter-spacing-tight;
+}
+
+.salesText {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.productName {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  line-height: 1.4;
+  letter-spacing: $letter-spacing-tight;
+  margin-bottom: $spacing-sm;
+}
+
+.productDesc {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  margin-bottom: $spacing-sm;
+}
+
+.unit {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+  margin-bottom: $spacing-md;
+}
+
+.section {
+  @include card-base;
+  margin: 0 $spacing-lg $spacing-md;
+  padding: $card-padding;
+}
+
+.sectionTitle {
+  display: block;
+  @include section-title;
+  font-size: $font-size-lg;
+  margin-bottom: $spacing-md;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  @include safe-area-bottom($spacing-md);
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+  box-shadow: $shadow-float;
+}
+
+.actionBtn {
+  flex: 1;
+  @include button-reset;
+  gap: $spacing-xs;
+  height: $button-height-lg;
+  border-radius: $radius-lg;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.buyIcon {
+  margin-right: $spacing-xs;
+}
+
+.buyBtn {
+  background: $color-primary;
+  box-shadow: $shadow-glow;
+}
+
+.favBtn {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  width: 110rpx;
+  height: $button-height-lg;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.favText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.quantitySelector {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.quantityBtn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: $color-bg-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  @include press-feedback(0.9);
+}
+
+.quantityValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  min-width: 80rpx;
+  text-align: center;
+}
+
+.guarantees {
+  margin-top: $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  padding: $spacing-md;
+}
+
+.guaranteeItem {
+  padding: $spacing-sm 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.guaranteeTitle {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.guaranteeText {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.highlightItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+
+  .guaranteeTitle {
+    font-weight: $font-weight-normal;
+    line-height: $line-height-normal;
+  }
+}
+
+.highlightIcon {
+  flex-shrink: 0;
+}
+
+.stars {
+  display: flex;
+  align-items: center;
+  gap: 2rpx;
+}
+
+.evalHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.evalScore {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.evalScoreValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-price;
+}
+
+.evalEmpty {
+  display: block;
+  padding: $spacing-md 0;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.evalItem {
+  padding: $spacing-md 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.evalItemHeader {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.evalAvatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.evalName {
+  flex: 1;
+  margin-left: $spacing-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.evalContent {
+  display: block;
+  margin-top: $spacing-sm;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+}
+
+.evalTime {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.evalReply {
+  margin-top: $spacing-sm;
+  padding: $spacing-sm;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+}
+
+.evalReplyLabel {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.evalReplyText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}

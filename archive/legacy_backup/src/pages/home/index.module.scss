@@ -1,0 +1,137 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+}
+
+.header {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  padding: $page-padding;
+  padding-top: $spacing-lg;
+  padding-bottom: $spacing-xl;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: $radius-button;
+  padding: $spacing-sm $spacing-md;
+  gap: $spacing-sm;
+}
+
+.searchIcon {
+  font-size: 32rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.searchPlaceholder {
+  flex: 1;
+  font-size: $font-size-md;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.banner {
+  margin: $spacing-md $page-padding;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  height: 320rpx;
+}
+
+.bannerImage {
+  width: 100%;
+  height: 100%;
+}
+
+.section {
+  padding: 0 $page-padding $spacing-lg;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.moreLink {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-normal;
+}
+
+.productGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+}
+
+.productCard {
+  width: calc(50% - $spacing-md / 2);
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  box-shadow: $shadow-card;
+}
+
+.productImage {
+  width: 100%;
+  height: 320rpx;
+}
+
+.productInfo {
+  padding: $spacing-sm;
+}
+
+.productName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  margin-bottom: $spacing-xs;
+}
+
+.productDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  @include text-ellipsis-multi(2);
+  margin-bottom: $spacing-xs;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+}
+
+.price {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-price;
+}
+
+.originalPrice {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-decoration: line-through;
+}
+
+.sales {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-left: auto;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2rpx $spacing-xs;
+  background: rgba(255, 107, 107, 0.1);
+  color: $color-primary;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  margin-right: $spacing-xs;
+}

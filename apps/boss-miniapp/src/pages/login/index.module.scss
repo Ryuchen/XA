@@ -1,0 +1,184 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  box-sizing: border-box;
+  @include safe-area-bottom($spacing-lg);
+}
+
+// ===== 顶部蓝渐变品牌区 =====
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: $spacing-3xl $page-padding $spacing-2xl;
+  background: $color-gradient-header;
+  border-bottom-left-radius: 64rpx;
+  border-bottom-right-radius: 64rpx;
+}
+
+.logoBox {
+  @include flex-center;
+  width: 152rpx;
+  height: 152rpx;
+  border-radius: 44rpx;
+  background: $color-bg-card;
+  box-shadow: $shadow-float;
+}
+
+.title {
+  display: block;
+  margin-top: $spacing-lg;
+  color: $color-text-white;
+  font-size: 60rpx;
+  font-weight: $font-weight-bold;
+  letter-spacing: $letter-spacing-tight;
+  line-height: $line-height-tight;
+}
+
+.subtitle {
+  display: block;
+  margin-top: $spacing-xs;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+}
+
+// ===== 登录表单卡片 =====
+.formCard {
+  margin: $spacing-lg $page-padding 0;
+  @include card-base;
+  padding: $spacing-lg;
+  @include slide-up;
+}
+
+.formTitle {
+  display: block;
+  @include section-title;
+  margin-bottom: $spacing-sm;
+}
+
+.formTip {
+  display: block;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+  margin-bottom: $spacing-lg;
+}
+
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.avatarBtn {
+  @include button-reset;
+  flex-direction: column;
+  width: 140rpx;
+  background: transparent;
+  @include press-feedback(0.98);
+}
+
+.avatarImg {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: $color-bg-hover;
+}
+
+.avatarTip {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.nicknameInput {
+  flex: 1;
+  height: 88rpx;
+  padding: 0 $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+}
+
+// ===== 微信一键登录按钮 =====
+.loginBtn {
+  @include button-reset;
+  flex-direction: row;
+  gap: $spacing-sm;
+  width: 100%;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  color: $color-text-white;
+  background: $color-gradient-primary;
+  box-shadow: $shadow-glow;
+  @include press-feedback(0.98);
+}
+
+.loginBtnText {
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  letter-spacing: 2rpx;
+}
+
+.loginHint {
+  @include flex-center;
+  gap: $spacing-xs;
+  margin-top: $spacing-md;
+}
+
+.loginHintText {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.devLoginBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  margin-top: $spacing-md;
+  border-radius: $radius-button;
+  color: $color-text-secondary;
+  background: $color-bg-hover;
+  border: 2rpx dashed $color-text-tertiary;
+  font-size: $font-size-sm;
+  @include press-feedback(0.98);
+}
+
+// ===== 用户协议区（纯展示） =====
+.agreement {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  margin: $spacing-lg $page-padding 0;
+}
+
+.agreementCheck {
+  @include flex-center;
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: $radius-round;
+  background: $color-primary;
+}
+
+.agreementText {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+}
+
+.agreementLink {
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}

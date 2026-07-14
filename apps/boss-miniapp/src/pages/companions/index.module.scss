@@ -1,0 +1,453 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  padding-bottom: 132rpx;
+  background: $color-bg-page;
+}
+
+.header {
+  padding: 28rpx $page-padding $spacing-lg;
+  background: $color-bg-card;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.headerTitle {
+  display: block;
+  color: $color-text-primary;
+  font-size: 38rpx;
+  font-weight: $font-weight-bold;
+}
+
+.headerSubtitle {
+  display: block;
+  margin-top: 6rpx;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  height: 72rpx;
+  margin-top: $spacing-lg;
+  padding: 0 $spacing-md;
+  border-radius: $radius-md;
+  background: $color-bg-hover;
+}
+
+.searchInput {
+  flex: 1;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+}
+
+.section {
+  padding: $spacing-lg $page-padding 0;
+}
+
+.rankCard {
+  overflow: hidden;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+}
+
+.rankHeader,
+.sectionHeader,
+.playerNameRow,
+.playerBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rankHeader {
+  gap: $spacing-sm;
+  padding: $spacing-lg $spacing-md $spacing-md;
+}
+
+.rankTitle,
+.sectionTitle {
+  display: block;
+  color: $color-text-primary;
+  font-size: 30rpx;
+  font-weight: $font-weight-semibold;
+}
+
+.rankSubtitle,
+.sectionSubtitle {
+  display: block;
+  margin-top: 4rpx;
+  color: $color-text-tertiary;
+  font-size: 22rpx;
+}
+
+.rankPeriods {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4rpx;
+  padding: 4rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+}
+
+.rankPeriod {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-round;
+}
+
+.rankPeriodActive {
+  background: $color-bg-card;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.08);
+}
+
+.rankPeriodText {
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.rankPeriodActive .rankPeriodText {
+  color: $color-text-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.rankList {
+  border-top: 1rpx solid $color-border;
+}
+
+.rankRowHeader,
+.rankRow {
+  display: flex;
+  align-items: center;
+}
+
+.rankRowHeader {
+  padding: 12rpx $spacing-md;
+  background: $color-bg-hover;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.rankRow {
+  min-height: 92rpx;
+  padding: 8rpx $spacing-md;
+  border-top: 1rpx solid $color-border;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+}
+
+.rankNo {
+  width: 72rpx;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+}
+
+.rankNoTop {
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.rankPlayer {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: $spacing-sm;
+  min-width: 0;
+}
+
+.rankAvatar {
+  width: 60rpx;
+  height: 60rpx;
+  flex-shrink: 0;
+  border-radius: $radius-round;
+}
+
+.rankName {
+  overflow: hidden;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankOrders,
+.rankLevel {
+  width: 84rpx;
+  text-align: right;
+}
+
+.rankLevel {
+  color: $color-text-secondary;
+}
+
+.rankEmpty {
+  padding: $spacing-xl;
+  border-top: 1rpx solid $color-border;
+  color: $color-text-tertiary;
+  background: $color-bg-hover;
+  font-size: $font-size-sm;
+  text-align: center;
+}
+
+.playerCount {
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.giftBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 7rpx 14rpx;
+  border-radius: $radius-round;
+  color: #FF2D55;
+  background: rgba(255, 45, 85, 0.08);
+  font-size: $font-size-xs;
+}
+
+.giftScroll {
+  width: 100%;
+  margin-top: $spacing-md;
+  white-space: nowrap;
+}
+
+.giftRow {
+  display: inline-flex;
+  gap: $spacing-md;
+  padding-right: $page-padding;
+}
+
+.giftCard {
+  display: inline-flex;
+  flex-direction: column;
+  width: 218rpx;
+  overflow: hidden;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.035);
+  white-space: normal;
+}
+
+.giftCover {
+  display: block;
+  width: 100%;
+  height: 174rpx;
+  background: $color-bg-hover;
+}
+
+.giftMain {
+  padding: $spacing-sm $spacing-md $spacing-md;
+}
+
+.giftName {
+  display: block;
+  overflow: hidden;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.giftPrice {
+  display: block;
+  margin-top: 6rpx;
+  color: $color-price;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+.gameFilterWrap {
+  width: 100%;
+  margin-top: $spacing-md;
+  box-sizing: border-box;
+}
+
+.gameFilterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.gameFilterChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88rpx;
+  max-width: 100%;
+  height: 58rpx;
+  padding: 0 22rpx;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-round;
+  color: $color-text-secondary;
+  background: $color-bg-card;
+  box-sizing: border-box;
+}
+
+.gameFilterChipActive {
+  border-color: $color-primary;
+  color: $color-text-white;
+  background: $color-primary;
+  box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.18);
+}
+
+.gameFilterText {
+  color: inherit;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.playerList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.playerListLoading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.playerCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-lg;
+  background: $color-bg-card;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.035);
+}
+
+.playerAvatarWrap {
+  position: relative;
+  width: 100%;
+}
+
+.playerAvatar {
+  display: block;
+  width: 100%;
+  height: 250rpx;
+}
+
+.playerMain {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: $spacing-md;
+}
+
+.playerNameRow {
+  align-items: flex-start;
+  gap: $spacing-sm;
+}
+
+.playerName {
+  overflow: hidden;
+  color: $color-text-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  position: absolute;
+  right: 12rpx;
+  bottom: 12rpx;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6rpx;
+  padding: 4rpx 10rpx;
+  border-radius: $radius-round;
+  font-size: 18rpx;
+  backdrop-filter: blur(12rpx);
+}
+
+.statusDot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: $radius-round;
+  background: currentColor;
+}
+
+.online { color: $color-success; background: rgba($color-success, 0.1); }
+.busy { color: $color-warning; background: rgba($color-warning, 0.12); }
+.offline { color: $color-text-tertiary; background: $color-bg-hover; }
+
+.playerRank {
+  display: block;
+  margin-top: 4rpx;
+  color: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.playerMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-xs;
+}
+
+.playerBio {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: $spacing-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.playerBottom {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.playerPrice {
+  color: $color-price;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+}
+
+.playerPriceUnit {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.orderButton,
+.loginButton {
+  padding: 12rpx 24rpx;
+  border-radius: $radius-round;
+  color: $color-text-white;
+  background: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.orderButton {
+  text-align: center;
+}
+
+.loadingWrap,
+.loginState {
+  padding: $spacing-lg $page-padding;
+}
+
+.loginButton {
+  display: inline-flex;
+  margin-top: $spacing-md;
+}

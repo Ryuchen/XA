@@ -1,0 +1,91 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding: $page-padding;
+  box-sizing: border-box;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: $spacing-lg 0 $spacing-md;
+  @include slide-up;
+}
+
+.heroBadge {
+  @include flex-center;
+  width: 136rpx;
+  height: 136rpx;
+  border-radius: $radius-round;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  letter-spacing: $letter-spacing-tight;
+  line-height: $line-height-tight;
+}
+
+.subtitle {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+}
+
+.card {
+  @include card-base;
+  padding: $spacing-lg;
+  margin-top: $spacing-lg;
+  @include slide-up;
+}
+
+.summary {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+}
+
+.divider {
+  height: 1rpx;
+  background: $color-border;
+  margin: $spacing-md 0;
+}
+
+.paragraph {
+  display: block;
+  color: $color-text-secondary;
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.actionBtn {
+  @include button-reset;
+  height: $button-height-lg;
+  margin-top: $spacing-lg;
+  border-radius: $radius-round;
+  color: $color-text-white;
+  background: $color-primary;
+  box-shadow: $shadow-glow;
+  gap: $spacing-xs;
+  @include press-feedback(0.97);
+}
+
+.actionText {
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}

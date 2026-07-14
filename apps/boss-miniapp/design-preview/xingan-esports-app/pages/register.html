@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册账号</title>
+    <style id="theme-vars">
+/*
+ * Pinguo design tokens
+ * Brand: Pinguo
+ * Domain: Consumer imaging product
+ * Style: Restrained, elegant, Apple-inspired
+ * Theme mode: light-dark
+ * Source language: zh
+ * Output language: en
+ */
+
+/* @group-priority: brand, background, text, icon, state-success, state-error */
+
+:root {
+  /* ===== PRIMITIVE PALETTE ===== */
+
+  /* brand */
+  --brand-50: #e8f2ff;
+  --brand-100: #cfe5ff;
+  --brand-200: #9fcbff;
+  --brand-300: #66abff;
+  --brand-400: #2e8dff;
+  --brand-500: #007aff; /* @primary */
+  --brand-600: #0064d6;
+  --brand-700: #004fad;
+  --brand-800: #003b82;
+  --brand-900: #00275a;
+
+  /* background */
+  --background-50: #ffffff;
+  --background-100: #f7f7fa;
+  --background-200: #f2f2f7;
+  --background-300: #e5e5ea;
+  --background-400: #d1d1d6;
+  --background-500: #aeaeb2;
+  --background-600: #8e8e93;
+  --background-700: #3a3a3c;
+  --background-800: #1c1c1e;
+  --background-900: #000000;
+
+  /* text */
+  --text-50: #f5f5f7;
+  --text-100: #e3e3e8;
+  --text-200: #c7c7cc;
+  --text-300: #aeaeb2;
+  --text-400: #8e8e93;
+  --text-500: #6e6e73;
+  --text-600: #48484a;
+  --text-700: #3c3c43;
+  --text-800: #1d1d1f;
+  --text-900: #000000;
+
+  /* icon */
+  --icon-50: #f5f5f7;
+  --icon-100: #e5e5ea;
+  --icon-200: #d1d1d6;
+  --icon-300: #c7c7cc;
+  --icon-400: #aeaeb2;
+  --icon-500: #8e8e93;
+  --icon-600: #6e6e73;
+  --icon-700: #48484a;
+  --icon-800: #2c2c2e;
+  --icon-900: #1d1d1f;
+
+  /* state-success */
+  --state-success: #34c759; /* @primary */
+  --state-success-dark: #30d158;
+  --state-success-surface: #e9f9ee;
+  --state-success-foreground: #ffffff;
+
+  /* state-error */
+  --state-error: #ff3b30; /* @primary */
+  --state-error-dark: #ff453a;
+  --state-error-surface: #ffecea;
+  --state-error-foreground: #ffffff;
+
+  /* ===== SEMANTIC ROLES ===== */
+
+  /* semantic */
+  --background: var(--background-50);
+  --foreground: var(--text-800);
+  --card: var(--background-50);
+  --card-foreground: var(--text-800);
+  --popover: var(--background-50);
+  --popover-foreground: var(--text-900);
+
+  --primary: var(--brand-500);
+  --primary-foreground: var(--background-50);
+  --secondary: var(--background-200);
+  --secondary-foreground: var(--text-800);
+  --muted: var(--background-200);
+  --muted-foreground: var(--text-400);
+  --accent: var(--background-100);
+  --accent-foreground: var(--text-800);
+  --destructive: var(--state-error);
+  --destructive-foreground: var(--state-error-foreground);
+  --success: var(--state-success);
+  --success-foreground: var(--state-success-foreground);
+  --border: var(--background-300);
+  --input: var(--background-400);
+  --ring: var(--brand-500);
+
+  --icon: var(--icon-900);
+  --icon-muted: var(--icon-500);
+
+  /* chart */
+  --chart-1: var(--state-success);
+  --chart-2: var(--brand-500);
+  --chart-3: #ff9500;
+  --chart-4: #5856d6;
+  --chart-5: #af52de;
+
+  /* sidebar */
+  --sidebar: var(--background-200);
+  --sidebar-foreground: var(--text-800);
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: var(--background-50);
+  --sidebar-accent: var(--background-300);
+  --sidebar-accent-foreground: var(--text-800);
+  --sidebar-border: var(--background-300);
+  --sidebar-ring: var(--brand-500);
+
+  /* TYPOGRAPHY */
+  --font-sans: DM Sans, ui-sans-serif, sans-serif, system-ui;
+  --font-serif: DM Sans, ui-sans-serif, sans-serif, system-ui;
+  --font-mono: JetBrains Mono, monospace;
+  --tracking-normal: 0em;
+
+  /* RADIUS */
+  --radius: 1.2rem;
+
+  /* SHADOWS */
+  --shadow-2xs: 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 1px 3px -1px rgba(0, 0, 0, 0.05);
+  --shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 24px -8px rgba(0, 0, 0, 0.08), 0 4px 8px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 16px 40px -10px rgba(0, 0, 0, 0.10), 0 8px 16px -8px rgba(0, 0, 0, 0.06);
+  --shadow-2xl: 0 24px 64px -12px rgba(0, 0, 0, 0.12);
+
+  /* SPACING */
+  --spacing: 0.24rem;
+}
+
+/* ===== SEMANTIC ROLES - dark (primitive palette inherited) ===== */
+.dark {
+  --background: var(--background-900);
+  --foreground: var(--text-50);
+  --card: var(--background-800);
+  --card-foreground: var(--text-50);
+  --popover: var(--background-700);
+  --popover-foreground: var(--text-50);
+
+  --primary: var(--brand-400);
+  --primary-foreground: var(--background-900);
+  --secondary: var(--background-800);
+  --secondary-foreground: var(--text-50);
+  --muted: var(--background-800);
+  --muted-foreground: var(--text-400);
+  --accent: var(--background-700);
+  --accent-foreground: var(--text-50);
+  --destructive: var(--state-error-dark);
+  --destructive-foreground: var(--state-error-foreground);
+  --success: var(--state-success-dark);
+  --success-foreground: var(--state-success-foreground);
+  --border: var(--background-700);
+  --input: var(--background-700);
+  --ring: var(--brand-400);
+
+  --icon: var(--icon-50);
+  --icon-muted: var(--icon-500);
+
+  --chart-1: var(--state-success-dark);
+  --chart-2: var(--brand-400);
+  --chart-3: #ff9f0a;
+  --chart-4: #5e5ce6;
+  --chart-5: #bf5af2;
+
+  --sidebar: var(--background-800);
+  --sidebar-foreground: var(--text-50);
+  --sidebar-primary: var(--brand-400);
+  --sidebar-primary-foreground: var(--background-900);
+  --sidebar-accent: var(--background-700);
+  --sidebar-accent-foreground: var(--text-50);
+  --sidebar-border: var(--background-700);
+  --sidebar-ring: var(--brand-400);
+
+  --shadow-2xs: 0 1px 2px -1px rgba(0, 0, 0, 0.30);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.30);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.36), 0 1px 3px -1px rgba(0, 0, 0, 0.36);
+  --shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.40), 0 1px 2px -1px rgba(0, 0, 0, 0.36);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.44), 0 2px 4px -2px rgba(0, 0, 0, 0.36);
+  --shadow-lg: 0 8px 24px -8px rgba(0, 0, 0, 0.50), 0 4px 8px -4px rgba(0, 0, 0, 0.40);
+  --shadow-xl: 0 16px 40px -10px rgba(0, 0, 0, 0.55), 0 8px 16px -8px rgba(0, 0, 0, 0.44);
+  --shadow-2xl: 0 24px 64px -12px rgba(0, 0, 0, 0.60);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-foreground: var(--card-foreground);
+  }
+  @layer base {
+    body { background: var(--card-background); color: var(--card-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="min-h-screen w-full flex justify-center" style="background: var(--background-200);">
+      <div class="relative flex w-full max-w-[420px] flex-col" style="background: var(--background-200);">
+
+        <!-- ===== Brand visual zone (blue gradient) ===== -->
+        <section class="relative overflow-hidden rounded-b-[32px] px-6 pb-10 pt-3"
+                 style="background: linear-gradient(135deg, var(--brand-400) 0%, var(--primary) 55%, var(--brand-600) 100%);">
+
+          <!-- iOS status bar -->
+          <div class="flex items-center justify-between text-[15px] font-semibold" style="color: var(--primary-foreground);">
+            <span class="tabular-nums tracking-tight">9:41</span>
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="signal" class="h-[15px] w-[15px]"></i>
+              <i data-lucide="wifi" class="h-[15px] w-[15px]"></i>
+              <i data-lucide="battery-full" class="h-[18px] w-[18px]"></i>
+            </div>
+          </div>
+
+          <!-- Nav row: back button -->
+          <div class="mt-2 flex h-11 items-center">
+            <button type="button" data-dom-id="nav-back" aria-label="返回登录"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20 transition-[transform,background-color] duration-150 ease-out hover:bg-white/30 active:scale-90 motion-reduce:transition-none"
+                    style="color: var(--primary-foreground);">
+              <i data-lucide="chevron-left" class="h-5 w-5"></i>
+            </button>
+          </div>
+
+          <!-- Title -->
+          <div class="mt-5 flex flex-col">
+            <h1 class="text-[30px] font-bold leading-[1.2]"
+                style="color: var(--primary-foreground); letter-spacing: -0.5px; word-break: keep-all; text-wrap: balance;">创建账号</h1>
+            <p class="mt-1.5 text-[15px] font-medium text-white/80">加入兴安电竞，开启陪玩之旅</p>
+          </div>
+        </section>
+
+        <!-- ===== Register form zone ===== -->
+        <section class="flex flex-1 flex-col px-6 pb-8 pt-6">
+
+          <!-- Register form card -->
+          <div class="flex flex-col gap-4 rounded-[var(--radius)] p-5"
+               style="background: var(--card); box-shadow: var(--shadow-sm);">
+
+            <!-- Phone number input -->
+            <label class="block">
+              <span class="mb-1.5 block text-[13px] font-medium" style="color: var(--text-500);">手机号</span>
+              <span class="flex h-12 items-center gap-2.5 rounded-xl border px-3.5 transition-colors duration-150 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--ring)]/25 motion-reduce:transition-none"
+                    style="background: var(--background-100); border-color: var(--border);">
+                <i data-lucide="smartphone" class="h-[18px] w-[18px] shrink-0" style="color: var(--text-400);"></i>
+                <input type="tel" inputmode="numeric" maxlength="11" autocomplete="tel"
+                       placeholder="请输入手机号"
+                       class="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-[var(--text-400)]"
+                       style="color: var(--foreground);">
+              </span>
+            </label>
+
+            <!-- Verification code input + get-code button -->
+            <label class="block">
+              <span class="mb-1.5 block text-[13px] font-medium" style="color: var(--text-500);">验证码</span>
+              <span class="flex h-12 items-center gap-2.5 rounded-xl border px-3.5 transition-colors duration-150 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--ring)]/25 motion-reduce:transition-none"
+                    style="background: var(--background-100); border-color: var(--border);">
+                <i data-lucide="shield-check" class="h-[18px] w-[18px] shrink-0" style="color: var(--text-400);"></i>
+                <input type="text" inputmode="numeric" maxlength="6"
+                       placeholder="请输入验证码"
+                       class="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-[var(--text-400)]"
+                       style="color: var(--foreground);">
+                <button type="button" data-dom-id="btn-get-code"
+                        class="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[14px] font-semibold transition-[opacity,color] duration-150 ease-out active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
+                        style="color: var(--primary);">获取验证码</button>
+              </span>
+            </label>
+
+            <!-- Password input -->
+            <label class="block">
+              <span class="mb-1.5 block text-[13px] font-medium" style="color: var(--text-500);">设置密码</span>
+              <span class="flex h-12 items-center gap-2.5 rounded-xl border px-3.5 transition-colors duration-150 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--ring)]/25 motion-reduce:transition-none"
+                    style="background: var(--background-100); border-color: var(--border);">
+                <i data-lucide="lock-keyhole" class="h-[18px] w-[18px] shrink-0" style="color: var(--text-400);"></i>
+                <input type="password" autocomplete="new-password"
+                       placeholder="8-20位，含字母和数字"
+                       id="pwd-input"
+                       class="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-[var(--text-400)]"
+                       style="color: var(--foreground);">
+                <button type="button" data-dom-id="btn-toggle-pwd" aria-label="显示或隐藏密码"
+                        class="shrink-0 transition-opacity duration-150 active:opacity-60"
+                        style="color: var(--text-400);">
+                  <i data-lucide="eye" class="h-[18px] w-[18px]" data-pwd-eye></i>
+                </button>
+              </span>
+            </label>
+
+            <!-- Invite code (optional) -->
+            <label class="block">
+              <span class="mb-1.5 block text-[13px] font-medium" style="color: var(--text-500);">邀请码<span class="ml-1 font-normal" style="color: var(--text-400);">（选填）</span></span>
+              <span class="flex h-12 items-center gap-2.5 rounded-xl border px-3.5 transition-colors duration-150 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--ring)]/25 motion-reduce:transition-none"
+                    style="background: var(--background-100); border-color: var(--border);">
+                <i data-lucide="gift" class="h-[18px] w-[18px] shrink-0" style="color: var(--text-400);"></i>
+                <input type="text" maxlength="12"
+                       placeholder="填写邀请码得新人礼包"
+                       class="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-[var(--text-400)]"
+                       style="color: var(--foreground);">
+              </span>
+            </label>
+
+            <!-- Register submit -->
+            <button type="button" data-dom-id="btn-register" data-requires-agreement="true" disabled
+                    class="mt-1 h-[52px] w-full rounded-2xl text-[17px] font-semibold transition-[transform,opacity] duration-150 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none"
+                    style="background: var(--primary); color: var(--primary-foreground); box-shadow: 0 8px 20px -8px var(--brand-500);">注册并登录</button>
+          </div>
+
+          <!-- Go to login -->
+          <p class="mt-5 text-center text-[14px]" style="color: var(--text-500);">
+            已有账号？
+            <a href="#" data-dom-id="link-to-login" class="font-semibold underline-offset-2 hover:underline" style="color: var(--primary);">返回登录</a>
+          </p>
+
+          <!-- Spacer -->
+          <div class="flex-1"></div>
+
+          <!-- Agreement -->
+          <div class="mt-8 flex items-start gap-2.5">
+            <button type="button" id="agreement-check" data-dom-id="toggle-agreement" role="checkbox" aria-checked="false" aria-label="同意用户协议与隐私政策"
+                    class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-[1.5px] transition-colors duration-150 ease-out motion-reduce:transition-none"
+                    style="border-color: var(--input);">
+              <i data-lucide="check" class="h-3 w-3 scale-0 opacity-0 transition-[transform,opacity] duration-150 ease-out motion-reduce:transition-none" data-check-icon style="color: var(--primary-foreground);"></i>
+            </button>
+            <p class="text-[13px] leading-[1.5]" style="color: var(--text-500);">
+              我已阅读并同意
+              <a href="#" data-dom-id="link-user-agreement" class="font-medium underline-offset-2 hover:underline" style="color: var(--primary);">《用户协议》</a>
+              和
+              <a href="#" data-dom-id="link-privacy-policy" class="font-medium underline-offset-2 hover:underline" style="color: var(--primary);">《隐私政策》</a>
+            </p>
+          </div>
+
+          <!-- Home indicator -->
+          <div class="mx-auto mt-8 h-1 w-32 rounded-full" style="background: var(--background-400);" aria-hidden="true"></div>
+        </section>
+      </div>
+
+      <script>
+        (function () {
+          var checkBtn = document.getElementById('agreement-check');
+          var checkIcon = document.querySelector('[data-check-icon]');
+          var agreed = false;
+          var gatedButtons = Array.prototype.slice.call(document.querySelectorAll('[data-requires-agreement="true"]'));
+
+          function syncGated() {
+            gatedButtons.forEach(function (btn) { btn.disabled = !agreed; });
+          }
+
+          if (checkBtn) {
+            checkBtn.addEventListener('click', function () {
+              agreed = !agreed;
+              checkBtn.setAttribute('aria-checked', agreed ? 'true' : 'false');
+              checkBtn.style.borderColor = agreed ? 'var(--primary)' : 'var(--input)';
+              checkBtn.style.background = agreed ? 'var(--primary)' : 'transparent';
+              if (checkIcon) {
+                checkIcon.classList.toggle('scale-0', !agreed);
+                checkIcon.classList.toggle('opacity-0', !agreed);
+                checkIcon.classList.toggle('scale-100', agreed);
+                checkIcon.classList.toggle('opacity-100', agreed);
+              }
+              syncGated();
+            });
+          }
+
+          var codeBtn = document.querySelector('[data-dom-id="btn-get-code"]');
+          if (codeBtn) {
+            var defaultLabel = codeBtn.textContent;
+            codeBtn.addEventListener('click', function () {
+              if (codeBtn.disabled) return;
+              var remaining = 60;
+              codeBtn.disabled = true;
+              codeBtn.textContent = remaining + 's 后重发';
+              var timer = setInterval(function () {
+                remaining -= 1;
+                if (remaining <= 0) {
+                  clearInterval(timer);
+                  codeBtn.disabled = false;
+                  codeBtn.textContent = defaultLabel;
+                } else {
+                  codeBtn.textContent = remaining + 's 后重发';
+                }
+              }, 1000);
+            });
+          }
+
+          var togglePwd = document.querySelector('[data-dom-id="btn-toggle-pwd"]');
+          var pwdInput = document.getElementById('pwd-input');
+          var pwdEye = document.querySelector('[data-pwd-eye]');
+          if (togglePwd && pwdInput) {
+            togglePwd.addEventListener('click', function () {
+              var show = pwdInput.type === 'password';
+              pwdInput.type = show ? 'text' : 'password';
+              if (pwdEye) {
+                pwdEye.setAttribute('data-lucide', show ? 'eye-off' : 'eye');
+                if (window.lucide) lucide.createIcons();
+              }
+            });
+          }
+        })();
+      </script>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

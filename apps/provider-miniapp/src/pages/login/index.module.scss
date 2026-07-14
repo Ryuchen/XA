@@ -1,0 +1,84 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  box-sizing:border-box;
+  padding: 96rpx $page-padding 60rpx;
+  background: linear-gradient(155deg,#17171c,#393440 58%,#51455b);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 64rpx;
+}
+
+.title {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+.subtitle {
+  margin-top: $spacing-sm;
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.formCard {
+  @include card-base;
+  padding: 30rpx;
+  border-radius: 30rpx;
+}
+
+.formTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.formTip {
+  display: block;
+  margin-top: $spacing-xs;
+  margin-bottom: $spacing-lg;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: $line-height-normal;
+}
+
+.formItem {
+  margin-bottom: $spacing-md;
+}
+
+.formLabel {
+  display: block;
+  margin-bottom: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.formInput {
+  width: 100%;
+  height: $button-height-md;
+  padding: 0 $spacing-md;
+  border: none;
+  border-radius: 18rpx;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  background: $color-bg-page;
+}
+
+.loginBtn {
+  @include button-reset;
+  @include primary-control-state;
+  margin-top: $spacing-lg;
+  height: $button-height-lg;
+  border:none;
+  border-radius: 22rpx;
+  background: $color-primary !important;
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  &::after{border:none}
+}

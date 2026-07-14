@@ -1,0 +1,32 @@
+# Runtime secrets and local configuration
+.env
+.env.*
+!.env.example
+services/backend/.env
+services/backend/.env.*
+!services/backend/.env.example
+
+# JavaScript / Taro build output
+**/node_modules/
+**/dist/
+**/dist-h5/
+**/.swc/
+*.tsbuildinfo
+
+# Python build/runtime output
+services/backend/venv/
+**/__pycache__/
+*.py[cod]
+*.sqlite3
+services/backend/media/
+services/backend/celerybeat-schedule*
+
+# Tooling runtime
+.pai/
+.trae/
+**/.vite/
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,75 @@
+{
+  "project": {
+    "name": "兴安电竞 · 陪玩商城 App",
+    "device": "mobile",
+    "viewport": "375x812",
+    "language": "zh-CN",
+    "designSource": {
+      "mode": "library-bound",
+      "libraryIdentity": {
+        "name": "苹果",
+        "id": "dl_builtin_apple",
+        "version": "1.0.0",
+        "scope": "builtin",
+        "path": "/Users/bytedance/.trae-cn/design_libraries/dl_builtin_apple"
+      },
+      "cssFile": "colors_and_type.css",
+      "tokenPrefix": ""
+    }
+  },
+  "designSystem": {
+    "primary": "#007AFF",
+    "primaryHover": "#0064D6",
+    "background": "#F2F2F7",
+    "card": "#FFFFFF",
+    "textPrimary": "#1D1D1F",
+    "textSecondary": "#6E6E73",
+    "textTertiary": "#AEAEB2",
+    "border": "#E5E5EA",
+    "success": "#34C759",
+    "warning": "#FF9F0A",
+    "error": "#FF3B30",
+    "price": "#FF9500",
+    "radius": "19.2px",
+    "fontSans": "DM Sans, ui-sans-serif, system-ui",
+    "shadowCard": "0 1px 2px rgba(0,0,0,.05), 0 1px 3px -1px rgba(0,0,0,.05)",
+    "keyRules": "Apple 风格：System Blue 主色、中性灰阶、hairline 1px 描边、柔和分层投影、大圆角、克制留白、SF/DM Sans 字体、大标题收紧字距"
+  },
+  "styleContinuityAnchors": {
+    "layout": "移动端 375px 竖屏，顶部状态栏+导航，底部 TabBar（首页/分类/我的），内容区卡片化分组",
+    "color": "System Blue #007AFF 主色，背景 #F2F2F7，卡片纯白+1px hairline 描边",
+    "typography": "DM Sans；大标题 32-40px bold 收紧字距，正文 15-17px，辅助 13px 灰",
+    "components": "圆角卡片、胶囊标签、纯色蓝按钮带柔光、分段控件、头像圆形",
+    "spacing": "页面左右 16px padding，卡片内 16-20px，区块间 24-32px"
+  },
+  "assets": [
+    {"file": "assets/banner-hero.jpg", "usage": "首页顶部 banner"},
+    {"file": "assets/player-1.jpg", "usage": "陪玩选手头像/封面"},
+    {"file": "assets/player-2.jpg", "usage": "陪玩选手头像/封面"},
+    {"file": "assets/player-3.jpg", "usage": "陪玩选手头像/封面"}
+  ],
+  "pages": [
+    {"id": "home", "title": "首页", "file": "pages/home.html"},
+    {"id": "category", "title": "分类商城", "file": "pages/category.html"},
+    {"id": "product-detail", "title": "商品详情", "file": "pages/product-detail.html"},
+    {"id": "players", "title": "选手列表", "file": "pages/players.html"},
+    {"id": "checkout", "title": "确认下单", "file": "pages/checkout.html"},
+    {"id": "wallet", "title": "我的钱包", "file": "pages/wallet.html"},
+    {"id": "mine", "title": "个人中心", "file": "pages/mine.html"},
+    {"id": "login", "title": "登录", "file": "pages/login.html"},
+    {"id": "register", "title": "注册账号", "file": "pages/register.html"},
+    {"id": "checkin", "title": "每日签到", "file": "pages/checkin.html"},
+    {"id": "coupon", "title": "领券中心", "file": "pages/coupon.html"},
+    {"id": "coupon-mine", "title": "我的优惠券", "file": "pages/coupon-mine.html"},
+    {"id": "favorite", "title": "我的收藏", "file": "pages/favorite.html"},
+    {"id": "order-list", "title": "我的订单", "file": "pages/order-list.html"},
+    {"id": "customer-service", "title": "在线客服", "file": "pages/customer-service.html"},
+    {"id": "audition", "title": "陪玩试音", "file": "pages/audition.html"},
+    {"id": "service-card", "title": "服务卡", "file": "pages/service-card.html"},
+    {"id": "message-list", "title": "消息中心", "file": "pages/message-list.html"},
+    {"id": "message-detail", "title": "消息详情", "file": "pages/message-detail.html"},
+    {"id": "announcement", "title": "公告中心", "file": "pages/announcement.html"},
+    {"id": "announcement-detail", "title": "公告详情", "file": "pages/announcement-detail.html"},
+    {"id": "settings", "title": "设置", "file": "pages/settings.html"}
+  ]
+}

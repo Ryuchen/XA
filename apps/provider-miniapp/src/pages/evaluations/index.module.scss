@@ -1,0 +1,36 @@
+@use '@/styles/variables.scss' as *;
+
+.page { min-height: 100vh; box-sizing: border-box; padding: $spacing-md $page-padding 60rpx; background: $color-bg-page; }
+.summary { display: flex; padding: 30rpx; margin: 22rpx 0 18rpx; border-radius: 30rpx; text-align: center; color:#fff; background:linear-gradient(145deg,#17171c,#393440 62%,#51455b); box-shadow:0 16rpx 40rpx rgba(30,25,36,.17); }
+.summary > view { flex: 1; &:first-child { border-right: 2rpx solid $color-divider; } }
+.summaryValue, .summaryLabel { display: block; }
+.summaryValue { color: #fff; font-size: $font-size-xl; font-weight: $font-weight-bold; }
+.summaryLabel { margin-top: $spacing-xs; color: rgba(255,255,255,.58); font-size: $font-size-xs; }
+.card { padding: 26rpx; margin-bottom: 18rpx; border-radius:28rpx; background:#fff; box-shadow:$shadow-card; }
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: $spacing-sm; }
+.name, .service { display: block; }
+.name { color: $color-text-primary; font-size: $font-size-md; font-weight: $font-weight-semibold; }
+.service, .time { color: $color-text-tertiary; font-size: $font-size-xs; }
+.service { margin-top: 4rpx; }
+.score { flex-shrink: 0; color: $color-price; font-size: $font-size-sm; }
+.content { display: block; margin-top: $spacing-md; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-normal; }
+.time { display: block; margin-top: $spacing-sm; }
+.reply { margin-top: $spacing-md; padding: $spacing-sm $spacing-md; border-radius: $radius-md; background: $color-bg-page; }
+.replyLabel, .replyContent { display: block; }
+.replyLabel { color: $color-primary; font-size: $font-size-xs; font-weight: $font-weight-semibold; }
+.replyContent { margin-top: 6rpx; color: $color-text-secondary; font-size: $font-size-sm; }
+.replyButton { @include secondary-control-state; margin: $spacing-md 0 0; border: 0; border-radius: 18rpx; color: $color-primary; background: rgba(0,122,255,.09); font-size: $font-size-sm; &::after { border: 0; } }
+.empty { display: block; padding: 100rpx 0; text-align: center; color: $color-text-tertiary; }
+.emptyCard { @include card-base; padding: 100rpx $spacing-lg; text-align: center; }
+.emptyTitle, .emptyText { display: block; }
+.emptyTitle { color: $color-text-primary; font-size: $font-size-lg; font-weight: $font-weight-semibold; }
+.emptyText { margin-top: $spacing-sm; color: $color-text-tertiary; font-size: $font-size-sm; }
+.mask { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; background: rgba(0, 0, 0, .35); }
+.sheet { width: 100%; padding: 16rpx $page-padding calc(28rpx + env(safe-area-inset-bottom)); border-radius: 36rpx 36rpx 0 0; background: $color-bg-card; }
+.sheetHandle { width: 72rpx; height: 8rpx; margin: 0 auto $spacing-md; border-radius: $radius-round; background: $color-divider; }
+.sheetTitle { display: block; color: $color-text-primary; font-size: $font-size-lg; font-weight: $font-weight-semibold; }
+.textarea { width: 100%; height: 220rpx; box-sizing: border-box; margin-top: $spacing-md; padding: $spacing-md; border-radius: $radius-md; color: $color-text-primary; background: $color-bg-page; font-size: $font-size-sm; }
+.counter { display: block; margin-top: $spacing-xs; text-align: right; color: $color-text-tertiary; font-size: $font-size-xs; }
+.submit, .cancel { margin-top: $spacing-sm; border: 0; border-radius: $radius-round; font-size: $font-size-md; &::after { border: 0; } }
+.submit { color: $color-text-white; background: $color-primary; }
+.cancel { color: $color-text-secondary; background: $color-bg-page; }

@@ -1,0 +1,364 @@
+@use 'sass:math';
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 128rpx;
+}
+
+.header {
+  padding: $spacing-lg $page-padding $spacing-md;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+}
+
+.title {
+  display: block;
+  color: $color-text-white;
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+}
+
+.subtitle {
+  display: block;
+  margin-top: $spacing-xs;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: $font-size-sm;
+  line-height: 1.5;
+}
+
+.sortTabs {
+  white-space: nowrap;
+  padding: $spacing-md $page-padding;
+  background: $color-bg-card;
+  box-sizing: border-box;
+}
+
+.sortTab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: math.div($spacing-xs, 2);
+  height: 64rpx;
+  min-width: 112rpx;
+  padding: 0 $spacing-md;
+  margin-right: $spacing-sm;
+  color: $color-text-secondary;
+  background: $color-bg-card;
+  border: 1rpx solid $color-border;
+  border-radius: $radius-round;
+  font-size: $font-size-sm;
+
+  &.active {
+    color: $color-text-white;
+    background: $color-primary;
+    border-color: $color-primary;
+    font-weight: $font-weight-semibold;
+    box-shadow: $shadow-card;
+  }
+}
+
+.sortIcon {
+  margin-right: 2rpx;
+}
+
+.playerList {
+  height: calc(100vh - 340rpx);
+  padding: $page-padding;
+  box-sizing: border-box;
+}
+
+.smartCard,
+.playerCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  @include press-feedback(0.98);
+}
+
+.smartCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+}
+
+.smartTitle {
+  display: block;
+  color: $color-text-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+}
+
+.smartText {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+}
+
+.smartAction {
+  flex-shrink: 0;
+  color: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.playerCard {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  border: 2rpx solid transparent;
+
+  &.selected {
+    border-color: $color-primary;
+    background: rgba($color-primary, 0.06);
+  }
+}
+
+.selectBadge {
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-md;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: $radius-round;
+  background: $color-primary;
+  box-shadow: $shadow-card;
+  @include flex-center;
+  z-index: 1;
+}
+
+.avatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 144rpx;
+  height: 144rpx;
+  border-radius: $radius-lg;
+  display: block;
+}
+
+.statusDot {
+  position: absolute;
+  right: -4rpx;
+  bottom: -4rpx;
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: $radius-round;
+  border: 4rpx solid $color-bg-card;
+  box-sizing: border-box;
+}
+
+.dot_online {
+  background: $color-success;
+}
+
+.dot_busy {
+  background: $color-warning;
+}
+
+.dot_offline {
+  background: $color-text-tertiary;
+}
+
+.playerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow,
+.metaRow,
+.tagRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.nickname {
+  color: $color-text-primary;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  margin-right: $spacing-sm;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: math.div($spacing-xs, 2);
+  padding: 4rpx $spacing-sm;
+  border-radius: $radius-round;
+  font-size: 20rpx;
+  font-weight: $font-weight-medium;
+}
+
+.statusPillDot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: $radius-round;
+  flex-shrink: 0;
+}
+
+.online {
+  color: $color-success;
+  background: rgba($color-success, 0.12);
+}
+
+.busy {
+  color: $color-warning;
+  background: rgba($color-warning, 0.14);
+}
+
+.offline {
+  color: $color-text-tertiary;
+  background: $color-bg-hover;
+}
+
+.rank,
+.intro {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.5;
+}
+
+.intro {
+  @include text-ellipsis-multi(2);
+}
+
+.metaRow {
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+}
+
+.metaIcon {
+  flex-shrink: 0;
+}
+
+.ratingValue {
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.meta {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.tagRow {
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+}
+
+.tag {
+  color: $color-primary;
+  background: rgba($color-primary, 0.08);
+  border-radius: $radius-xs;
+  padding: 2rpx $spacing-xs;
+  font-size: 20rpx;
+}
+
+.bottomRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-sm;
+}
+
+.priceBlock {
+  display: flex;
+  align-items: baseline;
+  flex-shrink: 0;
+}
+
+.price {
+  color: $color-price;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+}
+
+.priceUnit {
+  margin-left: 2rpx;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.emptyBox {
+  @include flex-center;
+  flex-direction: column;
+  padding: $spacing-3xl $page-padding;
+}
+
+.emptyIcon {
+  margin-bottom: $spacing-md;
+}
+
+.emptyTitle {
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}
+
+.emptyDesc {
+  margin-top: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-sm;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 128rpx;
+  padding: $spacing-md $page-padding;
+  box-sizing: border-box;
+  background: $color-bg-card;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.footerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.footerLabel {
+  display: block;
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+}
+
+.footerName {
+  display: block;
+  margin-top: $spacing-xs;
+  color: $color-text-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  @include text-ellipsis;
+}
+
+.confirmBtn {
+  @include button-reset;
+  @include press-feedback(0.96);
+  width: 224rpx;
+  height: $button-height-lg;
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  border-radius: $radius-button;
+  background: $color-primary;
+  box-shadow: $shadow-glow;
+}
