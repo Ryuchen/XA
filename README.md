@@ -93,6 +93,21 @@ cp .env.example .env
 
 `.env` 只用于本机或部署环境，不要提交真实密码和微信 `AppSecret`。
 
+如需把待派订单推送到 KOOK 频道，在 `.env` 中配置机器人 Token 和文字频道 ID：
+
+```dotenv
+KOOK_ENABLED=true
+KOOK_BOT_TOKEN=机器人Token
+KOOK_DISPATCH_CHANNEL_ID=目标文字频道ID
+KOOK_DISPATCH_NEW_ORDERS=true
+KOOK_DISPATCH_REJECTED_ORDERS=true
+# 可选：通知指定角色、增加运营后台跳转按钮
+KOOK_DISPATCH_MENTION_ROLE_IDS=角色ID1,角色ID2
+KOOK_ADMIN_ORDER_URL=https://admin.example.com/orders
+```
+
+机器人需要先加入目标 KOOK 服务器并拥有频道发消息权限。新建后未指定陪玩的订单，以及陪玩拒单后重新回到待接单池的订单，会通过 Celery 异步发送卡片；发送结果可在 Django Admin 的 `Kook dispatch records` 中查询。
+
 ### 2. 启动后端服务
 
 ```bash

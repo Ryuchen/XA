@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Evaluation, Order, OrderStatusLog, ServiceItem
+from .models import Evaluation, KookDispatchRecord, Order, OrderStatusLog, ServiceItem
 
 
 @admin.register(ServiceItem)
@@ -42,6 +42,17 @@ class OrderStatusLogAdmin(admin.ModelAdmin):
     list_filter = ['action', 'created_at']
     search_fields = ['order__order_no']
     readonly_fields = ['order', 'action', 'from_status', 'to_status', 'operator', 'reason', 'created_at']
+
+
+@admin.register(KookDispatchRecord)
+class KookDispatchRecordAdmin(admin.ModelAdmin):
+    list_display = ['id', 'order', 'trigger', 'sequence', 'channel_id', 'status', 'attempts', 'sent_at']
+    list_filter = ['trigger', 'status', 'created_at']
+    search_fields = ['order__order_no', 'message_id', 'channel_id']
+    readonly_fields = [
+        'order', 'sequence', 'trigger', 'channel_id', 'status', 'message_id',
+        'attempts', 'last_error', 'created_at', 'sent_at',
+    ]
 
 
 @admin.register(Evaluation)

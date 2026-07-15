@@ -11,7 +11,11 @@ from rest_framework.views import APIView
 from users.models import EscortProfile, EscortSchedule
 from wallet.models import Transaction, Wallet, get_platform_wallet
 
-from .models import Evaluation, GameCategory, Order, OrderStatusLog, ServiceFavorite, ServiceItem
+from .models import (
+    Evaluation, GameCategory, KookDispatchRecord, Order, OrderStatusLog,
+    ServiceFavorite, ServiceItem,
+)
+from .kook_dispatch import enqueue_kook_dispatch
 from .notifier import notify_order_update
 from .ratings import apply_escort_rating
 from .settlement import compute_split
@@ -429,6 +433,7 @@ class CreateOrderView(APIView):
 
         if provider is None:
             _schedule_auto_cancel(order)
+            enqueue_kook_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
         else:
             _push_message_safe(
                 recipient_id=provider.id,
@@ -920,6 +925,7 @@ class RejectOrderView(APIView):
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许拒单'})
 
         _schedule_auto_cancel(order)
+        enqueue_kook_dispatch(order, KookDispatchRecord.Trigger.PROVIDER_REJECTED)
         notify_order_update(order)
 
         _push_message_safe(

@@ -236,6 +236,22 @@ AUDITION_PROVIDER_LINK_BASE_URL = os.environ.get(
     'AUDITION_PROVIDER_LINK_BASE_URL', _legacy_audition_base_url,
 )
 
+# KOOK 订单派单通知。默认关闭，避免本地/测试环境误发真实频道。
+# 机器人需已加入目标服务器，并拥有目标文字频道的发消息权限。
+KOOK_ENABLED = env_bool('KOOK_ENABLED', False)
+KOOK_API_BASE_URL = os.environ.get('KOOK_API_BASE_URL', 'https://www.kookapp.cn/api/v3').rstrip('/')
+KOOK_BOT_TOKEN = os.environ.get('KOOK_BOT_TOKEN', '')
+KOOK_DISPATCH_CHANNEL_ID = os.environ.get('KOOK_DISPATCH_CHANNEL_ID', '')
+KOOK_DISPATCH_NEW_ORDERS = env_bool('KOOK_DISPATCH_NEW_ORDERS', True)
+KOOK_DISPATCH_REJECTED_ORDERS = env_bool('KOOK_DISPATCH_REJECTED_ORDERS', True)
+KOOK_DISPATCH_MENTION_ROLE_IDS = tuple(
+    value.strip()
+    for value in os.environ.get('KOOK_DISPATCH_MENTION_ROLE_IDS', '').split(',')
+    if value.strip()
+)
+KOOK_ADMIN_ORDER_URL = os.environ.get('KOOK_ADMIN_ORDER_URL', '').rstrip('/')
+KOOK_REQUEST_TIMEOUT = float(os.environ.get('KOOK_REQUEST_TIMEOUT', '8'))
+
 # 默认最低提现兴安币对应的内部账务值。C 端未配置时回落此值。
 MIN_WITHDRAW_AMOUNT = 10000
 

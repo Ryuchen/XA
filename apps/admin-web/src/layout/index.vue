@@ -55,7 +55,15 @@
     <div class="ap-content">
       <header class="ap-topbar">
         <div class="ap-topbar-left">
-          <el-icon class="ap-menu-toggle" @click="mobileOpen = !mobileOpen"><Fold /></el-icon>
+          <button
+            class="ap-menu-toggle"
+            type="button"
+            aria-label="打开主导航"
+            :aria-expanded="mobileOpen"
+            @click="mobileOpen = !mobileOpen"
+          >
+            <el-icon><Fold /></el-icon>
+          </button>
           <div class="ap-topbar-titles">
             <span class="ap-breadcrumb">{{ breadcrumb }}</span>
             <h1 class="ap-page-title">{{ pageTitle }}</h1>
@@ -115,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
@@ -127,6 +135,33 @@ const router = useRouter()
 
 const mobileOpen = ref(false)
 const searchText = ref('')
+
+function closeMobileNav() {
+  mobileOpen.value = false
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeMobileNav()
+}
+
+function onViewportChange() {
+  if (window.innerWidth > 900) closeMobileNav()
+}
+
+watch(() => route.fullPath, closeMobileNav)
+watch(mobileOpen, (open) => {
+  document.body.classList.toggle('ap-nav-open', open)
+})
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  window.addEventListener('resize', onViewportChange, { passive: true })
+})
+onBeforeUnmount(() => {
+  document.body.classList.remove('ap-nav-open')
+  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('resize', onViewportChange)
+})
 
 // 主题切换（对齐设计稿 light/dark）
 const THEME_KEY = 'xa_admin_theme'
@@ -367,9 +402,23 @@ function onLogout() {
 }
 .ap-menu-toggle {
   display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   font-size: 22px;
   cursor: pointer;
   color: var(--icon);
+}
+.ap-menu-toggle:hover,
+.ap-menu-toggle:focus-visible {
+  background: var(--secondary);
+  outline: none;
 }
 .ap-topbar-titles {
   display: flex;
@@ -535,6 +584,25 @@ function onLogout() {
 }
 
 @media (max-width: 720px) {
+  .ap-sidebar {
+    width: min(82vw, 300px);
+    flex-basis: min(82vw, 300px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .ap-topbar {
+    height: calc(60px + env(safe-area-inset-top));
+    flex-basis: calc(60px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 12px 0;
+    gap: 8px;
+  }
+  .ap-topbar-left { gap: 8px; }
+  .ap-page-title { font-size: 18px; }
+  .ap-breadcrumb { display: none; }
+  .ap-topbar-right { gap: 8px; }
+  .ap-admin-caret { display: none; }
+  .ap-main {
+    padding: 16px 12px calc(20px + env(safe-area-inset-bottom));
+  }
   .ap-search {
     display: none;
   }

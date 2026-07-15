@@ -78,18 +78,26 @@ async function onSubmit() {
 
 <style scoped lang="scss">
 .login-page {
-  height: 100vh;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
   background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 100%);
 }
 .login-card {
-  width: 380px;
+  width: min(380px, 100%);
   padding: 40px 36px;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow-xl);
+}
+
+@media (max-width: 480px) {
+  .login-card { padding: 32px 22px; }
+  .brand { margin-bottom: 22px; }
+  .brand h1 { font-size: 23px; }
 }
 .brand {
   text-align: center;

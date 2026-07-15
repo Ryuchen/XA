@@ -20,7 +20,10 @@
         v-model:page-size="pageSize"
         :total="total"
         :page-sizes="[10, 20, 50, 100]"
-        layout="total, sizes, prev, pager, next, jumper"
+        :layout="paginationLayout"
+        :small="isMobile"
+        :pager-count="isMobile ? 5 : 7"
+        background
         @current-change="load"
         @size-change="onSizeChange"
       />
@@ -29,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { ApiResult, PageResult } from '@/api/request'
 
 const props = defineProps<{
@@ -42,6 +45,15 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 const loading = ref(false)
+const isMobile = ref(false)
+const mobileQuery = window.matchMedia('(max-width: 720px)')
+const paginationLayout = computed(() =>
+  isMobile.value ? 'prev, pager, next' : 'total, sizes, prev, pager, next, jumper',
+)
+
+function syncViewport(event?: MediaQueryListEvent) {
+  isMobile.value = event?.matches ?? mobileQuery.matches
+}
 
 async function load() {
   loading.value = true
@@ -66,7 +78,12 @@ function reload() {
   load()
 }
 
-onMounted(load)
+onMounted(() => {
+  syncViewport()
+  mobileQuery.addEventListener('change', syncViewport)
+  load()
+})
+onBeforeUnmount(() => mobileQuery.removeEventListener('change', syncViewport))
 
 defineExpose({ reload, load })
 </script>

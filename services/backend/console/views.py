@@ -19,6 +19,7 @@ from coupons.models import Coupon, UserCoupon
 from orders.models import (
     Evaluation,
     GameCategory,
+    KookDispatchRecord,
     Order,
     OrderProvider,
     OrderStatusLog,
@@ -34,6 +35,7 @@ from orders.views import (
     _schedule_auto_cancel,
 )
 from orders.notifier import notify_order_update
+from orders.kook_dispatch import enqueue_kook_dispatch
 from promotions.models import Promotion
 from site_messages.models import Message
 from site_messages.utils import create_message
@@ -871,6 +873,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             )
         else:
             _schedule_auto_cancel(order)
+            enqueue_kook_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
             _push_message_safe(
                 recipient_id=order.customer_id,
                 title='客服已为你下单',

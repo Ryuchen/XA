@@ -196,6 +196,43 @@ class Order(models.Model):
         return self.status in self.TERMINAL_STATUSES
 
 
+class KookDispatchRecord(models.Model):
+    """订单推送到 KOOK 派单频道的可审计发送记录。"""
+
+    class Trigger(models.TextChoices):
+        NEW_ORDER = 'NEW_ORDER', '新订单待派单'
+        PROVIDER_REJECTED = 'PROVIDER_REJECTED', '陪玩拒单后二次派单'
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', '待发送'
+        SENT = 'SENT', '已发送'
+        FAILED = 'FAILED', '发送失败'
+        SKIPPED = 'SKIPPED', '已跳过'
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='kook_dispatches')
+    # 0 表示首次待派单，后续使用订单 reject_count，保证同一次事件只创建一条记录。
+    sequence = models.PositiveIntegerField(default=0)
+    trigger = models.CharField(max_length=30, choices=Trigger.choices)
+    channel_id = models.CharField(max_length=64)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    message_id = models.CharField(max_length=100, blank=True, default='')
+    attempts = models.PositiveSmallIntegerField(default=0)
+    last_error = models.CharField(max_length=500, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['order', 'sequence'], name='uniq_kook_dispatch_order_sequence',
+            ),
+        ]
+
+    def __str__(self):
+        return f'KookDispatch<{self.order_id}:{self.sequence} {self.status}>'
+
+
 class OrderProvider(models.Model):
     """订单打手明细：一笔订单可关联一个（单陪）或两个（双陪）打手。
 

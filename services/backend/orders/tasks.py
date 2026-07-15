@@ -6,7 +6,7 @@
 from celery import shared_task
 from django.utils import timezone
 
-from .models import Order, OrderStatusLog
+from .models import KookDispatchRecord, Order, OrderStatusLog
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -72,3 +72,51 @@ def check_pending_timeouts() -> int:
     for order_id in expired_ids:
         auto_cancel_pending_order.delay(order_id)
     return len(expired_ids)
+
+
+@shared_task(bind=True, max_retries=3)
+def send_kook_dispatch(self, record_id: int) -> str:
+    """发送 KOOK 派单记录；网络/API 错误按 1/2/4 分钟退避重试。"""
+    from integrations.kook import KookClient, KookConfigurationError
+    from .kook_dispatch import build_order_card
+
+    try:
+        record = KookDispatchRecord.objects.select_related('order__service').get(id=record_id)
+    except KookDispatchRecord.DoesNotExist:
+        return 'record_not_found'
+    if record.status == KookDispatchRecord.Status.SENT:
+        return f'already_sent:{record.message_id}'
+    if record.order.status != Order.Status.PENDING:
+        record.status = KookDispatchRecord.Status.SKIPPED
+        record.last_error = f'订单状态已变更为 {record.order.status}'
+        record.save(update_fields=['status', 'last_error'])
+        return f'skip:status={record.order.status}'
+
+    record.attempts += 1
+    try:
+        result = KookClient().send_channel_message(
+            channel_id=record.channel_id,
+            content=build_order_card(record.order, record.trigger),
+            message_type=10,
+            nonce=f'xa-order-{record.order_id}-{record.sequence}',
+        )
+    except KookConfigurationError as exc:
+        record.status = KookDispatchRecord.Status.FAILED
+        record.last_error = str(exc)[:500]
+        record.save(update_fields=['status', 'attempts', 'last_error'])
+        return 'failed:configuration'
+    except Exception as exc:
+        record.last_error = str(exc)[:500]
+        if self.request.retries >= self.max_retries:
+            record.status = KookDispatchRecord.Status.FAILED
+            record.save(update_fields=['status', 'attempts', 'last_error'])
+            return 'failed:max_retries'
+        record.save(update_fields=['attempts', 'last_error'])
+        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+
+    record.status = KookDispatchRecord.Status.SENT
+    record.message_id = result.message_id
+    record.last_error = ''
+    record.sent_at = timezone.now()
+    record.save(update_fields=['status', 'message_id', 'attempts', 'last_error', 'sent_at'])
+    return f'sent:{result.message_id}'
