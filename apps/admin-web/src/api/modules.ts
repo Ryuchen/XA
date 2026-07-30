@@ -50,6 +50,7 @@ export const auditionSignupApi = createCrudApi('audition-signups')
 export const messageApi = createCrudApi('messages')
 export const roleApi = createCrudApi('roles')
 export const adminApi = createCrudApi('admins')
+export const auditApi = createCrudApi('audit-logs')
 
 export const dashboardApi = {
   stats: () => request({ url: '/dashboard/stats', method: 'get' }),
@@ -70,9 +71,9 @@ export const commissionApi = {
 }
 
 export const withdrawConfigApi = {
-  get: () => request<{ min_amount: number }>({ url: '/config/withdraw', method: 'get' }),
-  update: (min_amount: number) =>
-    request<{ min_amount: number }>({ url: '/config/withdraw', method: 'put', data: { min_amount } }),
+  get: () => request<{ min_amount: number; tax_rate: number }>({ url: '/config/withdraw', method: 'get' }),
+  update: (min_amount: number, tax_rate: number) =>
+    request<{ min_amount: number; tax_rate: number }>({ url: '/config/withdraw', method: 'put', data: { min_amount, tax_rate } }),
 }
 
 export const checkinConfigApi = {

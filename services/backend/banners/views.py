@@ -1,13 +1,13 @@
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from club_accounts.permissions import IsClubAccountAuthenticated
 from .models import Banner
 from .serializers import BannerSerializer
 
 
 class BannerListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         qs = Banner.objects.filter(is_active=True)

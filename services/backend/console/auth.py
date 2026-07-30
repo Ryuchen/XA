@@ -1,30 +1,31 @@
-from django.contrib.auth import authenticate, get_user_model
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from .permissions import get_user_permissions, is_console_user
+from club_accounts.models import ClubAccount
+from club_accounts.permissions import IsClubAccountAuthenticated
+from club_accounts.services import authenticate_account
+from club_accounts.tokens import issue_account_tokens, refresh_account_access_token
 
-User = get_user_model()
+from .permissions import get_account_permissions, is_console_account
 
 
-def _profile_payload(user):
-    membership = getattr(user, 'admin_membership', None)
-    role = membership.role if membership else None
+def _profile_payload(account):
+    membership = getattr(account, 'admin_membership', None)
+    roles = list(membership.roles.all()) if membership else []
+    role_list = [{'id': r.id, 'name': r.name, 'code': r.code} for r in roles]
+    is_super_admin = any(role['code'] == 'super_admin' for role in role_list)
     return {
-        'id': user.id,
-        'username': user.username,
-        'nickname': user.nickname or user.username,
-        'avatar': user.avatar_url or '',
-        'is_superuser': user.is_superuser,
-        'role': {
-            'id': role.id,
-            'name': role.name,
-            'code': role.code,
-        } if role else None,
-        'permissions': sorted(get_user_permissions(user)),
+        'id': account.id,
+        'username': account.username,
+        'nickname': account.nickname or account.username,
+        'avatar': account.avatar_url or '',
+        'is_superuser': is_super_admin,
+        'roles': role_list,
+        # 兼容旧前端：取首个角色
+        'role': role_list[0] if role_list else None,
+        'permissions': sorted(get_account_permissions(account)),
     }
 
 
@@ -37,21 +38,23 @@ class ConsoleLoginView(APIView):
         if not username or not password:
             return Response({'code': 400, 'msg': '请输入账号和密码'})
 
-        user = authenticate(request, username=username, password=password)
-        if user is None:
+        account = authenticate_account(
+            username,
+            password,
+            account_type=ClubAccount.AccountType.STAFF,
+        )
+        if account is None:
             return Response({'code': 400, 'msg': '账号或密码错误'})
-        if not user.is_active:
-            return Response({'code': 403, 'msg': '账号已被禁用'})
-        if not is_console_user(user):
+        if not is_console_account(account):
             return Response({'code': 403, 'msg': '该账号无后台访问权限'})
 
-        refresh = RefreshToken.for_user(user)
+        access_token, refresh_token = issue_account_tokens(account)
         return Response({
             'code': 0,
             'data': {
-                'token': str(refresh.access_token),
-                'refresh': str(refresh),
-                'profile': _profile_payload(user),
+                'token': access_token,
+                'refresh': refresh_token,
+                'profile': _profile_payload(account),
             },
         })
 
@@ -64,16 +67,16 @@ class ConsoleRefreshView(APIView):
         if not token:
             return Response({'code': 400, 'msg': '缺少 refresh token'})
         try:
-            refresh = RefreshToken(token)
+            access_token = refresh_account_access_token(token)
         except TokenError:
             return Response({'code': 401, 'msg': '登录已过期，请重新登录'})
-        return Response({'code': 0, 'data': {'token': str(refresh.access_token)}})
+        return Response({'code': 0, 'data': {'token': access_token}})
 
 
 class ConsoleProfileView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        if not is_console_user(request.user):
+        if not is_console_account(request.account):
             return Response({'code': 403, 'msg': '无后台访问权限'})
-        return Response({'code': 0, 'data': _profile_payload(request.user)})
+        return Response({'code': 0, 'data': _profile_payload(request.account)})

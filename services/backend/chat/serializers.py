@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from common.media import build_media_url
 from .models import ChatMessage, ChatSession
 
 
@@ -17,11 +18,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         ]
 
     def get_image_url(self, obj):
-        if not obj.image:
-            return ''
-        request = self.context.get('request')
-        url = obj.image.url
-        return request.build_absolute_uri(url) if request else url
+        return build_media_url(self.context.get('request'), obj.image)
 
 
 class ChatSessionSerializer(serializers.ModelSerializer):

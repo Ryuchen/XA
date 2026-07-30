@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Input } from '@tarojs/components';
+import { View, Text, ScrollView, Input, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { fetchMe, updateMe, MeProfile } from '@/services/user';
 import { fetchGameCategories, GameCategoryInfo } from '@/services/order';
 import { getStoredUser, setStoredUser } from '@/utils/auth';
 import Icon from '@/components/Icon';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const SettingsPage: React.FC = () => {
@@ -129,6 +130,9 @@ const SettingsPage: React.FC = () => {
                   className={`${styles.gameTab} ${selectedGameId === category.id ? styles.gameTabActive : ''}`}
                   onClick={() => setSelectedGameId(category.id)}
                 >
+                  {category.icon_url && (
+                    <Image className={styles.gameTabIcon} src={resolveImageUrl(category.icon_url)} mode="aspectFit" />
+                  )}
                   <Text>{category.name}</Text>
                 </View>
               ))}

@@ -22,6 +22,7 @@ from orders.models import (
 from promotions.models import Promotion
 from site_messages.models import Message
 from support.models import SupportContactCard
+from club_accounts.models import ClubAccount
 from users.models import (
     Achievement, BossType, CheckinGift, CheckinMonthProgress, CheckinRuleConfig,
     EscortLevel, EscortProfile,
@@ -35,21 +36,25 @@ from wallet.models import (
     WithdrawRequest,
     get_commission_rate,
 )
+from common.media import build_media_url
 
-from .models import AdminMembership, AdminRole
+from .models import AdminAuditLog, AdminMembership, AdminRole
 
 User = get_user_model()
 
 
 # ---------------- 用户 ----------------
 class AdminUserSerializer(serializers.ModelSerializer):
-    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    role = serializers.CharField(source='account_type', read_only=True)
+    role_display = serializers.CharField(source='get_account_type_display', read_only=True)
+    boss_no = serializers.CharField(source='account_no', required=False)
+    date_joined = serializers.DateTimeField(source='created_at', read_only=True)
     inviter_name = serializers.SerializerMethodField()
     boss_type_name = serializers.CharField(source='boss_type.name', read_only=True)
     wallet_balance = serializers.SerializerMethodField()
 
     class Meta:
-        model = User
+        model = ClubAccount
         fields = [
             'id', 'username', 'nickname', 'real_name', 'role', 'role_display',
             'phone', 'avatar_url', 'openid', 'is_phone_verified', 'is_openid_bound',
@@ -69,12 +74,36 @@ class AdminUserSerializer(serializers.ModelSerializer):
         wallet = getattr(obj, 'wallet', None)
         return wallet.balance if wallet else 0
 
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        mapping = getattr(instance, 'legacy_mapping', None)
+        if mapping is not None:
+            legacy_user = User.objects.filter(pk=mapping.legacy_user_id).first()
+            if legacy_user is not None:
+                legacy_user.inviter_commission_rate = instance.inviter_commission_rate
+                legacy_user.boss_type_id = instance.boss_type_id
+                legacy_user.boss_no = instance.account_no
+                legacy_user.can_login = instance.can_login
+                legacy_user.can_view = instance.can_view
+                if instance.inviter_id:
+                    inviter_mapping = getattr(instance.inviter, 'legacy_mapping', None)
+                    legacy_user.inviter_id = (
+                        inviter_mapping.legacy_user_id if inviter_mapping else None
+                    )
+                else:
+                    legacy_user.inviter_id = None
+                legacy_user.save(update_fields=[
+                    'inviter', 'inviter_commission_rate', 'boss_type',
+                    'boss_no', 'can_login', 'can_view',
+                ])
+        return instance
+
 
 # ---------------- 老板分级 ----------------
 class AdminBossTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = BossType
-        fields = ['id', 'name', 'discount_rate', 'remark', 'sort_order',
+        fields = ['id', 'name', 'discount_rate', 'color', 'remark', 'sort_order',
                   'is_active', 'created_at']
         read_only_fields = ['created_at']
 
@@ -90,8 +119,9 @@ class AdminEscortLevelSerializer(serializers.ModelSerializer):
 
 # ---------------- 陪玩 ----------------
 class AdminEscortSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    phone = serializers.CharField(source='user.phone', read_only=True)
+    user = serializers.PrimaryKeyRelatedField(source='account', read_only=True)
+    username = serializers.CharField(source='account.username', read_only=True)
+    phone = serializers.CharField(source='account.phone', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     gender_display = serializers.CharField(source='get_gender_display', read_only=True)
     level_name = serializers.CharField(source='level.name', read_only=True)
@@ -103,6 +133,8 @@ class AdminEscortSerializer(serializers.ModelSerializer):
     cheat_proof_url = serializers.SerializerMethodField()
     active_pass_tier = serializers.CharField(read_only=True)
     pass_tier_display = serializers.SerializerMethodField()
+    game_category_names = serializers.SerializerMethodField()
+    service_item_names = serializers.SerializerMethodField()
 
     class Meta:
         model = EscortProfile
@@ -114,6 +146,8 @@ class AdminEscortSerializer(serializers.ModelSerializer):
             'gender', 'gender_display',
             'city', 'service_area', 'price_per_hour', 'rank_tier', 'win_rate',
             'level', 'level_name',
+            'game_categories', 'game_category_names',
+            'service_items', 'service_item_names',
             'status', 'status_display', 'is_verified', 'escort_no',
             'deposit_required', 'deposit_paid', 'total_reward', 'total_penalty',
             'rating_avg', 'rating_count',
@@ -124,10 +158,13 @@ class AdminEscortSerializer(serializers.ModelSerializer):
                             'rating_avg', 'rating_count', 'completed_order_count', 'created_at']
 
     def _abs_url(self, field):
-        if not field:
-            return ''
-        request = self.context.get('request')
-        return request.build_absolute_uri(field.url) if request else field.url
+        return build_media_url(self.context.get('request'), field)
+
+    def get_game_category_names(self, obj):
+        return [c.name for c in obj.game_categories.all()]
+
+    def get_service_item_names(self, obj):
+        return [s.name for s in obj.service_items.all()]
 
     def get_avatar_url(self, obj):
         return self._abs_url(obj.avatar)
@@ -144,11 +181,13 @@ class AdminEscortSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         avatar = validated_data.get('avatar')
         instance = super().update(instance, validated_data)
-        # 头像同步回填到 CustomUser.avatar_url，供 C 端订单/评价展示
+        # 迁移期同步新旧账户头像，避免未切换的订单展示链路丢失头像。
         if avatar is not None and instance.avatar:
-            request = self.context.get('request')
-            url = request.build_absolute_uri(instance.avatar.url) if request else instance.avatar.url
-            instance.user.avatar_url = url
+            avatar_url = build_media_url(self.context.get('request'), instance.avatar)
+            if instance.account_id:
+                instance.account.avatar_url = avatar_url
+                instance.account.save(update_fields=['avatar_url'])
+            instance.user.avatar_url = avatar_url
             instance.user.save(update_fields=['avatar_url'])
         return instance
 
@@ -175,6 +214,12 @@ class AdminCreateEscortSerializer(serializers.Serializer):
     level = serializers.PrimaryKeyRelatedField(
         queryset=EscortLevel.objects.all(), required=False, allow_null=True,
     )
+    game_categories = serializers.PrimaryKeyRelatedField(
+        queryset=GameCategory.objects.all(), many=True, required=False,
+    )
+    service_items = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceItem.objects.all(), many=True, required=False,
+    )
     deposit_required = serializers.IntegerField(min_value=0, required=False, default=0)
     avatar = serializers.ImageField(required=False, allow_null=True)
     intro_video = serializers.FileField(required=False, allow_null=True)
@@ -184,13 +229,20 @@ class AdminCreateEscortSerializer(serializers.Serializer):
         value = value.strip()
         if not value:
             raise serializers.ValidationError('请输入登录账号')
-        if User.objects.filter(username=value).exists():
+        if (
+            ClubAccount.objects.filter(username=value).exists()
+            or User.objects.filter(username=value).exists()
+        ):
             raise serializers.ValidationError('登录账号已存在')
         return value
 
 
 # ---------------- 订单 ----------------
 class AdminOrderProviderSerializer(serializers.ModelSerializer):
+    provider = serializers.PrimaryKeyRelatedField(
+        source='provider_account',
+        read_only=True,
+    )
     provider_name = serializers.SerializerMethodField()
     commission_type_display = serializers.CharField(
         source='get_commission_type_display', read_only=True
@@ -206,19 +258,31 @@ class AdminOrderProviderSerializer(serializers.ModelSerializer):
         ]
 
     def get_provider_name(self, obj):
-        if obj.provider_id:
-            return obj.provider.nickname or obj.provider.username
+        if obj.provider_account_id:
+            return obj.provider_account.nickname or obj.provider_account.username
         return obj.provider_name_snapshot or ''
 
 
 class AdminOrderSerializer(serializers.ModelSerializer):
+    customer = serializers.PrimaryKeyRelatedField(
+        source='customer_account',
+        read_only=True,
+    )
+    provider = serializers.PrimaryKeyRelatedField(
+        source='provider_account',
+        read_only=True,
+    )
+    inviter = serializers.PrimaryKeyRelatedField(
+        source='inviter_account',
+        read_only=True,
+    )
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     payment_status_display = serializers.CharField(source='get_payment_status_display', read_only=True)
     escort_mode_display = serializers.CharField(source='get_escort_mode_display', read_only=True)
     customer_name = serializers.SerializerMethodField()
-    customer_username = serializers.CharField(source='customer.username', read_only=True)
-    customer_nickname = serializers.CharField(source='customer.nickname', read_only=True)
-    customer_phone = serializers.CharField(source='customer.phone', read_only=True)
+    customer_username = serializers.CharField(source='customer_account.username', read_only=True)
+    customer_nickname = serializers.CharField(source='customer_account.nickname', read_only=True)
+    customer_phone = serializers.CharField(source='customer_account.phone', read_only=True)
     provider_name = serializers.SerializerMethodField()
     inviter_name = serializers.SerializerMethodField()
     promotion_title = serializers.CharField(source='promotion.title', read_only=True)
@@ -244,20 +308,26 @@ class AdminOrderSerializer(serializers.ModelSerializer):
         ]
 
     def get_customer_name(self, obj):
-        return obj.customer.nickname or obj.customer.username if obj.customer_id else ''
+        if not obj.customer_account_id:
+            return ''
+        return obj.customer_account.nickname or obj.customer_account.username
 
     def get_provider_name(self, obj):
-        if not obj.provider_id:
+        if not obj.provider_account_id:
             return obj.provider_name_snapshot or ''
-        return obj.provider.nickname or obj.provider.username
+        return obj.provider_account.nickname or obj.provider_account.username
 
     def get_inviter_name(self, obj):
-        if not obj.inviter_id:
+        if not obj.inviter_account_id:
             return ''
-        return obj.inviter.nickname or obj.inviter.username
+        return obj.inviter_account.nickname or obj.inviter_account.username
 
 
 class AdminOrderLogSerializer(serializers.ModelSerializer):
+    operator = serializers.PrimaryKeyRelatedField(
+        source='operator_account',
+        read_only=True,
+    )
     action_display = serializers.CharField(source='get_action_display', read_only=True)
     operator_name = serializers.SerializerMethodField()
 
@@ -269,9 +339,9 @@ class AdminOrderLogSerializer(serializers.ModelSerializer):
         ]
 
     def get_operator_name(self, obj):
-        if not obj.operator_id:
+        if not obj.operator_account_id:
             return '系统'
-        return obj.operator.nickname or obj.operator.username
+        return obj.operator_account.nickname or obj.operator_account.username
 
 
 class AdminEvaluationSerializer(serializers.ModelSerializer):
@@ -369,11 +439,7 @@ class AdminRechargeRecordSerializer(serializers.ModelSerializer):
         return obj.operator.nickname or obj.operator.username
 
     def get_proof_image_url(self, obj):
-        if not obj.proof_image:
-            return ''
-        request = self.context.get('request')
-        url = obj.proof_image.url
-        return request.build_absolute_uri(url) if request else url
+        return build_media_url(self.context.get('request'), obj.proof_image)
 
 
 class AdminDisposeRecordSerializer(serializers.ModelSerializer):
@@ -431,17 +497,10 @@ class AdminProviderReportSerializer(serializers.ModelSerializer):
         return obj.auditor.nickname or obj.auditor.username
 
     def get_proof_image_url(self, obj):
-        if not obj.proof_image:
-            return ''
-        request = self.context.get('request')
-        url = obj.proof_image.url
-        return request.build_absolute_uri(url) if request else url
+        return build_media_url(self.context.get('request'), obj.proof_image)
 
     def _file_url(self, field):
-        if not field:
-            return ''
-        request = self.context.get('request')
-        return request.build_absolute_uri(field.url) if request else field.url
+        return build_media_url(self.context.get('request'), field)
 
     def get_entry_image_url(self, obj):
         return self._file_url(obj.entry_image)
@@ -489,7 +548,8 @@ class AdminWithdrawSerializer(serializers.ModelSerializer):
         model = WithdrawRequest
         fields = [
             'id', 'user', 'user_name', 'provider_username', 'provider_nickname',
-            'amount', 'payee_method', 'payee_method_display',
+            'amount', 'tax_rate', 'tax_amount', 'actual_amount',
+            'payee_method', 'payee_method_display',
             'payee_account', 'payee_name', 'status', 'status_display', 'remark',
             'audit_remark', 'payout_reference', 'paid_at',
             'auditor', 'auditor_name', 'transaction', 'created_at', 'audited_at',
@@ -519,11 +579,7 @@ class AdminChatMessageSerializer(serializers.ModelSerializer):
         ]
 
     def get_image_url(self, obj):
-        if not obj.image:
-            return ''
-        request = self.context.get('request')
-        url = obj.image.url
-        return request.build_absolute_uri(url) if request else url
+        return build_media_url(self.context.get('request'), obj.image)
 
 
 class AdminChatSessionSerializer(serializers.ModelSerializer):
@@ -588,11 +644,7 @@ class AdminBannerSerializer(serializers.ModelSerializer):
         extra_kwargs = {'image': {'write_only': True, 'required': False}}
 
     def get_image_url(self, obj):
-        if not obj.image:
-            return ''
-        request = self.context.get('request')
-        url = obj.image.url
-        return request.build_absolute_uri(url) if request else url
+        return build_media_url(self.context.get('request'), obj.image)
 
     def validate_image(self, image):
         # DRF ImageField 已用 Pillow 解析，校验过的文件带 .image(PIL) 属性
@@ -675,10 +727,16 @@ class AdminCheckinProgressSerializer(serializers.ModelSerializer):
 
 # ---------------- 服务项/礼物单 ----------------
 class AdminGameCategorySerializer(serializers.ModelSerializer):
+    icon = serializers.ImageField(write_only=True, required=False, allow_null=True)
+    icon_url = serializers.SerializerMethodField()
+
     class Meta:
         model = GameCategory
-        fields = ['id', 'name', 'remark', 'sort_order', 'is_active', 'created_at']
+        fields = ['id', 'name', 'icon', 'icon_url', 'remark', 'sort_order', 'is_active', 'created_at']
         read_only_fields = ['created_at']
+
+    def get_icon_url(self, obj):
+        return build_media_url(self.context.get('request'), obj.icon)
 
 
 class AdminServiceCategorySerializer(serializers.ModelSerializer):
@@ -691,12 +749,14 @@ class AdminServiceCategorySerializer(serializers.ModelSerializer):
 class AdminServiceItemSerializer(serializers.ModelSerializer):
     game_category_name = serializers.CharField(source='game_category.name', read_only=True, default='')
     service_category_name = serializers.CharField(source='service_category.name', read_only=True, default='')
+    required_level_name = serializers.CharField(source='required_level.name', read_only=True, default='')
 
     class Meta:
         model = ServiceItem
         fields = ['id', 'name', 'description', 'price',
                   'game_category', 'game_category_name',
                   'service_category', 'service_category_name',
+                  'required_level', 'required_level_name',
                   'commission_rate', 'cover_url', 'images', 'highlights', 'sort_order',
                   'is_active', 'created_at']
 
@@ -850,18 +910,29 @@ class AdminRoleSerializer(serializers.ModelSerializer):
 
 # ---------------- 管理员 / 客服 ----------------
 class AdminMembershipSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    nickname = serializers.CharField(source='user.nickname', read_only=True)
-    phone = serializers.CharField(source='user.phone', read_only=True)
-    role_name = serializers.CharField(source='role.name', read_only=True)
-    is_superuser = serializers.BooleanField(source='user.is_superuser', read_only=True)
+    user = serializers.PrimaryKeyRelatedField(source='account', read_only=True)
+    username = serializers.CharField(source='account.username', read_only=True)
+    nickname = serializers.CharField(source='account.nickname', read_only=True)
+    phone = serializers.CharField(source='account.phone', read_only=True)
+    role_ids = serializers.SerializerMethodField()
+    role_names = serializers.SerializerMethodField()
+    is_superuser = serializers.SerializerMethodField()
     today_dispatch_amount = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = AdminMembership
-        fields = ['id', 'user', 'username', 'nickname', 'phone', 'role', 'role_name',
+        fields = ['id', 'user', 'username', 'nickname', 'phone', 'role_ids', 'role_names',
                   'is_superuser', 'remark', 'today_dispatch_amount',
                   'is_active', 'created_at']
+
+    def get_role_ids(self, obj):
+        return [r.id for r in obj.roles.all()]
+
+    def get_role_names(self, obj):
+        return [r.name for r in obj.roles.all()]
+
+    def get_is_superuser(self, obj):
+        return any(role.code == 'super_admin' for role in obj.roles.all())
 
 
 class AdminCreateMembershipSerializer(serializers.Serializer):
@@ -870,9 +941,20 @@ class AdminCreateMembershipSerializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, default='')
     remark = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
-    role = serializers.PrimaryKeyRelatedField(queryset=AdminRole.objects.all())
+    roles = serializers.PrimaryKeyRelatedField(queryset=AdminRole.objects.all(), many=True)
 
     def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
+        value = value.strip()
+        if (
+            ClubAccount.objects.filter(username=value).exists()
+            or User.objects.filter(username=value).exists()
+        ):
             raise serializers.ValidationError('用户名已存在')
         return value
+
+
+class AdminAuditLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminAuditLog
+        fields = ['id', 'operator', 'operator_name', 'method', 'path', 'resource',
+                  'object_id', 'request_body', 'status_code', 'ip', 'created_at']

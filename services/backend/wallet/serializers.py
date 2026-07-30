@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from common.media import build_media_url
 from .models import ProviderReport, WithdrawRequest
 
 
@@ -30,17 +31,10 @@ class ReportSerializer(serializers.ModelSerializer):
         extra_kwargs = {'proof_image': {'write_only': True, 'required': False}}
 
     def get_proof_image_url(self, obj):
-        if not obj.proof_image:
-            return ''
-        request = self.context.get('request')
-        url = obj.proof_image.url
-        return request.build_absolute_uri(url) if request else url
+        return build_media_url(self.context.get('request'), obj.proof_image)
 
     def _file_url(self, field):
-        if not field:
-            return ''
-        request = self.context.get('request')
-        return request.build_absolute_uri(field.url) if request else field.url
+        return build_media_url(self.context.get('request'), field)
 
     def get_entry_image_url(self, obj):
         return self._file_url(obj.entry_image)
@@ -66,11 +60,13 @@ class WithdrawRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = WithdrawRequest
         fields = [
-            'id', 'amount', 'payee_method', 'payee_method_display', 'payee_account',
+            'id', 'amount', 'tax_rate', 'tax_amount', 'actual_amount',
+            'payee_method', 'payee_method_display', 'payee_account',
             'payee_name', 'status', 'status_display', 'remark', 'audit_remark',
             'payout_reference', 'paid_at', 'created_at', 'audited_at',
         ]
         read_only_fields = [
+            'tax_rate', 'tax_amount', 'actual_amount',
             'status', 'audit_remark', 'payout_reference', 'paid_at', 'audited_at',
         ]
 

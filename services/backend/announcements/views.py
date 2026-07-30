@@ -1,7 +1,7 @@
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from club_accounts.permissions import IsClubAccountAuthenticated
 from .models import Announcement
 from .serializers import AnnouncementDetailSerializer, AnnouncementSerializer
 
@@ -10,7 +10,7 @@ MAX_LIMIT = 20
 
 
 class AnnouncementListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         try:
@@ -25,7 +25,7 @@ class AnnouncementListView(APIView):
 
 
 class AnnouncementDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request, pk):
         try:

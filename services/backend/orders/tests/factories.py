@@ -57,7 +57,8 @@ def make_console_user(perms=None, password='pass1234'):
         name=f'角色{n}', code=f'role{n}', permissions=list(perms or [])
     )
     user = make_user(role=User.Role.OPERATOR, password=password)
-    AdminMembership.objects.create(user=user, role=role)
+    membership = AdminMembership.objects.create(user=user)
+    membership.roles.set([role])
     return user
 
 

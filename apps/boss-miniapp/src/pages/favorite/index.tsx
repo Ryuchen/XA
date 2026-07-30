@@ -6,6 +6,7 @@ import { ServiceInfo } from '@/types/order';
 import { formatXaCoin } from '@/utils/format';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const PLACEHOLDER_IMAGE = 'https://picsum.photos/id/1/400/400';
@@ -108,7 +109,7 @@ const FavoritePage: React.FC = () => {
               <View className={styles.imageWrap}>
                 <Image
                   className={styles.image}
-                  src={service.cover_url || PLACEHOLDER_IMAGE}
+                  src={resolveImageUrl(service.cover_url, PLACEHOLDER_IMAGE)}
                   mode="aspectFill"
                 />
               </View>

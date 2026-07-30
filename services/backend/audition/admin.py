@@ -1,10 +1,11 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from .models import AuditionLink
 
 
 @admin.register(AuditionLink)
-class AuditionLinkAdmin(admin.ModelAdmin):
+class AuditionLinkAdmin(ModelAdmin):
     list_display = ('id', 'title', 'operator', 'is_active', 'expire_at', 'created_at')
     list_filter = ('is_active',)
     search_fields = ('title', 'remark')

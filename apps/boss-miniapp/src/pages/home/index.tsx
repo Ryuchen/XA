@@ -7,6 +7,7 @@ import { fetchRankings, RankingData, RankingPeriod } from '@/services/ranking';
 import { fetchBanners, Banner } from '@/services/banner';
 import { fetchCoupons, claimCoupon, Coupon } from '@/services/coupon';
 import { formatXaCoin } from '@/utils/format';
+import { resolveImageUrl } from '@/utils/media';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { Skeleton, Icon, XaLogo } from '@/components';
 import styles from './index.module.scss';
@@ -196,7 +197,7 @@ const HomePage: React.FC = () => {
           >
             {banners.map(banner => (
               <SwiperItem key={banner.id} onClick={() => handleBannerTap(banner)}>
-                <Image className={styles.bannerImage} src={banner.image_url} mode="aspectFill" />
+                <Image className={styles.bannerImage} src={resolveImageUrl(banner.image_url)} mode="aspectFill" />
               </SwiperItem>
             ))}
           </Swiper>
@@ -265,7 +266,7 @@ const HomePage: React.FC = () => {
                     <View key={item.user_id} className={`${styles.bossPodiumItem} ${placeClass}`}>
                       <View className={styles.bossAvatarWrap}>
                         {place === 1 && <Icon name="crown" size={36} color="#F5C761" fill="#F5C761" className={styles.bossPodiumCrown} />}
-                        <Image className={styles.bossAvatar} src={item.avatar || DEFAULT_AVATAR} mode="aspectFill" />
+                        <Image className={styles.bossAvatar} src={resolveImageUrl(item.avatar, DEFAULT_AVATAR)} mode="aspectFill" />
                         <Text className={styles.bossRankNo}>{place}</Text>
                       </View>
                       <Text className={styles.bossName}>{item.nickname}</Text>
@@ -280,7 +281,7 @@ const HomePage: React.FC = () => {
                   {bossRest.map(item => (
                     <View key={item.user_id} className={styles.bossListItem}>
                       <Text className={styles.bossListNo}>{item.rank}</Text>
-                      <Image className={styles.bossListAvatar} src={item.avatar || DEFAULT_AVATAR} mode="aspectFill" />
+                      <Image className={styles.bossListAvatar} src={resolveImageUrl(item.avatar, DEFAULT_AVATAR)} mode="aspectFill" />
                       <Text className={styles.bossListName}>{item.nickname}</Text>
                       <Text className={styles.bossListAmount}>{formatXaCoin(item.total_amount)}币</Text>
                     </View>

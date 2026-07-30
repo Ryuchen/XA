@@ -22,7 +22,14 @@
 
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="nickname" label="昵称" min-width="110" />
-      <el-table-column prop="role_name" label="职位" min-width="110" />
+      <el-table-column label="职位" min-width="140">
+        <template #default="{ row }">
+          <template v-if="row.role_names && row.role_names.length">
+            <el-tag v-for="name in row.role_names" :key="name" size="small" effect="light" style="margin: 2px">{{ name }}</el-tag>
+          </template>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="username" label="账号" min-width="120" />
       <el-table-column prop="phone" label="手机号" width="130" />
       <el-table-column label="今日派单额" width="120">
@@ -66,7 +73,7 @@
       <el-form-item label="昵称"><el-input v-model="form.nickname" /></el-form-item>
       <el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item>
       <el-form-item label="职位">
-        <el-select v-model="form.role" style="width: 100%" :disabled="form.is_superuser">
+        <el-select v-model="form.roles" multiple style="width: 100%" :disabled="form.is_superuser">
           <el-option v-for="r in roles" :key="r.id" :label="r.name" :value="r.id" />
         </el-select>
       </el-form-item>
@@ -109,7 +116,7 @@ onMounted(async () => {
 function blank() {
   return {
     id: 0, username: '', password: '', nickname: '', phone: '',
-    remark: '', role: undefined, is_active: true, is_superuser: false,
+    remark: '', roles: [] as number[], is_active: true, is_superuser: false,
   }
 }
 
@@ -119,12 +126,12 @@ function onCreate() {
 }
 
 function onEdit(row: any) {
-  Object.assign(form, { ...blank(), ...row })
+  Object.assign(form, { ...blank(), ...row, roles: [...(row.role_ids || [])] })
   dialogVisible.value = true
 }
 
 async function onSave() {
-  if (!form.role) { ElMessage.warning('请选择职位'); return }
+  if (!form.roles || form.roles.length === 0) { ElMessage.warning('请选择职位'); return }
   saving.value = true
   try {
     if (form.id) {
@@ -132,7 +139,7 @@ async function onSave() {
         nickname: form.nickname,
         phone: form.phone,
         remark: form.remark,
-        role: form.role,
+        roles: form.roles,
         is_active: form.is_active,
       })
     } else {
@@ -144,7 +151,7 @@ async function onSave() {
         nickname: form.nickname,
         phone: form.phone,
         remark: form.remark,
-        role: form.role,
+        roles: form.roles,
       })
     }
     ElMessage.success('保存成功')

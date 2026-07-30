@@ -1,4 +1,4 @@
-import axios, { type AxiosRequestConfig } from 'axios'
+import axios, { type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
@@ -7,6 +7,8 @@ const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api/admin',
   timeout: 15000,
 })
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+let refreshPromise: Promise<string> | null = null
 
 service.interceptors.request.use((config) => {
   const auth = useAuthStore()
@@ -31,11 +33,29 @@ service.interceptors.response.use(
     ElMessage.error(body.msg || '请求失败')
     return Promise.reject(body)
   },
-  (error) => {
+  async (error) => {
     const status = error?.response?.status
     const data = error?.response?.data
     if (status === 401) {
       const auth = useAuthStore()
+      const config = error.config as RetryableConfig
+      const isRefreshRequest = config?.url?.includes('/auth/refresh')
+      if (auth.refresh && config && !config._retry && !isRefreshRequest) {
+        config._retry = true
+        try {
+          if (!refreshPromise) {
+            refreshPromise = auth.refreshAccessToken().finally(() => {
+              refreshPromise = null
+            })
+          }
+          const token = await refreshPromise
+          config.headers = config.headers || {}
+          config.headers.Authorization = `Bearer ${token}`
+          return service(config)
+        } catch {
+          // Fall through to the shared logout path.
+        }
+      }
       auth.clear()
       ElMessage.error('登录已过期，请重新登录')
       router.replace('/login')

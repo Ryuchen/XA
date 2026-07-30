@@ -8,11 +8,11 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django_asgi_app = get_asgi_application()
 
 from orders.routing import websocket_urlpatterns
-from users.auth_middleware import TokenAuthMiddleware
+from club_accounts.channels_middleware import ClubAccountTokenAuthMiddleware
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
-    'websocket': TokenAuthMiddleware(
+    'websocket': ClubAccountTokenAuthMiddleware(
         URLRouter(websocket_urlpatterns)
     ),
 })

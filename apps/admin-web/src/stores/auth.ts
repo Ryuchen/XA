@@ -21,6 +21,10 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem(TOKEN_KEY, token)
       localStorage.setItem(REFRESH_KEY, refresh)
     },
+    setAccessToken(token: string) {
+      this.token = token
+      localStorage.setItem(TOKEN_KEY, token)
+    },
     async login(username: string, password: string) {
       const res = await authApi.login({ username, password })
       this.setToken(res.data.token, res.data.refresh)
@@ -31,6 +35,14 @@ export const useAuthStore = defineStore('auth', {
       const res = await authApi.profile()
       this.profile = res.data
       return res.data
+    },
+    async refreshAccessToken() {
+      if (!this.refresh) {
+        throw new Error('Missing refresh token')
+      }
+      const res = await authApi.refresh(this.refresh)
+      this.setAccessToken(res.data.token)
+      return res.data.token
     },
     hasPerm(code?: string | string[]): boolean {
       if (!code) return true

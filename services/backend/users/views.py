@@ -13,14 +13,22 @@ from django.db.models import Case, Count, ExpressionWrapper, F, FloatField, Inte
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
-from orders.models import GameCategory, Order
+from club_accounts.models import ClubAccount, LegacyAccountMap
+from club_accounts.permissions import IsClubAccountAuthenticated
+from club_accounts.services import (
+    authenticate_account,
+    get_or_create_account_for_legacy_user,
+)
+from club_accounts.tokens import issue_account_tokens, refresh_account_access_token
+from orders.models import GameCategory, Order, ServiceItem
 from site_messages.utils import create_message
 from wallet.models import Transaction, Wallet
+from common.media import build_media_url
 
 from .models import (
     Achievement, CheckinGift, CheckinMonthProgress, CheckinRecord, CheckinRuleConfig,
@@ -30,10 +38,9 @@ from .models import (
 User = get_user_model()
 
 ROLE_REVERSE_MAP = {
-    'CUSTOMER': 'customer',
-    'PROVIDER': 'provider',
-    'OPERATOR': 'support',
-    'ADMIN': 'support',
+    ClubAccount.AccountType.BOSS: 'customer',
+    ClubAccount.AccountType.PROVIDER: 'provider',
+    ClubAccount.AccountType.STAFF: 'support',
 }
 
 WECHAT_API_TIMEOUT = 5
@@ -110,35 +117,94 @@ class WechatLoginView(APIView):
         猜测归属，交由后台人工整理，避免把两个历史老板错误合并。
         """
         with transaction.atomic():
-            user = User.objects.select_for_update().filter(openid=openid).first()
-            if user is not None:
-                return user, False, 'openid'
+            account = ClubAccount.objects.select_for_update().filter(openid=openid).first()
+            if account is not None:
+                return account, False, 'openid'
+
+            legacy_openid_user = (
+                User.objects.select_for_update()
+                .filter(openid=openid)
+                .first()
+            )
+            if legacy_openid_user is not None:
+                account = get_or_create_account_for_legacy_user(legacy_openid_user)
+                return account, False, 'openid'
 
             if allow_phone_binding and phone:
-                candidates = list(
-                    User.objects.select_for_update()
-                    .filter(role=User.Role.CUSTOMER, phone=phone)
+                account_candidates = list(
+                    ClubAccount.objects.select_for_update()
+                    .filter(account_type=ClubAccount.AccountType.BOSS, phone=phone)
                     .order_by('id')[:2]
                 )
-                if len(candidates) > 1:
+                mapped_legacy_ids = set(
+                    LegacyAccountMap.objects.filter(
+                        account_id__in=[item.id for item in account_candidates],
+                    ).values_list('legacy_user_id', flat=True)
+                )
+                legacy_candidates = list(
+                    User.objects.select_for_update()
+                    .filter(role=User.Role.CUSTOMER, phone=phone)
+                    .exclude(id__in=mapped_legacy_ids)
+                    .order_by('id')[:2]
+                )
+                if len(account_candidates) + len(legacy_candidates) > 1:
                     raise ValueError('该手机号关联了多个老板账号，请联系客服处理')
-                if candidates:
-                    user = candidates[0]
-                    user.openid = openid
-                    user.is_openid_bound = True
-                    user.is_phone_verified = True
-                    user.save(update_fields=[
+                if account_candidates or legacy_candidates:
+                    legacy_user = legacy_candidates[0] if legacy_candidates else None
+                    account = (
+                        account_candidates[0]
+                        if account_candidates
+                        else get_or_create_account_for_legacy_user(legacy_user)
+                    )
+                    account.openid = openid
+                    account.is_openid_bound = True
+                    account.is_phone_verified = True
+                    account.save(update_fields=[
                         'openid', 'is_openid_bound', 'is_phone_verified', 'updated_at',
                     ])
-                    return user, False, 'phone'
+                    if legacy_user is None:
+                        legacy_user = User.objects.filter(
+                            pk=account.legacy_mapping.legacy_user_id,
+                        ).first()
+                    if legacy_user:
+                        legacy_user.openid = openid
+                        legacy_user.is_openid_bound = True
+                        legacy_user.is_phone_verified = True
+                        legacy_user.save(update_fields=[
+                            'openid', 'is_openid_bound', 'is_phone_verified',
+                        ])
+                    return account, False, 'phone'
 
             try:
-                user = User.objects.create(openid=openid, **defaults)
-                return user, True, 'created'
+                # The nested savepoint keeps a uniqueness race from breaking
+                # the surrounding select-for-update transaction.
+                with transaction.atomic():
+                    account = ClubAccount.objects.create_account(
+                        password=None,
+                        openid=openid,
+                        **defaults,
+                    )
+                    legacy_user = User.objects.create_user(
+                        username=account.username,
+                        password=None,
+                        openid=openid,
+                        role=User.Role.CUSTOMER,
+                        phone=account.phone,
+                        nickname=account.nickname,
+                        is_phone_verified=account.is_phone_verified,
+                        is_openid_bound=True,
+                    )
+                    LegacyAccountMap.objects.create(
+                        legacy_user_id=legacy_user.id,
+                        account=account,
+                        legacy_role=User.Role.CUSTOMER,
+                    )
+                    Wallet.objects.filter(user=legacy_user).update(account=account)
+                return account, True, 'created'
             except IntegrityError:
                 # 唯一约束处理两个并发 code2session 请求的竞态。
-                user = User.objects.select_for_update().get(openid=openid)
-                return user, False, 'openid'
+                account = ClubAccount.objects.select_for_update().get(openid=openid)
+                return account, False, 'openid'
 
     def post(self, request):
         code = request.data.get('code')
@@ -162,69 +228,93 @@ class WechatLoginView(APIView):
                 return Response({'code': 400, 'msg': f'微信登录失败：{exc}'})
 
         try:
-            user, created, bind_status = self._resolve_customer(
+            account, created, bind_status = self._resolve_customer(
                 openid=openid,
                 phone=phone,
                 allow_phone_binding=not settings.WECHAT_MOCK_LOGIN,
                 defaults={
-                'username': f"xa_{uuid.uuid4().hex[:8]}",
-                'role': User.Role.CUSTOMER,
-                'phone': phone,
-                'nickname': nickname,
-                'is_phone_verified': bool(phone),
-                'is_openid_bound': True,
+                    'username': f"xa_{uuid.uuid4().hex[:8]}",
+                    'account_type': ClubAccount.AccountType.BOSS,
+                    'phone': phone,
+                    'nickname': nickname,
+                    'is_phone_verified': bool(phone),
+                    'is_openid_bound': True,
                 },
             )
         except ValueError as exc:
             return Response({'code': 409, 'msg': str(exc)})
 
         # 老板端仅允许老板登录：已存在的非老板账号（陪玩/客服/管理员）拒绝从此入口进入。
-        if not created and user.role != User.Role.CUSTOMER:
+        if not created and account.account_type != ClubAccount.AccountType.BOSS:
             return Response({'code': 403, 'msg': '该微信号非老板账号，请使用对应端登录'})
 
-        if not user.is_active or not user.can_login:
+        if not account.is_active or not account.can_login:
             return Response({'code': 403, 'msg': '该老板账号已被禁用，请联系客服'})
 
         updated_fields = []
-        if phone and user.phone != phone:
-            user.phone = phone
-            user.is_phone_verified = True
+        if phone and account.phone != phone:
+            account.phone = phone
+            account.is_phone_verified = True
             updated_fields.extend(['phone', 'is_phone_verified'])
 
         # 微信昵称：填写能力返回真实昵称时同步落库
-        if nickname and user.nickname != nickname:
-            user.nickname = nickname
+        if nickname and account.nickname != nickname:
+            account.nickname = nickname
             updated_fields.append('nickname')
 
         # 微信头像：chooseAvatar 上传的头像文件，落库并回填绝对 URL 供 C 端/后台展示
         if avatar_file:
-            user.avatar = avatar_file
-            user.save(update_fields=['avatar'] if not created else None)
-            user.avatar_url = request.build_absolute_uri(user.avatar.url)
+            account.avatar = avatar_file
+            account.save(update_fields=['avatar'] if not created else None)
+            account.avatar_url = build_media_url(request, account.avatar)
             updated_fields.append('avatar_url')
 
         if created:
-            updated_fields.extend(['role', 'phone', 'nickname', 'is_phone_verified', 'is_openid_bound'])
+            updated_fields.extend([
+                'account_type', 'phone', 'nickname',
+                'is_phone_verified', 'is_openid_bound',
+            ])
 
         if updated_fields:
-            user.save(update_fields=list(dict.fromkeys(updated_fields)))
+            account.save(update_fields=list(dict.fromkeys(updated_fields)))
 
-        refresh = RefreshToken.for_user(user)
+        legacy_user = User.objects.filter(
+            pk=account.legacy_mapping.legacy_user_id,
+        ).first()
+        if legacy_user:
+            legacy_fields = []
+            for field in ('phone', 'nickname', 'avatar_url'):
+                value = getattr(account, field)
+                if getattr(legacy_user, field) != value:
+                    setattr(legacy_user, field, value)
+                    legacy_fields.append(field)
+            if account.is_phone_verified != legacy_user.is_phone_verified:
+                legacy_user.is_phone_verified = account.is_phone_verified
+                legacy_fields.append('is_phone_verified')
+            if legacy_fields:
+                legacy_user.save(update_fields=legacy_fields)
 
+        access_token, refresh_token = issue_account_tokens(account)
+        response_id = (
+            legacy_user.id
+            if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False) and legacy_user
+            else account.id
+        )
         return Response({
             'code': 0,
             'msg': 'success',
             'data': {
-                'token': str(refresh.access_token),
+                'token': access_token,
+                'refreshToken': refresh_token,
                 'userInfo': {
-                    'id': str(user.id),
-                    'username': user.username,
-                    'nickname': user.nickname or user.username,
-                    'avatar': user.avatar_url or '',
+                    'id': str(response_id),
+                    'username': account.username,
+                    'nickname': account.nickname or account.username,
+                    'avatar': account.avatar_url or '',
                     'role': 'customer',
-                    'backendRole': user.role,
-                    'openid': user.openid,
-                    'phone': user.phone,
+                    'backendRole': account.account_type,
+                    'openid': account.openid,
+                    'phone': account.phone,
                     'bindCode': None,
                     'bindStatus': bind_status,
                 }
@@ -238,7 +328,7 @@ class AccountLoginView(APIView):
     陪玩账号由客服在后台开户（见 console 的创建陪玩账号接口），此端点只负责校验登录，
     不再接收 role / bindCode，也不会改写既有账号角色。
     开发期 WECHAT_MOCK_LOGIN=True 时按用户名自动创建陪玩账号、不强校验密码；
-    生产环境用 Django authenticate 校验真实密码。
+    生产环境用 ClubAccount 密码哈希校验真实密码。
     """
     permission_classes = [AllowAny]
 
@@ -250,55 +340,84 @@ class AccountLoginView(APIView):
             return Response({'code': 400, 'msg': '请输入账号'})
 
         if settings.WECHAT_MOCK_LOGIN:
-            user, created = User.objects.get_or_create(
-                username=username,
-                defaults={
-                    'openid': f"acct_{username}",
-                    'role': User.Role.PROVIDER,
-                    'is_openid_bound': True,
-                },
-            )
-            if created and password:
-                user.set_password(password)
-                user.save(update_fields=['password'])
-            # 开发期自动建号也必须具备完整的陪玩主体；否则虽然登录成功，
-            # 资料、档期、押金和工作台接口都会因不存在 EscortProfile 而不可用。
+            account = ClubAccount.objects.filter(username=username).first()
+            if account is None:
+                legacy_user = User.objects.filter(username=username).first()
+                if legacy_user is not None:
+                    account = get_or_create_account_for_legacy_user(legacy_user)
+            created = account is None
             if created:
+                account = ClubAccount.objects.create_account(
+                    username=username,
+                    password=password or None,
+                    account_type=ClubAccount.AccountType.PROVIDER,
+                    openid=f"acct_{username}",
+                    is_openid_bound=True,
+                )
+                user = User.objects.create_user(
+                    username=username,
+                    password=None,
+                    openid=account.openid,
+                    role=User.Role.PROVIDER,
+                    is_openid_bound=True,
+                )
+                LegacyAccountMap.objects.create(
+                    legacy_user_id=user.id,
+                    account=account,
+                    legacy_role=User.Role.PROVIDER,
+                )
                 EscortProfile.objects.create(
                     user=user,
-                    display_name=user.username,
+                    account=account,
+                    display_name=account.username,
                     status=EscortProfile.Status.OFFLINE,
                     is_verified=False,
                 )
+                Wallet.objects.filter(user=user).update(account=account)
         else:
             if not password:
                 return Response({'code': 400, 'msg': '请输入密码'})
-            user = authenticate(username=username, password=password)
-            if user is None:
+            account = authenticate_account(
+                username,
+                password,
+                account_type=ClubAccount.AccountType.PROVIDER,
+            )
+            if account is None:
+                # Allow a staged deployment to migrate a valid historical
+                # provider lazily when it first logs in.
+                legacy_user = authenticate(
+                    request=request,
+                    username=username,
+                    password=password,
+                )
+                if legacy_user is not None:
+                    account = get_or_create_account_for_legacy_user(legacy_user)
+            if account is None:
                 return Response({'code': 400, 'msg': '账号或密码错误'})
 
         # 陪玩端仅允许陪玩登录：老板/客服/管理员账号一律拒绝，且不改写其角色。
-        if user.role != User.Role.PROVIDER:
+        if account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '该账号非陪玩账号，请使用对应端登录'})
 
-        if not user.is_active:
+        if not account.is_active or not account.can_login:
             return Response({'code': 403, 'msg': '账号已被禁用'})
 
-        refresh = RefreshToken.for_user(user)
+        access_token, refresh_token = issue_account_tokens(account)
 
         return Response({
             'code': 0,
             'msg': 'success',
             'data': {
-                'token': str(refresh.access_token),
+                'token': access_token,
+                'refreshToken': refresh_token,
                 'userInfo': {
-                    'id': str(user.id),
-                    'username': user.username,
-                    'nickname': user.nickname or user.username,
+                    'id': str(account.id),
+                    'username': account.username,
+                    'nickname': account.nickname or account.username,
                     'role': 'provider',
-                    'backendRole': user.role,
-                    'openid': user.openid,
-                    'phone': user.phone,
+                    'backendRole': account.account_type,
+                    'openid': account.openid,
+                    'phone': account.phone,
                     'bindCode': None,
                     'bindStatus': 'direct',
                 }
@@ -306,11 +425,28 @@ class AccountLoginView(APIView):
         })
 
 
+class AccountRefreshView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        raw_refresh_token = request.data.get('refresh')
+        if not raw_refresh_token:
+            return Response({'code': 400, 'msg': '缺少 refresh token'})
+        try:
+            access_token = refresh_account_access_token(raw_refresh_token)
+        except TokenError:
+            return Response(
+                {'code': 401, 'msg': '登录已过期，请重新登录'},
+                status=401,
+            )
+        return Response({'code': 0, 'data': {'token': access_token}})
+
+
 class MeView(APIView):
     """当前登录用户资料：GET 读取，PATCH 更新昵称/手机号/常用游戏资料。"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
-    def _serialize(self, user):
+    def _serialize(self, account):
         game_profiles = [
             {
                 'game_category': profile.game_category_id,
@@ -320,31 +456,32 @@ class MeView(APIView):
                 'uid': profile.uid,
                 'is_default': profile.is_default,
             }
-            for profile in user.game_profiles.select_related('game_category').filter(
+            for profile in account.game_profiles.select_related('game_category').filter(
                 game_category__is_active=True,
             )
         ]
         return {
-            'id': str(user.id),
-            'username': user.username,
-            'nickname': user.nickname or user.username,
-            'role': ROLE_REVERSE_MAP.get(user.role, 'customer'),
-            'phone': user.phone or '',
-            'avatar': user.avatar_url or '',
-            'game_region': user.game_region,
-            'game_nickname': user.game_nickname,
-            'game_uid': user.game_uid,
+            'id': str(account.id),
+            'username': account.username,
+            'nickname': account.nickname or account.username,
+            'role': ROLE_REVERSE_MAP.get(account.account_type, 'customer'),
+            'phone': account.phone or '',
+            'avatar': account.avatar_url or '',
+            'game_region': account.game_region,
+            'game_nickname': account.game_nickname,
+            'game_uid': account.game_uid,
             'game_profiles': game_profiles,
         }
 
     def get(self, request):
-        return Response({'code': 0, 'data': self._serialize(request.user)})
+        return Response({'code': 0, 'data': self._serialize(request.account)})
 
     def patch(self, request):
-        user = request.user
+        account = request.account
+        legacy_user = request.legacy_user
         game_profiles = request.data.get('game_profiles')
         if game_profiles is not None:
-            if user.role != User.Role.CUSTOMER:
+            if account.account_type != ClubAccount.AccountType.BOSS:
                 return Response({'code': 403, 'msg': '仅老板可维护常用游戏资料'})
             if not isinstance(game_profiles, list):
                 return Response({'code': 400, 'msg': 'game_profiles 必须为数组'})
@@ -378,19 +515,24 @@ class MeView(APIView):
                     has_content = any(values[field] for field in ('region', 'nickname', 'uid'))
                     if not has_content:
                         CustomerGameProfile.objects.filter(
-                            user=user, game_category_id=values['game_category_id'],
+                            account=account,
+                            game_category_id=values['game_category_id'],
                         ).delete()
                         continue
                     is_default = values.pop('is_default') and not default_assigned
                     profile, _ = CustomerGameProfile.objects.update_or_create(
-                        user=user,
+                        account=account,
                         game_category_id=values.pop('game_category_id'),
-                        defaults={**values, 'is_default': is_default},
+                        defaults={
+                            **values,
+                            'user': legacy_user,
+                            'is_default': is_default,
+                        },
                     )
                     if is_default:
                         default_assigned = True
                     saved_profiles.append(profile)
-                CustomerGameProfile.objects.filter(user=user).exclude(
+                CustomerGameProfile.objects.filter(account=account).exclude(
                     game_category_id__in=category_ids,
                 ).delete()
                 if saved_profiles and not default_assigned:
@@ -400,10 +542,17 @@ class MeView(APIView):
                 default_profile = next((item for item in saved_profiles if item.is_default), None)
                 if default_profile is None and saved_profiles:
                     default_profile = saved_profiles[0]
-                user.game_region = default_profile.region if default_profile else ''
-                user.game_nickname = default_profile.nickname if default_profile else ''
-                user.game_uid = default_profile.uid if default_profile else ''
-                user.save(update_fields=['game_region', 'game_nickname', 'game_uid'])
+                account.game_region = default_profile.region if default_profile else ''
+                account.game_nickname = default_profile.nickname if default_profile else ''
+                account.game_uid = default_profile.uid if default_profile else ''
+                account.save(update_fields=['game_region', 'game_nickname', 'game_uid'])
+                if legacy_user:
+                    legacy_user.game_region = account.game_region
+                    legacy_user.game_nickname = account.game_nickname
+                    legacy_user.game_uid = account.game_uid
+                    legacy_user.save(update_fields=[
+                        'game_region', 'game_nickname', 'game_uid',
+                    ])
 
         # 允许更新的字段及其最大长度
         editable = {
@@ -420,25 +569,40 @@ class MeView(APIView):
             value = (request.data.get(field) or '').strip()
             if len(value) > max_len:
                 return Response({'code': 400, 'msg': f'{field} 长度不能超过 {max_len}'})
-            setattr(user, field, value)
+            setattr(account, field, value)
             updated_fields.append(field)
 
         if updated_fields:
-            user.save(update_fields=updated_fields)
+            account.save(update_fields=updated_fields)
+            if legacy_user:
+                for field in updated_fields:
+                    setattr(legacy_user, field, getattr(account, field))
+                legacy_user.save(update_fields=updated_fields)
 
-        return Response({'code': 0, 'msg': '已更新', 'data': self._serialize(user)})
+        return Response({'code': 0, 'msg': '已更新', 'data': self._serialize(account)})
 
 
 class EscortProfileListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         game = request.query_params.get('game', '').strip()
+        game_category_id = request.query_params.get('game_category', '').strip()
+        service_item_id = request.query_params.get('service_item', '').strip()
         profiles = EscortProfile.objects.filter(
             status=EscortProfile.Status.AVAILABLE,
             is_verified=True,
-        ).select_related('user')
-        if game:
+        ).select_related('account', 'user').prefetch_related(
+            'game_categories',
+            'service_items',
+        )
+        if service_item_id.isdigit():
+            # 最细粒度：仅展示可接该服务项的陪玩（未勾选该服务项的陪玩不出现）
+            profiles = profiles.filter(service_items__id=int(service_item_id)).distinct()
+        elif game_category_id.isdigit():
+            # 精准筛选：仅展示可接该游戏类目的陪玩（未配置可接游戏的陪玩不出现）
+            profiles = profiles.filter(game_categories__id=int(game_category_id)).distinct()
+        elif game:
             profiles = profiles.filter(
                 Q(service_area__icontains=game)
                 | Q(user__received_orders__service__game_category__name__iexact=game)
@@ -472,10 +636,11 @@ class EscortProfileListView(APIView):
 
         data = []
         for p in profiles:
+            identity = p.account or p.user
             item = {
-                'id': p.user_id,
-                'nickname': p.display_name or p.user.nickname or p.user.username,
-                'avatar': p.user.avatar_url or '',
+                'id': p.account_id or p.user_id,
+                'nickname': p.display_name or identity.nickname or identity.username,
+                'avatar': identity.avatar_url or '',
                 'rank': p.rank_tier,
                 'rating': float(p.rating_avg),
                 'ratingCount': p.rating_count,
@@ -487,6 +652,9 @@ class EscortProfileListView(APIView):
                 'city': p.city,
                 'status': p.status,
                 'is_verified': p.is_verified,
+                'voice_card_url': build_media_url(request, p.voice_card),
+                'game_category_ids': [c.id for c in p.game_categories.all()],
+                'service_item_ids': [s.id for s in p.service_items.all()],
             }
             data.append(item)
 
@@ -494,14 +662,14 @@ class EscortProfileListView(APIView):
 
 
 class UpdateEscortStatusView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
-        if request.user.role != User.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可操作'})
 
         try:
-            profile = request.user.escort_profile
+            profile = request.account.escort_profile
         except EscortProfile.DoesNotExist:
             return Response({'code': 403, 'msg': '未创建大神资料'})
 
@@ -515,7 +683,7 @@ class UpdateEscortStatusView(APIView):
 
 
 class ProviderStatsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     INCOME_TREND_DAYS = 7
 
@@ -544,18 +712,18 @@ class ProviderStatsView(APIView):
         return [{'date': day, 'income': amount} for day, amount in buckets.items()]
 
     def get(self, request):
-        if request.user.role != User.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可查看'})
 
-        orders = Order.objects.filter(provider=request.user)
+        orders = Order.objects.filter(provider_account=request.account)
         today = Order.objects.filter(
-            provider=request.user,
+            provider_account=request.account,
             created_at__date=timezone.now().date(),
         )
 
-        profile = EscortProfile.objects.filter(user=request.user).first()
+        profile = EscortProfile.objects.filter(account=request.account).first()
 
-        wallet = Wallet.objects.filter(user=request.user).first()
+        wallet = Wallet.objects.filter(account=request.account).first()
         total_income = 0
         if wallet:
             total_income = wallet.transactions.filter(
@@ -568,11 +736,23 @@ class ProviderStatsView(APIView):
         finished = total_completed + total_cancelled
         completion_rate = round(total_completed / finished * 100) if finished else 0
 
+        active_orders = (
+            Order.objects.filter(
+                Q(provider_account=request.account)
+                | Q(providers__provider_account=request.account),
+                status__in=[Order.Status.GRABBED, Order.Status.IN_SERVICE],
+            )
+            .distinct()
+            .count()
+        )
+
         return Response({
             'code': 0,
             'data': {
                 'today_orders': today.count(),
                 'serving': orders.filter(status=Order.Status.IN_SERVICE).count(),
+                'active_orders': active_orders,
+                'max_concurrent_orders': Order.MAX_CONCURRENT_ORDERS,
                 'total_completed': total_completed,
                 'pending': orders.filter(status=Order.Status.PENDING).count(),
                 'rating_avg': float(profile.rating_avg) if profile else 0,
@@ -588,7 +768,7 @@ class ProviderStatsView(APIView):
 class ProviderPassView(APIView):
     """陪玩通行证：余额购买，决定公共单池的提前可见时间。"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
     DAILY_PRICES = {
         EscortProfile.PassTier.BLACK: 5000,
         EscortProfile.PassTier.GOLD: 3000,
@@ -604,12 +784,15 @@ class ProviderPassView(APIView):
     }
 
     def _profile(self, request):
-        if request.user.role != User.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return None
-        return EscortProfile.objects.filter(user=request.user).first()
+        return EscortProfile.objects.filter(account=request.account).first()
 
     def _data(self, request, profile):
-        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        wallet, _ = Wallet.objects.get_or_create(
+            account=request.account,
+            defaults={'user': request.legacy_user},
+        )
         products = []
         for tier, label in EscortProfile.PassTier.choices:
             daily = self.DAILY_PRICES[tier]
@@ -617,7 +800,7 @@ class ProviderPassView(APIView):
                 'tier': tier, 'name': label, 'daily_price': daily,
                 'delay_seconds': self.DELAYS[tier],
             })
-        history = ProviderPassPurchase.objects.filter(provider=request.user)[:20]
+        history = ProviderPassPurchase.objects.filter(account=request.account)[:20]
         return {
             'balance': wallet.balance,
             'active_tier': profile.active_pass_tier,
@@ -668,7 +851,10 @@ class ProviderPassView(APIView):
                     'code': 400,
                     'msg': '当前通行证尚未到期，仅支持续费同等级通行证',
                 })
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.user)
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                account=request.account,
+                defaults={'user': request.legacy_user},
+            )
             if not wallet.is_active:
                 return Response({'code': 403, 'msg': '钱包不可用'})
             if wallet.balance < paid_amount:
@@ -685,7 +871,10 @@ class ProviderPassView(APIView):
                 remark=f'{dict(EscortProfile.PassTier.choices)[tier]} {days}天',
             )
             ProviderPassPurchase.objects.create(
-                provider=request.user, tier=tier, days=days,
+                provider=request.legacy_user,
+                account=request.account,
+                tier=tier,
+                days=days,
                 daily_price=daily_price, original_amount=original_amount,
                 discount_amount=original_amount - paid_amount,
                 paid_amount=paid_amount, starts_at=starts_at,
@@ -709,27 +898,27 @@ class EscortScheduleView(APIView):
     在 atomic 内先清空本人全部时段再批量写入。
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     VALID_SEGMENTS = {(0, 360), (360, 720), (720, 1080), (1080, 1440)}
 
-    def _serialize(self, provider):
+    def _serialize(self, account):
         return [
             {
                 'weekday': s.weekday,
                 'start_minute': s.start_minute,
                 'end_minute': s.end_minute,
             }
-            for s in EscortSchedule.objects.filter(provider=provider)
+            for s in EscortSchedule.objects.filter(account=account)
         ]
 
     def get(self, request):
-        if request.user.role != User.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可查看档期'})
-        return Response({'code': 0, 'data': self._serialize(request.user)})
+        return Response({'code': 0, 'data': self._serialize(request.account)})
 
     def put(self, request):
-        if request.user.role != User.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可设置档期'})
 
         slots = request.data.get('slots')
@@ -751,10 +940,11 @@ class EscortScheduleView(APIView):
             cleaned.add((weekday, start_minute, end_minute))
 
         with transaction.atomic():
-            EscortSchedule.objects.filter(provider=request.user).delete()
+            EscortSchedule.objects.filter(account=request.account).delete()
             EscortSchedule.objects.bulk_create([
                 EscortSchedule(
-                    provider=request.user,
+                    provider=request.legacy_user,
+                    account=request.account,
                     weekday=weekday,
                     start_minute=start_minute,
                     end_minute=end_minute,
@@ -762,7 +952,11 @@ class EscortScheduleView(APIView):
                 for weekday, start_minute, end_minute in sorted(cleaned)
             ])
 
-        return Response({'code': 0, 'msg': '档期已保存', 'data': self._serialize(request.user)})
+        return Response({
+            'code': 0,
+            'msg': '档期已保存',
+            'data': self._serialize(request.account),
+        })
 
 
 class EscortMeView(APIView):
@@ -771,20 +965,18 @@ class EscortMeView(APIView):
     可编辑：display_name/bio/city/service_area/gender。
     受保护（仅展示）：price_per_hour/level/rating/抽成/认证/押金等由后台维护。
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     GENDER_VALUES = {choice.value for choice in EscortProfile.Gender}
 
     def _get_profile(self, request):
-        if request.user.role != User.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return None
-        return EscortProfile.objects.filter(user=request.user).first()
+        return EscortProfile.objects.filter(account=request.account).first()
 
     def _file_url(self, field, request=None):
-        if not field:
-            return ''
-        return request.build_absolute_uri(field.url) if request else field.url
+        return build_media_url(request, field)
 
     def _serialize(self, profile, request=None):
         return {
@@ -804,6 +996,8 @@ class EscortMeView(APIView):
             'intro_video_url': self._file_url(profile.intro_video, request),
             'voice_card_url': self._file_url(profile.voice_card, request),
             'cheat_proof_url': self._file_url(profile.cheat_proof, request),
+            'game_category_ids': list(profile.game_categories.values_list('id', flat=True)),
+            'service_item_ids': list(profile.service_items.values_list('id', flat=True)),
         }
 
     def get(self, request):
@@ -861,17 +1055,61 @@ class EscortMeView(APIView):
         if updated_fields:
             profile.save(update_fields=updated_fields)
 
+        # 可接服务项：陪玩自助勾选。传入服务项 ID 列表后覆盖设置，
+        # 并同步把这些服务项所属游戏并入 game_categories（勾服务项即隐含可接该游戏）。
+        if 'service_items' in request.data:
+            raw = request.data.get('service_items')
+            if isinstance(raw, str):
+                # multipart/表单可能以逗号分隔字符串传入
+                raw = [seg for seg in raw.split(',') if seg.strip()]
+            elif not isinstance(raw, (list, tuple)):
+                raw = [raw]
+            item_ids = [int(v) for v in raw if str(v).strip().isdigit()]
+            items = list(ServiceItem.objects.filter(id__in=item_ids))
+            profile.service_items.set(items)
+            game_ids = {item.game_category_id for item in items if item.game_category_id}
+            profile.game_categories.set(list(game_ids))
+
         return Response({'code': 0, 'msg': '已更新', 'data': self._serialize(profile, request)})
 
     # Taro.uploadFile 使用 POST 上传 multipart；与 PATCH 共用同一更新逻辑。
     post = patch
 
 
+class EscortSkillOptionsView(APIView):
+    """陪玩「我的技能」可选项树：按游戏分组返回其下启用的服务项，供陪玩勾选可接项目。"""
+    permission_classes = [IsClubAccountAuthenticated]
+
+    def get(self, request):
+        items = (
+            ServiceItem.objects.filter(is_active=True, game_category__isnull=False)
+            .select_related('game_category')
+            .order_by('game_category__sort_order', 'game_category_id', 'sort_order', 'id')
+        )
+        groups = {}
+        order = []
+        for item in items:
+            game = item.game_category
+            if game.id not in groups:
+                groups[game.id] = {
+                    'game_category_id': game.id,
+                    'game_category_name': game.name,
+                    'items': [],
+                }
+                order.append(game.id)
+            groups[game.id]['items'].append({
+                'id': item.id,
+                'name': item.name,
+                'price': item.price,
+            })
+        return Response({'code': 0, 'data': [groups[gid] for gid in order]})
+
+
 class BindCodeGenerateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
-        if request.user.role != User.Role.OPERATOR:
+        if request.account.account_type != ClubAccount.AccountType.STAFF:
             return Response({'code': 403, 'msg': '仅客服可生成绑定码'})
 
         role = request.data.get('role', 'provider')
@@ -883,11 +1121,11 @@ class BindCodeGenerateView(APIView):
 
 class CustomerAchievementView(APIView):
     """老板成就馆：成就清单由后台配置，根据已完成订单实时计算解锁状态。"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         completed = Order.objects.filter(
-            customer=request.user,
+            customer_account=request.account,
             status=Order.Status.COMPLETED,
         )
         agg = completed.aggregate(order_count=Count('id'), total=Sum('amount'))
@@ -930,13 +1168,13 @@ def _reward_for_seq(seq_in_month):
     return MONTHLY_CHECKIN_REWARDS[index]
 
 
-def _daily_paid_amount(user, target_date):
+def _daily_paid_amount(account, target_date):
     """按订单创建日统计当日已支付且未退款的兴安币消费。"""
     tz = timezone.get_current_timezone()
     start = timezone.make_aware(datetime.combine(target_date, time.min), tz)
     end = start + timedelta(days=1)
     return Order.objects.filter(
-        customer=user,
+        customer_account=account,
         payment_status=Order.PaymentStatus.PAID,
         created_at__gte=start,
         created_at__lt=end,
@@ -974,32 +1212,38 @@ def _continuous_days(checked_days, today):
 
 class CheckinView(APIView):
     """老板月度消费签到：满额签到、补签卡及全勤 KOOK Tag 奖励。"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
-    def _month_records(self, user, today):
+    def _month_records(self, account, today):
         return CheckinRecord.objects.filter(
-            user=user,
+            account=account,
             checkin_date__year=today.year,
             checkin_date__month=today.month,
         )
 
     def get(self, request):
-        if request.user.role != User.Role.CUSTOMER:
+        if request.account.account_type != ClubAccount.AccountType.BOSS:
             return Response({'code': 403, 'msg': '仅老板可签到'})
 
         today = timezone.localdate()
         rule = _checkin_rule()
-        records = self._month_records(request.user, today)
+        records = self._month_records(request.account, today)
         checked_days = sorted(r.checkin_date.day for r in records)
         checked_set = set(checked_days)
         checked_count = len(checked_days)
         today_checked = today.day in checked_set
 
-        wallet, _ = Wallet.objects.get_or_create(user=request.user)
-        progress, _ = CheckinMonthProgress.objects.get_or_create(
-            user=request.user, year=today.year, month=today.month,
+        wallet, _ = Wallet.objects.get_or_create(
+            account=request.account,
+            defaults={'user': request.legacy_user},
         )
-        today_spend = _daily_paid_amount(request.user, today)
+        progress, _ = CheckinMonthProgress.objects.get_or_create(
+            account=request.account,
+            year=today.year,
+            month=today.month,
+            defaults={'user': request.legacy_user},
+        )
+        today_spend = _daily_paid_amount(request.account, today)
         card_earned_today = _sync_makeup_card(progress, rule, today_spend, today)
 
         gifts = {gift.checkin_day: gift for gift in CheckinGift.objects.filter(is_active=True)}
@@ -1058,7 +1302,7 @@ class CheckinView(APIView):
         })
 
     def post(self, request):
-        if request.user.role != User.Role.CUSTOMER:
+        if request.account.account_type != ClubAccount.AccountType.BOSS:
             return Response({'code': 403, 'msg': '仅老板可签到'})
 
         today = timezone.localdate()
@@ -1070,9 +1314,12 @@ class CheckinView(APIView):
         try:
             with transaction.atomic():
                 progress, _ = CheckinMonthProgress.objects.select_for_update().get_or_create(
-                    user=request.user, year=today.year, month=today.month,
+                    account=request.account,
+                    year=today.year,
+                    month=today.month,
+                    defaults={'user': request.legacy_user},
                 )
-                today_spend = _daily_paid_amount(request.user, today)
+                today_spend = _daily_paid_amount(request.account, today)
                 _sync_makeup_card(progress, rule, today_spend, today)
 
                 if is_makeup:
@@ -1085,7 +1332,9 @@ class CheckinView(APIView):
                         return Response({'code': 400, 'msg': '只能补签本月今日之前的日期'})
                     if progress.makeup_cards <= 0:
                         return Response({'code': 400, 'msg': '暂无可用补签卡'})
-                    if self._month_records(request.user, today).filter(checkin_date=target_date).exists():
+                    if self._month_records(request.account, today).filter(
+                        checkin_date=target_date,
+                    ).exists():
                         return Response({'code': 400, 'msg': '该日期已签到'})
                     progress.makeup_cards -= 1
                     progress.save(update_fields=['makeup_cards', 'updated_at'])
@@ -1097,15 +1346,18 @@ class CheckinView(APIView):
                             'code': 400,
                             'msg': f'今日还需消费 {needed / 10:g} 兴安币才可签到',
                         })
-                    if self._month_records(request.user, today).filter(checkin_date=today).exists():
+                    if self._month_records(request.account, today).filter(
+                        checkin_date=today,
+                    ).exists():
                         return Response({'code': 400, 'msg': '今日已签到'})
 
-                seq_in_month = self._month_records(request.user, today).count() + 1
+                seq_in_month = self._month_records(request.account, today).count() + 1
                 gift = CheckinGift.objects.filter(checkin_day=seq_in_month, is_active=True).first()
                 reward_amount = gift.reward_amount if gift else _reward_for_seq(seq_in_month)
 
                 CheckinRecord.objects.create(
-                    user=request.user,
+                    user=request.legacy_user,
+                    account=request.account,
                     checkin_date=target_date,
                     seq_in_month=seq_in_month,
                     reward_amount=reward_amount,
@@ -1114,7 +1366,10 @@ class CheckinView(APIView):
                     is_makeup=is_makeup,
                 )
 
-                wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.user)
+                wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                    account=request.account,
+                    defaults={'user': request.legacy_user},
+                )
                 if reward_amount > 0:
                     balance_before = wallet.balance
                     wallet.balance += reward_amount
@@ -1129,7 +1384,7 @@ class CheckinView(APIView):
                         remark=f'月度签到礼物：{gift.name if gift else seq_in_month}',
                     )
 
-                checked_count = self._month_records(request.user, today).count()
+                checked_count = self._month_records(request.account, today).count()
                 days_in_month = calendar.monthrange(today.year, today.month)[1]
                 if checked_count == days_in_month and not progress.full_attendance_awarded:
                     progress.full_attendance_awarded = True
@@ -1146,7 +1401,7 @@ class CheckinView(APIView):
 
         if full_attendance_just_awarded:
             create_message(
-                recipient_id=request.user.id,
+                recipient_id=request.legacy_user.id,
                 title='月度全勤奖励已获得',
                 preview=f'恭喜获得 {rule.full_attendance_reward_name}',
                 detail=rule.full_attendance_reward_desc,

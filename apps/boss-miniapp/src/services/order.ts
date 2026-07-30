@@ -23,6 +23,7 @@ export interface GameCategoryInfo {
   id: number;
   name: string;
   remark: string;
+  icon_url: string;
 }
 
 export const fetchGameCategories = () => {

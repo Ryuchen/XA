@@ -12,6 +12,7 @@ import {
 import { wsService } from '@/services/websocket';
 import { Empty } from '@/components';
 import Icon from '@/components/Icon';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const formatTime = (dateStr: string): string => {
@@ -130,9 +131,9 @@ const CustomerServicePage: React.FC = () => {
               {msg.content_type === 'IMAGE' ? (
                 <Image
                   className={styles.msgImage}
-                  src={msg.image_url}
+                  src={resolveImageUrl(msg.image_url)}
                   mode="widthFix"
-                  onClick={() => previewImage(msg.image_url)}
+                  onClick={() => previewImage(resolveImageUrl(msg.image_url))}
                 />
               ) : (
                 <View className={`${styles.bubble} ${msg.is_from_support ? styles.bubbleLeft : styles.bubbleRight}`}>

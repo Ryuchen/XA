@@ -7,6 +7,8 @@ import { ServiceInfo } from '@/types/order';
 import { formatXaCoin } from '@/utils/format';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
+import { useVoicePreview } from '@/hooks/useVoicePreview';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const COLOR_PRICE = '#FF9500';
@@ -44,6 +46,7 @@ const PlayerSelectPage: React.FC = () => {
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [gameRounds, setGameRounds] = useState(1);
   const [loading, setLoading] = useState(true);
+  const { playingId, toggle: toggleVoice } = useVoicePreview();
 
   useEffect(() => {
     const params = Taro.getCurrentInstance().router?.params || {};
@@ -165,7 +168,7 @@ const PlayerSelectPage: React.FC = () => {
                 </View>
               )}
               <View className={styles.avatarWrap}>
-                <Image className={styles.avatar} src={player.avatar} mode="aspectFill" />
+                <Image className={styles.avatar} src={resolveImageUrl(player.avatar)} mode="aspectFill" />
                 <View className={`${styles.statusDot} ${styles[`dot_${sKey}`]}`} />
               </View>
               <View className={styles.playerInfo}>
@@ -173,6 +176,18 @@ const PlayerSelectPage: React.FC = () => {
                   <Text className={styles.nickname}>{player.nickname}</Text>
                 </View>
                 <Text className={styles.rank}>{player.rank}</Text>
+                {player.voice_card_url && (
+                  <View
+                    className={`${styles.voicePreview} ${playingId === player.id ? styles.voicePreviewPlaying : ''}`}
+                    onClick={event => {
+                      event.stopPropagation();
+                      toggleVoice(player.id, player.voice_card_url);
+                    }}
+                  >
+                    <Text className={styles.voicePreviewIcon}>{playingId === player.id ? '⏸' : '🔊'}</Text>
+                    <Text>{playingId === player.id ? '播放中' : '试听'}</Text>
+                  </View>
+                )}
                 <View className={styles.metaRow}>
                   <Icon name="star" size={26} color={COLOR_PRICE} fill={COLOR_PRICE} className={styles.metaIcon} />
                   <Text className={styles.ratingValue}>{player.rating}</Text>

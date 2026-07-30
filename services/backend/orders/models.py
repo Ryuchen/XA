@@ -9,6 +9,13 @@ class GameCategory(models.Model):
     """游戏类目字典：具体游戏（王者荣耀、和平精英等），供服务项下拉选择。"""
 
     name = models.CharField(max_length=50, unique=True)
+    icon = models.ImageField(
+        upload_to='game_categories/',
+        blank=True,
+        null=True,
+        verbose_name='图标',
+        help_text='游戏图标，建议使用正方形图片；未上传时前端展示默认图标',
+    )
     remark = models.CharField(max_length=255, blank=True, default='')
     sort_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -52,6 +59,12 @@ class ServiceItem(models.Model):
         ServiceCategory, on_delete=models.PROTECT, null=True, blank=True,
         related_name='service_items',
     )
+    # 要求陪玩档位：仅档位 >= 此档位的陪玩可接单/被派单；null 表示不限档位。
+    # 档位高低以 EscortLevel.sort_order 比较（值越大档位越高）。
+    required_level = models.ForeignKey(
+        'users.EscortLevel', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='required_service_items',
+    )
     # 平台抽成率(%)：null 表示未单独配置，下单时回落全局 SystemConfig
     commission_rate = models.PositiveSmallIntegerField(
         null=True, blank=True, validators=[MinValueValidator(0), MaxValueValidator(100)]
@@ -66,6 +79,33 @@ class ServiceItem(models.Model):
 
     class Meta:
         ordering = ['sort_order', 'id']
+        indexes = [
+            models.Index(
+                fields=['is_active', 'sort_order', 'id'],
+                name='svc_item_active_sort_idx',
+            ),
+            models.Index(
+                fields=['game_category', 'is_active', 'sort_order'],
+                name='svc_item_game_active_idx',
+            ),
+            models.Index(
+                fields=['service_category', 'is_active', 'sort_order'],
+                name='svc_item_type_active_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(price__gt=0),
+                name='svc_item_price_positive',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(commission_rate__isnull=True)
+                    | models.Q(commission_rate__range=(0, 100))
+                ),
+                name='svc_item_commission_valid',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.name} - {self.price / 10:g}兴安币"
@@ -77,6 +117,13 @@ class ServiceFavorite(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='service_favorites'
     )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='service_favorites',
+    )
     service = models.ForeignKey(
         ServiceItem, on_delete=models.CASCADE, related_name='favorited_by'
     )
@@ -85,6 +132,18 @@ class ServiceFavorite(models.Model):
     class Meta:
         unique_together = ('user', 'service')
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account', 'service'],
+                name='uniq_favorite_account_service',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['account', '-created_at'],
+                name='favorite_account_time_idx',
+            ),
+        ]
 
     def __str__(self):
         return f"Favorite<{self.user_id} - {self.service_id}>"
@@ -110,9 +169,26 @@ class Order(models.Model):
     # 终态：进入后不可再转换
     TERMINAL_STATUSES = {Status.COMPLETED, Status.CANCELLED}
 
+    # 单个陪玩同时进行中订单（已接单 + 服务中）的数量上限
+    MAX_CONCURRENT_ORDERS = 3
+
     order_no = models.CharField(max_length=32, unique=True, blank=True, default='', db_index=True)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='placed_orders')
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_orders')
+    customer_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='placed_orders',
+    )
+    provider_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='received_orders',
+    )
     service = models.ForeignKey(ServiceItem, on_delete=models.PROTECT)
     source_order = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
@@ -145,6 +221,13 @@ class Order(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='referred_orders',
     )  # 下单老板的推荐人快照
+    inviter_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='referred_orders',
+    )
     inviter_commission = models.PositiveIntegerField(default=0)  # 推荐人分佣
     shop_income = models.PositiveIntegerField(default=0)  # 店铺/平台留存
     # 老板下单时填写的游戏账号资料（结构化落库，供陪玩端与后台读取）
@@ -175,6 +258,48 @@ class Order(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['customer_account', 'status', '-created_at'],
+                name='order_customer_status_idx',
+            ),
+            models.Index(
+                fields=['provider_account', 'status', '-created_at'],
+                name='order_provider_status_idx',
+            ),
+            models.Index(
+                fields=['status', 'auto_cancel_at'],
+                name='order_timeout_scan_idx',
+            ),
+            models.Index(
+                fields=['service', '-created_at'],
+                name='order_service_time_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(game_rounds__gte=1),
+                name='order_rounds_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(commission_rate__range=(0, 100)),
+                name='order_commission_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=['PENDING', 'GRABBED', 'IN_SERVICE', 'COMPLETED', 'CANCELLED']
+                ),
+                name='order_status_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(payment_status__in=['UNPAID', 'PAID', 'REFUNDED']),
+                name='order_payment_status_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(escort_mode__in=['SINGLE', 'DOUBLE']),
+                name='order_escort_mode_valid',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.order_no:
@@ -227,6 +352,20 @@ class KookDispatchRecord(models.Model):
             models.UniqueConstraint(
                 fields=['order', 'sequence'], name='uniq_kook_dispatch_order_sequence',
             ),
+            models.CheckConstraint(
+                condition=models.Q(trigger__in=['NEW_ORDER', 'PROVIDER_REJECTED']),
+                name='kook_dispatch_trigger_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['PENDING', 'SENT', 'FAILED', 'SKIPPED']),
+                name='kook_dispatch_status_valid',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['status', 'created_at'],
+                name='kook_dispatch_status_idx',
+            ),
         ]
 
     def __str__(self):
@@ -251,6 +390,13 @@ class OrderProvider(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='order_assignments',
     )
+    provider_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_assignments',
+    )
     provider_name_snapshot = models.CharField(max_length=50, blank=True, default='')
     settlement_base = models.PositiveIntegerField(default=0)  # 分配给该打手的结算基数（内部账务单位）
     commission_type = models.CharField(
@@ -270,6 +416,22 @@ class OrderProvider(models.Model):
             models.UniqueConstraint(
                 fields=['order', 'provider'], name='uniq_order_provider'
             ),
+            models.UniqueConstraint(
+                fields=['order', 'provider_account'],
+                name='uniq_order_provider_account',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(commission_type__in=['PERCENT', 'FIXED']),
+                name='order_provider_comm_type_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(commission_rate__range=(0, 100)),
+                name='order_provider_rate_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(provider_income__lte=models.F('settlement_base')),
+                name='order_provider_income_lte_base',
+            ),
         ]
 
     def __str__(self):
@@ -288,6 +450,7 @@ class OrderStatusLog(models.Model):
         REJECT = 'REJECT', '拒单'
         CANCEL = 'CANCEL', '取消'
         REFUND = 'REFUND', '退款'
+        TRANSFER = 'TRANSFER', '转单'
         AUTO_CANCEL = 'AUTO_CANCEL', '超时自动取消'
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_logs')
@@ -296,6 +459,13 @@ class OrderStatusLog(models.Model):
     to_status = models.CharField(max_length=20, blank=True, default='')
     operator = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_status_logs',
+    )
+    operator_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -318,6 +488,20 @@ class Evaluation(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='evaluation')
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='given_evaluations')
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_evaluations')
+    customer_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='given_evaluations',
+    )
+    provider_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='received_evaluations',
+    )
     score = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])  # 综合评分
     skill_score = models.PositiveSmallIntegerField(
         default=5, validators=[MinValueValidator(1), MaxValueValidator(5)]
@@ -337,6 +521,30 @@ class Evaluation(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['provider_account', '-created_at'],
+                name='evaluation_provider_time_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(score__range=(1, 5)),
+                name='evaluation_score_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(skill_score__range=(1, 5)),
+                name='evaluation_skill_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(attitude_score__range=(1, 5)),
+                name='evaluation_attitude_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(communication_score__range=(1, 5)),
+                name='evaluation_communication_valid',
+            ),
+        ]
 
     @property
     def avg_score(self) -> float:

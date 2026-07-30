@@ -66,6 +66,10 @@ const MinePage: React.FC = () => {
       Taro.showToast({ title: '押金已缴清', icon: 'none' });
       return;
     }
+    if (deposit.balance < remaining) {
+      Taro.showToast({ title: '钱包余额不足', icon: 'none' });
+      return;
+    }
     const confirm = await Taro.showModal({
       title: '缴纳押金',
       content: `将从钱包余额扣除 ${formatXaCoin(remaining)} 兴安币缴纳押金。`,
@@ -243,6 +247,11 @@ const MinePage: React.FC = () => {
           <Text className={styles.menuText}>资料与档期</Text>
           <Text className={styles.menuArrow}>›</Text>
         </View>
+        <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/skills/index' })}>
+          <Text className={styles.menuIcon}>🎮</Text>
+          <Text className={styles.menuText}>我的技能</Text>
+          <Text className={styles.menuArrow}>›</Text>
+        </View>
         <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/evaluations/index' })}>
           <Text className={styles.menuIcon}>⭐️</Text>
           <Text className={styles.menuText}>评价管理</Text>
@@ -254,11 +263,6 @@ const MinePage: React.FC = () => {
         <View className={styles.menuItem} onClick={() => Taro.switchTab({ url: '/pages/wallet/index' })}>
           <Text className={styles.menuIcon}>💰</Text>
           <Text className={styles.menuText}>我的钱包</Text>
-          <Text className={styles.menuArrow}>›</Text>
-        </View>
-        <View className={styles.menuItem} onClick={() => Taro.switchTab({ url: '/pages/report/index' })}>
-          <Text className={styles.menuIcon}>📝</Text>
-          <Text className={styles.menuText}>我的报单</Text>
           <Text className={styles.menuArrow}>›</Text>
         </View>
         <View className={styles.menuItem} onClick={handleLogout}>

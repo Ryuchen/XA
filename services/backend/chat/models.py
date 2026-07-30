@@ -11,6 +11,14 @@ class ChatSession(models.Model):
         related_name='chat_session',
         verbose_name='发起用户',
     )
+    account = models.OneToOneField(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='chat_session',
+        verbose_name='发起业务账户',
+    )
     last_message = models.CharField(max_length=255, blank=True, default='', verbose_name='最新消息预览')
     last_message_at = models.DateTimeField(blank=True, null=True, db_index=True, verbose_name='最新消息时间')
     unread_user = models.PositiveIntegerField(default=0, verbose_name='用户未读数')
@@ -22,6 +30,12 @@ class ChatSession(models.Model):
         ordering = ['-last_message_at', '-created_at']
         verbose_name = '客服会话'
         verbose_name_plural = '客服会话'
+        indexes = [
+            models.Index(
+                fields=['account', '-last_message_at'],
+                name='chat_session_account_idx',
+            ),
+        ]
 
     def __str__(self):
         return f"ChatSession<{self.user_id}>"
@@ -48,6 +62,14 @@ class ChatMessage(models.Model):
         related_name='sent_chat_messages',
         verbose_name='发送者',
     )
+    sender_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sent_chat_messages',
+        verbose_name='发送业务账户',
+    )
     is_from_support = models.BooleanField(default=False, db_index=True, verbose_name='是否客服发出')
     content_type = models.CharField(
         max_length=10,
@@ -64,6 +86,16 @@ class ChatMessage(models.Model):
         ordering = ['created_at']
         indexes = [
             models.Index(fields=['session', 'created_at']),
+            models.Index(
+                fields=['session', 'is_from_support', 'is_read'],
+                name='chat_message_unread_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(content_type__in=['TEXT', 'IMAGE']),
+                name='chat_message_content_type_valid',
+            ),
         ]
         verbose_name = '客服消息'
         verbose_name_plural = '客服消息'

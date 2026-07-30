@@ -1,16 +1,16 @@
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from club_accounts.permissions import IsClubAccountAuthenticated
 from .models import Message
 from .serializers import MessageDetailSerializer, MessageListItemSerializer
 
 
 class MessageListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        qs = Message.objects.filter(recipient=request.user)
+        qs = Message.objects.filter(recipient_account=request.account)
         msg_type = request.query_params.get('type')
         if msg_type:
             qs = qs.filter(type=msg_type)
@@ -22,7 +22,10 @@ class MessageListView(APIView):
             page, page_size = 1, 20
 
         total = qs.count()
-        unread = Message.objects.filter(recipient=request.user, is_read=False).count()
+        unread = Message.objects.filter(
+            recipient_account=request.account,
+            is_read=False,
+        ).count()
 
         start = (page - 1) * page_size
         items = qs.order_by('-created_at')[start:start + page_size]
@@ -40,11 +43,14 @@ class MessageListView(APIView):
 
 
 class MessageDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request, message_id):
         try:
-            msg = Message.objects.get(id=message_id, recipient=request.user)
+            msg = Message.objects.get(
+                id=message_id,
+                recipient_account=request.account,
+            )
         except Message.DoesNotExist:
             return Response({'code': 404, 'msg': '消息不存在'})
 
@@ -56,16 +62,22 @@ class MessageDetailView(APIView):
 
 
 class MessageReadAllView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
-        Message.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+        Message.objects.filter(
+            recipient_account=request.account,
+            is_read=False,
+        ).update(is_read=True)
         return Response({'code': 0, 'msg': '全部已读'})
 
 
 class MessageUnreadCountView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        unread = Message.objects.filter(recipient=request.user, is_read=False).count()
+        unread = Message.objects.filter(
+            recipient_account=request.account,
+            is_read=False,
+        ).count()
         return Response({'code': 0, 'data': {'unread': unread}})

@@ -29,9 +29,10 @@ x-backend: &backend
     KOOK_ADMIN_ORDER_URL: ${KOOK_ADMIN_ORDER_URL:-}
     KOOK_REQUEST_TIMEOUT: ${KOOK_REQUEST_TIMEOUT:-8}
   volumes:
-    # 开发模式：挂载源码实现热更新；media 持久化到命名卷。
+    # 开发模式：挂载源码实现热更新；媒体和静态资源持久化到命名卷。
     - ./services/backend:/app
     - backend_media:/app/media
+    - backend_static:/app/staticfiles
   depends_on:
     db:
       condition: service_healthy
@@ -67,11 +68,11 @@ services:
       timeout: 3s
       retries: 10
 
-  # 迁移初始化：一次性任务，Web / worker 启动前完成建表。
+  # 初始化任务：Web / worker 启动前完成迁移并收集 Admin 静态资源。
   migrate:
     <<: *backend
     container_name: xa_backend_migrate
-    command: python manage.py migrate --noinput
+    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
     restart: "no"
     depends_on:
       db:
@@ -116,3 +117,4 @@ services:
 volumes:
   mysql_data:
   backend_media:
+  backend_static:

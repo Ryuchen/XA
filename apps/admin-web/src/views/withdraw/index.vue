@@ -5,7 +5,7 @@
       <p class="ap-page-intro">平台资金流水、结算与提现审核</p>
       <div class="ap-page-head-actions">
         <el-button v-if="auth.hasPerm('withdraw:audit')" type="warning" plain @click="openConfig">
-          最低提现：{{ amountToXaCoin(minAmount) }} 兴安币
+          最低提现：{{ amountToXaCoin(minAmount) }} 兴安币 · 税率 {{ taxRate }}%
         </el-button>
       </div>
     </div>
@@ -99,6 +99,9 @@
       <el-descriptions :column="1" border>
         <el-descriptions-item label="陪玩">{{ current.user_name }}</el-descriptions-item>
         <el-descriptions-item label="提现金额">{{ amountToXaCoin(current.amount) }} 兴安币</el-descriptions-item>
+        <el-descriptions-item label="税率">{{ current.tax_rate }}%</el-descriptions-item>
+        <el-descriptions-item label="税额">{{ amountToXaCoin(current.tax_amount) }} 兴安币</el-descriptions-item>
+        <el-descriptions-item label="实际到账">{{ amountToXaCoin(current.actual_amount) }} 兴安币</el-descriptions-item>
         <el-descriptions-item label="收款方式">{{ current.payee_method_display }}</el-descriptions-item>
         <el-descriptions-item label="收款人">{{ current.payee_name }}</el-descriptions-item>
         <el-descriptions-item label="收款账号">{{ current.payee_account }}</el-descriptions-item>
@@ -120,11 +123,15 @@
     </template>
   </el-drawer>
 
-  <el-dialog v-model="configVisible" title="最低提现金额配置" width="380px">
+  <el-dialog v-model="configVisible" title="提现配置" width="380px">
     <el-form label-width="120px">
       <el-form-item label="最低提现(兴安币)">
         <el-input-number v-model="configInput" :min="0" :step="10" :precision="1" style="width: 100%" />
         <div class="tip">陪玩单次提现金额不得低于该值</div>
+      </el-form-item>
+      <el-form-item label="提现税率(%)">
+        <el-input-number v-model="taxInput" :min="0" :max="100" :step="1" :precision="0" style="width: 100%" />
+        <div class="tip">按提现金额扣税，陪玩实际到账 = 提现金额 ×(1 - 税率)</div>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -186,13 +193,16 @@ const detailVisible = ref(false)
 const current = ref<any>(null)
 
 const minAmount = ref<number>(0)
+const taxRate = ref<number>(0)
 const configVisible = ref(false)
 const configInput = ref<number>(0)
+const taxInput = ref<number>(0)
 const savingConfig = ref(false)
 
 async function loadConfig() {
   const res = await withdrawConfigApi.get()
   minAmount.value = res.data.min_amount
+  taxRate.value = res.data.tax_rate
 }
 
 onMounted(loadConfig)
@@ -206,7 +216,7 @@ async function onApprove(row: any) {
   let payout_reference = ''
   try {
     const { value } = await ElMessageBox.prompt(
-      `请先完成向「${row.user_name}」结算 ${amountToXaCoin(row.amount)} 兴安币，再填写渠道流水号或转账凭证编号。`,
+      `请先完成向「${row.user_name}」结算 ${amountToXaCoin(row.actual_amount)} 兴安币（提现 ${amountToXaCoin(row.amount)} 扣税 ${amountToXaCoin(row.tax_amount)}），再填写渠道流水号或转账凭证编号。`,
       '提现审核',
       {
         type: 'warning', confirmButtonText: '确认已打款',
@@ -241,15 +251,17 @@ async function onReject(row: any) {
 
 function openConfig() {
   configInput.value = Number(amountToXaCoin(minAmount.value))
+  taxInput.value = taxRate.value
   configVisible.value = true
 }
 
 async function saveConfig() {
   savingConfig.value = true
   try {
-    const res = await withdrawConfigApi.update(xaCoinToAmount(configInput.value))
+    const res = await withdrawConfigApi.update(xaCoinToAmount(configInput.value), taxInput.value)
     minAmount.value = res.data.min_amount
-    ElMessage.success('最低提现金额已更新')
+    taxRate.value = res.data.tax_rate
+    ElMessage.success('提现配置已更新')
     configVisible.value = false
   } finally {
     savingConfig.value = false

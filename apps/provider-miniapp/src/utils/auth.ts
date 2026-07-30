@@ -18,6 +18,7 @@ interface LoginResponse {
   msg?: string;
   data?: {
     token?: string;
+    refreshToken?: string;
     userInfo?: {
       id?: string;
       username?: string;
@@ -31,6 +32,7 @@ interface LoginResponse {
 
 const USER_KEY = 'xa_provider_user';
 const TOKEN_KEY = 'token';
+const REFRESH_TOKEN_KEY = 'xa_provider_refresh_token';
 const HOME_URL = '/pages/orders/index';
 const DEFAULT_AVATAR = 'https://picsum.photos/id/1005/200/200';
 
@@ -44,6 +46,18 @@ export const getStoredToken = (): string => {
 
 export const setStoredToken = (token: string) => {
   Taro.setStorageSync(TOKEN_KEY, token);
+};
+
+export const getStoredRefreshToken = (): string => {
+  try {
+    return Taro.getStorageSync(REFRESH_TOKEN_KEY) || '';
+  } catch (error) {
+    return '';
+  }
+};
+
+export const setStoredRefreshToken = (token: string) => {
+  Taro.setStorageSync(REFRESH_TOKEN_KEY, token);
 };
 
 export const getStoredUser = (): LoginUser | null => {
@@ -61,6 +75,7 @@ export const setStoredUser = (user: LoginUser) => {
 export const clearStoredUser = () => {
   Taro.removeStorageSync(USER_KEY);
   Taro.removeStorageSync(TOKEN_KEY);
+  Taro.removeStorageSync(REFRESH_TOKEN_KEY);
 };
 
 export const goHome = () => {
@@ -96,6 +111,9 @@ export const persistLoginData = (data: NonNullable<LoginResponse['data']>): Logi
   };
 
   setStoredToken(data.token);
+  if (data.refreshToken) {
+    setStoredRefreshToken(data.refreshToken);
+  }
   setStoredUser(user);
   return user;
 };

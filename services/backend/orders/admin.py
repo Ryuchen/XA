@@ -1,16 +1,17 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Evaluation, KookDispatchRecord, Order, OrderStatusLog, ServiceItem
 
 
 @admin.register(ServiceItem)
-class ServiceItemAdmin(admin.ModelAdmin):
+class ServiceItemAdmin(ModelAdmin):
     list_display = ['id', 'name', 'game_category', 'service_category', 'price', 'cover_url', 'is_active', 'sort_order']
     list_filter = ['game_category', 'service_category', 'is_active']
     search_fields = ['name']
 
 
-class OrderStatusLogInline(admin.TabularInline):
+class OrderStatusLogInline(TabularInline):
     model = OrderStatusLog
     extra = 0
     readonly_fields = ['action', 'from_status', 'to_status', 'operator', 'reason', 'created_at']
@@ -21,7 +22,7 @@ class OrderStatusLogInline(admin.TabularInline):
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(ModelAdmin):
     list_display = [
         'id', 'order_no', 'status', 'payment_status',
         'customer', 'provider', 'amount', 'created_at',
@@ -37,7 +38,7 @@ class OrderAdmin(admin.ModelAdmin):
 
 
 @admin.register(OrderStatusLog)
-class OrderStatusLogAdmin(admin.ModelAdmin):
+class OrderStatusLogAdmin(ModelAdmin):
     list_display = ['id', 'order', 'action', 'from_status', 'to_status', 'operator', 'created_at']
     list_filter = ['action', 'created_at']
     search_fields = ['order__order_no']
@@ -45,7 +46,7 @@ class OrderStatusLogAdmin(admin.ModelAdmin):
 
 
 @admin.register(KookDispatchRecord)
-class KookDispatchRecordAdmin(admin.ModelAdmin):
+class KookDispatchRecordAdmin(ModelAdmin):
     list_display = ['id', 'order', 'trigger', 'sequence', 'channel_id', 'status', 'attempts', 'sent_at']
     list_filter = ['trigger', 'status', 'created_at']
     search_fields = ['order__order_no', 'message_id', 'channel_id']
@@ -56,6 +57,6 @@ class KookDispatchRecordAdmin(admin.ModelAdmin):
 
 
 @admin.register(Evaluation)
-class EvaluationAdmin(admin.ModelAdmin):
+class EvaluationAdmin(ModelAdmin):
     list_display = ['id', 'order', 'score', 'is_anonymous', 'created_at']
     list_filter = ['score', 'is_anonymous']

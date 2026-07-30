@@ -19,6 +19,8 @@ export interface EscortMeProfile {
   intro_video_url: string;
   voice_card_url: string;
   cheat_proof_url: string;
+  game_category_ids: number[];
+  service_item_ids: number[];
 }
 
 export interface UpdateEscortProfilePayload {
@@ -61,6 +63,26 @@ export const fetchEscortSchedule = () => {
 export const saveEscortSchedule = (slots: EscortScheduleSlot[]) => {
   return request<ApiResponse<EscortScheduleSlot[]>>('/users/escorts/schedule/', 'PUT', { slots });
 };
+
+export interface SkillOptionItem {
+  id: number;
+  name: string;
+  price: number;
+}
+
+export interface SkillOptionGroup {
+  game_category_id: number;
+  game_category_name: string;
+  items: SkillOptionItem[];
+}
+
+export const fetchSkillOptions = () =>
+  request<ApiResponse<SkillOptionGroup[]>>('/users/escorts/skill-options/', 'GET');
+
+export const updateEscortSkills = (serviceItemIds: number[]) =>
+  request<ApiResponse<EscortMeProfile>>('/users/escorts/me/', 'PATCH', {
+    service_items: serviceItemIds,
+  });
 
 export interface PassProduct {
   tier: 'BLACK' | 'GOLD' | 'SILVER' | 'BRONZE';

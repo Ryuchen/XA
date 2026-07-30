@@ -31,6 +31,17 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'completed', label: '已完成' },
 ];
 
+/** 把后端下发的等级 hex 色转为带透明度的 rgba，用于卡片淡色底。非法值返回空串。 */
+const hexToRgba = (hex: string, alpha: number): string => {
+  const value = (hex || '').replace('#', '');
+  if (value.length !== 6) return '';
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  if ([r, g, b].some(Number.isNaN)) return '';
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const OrdersPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
   const [orders, setOrders] = useState<ProviderOrder[]>([]);
@@ -139,8 +150,28 @@ const OrdersPage: React.FC = () => {
   };
 
   const handleGrab = (order: ProviderOrder) => runAction(() => grabOrder(order.id), '接单成功');
-  const handleStart = (order: ProviderOrder) => runAction(() => startOrder(order.id), '已开始服务');
-  const handleComplete = (order: ProviderOrder) => runAction(() => completeOrder(order.id), '订单已完成');
+
+  // 开始服务/完成订单必须上传对应截图：先选图，用户取消则中止，不推进状态。
+  const chooseImage = async (): Promise<string | null> => {
+    const res = await Taro.chooseImage({ count: 1, sizeType: ['compressed'] }).catch(() => null);
+    return res?.tempFilePaths?.[0] || null;
+  };
+  const handleStart = async (order: ProviderOrder) => {
+    if (acting) return;
+    const path = await chooseImage();
+    if (!path) return;
+    runAction(() => startOrder(order.id, path), '已开始服务');
+  };
+  const handleComplete = async (order: ProviderOrder) => {
+    if (acting) return;
+    const path = await chooseImage();
+    if (!path) return;
+    runAction(() => completeOrder(order.id, path), '订单已完成');
+  };
+
+  // 同时进行中订单（已接单 + 服务中）是否已达上限
+  const maxConcurrent = stats?.max_concurrent_orders ?? 0;
+  const reachedLimit = !!stats && maxConcurrent > 0 && (stats.active_orders ?? 0) >= maxConcurrent;
 
   const handleReject = (order: ProviderOrder) => {
     Taro.showActionSheet({
@@ -205,8 +236,14 @@ const OrdersPage: React.FC = () => {
       if (!can('GRAB', true)) return null;
       return (
         <View className={styles.actions}>
-          <Button className={`${styles.actionBtn} ${styles.primaryBtn}`} disabled={acting} onClick={() => handleGrab(order)}>
-            抢单
+          <Button
+            className={`${styles.actionBtn} ${styles.primaryBtn}`}
+            disabled={acting || reachedLimit}
+            onClick={() => reachedLimit
+              ? Taro.showToast({ title: `最多同时进行 ${maxConcurrent} 单`, icon: 'none' })
+              : handleGrab(order)}
+          >
+            {reachedLimit ? '已达接单上限' : '抢单'}
           </Button>
         </View>
       );
@@ -273,10 +310,27 @@ const OrdersPage: React.FC = () => {
         {loading ? (
           <Skeleton variant="card-list" rows={3} />
         ) : orders.length === 0 ? (
-          <Empty icon="🎮" title="暂无订单" desc={activeTab === 'pending' ? '待接单池暂时空空如也' : '还没有此类订单'} />
+          <Empty icon="🎮" title="暂无订单" desc={activeTab === 'pending' ? (reachedLimit ? `已达同时进行 ${maxConcurrent} 单上限，完成订单后可继续抢单` : '待接单池暂时空空如也') : '还没有此类订单'} />
         ) : (
-          orders.map(order => (
-            <View key={order.id} className={styles.orderCard}>
+          orders.map(order => {
+            const bossType = order.customer?.boss_type;
+            const vipColor = bossType?.color || '';
+            const cardBg = vipColor ? hexToRgba(vipColor, 0.06) : '';
+            const cardStyle = vipColor
+              ? { background: cardBg || undefined, borderLeft: `6rpx solid ${vipColor}` }
+              : undefined;
+            const showDiscount = !!bossType && bossType.discount_rate < 100;
+            return (
+            <View key={order.id} className={styles.orderCard} style={cardStyle}>
+              {!!bossType && (
+                <View className={styles.vipRow}>
+                  <Text
+                    className={styles.vipBadge}
+                    style={vipColor ? { background: vipColor } : undefined}
+                  >{bossType.name}</Text>
+                  <Text className={styles.bossName}>{order.customer?.nickname || '老板'}</Text>
+                </View>
+              )}
               <View className={styles.cardHeader}>
                 <View className={styles.serviceBlock}><Text className={styles.serviceName}>{order.service?.name || '陪玩服务'}</Text><Text className={styles.orderNo}>{order.order_no}</Text></View>
                 <View className={styles.priceBlock}><Text className={styles.pricePrefix}>订单金额</Text><Text className={styles.amountValue}>{formatXaCoin(order.amount)}币</Text></View>
@@ -285,6 +339,12 @@ const OrdersPage: React.FC = () => {
                 <Text className={`${styles.statusTag} ${styles[`status_${order.status}`]}`}>{statusTextMap[order.status]}</Text>
                 <Text className={styles.chip}>{order.game_rounds} 局</Text>
                 {!!order.game_region && <Text className={styles.chip}>{order.game_region}</Text>}
+                {showDiscount && (
+                  <Text
+                    className={styles.discountChip}
+                    style={vipColor ? { color: vipColor, background: hexToRgba(vipColor, 0.12) || undefined } : undefined}
+                  >{bossType!.discount_rate}折 VIP价</Text>
+                )}
               </View>
               {!!order.game_nickname && (
                 <View className={styles.infoRow}>
@@ -314,7 +374,8 @@ const OrdersPage: React.FC = () => {
                 {renderActions(order)}
               </View>
             </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
       <ReplyDialog

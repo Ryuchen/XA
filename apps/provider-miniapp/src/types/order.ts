@@ -12,7 +12,12 @@ export interface ProviderOrder {
   game_uid: string;
   remark: string;
   service?: { id: number; name: string };
-  customer?: { id: number; nickname: string; phone: string };
+  customer?: {
+    id: number;
+    nickname: string;
+    phone: string;
+    boss_type?: { name: string; color: string; discount_rate: number } | null;
+  };
   provider?: { id: number; nickname: string } | null;
   can_operate?: boolean;
   can_reject?: boolean;
@@ -23,6 +28,8 @@ export interface ProviderOrder {
 export interface ProviderStats {
   today_orders: number;
   serving: number;
+  active_orders: number;
+  max_concurrent_orders: number;
   completion_rate: number;
   total_income: number;
 }

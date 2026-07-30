@@ -9,6 +9,7 @@ import { fetchMe, MeProfile } from '@/services/user';
 import { formatXaCoin } from '@/utils/format';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import Icon, { IconName } from '@/components/Icon';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const MinePage: React.FC = () => {
@@ -28,15 +29,21 @@ const MinePage: React.FC = () => {
   // 拉取需鉴权数据：仅登录后调用，避免匿名态触发无意义 401
   const loadAuthedData = () => {
     if (!getStoredToken()) return;
-    fetchOrderStats().then((res: any) => {
-      if (res.code === 0 && res.data) setStats(res.data);
-    });
-    fetchWalletInfo().then((res: any) => {
-      if (res.code === 0 && res.data) setBalance(res.data.balance);
-    });
-    fetchMe().then(res => {
-      if (res.code === 0 && res.data) setProfile(res.data);
-    });
+    fetchOrderStats()
+      .then((res: any) => {
+        if (res.code === 0 && res.data) setStats(res.data);
+      })
+      .catch(() => {});
+    fetchWalletInfo()
+      .then((res: any) => {
+        if (res.code === 0 && res.data) setBalance(res.data.balance);
+      })
+      .catch(() => {});
+    fetchMe()
+      .then(res => {
+        if (res.code === 0 && res.data) setProfile(res.data);
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -120,7 +127,7 @@ const MinePage: React.FC = () => {
           >
             <Image
               className={styles.avatar}
-              src={user?.avatar || 'https://picsum.photos/id/64/200/200'}
+              src={resolveImageUrl(user?.avatar, 'https://picsum.photos/id/64/200/200')}
               mode="aspectFill"
             />
             <View className={styles.userDetail}>

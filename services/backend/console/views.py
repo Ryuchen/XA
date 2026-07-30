@@ -1,11 +1,11 @@
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
@@ -15,6 +15,11 @@ from audition.models import AuditionLink, AuditionSignup
 from banners.models import Banner
 from chat.models import ChatMessage, ChatSession
 from chat.notifier import notify_chat_message, notify_chat_session_update
+from club_accounts.models import ClubAccount, LegacyAccountMap
+from club_accounts.services import (
+    get_or_create_account_for_legacy_user,
+    link_legacy_relations,
+)
 from coupons.models import Coupon, UserCoupon
 from orders.models import (
     Evaluation,
@@ -47,6 +52,7 @@ from users.models import (
 from wallet.models import (
     COMMISSION_RATE_KEY,
     MIN_WITHDRAW_AMOUNT_KEY,
+    WITHDRAW_TAX_RATE_KEY,
     DisposeRecord,
     ProviderReport,
     RechargeRecord,
@@ -57,10 +63,12 @@ from wallet.models import (
     get_commission_rate,
     get_min_withdraw_amount,
     get_platform_wallet,
+    get_withdraw_tax_rate,
 )
+from common.media import build_media_url
 
 from .mixins import EnvelopeViewSetMixin
-from .models import AdminMembership, AdminRole
+from .models import AdminAuditLog, AdminMembership, AdminRole
 from .permissions import (
     PERMISSION_GROUPS,
     IsConsoleUser,
@@ -69,6 +77,7 @@ from .permissions import (
 from .serializers import (
     AdminAchievementSerializer,
     AdminAnnouncementSerializer,
+    AdminAuditLogSerializer,
     AdminAuditionLinkSerializer,
     AdminAuditionSignupSerializer,
     AdminBannerSerializer,
@@ -107,6 +116,41 @@ from .serializers import (
 User = get_user_model()
 
 
+def _legacy_user_for_account(account):
+    mapping = getattr(account, 'legacy_mapping', None)
+    if mapping is None:
+        raise User.DoesNotExist
+    return User.objects.get(pk=mapping.legacy_user_id)
+
+
+def _business_account(account_id, account_type):
+    """Resolve a business account, accepting a legacy ID during test cut-over."""
+    if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False):
+        mapping = LegacyAccountMap.objects.select_related('account').filter(
+            legacy_user_id=account_id,
+            account__account_type=account_type,
+        ).first()
+        if mapping is not None:
+            return mapping.account
+    account = ClubAccount.objects.filter(
+        id=account_id,
+        account_type=account_type,
+    ).first()
+    if account is not None or not getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False):
+        return account
+    role = (
+        User.Role.CUSTOMER
+        if account_type == ClubAccount.AccountType.BOSS
+        else User.Role.PROVIDER
+    )
+    legacy_user = User.objects.filter(id=account_id, role=role).first()
+    if legacy_user is None:
+        return None
+    account = get_or_create_account_for_legacy_user(legacy_user)
+    link_legacy_relations(legacy_user, account)
+    return account
+
+
 def _truthy(value):
     return str(value).lower() in ('1', 'true', 'yes')
 
@@ -139,9 +183,13 @@ class DashboardView(APIView):
         return Response({
             'code': 0,
             'data': {
-                'user_total': User.objects.count(),
-                'customer_total': User.objects.filter(role=User.Role.CUSTOMER).count(),
-                'provider_total': User.objects.filter(role=User.Role.PROVIDER).count(),
+                'user_total': ClubAccount.objects.count(),
+                'customer_total': ClubAccount.objects.filter(
+                    account_type=ClubAccount.AccountType.BOSS,
+                ).count(),
+                'provider_total': ClubAccount.objects.filter(
+                    account_type=ClubAccount.AccountType.PROVIDER,
+                ).count(),
                 'order_total': orders.count(),
                 'today_order_total': today_orders.count(),
                 'order_amount_total': orders.aggregate(total=Sum('amount'))['total'] or 0,
@@ -167,8 +215,7 @@ class PlayerDashboardView(APIView):
     permission_classes = [IsConsoleUser]
 
     def get(self, request):
-        if not request.user.is_superuser and \
-                'player_dashboard:view' not in get_user_permissions(request.user):
+        if 'player_dashboard:view' not in get_user_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'}, status=403)
 
         order_qs = Order.objects.filter(payment_status=Order.PaymentStatus.PAID)
@@ -284,11 +331,11 @@ class UserViewSet(EnvelopeViewSetMixin, ModelViewSet):
     }
 
     def get_queryset(self):
-        # 老板信息管理：仅老板（CUSTOMER），不含陪玩/客服/管理员
+        # 老板信息管理：仅业务账户中的老板，不含陪玩和后台人员。
         qs = (
-            User.objects.filter(role=User.Role.CUSTOMER)
+            ClubAccount.objects.filter(account_type=ClubAccount.AccountType.BOSS)
             .select_related('wallet', 'boss_type', 'inviter')
-            .order_by('-date_joined')
+            .order_by('-created_at')
         )
         # 编号 / 昵称 / 手机号 三个独立条件，相互 AND 叠加（支持输入即查提示）
         boss_no = self.request.query_params.get('boss_no')
@@ -320,7 +367,9 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
     }
 
     def get_queryset(self):
-        qs = EscortProfile.objects.select_related('user').order_by('-created_at')
+        qs = EscortProfile.objects.select_related(
+            'account', 'user',
+        ).prefetch_related('game_categories', 'service_items').order_by('-created_at')
         status_filter = self.request.query_params.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter.upper())
@@ -331,8 +380,8 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
         if keyword:
             qs = qs.filter(
                 Q(display_name__icontains=keyword)
-                | Q(user__username__icontains=keyword)
-                | Q(user__phone__icontains=keyword)
+                | Q(account__username__icontains=keyword)
+                | Q(account__phone__icontains=keyword)
             )
         return qs
 
@@ -342,6 +391,14 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         with transaction.atomic():
+            account = ClubAccount.objects.create_account(
+                username=data['username'],
+                password=data['password'],
+                nickname=data.get('nickname', ''),
+                phone=data.get('phone') or None,
+                account_type=ClubAccount.AccountType.PROVIDER,
+                is_openid_bound=True,
+            )
             user = User.objects.create_user(
                 username=data['username'],
                 password=data['password'],
@@ -350,8 +407,14 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
                 role=User.Role.PROVIDER,
                 is_openid_bound=True,
             )
+            LegacyAccountMap.objects.create(
+                legacy_user_id=user.id,
+                account=account,
+                legacy_role=User.Role.PROVIDER,
+            )
             profile = EscortProfile.objects.create(
                 user=user,
+                account=account,
                 display_name=data['display_name'],
                 gender=data.get('gender', EscortProfile.Gender.UNKNOWN),
                 city=data.get('city', ''),
@@ -362,10 +425,20 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
                 intro_video=data.get('intro_video'),
                 cheat_proof=data.get('cheat_proof'),
             )
+            game_categories = data.get('game_categories')
+            if game_categories:
+                profile.game_categories.set(game_categories)
+            service_items = data.get('service_items')
+            if service_items:
+                profile.service_items.set(service_items)
             # 头像同步回填到 CustomUser.avatar_url，供 C 端订单/评价展示
             if profile.avatar:
-                user.avatar_url = request.build_absolute_uri(profile.avatar.url)
+                avatar_url = build_media_url(request, profile.avatar)
+                account.avatar_url = avatar_url
+                account.save(update_fields=['avatar_url'])
+                user.avatar_url = avatar_url
                 user.save(update_fields=['avatar_url'])
+            Wallet.objects.filter(user=user).update(account=account)
         return Response(
             {'code': 0, 'data': AdminEscortSerializer(profile, context={'request': request}).data},
             status=201,
@@ -426,7 +499,8 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
                 dispose_type=dispose_type,
                 amount=amount,
                 reason=reason,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 transaction=tx,
             )
 
@@ -451,6 +525,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         'quick_dispatch': 'order:dispatch',
         'assign': 'order:dispatch',
         'start': 'order:dispatch',
+        'transfer': 'order:dispatch',
         'complete': 'order:settle',
     }
 
@@ -499,12 +574,16 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if not provider_id:
             return Response({'code': 400, 'msg': '请选择陪玩'})
         try:
-            provider = User.objects.select_related('escort_profile').get(
-                id=provider_id, role=User.Role.PROVIDER,
+            provider_account = ClubAccount.objects.select_related(
+                'escort_profile__level', 'legacy_mapping',
+            ).get(
+                id=provider_id,
+                account_type=ClubAccount.AccountType.PROVIDER,
             )
-        except User.DoesNotExist:
+            provider = _legacy_user_for_account(provider_account)
+        except (ClubAccount.DoesNotExist, User.DoesNotExist):
             return Response({'code': 404, 'msg': '陪玩不存在'})
-        profile = getattr(provider, 'escort_profile', None)
+        profile = getattr(provider_account, 'escort_profile', None)
         if profile is None or profile.status != EscortProfile.Status.AVAILABLE:
             return Response({'code': 400, 'msg': '该陪玩当前不可接单'})
         if not EscortSchedule.provider_is_scheduled_now(provider):
@@ -515,14 +594,18 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 raise IllegalTransitionError('订单未支付，不能派单')
             if o.escort_mode != Order.EscortMode.SINGLE:
                 raise IllegalTransitionError('双陪订单请通过快捷派单创建并同时指定两名陪玩')
+            if not profile.can_take_service(o.service):
+                raise IllegalTransitionError('该服务要求更高的陪玩档位，所选陪玩不符合')
 
         def side_effect(o):
             o.provider = provider
+            o.provider_account = provider_account
             o.provider_name_snapshot = profile.display_name or provider.nickname or provider.username
             EscortProfile.objects.filter(user=provider).update(status=EscortProfile.Status.BUSY)
             OrderProvider.objects.get_or_create(
                 order=o,
                 provider=provider,
+                provider_account=provider_account,
                 defaults={
                     'provider_name_snapshot': o.provider_name_snapshot,
                     'settlement_base': o.amount,
@@ -536,12 +619,13 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             order = transition(
                 order.id,
                 Order.Status.GRABBED,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 action=OrderStatusLog.Action.ASSIGN,
                 reason='客服指派陪玩',
                 pre_check=pre_check,
                 side_effect=side_effect,
-                update_fields=['provider', 'provider_name_snapshot'],
+                update_fields=['provider', 'provider_account', 'provider_name_snapshot'],
             )
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许派单'})
@@ -562,6 +646,244 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             related_order_id=order.id,
         )
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '派单成功'})
+
+    @action(detail=True, methods=['post'])
+    def transfer(self, request, pk=None):
+        """转单：服务中订单将部分或全部打手转交新打手。
+
+        对每一名被转出的旧打手：按客服填写的比例/固定额，从其应得份额(provider_income)
+        中立即结算入账其应得部分，剩余份额转给新打手（订单完成时随新打手结算）；
+        同时对旧打手扣除罚款。旧打手余额（含本次刚结算入账的分钱）不足以扣罚款时，
+        整笔转单失败并回滚。旧打手状态恢复可接单，新打手置忙碌。
+        """
+        order = self.get_object()
+        if order.status != Order.Status.IN_SERVICE:
+            return Response({'code': 400, 'msg': '仅服务中的订单可转单'})
+
+        transfers = request.data.get('transfers')
+        if not isinstance(transfers, list) or not transfers:
+            return Response({'code': 400, 'msg': '请至少选择一名要转出的打手'})
+
+        # ---- 解析并校验每条转单指令 ----
+        parsed = []
+        seen_old = set()
+        seen_new = set()
+        for item in transfers:
+            old_provider_id = item.get('old_provider_id')
+            new_provider_id = item.get('new_provider_id')
+            if not old_provider_id or not new_provider_id:
+                return Response({'code': 400, 'msg': '请完整选择转出与转入打手'})
+            if old_provider_id in seen_old:
+                return Response({'code': 400, 'msg': '同一打手不能重复转出'})
+            if int(old_provider_id) == int(new_provider_id):
+                return Response({'code': 400, 'msg': '新打手不能与原打手相同'})
+            split_type = (item.get('split_type') or OrderProvider.CommissionType.PERCENT).upper()
+            if split_type not in OrderProvider.CommissionType.values:
+                return Response({'code': 400, 'msg': '分钱方式不合法'})
+            try:
+                split_value = int(item.get('split_value', 0))
+                penalty = int(item.get('penalty_amount', 0))
+            except (TypeError, ValueError):
+                return Response({'code': 400, 'msg': '请输入合法的分钱比例/金额'})
+            if split_value < 0 or penalty < 0:
+                return Response({'code': 400, 'msg': '分钱与罚款金额不能为负'})
+            if split_type == OrderProvider.CommissionType.PERCENT and split_value > 100:
+                return Response({'code': 400, 'msg': '分钱比例不能超过 100%'})
+
+            new_provider_account = ClubAccount.objects.select_related(
+                'escort_profile__level', 'legacy_mapping',
+            ).filter(
+                id=new_provider_id,
+                account_type=ClubAccount.AccountType.PROVIDER,
+            ).first()
+            if new_provider_account is None:
+                return Response({'code': 404, 'msg': '转入打手不存在'})
+            try:
+                new_provider = _legacy_user_for_account(new_provider_account)
+            except User.DoesNotExist:
+                return Response({'code': 404, 'msg': '转入打手兼容映射不存在'})
+            new_profile = getattr(new_provider_account, 'escort_profile', None)
+            if new_profile is None or new_profile.status != EscortProfile.Status.AVAILABLE:
+                return Response({'code': 400, 'msg': f'{new_provider.nickname or new_provider.username} 当前不可接单'})
+            if not EscortSchedule.provider_is_scheduled_now(new_provider):
+                return Response({'code': 400, 'msg': f'{new_provider.nickname or new_provider.username} 当前不在接单档期'})
+            if not new_profile.can_take_service(order.service):
+                return Response({'code': 400, 'msg': f'{new_provider.nickname or new_provider.username} 档位不满足该服务要求'})
+            seen_old.add(old_provider_id)
+            seen_new.add(int(new_provider_id))
+            parsed.append({
+                'old_provider_account_id': int(old_provider_id),
+                'new_provider': new_provider,
+                'new_provider_account': new_provider_account,
+                'new_profile': new_profile,
+                'split_type': split_type,
+                'split_value': split_value,
+                'penalty': penalty,
+                'reason': (item.get('reason') or '').strip()[:255],
+            })
+
+        reason = (request.data.get('reason') or '转单').strip()[:255]
+
+        try:
+            with transaction.atomic():
+                locked_order = Order.objects.select_for_update().get(pk=order.pk)
+                if locked_order.status != Order.Status.IN_SERVICE:
+                    raise IllegalTransitionError('订单状态已变更，无法转单')
+                rows = {
+                    row.provider_account_id: row
+                    for row in locked_order.providers.select_for_update().all()
+                    if row.provider_account_id
+                }
+                last_new_provider = None
+                last_new_provider_account = None
+                for cmd in parsed:
+                    old_row = rows.get(cmd['old_provider_account_id'])
+                    if old_row is None or old_row.settled_at:
+                        raise IllegalTransitionError('所选原打手不在本单未结算打手中')
+                    pool = old_row.provider_income
+                    if cmd['split_type'] == OrderProvider.CommissionType.FIXED:
+                        old_income = min(cmd['split_value'], pool)
+                    else:
+                        old_income = pool * cmd['split_value'] // 100
+                    new_income = pool - old_income
+
+                    # 旧打手：结算入账应得份额
+                    old_wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                        user_id=old_row.provider_id,
+                        defaults={'account_id': old_row.provider_account_id},
+                    )
+                    if old_wallet.account_id != old_row.provider_account_id:
+                        old_wallet.account_id = old_row.provider_account_id
+                        old_wallet.save(update_fields=['account'])
+                    if old_income:
+                        before = old_wallet.balance
+                        old_wallet.balance += old_income
+                        old_wallet.save(update_fields=['balance'])
+                        Transaction.objects.create(
+                            wallet=old_wallet,
+                            order=locked_order,
+                            amount=old_income,
+                            tx_type=Transaction.TxType.INCOME,
+                            balance_before=before,
+                            balance_after=old_wallet.balance,
+                            remark=f'转单结算：{locked_order.order_no}',
+                        )
+                    # 旧打手：扣罚款（余额不足则整笔失败）
+                    penalty = cmd['penalty']
+                    if penalty:
+                        if old_wallet.balance < penalty:
+                            raise IllegalTransitionError('旧打手余额不足以扣除罚款，转单失败')
+                        before = old_wallet.balance
+                        old_wallet.balance -= penalty
+                        old_wallet.save(update_fields=['balance'])
+                        tx = Transaction.objects.create(
+                            wallet=old_wallet,
+                            order=locked_order,
+                            amount=-penalty,
+                            tx_type=Transaction.TxType.PENALTY,
+                            balance_before=before,
+                            balance_after=old_wallet.balance,
+                            remark=cmd['reason'] or f'转单罚款：{locked_order.order_no}',
+                        )
+                        DisposeRecord.objects.create(
+                            user_id=old_row.provider_id,
+                            account_id=old_row.provider_account_id,
+                            dispose_type=DisposeRecord.DisposeType.PENALTY,
+                            amount=penalty,
+                            reason=cmd['reason'] or '转单罚款',
+                            operator=request.legacy_user,
+                            operator_account=request.account,
+                            transaction=tx,
+                        )
+                        old_profile = EscortProfile.objects.select_for_update().get(
+                            account_id=old_row.provider_account_id,
+                        )
+                        old_profile.total_penalty += penalty
+                        old_profile.save(update_fields=['total_penalty'])
+
+                    # 旧打手行：定格已结算份额并标记已结算
+                    old_row.provider_income = old_income
+                    old_row.settled_at = timezone.now()
+                    old_row.save(update_fields=['provider_income', 'settled_at'])
+                    EscortProfile.objects.filter(
+                        account_id=old_row.provider_account_id,
+                    ).update(
+                        status=EscortProfile.Status.AVAILABLE,
+                    )
+
+                    # 新打手行：承接剩余份额，订单完成时结算
+                    new_provider = cmd['new_provider']
+                    new_name = cmd['new_profile'].display_name or new_provider.nickname or new_provider.username
+                    new_row, created = OrderProvider.objects.get_or_create(
+                        order=locked_order,
+                        provider_account=cmd['new_provider_account'],
+                        defaults={
+                            'provider': new_provider,
+                            'provider_name_snapshot': new_name,
+                            'settlement_base': locked_order.amount,
+                            'commission_type': OrderProvider.CommissionType.PERCENT,
+                            'commission_rate': locked_order.commission_rate,
+                            'provider_income': new_income,
+                        },
+                    )
+                    if not created:
+                        new_row.provider_income += new_income
+                        new_row.settled_at = None
+                        new_row.save(update_fields=['provider_income', 'settled_at'])
+                    EscortProfile.objects.filter(user=new_provider).update(
+                        status=EscortProfile.Status.BUSY,
+                    )
+                    last_new_provider = new_provider
+                    last_new_provider_account = cmd['new_provider_account']
+
+                # 订单主打手快照更新为最后转入的新打手
+                if last_new_provider is not None:
+                    locked_order.provider = last_new_provider
+                    locked_order.provider_account = last_new_provider_account
+                    profile = getattr(last_new_provider, 'escort_profile', None)
+                    locked_order.provider_name_snapshot = (
+                        (profile.display_name if profile else '')
+                        or last_new_provider.nickname or last_new_provider.username
+                    )
+                    locked_order.save(update_fields=[
+                        'provider', 'provider_account', 'provider_name_snapshot',
+                    ])
+
+                log_only(
+                    locked_order,
+                    action=OrderStatusLog.Action.TRANSFER,
+                    operator=request.legacy_user,
+                    operator_account=request.account,
+                    reason=reason,
+                )
+                order = locked_order
+        except IllegalTransitionError as exc:
+            return Response({'code': 400, 'msg': str(exc) or '转单失败'})
+
+        notify_order_update(order)
+        for cmd in parsed:
+            _push_message_safe(
+                recipient_id=rows[cmd['old_provider_account_id']].provider_id,
+                title='订单已转出',
+                preview=f'你的「{order.service_name_snapshot}」已转交其他大神，结算已到账',
+                msg_type='ORDER',
+                related_order_id=order.id,
+            )
+            _push_message_safe(
+                recipient_id=cmd['new_provider'].id,
+                title='客服转单给你',
+                preview=f'客服为你转入「{order.service_name_snapshot}」，请尽快开始服务',
+                msg_type='ORDER',
+                related_order_id=order.id,
+            )
+        _push_message_safe(
+            recipient_id=order.customer_id,
+            title='已为你更换大神',
+            preview=f'你的「{order.service_name_snapshot}」已更换服务大神',
+            msg_type='ORDER',
+            related_order_id=order.id,
+        )
+        return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '转单成功'})
 
     @action(detail=False, methods=['get'], url_path='suggest-commission')
     def suggest_commission(self, request):
@@ -585,7 +907,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         escort_profile = None
         if provider_id:
             escort_profile = EscortProfile.objects.filter(
-                user_id=provider_id, user__role=User.Role.PROVIDER,
+                account_id=provider_id,
+                account__account_type=ClubAccount.AccountType.PROVIDER,
             ).select_related('level').first()
         promotion = resolve_active_promotion(service)
         rate, source = resolve_commission_rate_with_source(service, escort_profile, promotion)
@@ -626,8 +949,14 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         remark = (request.data.get('remark') or '').strip()[:255]
 
         try:
-            customer = User.objects.get(id=customer_id, role=User.Role.CUSTOMER)
-        except User.DoesNotExist:
+            customer_account = _business_account(
+                customer_id,
+                ClubAccount.AccountType.BOSS,
+            )
+            if customer_account is None:
+                raise ClubAccount.DoesNotExist
+            customer = _legacy_user_for_account(customer_account)
+        except (ClubAccount.DoesNotExist, User.DoesNotExist):
             return Response({'code': 404, 'msg': '老板不存在'})
         try:
             service = ServiceItem.objects.get(id=service_id, is_active=True)
@@ -664,20 +993,28 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         provider_objs = []
         for item in providers_input:
             try:
-                pu = User.objects.select_related('escort_profile__level').get(
-                    id=item['provider_id'], role=User.Role.PROVIDER
+                provider_account = _business_account(
+                    item['provider_id'],
+                    ClubAccount.AccountType.PROVIDER,
                 )
-            except User.DoesNotExist:
+                if provider_account is None:
+                    raise ClubAccount.DoesNotExist
+                pu = _legacy_user_for_account(provider_account)
+            except (ClubAccount.DoesNotExist, User.DoesNotExist):
                 return Response({'code': 404, 'msg': '指定的陪玩不存在'})
-            if pu.escort_profile.status != EscortProfile.Status.AVAILABLE:
-                return Response({'code': 400, 'msg': f'{pu.escort_profile.display_name}当前不可接单'})
+            profile = provider_account.escort_profile
+            if profile.status != EscortProfile.Status.AVAILABLE:
+                return Response({'code': 400, 'msg': f'{profile.display_name}当前不可接单'})
             from users.models import EscortSchedule
             if not EscortSchedule.provider_is_scheduled_now(pu):
-                return Response({'code': 400, 'msg': f'{pu.escort_profile.display_name}当前不在接单档期'})
-            provider_objs.append((pu, item))
+                return Response({'code': 400, 'msg': f'{profile.display_name}当前不在接单档期'})
+            if not profile.can_take_service(service):
+                return Response({'code': 400, 'msg': f'{profile.display_name}档位不满足该服务要求'})
+            provider_objs.append((provider_account, pu, item))
 
         # 主打手（回填 Order.provider 兼容旧字段与流转）
-        provider = provider_objs[0][0] if provider_objs else None
+        provider_account = provider_objs[0][0] if provider_objs else None
+        provider = provider_objs[0][1] if provider_objs else None
 
         # ---- 金额与拆账（复用 C 端计价口径：老板折扣+活动折扣，代派单不含优惠券）----
         from orders.pricing import (
@@ -687,7 +1024,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             resolve_commission_rate,
         )
         original_amount = service.price * game_rounds
-        boss_type = getattr(customer, 'boss_type', None)
+        boss_type = customer_account.boss_type
         boss_rate = boss_type.discount_rate if (boss_type and boss_type.is_active) else 100
         promotion = resolve_active_promotion(service)
         try:
@@ -709,9 +1046,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if provider_count:
             base, remainder = divmod(amount, provider_count)
             settlement_bases = [base + (1 if idx < remainder else 0) for idx in range(provider_count)]
-        for idx, (pu, item) in enumerate(provider_objs):
+        for idx, (row_account, pu, item) in enumerate(provider_objs):
             settlement_base = settlement_bases[idx]
-            escort_profile = getattr(pu, 'escort_profile', None)
+            escort_profile = row_account.escort_profile
             ctype = item.get('commission_type') or _OP.CommissionType.PERCENT
             if ctype == _OP.CommissionType.FIXED:
                 try:
@@ -722,6 +1059,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     return Response({'code': 400, 'msg': '固定抽成额必须为非负兴安币'})
                 fixed = min(fixed, settlement_base)
                 provider_rows.append({
+                    'provider_account': row_account,
                     'provider': pu,
                     'settlement_base': settlement_base,
                     'commission_type': _OP.CommissionType.FIXED,
@@ -739,6 +1077,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     except (TypeError, ValueError):
                         return Response({'code': 400, 'msg': '抽成率必须为 0-100 的整数'})
                 provider_rows.append({
+                    'provider_account': row_account,
                     'provider': pu,
                     'settlement_base': settlement_base,
                     'commission_type': _OP.CommissionType.PERCENT,
@@ -752,7 +1091,10 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             primary = provider_rows[0]
             total_provider_income = sum(row['provider_income'] for row in provider_rows)
             platform_cut = amount - total_provider_income
-            inviter_rate = customer.inviter_commission_rate if getattr(customer, 'inviter', None) else 0
+            inviter_rate = (
+                customer_account.inviter_commission_rate
+                if customer_account.inviter_id else 0
+            )
             inviter_commission = platform_cut * min(max(int(inviter_rate), 0), 100) // 100
             from orders.settlement import OrderSplit
             split = OrderSplit(
@@ -766,13 +1108,24 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             split = compute_split(
                 amount,
                 primary_rate,
-                customer.inviter_commission_rate if getattr(customer, 'inviter', None) else 0,
+                customer_account.inviter_commission_rate
+                if customer_account.inviter_id else 0,
             )
-        inviter = getattr(customer, 'inviter', None)
+        inviter_account = customer_account.inviter
+        inviter = (
+            _legacy_user_for_account(inviter_account)
+            if inviter_account is not None else None
+        )
 
         # ---- 扣款建单 ----
         with transaction.atomic():
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(user=customer)
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                user=customer,
+                defaults={'account': customer_account},
+            )
+            if wallet.account_id != customer_account.id:
+                wallet.account = customer_account
+                wallet.save(update_fields=['account'])
             if not wallet.is_active:
                 return Response({'code': 403, 'msg': '该老板钱包不可用'})
             if wallet.balance < amount:
@@ -784,7 +1137,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
             order = Order.objects.create(
                 customer=customer,
+                customer_account=customer_account,
                 provider=provider,
+                provider_account=provider_account,
                 service=service,
                 amount=amount,
                 game_rounds=game_rounds,
@@ -801,6 +1156,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 commission_rate=split.commission_rate,
                 provider_income=split.provider_income,
                 inviter=inviter,
+                inviter_account=inviter_account,
                 inviter_commission=split.inviter_commission,
                 shop_income=split.shop_income,
             )
@@ -810,6 +1166,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 OrderProvider.objects.create(
                     order=order,
                     provider=pu,
+                    provider_account=row['provider_account'],
                     provider_name_snapshot=pu.nickname or pu.username,
                     settlement_base=row['settlement_base'],
                     commission_type=row['commission_type'],
@@ -829,7 +1186,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             log_only(
                 order,
                 action=OrderStatusLog.Action.CREATE,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 reason='客服代派单',
             )
 
@@ -839,6 +1197,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
             def side_effect(o):
                 o.provider = provider
+                o.provider_account = provider_account
                 o.provider_name_snapshot = provider.nickname or provider.username
                 EscortProfile.objects.filter(user_id__in=all_provider_ids).update(
                     status=EscortProfile.Status.BUSY,
@@ -848,10 +1207,11 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 order = transition(
                     order.id,
                     Order.Status.GRABBED,
-                    operator=request.user,
+                    operator=request.legacy_user,
+                    operator_account=request.account,
                     action=OrderStatusLog.Action.ASSIGN,
                     side_effect=side_effect,
-                    update_fields=['provider', 'provider_name_snapshot'],
+                    update_fields=['provider', 'provider_account', 'provider_name_snapshot'],
                 )
             except IllegalTransitionError as exc:
                 return Response({'code': 400, 'msg': str(exc) or '指派失败'})
@@ -909,7 +1269,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             order = transition(
                 order.id,
                 Order.Status.IN_SERVICE,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 action=OrderStatusLog.Action.START,
                 side_effect=side_effect,
             )
@@ -1013,7 +1374,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             order = transition(
                 order.id,
                 Order.Status.COMPLETED,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 action=OrderStatusLog.Action.COMPLETE,
                 side_effect=side_effect,
             )
@@ -1036,7 +1398,12 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if not reason:
             return Response({'code': 400, 'msg': '请填写退款原因'})
         try:
-            order = self._do_refund(order.id, request.user, reason)
+            order = self._do_refund(
+                order.id,
+                request.legacy_user,
+                request.account,
+                reason,
+            )
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许退款'})
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '已退款'})
@@ -1048,14 +1415,25 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if order.status != Order.Status.PENDING:
             return Response({'code': 400, 'msg': '仅待接单订单可直接取消，其它状态请用退款'})
         try:
-            order = self._do_refund(order.id, request.user, reason or '后台取消',
-                                    action=OrderStatusLog.Action.CANCEL)
+            order = self._do_refund(
+                order.id,
+                request.legacy_user,
+                request.account,
+                reason or '后台取消',
+                action=OrderStatusLog.Action.CANCEL,
+            )
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许取消'})
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '已取消'})
 
     @staticmethod
-    def _do_refund(order_id, operator, reason, action=OrderStatusLog.Action.REFUND):
+    def _do_refund(
+        order_id,
+        operator,
+        operator_account,
+        reason,
+        action=OrderStatusLog.Action.REFUND,
+    ):
         def pre_check(order):
             if order.status in Order.TERMINAL_STATUSES:
                 raise IllegalTransitionError('订单已是终态，无法退款')
@@ -1093,6 +1471,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             order_id,
             Order.Status.CANCELLED,
             operator=operator,
+            operator_account=operator_account,
             action=action,
             reason=reason,
             pre_check=pre_check,
@@ -1221,7 +1600,8 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 balance_before=balance_before,
                 balance_after=wallet.balance,
                 remark=remark,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
             )
         return Response({'code': 0, 'data': self.get_serializer(wallet).data, 'msg': '调账成功'})
 
@@ -1284,7 +1664,8 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 trade_no=trade_no,
                 proof_image=proof_image,
                 remark=remark,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 recharge_tx=recharge_tx,
                 gift_tx=gift_tx,
             )
@@ -1413,12 +1794,19 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 report.status = ProviderReport.Status.APPROVED
                 report.commission_rate = report.order.commission_rate
                 report.payout_amount = report.order.provider_income
-                report.auditor = request.user
+                report.auditor = request.legacy_user
+                report.auditor_account = request.account
                 report.audited_at = timezone.now()
                 report.save(update_fields=[
-                    'status', 'commission_rate', 'payout_amount', 'auditor', 'audited_at',
+                    'status', 'commission_rate', 'payout_amount', 'auditor',
+                    'auditor_account', 'audited_at',
                 ])
                 return Response({'code': 0, 'data': self.get_serializer(report).data, 'msg': '凭证审核通过'})
+
+            # 无关联订单的历史手工报单：优先采用陪玩报单时填写的抽成比例。
+            if report.commission_rate:
+                rate = report.commission_rate
+                source_label = '报单填写'
 
             payout = report.amount * (100 - rate) // 100
 
@@ -1441,11 +1829,12 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             report.status = ProviderReport.Status.APPROVED
             report.commission_rate = rate
             report.payout_amount = payout
-            report.auditor = request.user
+            report.auditor = request.legacy_user
+            report.auditor_account = request.account
             report.transaction = tx
             report.audited_at = timezone.now()
             report.save(update_fields=[
-                'status', 'commission_rate', 'payout_amount', 'auditor',
+                'status', 'commission_rate', 'payout_amount', 'auditor', 'auditor_account',
                 'transaction', 'audited_at',
             ])
 
@@ -1471,9 +1860,12 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 return Response({'code': 400, 'msg': '该报单已审核，无法重复操作'})
             report.status = ProviderReport.Status.REJECTED
             report.audit_remark = audit_remark
-            report.auditor = request.user
+            report.auditor = request.legacy_user
+            report.auditor_account = request.account
             report.audited_at = timezone.now()
-            report.save(update_fields=['status', 'audit_remark', 'auditor', 'audited_at'])
+            report.save(update_fields=[
+                'status', 'audit_remark', 'auditor', 'auditor_account', 'audited_at',
+            ])
 
         create_message(
             recipient_id=report.provider_id,
@@ -1490,7 +1882,7 @@ class CommissionConfigView(APIView):
     permission_classes = [IsConsoleUser]
 
     def put(self, request):
-        if not request.user.is_superuser and 'report:audit' not in get_user_permissions(request.user):
+        if 'report:audit' not in get_user_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'})
         try:
             rate = int(request.data.get('rate'))
@@ -1569,10 +1961,12 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             withdraw.status = WithdrawRequest.Status.APPROVED
             withdraw.payout_reference = payout_reference
             withdraw.paid_at = timezone.now()
-            withdraw.auditor = request.user
+            withdraw.auditor = request.legacy_user
+            withdraw.auditor_account = request.account
             withdraw.audited_at = timezone.now()
             withdraw.save(update_fields=[
-                'status', 'payout_reference', 'paid_at', 'auditor', 'audited_at',
+                'status', 'payout_reference', 'paid_at', 'auditor',
+                'auditor_account', 'audited_at',
             ])
 
         create_message(
@@ -1609,9 +2003,12 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
             withdraw.status = WithdrawRequest.Status.REJECTED
             withdraw.audit_remark = audit_remark
-            withdraw.auditor = request.user
+            withdraw.auditor = request.legacy_user
+            withdraw.auditor_account = request.account
             withdraw.audited_at = timezone.now()
-            withdraw.save(update_fields=['status', 'audit_remark', 'auditor', 'audited_at'])
+            withdraw.save(update_fields=[
+                'status', 'audit_remark', 'auditor', 'auditor_account', 'audited_at',
+            ])
 
         create_message(
             recipient_id=withdraw.user_id,
@@ -1623,12 +2020,12 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
 
 class WithdrawConfigView(APIView):
-    """最低提现金额配置：GET 读取，PUT 修改（需 withdraw:audit）。"""
+    """提现配置：GET 读取（最低提现金额 + 提现税率），PUT 修改（需 withdraw:audit）。"""
 
     permission_classes = [IsConsoleUser]
 
     def put(self, request):
-        if not request.user.is_superuser and 'withdraw:audit' not in get_user_permissions(request.user):
+        if 'withdraw:audit' not in get_user_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'})
         try:
             min_amount = int(request.data.get('min_amount'))
@@ -1636,14 +2033,36 @@ class WithdrawConfigView(APIView):
             return Response({'code': 400, 'msg': '请输入合法的最低提现兴安币'})
         if min_amount < 0:
             return Response({'code': 400, 'msg': '最低提现金额不能为负'})
+
+        try:
+            tax_rate = int(request.data.get('tax_rate'))
+        except (TypeError, ValueError):
+            return Response({'code': 400, 'msg': '请输入合法的提现税率'})
+        if tax_rate < 0 or tax_rate > 100:
+            return Response({'code': 400, 'msg': '提现税率需在 0-100 之间'})
+
         SystemConfig.objects.update_or_create(
             key=MIN_WITHDRAW_AMOUNT_KEY,
             defaults={'value': str(min_amount), 'remark': '最低提现兴安币（账务单位）'},
         )
-        return Response({'code': 0, 'data': {'min_amount': min_amount}, 'msg': '最低提现金额已更新'})
+        SystemConfig.objects.update_or_create(
+            key=WITHDRAW_TAX_RATE_KEY,
+            defaults={'value': str(tax_rate), 'remark': '提现税率（百分比，0-100）'},
+        )
+        return Response({
+            'code': 0,
+            'data': {'min_amount': min_amount, 'tax_rate': tax_rate},
+            'msg': '提现配置已更新',
+        })
 
     def get(self, request):
-        return Response({'code': 0, 'data': {'min_amount': get_min_withdraw_amount()}})
+        return Response({
+            'code': 0,
+            'data': {
+                'min_amount': get_min_withdraw_amount(),
+                'tax_rate': get_withdraw_tax_rate(),
+            },
+        })
 
 
 # ---------------- 在线客服 ----------------
@@ -1693,7 +2112,8 @@ class ChatSessionViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             session = ChatSession.objects.select_for_update().get(pk=pk)
             message = ChatMessage.objects.create(
                 session=session,
-                sender=request.user,
+                sender=request.legacy_user,
+                sender_account=request.account,
                 is_from_support=True,
                 content_type=content_type,
                 content=content,
@@ -1818,7 +2238,7 @@ class CheckinRuleConfigView(APIView):
         return Response({'code': 0, 'data': AdminCheckinRuleSerializer(rule).data})
 
     def put(self, request):
-        if not request.user.is_superuser and 'checkin:edit' not in get_user_permissions(request.user):
+        if 'checkin:edit' not in get_user_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'})
         rule, _ = CheckinRuleConfig.objects.get_or_create(pk=1)
         serializer = AdminCheckinRuleSerializer(rule, data=request.data, partial=True)
@@ -2010,7 +2430,10 @@ class AuditionLinkViewSet(EnvelopeViewSetMixin, ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(operator=self.request.user)
+        serializer.save(
+            operator=self.request.legacy_user,
+            operator_account=self.request.account,
+        )
 
 
 # ---------------- 试音报名 ----------------
@@ -2047,9 +2470,12 @@ class AuditionSignupViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if signup.status != AuditionSignup.Status.PENDING:
                 return Response({'code': 400, 'msg': '该报名已审核，无法重复操作'})
             signup.status = AuditionSignup.Status.APPROVED
-            signup.auditor = request.user
+            signup.auditor = request.legacy_user
+            signup.auditor_account = request.account
             signup.audited_at = timezone.now()
-            signup.save(update_fields=['status', 'auditor', 'audited_at'])
+            signup.save(update_fields=[
+                'status', 'auditor', 'auditor_account', 'audited_at',
+            ])
 
         create_message(
             recipient_id=signup.applicant_id,
@@ -2070,9 +2496,12 @@ class AuditionSignupViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 return Response({'code': 400, 'msg': '该报名已审核，无法重复操作'})
             signup.status = AuditionSignup.Status.REJECTED
             signup.audit_remark = audit_remark
-            signup.auditor = request.user
+            signup.auditor = request.legacy_user
+            signup.auditor_account = request.account
             signup.audited_at = timezone.now()
-            signup.save(update_fields=['status', 'audit_remark', 'auditor', 'audited_at'])
+            signup.save(update_fields=[
+                'status', 'audit_remark', 'auditor', 'auditor_account', 'audited_at',
+            ])
 
         create_message(
             recipient_id=signup.applicant_id,
@@ -2174,16 +2603,16 @@ class AdminMembershipViewSet(EnvelopeViewSetMixin, ModelViewSet):
         today = timezone.localdate()
         dispatch_sq = (
             OrderStatusLog.objects.filter(
-                operator_id=OuterRef('user_id'),
+                operator_account_id=OuterRef('account_id'),
                 action=OrderStatusLog.Action.CREATE,
                 created_at__date=today,
             )
-            .values('operator_id')
+            .values('operator_account_id')
             .annotate(total=Sum('order__amount'))
             .values('total')
         )
         qs = (
-            AdminMembership.objects.select_related('user', 'role')
+            AdminMembership.objects.select_related('account', 'user').prefetch_related('roles')
             .annotate(
                 today_dispatch_amount=Coalesce(
                     Subquery(dispatch_sq, output_field=IntegerField()), 0
@@ -2193,9 +2622,9 @@ class AdminMembershipViewSet(EnvelopeViewSetMixin, ModelViewSet):
         keyword = self.request.query_params.get('keyword')
         if keyword:
             qs = qs.filter(
-                Q(user__username__icontains=keyword)
-                | Q(user__nickname__icontains=keyword)
-                | Q(user__phone__icontains=keyword)
+                Q(account__username__icontains=keyword)
+                | Q(account__nickname__icontains=keyword)
+                | Q(account__phone__icontains=keyword)
             )
         return qs
 
@@ -2204,19 +2633,32 @@ class AdminMembershipViewSet(EnvelopeViewSetMixin, ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         with transaction.atomic():
-            user = User.objects.create_user(
+            account = ClubAccount.objects.create_account(
                 username=data['username'],
                 password=data['password'],
                 nickname=data.get('nickname', ''),
                 phone=data.get('phone') or None,
+                account_type=ClubAccount.AccountType.STAFF,
+            )
+            user = User.objects.create_user(
+                username=data['username'],
+                password=None,
+                nickname=data.get('nickname', ''),
+                phone=data.get('phone') or None,
                 role=User.Role.ADMIN,
-                is_staff=True,
+                is_staff=False,
+            )
+            LegacyAccountMap.objects.create(
+                legacy_user_id=user.id,
+                account=account,
+                legacy_role=User.Role.ADMIN,
             )
             membership = AdminMembership.objects.create(
                 user=user,
-                role=data['role'],
+                account=account,
                 remark=data.get('remark', ''),
             )
+            membership.roles.set(data['roles'])
         membership = self.get_queryset().get(pk=membership.pk)
         return Response(
             {'code': 0, 'data': AdminMembershipSerializer(membership).data},
@@ -2225,17 +2667,27 @@ class AdminMembershipViewSet(EnvelopeViewSetMixin, ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        account = instance.account
         user = instance.user
         data = request.data
 
         with transaction.atomic():
+            account_fields = []
             user_fields = []
             if 'nickname' in data:
-                user.nickname = (data.get('nickname') or '').strip()[:50]
+                nickname = (data.get('nickname') or '').strip()[:50]
+                account.nickname = nickname
+                account_fields.append('nickname')
+                user.nickname = nickname
                 user_fields.append('nickname')
             if 'phone' in data:
-                user.phone = (data.get('phone') or '').strip()[:20] or None
+                phone = (data.get('phone') or '').strip()[:20] or None
+                account.phone = phone
+                account_fields.append('phone')
+                user.phone = phone
                 user_fields.append('phone')
+            if account_fields:
+                account.save(update_fields=account_fields)
             if user_fields:
                 user.save(update_fields=user_fields)
 
@@ -2243,14 +2695,18 @@ class AdminMembershipViewSet(EnvelopeViewSetMixin, ModelViewSet):
             if 'remark' in data:
                 instance.remark = (data.get('remark') or '').strip()[:255]
                 membership_fields.append('remark')
-            # 超管的角色与启用状态受保护，不可通过本接口变更
-            if not user.is_superuser:
-                if 'role' in data and data.get('role'):
-                    try:
-                        instance.role = AdminRole.objects.get(pk=data['role'])
-                    except AdminRole.DoesNotExist:
-                        return Response({'code': 400, 'msg': '角色不存在'})
-                    membership_fields.append('role')
+            is_super_admin = (
+                instance.roles.filter(code='super_admin').exists()
+                or bool(user and user.is_superuser)
+            )
+            # 业务超管的角色与启用状态受保护，不依赖 Django 超级用户字段。
+            if not is_super_admin:
+                if 'roles' in data:
+                    role_ids = data.get('roles') or []
+                    roles = list(AdminRole.objects.filter(pk__in=role_ids))
+                    if len(roles) != len(set(role_ids)):
+                        return Response({'code': 400, 'msg': '存在无效角色'})
+                    instance.roles.set(roles)
                 if 'is_active' in data:
                     instance.is_active = _truthy(data.get('is_active'))
                     membership_fields.append('is_active')
@@ -2261,7 +2717,39 @@ class AdminMembershipViewSet(EnvelopeViewSetMixin, ModelViewSet):
         return Response({'code': 0, 'data': AdminMembershipSerializer(instance).data})
 
     def perform_destroy(self, instance):
-        if instance.user.is_superuser:
+        if (
+            instance.roles.filter(code='super_admin').exists()
+            or bool(instance.user and instance.user.is_superuser)
+        ):
             from rest_framework.exceptions import ValidationError
             raise ValidationError('超级管理员不可删除')
         instance.delete()
+
+
+# ---------------- 操作审计日志 ----------------
+class AuditLogViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
+    serializer_class = AdminAuditLogSerializer
+    default_perm = 'audit:view'
+
+    def get_queryset(self):
+        qs = AdminAuditLog.objects.select_related('operator').all()
+        operator = self.request.query_params.get('operator')
+        if operator:
+            qs = qs.filter(operator_id=operator)
+        keyword = self.request.query_params.get('keyword')
+        if keyword:
+            qs = qs.filter(
+                Q(operator_name__icontains=keyword)
+                | Q(path__icontains=keyword)
+                | Q(resource__icontains=keyword)
+            )
+        method = self.request.query_params.get('method')
+        if method:
+            qs = qs.filter(method=method.upper())
+        start_date = self.request.query_params.get('start_date')
+        if start_date:
+            qs = qs.filter(created_at__date__gte=start_date)
+        end_date = self.request.query_params.get('end_date')
+        if end_date:
+            qs = qs.filter(created_at__date__lte=end_date)
+        return qs

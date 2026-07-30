@@ -1,6 +1,13 @@
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 
+from club_accounts.models import ClubAccount
+from club_accounts.services import (
+    get_or_create_account_for_legacy_user,
+    link_legacy_relations,
+)
 from .models import Evaluation, Order, ServiceFavorite, ServiceItem
 
 
@@ -8,11 +15,13 @@ class ServiceItemSerializer(serializers.ModelSerializer):
     game_category_name = serializers.CharField(source='game_category.name', read_only=True, default='')
     service_category_name = serializers.CharField(source='service_category.name', read_only=True, default='')
     is_gift = serializers.BooleanField(source='service_category.is_gift', read_only=True, default=False)
+    required_level_name = serializers.CharField(source='required_level.name', read_only=True, default='')
 
     class Meta:
         model = ServiceItem
         fields = ['id', 'name', 'description', 'price', 'game_category', 'game_category_name',
-                  'service_category', 'service_category_name', 'is_gift', 'cover_url']
+                  'service_category', 'service_category_name', 'is_gift',
+                  'required_level', 'required_level_name', 'cover_url']
 
 
 class ServiceItemDetailSerializer(serializers.ModelSerializer):
@@ -42,9 +51,12 @@ class ServiceItemDetailSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
+        if not request or not getattr(request, 'account', None):
             return False
-        return ServiceFavorite.objects.filter(user=request.user, service_id=obj.id).exists()
+        return ServiceFavorite.objects.filter(
+            account=request.account,
+            service_id=obj.id,
+        ).exists()
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -123,8 +135,8 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_can_operate(self, obj):
         request = self.context.get('request')
         return bool(
-            request and request.user.is_authenticated
-            and obj.provider_id == request.user.id
+            request and getattr(request, 'account', None)
+            and obj.provider_account_id == request.account.id
             and obj.status in (Order.Status.GRABBED, Order.Status.IN_SERVICE)
         )
 
@@ -138,12 +150,16 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_allowed_actions(self, obj):
         """后端给出当前登录人可执行动作，三端只负责按此渲染按钮。"""
         request = self.context.get('request')
-        if not request or not request.user.is_authenticated:
+        if not request or not getattr(request, 'account', None):
             return []
-        user = request.user
+        account = request.account
+        user = request.legacy_user
         actions = []
 
-        if user.role == user.Role.CUSTOMER and obj.customer_id == user.id:
+        if (
+            account.account_type == ClubAccount.AccountType.BOSS
+            and obj.customer_account_id == account.id
+        ):
             if obj.status == Order.Status.PENDING and obj.payment_status == Order.PaymentStatus.PAID:
                 actions.append('CANCEL')
             is_gift = bool(obj.service.service_category and obj.service.service_category.is_gift)
@@ -153,9 +169,9 @@ class OrderSerializer(serializers.ModelSerializer):
                 actions.append('TIP')
             return actions
 
-        if user.role == user.Role.PROVIDER:
-            if obj.status == Order.Status.PENDING and obj.provider_id is None:
-                profile = getattr(user, 'escort_profile', None)
+        if account.account_type == ClubAccount.AccountType.PROVIDER:
+            if obj.status == Order.Status.PENDING and obj.provider_account_id is None:
+                profile = getattr(account, 'escort_profile', None)
                 if (
                     profile
                     and profile.status == profile.Status.AVAILABLE
@@ -164,15 +180,15 @@ class OrderSerializer(serializers.ModelSerializer):
                     from users.models import EscortSchedule
                     if EscortSchedule.provider_is_scheduled_now(user):
                         actions.append('GRAB')
-            if obj.provider_id == user.id and obj.status == Order.Status.GRABBED:
+            if obj.provider_account_id == account.id and obj.status == Order.Status.GRABBED:
                 actions.append('START')
                 if obj.escort_mode == Order.EscortMode.SINGLE:
                     actions.append('REJECT')
-            if obj.provider_id == user.id and obj.status == Order.Status.IN_SERVICE:
+            if obj.provider_account_id == account.id and obj.status == Order.Status.IN_SERVICE:
                 actions.append('COMPLETE')
             return actions
 
-        if user.role == user.Role.OPERATOR:
+        if account.account_type == ClubAccount.AccountType.STAFF:
             if obj.status == Order.Status.PENDING:
                 actions.extend(['ASSIGN', 'CANCEL'])
             elif obj.status == Order.Status.GRABBED:
@@ -184,17 +200,26 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_expected_income(self, obj):
         """当前陪玩预计到手金额；双陪订单优先取本人结算明细。"""
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            assignment = obj.providers.filter(provider=request.user).first()
+        if request and getattr(request, 'account', None):
+            assignment = obj.providers.filter(provider_account=request.account).first()
             if assignment:
                 return assignment.provider_income
         return obj.provider_income
 
     def get_customer(self, obj):
+        boss_type = obj.customer.boss_type
+        boss_type_data = None
+        if boss_type and boss_type.is_active:
+            boss_type_data = {
+                'name': boss_type.name,
+                'color': boss_type.color,
+                'discount_rate': boss_type.discount_rate,
+            }
         return {
             'id': obj.customer_id,
             'nickname': obj.customer.nickname or obj.customer.username,
             'phone': obj.customer.phone or '',
+            'boss_type': boss_type_data,
         }
 
     def get_provider(self, obj):
@@ -229,8 +254,12 @@ class CreateOrderSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         request = self.context['request']
-        user = request.user
-        if user.role not in (user.Role.CUSTOMER, user.Role.OPERATOR):
+        account = request.account
+        user = request.legacy_user
+        if account.account_type not in (
+            ClubAccount.AccountType.BOSS,
+            ClubAccount.AccountType.STAFF,
+        ):
             raise serializers.ValidationError('仅玩家或客服可下单')
 
         service_id = attrs.get('service_id') or attrs.get('product_id')
@@ -246,7 +275,7 @@ class CreateOrderSerializer(serializers.Serializer):
         original_amount = service.price * attrs.get('game_rounds', 1)
 
         # 老板分级折扣：discount_rate=100 表示原价
-        boss_type = getattr(user, 'boss_type', None)
+        boss_type = account.boss_type
         if boss_type and boss_type.is_active:
             boss_rate = boss_type.discount_rate
         else:
@@ -256,20 +285,41 @@ class CreateOrderSerializer(serializers.Serializer):
         provider = None
         provider_id = attrs.get('provider_id')
         if provider_id:
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
             try:
-                provider = User.objects.select_related('escort_profile__level').get(
-                    id=provider_id, role=User.Role.PROVIDER
+                provider_account = None
+                if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False):
+                    legacy_provider = get_user_model().objects.filter(
+                        id=provider_id,
+                        role='PROVIDER',
+                    ).first()
+                    if legacy_provider is not None:
+                        provider_account = get_or_create_account_for_legacy_user(
+                            legacy_provider,
+                        )
+                        link_legacy_relations(legacy_provider, provider_account)
+                if provider_account is None:
+                    provider_account = ClubAccount.objects.select_related(
+                        'escort_profile__level',
+                        'legacy_mapping',
+                    ).filter(
+                        id=provider_id,
+                        account_type=ClubAccount.AccountType.PROVIDER,
+                    ).first()
+                if provider_account is None:
+                    raise ClubAccount.DoesNotExist
+                provider = get_user_model().objects.get(
+                    id=provider_account.legacy_mapping.legacy_user_id,
                 )
-            except User.DoesNotExist as exc:
+            except (ClubAccount.DoesNotExist, get_user_model().DoesNotExist) as exc:
                 raise serializers.ValidationError('指定的大神不存在') from exc
-            profile = getattr(provider, 'escort_profile', None)
+            profile = getattr(provider_account, 'escort_profile', None)
             if profile is None or profile.status != profile.Status.AVAILABLE:
                 raise serializers.ValidationError('指定的大神当前不可接单')
             from users.models import EscortSchedule
             if not EscortSchedule.provider_is_scheduled_now(provider):
                 raise serializers.ValidationError('指定的大神当前不在接单档期')
+            if not profile.can_take_service(service):
+                raise serializers.ValidationError('该服务要求更高的陪玩档位，所选大神不符合')
         attrs['provider'] = provider
 
         support_contact = None
@@ -304,7 +354,7 @@ class CreateOrderSerializer(serializers.Serializer):
             try:
                 user_coupon = UserCoupon.objects.select_related('coupon').get(
                     id=user_coupon_id,
-                    user=user,
+                    account=account,
                 )
             except UserCoupon.DoesNotExist as exc:
                 raise serializers.ValidationError('优惠券不存在') from exc
@@ -408,7 +458,7 @@ class CreateEvaluationSerializer(serializers.Serializer):
 
         if order.status != Order.Status.COMPLETED:
             raise serializers.ValidationError('仅已完成订单可评价')
-        if order.customer_id != request.user.id:
+        if order.customer_id != request.legacy_user.id:
             raise serializers.ValidationError('仅订单所属玩家可评价')
         if hasattr(order, 'evaluation'):
             raise serializers.ValidationError('该订单已评价')

@@ -177,8 +177,8 @@
             <el-form-item label="胜率(%)"><el-input-number v-model="editForm.win_rate" :min="0" :max="100" :precision="2" style="width: 100%" /></el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="陪玩等级">
-              <el-select v-model="editForm.level" clearable placeholder="未设置（按店铺抽成）" style="width: 100%">
+            <el-form-item label="陪玩等级" required>
+              <el-select v-model="editForm.level" placeholder="请选择档位（必填）" style="width: 100%">
                 <el-option
                   v-for="lv in levelOptions"
                   :key="lv.id"
@@ -189,6 +189,30 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-form-item label="可接游戏">
+          <el-select
+            v-model="editForm.game_categories"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择该陪玩可接单的游戏（可多选）"
+            style="width: 100%"
+          >
+            <el-option v-for="g in gameOptions" :key="g.id" :label="g.name" :value="g.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="可接服务项">
+          <el-select
+            v-model="editForm.service_items"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择该陪玩可接单的具体服务项（可多选）"
+            style="width: 100%"
+          >
+            <el-option v-for="s in serviceItemOptions" :key="s.id" :label="s.name" :value="s.id" />
+          </el-select>
+        </el-form-item>
       </div>
 
       <div class="es-form-section">
@@ -318,8 +342,8 @@
         <p class="es-section-title">计费与押金</p>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="陪玩等级">
-              <el-select v-model="createForm.level" clearable placeholder="未设置（按店铺抽成）" style="width: 100%">
+            <el-form-item label="陪玩等级" required>
+              <el-select v-model="createForm.level" placeholder="请选择档位（必填）" style="width: 100%">
                 <el-option
                   v-for="lv in levelOptions"
                   :key="lv.id"
@@ -335,6 +359,30 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <el-form-item label="可接游戏">
+          <el-select
+            v-model="createForm.game_categories"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择该陪玩可接单的游戏（可多选）"
+            style="width: 100%"
+          >
+            <el-option v-for="g in gameOptions" :key="g.id" :label="g.name" :value="g.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="可接服务项">
+          <el-select
+            v-model="createForm.service_items"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择该陪玩可接单的具体服务项（可多选）"
+            style="width: 100%"
+          >
+            <el-option v-for="s in serviceItemOptions" :key="s.id" :label="s.name" :value="s.id" />
+          </el-select>
+        </el-form-item>
       </div>
     </el-form>
     <template #footer>
@@ -372,7 +420,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, VideoCamera } from '@element-plus/icons-vue'
 import CrudTable from '@/components/CrudTable.vue'
-import { escortApi, escortLevelApi } from '@/api/modules'
+import { escortApi, escortLevelApi, gameCategoryApi, serviceItemApi } from '@/api/modules'
 import { ESCORT_STATUS, GENDER } from '@/utils/dict'
 import { amountToXaCoin, xaCoinToAmount } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
@@ -387,6 +435,8 @@ const editForm = reactive<any>({})
 const depositRequiredYuan = ref<number>(0)
 const depositPaidYuan = ref<number>(0)
 const levelOptions = ref<any[]>([])
+const gameOptions = ref<any[]>([])
+const serviceItemOptions = ref<any[]>([])
 
 type MediaKey = 'avatar' | 'intro_video' | 'cheat_proof'
 const editFiles = reactive<Record<MediaKey, File | null>>({ avatar: null, intro_video: null, cheat_proof: null })
@@ -404,10 +454,25 @@ async function ensureLevels() {
   levelOptions.value = res.data?.list || []
 }
 
+async function ensureGames() {
+  if (gameOptions.value.length) return
+  const res = (await gameCategoryApi.list({ is_active: 'true', page_size: 200 })) as any
+  gameOptions.value = res.data?.list || []
+}
+
+async function ensureServiceItems() {
+  if (serviceItemOptions.value.length) return
+  const res = (await serviceItemApi.list({ is_active: 'true', page_size: 500 })) as any
+  serviceItemOptions.value = res.data?.list || []
+}
+
 async function onEdit(row: any) {
   Object.assign(editForm, row)
   // DRF DecimalField 序列化为字符串，el-input-number 需要 Number
   editForm.win_rate = row.win_rate != null ? Number(row.win_rate) : 0
+  // 后端 game_categories 返回 id 数组，多选组件直接绑定；拷贝一份避免污染表格行
+  editForm.game_categories = Array.isArray(row.game_categories) ? [...row.game_categories] : []
+  editForm.service_items = Array.isArray(row.service_items) ? [...row.service_items] : []
   depositRequiredYuan.value = Number(amountToXaCoin(row.deposit_required))
   depositPaidYuan.value = Number(amountToXaCoin(row.deposit_paid))
   editFiles.avatar = editFiles.intro_video = editFiles.cheat_proof = null
@@ -416,9 +481,12 @@ async function onEdit(row: any) {
   editPreview.cheat_proof = row.cheat_proof_url || ''
   dialogVisible.value = true
   ensureLevels()
+  ensureGames()
+  ensureServiceItems()
 }
 
 async function onSave() {
+  if (editForm.level == null) { ElMessage.warning('请为该陪玩设置档位'); return }
   saving.value = true
   try {
     const base: Record<string, any> = {
@@ -434,6 +502,8 @@ async function onSave() {
       deposit_paid: xaCoinToAmount(depositPaidYuan.value),
       status: editForm.status,
       bio: editForm.bio ?? '',
+      game_categories: Array.isArray(editForm.game_categories) ? editForm.game_categories : [],
+      service_items: Array.isArray(editForm.service_items) ? editForm.service_items : [],
     }
     const hasFile = editFiles.avatar || editFiles.intro_video || editFiles.cheat_proof
     let payload: any = base
@@ -442,9 +512,14 @@ async function onSave() {
       const fd = new FormData()
       Object.entries(base).forEach(([k, v]) => {
         if (k === 'level' && (v === null || v === '')) return
+        if (k === 'game_categories') return // 数组需逐值 append，见下方
+        if (k === 'service_items') return // 数组需逐值 append，见下方
         if (v === null || v === undefined) return
         fd.append(k, String(v))
       })
+      // multipart 表达数组：同名字段多次 append，DRF 会解析为列表；空数组显式清空关联
+      base.game_categories.forEach((id: number) => fd.append('game_categories', String(id)))
+      base.service_items.forEach((id: number) => fd.append('service_items', String(id)))
       ;(['avatar', 'intro_video', 'cheat_proof'] as MediaKey[]).forEach((k) => {
         if (editFiles[k]) fd.append(k, editFiles[k] as File)
       })
@@ -478,6 +553,8 @@ const defaultCreateForm = () => ({
   phone: '',
   city: '',
   level: null as number | null,
+  game_categories: [] as number[],
+  service_items: [] as number[],
 })
 const createForm = reactive<Record<string, any>>(defaultCreateForm())
 const createFiles = reactive<Record<MediaKey, File | null>>({ avatar: null, intro_video: null, cheat_proof: null })
@@ -504,6 +581,8 @@ function onCreate() {
   createPreview.avatar = createPreview.intro_video = createPreview.cheat_proof = ''
   createVisible.value = true
   ensureLevels()
+  ensureGames()
+  ensureServiceItems()
   createFormRef.value?.clearValidate()
 }
 
@@ -511,6 +590,7 @@ async function onCreateSave() {
   if (!createFormRef.value) return
   await createFormRef.value.validate(async (valid) => {
     if (!valid) return
+    if (createForm.level == null) { ElMessage.warning('请为该陪玩设置档位'); return }
     creating.value = true
     try {
       const fd = new FormData()
@@ -522,6 +602,9 @@ async function onCreateSave() {
       fd.append('city', createForm.city.trim())
       fd.append('deposit_required', String(xaCoinToAmount(createDepositYuan.value)))
       if (createForm.level != null) fd.append('level', String(createForm.level))
+      // 可接游戏：multipart 数组同名多次 append，后端 .set() 建立 n:n 关联
+      ;(createForm.game_categories as number[]).forEach((id) => fd.append('game_categories', String(id)))
+      ;(createForm.service_items as number[]).forEach((id) => fd.append('service_items', String(id)))
       ;(['avatar', 'intro_video', 'cheat_proof'] as MediaKey[]).forEach((k) => {
         if (createFiles[k]) fd.append(k, createFiles[k] as File)
       })

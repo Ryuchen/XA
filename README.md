@@ -185,6 +185,9 @@ docker compose up -d --build web celery-worker celery-beat
 
 `WECHAT_MOCK_LOGIN=true` 只适合本地 H5 联调，生产或微信开发者工具真机联调必须关闭，否则无法验证真实微信身份，也可能产生非预期测试账号。
 
+陪玩开始服务、完成服务时默认必须上传入队和结单截图。旧版客户端灰度升级期间可临时设置
+`REQUIRE_ORDER_EVIDENCE_IMAGES=false`，生产稳定后应恢复为 `true`；即使关闭该开关，报单正式提交仍会校验完整凭证。
+
 ## 测试账号与阶段数据
 
 后端提供可重复执行的联调数据命令。重跑只清理 `demo_*` 测试账号及其关联数据，不会清理手工创建的正常账号。

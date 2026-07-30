@@ -1,4 +1,4 @@
-import { ApiResponse, request } from '@/utils/request';
+import { ApiResponse, request, uploadFile } from '@/utils/request';
 import { EvaluationListData, ProviderOrder, ProviderStats } from '@/types/order';
 
 /** 订单列表。status=pending 且 role=provider 时返回待接单池。 */
@@ -14,12 +14,18 @@ export const grabOrder = (orderId: number | string) => {
   return request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/grab/`, 'POST');
 };
 
-export const startOrder = (orderId: number | string) => {
-  return request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/start-service/`, 'POST');
+/** 开始服务：必须上传入队截图。 */
+export const startOrder = (orderId: number | string, entryImagePath: string) => {
+  return uploadFile<ApiResponse<ProviderOrder>>(
+    `/orders/orders/${orderId}/start-service/`, entryImagePath, {}, 'entry_image',
+  );
 };
 
-export const completeOrder = (orderId: number | string) => {
-  return request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/complete/`, 'POST');
+/** 完成订单：必须上传结单截图。 */
+export const completeOrder = (orderId: number | string, completionImagePath: string) => {
+  return uploadFile<ApiResponse<ProviderOrder>>(
+    `/orders/orders/${orderId}/complete/`, completionImagePath, {}, 'completion_image',
+  );
 };
 
 export const rejectOrder = (orderId: number | string, reason?: string) => {

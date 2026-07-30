@@ -6,6 +6,7 @@ import { ServiceInfo } from '@/types/order';
 import { formatXaCoin } from '@/utils/format';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { getStoredToken } from '@/utils/auth';
@@ -92,7 +93,7 @@ const CategoryPage: React.FC = () => {
             >
               <Image
                 className={styles.productImage}
-                src={service.cover_url || PLACEHOLDER_IMAGE}
+                src={resolveImageUrl(service.cover_url, PLACEHOLDER_IMAGE)}
                 mode="aspectFill"
               />
               <View className={styles.productInfo}>

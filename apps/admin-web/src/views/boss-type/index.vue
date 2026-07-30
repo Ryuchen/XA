@@ -13,6 +13,15 @@
       <el-table-column label="折扣率" width="120">
         <template #default="{ row }">{{ row.discount_rate }}%</template>
       </el-table-column>
+      <el-table-column label="标识色" width="120">
+        <template #default="{ row }">
+          <div v-if="row.color" class="bt-color-cell">
+            <span class="bt-color-dot" :style="{ background: row.color }" />
+            <span class="bt-color-text">{{ row.color }}</span>
+          </div>
+          <span v-else class="tip">未设置</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
       <el-table-column prop="sort_order" label="排序" width="80" />
       <el-table-column label="状态" width="90">
@@ -56,6 +65,10 @@
         <el-form-item label="折扣说明">
           <span class="tip">100=原价，80=八折；下单时按此折扣计费</span>
         </el-form-item>
+        <el-form-item label="标识色">
+          <el-color-picker v-model="form.color" />
+          <span class="tip">用于接单工作台按等级渲染卡片底色与徽章；留空则不做特殊标记</span>
+        </el-form-item>
         <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
       </div>
     </el-form>
@@ -82,7 +95,7 @@ const saving = ref(false)
 const form = reactive<any>({})
 
 function blank() {
-  return { id: 0, name: '', discount_rate: 100, remark: '', sort_order: 0, is_active: true }
+  return { id: 0, name: '', discount_rate: 100, color: '', remark: '', sort_order: 0, is_active: true }
 }
 
 function onCreate() {
@@ -102,6 +115,7 @@ async function onSave() {
     const payload = {
       name: form.name,
       discount_rate: form.discount_rate,
+      color: form.color || '',
       remark: form.remark,
       sort_order: form.sort_order,
       is_active: form.is_active,
@@ -140,6 +154,22 @@ async function onDelete(row: any) {
   font-size: 12px;
   color: var(--muted-foreground);
   margin-left: 12px;
+}
+.bt-color-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bt-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  flex: none;
+}
+.bt-color-text {
+  font-size: 12px;
+  color: var(--muted-foreground);
 }
 .bt-dialog :deep(.el-dialog__body) {
   padding-top: 8px;

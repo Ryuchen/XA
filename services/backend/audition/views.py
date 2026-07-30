@@ -1,10 +1,17 @@
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
+from club_accounts.models import ClubAccount
+from club_accounts.permissions import IsClubAccountAuthenticated
+from club_accounts.services import (
+    get_or_create_account_for_legacy_user,
+    link_legacy_relations,
+)
+from club_accounts.tokens import issue_account_tokens
 from users.views import ROLE_REVERSE_MAP
 
 from .models import AuditionLink, AuditionSignup
@@ -67,7 +74,10 @@ class AuditionExchangeView(APIView):
 
         token_field = 'boss_token' if role == 'boss' else 'provider_token'
         try:
-            link = AuditionLink.objects.select_related('boss_user', 'provider_user').get(
+            link = AuditionLink.objects.select_related(
+                'boss_account',
+                'provider_account',
+            ).get(
                 **{token_field: token}
             )
         except AuditionLink.DoesNotExist:
@@ -78,28 +88,52 @@ class AuditionExchangeView(APIView):
         if link.expire_at and link.expire_at < timezone.now():
             return Response({'code': 410, 'msg': '该试音链接已过期'})
 
-        bound_user = link.boss_user if role == 'boss' else link.provider_user
-        if bound_user is None:
+        bound_account = link.boss_account if role == 'boss' else link.provider_account
+        if bound_account is None:
+            legacy_user = link.boss_user if role == 'boss' else link.provider_user
+            if legacy_user is not None:
+                bound_account = get_or_create_account_for_legacy_user(legacy_user)
+                link_legacy_relations(legacy_user, bound_account)
+        if bound_account is None:
             return Response({'code': 409, 'msg': '该入口尚未绑定账号，请联系客服'})
-        if not bound_user.is_active:
+        expected_type = (
+            ClubAccount.AccountType.BOSS
+            if role == 'boss'
+            else ClubAccount.AccountType.PROVIDER
+        )
+        if bound_account.account_type != expected_type:
+            return Response({'code': 409, 'msg': '入口绑定账号类型错误，请联系客服'})
+        if not bound_account.is_active or not bound_account.can_login:
             return Response({'code': 403, 'msg': '该账号已被禁用'})
 
-        refresh = RefreshToken.for_user(bound_user)
-        frontend_role = ROLE_REVERSE_MAP.get(bound_user.role, 'customer')
+        access_token, refresh_token = issue_account_tokens(bound_account)
+        frontend_role = ROLE_REVERSE_MAP.get(bound_account.account_type, 'customer')
+        legacy_user = link.boss_user if role == 'boss' else link.provider_user
+        response_id = (
+            legacy_user.id
+            if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False) and legacy_user
+            else bound_account.id
+        )
+        backend_role = (
+            legacy_user.role
+            if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False) and legacy_user
+            else bound_account.account_type
+        )
 
         return Response({
             'code': 0,
             'msg': 'success',
             'data': {
-                'token': str(refresh.access_token),
+                'token': access_token,
+                'refreshToken': refresh_token,
                 'userInfo': {
-                    'id': str(bound_user.id),
-                    'username': bound_user.username,
-                    'nickname': bound_user.nickname or bound_user.username,
+                    'id': str(response_id),
+                    'username': bound_account.username,
+                    'nickname': bound_account.nickname or bound_account.username,
                     'role': frontend_role,
-                    'backendRole': bound_user.role,
-                    'openid': bound_user.openid,
-                    'phone': bound_user.phone,
+                    'backendRole': backend_role,
+                    'openid': bound_account.openid,
+                    'phone': bound_account.phone,
                     'bindCode': None,
                     'bindStatus': 'direct' if frontend_role == 'customer' else 'bound',
                 },
@@ -115,10 +149,10 @@ class AuditionSignupView(APIView):
     审核交由后台，本接口不涉及任何资金动作。
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
-        if request.user.role != request.user.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩账号可报名试音'})
 
         token = (request.data.get('token') or '').strip()
@@ -140,7 +174,11 @@ class AuditionSignupView(APIView):
 
         try:
             with transaction.atomic():
-                signup = serializer.save(link=link, applicant=request.user)
+                signup = serializer.save(
+                    link=link,
+                    applicant=request.legacy_user,
+                    applicant_account=request.account,
+                )
         except IntegrityError:
             return Response({'code': 409, 'msg': '您已报名该试音活动，请勿重复提交'})
 
@@ -158,11 +196,11 @@ class MyAuditionSignupView(APIView):
     仅返回当前登录用户提交过的报名，按提交时间倒序。
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         signups = (
-            AuditionSignup.objects.filter(applicant=request.user)
+            AuditionSignup.objects.filter(applicant_account=request.account)
             .select_related('link')
             .order_by('-created_at')
         )

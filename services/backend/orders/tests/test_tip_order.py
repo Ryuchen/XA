@@ -19,8 +19,8 @@ class TipOrderTest(APITestCase):
         self.provider = make_provider(display_name='测试陪玩', is_verified=True)
         make_wallet(self.customer, balance=10000)
         make_wallet(self.provider, balance=1000)
-        normal_category = ServiceCategory.objects.get(name='陪玩服务')
-        gift_category = ServiceCategory.objects.get(name='礼品套餐')
+        normal_category = ServiceCategory.objects.create(name='测试陪玩分类', is_gift=False)
+        gift_category = ServiceCategory.objects.create(name='测试礼物分类', is_gift=True)
         self.normal_service = make_service(
             name='王者陪玩', price=5000, service_category=normal_category,
         )

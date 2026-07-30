@@ -1,10 +1,11 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from .models import Message
 
 
 @admin.register(Message)
-class MessageAdmin(admin.ModelAdmin):
+class MessageAdmin(ModelAdmin):
     list_display = ('id', 'recipient', 'type', 'title', 'is_read', 'created_at')
     list_filter = ('type', 'is_read')
     search_fields = ('title', 'preview', 'recipient__username')

@@ -642,7 +642,12 @@ class PlayerDashboardTest(APITestCase):
         self.male.escort_profile.save()
         make_wallet(self.male, balance=15000, frozen_amount=5000)
         WithdrawRequest.objects.create(
-            user=self.male, amount=7000, status=WithdrawRequest.Status.APPROVED,
+            user=self.male,
+            amount=7000,
+            payee_method=WithdrawRequest.PayeeMethod.WECHAT,
+            payee_account='dashboard-test-payee',
+            payee_name='仪表盘测试',
+            status=WithdrawRequest.Status.APPROVED,
         )
         self.client.force_authenticate(self.admin)
         sec = self.client.get(self.URL).data['data']['secondary']
@@ -1000,7 +1005,7 @@ class CustomerServiceAdminTest(APITestCase):
             'nickname': '小客服',
             'phone': '13800001111',
             'remark': '夜班',
-            'role': self.role.id,
+            'roles': [self.role.id],
         })
         self.assertEqual(res.data['code'], 0)
         data = res.data['data']
@@ -1058,11 +1063,11 @@ class CustomerServiceAdminTest(APITestCase):
         self.client.force_authenticate(self.admin)
         self.client.post(self.URL, {
             'username': 'csA', 'password': 'pass1234', 'nickname': '甲',
-            'phone': '13900002222', 'role': self.role.id,
+            'phone': '13900002222', 'roles': [self.role.id],
         })
         self.client.post(self.URL, {
             'username': 'csB', 'password': 'pass1234', 'nickname': '乙',
-            'phone': '13700003333', 'role': self.role.id,
+            'phone': '13700003333', 'roles': [self.role.id],
         })
         res = self.client.get(self.URL, {'keyword': '13900002222'})
         self.assertEqual(res.data['data']['total'], 1)
@@ -1087,21 +1092,23 @@ class CustomerServiceAdminTest(APITestCase):
     def test_update_superuser_role_and_status_protected(self):
         su = make_superuser()
         other_role = AdminRole.objects.create(name='受限', code='limited', permissions=[])
-        membership = AdminMembership.objects.create(user=su, role=self.role)
+        membership = AdminMembership.objects.create(user=su)
+        membership.roles.set([self.role])
         self.client.force_authenticate(self.admin)
         res = self.client.patch(f'{self.URL}{membership.id}/', {
-            'role': other_role.id,
+            'roles': [other_role.id],
             'is_active': False,
         })
         self.assertEqual(res.data['code'], 0)
         membership.refresh_from_db()
         # 超管角色与状态不可被改动
-        self.assertEqual(membership.role_id, self.role.id)
+        self.assertEqual(list(membership.roles.values_list('id', flat=True)), [self.role.id])
         self.assertTrue(membership.is_active)
 
     def test_destroy_superuser_forbidden(self):
         su = make_superuser()
-        membership = AdminMembership.objects.create(user=su, role=self.role)
+        membership = AdminMembership.objects.create(user=su)
+        membership.roles.set([self.role])
         self.client.force_authenticate(self.admin)
         res = self.client.delete(f'{self.URL}{membership.id}/')
         self.assertEqual(res.status_code, 400)
@@ -1112,7 +1119,7 @@ class CustomerServiceAdminTest(APITestCase):
         self.client.force_authenticate(user)
         self.assertEqual(self.client.get(self.URL).status_code, 200)
         res = self.client.post(self.URL, {
-            'username': 'x', 'password': 'pass1234', 'role': self.role.id,
+            'username': 'x', 'password': 'pass1234', 'roles': [self.role.id],
         })
         self.assertEqual(res.status_code, 403)
 
@@ -1121,7 +1128,7 @@ class CustomerServiceAdminTest(APITestCase):
         self.client.force_authenticate(user)
         res = self.client.post(self.URL, {
             'username': 'csNew', 'password': 'pass1234', 'nickname': '新人',
-            'phone': '13500005555', 'role': self.role.id,
+            'phone': '13500005555', 'roles': [self.role.id],
         })
         self.assertEqual(res.data['code'], 0)
 

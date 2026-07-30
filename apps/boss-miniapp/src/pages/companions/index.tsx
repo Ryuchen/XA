@@ -2,13 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, Input, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchEscorts, EscortProfile } from '@/services/user';
-import { fetchServices } from '@/services/order';
+import { fetchServices, fetchGameCategories, GameCategoryInfo } from '@/services/order';
 import { fetchRankings, RankingData, RankingPeriod } from '@/services/ranking';
 import { ServiceInfo } from '@/types/order';
 import { formatXaCoin } from '@/utils/format';
 import { getStoredToken } from '@/utils/auth';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
+import { useVoicePreview } from '@/hooks/useVoicePreview';
 import { Empty, Icon, Skeleton } from '@/components';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const rankPeriods = [
@@ -32,12 +34,13 @@ const CompanionsPage: React.FC = () => {
   const [ranking, setRanking] = useState<RankingData>({ consume_rank: [], order_rank: [] });
   const [escorts, setEscorts] = useState<EscortProfile[]>([]);
   const [gifts, setGifts] = useState<ServiceInfo[]>([]);
-  const [gameCategories, setGameCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [gameCategories, setGameCategories] = useState<GameCategoryInfo[]>([]);
   const [selectedGame, setSelectedGame] = useState('');
   const [escortLoading, setEscortLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { ensureLogin, loginSheet } = useLoginGuard();
+  const { playingId, toggle: toggleVoice } = useVoicePreview();
 
   const loadEscorts = async (game = selectedGame) => {
     const res = await fetchEscorts(game || undefined);
@@ -45,17 +48,9 @@ const CompanionsPage: React.FC = () => {
   };
 
   const loadGameCategories = async () => {
-    const res = await fetchServices();
+    const res = await fetchGameCategories();
     if (res.code !== 0 || !res.data) return;
-    const categoryMap = new Map<string, number>();
-    res.data.forEach(service => {
-      if (service.game_category && service.game_category_name) {
-        if (!categoryMap.has(service.game_category_name)) {
-          categoryMap.set(service.game_category_name, service.game_category);
-        }
-      }
-    });
-    setGameCategories(Array.from(categoryMap, ([name, id]) => ({ id, name })));
+    setGameCategories(res.data);
   };
 
   const loadGifts = async () => {
@@ -210,7 +205,7 @@ const CompanionsPage: React.FC = () => {
                     <View key={item.user_id} className={styles.rankRow}>
                       <Text className={`${styles.rankNo} ${item.rank <= 3 ? styles.rankNoTop : ''}`}>{item.rank}</Text>
                       <View className={styles.rankPlayer}>
-                        <Image className={styles.rankAvatar} src={item.avatar || DEFAULT_AVATAR} mode="aspectFill" />
+                        <Image className={styles.rankAvatar} src={resolveImageUrl(item.avatar, DEFAULT_AVATAR)} mode="aspectFill" />
                         <Text className={styles.rankName}>{item.nickname}</Text>
                       </View>
                       <Text className={styles.rankOrders}>{item.order_count}单</Text>
@@ -240,7 +235,7 @@ const CompanionsPage: React.FC = () => {
                     <View key={gift.id} className={styles.giftCard} onClick={() => handleGiftTap(gift.id)}>
                       <Image
                         className={styles.giftCover}
-                        src={gift.cover_url || DEFAULT_AVATAR}
+                        src={resolveImageUrl(gift.cover_url, DEFAULT_AVATAR)}
                         mode="aspectFill"
                       />
                       <View className={styles.giftMain}>
@@ -277,6 +272,9 @@ const CompanionsPage: React.FC = () => {
                     className={`${styles.gameFilterChip} ${selectedGame === category.name ? styles.gameFilterChipActive : ''}`}
                     onClick={() => handleGameChange(category.name)}
                   >
+                    {category.icon_url && (
+                      <Image className={styles.gameFilterIcon} src={resolveImageUrl(category.icon_url)} mode="aspectFit" />
+                    )}
                     <Text className={styles.gameFilterText}>{category.name}</Text>
                   </View>
                 ))}
@@ -289,7 +287,7 @@ const CompanionsPage: React.FC = () => {
                 return (
                   <View key={escort.id} className={styles.playerCard}>
                     <View className={styles.playerAvatarWrap}>
-                      <Image className={styles.playerAvatar} src={escort.avatar || DEFAULT_AVATAR} mode="aspectFill" />
+                      <Image className={styles.playerAvatar} src={resolveImageUrl(escort.avatar, DEFAULT_AVATAR)} mode="aspectFill" />
                       <View className={`${styles.status} ${styles[status.key]}`}>
                         <View className={styles.statusDot} />
                         <Text>{status.text}</Text>
@@ -300,6 +298,15 @@ const CompanionsPage: React.FC = () => {
                         <Text className={styles.playerName}>{escort.nickname}</Text>
                       </View>
                       <Text className={styles.playerRank}>{escort.rank || '暂无段位'}</Text>
+                      {escort.voice_card_url && (
+                        <View
+                          className={`${styles.voicePreview} ${playingId === escort.id ? styles.voicePreviewPlaying : ''}`}
+                          onClick={() => toggleVoice(escort.id, escort.voice_card_url)}
+                        >
+                          <Text className={styles.voicePreviewIcon}>{playingId === escort.id ? '⏸' : '🔊'}</Text>
+                          <Text>{playingId === escort.id ? '播放中' : '试听'}</Text>
+                        </View>
+                      )}
                       <View className={styles.playerMeta}>
                         <Text>好评 {escort.favorableRate || 0}%</Text>
                         <Text>已接 {escort.orderCount}</Text>

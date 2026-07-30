@@ -7,10 +7,19 @@ from django.db import models
 COMMISSION_RATE_KEY = 'platform_commission_rate'
 # 最低提现金额配置在 SystemConfig 中的键名
 MIN_WITHDRAW_AMOUNT_KEY = 'min_withdraw_amount'
+# 提现税率配置在 SystemConfig 中的键名
+WITHDRAW_TAX_RATE_KEY = 'withdraw_tax_rate'
 
 
 class Wallet(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet')
+    account = models.OneToOneField(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='wallet',
+    )
     balance = models.IntegerField(default=0)  # 余额，内部账务单位；10 单位 = 1 兴安币
     frozen_amount = models.PositiveIntegerField(default=0)
     total_recharge = models.IntegerField(default=0)  # 累计充值兴安币（内部账务单位）
@@ -22,6 +31,20 @@ class Wallet(models.Model):
     class Meta:
         verbose_name = 'Wallet'
         verbose_name_plural = 'Wallets'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(balance__gte=0),
+                name='wallet_balance_nonnegative',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(total_recharge__gte=0),
+                name='wallet_recharge_nonnegative',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(total_gift__gte=0),
+                name='wallet_gift_nonnegative',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - 余额: {self.balance / 10:g}兴安币"
@@ -53,6 +76,13 @@ class Transaction(models.Model):
         related_name='operated_transactions',
         help_text='后台调账等人工操作的操作人；系统自动流水为空',
     )
+    operator_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='operated_transactions',
+    )
     tx_no = models.CharField(max_length=32, unique=True, blank=True, default='', db_index=True)
     amount = models.IntegerField()  # 正数代表增加，负数代表扣减
     tx_type = models.CharField(max_length=20, choices=TxType.choices, db_index=True)
@@ -66,6 +96,39 @@ class Transaction(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['wallet', 'status', '-created_at'],
+                name='tx_wallet_status_time_idx',
+            ),
+            models.Index(
+                fields=['wallet', 'tx_type', 'status', '-created_at'],
+                name='tx_wallet_type_time_idx',
+            ),
+            models.Index(
+                fields=['order', 'tx_type', 'status'],
+                name='tx_order_type_status_idx',
+            ),
+            models.Index(
+                fields=['external_tx_id'],
+                name='tx_external_id_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(
+                    tx_type__in=[
+                        'TOPUP', 'PAY', 'INCOME', 'WITHDRAW', 'REWARD', 'GIFT',
+                        'PENALTY', 'DEPOSIT', 'SHOP_INCOME', 'REFUND', 'PASS_PURCHASE',
+                    ]
+                ),
+                name='transaction_type_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['PENDING', 'SUCCESS', 'FAILED']),
+                name='transaction_status_valid',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.tx_no:
@@ -127,6 +190,29 @@ def get_min_withdraw_amount():
     return amount
 
 
+def get_withdraw_tax_rate():
+    """返回当前提现税率（百分比，0-100 的整数）。
+
+    优先读取 SystemConfig，未配置或非法时回落 settings.WITHDRAW_TAX_RATE（默认 2）。
+    """
+    default = getattr(settings, 'WITHDRAW_TAX_RATE', 2)
+    config = SystemConfig.objects.filter(key=WITHDRAW_TAX_RATE_KEY).first()
+    if not config:
+        return default
+    try:
+        rate = int(config.value)
+    except (TypeError, ValueError):
+        return default
+    if rate < 0 or rate > 100:
+        return default
+    return rate
+
+
+def compute_withdraw_tax(amount, tax_rate):
+    """按税率计算提现税额（内部账务单位，四舍五入取整）。"""
+    return round(amount * tax_rate / 100)
+
+
 def get_platform_wallet(for_update=False):
     """返回平台系统账户的钱包，用于归集 shop_income（店铺/平台留存）。
 
@@ -137,7 +223,19 @@ def get_platform_wallet(for_update=False):
     from django.contrib.auth import get_user_model
 
     User = get_user_model()
-    user = User.objects.get(username=settings.PLATFORM_SYSTEM_USERNAME)
+    user, created = User.objects.get_or_create(
+        username=settings.PLATFORM_SYSTEM_USERNAME,
+        defaults={
+            'is_active': False,
+            'is_staff': False,
+            'is_superuser': False,
+            'role': 'ADMIN',
+            'nickname': '平台账户',
+        },
+    )
+    if created:
+        user.set_unusable_password()
+        user.save(update_fields=['password'])
     qs = Wallet.objects.all()
     if for_update:
         qs = qs.select_for_update()
@@ -156,6 +254,13 @@ class ProviderReport(models.Model):
 
     provider = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='provider_reports'
+    )
+    provider_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='provider_reports',
     )
     order = models.ForeignKey(
         'orders.Order', on_delete=models.CASCADE, null=True, blank=True,
@@ -178,6 +283,13 @@ class ProviderReport(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='audited_reports',
     )
+    auditor_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audited_reports',
+    )
     transaction = models.ForeignKey(
         Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
     )
@@ -192,6 +304,36 @@ class ProviderReport(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['provider', 'order'], name='uniq_provider_order_report',
+            ),
+            models.UniqueConstraint(
+                fields=['provider_account', 'order'],
+                name='uniq_provider_account_report',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name='provider_report_amount_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(commission_rate__range=(0, 100)),
+                name='provider_report_rate_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(payout_amount__lte=models.F('amount')),
+                name='provider_report_payout_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['DRAFT', 'PENDING', 'APPROVED', 'REJECTED']),
+                name='provider_report_status_valid',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['provider_account', 'status', '-created_at'],
+                name='report_account_status_idx',
+            ),
+            models.Index(
+                fields=['status', '-created_at'],
+                name='report_status_time_idx',
             ),
         ]
 
@@ -231,7 +373,23 @@ class WithdrawRequest(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='withdraw_requests'
     )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='withdraw_requests',
+    )
     amount = models.PositiveIntegerField()  # 提现兴安币（内部账务单位）
+    tax_rate = models.PositiveIntegerField(
+        default=0, help_text='申请时快照的提现税率（百分比，0-100）',
+    )
+    tax_amount = models.PositiveIntegerField(
+        default=0, help_text='按税率计算的税额（内部账务单位）',
+    )
+    actual_amount = models.PositiveIntegerField(
+        default=0, help_text='扣税后实际打款给陪玩的金额（内部账务单位）',
+    )
     payee_method = models.CharField(max_length=20, choices=PayeeMethod.choices)
     payee_account = models.CharField(max_length=100)  # 收款账号
     payee_name = models.CharField(max_length=50)  # 收款人姓名
@@ -249,6 +407,13 @@ class WithdrawRequest(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='audited_withdrawals',
     )
+    auditor_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audited_withdrawals',
+    )
     transaction = models.ForeignKey(
         Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
     )
@@ -260,6 +425,53 @@ class WithdrawRequest(models.Model):
         ordering = ['-created_at']
         verbose_name = 'WithdrawRequest'
         verbose_name_plural = 'WithdrawRequests'
+        indexes = [
+            models.Index(
+                fields=['account', 'status', '-created_at'],
+                name='withdraw_account_status_idx',
+            ),
+            models.Index(
+                fields=['status', '-created_at'],
+                name='withdraw_status_time_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name='withdraw_amount_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(tax_rate__range=(0, 100)),
+                name='withdraw_tax_rate_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(tax_amount__lte=models.F('amount')),
+                name='withdraw_tax_amount_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    actual_amount=models.F('amount') - models.F('tax_amount')
+                ),
+                name='withdraw_actual_amount_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['PENDING', 'APPROVED', 'REJECTED']),
+                name='withdraw_status_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(payee_method__in=['WECHAT', 'ALIPAY', 'BANK']),
+                name='withdraw_payee_method_valid',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # actual_amount 是 amount 与 tax_amount 的派生快照，统一在模型层计算，
+        # 避免后台脚本、管理命令或测试绕过 API serializer 时写入不一致数据。
+        self.actual_amount = self.amount - self.tax_amount
+        update_fields = kwargs.get('update_fields')
+        if update_fields and {'amount', 'tax_amount'} & set(update_fields):
+            kwargs['update_fields'] = set(update_fields) | {'actual_amount'}
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"提现#{self.pk} {self.user.username} {self.amount / 10:g}兴安币 [{self.status}]"
@@ -273,6 +485,13 @@ class RechargeRecord(models.Model):
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recharge_records'
+    )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='recharge_records',
     )
     amount = models.PositiveIntegerField()  # 充值兴安币（内部账务单位）
     gift_amount = models.PositiveIntegerField(default=0)  # 赠送兴安币（内部账务单位）
@@ -289,6 +508,13 @@ class RechargeRecord(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='operated_recharges',
     )
+    operator_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='operated_recharges',
+    )
     recharge_tx = models.ForeignKey(
         Transaction, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
     )
@@ -301,6 +527,22 @@ class RechargeRecord(models.Model):
         ordering = ['-created_at']
         verbose_name = 'RechargeRecord'
         verbose_name_plural = 'RechargeRecords'
+        indexes = [
+            models.Index(
+                fields=['account', '-created_at'],
+                name='recharge_account_time_idx',
+            ),
+            models.Index(
+                fields=['trade_no'],
+                name='recharge_trade_no_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name='recharge_amount_positive',
+            ),
+        ]
 
     @property
     def total_amount(self) -> int:
@@ -323,6 +565,13 @@ class DisposeRecord(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='dispose_records'
     )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='dispose_records',
+    )
     dispose_type = models.CharField(
         max_length=16, choices=DisposeType.choices, db_index=True
     )
@@ -330,6 +579,13 @@ class DisposeRecord(models.Model):
     reason = models.CharField(max_length=255, blank=True, default='')
     operator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='operated_disposes',
+    )
+    operator_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='operated_disposes',
     )
     transaction = models.ForeignKey(
@@ -341,6 +597,22 @@ class DisposeRecord(models.Model):
         ordering = ['-created_at']
         verbose_name = 'DisposeRecord'
         verbose_name_plural = 'DisposeRecords'
+        indexes = [
+            models.Index(
+                fields=['account', 'dispose_type', '-created_at'],
+                name='dispose_account_type_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name='dispose_amount_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(dispose_type__in=['REWARD', 'PENALTY']),
+                name='dispose_type_valid',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.get_dispose_type_display()}#{self.pk} {self.user.username} {self.amount / 10:g}兴安币"

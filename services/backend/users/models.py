@@ -24,6 +24,9 @@ class BossType(models.Model):
     discount_rate = models.PositiveSmallIntegerField(
         default=100, validators=[MinValueValidator(1), MaxValueValidator(100)]
     )  # 折扣率(%)，100=原价，90=九折
+    # 标识色(hex，如 #C99A2E)：用于接单工作台按等级渲染卡片底色与徽章；
+    # 留空表示不做特殊视觉标记，前端走默认样式。
+    color = models.CharField(max_length=9, blank=True, default='')
     remark = models.CharField(max_length=255, blank=True, default='')
     sort_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -34,6 +37,12 @@ class BossType(models.Model):
         verbose_name = 'Boss Type'
         verbose_name_plural = 'Boss Types'
         ordering = ['sort_order', 'id']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(discount_rate__range=(1, 100)),
+                name='boss_type_discount_valid',
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name}({self.discount_rate}%)"
@@ -60,6 +69,12 @@ class EscortLevel(models.Model):
         verbose_name = 'Escort Level'
         verbose_name_plural = 'Escort Levels'
         ordering = ['sort_order', 'id']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(commission_rate__range=(0, 100)),
+                name='escort_level_rate_valid',
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name}({self.commission_rate}%)"
@@ -103,12 +118,30 @@ class CustomUser(AbstractUser):
     boss_type = models.ForeignKey(
         'users.BossType', on_delete=models.SET_NULL, null=True, blank=True, related_name='bosses'
     )
-    boss_no = models.CharField(max_length=32, blank=True, default='', db_index=True)  # 老板编号
+    boss_no = models.CharField(max_length=32, blank=True, default='', unique=True)  # 全局人员编号
     can_login = models.BooleanField(default=True)  # 是否允许登录
     can_view = models.BooleanField(default=True)  # 是否允许查看数据
     last_active_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(role__in=['CUSTOMER', 'PROVIDER', 'OPERATOR', 'ADMIN']),
+                name='custom_user_role_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(inviter_commission_rate__range=(0, 100)),
+                name='custom_user_inviter_rate_valid',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['role', 'can_login', 'is_active'],
+                name='custom_user_login_idx',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         # 全系统人员统一编号：boss_no 为空时自动生成 XA+6 位随机数字
@@ -126,6 +159,13 @@ class CustomerGameProfile(models.Model):
     user = models.ForeignKey(
         'users.CustomUser', on_delete=models.CASCADE, related_name='game_profiles',
     )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='game_profiles',
+    )
     game_category = models.ForeignKey(
         'orders.GameCategory', on_delete=models.PROTECT, related_name='customer_profiles',
     )
@@ -140,6 +180,10 @@ class CustomerGameProfile(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'game_category'], name='uniq_customer_game_profile',
+            ),
+            models.UniqueConstraint(
+                fields=['account', 'game_category'],
+                name='uniq_account_game_profile',
             ),
         ]
         ordering = ['game_category__sort_order', 'game_category_id']
@@ -168,6 +212,13 @@ class EscortProfile(models.Model):
     user = models.OneToOneField(
         'users.CustomUser',
         on_delete=models.CASCADE,
+        related_name='escort_profile',
+    )
+    account = models.OneToOneField(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='escort_profile',
     )
     display_name = models.CharField(max_length=50)
@@ -228,12 +279,43 @@ class EscortProfile(models.Model):
         max_length=10, choices=PassTier.choices, blank=True, default='', db_index=True,
     )
     pass_expires_at = models.DateTimeField(blank=True, null=True, db_index=True)
+    # 可接游戏类目：陪玩与游戏为多对多，一个陪玩可接多种游戏，一个游戏可被多名陪玩接单。
+    # 下单指定游戏后，仅展示可接该游戏的陪玩；未配置任何游戏的陪玩不会在指定游戏筛选下出现。
+    game_categories = models.ManyToManyField(
+        'orders.GameCategory', blank=True, related_name='escorts',
+    )
+    # 可接服务项：陪玩与服务项为多对多，粒度比游戏更细（如"三角洲·排位上分"）。
+    # 陪玩勾选服务项即隐含可接其所属游戏；下单指定服务项后仅展示可接该服务项的陪玩。
+    service_items = models.ManyToManyField(
+        'orders.ServiceItem', blank=True, related_name='escorts',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Escort Profile'
         verbose_name_plural = 'Escort Profiles'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(win_rate__range=(0, 100)),
+                name='escort_profile_win_rate_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rating_avg__range=(0, 5)),
+                name='escort_profile_rating_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['AVAILABLE', 'BUSY', 'OFFLINE']),
+                name='escort_profile_status_valid',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(pass_tier='')
+                    | models.Q(pass_tier__in=['BLACK', 'GOLD', 'SILVER', 'BRONZE'])
+                ),
+                name='escort_profile_pass_tier_valid',
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         # 陪玩编号与该用户的全局编号保持一致（一人一码）
@@ -261,10 +343,34 @@ class EscortProfile(models.Model):
             '': 300,
         }[self.active_pass_tier]
 
+    @property
+    def level_rank(self):
+        """陪玩档位高低数值：未设档位视为最低(-1)。值越大档位越高。"""
+        if self.level_id is None or self.level is None:
+            return -1
+        return self.level.sort_order
+
+    def can_take_service(self, service) -> bool:
+        """是否满足服务项要求的最低档位：陪玩档位 >= 服务要求档位。
+
+        服务未绑定档位(required_level 为空)时视为不限档，任何陪玩可接。
+        """
+        required = getattr(service, 'required_level', None)
+        if required is None:
+            return True
+        return self.level_rank >= required.sort_order
+
 
 class ProviderPassPurchase(models.Model):
     provider = models.ForeignKey(
         'users.CustomUser', on_delete=models.CASCADE, related_name='pass_purchases',
+    )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='pass_purchases',
     )
     tier = models.CharField(max_length=10, choices=EscortProfile.PassTier.choices)
     days = models.PositiveSmallIntegerField()
@@ -281,12 +387,45 @@ class ProviderPassPurchase(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['account', '-created_at'],
+                name='pass_purchase_account_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(days__gte=1),
+                name='pass_purchase_days_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(expires_at__gt=models.F('starts_at')),
+                name='pass_purchase_period_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(discount_amount__lte=models.F('original_amount')),
+                name='pass_purchase_discount_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    paid_amount=models.F('original_amount') - models.F('discount_amount')
+                ),
+                name='pass_purchase_amount_valid',
+            ),
+        ]
 
 
 class CheckinRecord(models.Model):
     user = models.ForeignKey(
         'users.CustomUser',
         on_delete=models.CASCADE,
+        related_name='checkin_records',
+    )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='checkin_records',
     )
     checkin_date = models.DateField(db_index=True)
@@ -302,6 +441,22 @@ class CheckinRecord(models.Model):
         verbose_name_plural = 'Checkin Records'
         unique_together = ('user', 'checkin_date')
         ordering = ['-checkin_date']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account', 'checkin_date'],
+                name='uniq_account_checkin_date',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(seq_in_month__range=(1, 31)),
+                name='checkin_sequence_valid',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['account', '-checkin_date'],
+                name='checkin_account_date_idx',
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.user.username} - {self.checkin_date}"
@@ -339,6 +494,12 @@ class CheckinGift(models.Model):
 
     class Meta:
         ordering = ['checkin_day']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(checkin_day__range=(1, 31)),
+                name='checkin_gift_day_valid',
+            ),
+        ]
 
     def __str__(self):
         return f'第{self.checkin_day}天 - {self.name}'
@@ -349,6 +510,13 @@ class CheckinMonthProgress(models.Model):
 
     user = models.ForeignKey(
         'users.CustomUser', on_delete=models.CASCADE, related_name='checkin_month_progresses',
+    )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='checkin_month_progresses',
     )
     year = models.PositiveSmallIntegerField()
     month = models.PositiveSmallIntegerField()
@@ -364,6 +532,20 @@ class CheckinMonthProgress(models.Model):
     class Meta:
         unique_together = ('user', 'year', 'month')
         ordering = ['-year', '-month', '-updated_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account', 'year', 'month'],
+                name='uniq_account_checkin_month',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(year__gte=2000),
+                name='checkin_month_year_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(month__range=(1, 12)),
+                name='checkin_month_value_valid',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.user.username} {self.year}-{self.month:02d}'
@@ -412,6 +594,13 @@ class EscortSchedule(models.Model):
         on_delete=models.CASCADE,
         related_name='schedules',
     )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='schedules',
+    )
     weekday = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(6)]
     )  # 0=周一 … 6=周日
@@ -428,6 +617,30 @@ class EscortSchedule(models.Model):
         verbose_name_plural = 'Escort Schedules'
         unique_together = ('provider', 'weekday', 'start_minute', 'end_minute')
         ordering = ['weekday', 'start_minute']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account', 'weekday', 'start_minute', 'end_minute'],
+                name='uniq_account_schedule_slot',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(weekday__range=(0, 6)),
+                name='escort_schedule_weekday_valid',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(start_minute__gte=0)
+                    & models.Q(end_minute__lte=1440)
+                    & models.Q(start_minute__lt=models.F('end_minute'))
+                ),
+                name='escort_schedule_period_valid',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['account', 'weekday', 'start_minute', 'end_minute'],
+                name='schedule_account_slot_idx',
+            ),
+        ]
 
     @classmethod
     def provider_is_scheduled_now(cls, provider, now=None) -> bool:

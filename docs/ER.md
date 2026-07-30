@@ -1,8 +1,9 @@
 # 兴安电竞（XA）· 数据模型 ER 图
 
-> 配套文档：[PRD.md](./PRD.md)　│　最后更新：2026-06-30
+> 配套文档：[PRD.md](./PRD.md) / [DATABASE_DESIGN.md](./DATABASE_DESIGN.md)　│　最后更新：2026-07-30
 >
-> 本文用 Mermaid `erDiagram` 描述系统全部数据表及其关系。金额字段一律以「分」为单位。
+> 本文用 Mermaid `erDiagram` 描述系统数据表及其关系。金额字段使用整数内部账务单位，
+> 当前换算规则为 `10` 个内部单位等于 `1` 兴安币。
 > GitHub / 支持 Mermaid 的 Markdown 预览器可直接渲染。
 
 ---

@@ -30,6 +30,33 @@ class Coupon(models.Model):
         verbose_name = '优惠券'
         verbose_name_plural = '优惠券'
         ordering = ['sort_order', '-created_at']
+        indexes = [
+            models.Index(
+                fields=['is_active', 'valid_to', 'sort_order'],
+                name='coupon_claimable_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(threshold__gte=0),
+                name='coupon_threshold_nonnegative',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name='coupon_amount_positive',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(total_qty=0)
+                    | models.Q(claimed_qty__lte=models.F('total_qty'))
+                ),
+                name='coupon_claimed_qty_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(discount_type__in=['THRESHOLD', 'DIRECT']),
+                name='coupon_discount_type_valid',
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -56,6 +83,13 @@ class UserCoupon(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        related_name='coupons',
+    )
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='coupons',
     )
     coupon = models.ForeignKey(
@@ -85,6 +119,22 @@ class UserCoupon(models.Model):
         verbose_name_plural = '用户优惠券'
         unique_together = ('user', 'coupon')
         ordering = ['-claimed_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account', 'coupon'],
+                name='uniq_account_coupon',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['UNUSED', 'USED', 'EXPIRED']),
+                name='user_coupon_status_valid',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['account', 'status', '-claimed_at'],
+                name='user_coupon_account_idx',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.user_id} - {self.coupon.name}'

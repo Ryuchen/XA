@@ -20,3 +20,7 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+elif not settings.MEDIA_BASE_URL:
+    # 生产环境未接入对象存储 / 独立媒体域名时，由 Django 兜底提供 media，
+    # 避免 DEBUG=False 后上传图片 404。接入对象存储后此分支自动跳过。
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

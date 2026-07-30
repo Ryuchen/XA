@@ -43,6 +43,7 @@ def transition(
     to_status: str,
     *,
     operator=None,
+    operator_account=None,
     action: Optional[str] = None,
     reason: str = '',
     pre_check: Optional[Callable[[Order], None]] = None,
@@ -55,6 +56,7 @@ def transition(
         order_id: 订单 ID
         to_status: 目标状态
         operator: 操作人（可空，超时任务无操作人）
+        operator_account: ClubAccount 业务操作人
         action: OrderStatusLog.Action，不传则按 TRANSITIONS 推断
         reason: 操作原因（用于审计）
         pre_check: 前置校验回调，参数为加锁后的 order；不通过应抛异常
@@ -111,6 +113,7 @@ def transition(
         from_status=from_status,
         to_status=to_status,
         operator=operator,
+        operator_account=operator_account,
         reason=reason,
     )
 
@@ -131,6 +134,7 @@ def log_only(
     *,
     action: str,
     operator=None,
+    operator_account=None,
     reason: str = '',
 ) -> None:
     """记录不涉及状态变更的事件（如订单创建、退款标记）。"""
@@ -140,5 +144,6 @@ def log_only(
         from_status=order.status,
         to_status=order.status,
         operator=operator,
+        operator_account=operator_account,
         reason=reason,
     )

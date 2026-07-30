@@ -8,6 +8,7 @@ import { formatXaCoin } from '@/utils/format';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { Skeleton, Empty } from '@/components';
 import Icon from '@/components/Icon';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const FALLBACK_IMAGE = 'https://picsum.photos/id/1/400/400';
@@ -128,7 +129,7 @@ const ProductDetailPage: React.FC = () => {
       >
         {swiperImages.map((src, index) => (
           <SwiperItem key={index}>
-            <Image className={styles.swiperImage} src={src} mode="aspectFill" />
+            <Image className={styles.swiperImage} src={resolveImageUrl(src, FALLBACK_IMAGE)} mode="aspectFill" />
           </SwiperItem>
         ))}
       </Swiper>
@@ -210,7 +211,7 @@ const ProductDetailPage: React.FC = () => {
               <View className={styles.evalItemHeader}>
                 <Image
                   className={styles.evalAvatar}
-                  src={item.customer_avatar || 'https://picsum.photos/id/1005/100/100'}
+                  src={resolveImageUrl(item.customer_avatar, 'https://picsum.photos/id/1005/100/100')}
                   mode="aspectFill"
                 />
                 <Text className={styles.evalName}>{item.customer_name}</Text>

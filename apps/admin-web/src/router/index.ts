@@ -205,6 +205,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '职位权限管理', icon: 'Lock', perm: 'role:view', group: '权限系统' },
       },
       {
+        path: 'audit-logs',
+        name: 'audit-logs',
+        component: () => import('@/views/system/audit.vue'),
+        meta: { title: '操作审计日志', icon: 'Document', perm: 'audit:view', group: '权限系统' },
+      },
+      {
         path: '403',
         name: 'forbidden',
         component: () => import('@/views/error/403.vue'),

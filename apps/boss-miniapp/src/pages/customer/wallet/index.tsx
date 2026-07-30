@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import {
   fetchWalletInfo,
   fetchTransactions,
@@ -33,9 +33,13 @@ const WalletPage: React.FC = () => {
   const [activeTxType, setActiveTxType] = useState<string>('');
 
   const loadWallet = async () => {
-    const res = await fetchWalletInfo();
-    if (res.code === 0 && res.data) {
-      setBalance(res.data.balance);
+    try {
+      const res = await fetchWalletInfo();
+      if (res.code === 0 && res.data) {
+        setBalance(res.data.balance);
+      }
+    } catch {
+      Taro.showToast({ title: '加载失败', icon: 'none' });
     }
   };
 
@@ -47,6 +51,8 @@ const WalletPage: React.FC = () => {
         setTransactions(res.data.transactions || []);
         setBalance(res.data.balance);
       }
+    } catch {
+      Taro.showToast({ title: '加载失败', icon: 'none' });
     } finally {
       setTxLoading(false);
     }
@@ -56,6 +62,16 @@ const WalletPage: React.FC = () => {
     loadWallet();
     loadTransactions('');
   }, []);
+
+  useDidShow(() => {
+    loadWallet();
+    loadTransactions(activeTxType);
+  });
+
+  usePullDownRefresh(async () => {
+    await Promise.all([loadWallet(), loadTransactions(activeTxType)]);
+    Taro.stopPullDownRefresh();
+  });
 
   const handleTabClick = (txType: string) => {
     setActiveTxType(txType);

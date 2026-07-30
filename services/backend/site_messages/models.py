@@ -14,6 +14,13 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name='messages',
     )
+    recipient_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='messages',
+    )
     type = models.CharField(max_length=20, choices=Type.choices, default=Type.SYSTEM, db_index=True)
     title = models.CharField(max_length=100)
     preview = models.CharField(max_length=255, blank=True, default='')
@@ -27,6 +34,20 @@ class Message(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['recipient', 'is_read', '-created_at']),
+            models.Index(
+                fields=['recipient_account', 'is_read', '-created_at'],
+                name='site_msg_account_unread_idx',
+            ),
+            models.Index(
+                fields=['recipient_account', 'type', '-created_at'],
+                name='site_msg_account_type_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(type__in=['SYSTEM', 'ORDER', 'SUPPORT', 'PROMOTION']),
+                name='site_message_type_valid',
+            ),
         ]
         verbose_name = '站内消息'
         verbose_name_plural = '站内消息'

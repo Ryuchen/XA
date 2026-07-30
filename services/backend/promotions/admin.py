@@ -1,10 +1,11 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 
 from .models import Promotion
 
 
 @admin.register(Promotion)
-class PromotionAdmin(admin.ModelAdmin):
+class PromotionAdmin(ModelAdmin):
     list_display = (
         'id', 'title', 'scope', 'discount_rate', 'commission_rate',
         'priority', 'is_active', 'start_at', 'end_at',

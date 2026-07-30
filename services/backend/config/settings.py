@@ -48,7 +48,8 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    'unfold',
+    'config.admin_config.SuperuserOnlyAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -58,6 +59,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'club_accounts',
     'users',
     'orders',
     'wallet',
@@ -75,12 +77,16 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 后台写操作审计：置于认证中间件之后，确保 request.user 已就绪。
+    # 注意 DRF 的 JWT 认证在视图层执行，故此处在响应阶段读取 request.user。
+    'console.middleware.AdminAuditMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -162,16 +168,44 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# 对外媒体域名（对象存储 / 独立媒体域名的过渡入口）。
+# 留空时由请求 Host 推导绝对 URL，本地开发零配置。
+MEDIA_BASE_URL = os.environ.get('DJANGO_MEDIA_BASE_URL', '').strip()
+
+# 履约凭证策略可按部署环境配置；生产默认强制上传，历史客户端过渡期
+# 可显式关闭，待全部升级后再开启。
+REQUIRE_ORDER_EVIDENCE_IMAGES = env_bool(
+    'REQUIRE_ORDER_EVIDENCE_IMAGES',
+    True,
+)
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
+UNFOLD = {
+    'SITE_TITLE': '兴安电竞管理后台',
+    'SITE_HEADER': '兴安电竞',
+    'SITE_SUBHEADER': 'Django 数据管理',
+    'SITE_URL': '/',
+    'SHOW_HISTORY': True,
+    'SHOW_VIEW_ON_SITE': True,
+}
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'club_accounts.authentication.ClubAccountAuthentication',
     ),
     'EXCEPTION_HANDLER': 'console.exceptions.console_exception_handler',
 }

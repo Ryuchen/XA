@@ -1,4 +1,4 @@
-import { ApiResponse, request, uploadFile } from '@/utils/request';
+import { ApiResponse, request } from '@/utils/request';
 
 // ---------------- 流水 ----------------
 export interface TransactionRecord {
@@ -38,6 +38,9 @@ export type WithdrawStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export interface WithdrawRecord {
   id: number;
   amount: number;
+  tax_rate: number;
+  tax_amount: number;
+  actual_amount: number;
   payee_method: PayeeMethod;
   payee_method_display: string;
   payee_account: string;
@@ -54,6 +57,7 @@ export interface WithdrawOverview {
   balance: number;
   frozen_amount: number;
   min_amount: number;
+  tax_rate: number;
   requests: WithdrawRecord[];
 }
 
@@ -76,67 +80,6 @@ export const withdrawRequest = (payload: WithdrawPayload) => {
     payload,
   );
 };
-
-// ---------------- 报单 ----------------
-export type ReportStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
-
-export interface ReportRecord {
-  id: number;
-  order_id: number | null;
-  order_no: string;
-  service_name: string;
-  game_name: string;
-  description: string;
-  amount: number;
-  proof_image_url: string;
-  entry_image_url: string;
-  completion_image_url: string;
-  result_image_urls: string[];
-  status: ReportStatus;
-  status_display: string;
-  commission_rate: number;
-  payout_amount: number;
-  remark: string;
-  audit_remark: string;
-  created_at: string;
-  audited_at: string | null;
-}
-
-export interface ReportPayload {
-  game_name: string;
-  description?: string;
-  amount: number;
-  remark?: string;
-}
-
-export const fetchReports = () => {
-  return request<ApiResponse<ReportRecord[]>>('/wallet/reports/', 'GET');
-};
-
-export const submitReport = (payload: ReportPayload) => {
-  return request<ApiResponse<ReportRecord>>('/wallet/reports/', 'POST', payload);
-};
-
-/** 带凭证图片的报单：走 multipart 上传。 */
-export const submitReportWithImage = (payload: ReportPayload, filePath: string) => {
-  const formData: Record<string, string | number> = {
-    game_name: payload.game_name,
-    amount: payload.amount,
-  };
-  if (payload.description) formData.description = payload.description;
-  if (payload.remark) formData.remark = payload.remark;
-  return uploadFile<ApiResponse<ReportRecord>>('/wallet/reports/', filePath, formData, 'proof_image');
-};
-
-export const createOrderReport = (orderId: number) =>
-  request<ApiResponse<ReportRecord>>('/wallet/reports/', 'POST', { order_id: orderId });
-
-export type ReportImageKind = 'ENTRY' | 'COMPLETION' | 'RESULT';
-export const uploadReportImage = (reportId: number, kind: ReportImageKind, filePath: string) =>
-  uploadFile<ApiResponse<ReportRecord>>(`/wallet/reports/${reportId}/images/`, filePath, { kind }, 'image');
-
-export const submitOrderReport = (reportId: number) =>
-  request<ApiResponse<ReportRecord>>(`/wallet/reports/${reportId}/submit/`, 'POST');
 
 // ---------------- 押金 ----------------
 export interface DepositOverview {

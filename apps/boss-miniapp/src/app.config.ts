@@ -25,11 +25,14 @@ export default defineAppConfig({
     'pages/audition/index'
   ],
   window: {
-    backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#fff',
+    backgroundTextStyle: '@bgTxtStyle',
+    navigationBarBackgroundColor: '@navBgColor',
     navigationBarTitleText: '游戏陪玩',
-    navigationBarTextStyle: 'black'
+    navigationBarTextStyle: '@navTxtStyle',
+    backgroundColor: '@bgColor'
   },
+  darkmode: true,
+  themeLocation: 'theme.json',
   tabBar: {
     custom: true,
     color: '#999999',

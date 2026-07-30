@@ -30,6 +30,7 @@ const WalletPage: React.FC = () => {
   const [balance, setBalance] = useState(0);
   const [frozenAmount, setFrozenAmount] = useState(0);
   const [minAmount, setMinAmount] = useState(0);
+  const [taxRate, setTaxRate] = useState(0);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [withdrawRecords, setWithdrawRecords] = useState<WithdrawRecord[]>([]);
   const [benefits, setBenefits] = useState<ProviderBenefits>(EMPTY_BENEFITS);
@@ -50,7 +51,8 @@ const WalletPage: React.FC = () => {
       ]);
       if (withdrawRes.code === 0 && withdrawRes.data) {
         setBalance(withdrawRes.data.balance); setFrozenAmount(withdrawRes.data.frozen_amount);
-        setMinAmount(withdrawRes.data.min_amount); setWithdrawRecords(withdrawRes.data.requests || []);
+        setMinAmount(withdrawRes.data.min_amount); setTaxRate(withdrawRes.data.tax_rate);
+        setWithdrawRecords(withdrawRes.data.requests || []);
       }
       if (txRes.code === 0 && txRes.data) setTransactions(txRes.data.transactions || []);
       if (benefitRes.code === 0 && benefitRes.data) setBenefits(benefitRes.data);
@@ -65,21 +67,24 @@ const WalletPage: React.FC = () => {
   const totalIncome = useMemo(() => transactions
     .filter(item => item.tx_type === 'INCOME' && item.amount > 0)
     .reduce((sum, item) => sum + item.amount, 0), [transactions]);
-  const withdrawAmount = Math.round((parseFloat(withdrawInput) || 0) * 10);
-  const canWithdraw = !submitting
-    && withdrawAmount > 0
-    && withdrawAmount >= minAmount
-    && withdrawAmount <= balance
-    && !!payeeAccount.trim()
-    && !!payeeName.trim();
+  const parsedWithdraw = parseFloat(withdrawInput);
+  const withdrawAmount = Number.isFinite(parsedWithdraw) ? Math.round(parsedWithdraw * 10) : 0;
+  const withdrawTax = Math.round(withdrawAmount * taxRate / 100);
+  const withdrawActual = withdrawAmount - withdrawTax;
+  const validateWithdraw = (): string | null => {
+    if (!Number.isFinite(parsedWithdraw) || withdrawAmount <= 0) return '请输入有效提现金额';
+    if (withdrawAmount < minAmount) return `最低提现 ${formatXaCoin(minAmount)} 兴安币`;
+    if (withdrawAmount > balance) return '提现金额超出可用余额';
+    if (!payeeAccount.trim() || !payeeName.trim()) return '请填写收款账号与姓名';
+    return null;
+  };
+  const canWithdraw = !submitting && !validateWithdraw();
 
   const handleWithdraw = async () => {
     if (submitting) return;
-    const amount = Math.round(parseFloat(withdrawInput) * 10);
-    if (!amount || amount <= 0) return void Taro.showToast({ title: '请输入有效提现金额', icon: 'none' });
-    if (amount < minAmount) return void Taro.showToast({ title: `最低提现 ${formatXaCoin(minAmount)} 兴安币`, icon: 'none' });
-    if (amount > balance) return void Taro.showToast({ title: '提现金额超出可用余额', icon: 'none' });
-    if (!payeeAccount.trim() || !payeeName.trim()) return void Taro.showToast({ title: '请填写收款账号与姓名', icon: 'none' });
+    const error = validateWithdraw();
+    if (error) return void Taro.showToast({ title: error, icon: 'none' });
+    const amount = withdrawAmount;
     setSubmitting(true);
     try {
       const res = await withdrawRequest({ amount, payee_method: payeeMethod, payee_account: payeeAccount.trim(), payee_name: payeeName.trim() });
@@ -144,7 +149,7 @@ const WalletPage: React.FC = () => {
         ) : withdrawRecords.length ? withdrawRecords.map(item => <View className={styles.listItem} key={item.id}>
           <View className={`${styles.itemIcon} ${styles.withdrawIcon}`}>提</View>
           <View className={styles.itemInfo}><Text className={styles.itemTitle}>{item.payee_method_display} · {item.payee_name}</Text><Text className={styles.itemDesc}>{item.status === 'REJECTED' && item.audit_remark ? `驳回：${item.audit_remark}` : '提现申请'}</Text><Text className={styles.itemTime}>{new Date(item.created_at).toLocaleString()}</Text></View>
-          <View className={styles.amountColumn}><Text className={styles.negative}>-{formatXaCoin(item.amount)}币</Text><Text className={`${styles.status} ${styles[`status_${item.status}`]}`}>{STATUS_LABEL[item.status]}</Text></View>
+          <View className={styles.amountColumn}><Text className={styles.negative}>-{formatXaCoin(item.amount)}币</Text><Text className={styles.itemTime}>{item.tax_amount > 0 ? `税${formatXaCoin(item.tax_amount)} · 到账${formatXaCoin(item.actual_amount)}币` : ''}</Text><Text className={`${styles.status} ${styles[`status_${item.status}`]}`}>{STATUS_LABEL[item.status]}</Text></View>
         </View>) : <Empty icon='↗️' title='暂无提现记录' desc='提交提现后可在这里查看审核进度' />}
       </View>
 
@@ -153,6 +158,7 @@ const WalletPage: React.FC = () => {
           <View className={styles.handle} /><View className={styles.sheetHead}><Text className={styles.sheetTitle}>申请提现</Text><Text className={styles.close} onClick={() => setShowWithdraw(false)}>取消</Text></View>
           <Text className={styles.formLabel}>提现兴安币</Text><View className={styles.moneyInput}><Text>币</Text><Input type='digit' value={withdrawInput} placeholder='0' onInput={e => setWithdrawInput(e.detail.value)} /></View>
           <Text className={styles.formHint}>可提现 {formatXaCoin(balance)}币 · 最低 {formatXaCoin(minAmount)}币 · 本次提现 {formatXaCoin(withdrawAmount)}币</Text>
+          <Text className={styles.formHint}>税率 {taxRate}% · 应扣税 {formatXaCoin(withdrawTax)}币 · 实际到账 {formatXaCoin(withdrawActual)}币</Text>
           <Text className={styles.formLabel}>收款方式</Text><View className={styles.methodRow}>{PAYEE_METHODS.map(item => <View key={item.value} className={`${styles.method} ${payeeMethod === item.value ? styles.methodActive : ''}`} onClick={() => setPayeeMethod(item.value)}>{item.label}</View>)}</View>
           <Text className={styles.formLabel}>收款账号</Text><Input className={styles.formInput} value={payeeAccount} placeholder='微信号 / 支付宝账号 / 银行卡号' onInput={e => setPayeeAccount(e.detail.value)} />
           <Text className={styles.formLabel}>收款人姓名</Text><Input className={styles.formInput} value={payeeName} placeholder='请输入真实姓名' onInput={e => setPayeeName(e.detail.value)} />

@@ -94,7 +94,7 @@
       <el-table-column label="下单时间" width="160">
         <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="280" fixed="right">
+      <el-table-column label="操作" width="320" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="onDetail(row)">详情</el-button>
           <el-button
@@ -115,6 +115,12 @@
             type="success"
             @click="onComplete(row)"
           >完成</el-button>
+          <el-button
+            v-if="auth.hasPerm('order:dispatch') && row.status === 'IN_SERVICE'"
+            link
+            type="primary"
+            @click="onTransfer(row)"
+          >转单</el-button>
           <el-button
             v-if="auth.hasPerm('order:cancel') && row.status === 'PENDING'"
             link
@@ -371,9 +377,9 @@
         >
           <el-option
             v-for="p in providerOptions"
-            :key="p.id"
+            :key="p.user"
             :label="p.display_name || p.nickname || p.username"
-            :value="p.user || p.user_id || p.id"
+            :value="p.user"
           />
         </el-select>
       </el-form-item>
@@ -383,18 +389,108 @@
       <el-button type="primary" :loading="assigning" @click="onAssignSave">确认派单</el-button>
     </template>
   </el-dialog>
+
+  <el-dialog v-model="transferVisible" title="订单转单" width="720px">
+    <template v-if="transferOrder">
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        title="勾选要转出的打手，填写其应得份额与罚款；剩余份额将转给新打手，订单完成时随新打手结算。"
+        style="margin-bottom: 16px"
+      />
+      <div v-for="row in transferRows" :key="row.old_provider_id" class="od-provider-row">
+        <el-checkbox v-model="row.enabled" style="margin-bottom: 8px">
+          转出：{{ row.old_provider_name }}（应得 {{ amountToXaCoin(row.pool) }} 币）
+        </el-checkbox>
+        <el-row v-if="row.enabled" :gutter="12">
+          <el-col :span="8">
+            <el-form-item label="转入新打手" label-position="top">
+              <el-select
+                v-model="row.new_provider_id"
+                filterable
+                remote
+                reserve-keyword
+                placeholder="搜索可接单打手"
+                :remote-method="searchProvider"
+                :loading="providerLoading"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="p in providerOptions"
+                  :key="p.user"
+                  :label="p.display_name || p.nickname || p.username"
+                  :value="p.user"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="5">
+            <el-form-item label="分钱方式" label-position="top">
+              <el-select v-model="row.split_type" style="width: 100%">
+                <el-option label="按比例" value="PERCENT" />
+                <el-option label="固定额" value="FIXED" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="5">
+            <el-form-item :label="row.split_type === 'FIXED' ? '旧手分钱(币)' : '旧手比例(%)'" label-position="top">
+              <el-input-number
+                v-if="row.split_type === 'PERCENT'"
+                v-model="row.split_percent"
+                :min="0"
+                :max="100"
+                :step="1"
+                controls-position="right"
+                style="width: 100%"
+              />
+              <el-input-number
+                v-else
+                v-model="row.split_fixed_yuan"
+                :min="0"
+                :precision="2"
+                :step="1"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="罚款(币)" label-position="top">
+              <el-input-number
+                v-model="row.penalty_yuan"
+                :min="0"
+                :precision="2"
+                :step="1"
+                controls-position="right"
+                style="width: 100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </div>
+      <el-form-item label="转单原因">
+        <el-input v-model="transferReason" type="textarea" :rows="2" placeholder="可选，将记入订单流水与罚款记录" />
+      </el-form-item>
+    </template>
+    <template #footer>
+      <el-button @click="transferVisible = false">取消</el-button>
+      <el-button type="primary" :loading="transferring" @click="onTransferSave">确认转单</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import CrudTable from '@/components/CrudTable.vue'
 import { orderApi, serviceItemApi, userApi, escortApi } from '@/api/modules'
 import { request } from '@/api/request'
 import { ORDER_STATUS, PAYMENT_STATUS } from '@/utils/dict'
-import { amountToXaCoin, formatDateTime } from '@/utils/format'
+import { amountToXaCoin, formatDateTime, xaCoinToAmount } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
+import { adminWs } from '@/utils/ws'
 
 const auth = useAuthStore()
 const tableRef = ref()
@@ -501,6 +597,65 @@ async function onAssignSave() {
     tableRef.value.load()
   } finally {
     assigning.value = false
+  }
+}
+
+// ---------------- 转单 ----------------
+const transferVisible = ref(false)
+const transferring = ref(false)
+const transferOrder = ref<any>(null)
+const transferReason = ref('')
+const transferRows = ref<any[]>([])
+
+function onTransfer(row: any) {
+  transferOrder.value = row
+  transferReason.value = ''
+  providerOptions.value = []
+  // 未结算的打手行才可转出；无明细行时回落订单级主打手
+  const rows = (row.providers && row.providers.length)
+    ? row.providers.filter((p: any) => p.provider && !p.settled_at)
+    : (row.provider
+      ? [{ provider: row.provider, provider_name: row.provider_name, provider_income: row.provider_income }]
+      : [])
+  transferRows.value = rows.map((p: any) => ({
+    old_provider_id: p.provider,
+    old_provider_name: p.provider_name || '打手',
+    pool: p.provider_income || 0,
+    enabled: rows.length === 1,
+    new_provider_id: undefined,
+    split_type: 'PERCENT',
+    split_percent: 0,
+    split_fixed_yuan: 0,
+    penalty_yuan: 0,
+  }))
+  transferVisible.value = true
+}
+
+async function onTransferSave() {
+  const picked = transferRows.value.filter((r) => r.enabled)
+  if (!picked.length) { ElMessage.warning('请至少选择一名要转出的打手'); return }
+  for (const r of picked) {
+    if (!r.new_provider_id) { ElMessage.warning(`请为「${r.old_provider_name}」选择转入新打手`); return }
+    if (r.new_provider_id === r.old_provider_id) { ElMessage.warning('新打手不能与原打手相同'); return }
+  }
+  const newIds = picked.map((r) => r.new_provider_id)
+  if (new Set(newIds).size !== newIds.length) { ElMessage.warning('多个转入新打手不能重复'); return }
+
+  const transfers = picked.map((r) => ({
+    old_provider_id: r.old_provider_id,
+    new_provider_id: r.new_provider_id,
+    split_type: r.split_type,
+    split_value: r.split_type === 'FIXED' ? xaCoinToAmount(r.split_fixed_yuan) : r.split_percent,
+    penalty_amount: xaCoinToAmount(r.penalty_yuan),
+  }))
+  transferring.value = true
+  try {
+    await orderApi.action(transferOrder.value.id, 'transfer', { transfers, reason: transferReason.value })
+    ElMessage.success('转单成功')
+    transferVisible.value = false
+    tableRef.value.load()
+  } finally {
+    transferring.value = false
   }
 }
 
@@ -663,6 +818,7 @@ async function onDispatchSave() {
     const ids = picked.map((s: any) => s.provider_id)
     if (new Set(ids).size !== ids.length) { ElMessage.warning('不可重复指派同一打手'); return }
   }
+  if (insufficient.value) { ElMessage.warning('老板余额不足，无法派单'); return }
   const providersPayload = picked.map((s: any) => (
     s.commission_type === 'FIXED'
       ? {
@@ -719,6 +875,19 @@ async function onComplete(row: any) {
   ElMessage.success('订单已完成')
   tableRef.value.load()
 }
+
+let offOrderWs: (() => void) | null = null
+
+onMounted(() => {
+  adminWs.connect()
+  offOrderWs = adminWs.on('order_status_update', () => {
+    tableRef.value?.load()
+  })
+})
+
+onUnmounted(() => {
+  offOrderWs?.()
+})
 </script>
 
 <style scoped lang="scss">

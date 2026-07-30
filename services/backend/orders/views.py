@@ -1,15 +1,19 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Avg, Count, Q, Sum
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from club_accounts.models import ClubAccount, LegacyAccountMap
+from club_accounts.permissions import IsClubAccountAuthenticated
 from users.models import EscortProfile, EscortSchedule
-from wallet.models import Transaction, Wallet, get_platform_wallet
+from wallet.models import ProviderReport, Transaction, Wallet, get_platform_wallet
+from common.media import build_media_url
 
 from .models import (
     Evaluation, GameCategory, KookDispatchRecord, Order, OrderStatusLog,
@@ -43,8 +47,29 @@ PENDING_TIMEOUT_MINUTES = 30
 MAX_SERVICE_EVALUATIONS = 20
 
 
+def _account_for_legacy_user(user):
+    if user is None:
+        return None
+    mapping = LegacyAccountMap.objects.select_related('account').filter(
+        legacy_user_id=user.id,
+    ).first()
+    return mapping.account if mapping else None
+
+
+def count_active_orders(account):
+    """统计陪玩当前进行中的订单数（已接单 + 服务中），兼容外键与中间表两种关联。"""
+    return (
+        Order.objects.filter(
+            Q(provider_account=account) | Q(providers__provider_account=account),
+            status__in=[Order.Status.GRABBED, Order.Status.IN_SERVICE],
+        )
+        .distinct()
+        .count()
+    )
+
+
 class ServiceListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         services = ServiceItem.objects.filter(is_active=True)
@@ -66,21 +91,26 @@ class ServiceListView(APIView):
 
 
 class GameCategoryListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         categories = GameCategory.objects.filter(is_active=True).order_by('sort_order', 'id')
         return Response({
             'code': 0,
             'data': [
-                {'id': item.id, 'name': item.name, 'remark': item.remark}
+                {
+                    'id': item.id,
+                    'name': item.name,
+                    'remark': item.remark,
+                    'icon_url': build_media_url(request, item.icon),
+                }
                 for item in categories
             ],
         })
 
 
 class ServiceDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request, service_id):
         try:
@@ -95,11 +125,12 @@ class ServiceDetailView(APIView):
 
 class FavoriteListView(APIView):
     """我的收藏：返回当前老板收藏的服务列表。"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         favorites = ServiceFavorite.objects.filter(
-            user=request.user, service__is_active=True
+            account=request.account,
+            service__is_active=True,
         ).select_related('service')
         data = [
             ServiceItemSerializer(fav.service).data
@@ -110,7 +141,7 @@ class FavoriteListView(APIView):
 
 class FavoriteToggleView(APIView):
     """收藏 / 取消收藏：幂等切换，返回当前是否已收藏。"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
         service_id = request.data.get('service_id')
@@ -121,12 +152,19 @@ class FavoriteToggleView(APIView):
         except ServiceItem.DoesNotExist:
             return Response({'code': 404, 'msg': '服务不存在'})
 
-        favorite = ServiceFavorite.objects.filter(user=request.user, service=service).first()
+        favorite = ServiceFavorite.objects.filter(
+            account=request.account,
+            service=service,
+        ).first()
         if favorite:
             favorite.delete()
             return Response({'code': 0, 'msg': '已取消收藏', 'data': {'favorited': False}})
 
-        ServiceFavorite.objects.create(user=request.user, service=service)
+        ServiceFavorite.objects.create(
+            user=request.legacy_user,
+            account=request.account,
+            service=service,
+        )
         return Response({'code': 0, 'msg': '已收藏', 'data': {'favorited': True}})
 
 
@@ -165,7 +203,7 @@ class RankingView(APIView):
     """首页风云榜：老板消费榜 + 陪玩接单榜（基于已完成订单聚合）。
     支持 ?period=day|week|month，按 completed_at 过滤；默认 month。
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         period = request.query_params.get('period', 'month')
@@ -252,18 +290,20 @@ class RankingView(APIView):
 
 
 class OrderListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        user = request.user
+        account = request.account
+        user = request.legacy_user
         status_filter = request.query_params.get('status')
-        if user.role == user.Role.PROVIDER:
+        if account.account_type == ClubAccount.AccountType.PROVIDER:
             if status_filter == 'pending':
                 # 待接单池：返回尚未被接单的 PENDING 订单，供陪玩抢单
-                profile = EscortProfile.objects.filter(user=user).first()
+                profile = EscortProfile.objects.filter(account=account).select_related('level').first()
                 if (
                     profile is None
-                    or profile.status != EscortProfile.Status.AVAILABLE
+                    or profile.status == EscortProfile.Status.OFFLINE
+                    or count_active_orders(account) >= Order.MAX_CONCURRENT_ORDERS
                     or not EscortSchedule.provider_is_scheduled_now(user)
                 ):
                     orders = Order.objects.none()
@@ -272,19 +312,26 @@ class OrderListView(APIView):
                     visible_before = timezone.now() - timedelta(seconds=delay)
                     orders = Order.objects.filter(
                         Q(auto_cancel_at__isnull=True) | Q(auto_cancel_at__gt=timezone.now()),
-                        provider__isnull=True,
+                        provider_account__isnull=True,
                         status=Order.Status.PENDING,
                         payment_status=Order.PaymentStatus.PAID,
                         created_at__lte=visible_before,
                     )
+                    # 档位准入：仅保留服务不限档、或要求档位不高于本人档位的单。
+                    # 高档位陪玩可接低档位单，低档位不可接高档位单。
+                    orders = orders.filter(
+                        Q(service__required_level__isnull=True)
+                        | Q(service__required_level__sort_order__lte=profile.level_rank)
+                    )
             else:
                 orders = Order.objects.filter(
-                    Q(provider=user) | Q(providers__provider=user)
+                    Q(provider_account=account)
+                    | Q(providers__provider_account=account)
                 ).distinct()
-        elif user.role == user.Role.OPERATOR:
+        elif account.account_type == ClubAccount.AccountType.STAFF:
             orders = Order.objects.all()
         else:
-            orders = Order.objects.filter(customer=user)
+            orders = Order.objects.filter(customer_account=account)
 
         if status_filter and status_filter != 'all':
             status_map = {
@@ -299,15 +346,15 @@ class OrderListView(APIView):
                 orders = orders.filter(status=backend_status)
 
         orders = orders.select_related(
-            'customer', 'provider', 'service', 'service__service_category',
-            'evaluation', 'support_contact'
+            'customer', 'customer__boss_type', 'provider', 'service',
+            'service__service_category', 'evaluation', 'support_contact'
         ).order_by('-created_at')
         serializer = OrderSerializer(orders, many=True, context={'request': request})
         return Response({'code': 0, 'data': serializer.data})
 
 
 class CreateOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
@@ -326,6 +373,8 @@ class CreateOrderView(APIView):
         user_coupon = serializer.validated_data.get('user_coupon')
         commission_rate = serializer.validated_data['commission_rate']
         inviter = serializer.validated_data.get('inviter')
+        provider_account = _account_for_legacy_user(provider)
+        inviter_account = _account_for_legacy_user(inviter)
         inviter_commission_rate = serializer.validated_data['inviter_commission_rate']
         promotion = serializer.validated_data.get('promotion')
         original_amount = serializer.validated_data['original_amount']
@@ -336,7 +385,10 @@ class CreateOrderView(APIView):
         split = compute_split(amount, commission_rate, inviter_commission_rate)
 
         with transaction.atomic():
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.user)
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                account=request.account,
+                defaults={'user': request.legacy_user},
+            )
             if not wallet.is_active:
                 return Response({'code': 403, 'msg': '钱包不可用'})
             if wallet.balance < amount:
@@ -348,7 +400,11 @@ class CreateOrderView(APIView):
                 from coupons.models import UserCoupon
                 locked_coupon = (
                     UserCoupon.objects.select_for_update()
-                    .filter(id=user_coupon.id, user=request.user, status=UserCoupon.Status.UNUSED)
+                    .filter(
+                        id=user_coupon.id,
+                        account=request.account,
+                        status=UserCoupon.Status.UNUSED,
+                    )
                     .first()
                 )
                 if locked_coupon is None:
@@ -359,7 +415,8 @@ class CreateOrderView(APIView):
             wallet.save(update_fields=['balance'])
 
             order = Order.objects.create(
-                customer=request.user,
+                customer=request.legacy_user,
+                customer_account=request.account,
                 provider=None,
                 service=service,
                 support_contact=support_contact,
@@ -383,6 +440,7 @@ class CreateOrderView(APIView):
                 commission_rate=split.commission_rate,
                 provider_income=split.provider_income,
                 inviter=inviter,
+                inviter_account=inviter_account,
                 inviter_commission=split.inviter_commission,
                 shop_income=split.shop_income,
             )
@@ -406,13 +464,15 @@ class CreateOrderView(APIView):
             log_only(
                 order,
                 action=OrderStatusLog.Action.CREATE,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 reason='下单',
             )
 
             if provider is not None:
                 def assign_selected(o):
                     o.provider = provider
+                    o.provider_account = provider_account
                     o.provider_name_snapshot = (
                         provider.escort_profile.display_name
                         or provider.nickname or provider.username
@@ -424,11 +484,14 @@ class CreateOrderView(APIView):
                 order = transition(
                     order.id,
                     Order.Status.GRABBED,
-                    operator=request.user,
+                    operator=request.legacy_user,
+                    operator_account=request.account,
                     action=OrderStatusLog.Action.ASSIGN,
                     reason='老板指定陪玩',
                     side_effect=assign_selected,
-                    update_fields=['provider', 'provider_name_snapshot'],
+                    update_fields=[
+                        'provider', 'provider_account', 'provider_name_snapshot',
+                    ],
                 )
 
         if provider is None:
@@ -455,7 +518,7 @@ class CreateOrderView(APIView):
 class OrderQuoteView(APIView):
     """下单试算：与正式下单复用同一校验和计价器，但不扣款、不占券。"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
@@ -463,7 +526,7 @@ class OrderQuoteView(APIView):
             return Response({'code': 400, 'msg': _format_serializer_errors(serializer.errors)})
 
         data = serializer.validated_data
-        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        wallet, _ = Wallet.objects.get_or_create(user=request.legacy_user)
         promotion = data.get('promotion')
         amount = data['amount']
         return Response({'code': 0, 'data': {
@@ -481,10 +544,10 @@ class OrderQuoteView(APIView):
 class TipOrderView(APIView):
     """老板对已完成服务单快捷赠送礼物；即时扣款、结算并生成礼物单。"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
-        if request.user.role != request.user.Role.CUSTOMER:
+        if request.account.account_type != ClubAccount.AccountType.BOSS:
             return Response({'code': 403, 'msg': '仅老板可以赠送礼物'})
         try:
             gift_service_id = int(request.data.get('gift_service_id'))
@@ -505,7 +568,7 @@ class TipOrderView(APIView):
             try:
                 source_order = Order.objects.select_for_update().select_related(
                     'provider__escort_profile__level', 'service__service_category', 'support_contact',
-                ).get(id=order_id, customer=request.user)
+                ).get(id=order_id, customer=request.legacy_user)
             except Order.DoesNotExist:
                 return Response({'code': 404, 'msg': '原订单不存在'})
             if source_order.status != Order.Status.COMPLETED:
@@ -517,7 +580,7 @@ class TipOrderView(APIView):
                 return Response({'code': 400, 'msg': '原订单未关联陪玩，无法打赏'})
 
             amount = gift_service.price
-            customer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.user)
+            customer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.legacy_user)
             if not customer_wallet.is_active:
                 return Response({'code': 403, 'msg': '钱包不可用'})
             if customer_wallet.balance < amount:
@@ -527,12 +590,12 @@ class TipOrderView(APIView):
             commission_rate = resolve_commission_rate(
                 gift_service, getattr(provider, 'escort_profile', None), None,
             )
-            inviter = request.user.inviter
-            inviter_rate = request.user.inviter_commission_rate if inviter else 0
+            inviter = request.legacy_user.inviter
+            inviter_rate = request.legacy_user.inviter_commission_rate if inviter else 0
             split = compute_split(amount, commission_rate, inviter_rate)
             now = timezone.now()
             gift_order = Order.objects.create(
-                customer=request.user,
+                customer=request.legacy_user,
                 provider=provider,
                 service=gift_service,
                 source_order=source_order,
@@ -595,13 +658,13 @@ class TipOrderView(APIView):
                 )
             log_only(
                 gift_order, action=OrderStatusLog.Action.CREATE,
-                operator=request.user, reason=f'完成订单快捷打赏，来源订单 {source_order.order_no}',
+                operator=request.legacy_user, reason=f'完成订单快捷打赏，来源订单 {source_order.order_no}',
             )
 
         _push_message_safe(
             recipient_id=provider.id,
             title='收到老板礼物',
-            preview=f'{request.user.nickname or "老板"}送给你「{gift_service.name}」',
+            preview=f'{request.legacy_user.nickname or "老板"}送给你「{gift_service.name}」',
             msg_type='PROMOTION',
             related_order_id=gift_order.id,
         )
@@ -613,27 +676,35 @@ class TipOrderView(APIView):
 
 
 class GrabOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
-        if request.user.role != request.user.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅大神用户可接单'})
 
         try:
-            escort_profile = request.user.escort_profile
+            escort_profile = request.account.escort_profile
         except EscortProfile.DoesNotExist:
             return Response({'code': 403, 'msg': '当前账号未创建大神资料，无法接单'})
-
-        if escort_profile.status != EscortProfile.Status.AVAILABLE:
-            return Response({'code': 400, 'msg': '当前大神状态不可接单'})
-        if not EscortSchedule.provider_is_scheduled_now(request.user):
+        if escort_profile.status == EscortProfile.Status.OFFLINE:
+            return Response({'code': 400, 'msg': '当前处于离线状态，无法接单'})
+        if not EscortSchedule.provider_is_scheduled_now(request.legacy_user):
             return Response({'code': 400, 'msg': '当前时间不在你的接单档期内'})
 
+        active_count = count_active_orders(request.account)
+        if active_count >= Order.MAX_CONCURRENT_ORDERS:
+            return Response({
+                'code': 400,
+                'msg': f'最多同时进行 {Order.MAX_CONCURRENT_ORDERS} 单，请完成当前订单后再接单',
+            })
+
         def pre_check(order):
-            if order.provider_id is not None:
+            if order.provider_account_id is not None:
                 raise IllegalTransitionError('订单已被其他大神接单')
             if order.payment_status != Order.PaymentStatus.PAID:
                 raise IllegalTransitionError('订单未支付，不能接单')
+            if not escort_profile.can_take_service(order.service):
+                raise IllegalTransitionError('该订单要求更高的陪玩档位，你暂无法接单')
             if order.auto_cancel_at and order.auto_cancel_at <= timezone.now():
                 raise IllegalTransitionError('订单已超时，请刷新抢单池')
             visible_at = order.created_at + timedelta(
@@ -642,21 +713,30 @@ class GrabOrderView(APIView):
             if timezone.now() < visible_at:
                 remaining = max(1, int((visible_at - timezone.now()).total_seconds()) + 1)
                 raise IllegalTransitionError(f'当前通行证需等待 {remaining} 秒后才能抢此单')
+            # 二次校验并发上限，规避拉取抢单池到点击抢单之间的间隙
+            if count_active_orders(request.account) >= Order.MAX_CONCURRENT_ORDERS:
+                raise IllegalTransitionError(
+                    f'最多同时进行 {Order.MAX_CONCURRENT_ORDERS} 单，请完成当前订单后再接单'
+                )
 
         def side_effect(order):
-            order.provider = request.user
-            order.provider_name_snapshot = request.user.nickname or request.user.username
-            # 修复 Bug：抢单后将陪玩师状态设为 BUSY
-            EscortProfile.objects.filter(user=request.user).update(status=EscortProfile.Status.BUSY)
+            order.provider = request.legacy_user
+            order.provider_account = request.account
+            order.provider_name_snapshot = request.legacy_user.nickname or request.legacy_user.username
+            # BUSY 表示已有履约中的订单；并发上限仍由 active_count 独立控制。
+            EscortProfile.objects.filter(user=request.legacy_user).update(
+                status=EscortProfile.Status.BUSY,
+            )
 
         try:
             order = transition(
                 order_id,
                 Order.Status.GRABBED,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 pre_check=pre_check,
                 side_effect=side_effect,
-                update_fields=['provider', 'provider_name_snapshot'],
+                update_fields=['provider', 'provider_account', 'provider_name_snapshot'],
             )
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
@@ -681,24 +761,44 @@ class GrabOrderView(APIView):
 
 
 class StartOrderServiceView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request, order_id):
-        if request.user.role != request.user.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅大神用户可开始服务'})
 
+        entry_image = request.FILES.get('entry_image')
+        if settings.REQUIRE_ORDER_EVIDENCE_IMAGES and not entry_image:
+            return Response({'code': 400, 'msg': '请上传入队截图'})
+
         def pre_check(order):
-            if order.provider_id != request.user.id:
+            if order.provider_id != request.legacy_user.id:
                 raise IllegalTransitionError('仅订单关联的大神可开始服务')
             if order.payment_status != Order.PaymentStatus.PAID:
                 raise IllegalTransitionError('订单未支付，不能开始服务')
+
+        def side_effect(order):
+            # 开始服务落库入队截图：为该订单+陪玩建立/更新报单草稿。
+            report, _ = ProviderReport.objects.get_or_create(
+                provider=request.legacy_user, order=order,
+                defaults={
+                    'game_name': order.service_name_snapshot or (order.service.name if order.service_id else ''),
+                    'description': order.remark, 'amount': order.amount,
+                    'status': ProviderReport.Status.DRAFT,
+                },
+            )
+            if entry_image:
+                report.entry_image = entry_image
+                report.save(update_fields=['entry_image', 'updated_at'])
 
         try:
             order = transition(
                 order_id,
                 Order.Status.IN_SERVICE,
-                operator=request.user,
+                operator=request.legacy_user,
                 pre_check=pre_check,
+                side_effect=side_effect,
             )
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
@@ -715,14 +815,19 @@ class StartOrderServiceView(APIView):
 
 
 class CompleteOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request, order_id):
-        if request.user.role != request.user.Role.PROVIDER:
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅大神用户可完成订单'})
 
+        completion_image = request.FILES.get('completion_image')
+        if settings.REQUIRE_ORDER_EVIDENCE_IMAGES and not completion_image:
+            return Response({'code': 400, 'msg': '请上传结单截图'})
+
         def pre_check(order):
-            if order.provider_id != request.user.id:
+            if order.provider_id != request.legacy_user.id:
                 raise IllegalTransitionError('仅订单关联的大神可完成订单')
             if order.payment_status != Order.PaymentStatus.PAID:
                 raise IllegalTransitionError('订单未支付，不能完成订单')
@@ -751,7 +856,7 @@ class CompleteOrderView(APIView):
                     settled_provider_ids.append(row.provider_id)
             else:
                 provider_income = order.provider_income or order.amount
-                provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.user)
+                provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.legacy_user)
                 balance_before = provider_wallet.balance
                 provider_wallet.balance += provider_income
                 provider_wallet.save(update_fields=['balance'])
@@ -761,7 +866,7 @@ class CompleteOrderView(APIView):
                     balance_before=balance_before, balance_after=provider_wallet.balance,
                     remark=f'订单收入：{order.order_no}',
                 )
-                settled_provider_ids.append(request.user.id)
+                settled_provider_ids.append(request.legacy_user.id)
             # 推荐人分佣入账
             if order.inviter_id and order.inviter_commission:
                 inviter_wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=order.inviter_id)
@@ -800,11 +905,30 @@ class CompleteOrderView(APIView):
                 profile.completed_order_count = (profile.completed_order_count or 0) + 1
                 profile.save(update_fields=['completed_order_count'])
 
+            # 完成订单落库结单截图并自动提交后台审核：平台订单已在上方结算，
+            # 报单审核仅核验入队/结单凭证，不二次入账。
+            report, _ = ProviderReport.objects.get_or_create(
+                provider=request.legacy_user, order=order,
+                defaults={
+                    'game_name': order.service_name_snapshot or (order.service.name if order.service_id else ''),
+                    'description': order.remark, 'amount': order.amount,
+                    'status': ProviderReport.Status.DRAFT,
+                },
+            )
+            if completion_image:
+                report.completion_image = completion_image
+            report.status = ProviderReport.Status.PENDING
+            report.save(update_fields=[
+                *(['completion_image'] if completion_image else []),
+                'status',
+                'updated_at',
+            ])
+
         try:
             order = transition(
                 order_id,
                 Order.Status.COMPLETED,
-                operator=request.user,
+                operator=request.legacy_user,
                 pre_check=pre_check,
                 side_effect=side_effect,
             )
@@ -832,13 +956,13 @@ class CompleteOrderView(APIView):
 
 class CancelOrderView(APIView):
     """客户主动取消未接单订单（仅 PENDING 状态可取消，全额退款）"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
         reason = (request.data.get('reason') or '').strip()[:255]
 
         def pre_check(order):
-            if order.customer_id != request.user.id:
+            if order.customer_id != request.legacy_user.id:
                 raise IllegalTransitionError('仅订单所属客户可取消')
             if order.status != Order.Status.PENDING:
                 raise IllegalTransitionError('订单已被接单，无法取消')
@@ -851,7 +975,7 @@ class CancelOrderView(APIView):
             order = transition(
                 order_id,
                 Order.Status.CANCELLED,
-                operator=request.user,
+                operator=request.legacy_user,
                 action=OrderStatusLog.Action.CANCEL,
                 reason=reason,
                 pre_check=pre_check,
@@ -884,38 +1008,39 @@ class CancelOrderView(APIView):
 
 class RejectOrderView(APIView):
     """陪玩师抢单后拒单：订单回到 PENDING，清除 provider，陪玩师状态恢复 AVAILABLE"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
         reason = (request.data.get('reason') or '').strip()[:255]
 
         def pre_check(order):
-            if request.user.role != request.user.Role.PROVIDER:
+            if request.account.account_type != ClubAccount.AccountType.PROVIDER:
                 raise IllegalTransitionError('仅大神用户可拒单')
-            if order.provider_id != request.user.id:
+            if order.provider_id != request.legacy_user.id:
                 raise IllegalTransitionError('仅订单关联的大神可拒单')
             if order.escort_mode != Order.EscortMode.SINGLE:
                 raise IllegalTransitionError('双陪订单请联系客服调整，不支持自行拒单')
 
         def side_effect(order):
             order.provider = None
+            order.provider_account = None
             order.provider_name_snapshot = ''
             order.grabbed_at = None
             order.reject_count = (order.reject_count or 0) + 1
             order.auto_cancel_at = timezone.now() + timedelta(minutes=PENDING_TIMEOUT_MINUTES)
-            EscortProfile.objects.filter(user=request.user).update(status=EscortProfile.Status.AVAILABLE)
+            EscortProfile.objects.filter(user=request.legacy_user).update(status=EscortProfile.Status.AVAILABLE)
 
         try:
             order = transition(
                 order_id,
                 Order.Status.PENDING,
-                operator=request.user,
+                operator=request.legacy_user,
                 action=OrderStatusLog.Action.REJECT,
                 reason=reason,
                 pre_check=pre_check,
                 side_effect=side_effect,
                 update_fields=[
-                    'provider', 'provider_name_snapshot', 'grabbed_at',
+                    'provider', 'provider_account', 'provider_name_snapshot', 'grabbed_at',
                     'reject_count', 'auto_cancel_at',
                 ],
             )
@@ -945,10 +1070,10 @@ class RejectOrderView(APIView):
 
 class RefundOrderView(APIView):
     """运营强制退款：支持 GRABBED / IN_SERVICE 状态，全额退款"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
-        if request.user.role != request.user.Role.OPERATOR:
+        if request.account.account_type != ClubAccount.AccountType.STAFF:
             return Response({'code': 403, 'msg': '仅客服可强制退款'})
 
         reason = (request.data.get('reason') or '').strip()[:255]
@@ -974,7 +1099,7 @@ class RefundOrderView(APIView):
             order = transition(
                 order_id,
                 Order.Status.CANCELLED,
-                operator=request.user,
+                operator=request.legacy_user,
                 action=OrderStatusLog.Action.REFUND,
                 reason=reason,
                 pre_check=pre_check,
@@ -1012,7 +1137,7 @@ class RefundOrderView(APIView):
 
 
 class EvaluateOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
         serializer = CreateEvaluationSerializer(data=request.data, context={'request': request})
@@ -1025,7 +1150,7 @@ class EvaluateOrderView(APIView):
         with transaction.atomic():
             evaluation = Evaluation.objects.create(
                 order=order,
-                customer=request.user,
+                customer=request.legacy_user,
                 provider=order.provider,
                 score=score,
                 skill_score=serializer.validated_data['skill_score'],
@@ -1047,7 +1172,7 @@ class EvaluateOrderView(APIView):
 class ServiceEvaluationListView(APIView):
     """C 端商品详情页：某服务的评价列表 + 平均分。"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request, service_id):
         evaluations = (
@@ -1071,11 +1196,11 @@ class ServiceEvaluationListView(APIView):
 class MyEvaluationListView(APIView):
     """陪玩端：我收到的评价列表 + 平均分。"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         evaluations = (
-            Evaluation.objects.filter(provider_id=request.user.id)
+            Evaluation.objects.filter(provider_id=request.legacy_user.id)
             .select_related('customer', 'provider', 'order')
             .order_by('-created_at')
         )
@@ -1093,7 +1218,7 @@ class MyEvaluationListView(APIView):
 class ReplyEvaluationView(APIView):
     """陪玩端：回复自己收到的评价。"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, evaluation_id):
         content = (request.data.get('reply_content') or '').strip()
@@ -1103,7 +1228,7 @@ class ReplyEvaluationView(APIView):
             evaluation = Evaluation.objects.get(id=evaluation_id)
         except Evaluation.DoesNotExist:
             return Response({'code': 404, 'msg': '评价不存在'})
-        if evaluation.provider_id != request.user.id:
+        if evaluation.provider_id != request.legacy_user.id:
             return Response({'code': 403, 'msg': '仅被评价的陪玩可回复'})
 
         evaluation.reply_content = content[:1000]
@@ -1117,28 +1242,39 @@ class ReplyEvaluationView(APIView):
 
 
 class AssignOrderView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
-        if request.user.role != request.user.Role.OPERATOR:
+        if request.account.account_type != ClubAccount.AccountType.STAFF:
             return Response({'code': 403, 'msg': '仅客服可派单'})
 
         provider_id = request.data.get('provider_id')
         if not provider_id:
             return Response({'code': 400, 'msg': '请指定陪玩'})
 
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
         try:
-            provider = User.objects.get(id=provider_id, role=User.Role.PROVIDER)
-        except User.DoesNotExist:
+            provider_account = ClubAccount.objects.select_related(
+                'legacy_mapping',
+            ).get(
+                id=provider_id,
+                account_type=ClubAccount.AccountType.PROVIDER,
+            )
+            provider = User.objects.get(
+                id=provider_account.legacy_mapping.legacy_user_id,
+            )
+        except (ClubAccount.DoesNotExist, User.DoesNotExist):
             return Response({'code': 404, 'msg': '陪玩不存在'})
 
-        profile = EscortProfile.objects.filter(user=provider).first()
-        if profile is None or profile.status != EscortProfile.Status.AVAILABLE:
+        profile = EscortProfile.objects.filter(account=provider_account).first()
+        if profile is None or profile.status == EscortProfile.Status.OFFLINE:
             return Response({'code': 400, 'msg': '该陪玩当前不可接单'})
         if not EscortSchedule.provider_is_scheduled_now(provider):
             return Response({'code': 400, 'msg': '该陪玩当前不在接单档期'})
+        if count_active_orders(provider_account) >= Order.MAX_CONCURRENT_ORDERS:
+            return Response({
+                'code': 400,
+                'msg': f'该陪玩已达同时进行 {Order.MAX_CONCURRENT_ORDERS} 单上限',
+            })
 
         def pre_check(order):
             if order.payment_status != Order.PaymentStatus.PAID:
@@ -1146,18 +1282,26 @@ class AssignOrderView(APIView):
 
         def side_effect(order):
             order.provider = provider
+            order.provider_account = provider_account
             order.provider_name_snapshot = provider.nickname or provider.username
-            EscortProfile.objects.filter(user=provider).update(status=EscortProfile.Status.BUSY)
+            active_after = count_active_orders(provider_account) + 1
+            new_status = (
+                EscortProfile.Status.BUSY
+                if active_after >= Order.MAX_CONCURRENT_ORDERS
+                else EscortProfile.Status.AVAILABLE
+            )
+            EscortProfile.objects.filter(user=provider).update(status=new_status)
 
         try:
             order = transition(
                 order_id,
                 Order.Status.GRABBED,
-                operator=request.user,
+                operator=request.legacy_user,
+                operator_account=request.account,
                 action=OrderStatusLog.Action.ASSIGN,
                 pre_check=pre_check,
                 side_effect=side_effect,
-                update_fields=['provider', 'provider_name_snapshot'],
+                update_fields=['provider', 'provider_account', 'provider_name_snapshot'],
             )
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
@@ -1189,18 +1333,19 @@ class AssignOrderView(APIView):
 
 
 class OrderStatsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        user = request.user
-        if user.role == user.Role.PROVIDER:
+        account = request.account
+        if account.account_type == ClubAccount.AccountType.PROVIDER:
             orders = Order.objects.filter(
-                Q(provider=user) | Q(providers__provider=user)
+                Q(provider_account=account)
+                | Q(providers__provider_account=account)
             ).distinct()
-        elif user.role == user.Role.OPERATOR:
+        elif account.account_type == ClubAccount.AccountType.STAFF:
             orders = Order.objects.all()
         else:
-            orders = Order.objects.filter(customer=user)
+            orders = Order.objects.filter(customer_account=account)
 
         total = orders.count()
         pending = orders.filter(status=Order.Status.PENDING).count()

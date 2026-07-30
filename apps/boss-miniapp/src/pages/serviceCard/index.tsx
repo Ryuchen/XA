@@ -3,6 +3,7 @@ import { View, Text, Image, Button } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import Icon from '@/components/Icon';
 import { fetchContactCard, openWecomCustomerService, SupportContactCard } from '@/services/support';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const PRIMARY_COLOR = '#007AFF';
@@ -82,7 +83,7 @@ const ServiceCardPage: React.FC = () => {
         <View className={styles.serviceInfo}>
           <Image
             className={styles.avatar}
-            src={card.avatar_url}
+            src={resolveImageUrl(card.avatar_url)}
             mode="aspectFill"
           />
           <View className={styles.info}>
@@ -99,7 +100,7 @@ const ServiceCardPage: React.FC = () => {
           <Text className={styles.qrcodeTitle}>长按识别二维码添加客服</Text>
           <Image
             className={styles.qrcodeImage}
-            src={card.qrcode_url}
+            src={resolveImageUrl(card.qrcode_url)}
             mode="aspectFill"
             showMenuByLongpress
           />

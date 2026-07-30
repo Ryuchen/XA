@@ -1,0 +1,28 @@
+@use './variables.scss' as *;
+
+// 陪玩卡片「试听语音」按钮公共样式：老板端 companions / players 两页共用。
+// 通过 @include 引入，避免各页内联重复样式。
+@mixin voice-preview-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  height: 48rpx;
+  padding: 0 $spacing-sm;
+  border-radius: $radius-round;
+  background: rgba(0, 122, 255, 0.10);
+  color: $color-primary;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  @include press-feedback;
+
+  .voicePreviewIcon {
+    font-size: $font-size-md;
+    line-height: 1;
+  }
+
+  &.voicePreviewPlaying {
+    background: $color-primary;
+    color: #ffffff;
+  }
+}

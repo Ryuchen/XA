@@ -4,7 +4,6 @@ import Taro from '@tarojs/taro';
 import { createOrder, fetchServices, quoteOrder, CreateOrderPayload, OrderQuote } from '@/services/order';
 import { fetchMyCoupons, UserCoupon } from '@/services/coupon';
 import { fetchMe, fetchEscorts, EscortProfile, MeProfile } from '@/services/user';
-import { ApiResponse } from '@/utils/request';
 import { formatXaCoin } from '@/utils/format';
 import { fetchContactCards, openWecomCustomerService, SupportContactCard } from '@/services/support';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
@@ -139,6 +138,26 @@ const CheckoutPage: React.FC = () => {
 
   const originalAmount = selectedService ? selectedService.price * gameRounds : 0;
 
+  // 报价试算与正式下单共用的订单载荷，避免共享字段重复构造。
+  // includeGameAccount 为 true 时附带游戏账号信息与备注（仅下单需要）。
+  const buildOrderPayload = (opts?: { includeGameAccount?: boolean }): CreateOrderPayload => {
+    const payload: CreateOrderPayload = {
+      service_id: selectedService!.id,
+      game_rounds: gameRounds,
+    };
+    if (supportContactId) payload.support_contact_id = supportContactId;
+    // 仅"指定陪玩"模式携带 provider_id；平台派单不指定，交由后台待接单/客服指派
+    if (dispatchMode === 'assign' && providerId) payload.provider_id = providerId;
+    if (selectedCouponId != null) payload.user_coupon_id = selectedCouponId;
+    if (opts?.includeGameAccount) {
+      payload.game_region = gameAccount.region.trim();
+      payload.game_nickname = gameAccount.nickname.trim();
+      payload.game_uid = gameAccount.uid.trim();
+      payload.remark = remark.trim();
+    }
+    return payload;
+  };
+
   useEffect(() => {
     if (originalAmount <= 0) {
       setUsableCoupons([]);
@@ -165,13 +184,7 @@ const CheckoutPage: React.FC = () => {
     const timer = setTimeout(async () => {
       setQuoteLoading(true);
       setQuoteError('');
-      const payload: CreateOrderPayload = {
-        service_id: selectedService.id,
-        game_rounds: gameRounds,
-      };
-      if (supportContactId) payload.support_contact_id = supportContactId;
-      if (dispatchMode === 'assign' && providerId) payload.provider_id = providerId;
-      if (selectedCouponId != null) payload.user_coupon_id = selectedCouponId;
+      const payload = buildOrderPayload();
       try {
         const res = await quoteOrder(payload);
         if (!active) return;
@@ -280,18 +293,7 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    const payload: CreateOrderPayload = {
-      service_id: selectedService.id,
-      game_rounds: gameRounds,
-      game_region: gameAccount.region.trim(),
-      game_nickname: gameAccount.nickname.trim(),
-      game_uid: gameAccount.uid.trim(),
-      remark: remark.trim()
-    };
-    payload.support_contact_id = supportContactId;
-    // 仅"指定陪玩"模式携带 provider_id；平台派单不指定，交由后台待接单/客服指派
-    if (dispatchMode === 'assign' && providerId) payload.provider_id = providerId;
-    if (selectedCouponId != null) payload.user_coupon_id = selectedCouponId;
+    const payload = buildOrderPayload({ includeGameAccount: true });
 
     const confirmation = await Taro.showModal({
       title: '确认提交订单',
@@ -303,13 +305,14 @@ const CheckoutPage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const response = await createOrder(payload) as ApiResponse;
+      const response = await createOrder(payload);
 
       if (response?.code !== 0) {
         Taro.showToast({ title: response?.msg || '下单失败，请稍后重试', icon: 'none' });
         return;
       }
 
+      const createdOrderId = response.data?.id;
       const isAssign = dispatchMode === 'assign' && !!providerId;
       const assignName = selectedEscort?.nickname ? `「${selectedEscort.nickname}」` : '指定大神';
       Taro.showToast({ title: '下单成功', icon: 'success' });
@@ -320,7 +323,11 @@ const CheckoutPage: React.FC = () => {
           : '订单已进入待接单，将由陪玩师主动接单或客服为你指派，请在"我的订单"中留意状态。',
         showCancel: false,
         success: () => {
-          Taro.redirectTo({ url: '/pages/orderList/index' });
+          Taro.redirectTo({
+            url: createdOrderId
+              ? `/pages/orderList/index?orderId=${createdOrderId}`
+              : '/pages/orderList/index',
+          });
         }
       });
     } catch (error) {

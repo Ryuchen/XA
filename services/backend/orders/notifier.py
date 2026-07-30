@@ -10,27 +10,29 @@ def notify_order_update(order):
         return
     data = OrderSerializer(order).data
 
-    if order.customer_id:
+    if order.customer_account_id:
         async_to_sync(channel_layer.group_send)(
-            f'user_{order.customer_id}',
+            f'account_{order.customer_account_id}',
             {'type': 'order_status_update', 'data': data},
         )
 
     notified_provider_ids = set()
-    if order.provider_id:
-        notified_provider_ids.add(order.provider_id)
+    if order.provider_account_id:
+        notified_provider_ids.add(order.provider_account_id)
         async_to_sync(channel_layer.group_send)(
-            f'user_{order.provider_id}',
+            f'account_{order.provider_account_id}',
             {'type': 'order_status_update', 'data': data},
         )
 
     # 双陪第二打手也必须收到状态变化，否则其 H5 只能手动刷新。
-    for provider_id in order.providers.exclude(provider_id=None).values_list('provider_id', flat=True):
+    for provider_id in order.providers.exclude(
+        provider_account_id=None,
+    ).values_list('provider_account_id', flat=True):
         if provider_id in notified_provider_ids:
             continue
         notified_provider_ids.add(provider_id)
         async_to_sync(channel_layer.group_send)(
-            f'user_{provider_id}',
+            f'account_{provider_id}',
             {'type': 'order_status_update', 'data': data},
         )
 

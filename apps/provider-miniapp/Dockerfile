@@ -10,7 +10,7 @@ WORKDIR /app
 ARG TARO_APP_API=/api
 ENV TARO_APP_API=${TARO_APP_API}
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 COPY package.json ./
 RUN pnpm install

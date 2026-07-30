@@ -4,7 +4,14 @@
 超级管理员(is_superuser)自动拥有全部权限。
 """
 
+from django.conf import settings
 from rest_framework.permissions import BasePermission
+
+from club_accounts.services import (
+    get_or_create_account_for_legacy_user,
+    link_legacy_relations,
+    migrate_legacy_test_fixtures,
+)
 
 # 权限点分组定义：用于前端权限分配树展示与后端校验。
 PERMISSION_GROUPS = [
@@ -213,6 +220,7 @@ PERMISSION_GROUPS = [
             ('role:delete', '删除角色'),
             ('admin:view', '查看管理员'),
             ('admin:edit', '编辑管理员'),
+            ('audit:view', '查看操作审计'),
         ],
     },
 ]
@@ -226,27 +234,69 @@ ALL_PERMISSIONS = [
 ALL_PERMISSION_SET = set(ALL_PERMISSIONS)
 
 
-def get_user_permissions(user):
-    """返回用户拥有的权限点集合。超级管理员拥有全部。"""
-    if not user or not user.is_authenticated:
+def _request_account(request):
+    account = getattr(request, 'account', None)
+    if (
+        account is None
+        and getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
+        and getattr(request.user, 'is_authenticated', False)
+    ):
+        account = get_or_create_account_for_legacy_user(request.user)
+        if account is not None:
+            account._legacy_is_superuser = bool(
+                getattr(request.user, 'is_superuser', False),
+            )
+            request.account = account
+            request.legacy_user = request.user
+            if hasattr(request, '_request'):
+                request._request.account = account
+                request._request.legacy_user = request.user
+            link_legacy_relations(request.user, account)
+            migrate_legacy_test_fixtures()
+    return account
+
+
+def get_account_permissions(account):
+    """返回业务后台账户拥有的权限点集合。
+
+    用户可关联多个角色，权限取所有启用角色的并集。
+    """
+    if not account or not account.is_active or not account.can_login:
         return set()
-    if user.is_superuser:
-        return set(ALL_PERMISSIONS)
+    if (
+        getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
+        and getattr(account, '_legacy_is_superuser', False)
+    ):
+        return set(ALL_PERMISSION_SET)
     perms = set()
-    membership = getattr(user, 'admin_membership', None)
-    if membership and membership.is_active and membership.role and membership.role.is_active:
-        perms.update(p for p in membership.role.permissions if p in ALL_PERMISSION_SET)
+    membership = getattr(account, 'admin_membership', None)
+    if membership and membership.is_active:
+        for role in membership.roles.all():
+            if role.is_active:
+                perms.update(p for p in role.permissions if p in ALL_PERMISSION_SET)
     return perms
 
 
-def is_console_user(user):
-    """是否为后台管理用户：超管或拥有启用的管理员身份。"""
-    if not user or not user.is_authenticated:
+def is_console_account(account):
+    """是否为可登录派单后台的 STAFF 业务账户。"""
+    if not account or not account.is_active or not account.can_login:
         return False
-    if user.is_superuser:
+    if (
+        getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
+        and getattr(account, '_legacy_is_superuser', False)
+    ):
         return True
-    membership = getattr(user, 'admin_membership', None)
-    return bool(membership and membership.is_active)
+    membership = getattr(account, 'admin_membership', None)
+    return bool(
+        account.account_type == account.AccountType.STAFF
+        and membership
+        and membership.is_active
+    )
+
+
+# 过渡期保留函数名，调用方传入的必须是 ClubAccount。
+get_user_permissions = get_account_permissions
+is_console_user = is_console_account
 
 
 class IsConsoleUser(BasePermission):
@@ -255,7 +305,13 @@ class IsConsoleUser(BasePermission):
     message = '无后台访问权限'
 
     def has_permission(self, request, view):
-        return is_console_user(request.user)
+        account = _request_account(request)
+        if (
+            getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
+            and getattr(request.user, 'is_superuser', False)
+        ):
+            return True
+        return is_console_account(account)
 
 
 class HasConsolePerm(BasePermission):
@@ -269,17 +325,21 @@ class HasConsolePerm(BasePermission):
     message = '无操作权限'
 
     def has_permission(self, request, view):
-        if not is_console_user(request.user):
-            return False
-        if request.user.is_superuser:
+        account = _request_account(request)
+        if (
+            getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
+            and getattr(request.user, 'is_superuser', False)
+        ):
             return True
+        if not is_console_account(account):
+            return False
 
         required = self._resolve_required(view)
         if not required:
             return True
 
-        user_perms = get_user_permissions(request.user)
-        return all(code in user_perms for code in required)
+        account_perms = get_account_permissions(account)
+        return all(code in account_perms for code in required)
 
     @staticmethod
     def _resolve_required(view):

@@ -18,6 +18,7 @@ interface LoginResponse {
   msg?: string;
   data?: {
     token?: string;
+    refreshToken?: string;
     userInfo?: {
       id?: string;
       username?: string;
@@ -36,6 +37,7 @@ export const roleTextMap: Record<UserRole, string> = {
 
 const USER_KEY = 'xa_login_user';
 const TOKEN_KEY = 'token';
+const REFRESH_TOKEN_KEY = 'xa_boss_refresh_token';
 const HOME_URL = '/pages/home/index';
 const DEFAULT_AVATAR = 'https://picsum.photos/id/64/200/200';
 
@@ -49,6 +51,18 @@ export const getStoredToken = (): string => {
 
 export const setStoredToken = (token: string) => {
   Taro.setStorageSync(TOKEN_KEY, token);
+};
+
+export const getStoredRefreshToken = (): string => {
+  try {
+    return Taro.getStorageSync(REFRESH_TOKEN_KEY) || '';
+  } catch (error) {
+    return '';
+  }
+};
+
+export const setStoredRefreshToken = (token: string) => {
+  Taro.setStorageSync(REFRESH_TOKEN_KEY, token);
 };
 
 export const getStoredUser = (): LoginUser | null => {
@@ -66,6 +80,7 @@ export const setStoredUser = (user: LoginUser) => {
 export const clearStoredUser = () => {
   Taro.removeStorageSync(USER_KEY);
   Taro.removeStorageSync(TOKEN_KEY);
+  Taro.removeStorageSync(REFRESH_TOKEN_KEY);
 };
 
 export const goRoleHome = () => {
@@ -99,6 +114,9 @@ export const persistLoginData = (data: NonNullable<LoginResponse['data']>): Logi
   };
 
   setStoredToken(data.token);
+  if (data.refreshToken) {
+    setStoredRefreshToken(data.refreshToken);
+  }
   setStoredUser(user);
   return user;
 };

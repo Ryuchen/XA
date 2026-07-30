@@ -20,6 +20,7 @@ import {
 } from '@/types/order';
 import { Skeleton } from '@/components';
 import Icon, { IconName } from '@/components/Icon';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { getStoredToken } from '@/utils/auth';
@@ -432,7 +433,7 @@ const OrderListPage: React.FC = () => {
               </View>
 
               <View className={styles.productRow}>
-                <Image className={styles.productImage} src={order.service.cover_url || 'https://picsum.photos/id/64/200/200'} mode="aspectFill" />
+                <Image className={styles.productImage} src={resolveImageUrl(order.service.cover_url, 'https://picsum.photos/id/64/200/200')} mode="aspectFill" />
                 <View className={styles.productInfo}>
                   <Text className={styles.productName}>{order.service.name}</Text>
                   <Text className={styles.productSpec}>{order.service.description}</Text>

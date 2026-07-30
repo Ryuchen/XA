@@ -6,10 +6,9 @@ import TabIcon from '@/components/TabIcon';
 import { useLayoutMode } from '@/hooks/useLayoutMode';
 import styles from './index.module.scss';
 
-export type MainSection = 'orders' | 'report' | 'messages' | 'wallet' | 'mine';
+export type MainSection = 'orders' | 'messages' | 'wallet' | 'mine';
 const NAV = [
   { key: 'orders' as const, path: '/pages/orders/index', label: '接单工作台', caption: '订单与服务', icon: 'gamepad' as const },
-  { key: 'report' as const, path: '/pages/report/index', label: '订单报单', caption: '凭证与审核', icon: 'receipt' as const },
   { key: 'messages' as const, path: '/pages/messages/index', label: '消息中心', caption: '通知与动态', icon: 'bell' as const },
   { key: 'wallet' as const, path: '/pages/wallet/index', label: '资产钱包', caption: '流水与提现', icon: 'wallet' as const },
   { key: 'mine' as const, path: '/pages/mine/index', label: '个人中心', caption: '资料与设置', icon: 'user' as const },

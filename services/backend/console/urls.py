@@ -6,6 +6,7 @@ from .views import (
     AchievementViewSet,
     AdminMembershipViewSet,
     AnnouncementViewSet,
+    AuditLogViewSet,
     AuditionLinkViewSet,
     AuditionSignupViewSet,
     BannerViewSet,
@@ -72,6 +73,7 @@ router.register('chat-sessions', ChatSessionViewSet, basename='admin-chat-sessio
 router.register('messages', MessageViewSet, basename='admin-message')
 router.register('roles', RoleViewSet, basename='admin-role')
 router.register('admins', AdminMembershipViewSet, basename='admin-membership')
+router.register('audit-logs', AuditLogViewSet, basename='admin-audit-log')
 
 urlpatterns = [
     path('auth/login', ConsoleLoginView.as_view()),

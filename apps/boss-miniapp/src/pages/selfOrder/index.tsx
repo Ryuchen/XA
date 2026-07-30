@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { fetchServices } from '@/services/order';
+import { fetchServices, fetchGameCategories, GameCategoryInfo } from '@/services/order';
 import { fetchEscorts, EscortProfile } from '@/services/user';
 import { fetchContactCards, SupportContactCard } from '@/services/support';
 import { ServiceInfo } from '@/types/order';
 import { formatXaCoin } from '@/utils/format';
 import { Empty, Icon, Skeleton } from '@/components';
+import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 type DispatchMode = 'platform' | 'assign';
@@ -17,6 +18,7 @@ const FALLBACK_IMAGE = 'https://picsum.photos/id/1/300/300';
 const SelfOrderPage: React.FC = () => {
   const [step, setStep] = useState(0);
   const [services, setServices] = useState<ServiceInfo[]>([]);
+  const [categories, setCategories] = useState<GameCategoryInfo[]>([]);
   const [escorts, setEscorts] = useState<EscortProfile[]>([]);
   const [contacts, setContacts] = useState<SupportContactCard[]>([]);
   const [gameCategoryId, setGameCategoryId] = useState<number | null>(null);
@@ -27,28 +29,51 @@ const SelfOrderPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchServices(), fetchEscorts(), fetchContactCards()])
-      .then(([serviceRes, escortRes, contactRes]) => {
+    Promise.all([fetchServices(), fetchGameCategories(), fetchContactCards()])
+      .then(([serviceRes, categoryRes, contactRes]) => {
         const availableServices = (serviceRes.data || []).filter(
           item => !item.service_category_name?.includes('礼')
         );
         setServices(availableServices);
-        setEscorts(escortRes.data || []);
+        setCategories(categoryRes.data || []);
         setContacts(contactRes.data || []);
       })
       .catch(() => Taro.showToast({ title: '下单信息加载失败', icon: 'none' }))
       .finally(() => setLoading(false));
   }, []);
 
-  const gameCategories = useMemo(() => {
-    const map = new Map<number, string>();
+  // 已选服务项后，按服务项精准拉取可接该服务项的陪玩（最细粒度）；
+  // 尚未选服务项时退回按游戏类目筛选；两者都未选时清空。
+  useEffect(() => {
+    if (gameCategoryId == null) {
+      setEscorts([]);
+      return;
+    }
+    let active = true;
+    fetchEscorts(undefined, gameCategoryId, serviceId ?? undefined)
+      .then(res => {
+        if (active && res.code === 0 && res.data) setEscorts(res.data);
+      })
+      .catch(() => {
+        if (active) setEscorts([]);
+      });
+    return () => { active = false; };
+  }, [gameCategoryId, serviceId]);
+
+  const serviceCountByCategory = useMemo(() => {
+    const counter = new Map<number, number>();
     services.forEach(item => {
       if (item.game_category != null) {
-        map.set(item.game_category, item.game_category_name || `游戏 ${item.game_category}`);
+        counter.set(item.game_category, (counter.get(item.game_category) || 0) + 1);
       }
     });
-    return Array.from(map, ([id, name]) => ({ id, name }));
+    return counter;
   }, [services]);
+
+  const gameCategories = useMemo(
+    () => categories.filter(category => (serviceCountByCategory.get(category.id) || 0) > 0),
+    [categories, serviceCountByCategory]
+  );
 
   const currentServices = useMemo(
     () => services.filter(item => item.game_category === gameCategoryId),
@@ -65,6 +90,18 @@ const SelfOrderPage: React.FC = () => {
     if (id !== gameCategoryId) {
       setGameCategoryId(id);
       setServiceId(null);
+      // 换游戏后可接陪玩集合变化，重置已选陪玩，回落平台派单
+      setProviderId(null);
+      setDispatchMode('platform');
+    }
+  };
+
+  const selectService = (id: number) => {
+    if (id !== serviceId) {
+      setServiceId(id);
+      // 换服务项后可接陪玩集合变化，重置已选陪玩，回落平台派单
+      setProviderId(null);
+      setDispatchMode('platform');
     }
   };
 
@@ -126,9 +163,15 @@ const SelfOrderPage: React.FC = () => {
                 className={`${styles.gameCard} ${gameCategoryId === category.id ? styles.selected : ''}`}
                 onClick={() => selectGame(category.id)}
               >
-                <View className={styles.gameIcon}><Icon name="gamepad-2" size={44} color={gameCategoryId === category.id ? '#007AFF' : '#6E6E73'} /></View>
+                <View className={styles.gameIcon}>
+                  {category.icon_url ? (
+                    <Image className={styles.gameIconImage} src={resolveImageUrl(category.icon_url)} mode="aspectFit" />
+                  ) : (
+                    <Icon name="gamepad-2" size={44} color={gameCategoryId === category.id ? '#007AFF' : '#6E6E73'} />
+                  )}
+                </View>
                 <Text className={styles.gameName}>{category.name}</Text>
-                <Text className={styles.optionHint}>{services.filter(item => item.game_category === category.id).length} 个项目</Text>
+                <Text className={styles.optionHint}>{serviceCountByCategory.get(category.id) || 0} 个项目</Text>
                 {gameCategoryId === category.id && <Icon name="check-circle" size={36} color="#007AFF" />}
               </View>
             ))}
@@ -142,9 +185,9 @@ const SelfOrderPage: React.FC = () => {
               <View
                 key={service.id}
                 className={`${styles.serviceCard} ${serviceId === service.id ? styles.selected : ''}`}
-                onClick={() => setServiceId(service.id)}
+                onClick={() => selectService(service.id)}
               >
-                <Image className={styles.serviceImage} src={service.cover_url || FALLBACK_IMAGE} mode="aspectFill" />
+                <Image className={styles.serviceImage} src={resolveImageUrl(service.cover_url, FALLBACK_IMAGE)} mode="aspectFill" />
                 <View className={styles.optionMain}>
                   <Text className={styles.optionName}>{service.name}</Text>
                   <Text className={styles.optionDesc}>{service.description || '专业陪玩服务'}</Text>
@@ -175,7 +218,7 @@ const SelfOrderPage: React.FC = () => {
                 className={`${styles.providerCard} ${providerId === escort.id ? styles.selected : ''}`}
                 onClick={() => selectProvider(escort.id)}
               >
-                <Image className={styles.providerAvatar} src={escort.avatar || FALLBACK_IMAGE} mode="aspectFill" />
+                <Image className={styles.providerAvatar} src={resolveImageUrl(escort.avatar, FALLBACK_IMAGE)} mode="aspectFill" />
                 <View className={styles.optionMain}>
                   <Text className={styles.optionName}>{escort.nickname}</Text>
                   <Text className={styles.optionDesc}>{escort.rank} · 评分 {escort.rating} · 已接 {escort.orderCount}</Text>
@@ -184,6 +227,9 @@ const SelfOrderPage: React.FC = () => {
                 {providerId === escort.id && <Icon name="check-circle" size={38} color="#007AFF" />}
               </View>
             ))}
+            {escorts.length === 0 && (
+              <Empty icon="🧑‍💻" title="暂无可接该游戏的陪玩" desc="可选择不指定陪玩，交给平台安排接单" />
+            )}
           </View>
         )}
 
@@ -195,7 +241,7 @@ const SelfOrderPage: React.FC = () => {
                 className={`${styles.contactCard} ${supportContactId === contact.id ? styles.selected : ''}`}
                 onClick={() => setSupportContactId(contact.id)}
               >
-                <Image className={styles.contactAvatar} src={contact.avatar_url || FALLBACK_IMAGE} mode="aspectFill" />
+                <Image className={styles.contactAvatar} src={resolveImageUrl(contact.avatar_url, FALLBACK_IMAGE)} mode="aspectFill" />
                 <View className={styles.optionMain}>
                   <Text className={styles.optionName}>{contact.name}</Text>
                   <Text className={styles.optionDesc}>{contact.tips || contact.company || '负责订单进度与售后跟进'}</Text>

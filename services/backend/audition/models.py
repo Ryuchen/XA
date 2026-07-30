@@ -30,6 +30,14 @@ class AuditionLink(models.Model):
         related_name='audition_links',
         verbose_name='创建客服',
     )
+    operator_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audition_links',
+        verbose_name='创建客服业务账户',
+    )
     boss_token = models.CharField(max_length=64, unique=True, db_index=True, verbose_name='老板入口token')
     provider_token = models.CharField(max_length=64, unique=True, db_index=True, verbose_name='陪玩入口token')
     boss_user = models.ForeignKey(
@@ -40,6 +48,14 @@ class AuditionLink(models.Model):
         related_name='audition_boss_links',
         verbose_name='老板入口绑定用户',
     )
+    boss_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audition_boss_links',
+        verbose_name='老板入口绑定业务账户',
+    )
     provider_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -47,6 +63,14 @@ class AuditionLink(models.Model):
         blank=True,
         related_name='audition_provider_links',
         verbose_name='陪玩入口绑定用户',
+    )
+    provider_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audition_provider_links',
+        verbose_name='陪玩入口绑定业务账户',
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -91,6 +115,14 @@ class AuditionSignup(models.Model):
         related_name='audition_signups',
         verbose_name='报名人',
     )
+    applicant_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='audition_signups',
+        verbose_name='报名业务账户',
+    )
     contact = models.CharField(max_length=100, blank=True, default='', verbose_name='联系方式')
     game = models.CharField(max_length=100, blank=True, default='', verbose_name='擅长游戏')
     remark = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
@@ -105,6 +137,14 @@ class AuditionSignup(models.Model):
         blank=True,
         related_name='audited_audition_signups',
         verbose_name='审核客服',
+    )
+    auditor_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audited_audition_signups',
+        verbose_name='审核客服业务账户',
     )
     audit_remark = models.CharField(max_length=255, blank=True, default='', verbose_name='审核备注')
     audited_at = models.DateTimeField(null=True, blank=True, verbose_name='审核时间')
