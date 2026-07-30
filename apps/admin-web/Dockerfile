@@ -1,7 +1,9 @@
 # 运营后台：Vue 3 + Vite SPA。构建静态产物后交由 nginx 托管。
 
 # ---- 构建阶段 ----
-FROM node:22-slim AS builder
+# 前端静态资源与 CPU 架构无关，固定构建平台避免多架构发布时重复通过 QEMU 编译。
+ARG FRONTEND_BUILDPLATFORM=linux/amd64
+FROM --platform=${FRONTEND_BUILDPLATFORM} node:22-slim AS builder
 WORKDIR /workspace
 
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
