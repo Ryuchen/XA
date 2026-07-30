@@ -254,7 +254,21 @@ docker compose -f docker-compose.web.yml config --quiet
 docker compose -f docker-compose.web.yml up -d --build
 ```
 
-目前该整合编排属于**开发/验收配置**，还不能视为可直接上线的生产方案：前端镜像依赖 Corepack/pnpm 安装行为及仓库锁文件，需在目标环境完成镜像构建验证。生产部署前至少还应完成固定依赖锁文件、使用非 root 数据库账号、关闭 Django Debug、限制 Allowed Hosts/CORS、配置 HTTPS 与微信合法域名、托管静态与媒体文件、备份数据库并接入日志和监控。
+### 自动构建镜像
+
+`.github/workflows/docker-publish.yml` 在 Pull Request 中执行多架构构建校验，在合并到
+`main`、推送 `v*` 标签或手动触发时，将以下 AMD64/ARM64 镜像发布到 GHCR：
+
+- `ghcr.io/ryuchen/xa-backend`：Django / Daphne / Celery 共用后端镜像。
+- `ghcr.io/ryuchen/xa-dispatch`：运营派单后台。
+- `ghcr.io/ryuchen/xa-provider`：陪玩端 H5。
+
+分支、版本、Git SHA 和 `latest` 标签由工作流自动生成；发布镜像同时附带 SBOM、OCI
+元数据和构建来源证明。工作流使用仓库自带的 `GITHUB_TOKEN`，无需额外配置镜像仓库密码。
+
+目前整合编排仍属于**开发/验收配置**，不能直接视为生产部署方案。生产上线前至少还应使用非
+root 数据库账号、关闭 Django Debug、限制 Allowed Hosts/CORS、配置 HTTPS 与微信合法域名、
+托管静态与媒体文件、备份数据库并接入日志和监控。
 
 ## 接口与实时通信
 

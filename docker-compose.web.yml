@@ -12,7 +12,8 @@ include:
 services:
   boss-h5:
     build:
-      context: ./apps/boss-miniapp
+      context: .
+      dockerfile: apps/boss-miniapp/Dockerfile
       args:
         TARO_APP_API: /api
     image: xa-boss-h5:dev
@@ -26,7 +27,8 @@ services:
 
   provider-h5:
     build:
-      context: ./apps/provider-miniapp
+      context: .
+      dockerfile: apps/provider-miniapp/Dockerfile
       args:
         TARO_APP_API: /api
     image: xa-provider-h5:dev
@@ -40,7 +42,8 @@ services:
 
   admin-web:
     build:
-      context: ./apps/admin-web
+      context: .
+      dockerfile: apps/admin-web/Dockerfile
     image: xa-admin-web:dev
     container_name: xa_admin_web
     environment:

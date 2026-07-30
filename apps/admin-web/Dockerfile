@@ -2,15 +2,18 @@
 
 # ---- 构建阶段 ----
 FROM node:22-slim AS builder
-WORKDIR /app
+WORKDIR /workspace
 
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
-COPY package.json ./
-RUN pnpm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/admin-web/package.json apps/admin-web/package.json
+COPY packages/design-system/package.json packages/design-system/package.json
+RUN pnpm install --filter xa-admin-web... --frozen-lockfile
 
-COPY . .
-RUN pnpm run build
+COPY apps/admin-web apps/admin-web
+COPY packages/design-system packages/design-system
+RUN pnpm --filter xa-admin-web run build
 
 # ---- 运行阶段 ----
 FROM nginx:alpine
@@ -18,6 +21,6 @@ FROM nginx:alpine
 # NGINX_ENVSUBST_FILTER 限定只替换该变量，保留 $uri/$host 等 nginx 变量。
 ENV BACKEND_ORIGIN=http://backend:8000 \
     NGINX_ENVSUBST_FILTER=BACKEND_ORIGIN
-COPY nginx.conf /etc/nginx/templates/default.conf.template
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY apps/admin-web/nginx.conf /etc/nginx/templates/default.conf.template
+COPY --from=builder /workspace/apps/admin-web/dist /usr/share/nginx/html
 EXPOSE 80
