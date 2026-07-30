@@ -16,6 +16,8 @@
     "admin:dev": "pnpm --filter xa-admin-web run dev",
     "admin:build": "pnpm --filter xa-admin-web run build",
     "build:mini": "pnpm run boss:build && pnpm run provider:build",
-    "build:all": "pnpm run build:mini && pnpm run admin:build"
+    "build:all": "pnpm run build:mini && pnpm run admin:build",
+    "style:check": "node scripts/check-style-contract.mjs",
+    "verify:frontend": "pnpm run style:check && pnpm run build:all"
   }
 }

@@ -19,6 +19,7 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
     plugins: ['@tarojs/plugin-html'],
     defineConstants: {
       'process.env.TARO_APP_API': JSON.stringify(process.env.TARO_APP_API || ''),
+      'process.env.TARO_APP_MEDIA': JSON.stringify(process.env.TARO_APP_MEDIA || ''),
     },
     copy: {
       patterns: [],
@@ -35,6 +36,11 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
       enable: false,
     },
     mini: {
+      // CSS Modules are locally scoped, so cross-entry extraction order cannot affect
+      // selector precedence. Suppress webpack's false-positive common-chunk warnings.
+      miniCssExtractPluginOption: {
+        ignoreOrder: true,
+      },
       postcss: {
         pxtransform: {
           enable: true,

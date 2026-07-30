@@ -1,0 +1,144 @@
+// XA Design System
+// 只在这里维护品牌、状态和语义颜色。业务端只消费 --xa-* 语义变量。
+
+@mixin light {
+  // Primitive palette
+  --xa-brand-50: #e8f2ff;
+  --xa-brand-100: #cfe5ff;
+  --xa-brand-200: #9fcbff;
+  --xa-brand-300: #66abff;
+  --xa-brand-400: #2e8dff;
+  --xa-brand-500: #007aff;
+  --xa-brand-600: #0064d6;
+  --xa-brand-700: #004fad;
+  --xa-brand-800: #003b82;
+  --xa-brand-900: #00275a;
+
+  --xa-neutral-0: #ffffff;
+  --xa-neutral-50: #f7f7fa;
+  --xa-neutral-100: #f2f2f7;
+  --xa-neutral-200: #e5e5ea;
+  --xa-neutral-300: #d1d1d6;
+  --xa-neutral-400: #aeaeb2;
+  --xa-neutral-500: #8e8e93;
+  --xa-neutral-600: #6e6e73;
+  --xa-neutral-700: #48484a;
+  --xa-neutral-800: #1d1d1f;
+  --xa-neutral-900: #000000;
+
+  // Semantic colors
+  --xa-color-primary: var(--xa-brand-500);
+  --xa-color-primary-hover: var(--xa-brand-600);
+  --xa-color-primary-soft: var(--xa-brand-50);
+  --xa-color-on-primary: var(--xa-neutral-0);
+  --xa-color-success: #34c759;
+  --xa-color-warning: #ff9500;
+  --xa-color-danger: #ff3b30;
+  --xa-color-info: var(--xa-brand-500);
+  --xa-color-price: #ff9500;
+  --xa-color-price-soft: #ffb340;
+
+  --xa-color-surface-page: var(--xa-neutral-100);
+  --xa-color-surface-card: var(--xa-neutral-0);
+  --xa-color-surface-subtle: var(--xa-neutral-50);
+  --xa-color-surface-hover: var(--xa-neutral-100);
+  --xa-color-surface-elevated: var(--xa-neutral-0);
+  --xa-color-text-primary: var(--xa-neutral-800);
+  --xa-color-text-secondary: var(--xa-neutral-600);
+  --xa-color-text-tertiary: var(--xa-neutral-500);
+  --xa-color-text-disabled: var(--xa-neutral-300);
+  --xa-color-text-inverse: var(--xa-neutral-0);
+  --xa-color-border: var(--xa-neutral-200);
+  --xa-color-divider: var(--xa-neutral-100);
+  --xa-color-overlay: rgba(0, 0, 0, 0.38);
+  --xa-color-focus-ring: rgba(0, 122, 255, 0.22);
+
+  --xa-gradient-primary: linear-gradient(135deg, #0a84ff 0%, #007aff 100%);
+  --xa-gradient-dark: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+  --xa-gradient-header: var(--xa-gradient-primary);
+
+  --xa-primary-rgb: 0, 122, 255;
+  --xa-surface-card-rgb: 255, 255, 255;
+  --xa-success-rgb: 52, 199, 89;
+  --xa-warning-rgb: 255, 149, 0;
+  --xa-danger-rgb: 255, 59, 48;
+  --xa-price-rgb: 255, 149, 0;
+
+  // Motion and typography are unit-independent.
+  --xa-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --xa-font-mono: 'SFMono-Regular', 'JetBrains Mono', Consolas, monospace;
+  --xa-motion-fast: 150ms ease;
+  --xa-motion-base: 250ms ease;
+  --xa-motion-slow: 350ms ease;
+}
+
+@mixin dark {
+  --xa-color-primary: #0a84ff;
+  --xa-color-primary-hover: #409cff;
+  --xa-color-primary-soft: rgba(10, 132, 255, 0.16);
+  --xa-color-on-primary: var(--xa-neutral-0);
+  --xa-color-success: #30d158;
+  --xa-color-warning: #ff9f0a;
+  --xa-color-danger: #ff453a;
+  --xa-color-info: #0a84ff;
+  --xa-color-price: #ff9f0a;
+  --xa-color-price-soft: #ffb340;
+
+  --xa-color-surface-page: var(--xa-neutral-900);
+  --xa-color-surface-card: #1c1c1e;
+  --xa-color-surface-subtle: #202025;
+  --xa-color-surface-hover: #2c2c2e;
+  --xa-color-surface-elevated: #2c2c2e;
+  --xa-color-text-primary: #f5f5f7;
+  --xa-color-text-secondary: #98989d;
+  --xa-color-text-tertiary: #8e8e93;
+  --xa-color-text-disabled: #48484a;
+  --xa-color-text-inverse: var(--xa-neutral-0);
+  --xa-color-border: #38383a;
+  --xa-color-divider: #2c2c2e;
+  --xa-color-overlay: rgba(0, 0, 0, 0.58);
+  --xa-color-focus-ring: rgba(10, 132, 255, 0.3);
+
+  --xa-gradient-primary: linear-gradient(135deg, #0a84ff 0%, #0060df 100%);
+  --xa-gradient-dark: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);
+  --xa-gradient-header: var(--xa-gradient-primary);
+
+  --xa-primary-rgb: 10, 132, 255;
+  --xa-surface-card-rgb: 28, 28, 30;
+  --xa-success-rgb: 48, 209, 88;
+  --xa-warning-rgb: 255, 159, 10;
+  --xa-danger-rgb: 255, 69, 58;
+  --xa-price-rgb: 255, 159, 10;
+}
+
+// 旧变量作为迁移适配层保留，禁止业务代码新增 --c-*。
+@mixin miniapp-compat-aliases {
+  --c-primary: var(--xa-color-primary);
+  --c-primary-light: var(--xa-brand-300);
+  --c-primary-dark: var(--xa-color-primary-hover);
+  --c-primary-rgb: var(--xa-primary-rgb);
+  --c-gradient-primary: var(--xa-gradient-primary);
+  --c-gradient-dark: var(--xa-gradient-dark);
+  --c-gradient-header: var(--xa-gradient-header);
+  --c-success: var(--xa-color-success);
+  --c-success-rgb: var(--xa-success-rgb);
+  --c-warning: var(--xa-color-warning);
+  --c-warning-rgb: var(--xa-warning-rgb);
+  --c-error: var(--xa-color-danger);
+  --c-error-rgb: var(--xa-danger-rgb);
+  --c-info: var(--xa-color-info);
+  --c-price: var(--xa-color-price);
+  --c-price-light: var(--xa-color-price-soft);
+  --c-price-rgb: var(--xa-price-rgb);
+  --c-bg-page: var(--xa-color-surface-page);
+  --c-bg-card: var(--xa-color-surface-card);
+  --c-bg-hover: var(--xa-color-surface-hover);
+  --c-text-primary: var(--xa-color-text-primary);
+  --c-text-secondary: var(--xa-color-text-secondary);
+  --c-text-tertiary: var(--xa-color-text-tertiary);
+  --c-text-disabled: var(--xa-color-text-disabled);
+  --c-text-white: var(--xa-color-text-inverse);
+  --c-border: var(--xa-color-border);
+  --c-divider: var(--xa-color-divider);
+}

@@ -11,8 +11,8 @@
   height: 110rpx;
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(255, 255, 255, 0.94);
-  border-top: 1rpx solid rgba(60, 60, 67, 0.16);
+  background: $color-bg-card;
+  border-top: 1rpx solid $color-border;
   box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, 0.04);
   backdrop-filter: blur(28rpx) saturate(180%);
 }
@@ -44,7 +44,7 @@
 .tabText {
   font-size: 20rpx;
   line-height: 1.2;
-  color: #8E8E93;
+  color: $color-text-tertiary;
   transition: color $transition-base;
 }
 
@@ -54,5 +54,5 @@
 }
 
 .tabItemActive .tabIconWrap {
-  background: rgba(0, 122, 255, 0.1);
+  background: var(--xa-color-primary-soft);
 }

@@ -29,8 +29,9 @@
   border: 2rpx solid transparent; border-radius: $radius-lg; background: $color-bg-card; box-shadow: $shadow-card;
 }
 .gameCard { min-height: 150rpx; flex-wrap: wrap; }
-.selected { border-color: $color-primary; background: rgba($color-primary, .055); }
-.gameIcon, .platformIcon { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $radius-md; background: $color-bg-hover; }
+.selected { border-color: $color-primary; background: rgba(var(--xa-primary-rgb), .055); }
+.gameIcon, .platformIcon { display: flex; align-items: center; justify-content: center; width: 64rpx; height: 64rpx; border-radius: $radius-md; background: $color-bg-hover; overflow: hidden; }
+.gameIconImage { width: 100%; height: 100%; }
 .gameName { flex: 1; color: $color-text-primary; font-size: $font-size-md; font-weight: 600; }
 .optionHint { width: 100%; color: $color-text-tertiary; font-size: $font-size-xs; }
 .serviceImage { width: 116rpx; height: 116rpx; flex-shrink: 0; border-radius: $radius-md; }

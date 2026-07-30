@@ -43,7 +43,7 @@
   font-size: $font-size-sm;
   color: $color-text-primary;
 }
-.clearSearch { display:flex; align-items:center; justify-content:center; width:44rpx; height:44rpx; font-size:34rpx; line-height:1; color:#8E8E93; }
+.clearSearch { display:flex; align-items:center; justify-content:center; width:44rpx; height:44rpx; font-size:34rpx; line-height:1; color:$color-text-tertiary; }
 
 .productList {
   padding: 28rpx $page-padding 150rpx;

@@ -491,7 +491,7 @@
   gap: $spacing-xs;
   padding: $spacing-lg;
   border-radius: 28rpx;
-  background: linear-gradient(135deg, #0A84FF 0%, #007AFF 100%);
+  background: $color-gradient-primary;
   box-shadow: $shadow-card;
   overflow: hidden;
   @include press-feedback(0.96);
@@ -549,7 +549,7 @@
 .achievementUnlocked {
   opacity: 1;
   filter: none;
-  border: 2rpx solid rgba($color-primary, 0.3);
+  border: 2rpx solid rgba(var(--xa-primary-rgb), 0.3);
 }
 
 .achievementIcon {
@@ -596,7 +596,7 @@
   gap: 6rpx;
   padding: 4rpx 16rpx;
   border-radius: $radius-round;
-  background: rgba($color-primary, 0.12);
+  background: rgba(var(--xa-primary-rgb), 0.12);
 }
 
 .announceBadgeText {

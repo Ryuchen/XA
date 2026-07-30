@@ -18,7 +18,7 @@
   height: 52rpx;
   padding: 0 $spacing-md;
   border-radius: $radius-round;
-  background: rgba($color-primary, 0.1);
+  background: rgba(var(--xa-primary-rgb), 0.1);
 }
 
 .badgeText {

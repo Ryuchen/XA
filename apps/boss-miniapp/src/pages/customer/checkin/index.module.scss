@@ -65,7 +65,7 @@
 .ruleTitle { display: block; color: $color-text-primary; font-size: $font-size-lg; font-weight: $font-weight-bold; }
 .ruleDesc { display: block; margin-top: 6rpx; color: $color-text-secondary; font-size: $font-size-sm; }
 .ruleState { padding: 8rpx 18rpx; border-radius: $radius-round; color: $color-text-tertiary; background: $color-bg-hover; font-size: $font-size-xs; }
-.ruleStateDone { color: $color-success; background: rgba($color-success, 0.12); }
+.ruleStateDone { color: $color-success; background: rgba(var(--xa-success-rgb), 0.12); }
 .progressTrack { height: 12rpx; margin-top: $spacing-md; overflow: hidden; border-radius: $radius-round; background: $color-bg-hover; }
 .progressFill { height: 100%; border-radius: $radius-round; background: $color-gradient-header; transition: width 0.25s ease; }
 .cardRule { display: block; margin-top: $spacing-sm; color: $color-text-tertiary; font-size: $font-size-xs; line-height: 1.5; }
@@ -159,7 +159,7 @@
   width: 64rpx;
   height: 64rpx;
   border-radius: $radius-round;
-  background: rgba($color-success, 0.14);
+  background: rgba(var(--xa-success-rgb), 0.14);
 }
 
 .cellToday {
@@ -186,7 +186,7 @@
   z-index: 1;
 }
 
-.cellMakeup .cellDay { border: 2rpx dashed rgba($color-primary, 0.45); color: $color-primary; }
+.cellMakeup .cellDay { border: 2rpx dashed rgba(var(--xa-primary-rgb), 0.45); color: $color-primary; }
 .makeupMark { position: absolute; right: 2rpx; top: 4rpx; padding: 2rpx 7rpx; border-radius: $radius-round; color: $color-text-white; background: $color-primary; font-size: 18rpx; line-height: 1.3; }
 
 .rewardScroll { width: 100%; white-space: nowrap; }
@@ -218,8 +218,8 @@
 }
 
 .rewardReached {
-  background: rgba($color-price, 0.12);
-  border-color: rgba($color-price, 0.4);
+  background: rgba(var(--xa-price-rgb), 0.12);
+  border-color: rgba(var(--xa-price-rgb), 0.4);
 }
 
 .rewardSeq {
@@ -233,8 +233,8 @@
   font-weight: $font-weight-bold;
 }
 
-.fullRewardCard { display: flex; align-items: center; gap: $spacing-md; margin-top: $spacing-lg; padding: $spacing-lg; border-radius: $radius-xl; border: 2rpx solid rgba($color-price, 0.25); background: linear-gradient(135deg, rgba($color-price, 0.12), rgba($color-primary, 0.08)); }
-.fullRewardDone { border-color: rgba($color-success, 0.45); background: rgba($color-success, 0.09); }
+.fullRewardCard { display: flex; align-items: center; gap: $spacing-md; margin-top: $spacing-lg; padding: $spacing-lg; border-radius: $radius-xl; border: 2rpx solid rgba(var(--xa-price-rgb), 0.25); background: linear-gradient(135deg, rgba(var(--xa-price-rgb), 0.12), rgba(var(--xa-primary-rgb), 0.08)); }
+.fullRewardDone { border-color: rgba(var(--xa-success-rgb), 0.45); background: rgba(var(--xa-success-rgb), 0.09); }
 .fullRewardIcon { font-size: 52rpx; }
 .fullRewardCopy { flex: 1; min-width: 0; }
 .fullRewardTitle { display: block; color: $color-text-primary; font-size: $font-size-md; font-weight: $font-weight-bold; }

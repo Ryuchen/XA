@@ -30,6 +30,17 @@ navigator {
 .weui-tabbar__label,
 [class*='tabbar'] [class*='label'],
 [class*='tabbar'] [class*='text'] {
-  font-size: 30px !important;
+  font-size: 24rpx !important;
   line-height: 1.4 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

@@ -4,6 +4,7 @@ html,
 body,
 #app {
   height: 100%;
+  min-height: 100%;
   margin: 0;
   padding: 0;
 }
@@ -12,6 +13,8 @@ body {
   font-family: var(--font-sans);
   background: var(--background);
   color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.005em;
@@ -20,12 +23,33 @@ body {
 
 body.ap-nav-open { overflow: hidden; }
 
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after { box-sizing: border-box; }
 
 button,
 input,
 textarea,
 select { font: inherit; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+[role='button'],
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--xa-color-focus-ring);
+  outline-offset: 2px;
+}
 
 ::selection {
   color: var(--primary-foreground);
@@ -48,7 +72,7 @@ select { font: inherit; }
   --el-color-error: var(--destructive);
 
   /* 圆角 —— Apple 大圆角 */
-  --el-border-radius-base: 10px;
+  --el-border-radius-base: var(--radius-sm);
   --el-border-radius-small: 8px;
   --el-border-radius-round: 999px;
 
@@ -75,14 +99,16 @@ select { font: inherit; }
   border-radius: var(--radius-sm);
   border-color: var(--border);
   box-shadow: var(--shadow-sm) !important;
+  background: var(--card);
 }
 
 /* 按钮圆角略大 */
 .el-button {
-  border-radius: 10px;
-  min-height: 36px;
+  border-radius: var(--radius-sm);
+  min-height: var(--control-height-md);
   font-weight: 600;
-  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: transform var(--xa-motion-fast), background-color var(--xa-motion-fast),
+    border-color var(--xa-motion-fast), box-shadow var(--xa-motion-fast);
 }
 
 .el-button:active:not(.is-disabled) {
@@ -92,10 +118,10 @@ select { font: inherit; }
 .el-input__wrapper,
 .el-select__wrapper,
 .el-textarea__inner {
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   box-shadow: 0 0 0 1px var(--border) inset !important;
   background: color-mix(in srgb, var(--card) 92%, var(--secondary));
-  transition: box-shadow 0.16s ease, background-color 0.16s ease;
+  transition: box-shadow var(--xa-motion-fast), background-color var(--xa-motion-fast);
 }
 
 .el-input__wrapper.is-focus,
@@ -160,15 +186,18 @@ select { font: inherit; }
 
 /* ===== 页面通用容器 ===== */
 .page-container {
-  padding: 24px;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--space-6);
 }
 
 .page-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .page-toolbar .spacer {
@@ -189,8 +218,8 @@ select { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-5);
   flex-wrap: wrap;
 }
 .ap-page-intro {
@@ -210,19 +239,19 @@ select { font: inherit; }
 .ap-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 20px;
+  gap: var(--space-5);
 }
 .ap-kpi {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 22px;
+  gap: var(--space-2);
+  padding: var(--space-6);
   background: var(--card);
   color: var(--card-foreground);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform var(--xa-motion-fast), box-shadow var(--xa-motion-fast);
 }
 .ap-kpi:hover {
   transform: translateY(-3px);
@@ -475,5 +504,16 @@ select { font: inherit; }
   .el-message {
     width: calc(100vw - 24px);
     min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }

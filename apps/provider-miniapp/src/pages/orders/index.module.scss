@@ -8,7 +8,7 @@
 .todayValue { display: block; margin-top: 5rpx; font-size: 58rpx; line-height: 1.15; font-weight: 700; }
 .todayUnit { font-size: $font-size-sm; font-weight: 500; color: rgba(255,255,255,.65); }
 .liveBadge { display: flex; align-items: center; padding: 10rpx 16rpx; border-radius: $radius-round; font-size: 22rpx; color: rgba(255,255,255,.82); background: rgba(255,255,255,.1); }
-.liveDot { width: 12rpx; height: 12rpx; margin-right: 9rpx; border-radius: 50%; background: #30d158; box-shadow: 0 0 0 6rpx rgba(48,209,88,.14); }
+.liveDot { width: 12rpx; height: 12rpx; margin-right: 9rpx; border-radius: 50%; background: $color-success; box-shadow: 0 0 0 6rpx rgba(var(--xa-success-rgb), .14); }
 .dashboardBottom { gap: 76rpx; margin-top: 30rpx; padding-top: 24rpx; border-top: 1rpx solid rgba(255,255,255,.12); }
 .metricValue { display: block; margin-top: 5rpx; font-size: $font-size-md; font-weight: 650; }
 .passCard { @include press-feedback; margin-top: 22rpx; padding: 22rpx 24rpx; border-radius: 28rpx; background: #fff; box-shadow: $shadow-card; }
@@ -28,6 +28,10 @@
 .tabItemActive .tabText { color: $color-primary; font-weight: 650; }
 .list { width: 100%; }
 .orderCard { margin-bottom: 18rpx; padding: 26rpx 26rpx 22rpx; border: 1rpx solid rgba(0,0,0,.035); border-radius: 28rpx; background: #fff; box-shadow: $shadow-card; }
+.vipRow { display: flex; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
+.vipBadge { flex: none; padding: 5rpx 15rpx; border-radius: $radius-round; font-size: 20rpx; font-weight: 650; color: #fff; background: $color-primary; }
+.bossName { @include text-ellipsis; flex: 1; font-size: $font-size-sm; font-weight: 600; color: $color-text-primary; }
+.discountChip { padding: 6rpx 13rpx; border-radius: $radius-round; font-size: 20rpx; font-weight: 600; color: $color-primary; background: rgba(0,122,255,.1); }
 .cardHeader { align-items: flex-start; }
 .serviceBlock, .priceBlock { display: flex; flex-direction: column; min-width: 0; }
 .serviceBlock { flex: 1; }

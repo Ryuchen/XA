@@ -1,4 +1,11 @@
 @use '@/styles/variables.scss' as *;
+@use '@/styles/voice-preview.scss' as voice;
+
+.voicePreview {
+  @include voice.voice-preview-button;
+  margin-top: $spacing-xs;
+}
+
 
 .container {
   min-height: 100vh;
@@ -292,13 +299,20 @@
   border-color: $color-primary;
   color: $color-text-white;
   background: $color-primary;
-  box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.18);
+  box-shadow: 0 4rpx 12rpx rgba(var(--xa-primary-rgb), 0.18);
 }
 
 .gameFilterText {
   color: inherit;
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
+}
+
+.gameFilterIcon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 10rpx;
+  border-radius: $radius-sm;
 }
 
 .playerList {
@@ -377,8 +391,8 @@
   background: currentColor;
 }
 
-.online { color: $color-success; background: rgba($color-success, 0.1); }
-.busy { color: $color-warning; background: rgba($color-warning, 0.12); }
+.online { color: $color-success; background: rgba(var(--xa-success-rgb), 0.1); }
+.busy { color: $color-warning; background: rgba(var(--xa-warning-rgb), 0.12); }
 .offline { color: $color-text-tertiary; background: $color-bg-hover; }
 
 .playerRank {

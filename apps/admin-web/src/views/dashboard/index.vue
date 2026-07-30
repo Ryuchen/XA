@@ -187,14 +187,14 @@ const statusList = computed(() =>
 )
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#8e8e93',
-  GRABBED: '#007aff',
-  IN_SERVICE: '#ff9500',
-  COMPLETED: '#34c759',
-  CANCELLED: '#ff3b30',
+  PENDING: 'var(--muted-foreground)',
+  GRABBED: 'var(--primary)',
+  IN_SERVICE: 'var(--warning)',
+  COMPLETED: 'var(--success)',
+  CANCELLED: 'var(--destructive)',
 }
 function statusColor(key: string) {
-  return STATUS_COLORS[key] || '#007aff'
+  return STATUS_COLORS[key] || 'var(--primary)'
 }
 
 const statusBarOption = computed<EChartsOption>(() => {
@@ -202,8 +202,8 @@ const statusBarOption = computed<EChartsOption>(() => {
   return {
     grid: { left: 8, right: 16, top: 20, bottom: 8, containLabel: true },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: { type: 'category', data: items.map((s) => s.label), axisLine: { lineStyle: { color: '#d1d1d6' } } },
-    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f2f2f7' } } },
+    xAxis: { type: 'category', data: items.map((s) => s.label), axisLine: { lineStyle: { color: 'var(--border)' } } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: 'var(--border)' } } },
     series: [
       {
         type: 'bar',
@@ -229,12 +229,12 @@ const userDonutOption = computed<EChartsOption>(() => {
         radius: ['55%', '78%'],
         center: ['50%', '44%'],
         avoidLabelOverlap: false,
-        label: { show: true, position: 'center', formatter: `${userTotal.value}\n用户`, fontSize: 18, fontWeight: 700, color: '#1d1d1f' },
+        label: { show: true, position: 'center', formatter: `${userTotal.value}\n用户`, fontSize: 18, fontWeight: 700, color: 'var(--foreground)' },
         labelLine: { show: false },
         data: [
-          { value: customer, name: '老板', itemStyle: { color: '#007aff' } },
-          { value: provider, name: '陪玩', itemStyle: { color: '#34c759' } },
-          { value: other, name: '其他', itemStyle: { color: '#c7c7cc' } },
+          { value: customer, name: '老板', itemStyle: { color: 'var(--primary)' } },
+          { value: provider, name: '陪玩', itemStyle: { color: 'var(--success)' } },
+          { value: other, name: '其他', itemStyle: { color: 'var(--muted-foreground)' } },
         ].filter((d) => d.value > 0),
       },
     ],

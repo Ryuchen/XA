@@ -1,5 +1,6 @@
 packages:
   - 'apps/*'
+  - 'packages/*'
 
 # 依赖需要执行构建脚本的原生/编译型包白名单（pnpm v9+）。
 # 汇总三端所需的构建型依赖，供本地 workspace 安装时放行构建脚本。

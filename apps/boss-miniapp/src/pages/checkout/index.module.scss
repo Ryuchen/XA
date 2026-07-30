@@ -54,7 +54,7 @@
 
 .serviceModeBoxActive {
   border-color: $color-primary;
-  background: rgba($color-primary, 0.06);
+  background: rgba(var(--xa-primary-rgb), 0.06);
 }
 
 .serviceModeMain {
@@ -71,7 +71,7 @@
   padding: 6rpx 14rpx;
   border-radius: $radius-round;
   color: $color-primary;
-  background: rgba($color-primary, 0.1);
+  background: rgba(var(--xa-primary-rgb), 0.1);
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
 }
@@ -118,7 +118,7 @@
 
 .dispatchOptionActive {
   border-color: $color-primary;
-  background: rgba($color-primary, 0.06);
+  background: rgba(var(--xa-primary-rgb), 0.06);
 }
 
 .dispatchMain {
@@ -288,7 +288,7 @@
 
 .couponOptionActive {
   border-color: $color-primary;
-  background: rgba($color-primary, 0.06);
+  background: rgba(var(--xa-primary-rgb), 0.06);
 }
 
 .couponOptionMain {

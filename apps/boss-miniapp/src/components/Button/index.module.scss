@@ -46,7 +46,7 @@
 }
 
 .secondary {
-  background: rgba($color-primary, 0.1);
+  background: rgba(var(--xa-primary-rgb), 0.1);
   color: $color-primary;
 }
 
@@ -58,7 +58,7 @@
 .ghost {
   background: transparent;
   color: $color-primary;
-  border: 2rpx solid rgba($color-primary, 0.4);
+  border: 2rpx solid rgba(var(--xa-primary-rgb), 0.4);
 }
 
 .disabled {

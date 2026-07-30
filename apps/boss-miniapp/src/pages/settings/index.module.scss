@@ -58,11 +58,18 @@
   font-size: $font-size-sm;
 }
 
+.gameTabIcon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 8rpx;
+  border-radius: $radius-sm;
+}
+
 .gameTabActive {
   border-color: $color-primary;
   color: $color-text-white;
   background: $color-primary;
-  box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.18);
+  box-shadow: 0 4rpx 12rpx rgba(var(--xa-primary-rgb), 0.18);
 }
 
 .emptyGames {

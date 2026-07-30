@@ -14,7 +14,7 @@
 .eyebrow { font-weight:650; letter-spacing:2rpx; }
 .dashboardTitle { display:block; margin-top:6rpx; font-size:44rpx; line-height:1.2; font-weight:720; }
 .liveBadge { padding:10rpx 16rpx; border-radius:$radius-round; font-size:21rpx; color:rgba(255,255,255,.82); background:rgba(255,255,255,.1); }
-.liveDot { width:12rpx; height:12rpx; margin-right:9rpx; border-radius:50%; background:#30d158; box-shadow:0 0 0 6rpx rgba(48,209,88,.14); }
+.liveDot { width:12rpx; height:12rpx; margin-right:9rpx; border-radius:50%; background:$color-success; box-shadow:0 0 0 6rpx rgba(var(--xa-success-rgb),.14); }
 .dashboardBottom { justify-content:space-between; margin-top:28rpx; padding-top:22rpx; border-top:1rpx solid rgba(255,255,255,.12); }
 .metricItem { min-width:0; }
 .metricValue { display:block; margin-top:5rpx; font-size:27rpx; font-weight:650; }
@@ -95,8 +95,8 @@
 }
 
 .focusedOrderCard {
-  border: 2rpx solid rgba($color-primary, 0.5);
-  box-shadow: 0 12rpx 34rpx rgba($color-primary, 0.14);
+  border: 2rpx solid rgba(var(--xa-primary-rgb), 0.5);
+  box-shadow: 0 12rpx 34rpx rgba(var(--xa-primary-rgb), 0.14);
 }
 
 .orderHeader,
@@ -127,7 +127,7 @@
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
   color: $color-primary;
-  background: rgba($color-primary, 0.12);
+  background: rgba(var(--xa-primary-rgb), 0.12);
 }
 
 .statusIcon {
@@ -140,18 +140,18 @@
 
 .status_pending {
   color: $color-warning;
-  background: rgba($color-warning, 0.14);
+  background: rgba(var(--xa-warning-rgb), 0.14);
 }
 
 .status_grabbed,
 .status_in_progress {
   color: $color-primary;
-  background: rgba($color-primary, 0.12);
+  background: rgba(var(--xa-primary-rgb), 0.12);
 }
 
 .status_completed {
   color: $color-success;
-  background: rgba($color-success, 0.14);
+  background: rgba(var(--xa-success-rgb), 0.14);
 }
 
 .status_cancelled {
@@ -243,8 +243,8 @@
   margin-top: $spacing-sm;
   padding: $spacing-md;
   border-radius: 12rpx;
-  background: rgba($color-error, 0.08);
-  border: 1rpx dashed rgba($color-error, 0.35);
+  background: rgba(var(--xa-danger-rgb), 0.08);
+  border: 1rpx dashed rgba(var(--xa-danger-rgb), 0.35);
 }
 
 .cancelLabel {
@@ -355,7 +355,7 @@
   margin-top: $spacing-md;
   padding: $spacing-md;
   border-radius: 14rpx;
-  background: rgba($color-primary, 0.08);
+  background: rgba(var(--xa-primary-rgb), 0.08);
 }
 
 .replyLabel {
@@ -420,7 +420,7 @@
 
 .dangerBtn {
   color: $color-error;
-  background: rgba($color-error, 0.1);
+  background: rgba(var(--xa-danger-rgb), 0.1);
 }
 
 .giftBtn {

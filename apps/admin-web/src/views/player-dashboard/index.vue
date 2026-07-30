@@ -126,7 +126,15 @@ const secondary = ref<any>({})
 const rank = ref<any>({ amount: [], income: [], count: [] })
 
 // 统一图表色板（与 dashboard 的 STATUS_COLORS 一致）
-const PIE_COLORS = ['#007aff', '#34c759', '#ff9500', '#5856d6', '#af52de', '#ff3b30', '#8e8e93']
+const PIE_COLORS = [
+  'var(--primary)',
+  'var(--success)',
+  'var(--warning)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+  'var(--destructive)',
+  'var(--muted-foreground)',
+]
 
 const amountCards = computed(() => [
   { label: '总接单额', value: kpi.value.total_amount ?? 0, icon: 'Wallet' },

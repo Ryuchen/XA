@@ -20,7 +20,7 @@
   width: 96rpx;
   height: 96rpx;
   border-radius: $radius-round;
-  background: rgba($color-primary, 0.1);
+  background: rgba(var(--xa-primary-rgb), 0.1);
   margin-bottom: $spacing-md;
 }
 
@@ -87,7 +87,7 @@
   gap: $spacing-xs;
   padding: 6rpx 16rpx;
   border-radius: $radius-round;
-  background: rgba($color-primary, 0.1);
+  background: rgba(var(--xa-primary-rgb), 0.1);
 }
 
 .wechatIdText {

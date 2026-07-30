@@ -1,0 +1,10 @@
+{
+  "name": "@xa/design-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "XA 三端共享设计令牌与 Sass 基础设施",
+  "exports": {
+    "./theme": "./src/_theme.scss",
+    "./miniapp": "./src/_miniapp.scss"
+  }
+}

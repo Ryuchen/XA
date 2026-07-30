@@ -1,10 +1,146 @@
-.mobileContent { min-height: 100vh; }
-.desktopShell { min-height: 100vh; background: #f2f2f7; }
-.sidebar { position: fixed; inset: 0 auto 0 0; z-index: 1000; display: flex; flex-direction: column; width: 248PX; padding: 28PX 18PX; color: #fff; background: linear-gradient(180deg,#17171c,#28242e 70%,#37303e); box-sizing: border-box; }
-.brand { display:flex; align-items:center; gap:12PX; padding:0 10PX 28PX; border-bottom:1PX solid rgba(255,255,255,.1); }
-.brandMark { display:flex; align-items:center; justify-content:center; width:44PX; height:44PX; border-radius:14PX; color:#1d1d1f; font-size:14PX; font-weight:800; background:linear-gradient(145deg,#fff0b5,#e8be55); }
-.brandName,.brandSub,.navLabel,.navCaption { display:block; }.brandName{font-size:17PX;font-weight:700}.brandSub{margin-top:2PX;font-size:11PX;color:rgba(255,255,255,.5)}
-.navList{display:flex;flex-direction:column;gap:7PX;margin-top:24PX}.navItem{display:flex;align-items:center;gap:12PX;padding:12PX;border-radius:14PX;cursor:pointer;transition:background .18s ease}.navItem:hover{background:rgba(255,255,255,.07)}.navActive{background:rgba(255,255,255,.13)}
-.navIcon{display:flex;align-items:center;justify-content:center;width:36PX;height:36PX;border-radius:11PX;background:rgba(255,255,255,.07)}.navActive .navIcon{background:#007aff}.navLabel{font-size:14PX;font-weight:600;color:#f5f5f7}.navCaption{margin-top:2PX;font-size:10PX;color:rgba(255,255,255,.42)}.sidebarFoot{margin-top:auto;padding:10PX;text-align:center;font-size:10PX;color:rgba(255,255,255,.3)}
-.desktopMain{min-height:100vh;margin-left:248PX;padding:28PX 36PX 48PX;box-sizing:border-box}.desktopContent{width:100%;max-width:1180PX;margin:0 auto}.desktopContent > view,.desktopContent > scroll-view{min-height:calc(100vh - 76PX)!important;padding-bottom:32PX!important}
-@media (min-width: 960px) { .desktopContent :global(.taro-scroll-view__scroll-y){max-height:none!important;} }
+@use '@/styles/variables.scss' as *;
+
+.mobileContent {
+  min-height: 100vh;
+}
+
+.desktopShell {
+  min-height: 100vh;
+  background: $color-bg-page;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 248PX;
+  padding: 28PX 18PX;
+  color: $color-text-white;
+  background: $color-gradient-dark;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12PX;
+  padding: 0 10PX 28PX;
+  border-bottom: 1PX solid rgba(255, 255, 255, 0.1);
+}
+
+.brandMark {
+  @include flex-center;
+  width: 44PX;
+  height: 44PX;
+  border-radius: 14PX;
+  color: $color-text-primary;
+  font-size: 14PX;
+  font-weight: $font-weight-bold;
+  background: linear-gradient(145deg, #fff0b5, #e8be55);
+}
+
+.brandName,
+.brandSub,
+.navLabel,
+.navCaption {
+  display: block;
+}
+
+.brandName {
+  font-size: 17PX;
+  font-weight: $font-weight-bold;
+}
+
+.brandSub {
+  margin-top: 2PX;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11PX;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 7PX;
+  margin-top: 24PX;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12PX;
+  padding: 12PX;
+  border-radius: 14PX;
+  cursor: pointer;
+  transition: background $transition-fast, transform $transition-fast;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+.navActive {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.navIcon {
+  @include flex-center;
+  width: 36PX;
+  height: 36PX;
+  border-radius: 11PX;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.navActive .navIcon {
+  background: $color-primary;
+}
+
+.navLabel {
+  color: $color-text-white;
+  font-size: 14PX;
+  font-weight: $font-weight-semibold;
+}
+
+.navCaption {
+  margin-top: 2PX;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 10PX;
+}
+
+.sidebarFoot {
+  margin-top: auto;
+  padding: 10PX;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10PX;
+  text-align: center;
+}
+
+.desktopMain {
+  box-sizing: border-box;
+  min-height: 100vh;
+  margin-left: 248PX;
+  padding: 28PX 36PX 48PX;
+}
+
+.desktopContent {
+  width: 100%;
+  max-width: 1180PX;
+  margin: 0 auto;
+}
+
+.desktopContent > view,
+.desktopContent > scroll-view {
+  min-height: calc(100vh - 76PX) !important;
+  padding-bottom: 32PX !important;
+}
+
+@media (min-width: 960px) {
+  .desktopContent :global(.taro-scroll-view__scroll-y) {
+    max-height: none !important;
+  }
+}

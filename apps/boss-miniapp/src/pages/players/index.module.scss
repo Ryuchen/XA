@@ -1,5 +1,12 @@
 @use 'sass:math';
 @use '@/styles/variables.scss' as *;
+@use '@/styles/voice-preview.scss' as voice;
+
+.voicePreview {
+  @include voice.voice-preview-button;
+  margin-top: $spacing-xs;
+}
+
 
 .container {
   min-height: 100vh;
@@ -116,7 +123,7 @@
 
   &.selected {
     border-color: $color-primary;
-    background: rgba($color-primary, 0.06);
+    background: rgba(var(--xa-primary-rgb), 0.06);
   }
 }
 
@@ -207,12 +214,12 @@
 
 .online {
   color: $color-success;
-  background: rgba($color-success, 0.12);
+  background: rgba(var(--xa-success-rgb), 0.12);
 }
 
 .busy {
   color: $color-warning;
-  background: rgba($color-warning, 0.14);
+  background: rgba(var(--xa-warning-rgb), 0.14);
 }
 
 .offline {
@@ -260,7 +267,7 @@
 
 .tag {
   color: $color-primary;
-  background: rgba($color-primary, 0.08);
+  background: rgba(var(--xa-primary-rgb), 0.08);
   border-radius: $radius-xs;
   padding: 2rpx $spacing-xs;
   font-size: 20rpx;
