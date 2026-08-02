@@ -1,0 +1,154 @@
+# 单机远端部署编排（不挂载源码、不暴露数据库和 Redis）。
+# 启动：docker compose --env-file .env.remote -f docker-compose.remote.yml up -d --build
+
+x-backend: &backend
+  build:
+    context: ./services/backend
+  image: xa-backend:remote
+  init: true
+  restart: unless-stopped
+  environment:
+    DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+    DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
+    CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-false}
+    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+    MYSQL_DATABASE: ${MYSQL_DATABASE:-xa_db}
+    MYSQL_USER: ${MYSQL_USER:-root}
+    MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+    MYSQL_HOST: db
+    MYSQL_PORT: 3306
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    WECHAT_APPID: ${WECHAT_APPID:-}
+    WECHAT_SECRET: ${WECHAT_SECRET:-}
+    WECHAT_MOCK_LOGIN: ${WECHAT_MOCK_LOGIN:-true}
+    KOOK_ENABLED: ${KOOK_ENABLED:-false}
+    KOOK_BOT_TOKEN: ${KOOK_BOT_TOKEN:-}
+    KOOK_DISPATCH_CHANNEL_ID: ${KOOK_DISPATCH_CHANNEL_ID:-}
+    KOOK_DISPATCH_NEW_ORDERS: ${KOOK_DISPATCH_NEW_ORDERS:-true}
+    KOOK_DISPATCH_REJECTED_ORDERS: ${KOOK_DISPATCH_REJECTED_ORDERS:-true}
+    KOOK_DISPATCH_MENTION_ROLE_IDS: ${KOOK_DISPATCH_MENTION_ROLE_IDS:-}
+    KOOK_ADMIN_ORDER_URL: ${KOOK_ADMIN_ORDER_URL:-}
+    KOOK_REQUEST_TIMEOUT: ${KOOK_REQUEST_TIMEOUT:-8}
+  volumes:
+    - backend_media:/app/media
+    - backend_static:/app/staticfiles
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-xa_db}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    <<: *backend
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  celery-worker:
+    <<: *backend
+    command: celery -A config worker -l warning --concurrency=1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  celery-beat:
+    <<: *backend
+    command: celery -A config beat -l warning
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  boss-h5:
+    build:
+      context: .
+      dockerfile: apps/boss-miniapp/Dockerfile
+      args:
+        TARO_APP_API: /api
+    image: xa-boss-h5:remote
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8081:80"
+    depends_on:
+      web:
+        condition: service_started
+
+  provider-h5:
+    build:
+      context: .
+      dockerfile: apps/provider-miniapp/Dockerfile
+      args:
+        TARO_APP_API: /api
+    image: xa-provider-h5:remote
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8082:80"
+    depends_on:
+      web:
+        condition: service_started
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: apps/admin-web/Dockerfile
+    image: xa-admin-web:remote
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      web:
+        condition: service_started
+
+volumes:
+  mysql_data:
+  redis_data:
+  backend_media:
+  backend_static:
