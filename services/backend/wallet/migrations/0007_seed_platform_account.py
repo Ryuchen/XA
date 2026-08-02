@@ -17,7 +17,6 @@ def create_platform_account(apps, schema_editor):
             'is_staff': False,
             'is_superuser': False,
             'role': 'ADMIN',
-            'nickname': '平台账户',
         },
     )
     # 历史模型不触发 post_save 建钱包信号，需显式创建
