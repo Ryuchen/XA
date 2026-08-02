@@ -106,22 +106,6 @@ services:
       migrate:
         condition: service_completed_successfully
 
-  boss-h5:
-    build:
-      context: .
-      dockerfile: apps/boss-miniapp/Dockerfile
-      args:
-        TARO_APP_API: /api
-    image: xa-boss-h5:remote
-    restart: unless-stopped
-    environment:
-      BACKEND_ORIGIN: http://web:8000
-    ports:
-      - "8081:80"
-    depends_on:
-      web:
-        condition: service_started
-
   provider-h5:
     build:
       context: .
