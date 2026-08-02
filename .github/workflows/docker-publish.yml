@@ -1,4 +1,4 @@
-name: Docker images
+name: Docker Hub images and remote deployment
 
 on:
   push:
@@ -16,8 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAMESPACE: ryuchen
+  REGISTRY: docker.io
 
 jobs:
   build:
@@ -25,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
       attestations: write
       id-token: write
     strategy:
@@ -37,11 +35,11 @@ jobs:
             context: services/backend
             dockerfile: services/backend/Dockerfile
           - name: dispatch
-            image: xa-dispatch
+            image: xa-admin-web
             context: .
             dockerfile: apps/admin-web/Dockerfile
           - name: provider
-            image: xa-provider
+            image: xa-provider-h5
             context: .
             dockerfile: apps/provider-miniapp/Dockerfile
 
@@ -55,19 +53,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GitHub Container Registry
+      - name: Log in to Docker Hub
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Generate image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+          images: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -99,6 +97,41 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/attest@v4
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+          subject-name: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+  deploy:
+    name: Deploy Docker Hub images to remote server
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+
+      - name: Deploy by pulling immutable commit images
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          set -eu
+          ssh -o StrictHostKeyChecking=accept-new "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DOCKERHUB_USERNAME='$DOCKERHUB_USERNAME' DOCKERHUB_TOKEN='$DOCKERHUB_TOKEN' IMAGE_TAG='$IMAGE_TAG' sh -s" <<'REMOTE'
+          set -eu
+          cd /opt/xa
+          git fetch origin agent/restructure-wechat-login
+          git checkout --force agent/restructure-wechat-login
+          git reset --hard origin/agent/restructure-wechat-login
+          printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+          sed -i '/^DOCKERHUB_NAMESPACE=/d; /^XA_IMAGE_TAG=/d' .env.remote
+          printf '\nDOCKERHUB_NAMESPACE=%s\nXA_IMAGE_TAG=%s\n' "$DOCKERHUB_USERNAME" "$IMAGE_TAG" >> .env.remote
+          docker compose --env-file .env.remote -f docker-compose.remote.yml pull
+          docker compose --env-file .env.remote -f docker-compose.remote.yml up -d --remove-orphans
+          docker image prune -f
+          REMOTE

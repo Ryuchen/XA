@@ -4,7 +4,7 @@
 x-backend: &backend
   build:
     context: ./services/backend
-  image: xa-backend:remote
+  image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-backend:${XA_IMAGE_TAG:-latest}
   init: true
   restart: unless-stopped
   environment:
@@ -112,7 +112,7 @@ services:
       dockerfile: apps/provider-miniapp/Dockerfile
       args:
         TARO_APP_API: /api
-    image: xa-provider-h5:remote
+    image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-provider-h5:${XA_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       BACKEND_ORIGIN: http://web:8000
@@ -126,7 +126,7 @@ services:
     build:
       context: .
       dockerfile: apps/admin-web/Dockerfile
-    image: xa-admin-web:remote
+    image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-admin-web:${XA_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       BACKEND_ORIGIN: http://web:8000
