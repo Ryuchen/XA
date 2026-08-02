@@ -1,17 +1,23 @@
 @use '@/styles/variables.scss' as *;
 
 .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
   box-sizing:border-box;
-  padding: 96rpx $page-padding 60rpx;
+  padding: 72rpx $page-padding 60rpx;
   background: linear-gradient(155deg,#17171c,#393440 58%,#51455b);
 }
 
 .header {
+  width: 100%;
+  max-width: 640px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 64rpx;
+  margin-bottom: 48rpx;
 }
 
 .title {
@@ -27,8 +33,11 @@
 }
 
 .formCard {
+  width: 100%;
+  max-width: 640px;
   @include card-base;
-  padding: 30rpx;
+  box-sizing: border-box;
+  padding: 40rpx;
   border-radius: 30rpx;
 }
 
@@ -59,6 +68,7 @@
 }
 
 .formInput {
+  box-sizing: border-box;
   width: 100%;
   height: $button-height-md;
   padding: 0 $spacing-md;

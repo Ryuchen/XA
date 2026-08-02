@@ -1,4 +1,28 @@
 @use '@/styles/compat.scss';
 @use '@/styles/variables.scss' as design;
+@use '../../../packages/design-system/src/theme' as theme;
 
 @include design.install-foundation;
+
+// Taro H5 renders into body/#app instead of the miniapp `page` node. Keep the
+// same design tokens and typography available on all three platforms.
+body,
+#app {
+  @include theme.light;
+
+  margin: 0;
+  min-height: 100%;
+  color: var(--xa-color-text-primary);
+  background-color: var(--xa-color-surface-page);
+  font-family: var(--xa-font-sans);
+  font-size: 28rpx;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  body,
+  #app {
+    @include theme.dark;
+  }
+}
