@@ -244,8 +244,8 @@ docker compose -f docker-compose.web.yml config --quiet
 `docker-compose.web.yml` 计划提供以下地址：
 
 - 管理端：`http://127.0.0.1:8080`
-- 老板 H5：`http://127.0.0.1:8081`
-- 陪玩 H5：`http://127.0.0.1:8082`
+- 老板 H5：`http://127.0.0.1:8083`
+- 陪玩 H5：`http://127.0.0.1:8081`
 - 后端：`http://127.0.0.1:8000`
 
 启动命令为：

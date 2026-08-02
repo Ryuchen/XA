@@ -117,7 +117,7 @@ services:
     environment:
       BACKEND_ORIGIN: http://web:8000
     ports:
-      - "8082:80"
+      - "8081:80"
     depends_on:
       web:
         condition: service_started
