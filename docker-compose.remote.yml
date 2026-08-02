@@ -71,7 +71,12 @@ services:
   migrate:
     <<: *backend
     restart: "no"
-    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+    command: >-
+      sh -c "for attempt in $(seq 1 30); do
+      python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput && exit 0;
+      echo 'Database not ready, retrying...'; sleep 2;
+      done; exit 1"
     depends_on:
       db:
         condition: service_healthy
