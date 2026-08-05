@@ -201,17 +201,6 @@
 
 > 门槛、阶梯礼物、补签卡上限、全勤奖名称均由后台配置（`GET|PUT /api/admin/config/checkin`、`/api/admin/checkin-gifts/`）。
 
-### 1.11 生成绑定码（⚠️ 已废弃）
-`POST /api/users/bind-code/` · 权限：OPERATOR
-
-> **该端点已废弃，请勿调用。** 绑定码机制已下线：生成的 code 不落库、无任何消费方，登录端点也不再接收/校验 `bindCode`（`/wechat-login/`、`/account-login/` 响应中的 `bindCode` 恒为 `null`、`bindStatus` 恒为 `"direct"`）。陪玩/客服统一由后台开户后用账号密码登录。端点保留仅为兼容历史前端，后续版本将移除。
-
-| 参数 | 类型 | 说明 |
-| --- | --- | --- |
-| role | string | `provider`(前缀 PW) / 其它(前缀 KF) |
-
-响应 `data`：`bindCode`（随机生成、不落库，无实际用途）。
-
 ---
 
 ## 2. C 端 · 服务与订单（`/api/orders/`）
@@ -315,26 +304,48 @@
 | 接口 | 方法/路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | 钱包信息 | `GET /api/wallet/info/` | 登录 | `data.balance` |
-| 充值 | `POST /api/wallet/topup/` | 登录 | body `amount`（分，>0），返回 `balance` |
+| 充值 | `POST /api/wallet/topup/` | 登录 | body `amount`（内部账务单位，>0），返回 `balance` |
 | 收益记录 | `GET /api/wallet/income/` | 登录 | 返回 INCOME/WITHDRAW 流水（最多 50）+ `total_income` |
-| 提现配置+记录 | `GET /api/wallet/withdraw/` | 登录 | `balance, frozen_amount, min_amount, requests[]` |
+| 提现配置+记录 | `GET /api/wallet/withdraw/` | 登录 | `balance, frozen_amount, min_amount, tax_rate, requests[]`；可选 `?amount=` 触发试算，见 3.1 |
 | 提现申请 | `POST /api/wallet/withdraw/` | PROVIDER | 见下 |
 | 全部流水 | `GET /api/wallet/transactions/` | 登录 | `tx_type` 筛选 + 分页 |
 | 报单 | `GET/POST /api/wallet/reports/` | GET 登录 / POST PROVIDER | 见下 |
 | 押金 | `GET/POST /api/wallet/deposit/` | PROVIDER | 见下 |
 
-### 3.1 提现申请（POST）
+### 3.1 提现配置 / 试算（GET）
+
+`GET /api/wallet/withdraw/` · 权限：登录
+
+响应 `data`：`balance, frozen_amount, min_amount, tax_rate, requests[]`。
+
+| 查询参数 | 类型 | 说明 |
+| --- | --- | --- |
+| amount | int | **可选**。提现额（内部账务单位）。传入即在上述字段基础上追加 `amount`（原样回显）、`tax_amount`、`actual_amount` |
+
+- **前端不要自己算税。** 试算与 POST 落库调用的是同一个 `compute_withdraw_tax()`，
+  因此 `?amount=X` 返回的 `tax_amount` / `actual_amount` 与该笔 `X` 提交后落库的值**逐字段相等**。
+  客户端若另算一份，税率或舍入口径一变就会出现「提现前显示到账 12.3 币、记录里却是 12.2 币」。
+- 舍入为十进制 **ROUND_HALF_UP**（`.5` 一律进位），不是 JS `Math.round` 也不是 Python 内建 `round`
+  的银行家舍入。例：`amount=125`、`tax_rate=2` → `tax_amount=3`、`actual_amount=122`。
+- `amount` 非整数 / ≤0 / 含非法字符 → `code=400`「金额非法」；`?amount=`（空串）视为未传，按原响应返回。
+- 试算**不校验最低提现额、不校验余额**，也**不产生任何副作用**（不建提现单、不写流水、不占幂等键）。
+  准入判断请用同一响应里的 `min_amount` 与 `balance` 在前端做，避免用户逐字输入时每敲一下就闪一次错误。
+- 并发输入时响应可能乱序到达，用回显的 `amount` 丢弃过期响应。
+
+### 3.1.1 提现申请（POST）
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
-| amount | int | 提现额（分），须 ≥ 最低门槛且 ≤ 余额 |
+| amount | int | 提现额（内部账务单位），须 ≥ 最低门槛且 ≤ 余额。允许非整币（如 `125` = 12.5 兴安币） |
 | payee_method | string | 收款方式（WithdrawRequest.PayeeMethod） |
 | payee_account | string | 收款账号（≤100） |
 | payee_name | string | 收款人（≤50） |
 | remark | string | 备注（≤255） |
+| client_request_id | string | 可选但强烈建议，见 0.5 幂等约定 |
 
 申请时冻结资金（`balance-=amount`、`frozen+=amount`），生成 `WITHDRAW/PENDING` 流水与提现单。
-响应 `data`：`balance, frozen_amount, request{…}`。提现单字段：`id, amount, payee_method, payee_method_display, payee_account, payee_name, status, status_display, remark, audit_remark, created_at, audited_at`。
+税额在申请时按当时税率快照落库：`tax_amount = ROUND_HALF_UP(amount × tax_rate / 100)`、`actual_amount = amount - tax_amount`；冻结与扣款仍是全额 `amount`，税只影响实际打款金额。
+响应 `data`：`balance, frozen_amount, request{…}`。提现单字段：`id, amount, tax_rate, tax_amount, actual_amount, payee_method, payee_method_display, payee_account, payee_name, status, status_display, remark, audit_remark, payout_reference, paid_at, created_at, audited_at`。
 
 ### 3.2 报单（GET/POST）
 

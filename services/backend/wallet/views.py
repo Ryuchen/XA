@@ -169,19 +169,46 @@ class WithdrawView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
+        """返回提现配置与我的申请记录；带 ``?amount=`` 时附带一次服务端试算。
+
+        试算存在的理由：前端此前自己算了一遍税再展示「预计到账」，于是同一套税
+        规则在前后端各存一份。两份实现对齐舍入只能让它们**暂时**一致 —— 下次谁
+        改了税率口径或舍入方式，展示值就会和落库值悄悄分叉，用户看到「扣完剩
+        12.3 币」而记录里是 12.2 币。病根是前端不该持有第二份算法，所以这里把
+        试算搬到服务端，与 POST 落库**调用同一个** ``compute_withdraw_tax``。
+        """
         wallet, _ = _get_wallet(request)
         requests_qs = WithdrawRequest.objects.filter(account=request.account)
         serializer = WithdrawRequestSerializer(requests_qs, many=True)
-        return Response({
-            'code': 0,
-            'data': {
-                'balance': wallet.balance,
-                'frozen_amount': wallet.frozen_amount,
-                'min_amount': get_min_withdraw_amount(),
-                'tax_rate': get_withdraw_tax_rate(),
-                'requests': serializer.data,
-            },
-        })
+        tax_rate = get_withdraw_tax_rate()
+        data = {
+            'balance': wallet.balance,
+            'frozen_amount': wallet.frozen_amount,
+            'min_amount': get_min_withdraw_amount(),
+            'tax_rate': tax_rate,
+            'requests': serializer.data,
+        }
+
+        raw_amount = request.query_params.get('amount')
+        if raw_amount is not None and str(raw_amount).strip() != '':
+            try:
+                amount = int(str(raw_amount).strip())
+            except (TypeError, ValueError):
+                # 与订单状态白名单同口径：参数不合法就明确拒绝，不做静默兜底。
+                # 静默返回一个「不带试算的正常响应」会让前端以为拿到了估值，
+                # 实际展示的是上一次的旧数字。
+                return Response({'code': 400, 'msg': '金额非法'})
+            if amount <= 0:
+                return Response({'code': 400, 'msg': '金额非法'})
+
+            # 关键：必须复用 POST 落库那一个实现，不许在此另写一遍算法，
+            # 否则只是把「前后端两份」换成了「同后端两份」，问题原样保留。
+            tax_amount = compute_withdraw_tax(amount, tax_rate)
+            data['amount'] = amount
+            data['tax_amount'] = tax_amount
+            data['actual_amount'] = amount - tax_amount
+
+        return Response({'code': 0, 'data': data})
 
     def post(self, request):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:

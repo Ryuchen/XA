@@ -15,8 +15,7 @@ from banners.models import Banner
 from chat.models import ChatMessage, ChatSession
 from chat.notifier import notify_chat_message, notify_chat_session_update
 from club_accounts.models import ClubAccount, LegacyAccountMap
-from console.ban_utils import active_ban_for, apply_ban, lift_ban
-from console.models import AccountBan, AdminAuditLog, AdminMembership, AdminRole
+from console.models import AdminAuditLog, AdminMembership, AdminRole
 from club_accounts.services import (
     get_or_create_account_for_legacy_user,
     link_legacy_relations,
