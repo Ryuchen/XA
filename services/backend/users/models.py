@@ -335,13 +335,17 @@ class EscortProfile(models.Model):
 
     @property
     def order_visibility_delay_seconds(self):
-        return {
-            self.PassTier.BLACK: 0,
-            self.PassTier.GOLD: 30,
-            self.PassTier.SILVER: 60,
-            self.PassTier.BRONZE: 120,
-            '': 300,
-        }[self.active_pass_tier]
+        """当前通行证档位在公共单池中的可见延迟（秒）。
+
+        取值下沉到 ``SystemConfig``（``wallet.get_pass_delay_seconds``），
+        运营调档不再需要发版。此前这张表在模型、视图里各硬编码了一份，
+        改一处漏一处就会出现「购买页显示提前 30 秒，实际抢单池按 60 秒放行」。
+
+        延迟导入 wallet：避免 users 与 wallet 在 app 加载期互相牵引。
+        """
+        from wallet.models import get_pass_delay_seconds
+
+        return get_pass_delay_seconds(self.active_pass_tier)
 
     @property
     def level_rank(self):

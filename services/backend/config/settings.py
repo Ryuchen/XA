@@ -35,13 +35,23 @@ def env_bool(name, default=False):
 # Local development remains zero-config, while every deploy-time value can be
 # injected by the process environment.  Do not put production credentials back
 # into this module.
+#
+# 安全基线（B1-T1）：本地默认值保持不变（DEBUG=True、通配 Host），但一旦
+# DJANGO_DEBUG=False，缺失的生产配置会在本模块末尾的 run_startup_checks() 里
+# 直接抛 ImproperlyConfigured，让进程起不来 —— 而不是带着开发密钥裸奔上线。
 DEBUG = env_bool('DJANGO_DEBUG', True)
 SECRET_KEY = os.environ.get(
     'DJANGO_SECRET_KEY',
+    # 仅用于本地开发；生产由 run_startup_checks() 强制要求环境变量注入。
     'django-insecure-xa-local-development-key-change-before-production',
 )
+# 生产不再隐式回落 '*'：未显式配置时留空，由启动校验报错并阻断启动。
 ALLOWED_HOSTS = [
-    host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if host.strip()
+    host.strip()
+    for host in os.environ.get(
+        'DJANGO_ALLOWED_HOSTS', '*' if DEBUG else '',
+    ).split(',')
+    if host.strip()
 ]
 
 
@@ -192,6 +202,14 @@ REQUIRE_ORDER_EVIDENCE_IMAGES = env_bool(
     True,
 )
 
+# 资金写接口是否强制要求客户端携带 client_request_id。
+#
+# 默认 False：存量小程序尚未发版，强开会让下单/提现直接不可用。此时后端仍会
+# 用「账户+业务+关键参数」派生键做 60 秒窗口去重（见
+# wallet.services.claim_fund_write），挡得住弱网重试与连点。
+# 各端发版带上 client_request_id 后，把本项置 True，即可升级为永久强幂等。
+REQUIRE_CLIENT_REQUEST_ID = env_bool('REQUIRE_CLIENT_REQUEST_ID', False)
+
 AUTH_USER_MODEL = 'users.CustomUser'
 
 UNFOLD = {
@@ -203,11 +221,114 @@ UNFOLD = {
     'SHOW_VIEW_ON_SITE': True,
 }
 
+# 限流档位：作用于声明了 throttle_scope 的视图（ScopedRateThrottle）。
+# 未声明 scope 的视图不受影响，因此加默认限流类是零风险的。
+THROTTLE_RATE_LOGIN = os.environ.get('THROTTLE_RATE_LOGIN', '10/min')
+THROTTLE_RATE_ORDER_WRITE = os.environ.get('THROTTLE_RATE_ORDER_WRITE', '30/min')
+THROTTLE_RATE_CHECKIN = os.environ.get('THROTTLE_RATE_CHECKIN', '10/min')
+THROTTLE_RATE_WALLET_WRITE = os.environ.get('THROTTLE_RATE_WALLET_WRITE', '10/min')
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'club_accounts.authentication.ClubAccountAuthentication',
     ),
+    # fail-closed 兜底：任何忘记声明 permission_classes 的新视图都会被这里挡下
+    # （既要业务账户已登录，又要具备后台身份），逼开发显式声明放行范围。
+    # 需要匿名访问的接口（登录/刷新）必须显式写 permission_classes = [AllowAny]。
+    'DEFAULT_PERMISSION_CLASSES': (
+        'club_accounts.permissions.IsClubAccountAuthenticated',
+        'console.permissions.IsConsoleUser',
+    ),
+    # 只对写操作计数：读接口（列表/详情）不占配额，详见 common.throttling。
+    'DEFAULT_THROTTLE_CLASSES': (
+        'common.throttling.WriteScopedRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'login': THROTTLE_RATE_LOGIN,
+        'order_write': THROTTLE_RATE_ORDER_WRITE,
+        'checkin': THROTTLE_RATE_CHECKIN,
+        'wallet_write': THROTTLE_RATE_WALLET_WRITE,
+    },
     'EXCEPTION_HANDLER': 'console.exceptions.console_exception_handler',
+}
+
+# 限流计数依赖缓存。本地零配置走进程内存；多进程部署请通过 DJANGO_CACHE_URL
+# 指向 Redis，否则每个 worker 各算各的，限流会被 worker 数量放大。
+_CACHE_URL = os.environ.get('DJANGO_CACHE_URL', '').strip()
+if _CACHE_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': _CACHE_URL,
+        },
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'xa-default-cache',
+        },
+    }
+
+# ---------------------------------------------------------------------------
+# 结构化日志：资金链路必须可审计、可检索。
+# xa.money 通道恒为 JSON 行，字段见 common.logging_utils.BUSINESS_FIELDS。
+# ---------------------------------------------------------------------------
+LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO').upper()
+# 应用日志格式：本地默认人类可读，生产默认 JSON；可用 DJANGO_LOG_FORMAT 覆盖。
+LOG_FORMAT = os.environ.get('DJANGO_LOG_FORMAT', 'plain' if DEBUG else 'json').lower()
+if LOG_FORMAT not in {'plain', 'json'}:
+    LOG_FORMAT = 'json'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {
+            '()': 'common.logging_utils.JsonLogFormatter',
+        },
+        'plain': {
+            'format': '[%(asctime)s] %(levelname)s %(name)s %(module)s:%(lineno)d %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': LOG_FORMAT,
+        },
+        # 资金事件恒用 JSON，便于对账脚本直接解析，不随 DEBUG 变化。
+        'money': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'json',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        # 业务日志根：orders / wallet / users 等模块统一挂在 xa.* 下。
+        'xa': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+        'xa.money': {
+            'handlers': ['money'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }
 
 from datetime import timedelta  # noqa: E402
@@ -303,3 +424,23 @@ if 'test' in sys.argv:
     }
     CELERY_TASK_ALWAYS_EAGER = True
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+
+
+# ---------------------------------------------------------------------------
+# 启动期配置自检（必须放在文件最末尾，确保校验的是最终生效值）。
+#
+# DEBUG=True 时全部跳过 —— 本地开发与 `manage.py test` 保持零配置可跑；
+# DEBUG=False 时缺失 SECRET_KEY / ALLOWED_HOSTS 等会直接抛 ImproperlyConfigured，
+# 在 `manage.py check` / runserver / gunicorn 启动阶段就失败。
+# ---------------------------------------------------------------------------
+from config.checks import run_startup_checks  # noqa: E402
+
+run_startup_checks(
+    debug=DEBUG,
+    secret_key=SECRET_KEY,
+    allowed_hosts=ALLOWED_HOSTS,
+    cors_allow_all_origins=CORS_ALLOW_ALL_ORIGINS,
+    cors_allowed_origins=CORS_ALLOWED_ORIGINS,
+    databases=DATABASES,
+    wechat_mock_login=WECHAT_MOCK_LOGIN,
+)

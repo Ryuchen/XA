@@ -1,7 +1,8 @@
 import uuid
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
-from django.db import models
+from django.db import IntegrityError, models, transaction
 
 # 抽成率配置在 SystemConfig 中的键名
 COMMISSION_RATE_KEY = 'platform_commission_rate'
@@ -9,6 +10,31 @@ COMMISSION_RATE_KEY = 'platform_commission_rate'
 MIN_WITHDRAW_AMOUNT_KEY = 'min_withdraw_amount'
 # 提现税率配置在 SystemConfig 中的键名
 WITHDRAW_TAX_RATE_KEY = 'withdraw_tax_rate'
+
+# 陪玩通行证配置在 SystemConfig 中的键名前缀。
+# 每档位两条记录，便于后台单独调价而不必编辑 JSON：
+#   provider_pass_daily_price_<TIER>    该档位日价（内部账务单位）
+#   provider_pass_delay_seconds_<TIER>  该档位公共单池可见延迟（秒）
+# 无通行证档位用 NONE 作为 TIER 占位（对应 active_pass_tier == ''）。
+PASS_DAILY_PRICE_KEY_PREFIX = 'provider_pass_daily_price_'
+PASS_DELAY_SECONDS_KEY_PREFIX = 'provider_pass_delay_seconds_'
+PASS_TIER_NONE = 'NONE'
+
+# 通行证出厂默认值：SystemConfig 未配置或配置非法时回落此处。
+# 与历史硬编码口径完全一致，保证本次下沉配置不改变既有行为。
+DEFAULT_PASS_DAILY_PRICES = {
+    'BLACK': 5000,
+    'GOLD': 3000,
+    'SILVER': 1000,
+    'BRONZE': 200,
+}
+DEFAULT_PASS_DELAY_SECONDS = {
+    'BLACK': 0,
+    'GOLD': 30,
+    'SILVER': 60,
+    'BRONZE': 120,
+    '': 300,
+}
 
 
 class Wallet(models.Model):
@@ -143,6 +169,63 @@ class Transaction(models.Model):
         super().save(*args, **kwargs)
 
 
+class IdempotencyKey(models.Model):
+    """出账类写接口的幂等键（全站唯一的幂等落库位置）。
+
+    为什么需要它
+    ------------
+    小程序端在弱网下会自动重试 POST；提现、充值、打赏、下单这些**出账**接口
+    一旦被重复执行，就是实打实的资金损失。数据库唯一约束是唯一可靠的去重手段
+    —— 应用层的「先查再写」在并发下必然漏。
+
+    使用约定（不得绕过）
+    --------------------
+    1. 键为 ``(account, request_id)``，其中 ``request_id`` 由客户端生成并透传；
+    2. 出账写入前**必须**先调用 ``wallet.services.claim_idempotency_key``
+       抢占该键，抢不到即判定为重复请求，直接拒绝，不得继续执行业务；
+    3. 抢占动作必须与业务写入处于**同一个** ``transaction.atomic`` 块内，
+       业务回滚时幂等键一并回滚，避免「键占了但钱没动」导致用户永久无法重试。
+
+    ``scope`` 仅作排障标注（如 ``withdraw`` / ``order.create``），
+    **不参与**唯一约束 —— 同一个 request_id 在任何业务上都只允许用一次，
+    这样客户端只要保证 UUID 不复用即可，无需理解后端的业务分区。
+    """
+
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        related_name='idempotency_keys',
+    )
+    request_id = models.CharField(
+        max_length=64,
+        help_text='客户端生成的幂等键（client_request_id），建议 UUID hex',
+    )
+    scope = models.CharField(
+        max_length=32, blank=True, default='',
+        help_text='业务标注，仅用于排障，不参与唯一约束',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'IdempotencyKey'
+        verbose_name_plural = 'IdempotencyKeys'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account', 'request_id'],
+                name='uniq_idempotency_account_request',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['account', '-created_at'],
+                name='idempotency_account_time_idx',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.account_id}:{self.request_id}'
+
+
 class SystemConfig(models.Model):
     """轻量键值配置表：后台可改的运行时参数（如平台抽成率）。"""
 
@@ -214,8 +297,88 @@ def get_withdraw_tax_rate():
 
 
 def compute_withdraw_tax(amount, tax_rate):
-    """按税率计算提现税额（内部账务单位，四舍五入取整）。"""
-    return round(amount * tax_rate / 100)
+    """按税率计算提现税额（内部账务单位，四舍五入取整）。
+
+    刻意不用内建 ``round``：它是「银行家舍入」（round-half-to-even），
+    ``round(2.5) == 2``、``round(0.5) == 0``，且中间量走二进制浮点还会引入
+    ``0.1 + 0.2 != 0.3`` 这类误差。税额是要对外解释的钱，必须用十进制
+    ROUND_HALF_UP，保证「.5 一律进位」且结果可被人工用计算器复算。
+    """
+    if amount <= 0 or tax_rate <= 0:
+        return 0
+    tax = (Decimal(int(amount)) * Decimal(int(tax_rate)) / Decimal(100)).quantize(
+        Decimal('1'), rounding=ROUND_HALF_UP,
+    )
+    # 税额不允许超过本金，避免异常税率配置击穿 actual_amount 的非负约束。
+    return min(int(tax), int(amount))
+
+
+def _get_int_config(key, default, *, minimum=0, maximum=None):
+    """读取一条整数型 SystemConfig，非法值一律回落默认值。
+
+    Args:
+        key: SystemConfig 主键名。
+        default: 未配置或配置非法时的回落值。
+        minimum: 允许的最小值（含）。
+        maximum: 允许的最大值（含）；None 表示不设上限。
+    """
+    config = SystemConfig.objects.filter(key=key).only('value').first()
+    if config is None:
+        return default
+    try:
+        value = int(str(config.value).strip())
+    except (TypeError, ValueError):
+        return default
+    if value < minimum:
+        return default
+    if maximum is not None and value > maximum:
+        return default
+    return value
+
+
+def get_pass_daily_price(tier):
+    """返回指定通行证档位的日价（内部账务单位整数）。
+
+    档位取值同 ``users.EscortProfile.PassTier``；空串代表「无通行证」。
+    未配置时回落 ``DEFAULT_PASS_DAILY_PRICES``，保持与历史硬编码一致。
+    """
+    normalized = (tier or PASS_TIER_NONE).upper()
+    default = DEFAULT_PASS_DAILY_PRICES.get(normalized, 0)
+    return _get_int_config(
+        f'{PASS_DAILY_PRICE_KEY_PREFIX}{normalized}', default, minimum=0,
+    )
+
+
+def get_pass_daily_prices():
+    """返回全部可售通行证档位的日价映射 ``{tier: price}``。"""
+    return {
+        tier: get_pass_daily_price(tier)
+        for tier in DEFAULT_PASS_DAILY_PRICES
+    }
+
+
+def get_pass_delay_seconds(tier):
+    """返回指定通行证档位在公共单池中的可见延迟（秒）。
+
+    档位越高延迟越短；空串（无通行证）延迟最长。未配置时回落
+    ``DEFAULT_PASS_DELAY_SECONDS``，保持与历史硬编码一致。
+    """
+    normalized = (tier or '').upper()
+    default = DEFAULT_PASS_DELAY_SECONDS.get(normalized)
+    if default is None:
+        default = DEFAULT_PASS_DELAY_SECONDS.get('', 300)
+    key_tier = normalized or PASS_TIER_NONE
+    return _get_int_config(
+        f'{PASS_DELAY_SECONDS_KEY_PREFIX}{key_tier}', default, minimum=0,
+    )
+
+
+def get_pass_delays():
+    """返回全部档位的可见延迟映射 ``{tier: seconds}``（含空串档位）。"""
+    return {
+        tier: get_pass_delay_seconds(tier)
+        for tier in DEFAULT_PASS_DELAY_SECONDS
+    }
 
 
 def get_platform_wallet(for_update=False):

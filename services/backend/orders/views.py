@@ -12,8 +12,14 @@ from rest_framework.views import APIView
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from club_accounts.permissions import IsClubAccountAuthenticated
 from users.models import EscortProfile, EscortSchedule
-from wallet.models import ProviderReport, Transaction, Wallet, get_platform_wallet
-from wallet.services import get_wallet
+from wallet.models import ProviderReport, Transaction, get_platform_wallet
+from wallet.services import (
+    WalletAddressingError,
+    claim_fund_write,
+    get_wallet,
+    peek_fund_write,
+)
+from common.logging_utils import log_money_event, new_trace_id
 from common.media import build_media_url
 
 from .models import (
@@ -23,7 +29,17 @@ from .models import (
 from .kook_dispatch import enqueue_kook_dispatch
 from .notifier import notify_order_update
 from .ratings import apply_escort_rating
-from .settlement import compute_split
+from .services import (
+    count_active_orders,
+    mark_escort_busy,
+    pending_timeout_deadline,
+    push_message_safe as _push_message_safe,
+    refresh_escort_status,
+    refund_to_customer as _refund_to_customer,
+    schedule_auto_cancel as _schedule_auto_cancel,
+    settle_order,
+)
+from .settlement import SettlementError, assert_order_conserved, compute_split
 from .serializers import (
     CreateEvaluationSerializer,
     CreateOrderSerializer,
@@ -34,18 +50,23 @@ from .serializers import (
 )
 from .state_machine import IllegalTransitionError, log_only, transition
 
-try:
-    from site_messages.utils import create_message
-except ImportError:
-    create_message = None
-
 User = get_user_model()
-
-# PENDING 订单超时自动取消时长（分钟）
-PENDING_TIMEOUT_MINUTES = 30
 
 # 商品详情页评价列表最多展示条数
 MAX_SERVICE_EVALUATIONS = 20
+
+# 订单列表 ?status= 的对外取值 -> 内部状态。
+#
+# 对外一律小写下划线，与内部枚举解耦：内部把「服务中」叫 IN_SERVICE，
+# 对外历史上叫 in_progress，这层映射就是为了不让内部改名波及客户端。
+# 未收录的取值一律 400（见 OrderListView），不再静默放行。
+ORDER_STATUS_FILTER_MAP = {
+    'pending': Order.Status.PENDING,
+    'grabbed': Order.Status.GRABBED,
+    'in_progress': Order.Status.IN_SERVICE,
+    'completed': Order.Status.COMPLETED,
+    'cancelled': Order.Status.CANCELLED,
+}
 
 
 def _account_for_legacy_user(user):
@@ -55,18 +76,6 @@ def _account_for_legacy_user(user):
         legacy_user_id=user.id,
     ).first()
     return mapping.account if mapping else None
-
-
-def count_active_orders(account):
-    """统计陪玩当前进行中的订单数（已接单 + 服务中），兼容外键与中间表两种关联。"""
-    return (
-        Order.objects.filter(
-            Q(provider_account=account) | Q(providers__provider_account=account),
-            status__in=[Order.Status.GRABBED, Order.Status.IN_SERVICE],
-        )
-        .distinct()
-        .count()
-    )
 
 
 class ServiceListView(APIView):
@@ -335,16 +344,19 @@ class OrderListView(APIView):
             orders = Order.objects.filter(customer_account=account)
 
         if status_filter and status_filter != 'all':
-            status_map = {
-                'pending': Order.Status.PENDING,
-                'grabbed': Order.Status.GRABBED,
-                'in_progress': Order.Status.IN_SERVICE,
-                'completed': Order.Status.COMPLETED,
-                'cancelled': Order.Status.CANCELLED,
-            }
-            backend_status = status_map.get(status_filter)
-            if backend_status:
-                orders = orders.filter(status=backend_status)
+            backend_status = ORDER_STATUS_FILTER_MAP.get(status_filter)
+            if backend_status is None:
+                # 不认识的筛选值以前会被静默忽略，于是前端拼错一个 status
+                # （例如把 in_progress 写成 in_service）就会拿到「全部订单」，
+                # 看上去像后端漏了过滤，实则是契约没对齐。直接报错，问题当场暴露。
+                return Response({
+                    'code': 400,
+                    'msg': (
+                        f'不支持的订单状态筛选：{status_filter}；'
+                        f'可选值 all/{"/".join(ORDER_STATUS_FILTER_MAP)}'
+                    ),
+                })
+            orders = orders.filter(status=backend_status)
 
         orders = orders.select_related(
             'customer', 'customer__boss_type', 'provider', 'service',
@@ -356,6 +368,7 @@ class OrderListView(APIView):
 
 class CreateOrderView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
+    throttle_scope = 'order_write'
 
     def post(self, request):
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
@@ -384,11 +397,27 @@ class CreateOrderView(APIView):
         coupon_discount = serializer.validated_data['coupon_discount']
 
         split = compute_split(amount, commission_rate, inviter_commission_rate)
+        trace_id = new_trace_id()
+
+        # 只读探测重放：首单成功后余额已扣，重放会先撞「余额不足」返回 400，
+        # 把「上一单其实已经下成功了」这个真实原因盖掉。先明确回 409。
+        replayed, replay_reason = peek_fund_write(
+            account=request.account,
+            request_id=request.data.get('client_request_id'),
+        )
+        if replayed:
+            log_money_event(
+                'order.create.duplicate',
+                account_id=request.account.pk,
+                trace_id=trace_id,
+                idempotent_hit=True,
+                reason=replay_reason,
+            )
+            return Response({'code': 409, 'msg': replay_reason})
 
         with transaction.atomic():
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                account=request.account,
-                defaults={'user': request.legacy_user},
+            wallet = get_wallet(
+                account=request.account, user=request.legacy_user, for_update=True,
             )
             if not wallet.is_active:
                 return Response({'code': 403, 'msg': '钱包不可用'})
@@ -411,6 +440,27 @@ class CreateOrderView(APIView):
                 if locked_coupon is None:
                     return Response({'code': 400, 'msg': '优惠券已使用或已失效'})
 
+            # 下单是出账动作。幂等键在「校验全过、即将扣款」这一刻抢占：
+            # 弱网重试的第二个请求会在这里被拦下，而不是变成两笔扣款 + 两张单。
+            # 放在校验之后，是因为视图里的 `return Response(400)` 属于正常返回，
+            # atomic 会照常提交 —— 提前占键会让余额不足的用户充值后无法重试。
+            allowed, reason = claim_fund_write(
+                account=request.account,
+                request_id=request.data.get('client_request_id'),
+                scope='order.create',
+                fingerprint=f'{service.id}|{amount}|{game_rounds}|{game_uid}',
+            )
+            if not allowed:
+                log_money_event(
+                    'order.create.duplicate',
+                    account_id=request.account.pk,
+                    amount=amount,
+                    trace_id=trace_id,
+                    idempotent_hit=True,
+                    reason=reason,
+                )
+                return Response({'code': 409, 'msg': reason})
+
             balance_before = wallet.balance
             wallet.balance -= amount
             wallet.save(update_fields=['balance'])
@@ -431,7 +481,7 @@ class CreateOrderView(APIView):
                 payment_status=Order.PaymentStatus.PAID,
                 auto_cancel_at=(
                     None if provider is not None
-                    else timezone.now() + timedelta(minutes=PENDING_TIMEOUT_MINUTES)
+                    else pending_timeout_deadline()
                 ),
                 original_amount=original_amount,
                 boss_discount=boss_discount,
@@ -453,6 +503,18 @@ class CreateOrderView(APIView):
                 balance_before=balance_before,
                 balance_after=wallet.balance,
                 remark=f'订单支付：{order.order_no}',
+            )
+            log_money_event(
+                'order.create',
+                account_id=request.account.pk,
+                user_id=getattr(request.legacy_user, 'pk', None),
+                order_no=order.order_no,
+                order_id=order.pk,
+                tx_type=Transaction.TxType.PAY,
+                amount=-amount,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                trace_id=trace_id,
             )
 
             if locked_coupon is not None:
@@ -478,8 +540,9 @@ class CreateOrderView(APIView):
                         provider.escort_profile.display_name
                         or provider.nickname or provider.username
                     )
-                    EscortProfile.objects.filter(user=provider).update(
-                        status=EscortProfile.Status.BUSY,
+                    mark_escort_busy(
+                        provider_ids=[provider.id],
+                        account_ids=[getattr(provider_account, 'pk', None)],
                     )
 
                 order = transition(
@@ -527,7 +590,7 @@ class OrderQuoteView(APIView):
             return Response({'code': 400, 'msg': _format_serializer_errors(serializer.errors)})
 
         data = serializer.validated_data
-        wallet, _ = Wallet.objects.get_or_create(user=request.legacy_user)
+        wallet = get_wallet(user=request.legacy_user, account=request.account)
         promotion = data.get('promotion')
         amount = data['amount']
         return Response({'code': 0, 'data': {
@@ -546,6 +609,7 @@ class TipOrderView(APIView):
     """老板对已完成服务单快捷赠送礼物；即时扣款、结算并生成礼物单。"""
 
     permission_classes = [IsClubAccountAuthenticated]
+    throttle_scope = 'order_write'
 
     def post(self, request, order_id):
         if request.account.account_type != ClubAccount.AccountType.BOSS:
@@ -565,6 +629,23 @@ class TipOrderView(APIView):
         except ServiceItem.DoesNotExist:
             return Response({'code': 400, 'msg': '礼物不存在或已下架'})
 
+        trace_id = new_trace_id()
+        # 只读探测重放：首单成功后余额已扣，重放会先撞「余额不足」返回 400，
+        # 把「上一单其实已经下成功了」这个真实原因盖掉。先明确回 409。
+        replayed, replay_reason = peek_fund_write(
+            account=request.account,
+            request_id=request.data.get('client_request_id'),
+        )
+        if replayed:
+            log_money_event(
+                'order.tip.duplicate',
+                account_id=request.account.pk,
+                trace_id=trace_id,
+                idempotent_hit=True,
+                reason=replay_reason,
+            )
+            return Response({'code': 409, 'msg': replay_reason})
+
         with transaction.atomic():
             try:
                 source_order = Order.objects.select_for_update().select_related(
@@ -581,7 +662,9 @@ class TipOrderView(APIView):
                 return Response({'code': 400, 'msg': '原订单未关联陪玩，无法打赏'})
 
             amount = gift_service.price
-            customer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.legacy_user)
+            customer_wallet = get_wallet(
+                user=request.legacy_user, account=request.account, for_update=True,
+            )
             if not customer_wallet.is_active:
                 return Response({'code': 403, 'msg': '钱包不可用'})
             if customer_wallet.balance < amount:
@@ -594,10 +677,55 @@ class TipOrderView(APIView):
             inviter = request.legacy_user.inviter
             inviter_rate = request.legacy_user.inviter_commission_rate if inviter else 0
             split = compute_split(amount, commission_rate, inviter_rate)
+
+            # 资金守恒闸门：礼物单同样必须满足
+            # 陪玩实得 + 推荐分佣 + 平台留存 <= 老板实付。
+            # 必须在建单之前校验 —— 视图里的 `return` 会让 atomic 正常提交，
+            # 建完单再返回 400 会留下一张没付过钱的「已完成」礼物单。
+            try:
+                assert_order_conserved(
+                    amount,
+                    [split.provider_income],
+                    split.inviter_commission,
+                    split.shop_income,
+                )
+            except SettlementError as exc:
+                return Response({'code': 400, 'msg': str(exc)})
+
+            # 校验全部通过后再占幂等键：连点两次只会送出一份礼物。
+            # （校验失败的 `return` 会正常提交事务，提前占键会误伤合法重试。）
+            allowed, reason = claim_fund_write(
+                account=request.account,
+                request_id=request.data.get('client_request_id'),
+                scope='order.tip',
+                fingerprint=f'{order_id}|{gift_service_id}',
+            )
+            if not allowed:
+                log_money_event(
+                    'order.tip.duplicate',
+                    account_id=request.account.pk,
+                    order_id=order_id,
+                    trace_id=trace_id,
+                    idempotent_hit=True,
+                    reason=reason,
+                )
+                return Response({'code': 409, 'msg': reason})
+
             now = timezone.now()
+            # 礼物单必须和普通订单一样写全 account 维度。
+            # 历史实现只写了 legacy user 外键，导致后台按 account 统计
+            # （陪玩收益榜、老板消费榜、邀请人分佣报表）整批漏掉打赏流水 ——
+            # 钱确实到账了，报表上却查无此单。
+            provider_account = (
+                source_order.provider_account
+                or _account_for_legacy_user(provider)
+            )
+            inviter_account = _account_for_legacy_user(inviter)
             gift_order = Order.objects.create(
                 customer=request.legacy_user,
+                customer_account=request.account,
                 provider=provider,
+                provider_account=provider_account,
                 service=gift_service,
                 source_order=source_order,
                 support_contact=source_order.support_contact,
@@ -607,9 +735,15 @@ class TipOrderView(APIView):
                 payment_status=Order.PaymentStatus.PAID,
                 completed_at=now,
                 remark=f'赠送给{source_order.provider_name_snapshot or provider.nickname or provider.username}',
+                provider_name_snapshot=(
+                    source_order.provider_name_snapshot
+                    or provider.nickname
+                    or provider.username
+                ),
                 commission_rate=split.commission_rate,
                 provider_income=split.provider_income,
                 inviter=inviter,
+                inviter_account=inviter_account,
                 inviter_commission=split.inviter_commission,
                 shop_income=split.shop_income,
             )
@@ -623,8 +757,20 @@ class TipOrderView(APIView):
                 balance_before=customer_before, balance_after=customer_wallet.balance,
                 remark=f'礼物打赏：{gift_service.name}',
             )
+            log_money_event(
+                'order.tip.pay',
+                account_id=request.account.pk,
+                user_id=getattr(request.legacy_user, 'pk', None),
+                order_no=gift_order.order_no,
+                order_id=gift_order.pk,
+                tx_type=Transaction.TxType.GIFT,
+                amount=-amount,
+                balance_before=customer_before,
+                balance_after=customer_wallet.balance,
+                trace_id=trace_id,
+            )
 
-            provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=provider)
+            provider_wallet = get_wallet(user=provider, for_update=True)
             provider_before = provider_wallet.balance
             provider_wallet.balance += split.provider_income
             provider_wallet.save(update_fields=['balance'])
@@ -634,9 +780,21 @@ class TipOrderView(APIView):
                 balance_before=provider_before, balance_after=provider_wallet.balance,
                 remark=f'收到礼物：{gift_service.name}',
             )
+            log_money_event(
+                'order.tip.income',
+                account_id=getattr(provider_account, 'pk', None),
+                user_id=provider.pk,
+                order_no=gift_order.order_no,
+                order_id=gift_order.pk,
+                tx_type=Transaction.TxType.GIFT,
+                amount=split.provider_income,
+                balance_before=provider_before,
+                balance_after=provider_wallet.balance,
+                trace_id=trace_id,
+            )
 
             if inviter and split.inviter_commission:
-                inviter_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=inviter)
+                inviter_wallet = get_wallet(user=inviter, for_update=True)
                 inviter_before = inviter_wallet.balance
                 inviter_wallet.balance += split.inviter_commission
                 inviter_wallet.save(update_fields=['balance'])
@@ -724,9 +882,10 @@ class GrabOrderView(APIView):
             order.provider = request.legacy_user
             order.provider_account = request.account
             order.provider_name_snapshot = request.legacy_user.nickname or request.legacy_user.username
-            # BUSY 表示已有履约中的订单；并发上限仍由 active_count 独立控制。
-            EscortProfile.objects.filter(user=request.legacy_user).update(
-                status=EscortProfile.Status.BUSY,
+            # BUSY 表示已有履约中的订单；并发上限仍由 count_active_orders 独立控制。
+            mark_escort_busy(
+                provider_ids=[request.legacy_user.id],
+                account_ids=[request.account.pk],
             )
 
         try:
@@ -834,93 +993,9 @@ class CompleteOrderView(APIView):
                 raise IllegalTransitionError('订单未支付，不能完成订单')
 
         def side_effect(order):
-            provider_rows = list(order.providers.select_for_update().all())
-            settled_provider_ids = []
-            if provider_rows:
-                for row in provider_rows:
-                    if not row.provider_id or row.settled_at:
-                        continue
-                    # 抽成率 100% 时 provider_income=0 是合法配置：
-                    # 不入账、不落 0 元流水，但仍要打 settled_at 结束本行。
-                    if row.provider_income > 0:
-                        provider_wallet = get_wallet(
-                            user_id=row.provider_id,
-                            account_id=row.provider_account_id,
-                            for_update=True,
-                        )
-                        balance_before = provider_wallet.balance
-                        provider_wallet.balance += row.provider_income
-                        provider_wallet.save(update_fields=['balance'])
-                        Transaction.objects.create(
-                            wallet=provider_wallet, order=order, amount=row.provider_income,
-                            tx_type=Transaction.TxType.INCOME,
-                            balance_before=balance_before, balance_after=provider_wallet.balance,
-                            remark=f'订单收入：{order.order_no}',
-                        )
-                    row.settled_at = timezone.now()
-                    row.save(update_fields=['settled_at'])
-                    settled_provider_ids.append(row.provider_id)
-            else:
-                # 兼容无打手明细的旧单：按订单级 provider_income 入账。
-                # 为 0 就是 0（抽成率 100% 是合法配置），绝不回落成 order.amount ——
-                # 那会让陪玩拿走全款、平台留存还照发，凭空造钱。
-                provider_income = order.provider_income or 0
-                if provider_income > 0:
-                    provider_wallet = get_wallet(
-                        account=request.account,
-                        user=request.legacy_user,
-                        for_update=True,
-                    )
-                    balance_before = provider_wallet.balance
-                    provider_wallet.balance += provider_income
-                    provider_wallet.save(update_fields=['balance'])
-                    Transaction.objects.create(
-                        wallet=provider_wallet, order=order, amount=provider_income,
-                        tx_type=Transaction.TxType.INCOME,
-                        balance_before=balance_before, balance_after=provider_wallet.balance,
-                        remark=f'订单收入：{order.order_no}',
-                    )
-                settled_provider_ids.append(request.legacy_user.id)
-            # 推荐人分佣入账
-            if order.inviter_id and order.inviter_commission:
-                inviter_wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=order.inviter_id)
-                inv_before = inviter_wallet.balance
-                inviter_wallet.balance += order.inviter_commission
-                inviter_wallet.save(update_fields=['balance'])
-                Transaction.objects.create(
-                    wallet=inviter_wallet,
-                    order=order,
-                    amount=order.inviter_commission,
-                    tx_type=Transaction.TxType.INCOME,
-                    balance_before=inv_before,
-                    balance_after=inviter_wallet.balance,
-                    remark=f'推荐分佣：{order.order_no}',
-                )
-            # 店铺/平台留存入账：归集到平台系统账户钱包
-            if order.shop_income:
-                platform_wallet = get_platform_wallet(for_update=True)
-                shop_before = platform_wallet.balance
-                platform_wallet.balance += order.shop_income
-                platform_wallet.save(update_fields=['balance'])
-                Transaction.objects.create(
-                    wallet=platform_wallet,
-                    order=order,
-                    amount=order.shop_income,
-                    tx_type=Transaction.TxType.SHOP_INCOME,
-                    balance_before=shop_before,
-                    balance_after=platform_wallet.balance,
-                    remark=f'平台收入：{order.order_no}',
-                )
-            # 修复 Bug：完成订单后陪玩师状态恢复 AVAILABLE，并累加完成订单计数
-            EscortProfile.objects.filter(user_id__in=settled_provider_ids).update(
-                status=EscortProfile.Status.AVAILABLE,
-            )
-            for profile in EscortProfile.objects.filter(user_id__in=settled_provider_ids):
-                profile.completed_order_count = (profile.completed_order_count or 0) + 1
-                profile.save(update_fields=['completed_order_count'])
-
-            # 完成订单落库结单截图并自动提交后台审核：平台订单已在上方结算，
-            # 报单审核仅核验入队/结单凭证，不二次入账。
+            # 顺序很关键：先把结单截图落库，再结算。
+            # settle_order 里的凭证闸门查的就是这张报单，若先结算后存图，
+            # 陪玩每次点「完成」都会因为「缺结单截图」被自己刚上传的图卡住。
             report, _ = ProviderReport.objects.get_or_create(
                 provider=request.legacy_user, order=order,
                 defaults={
@@ -931,12 +1006,21 @@ class CompleteOrderView(APIView):
             )
             if completion_image:
                 report.completion_image = completion_image
+            # 平台订单已在下方 settle_order 结算，报单审核仅核验凭证，不二次入账。
             report.status = ProviderReport.Status.PENDING
             report.save(update_fields=[
                 *(['completion_image'] if completion_image else []),
                 'status',
                 'updated_at',
             ])
+
+            # 结算收口到 orders.services.settle_order：与后台 complete 共用同一份
+            # 凭证闸门 + 守恒闸门 + 入账口径，杜绝两条入口算出两套账。
+            settle_order(
+                order,
+                operator=request.legacy_user,
+                operator_account=request.account,
+            )
 
         try:
             order = transition(
@@ -950,6 +1034,11 @@ class CompleteOrderView(APIView):
             return Response({'code': 404, 'msg': '订单不存在'})
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前订单状态不允许完成'})
+        except SettlementError as exc:
+            # 分账超额已被闸门阻断，整笔事务回滚，订单保持服务中待人工核对
+            return Response({'code': 400, 'msg': f'{exc}，请联系客服核对分账'})
+        except WalletAddressingError as exc:
+            return Response({'code': 400, 'msg': f'钱包数据异常：{exc}'})
 
         notify_order_update(order)
 
@@ -1041,8 +1130,13 @@ class RejectOrderView(APIView):
             order.provider_name_snapshot = ''
             order.grabbed_at = None
             order.reject_count = (order.reject_count or 0) + 1
-            order.auto_cancel_at = timezone.now() + timedelta(minutes=PENDING_TIMEOUT_MINUTES)
-            EscortProfile.objects.filter(user=request.legacy_user).update(status=EscortProfile.Status.AVAILABLE)
+            order.auto_cancel_at = pending_timeout_deadline()
+            # 不能无脑置 AVAILABLE：这位陪玩手上可能还有别的单在服务中。
+            refresh_escort_status(
+                provider_ids=[request.legacy_user.id],
+                account_ids=[request.account.pk],
+                exclude_order_ids=[order.pk],
+            )
 
         try:
             order = transition(
@@ -1101,12 +1195,19 @@ class RefundOrderView(APIView):
         def side_effect(order):
             _refund_to_customer(order, reason=f'客服强制退款：{reason}')
             order.cancel_reason = reason
-            # 释放陪玩师状态
+            # 释放陪玩师状态：按「是否还有其它进行中的单」重算，而不是一律置空闲。
             provider_ids = list(order.providers.values_list('provider_id', flat=True))
+            account_ids = list(
+                order.providers.values_list('provider_account_id', flat=True)
+            )
             if order.provider_id:
                 provider_ids.append(order.provider_id)
-            EscortProfile.objects.filter(user_id__in=provider_ids).update(
-                status=EscortProfile.Status.AVAILABLE,
+            if order.provider_account_id:
+                account_ids.append(order.provider_account_id)
+            refresh_escort_status(
+                provider_ids=provider_ids,
+                account_ids=account_ids,
+                exclude_order_ids=[order.pk],
             )
 
         try:
@@ -1298,13 +1399,13 @@ class AssignOrderView(APIView):
             order.provider = provider
             order.provider_account = provider_account
             order.provider_name_snapshot = provider.nickname or provider.username
-            active_after = count_active_orders(provider_account) + 1
-            new_status = (
-                EscortProfile.Status.BUSY
-                if active_after >= Order.MAX_CONCURRENT_ORDERS
-                else EscortProfile.Status.AVAILABLE
+            # 口径与陪玩自助抢单一致：接到单就是 BUSY。
+            # 旧实现「未达并发上限就保持 AVAILABLE」会让同一个人在
+            # 「客服派单」和「自己抢单」两条路径下显示相反的状态。
+            mark_escort_busy(
+                provider_ids=[provider.id],
+                account_ids=[provider_account.pk],
             )
-            EscortProfile.objects.filter(user=provider).update(status=new_status)
 
         try:
             order = transition(
@@ -1382,28 +1483,10 @@ class OrderStatsView(APIView):
 
 
 # ---------- 内部工具函数 ----------
-
-def _refund_to_customer(order: Order, reason: str = '订单退款') -> None:
-    """全额退款到客户钱包，并写流水。在 transaction.atomic 中调用。"""
-    customer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=order.customer_id)
-    balance_before = customer_wallet.balance
-    customer_wallet.balance += order.amount
-    customer_wallet.save(update_fields=['balance'])
-    Transaction.objects.create(
-        wallet=customer_wallet,
-        order=order,
-        amount=order.amount,
-        tx_type=Transaction.TxType.REFUND,
-        balance_before=balance_before,
-        balance_after=customer_wallet.balance,
-        remark=f'{reason}：{order.order_no}',
-    )
-    order.payment_status = Order.PaymentStatus.REFUNDED
-    order.refunded_at = timezone.now()
-    from coupons.models import UserCoupon
-    UserCoupon.objects.filter(
-        order=order, status=UserCoupon.Status.USED,
-    ).update(status=UserCoupon.Status.UNUSED, order=None, used_at=None)
+#
+# 结算 / 退款 / 站内信推送 / 超时投递等实现已收口到 orders.services，
+# 本模块顶部按旧名 import 进来（_refund_to_customer / _push_message_safe /
+# _schedule_auto_cancel），调用点保持不变。
 
 
 def _update_escort_rating(provider_id: int, score: int) -> None:
@@ -1411,44 +1494,11 @@ def _update_escort_rating(provider_id: int, score: int) -> None:
     apply_escort_rating(provider_id, score)
 
 
-def _schedule_auto_cancel(order: Order) -> None:
-    """投递超时取消任务到 Celery；不可用时静默失败。"""
-    try:
-        from .tasks import auto_cancel_pending_order
-        auto_cancel_pending_order.apply_async(
-            args=[order.id],
-            countdown=PENDING_TIMEOUT_MINUTES * 60,
-        )
-    except Exception:
-        # Celery 未启动时由 management command 兜底
-        pass
-
-
 def _format_serializer_errors(errors):
+    """把 DRF 的嵌套错误结构压成一句人话，用于统一信封的 msg 字段。"""
     if isinstance(errors, dict):
         first_value = next(iter(errors.values()))
         return _format_serializer_errors(first_value)
     if isinstance(errors, list) and errors:
         return _format_serializer_errors(errors[0])
     return str(errors)
-
-
-def _push_message_safe(*, recipient_id, title, preview='', detail='',
-                       msg_type='SYSTEM', action_url='', related_order_id=None):
-    """安全推送站内消息：site_messages 不可用或异常时静默失败，绝不影响主流程。"""
-    if create_message is None or recipient_id is None:
-        return
-    if related_order_id and not action_url:
-        action_url = f'/pages/orderList/index?orderId={related_order_id}'
-    try:
-        create_message(
-            recipient_id=recipient_id,
-            title=title,
-            preview=preview,
-            detail=detail,
-            msg_type=msg_type,
-            action_url=action_url,
-            related_order_id=related_order_id,
-        )
-    except Exception:
-        pass

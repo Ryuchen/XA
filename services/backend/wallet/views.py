@@ -19,7 +19,8 @@ from .models import (
     get_withdraw_tax_rate,
 )
 from .serializers import ReportSerializer, WithdrawRequestSerializer
-from .services import get_wallet
+from .services import claim_fund_write, get_wallet, peek_fund_write
+from common.logging_utils import log_money_event, new_trace_id
 
 
 def _get_wallet(request, *, for_update=False):
@@ -161,6 +162,8 @@ class ProviderBenefitRecordsView(APIView):
 
 
 class WithdrawView(APIView):
+    # 出账接口：限流只作用于 POST（见 common.throttling.WriteScopedRateThrottle）。
+    throttle_scope = 'wallet_write'
     """提现：GET 返回提现配置与我的申请记录，POST 提交新的提现申请。"""
 
     permission_classes = [IsClubAccountAuthenticated]
@@ -204,10 +207,51 @@ class WithdrawView(APIView):
             return Response({'code': 400, 'msg': '请填写收款账号与收款人姓名'})
         remark = (request.data.get('remark') or '').strip()[:255]
 
+        trace_id = new_trace_id()
+        # 先只读探测重放：上一笔已成功时，余额已被扣走，重放会先撞上
+        # 「余额不足」返回 400，掩盖掉「其实已经提交过」的真实原因。
+        replayed, replay_reason = peek_fund_write(
+            account=request.account,
+            request_id=request.data.get('client_request_id'),
+        )
+        if replayed:
+            log_money_event(
+                'withdraw.duplicate',
+                account_id=request.account.pk,
+                amount=amount,
+                trace_id=trace_id,
+                idempotent_hit=True,
+                reason=replay_reason,
+            )
+            return Response({'code': 409, 'msg': replay_reason})
+
         with transaction.atomic():
             wallet, _ = _get_wallet(request, for_update=True)
             if wallet.balance < amount:
                 return Response({'code': 400, 'msg': '兴安币余额不足'})
+
+            # 幂等闸门放在「全部校验通过之后、第一次动钱之前」。
+            #
+            # 不能更早：视图里的 `return Response(400)` 是正常返回，不是异常，
+            # with transaction.atomic() 会照常提交 —— 校验失败也会把键占掉，
+            # 用户充完钱拿同一个 client_request_id 重试就会被永久判为「重复提交」。
+            # 也不能更晚：必须与扣款同处一个事务，才能靠唯一约束串行化并发重试。
+            allowed, reason = claim_fund_write(
+                account=request.account,
+                request_id=request.data.get('client_request_id'),
+                scope='withdraw',
+                fingerprint=f'{amount}|{payee_method}|{payee_account}',
+            )
+            if not allowed:
+                log_money_event(
+                    'withdraw.duplicate',
+                    account_id=request.account.pk,
+                    amount=amount,
+                    trace_id=trace_id,
+                    idempotent_hit=True,
+                    reason=reason,
+                )
+                return Response({'code': 409, 'msg': reason})
 
             # 快照当前税率并按提现金额扣税：冻结/扣款仍是全额 amount，
             # 税额只影响实际打款给陪玩的 actual_amount，账务可追溯。
@@ -245,6 +289,17 @@ class WithdrawView(APIView):
                 payee_name=payee_name,
                 remark=remark,
                 transaction=tx,
+            )
+            log_money_event(
+                'withdraw.submit',
+                account_id=request.account.pk,
+                user_id=getattr(request.legacy_user, 'pk', None),
+                tx_type=Transaction.TxType.WITHDRAW,
+                amount=-amount,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                trace_id=trace_id,
+                reason=f'tax_rate={tax_rate};tax_amount={tax_amount}',
             )
 
         submit_msg = '提现申请已提交，等待审核'
@@ -427,6 +482,7 @@ class DepositView(APIView):
     """
 
     permission_classes = [IsClubAccountAuthenticated]
+    throttle_scope = 'wallet_write'
 
     def _overview(self, profile, wallet):
         deposit_required = profile.deposit_required
@@ -458,6 +514,24 @@ class DepositView(APIView):
         if amount <= 0:
             return Response({'code': 400, 'msg': '金额非法'})
 
+        trace_id = new_trace_id()
+        # 同上：首次缴纳成功后应缴差额变小，重放会先撞「超过应缴差额」的 400，
+        # 必须先把「这是重放」这件事讲清楚。
+        replayed, replay_reason = peek_fund_write(
+            account=request.account,
+            request_id=request.data.get('client_request_id'),
+        )
+        if replayed:
+            log_money_event(
+                'deposit.duplicate',
+                account_id=request.account.pk,
+                amount=amount,
+                trace_id=trace_id,
+                idempotent_hit=True,
+                reason=replay_reason,
+            )
+            return Response({'code': 409, 'msg': replay_reason})
+
         with transaction.atomic():
             profile = (
                 EscortProfile.objects.select_for_update()
@@ -477,6 +551,25 @@ class DepositView(APIView):
             if wallet.balance < amount:
                 return Response({'code': 400, 'msg': '钱包兴安币不足'})
 
+            # 全部校验通过后再占幂等键：校验失败的 `return` 会正常提交事务，
+            # 提前占键会让用户补足余额后无法用同一个 client_request_id 重试。
+            allowed, reason = claim_fund_write(
+                account=request.account,
+                request_id=request.data.get('client_request_id'),
+                scope='deposit',
+                fingerprint=str(amount),
+            )
+            if not allowed:
+                log_money_event(
+                    'deposit.duplicate',
+                    account_id=request.account.pk,
+                    amount=amount,
+                    trace_id=trace_id,
+                    idempotent_hit=True,
+                    reason=reason,
+                )
+                return Response({'code': 409, 'msg': reason})
+
             balance_before = wallet.balance
             wallet.balance -= amount
             wallet.save(update_fields=['balance'])
@@ -492,6 +585,16 @@ class DepositView(APIView):
                 balance_after=wallet.balance,
                 status=Transaction.Status.SUCCESS,
                 remark='缴纳押金',
+            )
+            log_money_event(
+                'deposit.pay',
+                account_id=request.account.pk,
+                user_id=getattr(request.legacy_user, 'pk', None),
+                tx_type=Transaction.TxType.DEPOSIT,
+                amount=-amount,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                trace_id=trace_id,
             )
 
         return Response({

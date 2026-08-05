@@ -27,8 +27,15 @@ from club_accounts.services import (
 from club_accounts.tokens import issue_account_tokens, refresh_account_access_token
 from orders.models import GameCategory, Order, ServiceItem
 from site_messages.utils import create_message
-from wallet.models import Transaction, Wallet
+from wallet.models import (
+    Transaction,
+    Wallet,
+    get_pass_daily_price,
+    get_pass_daily_prices,
+    get_pass_delay_seconds,
+)
 from wallet.services import get_wallet
+from common.logging_utils import log_money_event
 from common.media import build_media_url
 
 from .models import (
@@ -108,6 +115,8 @@ class WechatLoginView(APIView):
     """
 
     permission_classes = [AllowAny]
+    # 未鉴权入口：必须限流，否则是免费的枚举/刷号通道（仅作用于 POST）。
+    throttle_scope = 'login'
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     @staticmethod
@@ -332,6 +341,8 @@ class AccountLoginView(APIView):
     生产环境用 ClubAccount 密码哈希校验真实密码。
     """
     permission_classes = [AllowAny]
+    # 口令登录：爆破的首选目标，限流优先级最高。
+    throttle_scope = 'login'
 
     def post(self, request):
         username = (request.data.get('username') or '').strip()
@@ -771,22 +782,15 @@ class ProviderStatsView(APIView):
 
 
 class ProviderPassView(APIView):
-    """陪玩通行证：余额购买，决定公共单池的提前可见时间。"""
+    """陪玩通行证：余额购买，决定公共单池的提前可见时间。
+
+    档位价格与延迟已下沉到 ``SystemConfig``（``wallet.models`` 的
+    ``get_pass_daily_price`` / ``get_pass_delay_seconds``），运营调价即时生效、
+    无需发版；未配置时回落出厂默认值，与历史硬编码完全一致。
+    """
 
     permission_classes = [IsClubAccountAuthenticated]
-    DAILY_PRICES = {
-        EscortProfile.PassTier.BLACK: 5000,
-        EscortProfile.PassTier.GOLD: 3000,
-        EscortProfile.PassTier.SILVER: 1000,
-        EscortProfile.PassTier.BRONZE: 200,
-    }
-    DELAYS = {
-        EscortProfile.PassTier.BLACK: 0,
-        EscortProfile.PassTier.GOLD: 30,
-        EscortProfile.PassTier.SILVER: 60,
-        EscortProfile.PassTier.BRONZE: 120,
-        '': 300,
-    }
+    throttle_scope = 'wallet_write'
 
     def _profile(self, request):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
@@ -797,10 +801,10 @@ class ProviderPassView(APIView):
         wallet = get_wallet(account=request.account, user=request.legacy_user)
         products = []
         for tier, label in EscortProfile.PassTier.choices:
-            daily = self.DAILY_PRICES[tier]
             products.append({
-                'tier': tier, 'name': label, 'daily_price': daily,
-                'delay_seconds': self.DELAYS[tier],
+                'tier': tier, 'name': label,
+                'daily_price': get_pass_daily_price(tier),
+                'delay_seconds': get_pass_delay_seconds(tier),
             })
         history = ProviderPassPurchase.objects.filter(account=request.account)[:20]
         return {
@@ -811,7 +815,7 @@ class ProviderPassView(APIView):
             ),
             'expires_at': profile.pass_expires_at,
             'current_delay_seconds': profile.order_visibility_delay_seconds,
-            'no_pass_delay_seconds': self.DELAYS[''],
+            'no_pass_delay_seconds': get_pass_delay_seconds(''),
             'products': products,
             'history': [{
                 'id': item.id, 'tier': item.tier,
@@ -832,7 +836,7 @@ class ProviderPassView(APIView):
         if profile is None:
             return Response({'code': 403, 'msg': '仅陪玩可购买通行证'})
         tier = (request.data.get('tier') or '').upper()
-        if tier not in self.DAILY_PRICES:
+        if tier not in get_pass_daily_prices():
             return Response({'code': 400, 'msg': '请选择有效通行证'})
         try:
             days = int(request.data.get('days', 1))
@@ -841,7 +845,7 @@ class ProviderPassView(APIView):
         if days != 1:
             return Response({'code': 400, 'msg': '通行证按日采购，每次有效期 1 天'})
 
-        daily_price = self.DAILY_PRICES[tier]
+        daily_price = get_pass_daily_price(tier)
         original_amount = daily_price * days
         paid_amount = original_amount
         now = timezone.now()
@@ -1106,20 +1110,6 @@ class EscortSkillOptionsView(APIView):
         return Response({'code': 0, 'data': [groups[gid] for gid in order]})
 
 
-class BindCodeGenerateView(APIView):
-    permission_classes = [IsClubAccountAuthenticated]
-
-    def post(self, request):
-        if request.account.account_type != ClubAccount.AccountType.STAFF:
-            return Response({'code': 403, 'msg': '仅客服可生成绑定码'})
-
-        role = request.data.get('role', 'provider')
-        prefix = 'PW' if role == 'provider' else 'KF'
-        code = f"{prefix}{uuid.uuid4().hex[:6].upper()}"
-
-        return Response({'code': 0, 'data': {'bindCode': code}})
-
-
 class CustomerAchievementView(APIView):
     """老板成就馆：成就清单由后台配置，根据已完成订单实时计算解锁状态。"""
     permission_classes = [IsClubAccountAuthenticated]
@@ -1160,13 +1150,107 @@ def _checkin_rule():
     return rule
 
 
-def _reward_for_seq(seq_in_month):
-    """读取后台配置的当月签到礼物；未配置时回落到原七日循环奖励。"""
-    gift = CheckinGift.objects.filter(checkin_day=seq_in_month, is_active=True).first()
-    if gift:
-        return gift.reward_amount
+def resolve_checkin_reward(seq_in_month, gift_map=None):
+    """签到奖励的**唯一**口径：返回 ``(gift, reward_amount)``。
+
+    此前 GET（日历展示）和 POST（实际发钱）各自拼了一遍
+    「有配置礼物就用礼物金额，否则按七日循环表取」的逻辑。
+    两处只要有一处漏改，用户就会看到「日历上写着 200，签下去只到账 20」——
+    这种账面与实发不一致的问题，用户会当成平台在耍赖。
+
+    Args:
+        seq_in_month: 本月第几次签到（从 1 开始）。
+        gift_map: 可选的 ``{checkin_day: CheckinGift}`` 预取字典。
+            渲染整月日历时传入可避免 N+1 查询；不传则按需单查。
+
+    Returns:
+        tuple[CheckinGift | None, int]: 命中的礼物配置与奖励金额
+        （内部账务单位整数）。
+    """
+    if gift_map is not None:
+        gift = gift_map.get(seq_in_month)
+    else:
+        gift = CheckinGift.objects.filter(
+            checkin_day=seq_in_month, is_active=True,
+        ).first()
+    if gift is not None:
+        return gift, gift.reward_amount
     index = (seq_in_month - 1) % len(MONTHLY_CHECKIN_REWARDS)
-    return MONTHLY_CHECKIN_REWARDS[index]
+    return None, MONTHLY_CHECKIN_REWARDS[index]
+
+
+def checkin_gift_payload(seq_in_month, gift=None):
+    """统一的礼物展示结构，保证 GET / POST 两端字段与默认值完全一致。"""
+    return {
+        'name': gift.name if gift else f'第{seq_in_month}天签到礼物',
+        'description': gift.description if gift else '',
+        'icon': gift.icon if gift else '🎁',
+    }
+
+
+def _reward_for_seq(seq_in_month):
+    """兼容旧调用点：只取奖励金额。"""
+    return resolve_checkin_reward(seq_in_month)[1]
+
+
+def _award_checkin(*, account, legacy_user, target_date, seq_in_month, is_makeup):
+    """落一条签到记录并把奖励打进钱包。签到发钱的**唯一**实现。
+
+    必须在 ``transaction.atomic`` 内调用：记录与入账要么一起成功，
+    要么一起回滚 —— 否则会出现「记录写了钱没到」或「钱到了记录没写」，
+    两种都会引来客诉且无法自证。
+
+    并发保护依赖 ``CheckinRecord`` 上 (account, checkin_date) 的唯一约束：
+    同日重复提交由数据库抛 ``IntegrityError``，调用方转成「该日期已签到」。
+
+    Args:
+        account: 签到的 ``ClubAccount``。
+        legacy_user: 对应的旧 ``CustomUser``。
+        target_date: 签到日期（补签时为过去某天）。
+        seq_in_month: 本月第几次签到，决定奖励档位。
+        is_makeup: 是否补签。
+
+    Returns:
+        tuple: ``(gift, reward_amount, wallet)``；wallet 为入账后的钱包实例。
+    """
+    gift, reward_amount = resolve_checkin_reward(seq_in_month)
+    payload = checkin_gift_payload(seq_in_month, gift)
+
+    CheckinRecord.objects.create(
+        user=legacy_user,
+        account=account,
+        checkin_date=target_date,
+        seq_in_month=seq_in_month,
+        reward_amount=reward_amount,
+        gift_name=payload['name'],
+        gift_icon=payload['icon'],
+        is_makeup=is_makeup,
+    )
+
+    wallet = get_wallet(account=account, user=legacy_user, for_update=True)
+    if reward_amount > 0:
+        balance_before = wallet.balance
+        wallet.balance += reward_amount
+        wallet.save(update_fields=['balance'])
+        Transaction.objects.create(
+            wallet=wallet,
+            amount=reward_amount,
+            tx_type=Transaction.TxType.REWARD,
+            balance_before=balance_before,
+            balance_after=wallet.balance,
+            remark=f'月度签到礼物：{payload["name"]}',
+        )
+        log_money_event(
+            'checkin.reward',
+            account_id=account.pk,
+            user_id=legacy_user.pk,
+            tx_type=Transaction.TxType.REWARD,
+            amount=reward_amount,
+            balance_before=balance_before,
+            balance_after=wallet.balance,
+            reason=f'seq={seq_in_month};makeup={is_makeup}',
+        )
+    return gift, reward_amount, wallet
 
 
 def _daily_paid_amount(account, target_date):
@@ -1214,6 +1298,8 @@ def _continuous_days(checked_days, today):
 class CheckinView(APIView):
     """老板月度消费签到：满额签到、补签卡及全勤 KOOK Tag 奖励。"""
     permission_classes = [IsClubAccountAuthenticated]
+    # 签到直接发钱，限流防连点刷奖励（仅作用于 POST，GET 日历不受影响）。
+    throttle_scope = 'checkin'
 
     def _month_records(self, account, today):
         return CheckinRecord.objects.filter(
@@ -1245,19 +1331,19 @@ class CheckinView(APIView):
         card_earned_today = _sync_makeup_card(progress, rule, today_spend, today)
 
         gifts = {gift.checkin_day: gift for gift in CheckinGift.objects.filter(is_active=True)}
+        days_in_month = calendar.monthrange(today.year, today.month)[1]
         rewards = []
-        for day in range(1, calendar.monthrange(today.year, today.month)[1] + 1):
-            gift = gifts.get(day)
+        for day in range(1, days_in_month + 1):
+            # 与 POST 走同一个 resolve_checkin_reward，日历展示的金额
+            # 就是签下去真正会到账的金额。
+            gift, amount = resolve_checkin_reward(day, gifts)
             rewards.append({
                 'seq': day,
-                'amount': gift.reward_amount if gift else _reward_for_seq(day),
-                'name': gift.name if gift else f'第{day}天签到礼物',
-                'description': gift.description if gift else '',
-                'icon': gift.icon if gift else '🎁',
+                'amount': amount,
+                **checkin_gift_payload(day, gift),
             })
         next_seq = checked_count if today_checked else checked_count + 1
-        next_gift = gifts.get(next_seq)
-        days_in_month = calendar.monthrange(today.year, today.month)[1]
+        next_gift, next_reward = resolve_checkin_reward(next_seq, gifts)
 
         return Response({
             'code': 0,
@@ -1271,12 +1357,8 @@ class CheckinView(APIView):
                 'checked_count': checked_count,
                 'continuous_days': _continuous_days(checked_set, today),
                 'rewards': rewards,
-                'next_reward': _reward_for_seq(next_seq),
-                'next_gift': {
-                    'name': next_gift.name if next_gift else f'第{next_seq}天签到礼物',
-                    'description': next_gift.description if next_gift else '',
-                    'icon': next_gift.icon if next_gift else '🎁',
-                },
+                'next_reward': next_reward,
+                'next_gift': checkin_gift_payload(next_seq, next_gift),
                 'balance': wallet.balance,
                 'today_spend': today_spend,
                 'daily_spend_required': rule.daily_spend_required,
@@ -1350,38 +1432,13 @@ class CheckinView(APIView):
                         return Response({'code': 400, 'msg': '今日已签到'})
 
                 seq_in_month = self._month_records(request.account, today).count() + 1
-                gift = CheckinGift.objects.filter(checkin_day=seq_in_month, is_active=True).first()
-                reward_amount = gift.reward_amount if gift else _reward_for_seq(seq_in_month)
-
-                CheckinRecord.objects.create(
-                    user=request.legacy_user,
+                gift, reward_amount, wallet = _award_checkin(
                     account=request.account,
-                    checkin_date=target_date,
+                    legacy_user=request.legacy_user,
+                    target_date=target_date,
                     seq_in_month=seq_in_month,
-                    reward_amount=reward_amount,
-                    gift_name=gift.name if gift else f'第{seq_in_month}天签到礼物',
-                    gift_icon=gift.icon if gift else '🎁',
                     is_makeup=is_makeup,
                 )
-
-                wallet = get_wallet(
-                    account=request.account,
-                    user=request.legacy_user,
-                    for_update=True,
-                )
-                if reward_amount > 0:
-                    balance_before = wallet.balance
-                    wallet.balance += reward_amount
-                    wallet.save(update_fields=['balance'])
-
-                    Transaction.objects.create(
-                        wallet=wallet,
-                        amount=reward_amount,
-                        tx_type=Transaction.TxType.REWARD,
-                        balance_before=balance_before,
-                        balance_after=wallet.balance,
-                        remark=f'月度签到礼物：{gift.name if gift else seq_in_month}',
-                    )
 
                 checked_count = self._month_records(request.account, today).count()
                 days_in_month = calendar.monthrange(today.year, today.month)[1]
@@ -1412,11 +1469,7 @@ class CheckinView(APIView):
             'msg': '补签成功' if is_makeup else '签到成功',
             'data': {
                 'reward_amount': reward_amount,
-                'gift': {
-                    'name': gift.name if gift else f'第{seq_in_month}天签到礼物',
-                    'description': gift.description if gift else '',
-                    'icon': gift.icon if gift else '🎁',
-                },
+                'gift': checkin_gift_payload(seq_in_month, gift),
                 'seq_in_month': seq_in_month,
                 'checked_count': checked_count,
                 'balance': wallet.balance,

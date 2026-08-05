@@ -2,7 +2,7 @@
 
 集中下单（C 端）与客服代派单（console）共用的两段逻辑，避免口径分叉：
 
-1. 折扣链（决定老板实付 amount，单位均为分，整数向下取整）：
+1. 折扣链（决定老板实付 amount，单位均为内部账务单位整数，10 = 1 兴安币，向下取整）：
        original_amount    = service.price × game_rounds
        amount_after_boss  = original_amount × 老板VIP折扣率 // 100      ① BossType.discount_rate
        ┌─ 命中带折扣率的活动 → amount = amount_after_boss × 活动折扣率 // 100  ② Promotion（此时禁用券）
@@ -88,10 +88,10 @@ def compute_order_amount(
     """计算折扣链并返回各项明细。
 
     Args:
-        original_amount: 原价（分，非负整数）
+        original_amount: 原价（内部账务单位，非负整数）
         boss_rate: 老板VIP折扣率(%)，100=原价
         promotion: 命中的 Promotion（可空）；其 discount_rate 非空时作用于实付
-        coupon_amount: 优惠券面额（分，可空）。传入即视为使用优惠券
+        coupon_amount: 优惠券面额（内部账务单位，可空）。传入即视为使用优惠券
         coupon_threshold: 优惠券使用门槛（内部账务单位），按老板折扣后金额判定
 
     Raises:

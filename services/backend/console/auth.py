@@ -1,3 +1,4 @@
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,6 +32,8 @@ def _profile_payload(account):
 
 class ConsoleLoginView(APIView):
     permission_classes = [AllowAny]
+    # 口令爆破的第一现场，必须限流（仅作用于 POST）。
+    throttle_scope = 'login'
 
     def post(self, request):
         username = (request.data.get('username') or '').strip()
@@ -69,7 +72,14 @@ class ConsoleRefreshView(APIView):
         try:
             access_token = refresh_account_access_token(token)
         except TokenError:
-            return Response({'code': 401, 'msg': '登录已过期，请重新登录'})
+            # HTTP 状态码必须真的是 401：信封里的 code=401 只有业务代码看得懂，
+            # 而浏览器 fetch 封装、网关、监控告警看的都是 HTTP 状态码。
+            # 之前这里返回 HTTP 200，前端的「401 自动跳登录」拦截器完全不触发，
+            # 用户 token 过期后只会看到一个静默失败的页面。
+            return Response(
+                {'code': 401, 'msg': '登录已过期，请重新登录'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         return Response({'code': 0, 'data': {'token': access_token}})
 
 

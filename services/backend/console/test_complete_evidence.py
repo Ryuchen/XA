@@ -2,8 +2,9 @@
 
 背景：``OrderViewSet.complete`` 是把钱打给陪玩的结算入口，但原先不校验入队/结单图即可
 结算，使报单审核退化成事后追认（"两套 ID 空间错充"之外的最后一类资金隐患）。修复后
-后台 ``complete`` 在出账前先过凭证闸门 ``console.views._require_order_evidence``，
-与顾客端 ``CompleteOrderView`` 受同一套 ``REQUIRE_ORDER_EVIDENCE_IMAGES`` 约束：
+凭证闸门收敛到 ``orders.services.require_order_evidence``，由唯一的结算实现
+``orders.services.settle_order`` 在出账前调用，因此后台 ``complete`` 与顾客端
+``CompleteOrderView`` 受同一套 ``REQUIRE_ORDER_EVIDENCE_IMAGES`` 约束：
 开启证据要求时，每个参与结算的陪玩报单必须齐备 ``entry_image`` + ``completion_image``，
 缺失则整体回滚并返回清晰错误。
 """

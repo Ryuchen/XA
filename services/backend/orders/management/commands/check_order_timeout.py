@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from orders.models import Order, OrderStatusLog
 from orders.notifier import notify_order_update
+from orders.services import refund_to_customer
 from orders.state_machine import IllegalTransitionError, transition
 
 
@@ -18,8 +19,6 @@ class Command(BaseCommand):
     help = '扫描超时未接单的 PENDING 订单并自动取消退款'
 
     def handle(self, *args, **options):
-        from orders.views import _refund_to_customer  # 延迟导入
-
         expired = Order.objects.filter(
             status=Order.Status.PENDING,
             auto_cancel_at__lte=timezone.now(),
@@ -29,7 +28,7 @@ class Command(BaseCommand):
 
         for order in expired:
             def side_effect(o):
-                _refund_to_customer(o, reason='超时未接单自动退款')
+                refund_to_customer(o, reason='超时未接单自动退款')
                 o.cancel_reason = '超时未接单自动取消'
 
             try:

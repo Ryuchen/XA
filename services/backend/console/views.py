@@ -4,7 +4,6 @@ from django.db import transaction
 from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from datetime import timedelta
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +15,8 @@ from banners.models import Banner
 from chat.models import ChatMessage, ChatSession
 from chat.notifier import notify_chat_message, notify_chat_session_update
 from club_accounts.models import ClubAccount, LegacyAccountMap
+from console.ban_utils import active_ban_for, apply_ban, lift_ban
+from console.models import AccountBan, AdminAuditLog, AdminMembership, AdminRole
 from club_accounts.services import (
     get_or_create_account_for_legacy_user,
     link_legacy_relations,
@@ -38,12 +39,18 @@ from orders.settlement import (
     build_provider_shares,
     compute_split,
 )
-from wallet.services import WalletAddressingError, get_wallet
 from orders.state_machine import IllegalTransitionError, log_only, transition
-from orders.views import (
-    PENDING_TIMEOUT_MINUTES,
-    _push_message_safe,
-    _schedule_auto_cancel,
+# 结算 / 派单副作用统一走 orders.services（领域服务层）。
+# 后台曾经直接 import orders.views 的私有函数：一个 app 的视图层反向依赖
+# 另一个 app 的视图层，既绕不开循环导入的风险，也让「顾客端改个视图把后台改挂」
+# 成为常态。
+from orders.services import (
+    mark_escort_busy,
+    pending_timeout_deadline,
+    push_message_safe as _push_message_safe,
+    refresh_escort_status,
+    schedule_auto_cancel as _schedule_auto_cancel,
+    settle_order,
 )
 from orders.notifier import notify_order_update
 from orders.kook_dispatch import enqueue_kook_dispatch
@@ -71,6 +78,7 @@ from wallet.models import (
     get_platform_wallet,
     get_withdraw_tax_rate,
 )
+from wallet.services import WalletAddressingError, get_wallet
 from common.media import build_media_url
 
 from .mixins import EnvelopeViewSetMixin
@@ -225,44 +233,8 @@ def _resolve_report_order_share(report):
     return None
 
 
-def _require_order_evidence(order):
-    """结算前凭证校验：每个参与结算的陪玩都必须有入队图 + 结单图。
-
-    顾客端与后台是同一个「把钱打给陪玩」的动作，凭证要求必须一致，
-    否则后台就成了绕过风控的后门，报单审核退化为事后追认。
-
-    仅当 ``REQUIRE_ORDER_EVIDENCE_IMAGES`` 开启时生效。
-
-    Raises:
-        SettlementError: 任一陪玩凭证缺失；调用方事务整体回滚。
-    """
-    if not getattr(settings, 'REQUIRE_ORDER_EVIDENCE_IMAGES', False):
-        return
-
-    provider_rows = list(order.providers.all())
-    if provider_rows:
-        provider_ids = [row.provider_id for row in provider_rows if row.provider_id]
-    elif order.provider_id:
-        provider_ids = [order.provider_id]
-    else:
-        provider_ids = []
-    if not provider_ids:
-        return
-
-    reports = {
-        report.provider_id: report
-        for report in ProviderReport.objects.filter(
-            order=order, provider_id__in=provider_ids,
-        )
-    }
-    for provider_id in provider_ids:
-        report = reports.get(provider_id)
-        if report is None:
-            raise SettlementError(f'陪玩 #{provider_id} 缺少服务报单凭证，无法结算')
-        if not report.entry_image:
-            raise SettlementError(f'陪玩 #{provider_id} 缺少入队截图，无法结算')
-        if not report.completion_image:
-            raise SettlementError(f'陪玩 #{provider_id} 缺少结单截图，无法结算')
+# 结算前的凭证闸门实现已移至 orders.services.require_order_evidence，
+# 并由 settle_order 内部统一调用，本模块不再直接引用。
 
 
 # ---------------- 仪表盘 ----------------
@@ -706,7 +678,12 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             o.provider = provider
             o.provider_account = provider_account
             o.provider_name_snapshot = profile.display_name or provider.nickname or provider.username
-            EscortProfile.objects.filter(user=provider).update(status=EscortProfile.Status.BUSY)
+            mark_escort_busy(
+                provider_ids=[provider.id],
+                account_ids=[provider_account.pk],
+            )
+            # 本入口已在 pre_check 中限定为单陪订单，独一打手的结算基数
+            # 就是订单全额；双陪必须走快捷派单，由 build_provider_shares 均分。
             OrderProvider.objects.get_or_create(
                 order=o,
                 provider=provider,
@@ -716,6 +693,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     'settlement_base': o.amount,
                     'commission_type': OrderProvider.CommissionType.PERCENT,
                     'commission_rate': o.commission_rate,
+                    'commission_fixed': 0,
                     'provider_income': o.provider_income,
                 },
             )
@@ -915,10 +893,12 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     old_row.save(update_fields=[
                         'provider_income', 'settlement_base', 'settled_at',
                     ])
-                    EscortProfile.objects.filter(
-                        account_id=old_row.provider_account_id,
-                    ).update(
-                        status=EscortProfile.Status.AVAILABLE,
+                    # 旧打手退出本单：按他手上是否还有别的单来定状态，
+                    # 不能一律置空闲（他可能同时在跑另一笔订单）。
+                    refresh_escort_status(
+                        account_ids=[old_row.provider_account_id],
+                        provider_ids=[old_row.provider_id],
+                        exclude_order_ids=[locked_order.pk],
                     )
 
                     # 新打手行：承接剩余份额与剩余基数，订单完成时结算。
@@ -945,8 +925,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         new_row.save(update_fields=[
                             'provider_income', 'settlement_base', 'settled_at',
                         ])
-                    EscortProfile.objects.filter(user=new_provider).update(
-                        status=EscortProfile.Status.BUSY,
+                    mark_escort_busy(
+                        provider_ids=[new_provider.id],
+                        account_ids=[cmd['new_provider_account'].pk],
                     )
                     last_new_provider = new_provider
                     last_new_provider_account = cmd['new_provider_account']
@@ -1244,7 +1225,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 status=Order.Status.PENDING,
                 escort_mode=escort_mode,
                 payment_status=Order.PaymentStatus.PAID,
-                auto_cancel_at=timezone.now() + timedelta(minutes=PENDING_TIMEOUT_MINUTES),
+                auto_cancel_at=pending_timeout_deadline(),
                 original_amount=pricing.original_amount,
                 boss_discount=pricing.boss_discount,
                 promo_discount=pricing.promo_discount,
@@ -1296,9 +1277,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 o.provider = provider
                 o.provider_account = provider_account
                 o.provider_name_snapshot = provider.nickname or provider.username
-                EscortProfile.objects.filter(user_id__in=all_provider_ids).update(
-                    status=EscortProfile.Status.BUSY,
-                )
+                mark_escort_busy(provider_ids=all_provider_ids)
 
             try:
                 order = transition(
@@ -1380,110 +1359,22 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     def complete(self, request, pk=None):
         """客服后台完成结算：服务中 → 已完成。
 
-        逐个给打手钱包入账（按 OrderProvider 各自实得），推荐人分佣与平台留存按单份入账，
-        并恢复相关陪玩状态、累加完成计数。无 OrderProvider 明细时回落主打手单份口径。
-
-        后台与顾客端是同一个「把钱打给陪玩」的动作，因此共用同一套凭证闸门
-        （``REQUIRE_ORDER_EVIDENCE_IMAGES``），否则后台就成了绕过风控的后门。
+        实际入账逻辑全部委托给 ``orders.services.settle_order``：逐个给打手钱包
+        入账（按 OrderProvider 各自实得），推荐人分佣与平台留存按单份入账，
+        并刷新陪玩状态、累加完成计数；无 OrderProvider 明细时回落主打手单份口径。
+        与陪玩端「完成订单」共用同一实现，两条入口的账必然一致。
         """
         order = self.get_object()
 
         def side_effect(o):
-            # 出账前先过凭证闸门：任一参与结算的陪玩缺凭证即整体回滚。
-            _require_order_evidence(o)
-
-            provider_rows = list(o.providers.select_for_update().all())
-            settled_provider_ids = []
-            if provider_rows:
-                for row in provider_rows:
-                    if not row.provider_id or row.settled_at:
-                        continue
-                    # 抽成率 100% 时 provider_income=0 是合法配置：
-                    # 不入账、不落 0 元流水，但仍要打 settled_at 结束本行。
-                    if row.provider_income > 0:
-                        p_wallet = get_wallet(
-                            user_id=row.provider_id,
-                            account_id=row.provider_account_id,
-                            for_update=True,
-                        )
-                        before = p_wallet.balance
-                        p_wallet.balance += row.provider_income
-                        p_wallet.save(update_fields=['balance'])
-                        Transaction.objects.create(
-                            wallet=p_wallet,
-                            order=o,
-                            amount=row.provider_income,
-                            tx_type=Transaction.TxType.INCOME,
-                            balance_before=before,
-                            balance_after=p_wallet.balance,
-                            remark=f'订单收入：{o.order_no}',
-                        )
-                    row.settled_at = timezone.now()
-                    row.save(update_fields=['settled_at'])
-                    settled_provider_ids.append(row.provider_id)
-            elif o.provider_id:
-                # 兼容旧订单：无打手明细时按订单级 provider_income 给主打手入账。
-                # 为 0 就是 0（抽成率 100% 是合法配置），绝不回落成 o.amount ——
-                # 那会让陪玩拿走全款、平台留存还照发，凭空造钱。
-                income = o.provider_income or 0
-                if income > 0:
-                    p_wallet = get_wallet(
-                        user_id=o.provider_id,
-                        account_id=o.provider_account_id,
-                        for_update=True,
-                    )
-                    before = p_wallet.balance
-                    p_wallet.balance += income
-                    p_wallet.save(update_fields=['balance'])
-                    Transaction.objects.create(
-                        wallet=p_wallet,
-                        order=o,
-                        amount=income,
-                        tx_type=Transaction.TxType.INCOME,
-                        balance_before=before,
-                        balance_after=p_wallet.balance,
-                        remark=f'订单收入：{o.order_no}',
-                    )
-                settled_provider_ids.append(o.provider_id)
-
-            # 推荐人分佣入账（单份）
-            if o.inviter_id and o.inviter_commission:
-                inv_wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=o.inviter_id)
-                inv_before = inv_wallet.balance
-                inv_wallet.balance += o.inviter_commission
-                inv_wallet.save(update_fields=['balance'])
-                Transaction.objects.create(
-                    wallet=inv_wallet,
-                    order=o,
-                    amount=o.inviter_commission,
-                    tx_type=Transaction.TxType.INCOME,
-                    balance_before=inv_before,
-                    balance_after=inv_wallet.balance,
-                    remark=f'推荐分佣：{o.order_no}',
-                )
-            # 平台留存入账（单份）
-            if o.shop_income:
-                platform_wallet = get_platform_wallet(for_update=True)
-                shop_before = platform_wallet.balance
-                platform_wallet.balance += o.shop_income
-                platform_wallet.save(update_fields=['balance'])
-                Transaction.objects.create(
-                    wallet=platform_wallet,
-                    order=o,
-                    amount=o.shop_income,
-                    tx_type=Transaction.TxType.SHOP_INCOME,
-                    balance_before=shop_before,
-                    balance_after=platform_wallet.balance,
-                    remark=f'平台收入：{o.order_no}',
-                )
-            # 恢复相关陪玩状态并累加完成计数
-            if settled_provider_ids:
-                EscortProfile.objects.filter(user_id__in=settled_provider_ids).update(
-                    status=EscortProfile.Status.AVAILABLE,
-                )
-                for profile in EscortProfile.objects.filter(user_id__in=settled_provider_ids):
-                    profile.completed_order_count = (profile.completed_order_count or 0) + 1
-                    profile.save(update_fields=['completed_order_count'])
+            # 结算收口到 orders.services.settle_order：凭证闸门、守恒闸门、
+            # 打手/推荐人/平台三方入账、完成计数与状态刷新全在里面，
+            # 与顾客端 CompleteOrderView 走的是同一份实现。
+            settle_order(
+                o,
+                operator=request.legacy_user,
+                operator_account=request.account,
+            )
 
         try:
             order = transition(
@@ -1497,8 +1388,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许完成'})
         except SettlementError as exc:
-            # 凭证缺失 / 分账超额已阻断，事务整体回滚，订单保持原状待人工核对
-            return Response({'code': 400, 'msg': str(exc)})
+            # 分账超额已阻断，事务整体回滚，订单保持原状待人工核对
+            return Response({'code': 400, 'msg': f'{exc}，请先核对该单打手分账明细'})
         except WalletAddressingError as exc:
             return Response({'code': 400, 'msg': f'钱包数据异常：{exc}'})
         notify_order_update(order)
@@ -1581,10 +1472,18 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 order.refunded_at = timezone.now()
             order.cancel_reason = reason
             provider_ids = list(order.providers.values_list('provider_id', flat=True))
+            account_ids = list(
+                order.providers.values_list('provider_account_id', flat=True)
+            )
             if order.provider_id:
                 provider_ids.append(order.provider_id)
-            EscortProfile.objects.filter(user_id__in=provider_ids).update(
-                status=EscortProfile.Status.AVAILABLE,
+            if order.provider_account_id:
+                account_ids.append(order.provider_account_id)
+            # 按剩余在跑的单重算状态，避免把还在服务其它订单的陪玩标成空闲。
+            refresh_escort_status(
+                provider_ids=provider_ids,
+                account_ids=account_ids,
+                exclude_order_ids=[order.pk],
             )
             from coupons.models import UserCoupon
             UserCoupon.objects.filter(

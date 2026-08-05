@@ -15,7 +15,9 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
 
     幂等：仅当订单仍处于 PENDING 状态时才执行取消。
     """
-    from .views import _refund_to_customer  # 延迟导入避免循环依赖
+    # 退款实现已收口到领域服务层，异步任务不再需要 import 视图模块
+    # （那会把 DRF/序列化器这一整条依赖拖进 worker 进程）。
+    from .services import refund_to_customer
     from .state_machine import IllegalTransitionError, transition
     from .notifier import notify_order_update
 
@@ -34,7 +36,7 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
         raise self.retry(countdown=max(1, int(delta)))
 
     def side_effect(order):
-        _refund_to_customer(order, reason='超时未接单自动退款')
+        refund_to_customer(order, reason='超时未接单自动退款')
         order.cancel_reason = '超时未接单自动取消'
 
     try:
