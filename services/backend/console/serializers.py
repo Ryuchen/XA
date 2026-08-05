@@ -74,30 +74,40 @@ class AdminUserSerializer(serializers.ModelSerializer):
         wallet = getattr(obj, 'wallet', None)
         return wallet.balance if wallet else 0
 
-    # 封禁语义开关：只允许走 /users/{id}/ban|unban，不许裸 PATCH。
-    BAN_MANAGED_FIELDS = ('is_active', 'can_login', 'can_view')
+    # 封禁流程真正翻转的开关，与 console.ban_utils.BAN_LOCKED_FIELDS 同源。
+    # 两处必须一致：一边锁 A 一边拦 B，报错文案就会开始说谎。
+    BAN_MANAGED_FIELDS = ('is_active', 'can_login')
+
+    # 拦截但**不由封禁流程管理**的开关。can_view 目前全仓没有鉴权消费点（死开关），
+    # 封禁刻意不动它；但也不能从「编辑用户」放开——一旦将来它被接成访问闸门，
+    # 裸 PATCH 就是一条现成的无审计后门。拦住成本为零，放开的代价要等出事才知道。
+    LOCKED_SWITCH_REASONS = {
+        'is_active': '该开关由封禁流程管理，请使用封禁/解封接口',
+        'can_login': '该开关由封禁流程管理，请使用封禁/解封接口',
+        'can_view': '该开关不开放在用户编辑中修改，如需调整请提工单',
+    }
 
     def validate(self, attrs):
         """拦截绕过封禁流程的裸 PATCH。
 
-        这三个开关一旦能被普通「编辑用户」接口改写，封禁就有了一条没有原因、
+        这几个开关一旦能被普通「编辑用户」接口改写，封禁就有了一条没有原因、
         没有操作人、没有到期时间、不落 AccountBan 的后门通道——审计表会显示
         「该账户从未被封禁」，而人确实进不来。
 
         只在**值真的发生变化**时拒绝：后台表单是整体提交的，每次保存都会带上
-        这三个字段的当前值，若一律拒绝会导致改个昵称都保存失败。
+        这些字段的当前值，若一律拒绝会导致改个昵称都保存失败。
         """
         instance = self.instance
         if instance is None:
             return attrs
 
         attempted = [
-            field for field in self.BAN_MANAGED_FIELDS
+            field for field in self.LOCKED_SWITCH_REASONS
             if field in attrs and bool(attrs[field]) != bool(getattr(instance, field))
         ]
         if attempted:
             raise serializers.ValidationError({
-                field: '该开关由封禁流程管理，请使用封禁/解封接口' for field in attempted
+                field: self.LOCKED_SWITCH_REASONS[field] for field in attempted
             })
         return attrs
 

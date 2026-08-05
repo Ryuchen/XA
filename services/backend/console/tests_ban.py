@@ -11,18 +11,15 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
 from console.ban_utils import active_ban_for, apply_ban, lift_ban, lift_expired_bans
-from console.models import AccountBan, AdminAuditLog
+from console.models import AccountBan
 from console.serializers import BanRecordSerializer
 from orders.models import Order, OrderProvider
 from orders.services import active_orders_for, count_active_orders
 from orders.tests.factories import (
-    make_console_user,
     make_order,
     make_provider,
-    make_superuser,
     make_user,
 )
 

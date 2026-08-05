@@ -16,8 +16,11 @@ from rest_framework.test import APITestCase
 
 from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
+from console.ban_utils import BAN_LOCKED_FIELDS
 from console.models import AccountBan, AdminAuditLog
+from console.serializers import AdminUserSerializer
 from orders.models import Order, OrderProvider
+from users.models import EscortProfile
 from orders.tests.factories import (
     make_console_user,
     make_order,
@@ -206,53 +209,80 @@ class EscortBanApiTest(APITestCase):
         self.assertEqual(AdminAuditLog.objects.count(), audit_before + 1)
 
     # --- 8. 未绑定业务账户 ------------------------------------------------
-    #
-    # 这两条必须 patch get_object，不能"把 account 置空再发请求"。原因：
-    # 测试环境开着 LEGACY_FORCE_AUTH_COMPAT，每次鉴权都会调
-    # migrate_legacy_test_fixtures() → link_legacy_relations()，后者会把所有
-    # account 为空的行按 legacy user 重新回填。也就是说置空动作在请求真正进到
-    # 视图之前就被"治好"了，测出来永远是 200，这条分支根本碰不到。
-    #
-    # 而生产环境 LEGACY_FORCE_AUTH_COMPAT=False，EscortProfile.account 又确实是
-    # null=True，孤儿档案是真实可达状态——所以守卫必须有，只是没法用自然路径构造。
 
     def _orphan_profile(self):
+        """造一个 account 为空的陪玩档案，且能扛住测试环境的自动回填。
+
+        直接「置空再发请求」是行不通的，但**不是**因为没法构造，而是因为漏了
+        一步。测试环境开着 ``LEGACY_FORCE_AUTH_COMPAT``，每次鉴权都会走
+        ``migrate_legacy_test_fixtures()``，它会把 account 为空的行按 legacy
+        user 回填回去。
+
+        绕开的关键在那个函数的遍历范围（``club_accounts/services.py``）::
+
+            mapped_ids = LegacyAccountMap.objects.values_list('legacy_user_id', flat=True)
+            for legacy_user in get_user_model().objects.exclude(id__in=mapped_ids):
+                ...
+                link_legacy_relations(legacy_user, account)
+
+        它**只遍历还没进 LegacyAccountMap 的 user**。所以先给 orphan 建好映射，
+        它就被 ``exclude`` 掉了，回填循环再也够不到它名下的 EscortProfile。
+
+        （鉴权里另有一次 ``link_legacy_relations(request.user, account)``，但那次
+        的过滤条件是 ``legacy_field: legacy_user``，打的是发请求的 admin 自己，
+        跟 orphan 无关。）
+
+        剩下的就是用 ``queryset.update()`` 而不是 ``instance.save()`` 置空——
+        前者直接写 DB 行，后者只改内存对象、DB 里那行仍是回填后的值。
+
+        这样构造出来的是**真实的 DB 状态**，请求照常走完整路由：URL 里的 pk、
+        queryset 过滤、对象级权限、get_object_or_404 一个都没被短路。生产环境
+        ``LEGACY_FORCE_AUTH_COMPAT=False`` 且该字段 ``null=True``，孤儿档案本就
+        是可达状态，所以这条守卫是真需要，也确实能被真实请求走到。
+        """
         orphan = make_provider()
+        # 关键第一步：先建映射，把 orphan 挡在回填循环的遍历范围之外。
+        get_or_create_account_for_legacy_user(orphan)
+
         profile = orphan.escort_profile
-        profile.account = None
+        # 关键第二步：绕过 save()，直接改 DB 行。
+        EscortProfile.objects.filter(pk=profile.pk).update(account=None)
+
+        profile.refresh_from_db()
+        # 构造不成立就当场炸，别退化成一条测了个寂寞的绿灯。
+        assert profile.account_id is None, (
+            '孤儿档案构造失败：account 仍被回填，'
+            '请检查 migrate_legacy_test_fixtures 的 exclude 逻辑是否变了'
+        )
         return profile
 
     def test_escort_without_account_400_not_500(self):
-        from unittest.mock import patch
-
-        from console.views import EscortViewSet
-
         profile = self._orphan_profile()
         self.client.force_authenticate(self.admin)
 
-        with patch.object(EscortViewSet, 'get_object', return_value=profile):
-            res = self.client.post(
-                f'/api/admin/escorts/{profile.id}/ban/',
-                {'reason': '无账户'}, format='json',
-            )
+        res = self.client.post(
+            f'/api/admin/escorts/{profile.id}/ban/',
+            {'reason': '无账户'}, format='json',
+        )
 
         self.assertEqual(res.status_code, 400)
         self.assertIn('业务账户', res.data['msg'])
+        # 请求跑完 account 仍为空 —— 证明 400 是真守卫拦的，
+        # 不是「回填后照常封禁」碰巧也返回了 400。
+        profile.refresh_from_db()
+        self.assertIsNone(profile.account_id)
 
     def test_unban_escort_without_account_400(self):
-        from unittest.mock import patch
-
-        from console.views import EscortViewSet
-
         profile = self._orphan_profile()
         self.client.force_authenticate(self.admin)
 
-        with patch.object(EscortViewSet, 'get_object', return_value=profile):
-            res = self.client.post(
-                f'/api/admin/escorts/{profile.id}/unban/', {}, format='json',
-            )
+        res = self.client.post(
+            f'/api/admin/escorts/{profile.id}/unban/', {}, format='json',
+        )
 
         self.assertEqual(res.status_code, 400)
+        profile.refresh_from_db()
+        self.assertIsNone(profile.account_id)
 
 
 class BossBanApiTest(APITestCase):
@@ -553,3 +583,29 @@ class RawSwitchPatchBlockedTest(APITestCase):
         self.account.refresh_from_db()
         self.assertFalse(self.account.can_login)
         self.assertFalse(self.account.is_active)
+
+    def test_can_view_rejection_does_not_claim_ban_ownership(self):
+        """can_view 不归封禁管，报错就不能说「由封禁流程管理」。
+
+        文案说谎的代价是客服照着提示去点封禁/解封，发现根本改不了 can_view，
+        然后回头找研发——一次误导换一次工单，比拦截本身贵。
+        """
+        res = self.client.patch(self.url, {'can_view': False}, format='json')
+        self.assertEqual(res.status_code, 400)
+        # console_exception_handler 把 DRF 错误包成 {code,msg,errors}。
+        self.assertNotIn('封禁', str(res.data['errors']['can_view'][0]))
+        self.assertNotIn('封禁', res.data['msg'])
+
+    def test_ban_managed_fields_stay_in_sync_with_ban_utils(self):
+        """序列化器拦的「封禁开关」必须与 ban_utils 真正翻的那组完全一致。
+
+        这两处一旦漂移（一边锁 A、一边拦 A+B），要么放开了后门，要么报错文案
+        开始说谎。用例钉死同源，改一边就会红。
+        """
+        self.assertEqual(
+            tuple(AdminUserSerializer.BAN_MANAGED_FIELDS),
+            tuple(BAN_LOCKED_FIELDS),
+        )
+        # 封禁那组必须全部落在「禁止裸 PATCH」名单里，不能有漏网的。
+        for field in BAN_LOCKED_FIELDS:
+            self.assertIn(field, AdminUserSerializer.LOCKED_SWITCH_REASONS)
