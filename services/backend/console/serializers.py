@@ -74,6 +74,33 @@ class AdminUserSerializer(serializers.ModelSerializer):
         wallet = getattr(obj, 'wallet', None)
         return wallet.balance if wallet else 0
 
+    # 封禁语义开关：只允许走 /users/{id}/ban|unban，不许裸 PATCH。
+    BAN_MANAGED_FIELDS = ('is_active', 'can_login', 'can_view')
+
+    def validate(self, attrs):
+        """拦截绕过封禁流程的裸 PATCH。
+
+        这三个开关一旦能被普通「编辑用户」接口改写，封禁就有了一条没有原因、
+        没有操作人、没有到期时间、不落 AccountBan 的后门通道——审计表会显示
+        「该账户从未被封禁」，而人确实进不来。
+
+        只在**值真的发生变化**时拒绝：后台表单是整体提交的，每次保存都会带上
+        这三个字段的当前值，若一律拒绝会导致改个昵称都保存失败。
+        """
+        instance = self.instance
+        if instance is None:
+            return attrs
+
+        attempted = [
+            field for field in self.BAN_MANAGED_FIELDS
+            if field in attrs and bool(attrs[field]) != bool(getattr(instance, field))
+        ]
+        if attempted:
+            raise serializers.ValidationError({
+                field: '该开关由封禁流程管理，请使用封禁/解封接口' for field in attempted
+            })
+        return attrs
+
     def update(self, instance, validated_data):
         instance = super().update(instance, validated_data)
         mapping = getattr(instance, 'legacy_mapping', None)
@@ -963,7 +990,9 @@ class AdminAuditLogSerializer(serializers.ModelSerializer):
 # ---------------- 封禁审计 ----------------
 class BanRecordSerializer(serializers.ModelSerializer):
     """封禁记录只读序列化：供审计列表/详情查看。"""
-    account_id = serializers.IntegerField(source='account_id', read_only=True)
+    # 不要写 source='account_id'：DRF 在字段 bind 阶段硬断言「source 与字段名相同」
+    # 属于冗余并直接抛 AssertionError。FK 的隐式 account_id 属性本来就能直接取。
+    account_id = serializers.IntegerField(read_only=True)
     account_nickname = serializers.CharField(
         source='account.nickname', read_only=True, default='',
     )

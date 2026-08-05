@@ -354,11 +354,18 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = False  # 测试时设为 True 即可同步执行
 
-# Celery beat 定时计划：每分钟兜底扫描超时未接单订单
+# Celery beat 定时计划
 CELERY_BEAT_SCHEDULE = {
+    # 每分钟兜底扫描超时未接单订单
     'check-pending-timeouts': {
         'task': 'orders.tasks.check_pending_timeouts',
         'schedule': 60.0,
+    },
+    # 每 5 分钟扫描到期封禁并自动解封。封禁到期属于「多关几分钟没人受伤、
+    # 但一直关着就是事故」的场景，5 分钟粒度足够，也不必每分钟空扫一次。
+    'lift-expired-bans': {
+        'task': 'console.tasks.lift_expired_bans_task',
+        'schedule': 300.0,
     },
 }
 

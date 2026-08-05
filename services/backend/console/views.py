@@ -44,6 +44,8 @@ from orders.state_machine import IllegalTransitionError, log_only, transition
 # 另一个 app 的视图层，既绕不开循环导入的风险，也让「顾客端改个视图把后台改挂」
 # 成为常态。
 from orders.services import (
+    ACTIVE_ORDER_STATUSES,
+    active_orders_for,
     mark_escort_busy,
     pending_timeout_deadline,
     push_message_safe as _push_message_safe,
@@ -80,11 +82,13 @@ from wallet.models import (
 from wallet.services import WalletAddressingError, get_wallet
 from common.media import build_media_url
 
+from .ban_utils import active_ban_for, apply_ban, lift_ban
 from .mixins import EnvelopeViewSetMixin
-from .models import AdminAuditLog, AdminMembership, AdminRole
+from .models import AccountBan, AdminAuditLog, AdminMembership, AdminRole
 from .permissions import (
     PERMISSION_GROUPS,
     IsConsoleUser,
+    get_account_permissions,
     get_user_permissions,
 )
 from .serializers import (
@@ -124,6 +128,8 @@ from .serializers import (
     AdminUserSerializer,
     AdminWalletSerializer,
     AdminWithdrawSerializer,
+    BanActionSerializer,
+    BanRecordSerializer,
 )
 
 User = get_user_model()
@@ -392,15 +398,178 @@ class PlayerDashboardView(APIView):
         }
 
 
+# ---------------- 封禁 / 解封（老板与陪玩共用） ----------------
+# 在途订单数超过这个上限就不再逐条列号，避免把几百个单号糊到前端提示框里。
+_BAN_BLOCKING_ORDER_SAMPLE = 20
+
+
+def _actor_has_perm(request, code):
+    """判断当前请求者是否持有某权限点。
+
+    与 ``HasConsolePerm`` 同源：超管在 legacy 兼容开关下直接放行，
+    其余走 ``get_account_permissions``。用于 action 内部的**二次**细粒度判定
+    （例如 force 强制封禁需要比进入 action 更高的权限）。
+    """
+    if (
+        getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
+        and getattr(request.user, 'is_superuser', False)
+    ):
+        return True
+    account = getattr(request, 'account', None)
+    if account is None:
+        return False
+    return code in get_account_permissions(account)
+
+
+def _ban_blocking_orders(account):
+    """返回阻断封禁的在途订单（已接单 + 服务中）。
+
+    **按账户实际承担的角色双向判定**：
+
+    - 陪玩侧口径完全复用 ``orders.services.active_orders_for``，双陪订单的
+      ``OrderProvider`` 次陪维度也在内，不在这里重写 Q 条件；
+    - 老板（顾客）侧补 ``customer_account``。封禁拦截的目的是「别把在途订单
+      甩在半空」，而顾客被封同样会让正在服务的那一单没人付尾款、没人确认完成。
+      只查陪玩侧的话，UserViewSet 上这条 409 分支永远不会命中——看起来做了
+      保护，实际老板照封不误，属于最坏的一种「假安全」。
+
+    Returns:
+        list[tuple[int, str]]: ``(订单 ID, 订单号)``，最多 ``_BAN_BLOCKING_ORDER_SAMPLE`` 条。
+    """
+    as_provider = active_orders_for(account).values_list('id', flat=True)
+    as_customer = Order.objects.filter(
+        customer_account=account, status__in=ACTIVE_ORDER_STATUSES,
+    ).values_list('id', flat=True)
+
+    blocking_ids = set(as_provider) | set(as_customer)
+    if not blocking_ids:
+        return []
+    return list(
+        Order.objects.filter(id__in=blocking_ids)
+        .order_by('-created_at')
+        .values_list('id', 'order_no')[:_BAN_BLOCKING_ORDER_SAMPLE]
+    )
+
+
+def _do_ban(request, account):
+    """执行封禁的公共流程，返回 DRF ``Response``。
+
+    规则：
+      - 原因必填，空则 400；
+      - 目标仍有在途订单时**硬阻断 409**，并回传在途订单号供运营处置；
+      - 带 ``force=true`` 可跳过在途拦截，但需额外持有 ``user:ban_force``，
+        否则 403。注意「有没有 force 权限」必须在「有没有在途订单」之前判，
+        否则无权限者能靠观察响应差异探出目标是否在接单；
+      - 重复封禁不报错：apply_ban 会收口旧记录并继承封禁前快照。
+
+    真实 HTTP 状态码而非仅 envelope code：AdminAuditLog 中间件只对
+    ``status_code < 400`` 落审计，被拦截的封禁本就没发生，不该留下成功流水。
+    """
+    payload = BanActionSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+
+    reason = (payload.validated_data.get('reason') or '').strip()
+    if not reason:
+        return Response({'code': 400, 'msg': '封禁原因必填'}, status=400)
+    expires_at = payload.validated_data.get('expires_at')
+    if expires_at is not None and expires_at <= timezone.now():
+        return Response({'code': 400, 'msg': '自动解封时间必须晚于当前时间'}, status=400)
+
+    force = _truthy(request.data.get('force', False))
+    if force and not _actor_has_perm(request, 'user:ban_force'):
+        return Response(
+            {'code': 403, 'msg': '无强制封禁权限（user:ban_force）'}, status=403,
+        )
+
+    if not force:
+        blocking = _ban_blocking_orders(account)
+        if blocking:
+            return Response({
+                'code': 409,
+                'msg': f'该账户还有 {len(blocking)} 笔在途订单，请先处理完再封禁',
+                'data': {
+                    'active_order_ids': [row[0] for row in blocking],
+                    'active_order_nos': [row[1] for row in blocking],
+                },
+            }, status=409)
+
+    try:
+        ban = apply_ban(
+            account,
+            reason=reason,
+            operator=getattr(request, 'legacy_user', None),
+            operator_account=getattr(request, 'account', None),
+            expires_at=expires_at,
+        )
+    except ValueError as exc:
+        return Response({'code': 400, 'msg': str(exc)}, status=400)
+
+    return Response({'code': 0, 'data': BanRecordSerializer(ban).data})
+
+
+def _do_unban(request, account):
+    """执行解封的公共流程，返回 DRF ``Response``。
+
+    幂等：账户当前没有生效封禁时返回成功（code 0），不报错——运营重复点两次
+    「解封」不该看到红色报错，且并发下第二次请求本就无事可做。
+    """
+    payload = BanActionSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    reason = (payload.validated_data.get('reason') or '').strip()
+
+    ban = active_ban_for(account)
+    if ban is None:
+        return Response({'code': 0, 'data': None, 'msg': '该账户当前没有生效的封禁'})
+
+    ban = lift_ban(
+        ban,
+        lifted_by=getattr(request, 'legacy_user', None),
+        lifted_by_account=getattr(request, 'account', None),
+        reason=reason,
+    )
+    return Response({'code': 0, 'data': BanRecordSerializer(ban).data})
+
+
+class BanViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
+    """封禁审计列表：只读，供后台追溯谁在何时因何封了谁。
+
+    写入一律走 users/escorts 的 ban/unban action，这里不开任何写口子，
+    否则「审计表」自己就能被改，审计也就没了意义。
+    """
+
+    serializer_class = BanRecordSerializer
+    default_perm = 'user:view'
+
+    def get_queryset(self):
+        qs = AccountBan.objects.select_related(
+            'account', 'operator', 'operator_account',
+            'lifted_by', 'lifted_by_account',
+        ).order_by('-banned_at')
+        account_id = self.request.query_params.get('account_id')
+        if account_id:
+            qs = qs.filter(account_id=account_id)
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter.upper())
+        return qs
+
+
 # ---------------- 用户 ----------------
 class UserViewSet(EnvelopeViewSetMixin, ModelViewSet):
     serializer_class = AdminUserSerializer
-    http_method_names = ['get', 'patch', 'put', 'head', 'options']
+    # post 仅为 ban/unban 两个 action 开放；本 ViewSet 不提供 create。
+    http_method_names = ['get', 'patch', 'put', 'post', 'head', 'options']
     default_perm = 'user:view'
     required_perms = {
         'update': 'user:edit',
         'partial_update': 'user:edit',
+        'ban': 'user:ban',
+        'unban': 'user:ban',
     }
+
+    def create(self, request, *args, **kwargs):
+        """显式关闭建号入口：老板账户由小程序注册产生，后台不许凭空造。"""
+        return Response({'code': 405, 'msg': '不支持在后台创建老板账户'}, status=405)
 
     def get_queryset(self):
         # 老板信息管理：仅业务账户中的老板，不含陪玩和后台人员。
@@ -424,6 +593,16 @@ class UserViewSet(EnvelopeViewSetMixin, ModelViewSet):
             qs = qs.filter(is_active=_truthy(is_active))
         return qs
 
+    @action(detail=True, methods=['post'])
+    def ban(self, request, pk=None):
+        """封禁老板账户：必须给原因，落 AccountBan 审计记录。"""
+        return _do_ban(request, self.get_object())
+
+    @action(detail=True, methods=['post'])
+    def unban(self, request, pk=None):
+        """解封老板账户：幂等，按封禁前快照回滚开关。"""
+        return _do_unban(request, self.get_object())
+
 
 # ---------------- 陪玩 ----------------
 class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
@@ -436,7 +615,30 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
         'partial_update': 'escort:edit',
         'verify': 'escort:verify',
         'dispose': 'escort:dispose',
+        # 封禁权限点跨老板/陪玩共用一套，运营心智里「封人」就是一件事。
+        'ban': 'user:ban',
+        'unban': 'user:ban',
     }
+
+    @action(detail=True, methods=['post'])
+    def ban(self, request, pk=None):
+        """封禁陪玩：作用于其绑定的业务账户。"""
+        profile = self.get_object()
+        if profile.account_id is None:
+            return Response(
+                {'code': 400, 'msg': '该陪玩尚未绑定业务账户，无法封禁'}, status=400,
+            )
+        return _do_ban(request, profile.account)
+
+    @action(detail=True, methods=['post'])
+    def unban(self, request, pk=None):
+        """解封陪玩：幂等，按封禁前快照回滚开关。"""
+        profile = self.get_object()
+        if profile.account_id is None:
+            return Response(
+                {'code': 400, 'msg': '该陪玩尚未绑定业务账户，无法解封'}, status=400,
+            )
+        return _do_unban(request, profile.account)
 
     def get_queryset(self):
         qs = EscortProfile.objects.select_related(

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 
 class AdminRole(models.Model):
@@ -102,10 +103,14 @@ class AdminAuditLog(models.Model):
 
 
 class AccountBan(models.Model):
-    """封禁记录：替代直接 PATCH 三个布尔开关（is_active/can_login/can_view）的无语义封禁。
+    """封禁记录：替代直接 PATCH 布尔开关（is_active/can_login/can_view）的无语义封禁。
 
-    - 封禁时强制记录原因与操作人，并翻转目标 ClubAccount 的开关（锁定登录与数据可见性）；
-    - 支持到期自动解封（expires_at 非空时由 beat/命令扫描回滚）；
+    - 封禁时强制记录原因与操作人，并翻转目标 ClubAccount 的 is_active/can_login；
+    - **can_view 不属于封禁语义**：它控制的是「资料是否对外可见」这类展示开关，
+      与「能不能进系统」是两码事，且当前没有任何鉴权路径消费它。把它一起翻转
+      会导致解封后无法区分「运营主动隐藏」与「封禁副作用」。字段保留，封禁不再动它；
+    - 支持到期自动解封（expires_at 非空时由 beat/命令扫描回滚，落 EXPIRED 而非 LIFTED）；
+    - 解封按 pre_ban_state 快照回滚，不无脑置 True；
     - 提供可追溯的专用封禁审计表，配合 AdminAuditLog 的 HTTP 层日志形成业务语义审计。
     """
 
@@ -175,6 +180,16 @@ class AccountBan(models.Model):
         verbose_name='业务解封人',
     )
     lift_reason = models.TextField(blank=True, default='', verbose_name='解封原因')
+    pre_ban_state = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='封禁前开关快照',
+        help_text=(
+            '封禁前 ClubAccount 相关布尔开关的取值，形如 '
+            '{"is_active": true, "can_login": false}。解封时据此回滚，'
+            '避免把「本来就被停用的账户」误恢复成正常账户。空 dict 视为全 True。'
+        ),
+    )
 
     class Meta:
         verbose_name = '封禁记录'
@@ -183,6 +198,16 @@ class AccountBan(models.Model):
         indexes = [
             models.Index(fields=['account', 'status']),
             models.Index(fields=['status', 'expires_at']),
+        ]
+        constraints = [
+            # 单账户至多一条生效封禁。应用层已在 apply_ban 里先收口旧封禁，
+            # 但并发双写只有数据库约束才拦得住，否则会出现两条 ACTIVE 记录，
+            # 解封一条后账户仍被另一条「悬空封禁」标记着。
+            models.UniqueConstraint(
+                fields=['account'],
+                condition=Q(status='ACTIVE'),
+                name='uniq_active_ban_per_account',
+            ),
         ]
 
     def __str__(self):

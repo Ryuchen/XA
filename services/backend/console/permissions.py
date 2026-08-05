@@ -35,6 +35,8 @@ PERMISSION_GROUPS = [
         'permissions': [
             ('user:view', '查看用户'),
             ('user:edit', '编辑用户'),
+            ('user:ban', '封禁/解封'),
+            ('user:ban_force', '强制封禁(跳过在途订单)'),
         ],
     },
     {

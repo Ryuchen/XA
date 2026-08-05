@@ -55,15 +55,19 @@ ACTIVE_ORDER_STATUSES = (Order.Status.GRABBED, Order.Status.IN_SERVICE)
 # 陪玩产能与状态
 # ---------------------------------------------------------------------------
 
-def count_active_orders(
+def active_orders_for(
     account=None, *, account_id=None, provider_id=None, exclude_order_ids=(),
 ):
-    """统计陪玩当前进行中的订单数（已接单 + 服务中）。
+    """返回陪玩当前进行中的订单查询集（已接单 + 服务中），已 ``distinct``。
 
     兼容 ``Order.provider_account`` 外键与 ``OrderProvider`` 中间表两种关联，
-    因此双陪订单对参与的每个打手都会计入一次。给出多个维度时取并集
+    因此双陪订单对参与的每个打手都会命中。给出多个维度时取并集
     （同一订单只算一次，靠 ``distinct``）—— 历史数据里 account 与 legacy user
     两个维度并非总是齐全，只查一边会漏。
+
+    这层单独抽出来，是因为调用方除了「有几单」还需要「是哪几单」
+    （后台封禁要把在途订单号回给运营）。两处各写一遍 Q 条件的下场是
+    双陪那半边条件迟早只在其中一处被维护。
 
     Args:
         account: ``ClubAccount`` 实例（推荐维度，位置参数兼容旧调用）。
@@ -74,7 +78,7 @@ def count_active_orders(
             否则「刚完成的这一单」会把自己算成仍在进行中。
 
     Returns:
-        int: 进行中的订单数；所有维度都为空时返回 0。
+        QuerySet[Order]: 进行中的订单；所有维度都为空时返回空查询集。
     """
     condition = Q()
     if account is not None:
@@ -87,12 +91,30 @@ def count_active_orders(
     if provider_id is not None:
         condition |= Q(provider_id=provider_id) | Q(providers__provider_id=provider_id)
     if not condition:
-        return 0
+        return Order.objects.none()
 
     queryset = Order.objects.filter(condition, status__in=ACTIVE_ORDER_STATUSES)
     if exclude_order_ids:
         queryset = queryset.exclude(id__in=list(exclude_order_ids))
-    return queryset.distinct().count()
+    return queryset.distinct()
+
+
+def count_active_orders(
+    account=None, *, account_id=None, provider_id=None, exclude_order_ids=(),
+):
+    """统计陪玩当前进行中的订单数（已接单 + 服务中）。
+
+    薄封装，条件口径完全复用 :func:`active_orders_for`。
+
+    Returns:
+        int: 进行中的订单数；所有维度都为空时返回 0。
+    """
+    return active_orders_for(
+        account,
+        account_id=account_id,
+        provider_id=provider_id,
+        exclude_order_ids=exclude_order_ids,
+    ).count()
 
 
 def refresh_escort_status(*, provider_ids=(), account_ids=(), exclude_order_ids=()):
