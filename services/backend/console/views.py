@@ -421,45 +421,76 @@ def _actor_has_perm(request, code):
     return code in get_account_permissions(account)
 
 
-def _ban_blocking_orders(account):
-    """返回阻断封禁的在途订单（已接单 + 服务中）。
+def _summarize_orders(queryset):
+    """把在途订单查询集汇总成「真实总数 + 采样列表」。
 
-    **按账户实际承担的角色双向判定**：
-
-    - 陪玩侧口径完全复用 ``orders.services.active_orders_for``，双陪订单的
-      ``OrderProvider`` 次陪维度也在内，不在这里重写 Q 条件；
-    - 老板（顾客）侧补 ``customer_account``。封禁拦截的目的是「别把在途订单
-      甩在半空」，而顾客被封同样会让正在服务的那一单没人付尾款、没人确认完成。
-      只查陪玩侧的话，UserViewSet 上这条 409 分支永远不会命中——看起来做了
-      保护，实际老板照封不误，属于最坏的一种「假安全」。
+    总数与采样必须分开算：拿 ``len(采样)`` 当总数，在超过 20 笔时会给运营
+    一个错的数字（真有 25 笔却提示「还有 20 笔」）。
 
     Returns:
-        list[tuple[int, str]]: ``(订单 ID, 订单号)``，最多 ``_BAN_BLOCKING_ORDER_SAMPLE`` 条。
+        tuple[int, list[tuple[int, str]]]: ``(真实总数, 采样的 (id, order_no) 列表)``，
+            采样最多 ``_BAN_BLOCKING_ORDER_SAMPLE`` 条。
     """
-    as_provider = active_orders_for(account).values_list('id', flat=True)
-    as_customer = Order.objects.filter(
-        customer_account=account, status__in=ACTIVE_ORDER_STATUSES,
-    ).values_list('id', flat=True)
-
-    blocking_ids = set(as_provider) | set(as_customer)
-    if not blocking_ids:
-        return []
-    return list(
-        Order.objects.filter(id__in=blocking_ids)
-        .order_by('-created_at')
+    total = queryset.count()
+    if not total:
+        return 0, []
+    sample = list(
+        queryset.order_by('-created_at')
         .values_list('id', 'order_no')[:_BAN_BLOCKING_ORDER_SAMPLE]
+    )
+    return total, sample
+
+
+def _provider_active_orders(account):
+    """账户作为**陪玩**的在途订单。
+
+    口径完全复用 ``orders.services.active_orders_for``，双陪订单的
+    ``OrderProvider`` 次陪维度也在内，不在这里重写 Q 条件。
+    """
+    return _summarize_orders(active_orders_for(account))
+
+
+def _customer_active_orders(account):
+    """账户作为**顾客（老板）**的在途订单。
+
+    仅用于封禁成功后回传 ``orphaned_order_*`` 提示，**不参与阻断**。
+    """
+    return _summarize_orders(
+        Order.objects.filter(
+            customer_account=account, status__in=ACTIVE_ORDER_STATUSES,
+        )
     )
 
 
-def _do_ban(request, account):
+def _do_ban(request, account, *, role):
     """执行封禁的公共流程，返回 DRF ``Response``。
 
-    规则：
+    Args:
+        request: DRF 请求。
+        account: 被封禁的 ``ClubAccount``。
+        role: ``'provider'`` 或 ``'boss'``，决定在途订单查哪个维度、是否阻断。
+
+    两侧行为**有意不同**：
+
+    - ``provider``：查陪玩维度（含双陪次席），有在途就**硬阻断 409**；
+    - ``boss``：查顾客维度，**不阻断**，照常封禁，只在成功响应里回传
+      ``orphaned_order_*``，让客服当场看见自己刚让哪几单失去了顾客侧。
+
+    老板侧不阻断是刻意的，不是漏了，理由记在这里免得后人「补全」回去：
+
+    1. 用户拍板的硬阻断只针对「有在途订单的**陪玩**」，扩到老板是自行加需求；
+    2. 封老板的典型场景是欺诈/盗刷/拒付，客服要的是立刻生效。老板侧频繁弹 409
+       会把客服训练成无脑勾 force，**连带陪玩侧那道真正重要的闸门一起失效**。
+       一道所有人都习惯性绕过的闸门比没有闸门更糟；
+    3. 老板只要挂一笔单不结就能让自己封不掉，等于给作恶者护身符。
+
+    信息给到人，决策权留给人，不制造习惯化。
+
+    其余规则：
       - 原因必填，空则 400；
-      - 目标仍有在途订单时**硬阻断 409**，并回传在途订单号供运营处置；
       - 带 ``force=true`` 可跳过在途拦截，但需额外持有 ``user:ban_force``，
         否则 403。注意「有没有 force 权限」必须在「有没有在途订单」之前判，
-        否则无权限者能靠观察响应差异探出目标是否在接单；
+        否则无权限者能靠观察 409 与 403 的响应差异探出目标是否在接单；
       - 重复封禁不报错：apply_ban 会收口旧记录并继承封禁前快照。
 
     真实 HTTP 状态码而非仅 envelope code：AdminAuditLog 中间件只对
@@ -481,17 +512,27 @@ def _do_ban(request, account):
             {'code': 403, 'msg': '无强制封禁权限（user:ban_force）'}, status=403,
         )
 
-    if not force:
-        blocking = _ban_blocking_orders(account)
-        if blocking:
-            return Response({
-                'code': 409,
-                'msg': f'该账户还有 {len(blocking)} 笔在途订单，请先处理完再封禁',
-                'data': {
-                    'active_order_ids': [row[0] for row in blocking],
-                    'active_order_nos': [row[1] for row in blocking],
-                },
-            }, status=409)
+    # 无论拦不拦，都要先把在途情况算出来：拦的时候用来报错，不拦的时候用来
+    # 在成功响应里告诉客服「你刚才让这几单没了对手方」。
+    if role == 'provider':
+        active_count, active_sample = _provider_active_orders(account)
+        block_on_active = True
+    else:
+        active_count, active_sample = _customer_active_orders(account)
+        block_on_active = False
+
+    if block_on_active and not force and active_count:
+        return Response({
+            'code': 409,
+            'msg': f'该账户还有 {active_count} 笔在途订单，请先处理完再封禁',
+            'data': {
+                'active_order_count': active_count,
+                'active_order_ids': [row[0] for row in active_sample],
+                'active_order_nos': [row[1] for row in active_sample],
+                # 超过采样上限时明确告知列表被截断，别让运营以为就这几单。
+                'truncated': active_count > len(active_sample),
+            },
+        }, status=409)
 
     try:
         ban = apply_ban(
@@ -504,7 +545,14 @@ def _do_ban(request, account):
     except ValueError as exc:
         return Response({'code': 400, 'msg': str(exc)}, status=400)
 
-    return Response({'code': 0, 'data': BanRecordSerializer(ban).data})
+    data = BanRecordSerializer(ban).data
+    if active_count:
+        # 封禁已生效，但这几单的一侧当事人刚被锁掉，交给人去善后。
+        data['orphaned_order_count'] = active_count
+        data['orphaned_order_ids'] = [row[0] for row in active_sample]
+        data['orphaned_order_nos'] = [row[1] for row in active_sample]
+        data['orphaned_truncated'] = active_count > len(active_sample)
+    return Response({'code': 0, 'data': data})
 
 
 def _do_unban(request, account):
@@ -595,8 +643,12 @@ class UserViewSet(EnvelopeViewSetMixin, ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def ban(self, request, pk=None):
-        """封禁老板账户：必须给原因，落 AccountBan 审计记录。"""
-        return _do_ban(request, self.get_object())
+        """封禁老板账户：必须给原因，落 AccountBan 审计记录。
+
+        老板侧**不做在途订单阻断**（理由见 ``_do_ban`` docstring），
+        但会在成功响应里回传 orphaned_order_* 供客服善后。
+        """
+        return _do_ban(request, self.get_object(), role='boss')
 
     @action(detail=True, methods=['post'])
     def unban(self, request, pk=None):
@@ -628,7 +680,7 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
             return Response(
                 {'code': 400, 'msg': '该陪玩尚未绑定业务账户，无法封禁'}, status=400,
             )
-        return _do_ban(request, profile.account)
+        return _do_ban(request, profile.account, role='provider')
 
     @action(detail=True, methods=['post'])
     def unban(self, request, pk=None):
