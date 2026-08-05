@@ -232,8 +232,10 @@ class EscortBanApiTest(APITestCase):
         的过滤条件是 ``legacy_field: legacy_user``，打的是发请求的 admin 自己，
         跟 orphan 无关。）
 
-        剩下的就是用 ``queryset.update()`` 而不是 ``instance.save()`` 置空——
-        前者直接写 DB 行，后者只改内存对象、DB 里那行仍是回填后的值。
+        另外，档案**出生时 account 就是空的**——``make_escort_profile`` 从不设置
+        该字段。所以这里其实不需要「先置空」，唯一的威胁只有鉴权期间那次回填。
+        下面的 ``update(account=None)`` 当前是 no-op，保留纯属防御：哪天工厂改成
+        默认绑定 account，这条构造依然成立。
 
         这样构造出来的是**真实的 DB 状态**，请求照常走完整路由：URL 里的 pk、
         queryset 过滤、对象级权限、get_object_or_404 一个都没被短路。生产环境
@@ -241,18 +243,21 @@ class EscortBanApiTest(APITestCase):
         是可达状态，所以这条守卫是真需要，也确实能被真实请求走到。
         """
         orphan = make_provider()
-        # 关键第一步：先建映射，把 orphan 挡在回填循环的遍历范围之外。
+        # 关键：先建映射，把 orphan 挡在回填循环的遍历范围之外。
         get_or_create_account_for_legacy_user(orphan)
 
         profile = orphan.escort_profile
-        # 关键第二步：绕过 save()，直接改 DB 行。
+        # 防御性置空（当前 no-op，见 docstring）。用 queryset.update() 而非
+        # instance.save()：后者只改内存对象，DB 行不动。
         EscortProfile.objects.filter(pk=profile.pk).update(account=None)
 
         profile.refresh_from_db()
-        # 构造不成立就当场炸，别退化成一条测了个寂寞的绿灯。
+        # 构造前提失效就当场炸，别退化成一条测了个寂寞的绿灯。
+        # 注意这道只挡得住「构造阶段就非空」；「请求期间被回填」它挡不住——
+        # 那个由用例里请求跑完之后的 assertIsNone 负责。两道必须都在。
         assert profile.account_id is None, (
-            '孤儿档案构造失败：account 仍被回填，'
-            '请检查 migrate_legacy_test_fixtures 的 exclude 逻辑是否变了'
+            '孤儿档案构造失败：account 在构造阶段就非空，'
+            '请检查 EscortProfile 工厂是否开始默认绑定 account'
         )
         return profile
 
@@ -494,6 +499,9 @@ class ReadOnlyViewSetsRejectWritesTest(APITestCase):
     mixin 里先确认子类真的混入了对应的 DRF 写 mixin，没有就老实返 405。
     """
 
+    # 抽查 6 个代表端点，**不是全量**：console 下受此影响的只读 ViewSet 共 14 个。
+    # 修复在 mixin 一处，抽查足以证明生效；但别把这份名单当成完整覆盖，
+    # 新增只读 ViewSet 时它不会自动帮你发现问题。
     READ_ONLY_LIST_URLS = [
         '/api/admin/bans/',
         '/api/admin/audit-logs/',
