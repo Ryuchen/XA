@@ -59,6 +59,10 @@ export interface WithdrawOverview {
   min_amount: number;
   tax_rate: number;
   requests: WithdrawRecord[];
+  /** T8-a 试算字段：仅当调用时传入 amount 才返回。 */
+  amount?: number;
+  tax_amount?: number;
+  actual_amount?: number;
 }
 
 export interface WithdrawPayload {
@@ -69,8 +73,15 @@ export interface WithdrawPayload {
   remark?: string;
 }
 
-export const fetchWithdrawOverview = () => {
-  return request<ApiResponse<WithdrawOverview>>('/wallet/withdraw/', 'GET');
+/**
+ * 拉取提现概览；传入 amount（内部账务单位整数）时，后端会额外回显
+ * 该金额的试算税额与实际到账（T8-a 提现试算接口），用于前端预览。
+ */
+export const fetchWithdrawOverview = (amount?: number) => {
+  const query = amount != null && Number.isFinite(amount)
+    ? `?amount=${Math.round(amount)}`
+    : '';
+  return request<ApiResponse<WithdrawOverview>>(`/wallet/withdraw/${query}`, 'GET');
 };
 
 export const withdrawRequest = (payload: WithdrawPayload) => {

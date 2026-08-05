@@ -11,6 +11,7 @@ import { Loading } from '@/components';
 import styles from './index.module.scss';
 import PageNav from '@/components/PageNav';
 import PlatformLayout from '@/components/PlatformLayout';
+import { formatXaCoin } from '@/utils/format';
 
 const SkillsPage: React.FC = () => {
   const [groups, setGroups] = useState<SkillOptionGroup[]>([]);
@@ -84,7 +85,7 @@ const SkillsPage: React.FC = () => {
                   onClick={() => toggle(item.id)}
                 >
                   <Text className={styles.itemName}>{item.name}</Text>
-                  <Text className={styles.itemPrice}>¥{(item.price / 100).toFixed(2)}</Text>
+                  <Text className={styles.itemPrice}>{formatXaCoin(item.price)}币</Text>
                 </View>
               );
             })}

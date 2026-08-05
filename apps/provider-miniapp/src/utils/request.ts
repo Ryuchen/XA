@@ -60,13 +60,24 @@ export const request = async <T = unknown>(
   const header: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) header.Authorization = `Bearer ${token}`;
 
-  const res = await Taro.request<T>({
-    url: `${BASE_URL}${url}`,
-    method,
-    data,
-    header,
-    timeout: REQUEST_TIMEOUT,
-  });
+  // Taro.request<T> 对 T 有 `string | IAnyObject | ArrayBuffer` 约束，
+  // 而本函数的泛型 T 是未约束的（调用方传入 ApiResponse<X>），故用局部类型接收。
+  type RequestResult = { data: T; statusCode: number; header?: Record<string, unknown> };
+  let res: RequestResult;
+  try {
+    res = await Taro.request<T>({
+      url: `${BASE_URL}${url}`,
+      method,
+      data,
+      header,
+      timeout: REQUEST_TIMEOUT,
+    });
+  } catch (err) {
+    // 网络失败 / 超时（request:fail timeout）在此归一处理，
+    // 避免未捕获拒绝冒泡成全局 Error: timeout。
+    const message = (err as { errMsg?: string })?.errMsg || 'request:fail';
+    return Promise.reject(new Error(message));
+  }
 
   if (res.statusCode === 401) {
     if (token && !retried) {

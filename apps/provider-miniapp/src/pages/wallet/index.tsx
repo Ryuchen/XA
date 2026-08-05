@@ -6,7 +6,7 @@ import {
   GiftRecord, PayeeMethod, ProviderBenefits, TransactionRecord, withdrawRequest,
   WithdrawRecord,
 } from '@/services/wallet';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin, toRawAmount } from '@/utils/format';
 import { Empty, Skeleton } from '@/components';
 import PlatformLayout from '@/components/PlatformLayout';
 import styles from './index.module.scss';
@@ -42,6 +42,7 @@ const WalletPage: React.FC = () => {
   const [payeeMethod, setPayeeMethod] = useState<PayeeMethod>('WECHAT');
   const [payeeAccount, setPayeeAccount] = useState('');
   const [payeeName, setPayeeName] = useState('');
+  const [withdrawPreview, setWithdrawPreview] = useState<{ tax_amount: number; actual_amount: number } | null>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -68,9 +69,32 @@ const WalletPage: React.FC = () => {
     .filter(item => item.tx_type === 'INCOME' && item.amount > 0)
     .reduce((sum, item) => sum + item.amount, 0), [transactions]);
   const parsedWithdraw = parseFloat(withdrawInput);
-  const withdrawAmount = Number.isFinite(parsedWithdraw) ? Math.round(parsedWithdraw * 10) : 0;
-  const withdrawTax = Math.round(withdrawAmount * taxRate / 100);
-  const withdrawActual = withdrawAmount - withdrawTax;
+  const withdrawAmount = toRawAmount(parsedWithdraw);
+
+  // 提现试算：输入有效金额时调用 T8-a 试算接口，用后端口径回显税额与实际到账。
+  // 空串 / 非法值（withdrawAmount <= 0）不请求、不报错。
+  useEffect(() => {
+    if (withdrawAmount <= 0) {
+      setWithdrawPreview(null);
+      return;
+    }
+    let cancelled = false;
+    fetchWithdrawOverview(withdrawAmount)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.code !== 0 || !res.data || res.data.amount !== withdrawAmount) {
+          setWithdrawPreview(null);
+          return;
+        }
+        setWithdrawPreview({
+          tax_amount: Number(res.data.tax_amount) || 0,
+          actual_amount: Number(res.data.actual_amount) || 0,
+        });
+      })
+      .catch(() => { if (!cancelled) setWithdrawPreview(null); });
+    return () => { cancelled = true; };
+  }, [withdrawAmount]);
+
   const validateWithdraw = (): string | null => {
     if (!Number.isFinite(parsedWithdraw) || withdrawAmount <= 0) return '请输入有效提现金额';
     if (withdrawAmount < minAmount) return `最低提现 ${formatXaCoin(minAmount)} 兴安币`;
@@ -158,7 +182,7 @@ const WalletPage: React.FC = () => {
           <View className={styles.handle} /><View className={styles.sheetHead}><Text className={styles.sheetTitle}>申请提现</Text><Text className={styles.close} onClick={() => setShowWithdraw(false)}>取消</Text></View>
           <Text className={styles.formLabel}>提现兴安币</Text><View className={styles.moneyInput}><Text>币</Text><Input type='digit' value={withdrawInput} placeholder='0' onInput={e => setWithdrawInput(e.detail.value)} /></View>
           <Text className={styles.formHint}>可提现 {formatXaCoin(balance)}币 · 最低 {formatXaCoin(minAmount)}币 · 本次提现 {formatXaCoin(withdrawAmount)}币</Text>
-          <Text className={styles.formHint}>税率 {taxRate}% · 应扣税 {formatXaCoin(withdrawTax)}币 · 实际到账 {formatXaCoin(withdrawActual)}币</Text>
+          <Text className={styles.formHint}>税率 {taxRate}% · 应扣税 {formatXaCoin(withdrawPreview?.tax_amount ?? 0)}币 · 实际到账 {formatXaCoin(withdrawPreview?.actual_amount ?? 0)}币</Text>
           <Text className={styles.formLabel}>收款方式</Text><View className={styles.methodRow}>{PAYEE_METHODS.map(item => <View key={item.value} className={`${styles.method} ${payeeMethod === item.value ? styles.methodActive : ''}`} onClick={() => setPayeeMethod(item.value)}>{item.label}</View>)}</View>
           <Text className={styles.formLabel}>收款账号</Text><Input className={styles.formInput} value={payeeAccount} placeholder='微信号 / 支付宝账号 / 银行卡号' onInput={e => setPayeeAccount(e.detail.value)} />
           <Text className={styles.formLabel}>收款人姓名</Text><Input className={styles.formInput} value={payeeName} placeholder='请输入真实姓名' onInput={e => setPayeeName(e.detail.value)} />

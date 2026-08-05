@@ -685,8 +685,8 @@ const estimateAmount = computed(() => {
 
 function providerIncome(slot: any): number {
   if (slot.commission_type === 'FIXED') {
-    const fixedFen = Math.max(Math.round((Number(slot.commission_fixed) || 0) * 10), 0)
-    return Math.max(estimateAmount.value - Math.min(fixedFen, estimateAmount.value), 0)
+    const fixedRawAmount = Math.max(xaCoinToAmount(slot.commission_fixed), 0)
+    return Math.max(estimateAmount.value - Math.min(fixedRawAmount, estimateAmount.value), 0)
   }
   const rate = Math.min(Math.max(Number(slot.commission_rate) || 0, 0), 100)
   return Math.floor((estimateAmount.value * (100 - rate)) / 100)
@@ -694,8 +694,8 @@ function providerIncome(slot: any): number {
 
 function providerIncomeDesc(slot: any): string {
   if (slot.commission_type === 'FIXED') {
-    const fixedFen = Math.max(Math.round((Number(slot.commission_fixed) || 0) * 10), 0)
-    return `订单金额 ${amountToXaCoin(estimateAmount.value)}币 - 固定抽成 ${amountToXaCoin(fixedFen)}币`
+    const fixedRawAmount = Math.max(xaCoinToAmount(slot.commission_fixed), 0)
+    return `订单金额 ${amountToXaCoin(estimateAmount.value)}币 - 固定抽成 ${amountToXaCoin(fixedRawAmount)}币`
   }
   return `订单金额 ${amountToXaCoin(estimateAmount.value)}币 × ${100 - (slot.commission_rate || 0)}%`
 }
@@ -824,7 +824,7 @@ async function onDispatchSave() {
       ? {
           provider_id: s.provider_id,
           commission_type: 'FIXED',
-          commission_fixed: Math.max(Math.round((Number(s.commission_fixed) || 0) * 10), 0),
+          commission_fixed: xaCoinToAmount(s.commission_fixed),
         }
       : {
           provider_id: s.provider_id,

@@ -1,13 +1,13 @@
+import { formatXaCoin, toRawAmount } from '../../../../packages/money/src'
+
 /** 后端账务单位转兴安币。 */
 export function amountToXaCoin(amount?: number | null): string {
-  const coins = Number(amount || 0) / 10
-  return Number.isInteger(coins) ? coins.toFixed(0) : coins.toFixed(1)
+  return formatXaCoin(amount)
 }
 
 /** 兴安币转后端账务单位。 */
 export function xaCoinToAmount(coins?: number | string | null): number {
-  if (coins == null || coins === '') return 0
-  return Math.round(Number(coins) * 10)
+  return toRawAmount(coins)
 }
 
 export function formatDateTime(value?: string | null): string {

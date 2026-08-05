@@ -1,4 +1,3 @@
-export const formatXaCoin = (amount: number): string => {
-  const coins = (amount || 0) / 10;
-  return Number.isInteger(coins) ? coins.toFixed(0) : coins.toFixed(1);
-};
+import { COIN_UNIT, formatXaCoin, toCoin, toRawAmount } from '../../../../packages/money/src'
+
+export { COIN_UNIT, formatXaCoin, toCoin, toRawAmount }
