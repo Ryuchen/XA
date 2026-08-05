@@ -28,6 +28,7 @@ from club_accounts.tokens import issue_account_tokens, refresh_account_access_to
 from orders.models import GameCategory, Order, ServiceItem
 from site_messages.utils import create_message
 from wallet.models import Transaction, Wallet
+from wallet.services import get_wallet
 from common.media import build_media_url
 
 from .models import (
@@ -723,7 +724,11 @@ class ProviderStatsView(APIView):
 
         profile = EscortProfile.objects.filter(account=request.account).first()
 
-        wallet = Wallet.objects.filter(account=request.account).first()
+        # 走统一寻址：account 维度查不到时回落 user 维度，
+        # 避免历史上 account 未回填的钱包被当成「没有收入」。
+        wallet = get_wallet(
+            account=request.account, user=request.legacy_user, create=False,
+        )
         total_income = 0
         if wallet:
             total_income = wallet.transactions.filter(
@@ -789,10 +794,7 @@ class ProviderPassView(APIView):
         return EscortProfile.objects.filter(account=request.account).first()
 
     def _data(self, request, profile):
-        wallet, _ = Wallet.objects.get_or_create(
-            account=request.account,
-            defaults={'user': request.legacy_user},
-        )
+        wallet = get_wallet(account=request.account, user=request.legacy_user)
         products = []
         for tier, label in EscortProfile.PassTier.choices:
             daily = self.DAILY_PRICES[tier]
@@ -851,9 +853,8 @@ class ProviderPassView(APIView):
                     'code': 400,
                     'msg': '当前通行证尚未到期，仅支持续费同等级通行证',
                 })
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                account=request.account,
-                defaults={'user': request.legacy_user},
+            wallet = get_wallet(
+                account=request.account, user=request.legacy_user, for_update=True,
             )
             if not wallet.is_active:
                 return Response({'code': 403, 'msg': '钱包不可用'})
@@ -1233,10 +1234,7 @@ class CheckinView(APIView):
         checked_count = len(checked_days)
         today_checked = today.day in checked_set
 
-        wallet, _ = Wallet.objects.get_or_create(
-            account=request.account,
-            defaults={'user': request.legacy_user},
-        )
+        wallet = get_wallet(account=request.account, user=request.legacy_user)
         progress, _ = CheckinMonthProgress.objects.get_or_create(
             account=request.account,
             year=today.year,
@@ -1366,9 +1364,10 @@ class CheckinView(APIView):
                     is_makeup=is_makeup,
                 )
 
-                wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                wallet = get_wallet(
                     account=request.account,
-                    defaults={'user': request.legacy_user},
+                    user=request.legacy_user,
+                    for_update=True,
                 )
                 if reward_amount > 0:
                     balance_before = wallet.balance

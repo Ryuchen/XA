@@ -20,13 +20,14 @@ class CompleteOrderSettlementTest(APITestCase):
         self.service = make_service(price=10000)
         make_wallet(self.provider, balance=2000)
 
-    def _in_service_order(self):
+    def _in_service_order(self, **kwargs):
         return make_order(
             self.customer,
             service=self.service,
             provider=self.provider,
             status=Order.Status.IN_SERVICE,
             amount=10000,
+            **kwargs,
         )
 
     def _complete(self, order, user=None):
@@ -34,22 +35,23 @@ class CompleteOrderSettlementTest(APITestCase):
         return self.client.post(f'/api/orders/orders/{order.id}/complete/')
 
     def test_complete_credits_provider_wallet(self):
-        order = self._in_service_order()
+        # 20% 抽成：实付 10000，陪玩实得 8000（不得回落全额，P0-2 防造钱）
+        order = self._in_service_order(provider_income=8000, shop_income=2000)
         res = self._complete(order)
         self.assertEqual(res.data['code'], 0)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.COMPLETED)
         self.provider.wallet.refresh_from_db()
-        self.assertEqual(self.provider.wallet.balance, 12000)
+        self.assertEqual(self.provider.wallet.balance, 10000)  # 2000 + 8000
 
     def test_complete_creates_income_transaction(self):
-        order = self._in_service_order()
+        # 入账流水金额必须等于拆账实得 8000，而非订单全额（防回落造钱）
+        order = self._in_service_order(provider_income=8000, shop_income=2000)
         self._complete(order)
-        tx = Transaction.objects.get(order=order)
-        self.assertEqual(tx.tx_type, Transaction.TxType.INCOME)
-        self.assertEqual(tx.amount, 10000)
+        tx = Transaction.objects.get(order=order, tx_type=Transaction.TxType.INCOME)
+        self.assertEqual(tx.amount, 8000)
         self.assertEqual(tx.balance_before, 2000)
-        self.assertEqual(tx.balance_after, 12000)
+        self.assertEqual(tx.balance_after, 10000)
 
     def test_complete_updates_escort_profile(self):
         order = self._in_service_order()
@@ -88,10 +90,16 @@ class CompleteOrderSettlementTest(APITestCase):
         self.assertEqual(res.status_code, 401)
 
     def test_complete_is_idempotent_guarded(self):
-        order = self._in_service_order()
+        order = self._in_service_order(provider_income=8000, shop_income=2000)
         self._complete(order)
         res = self._complete(order)  # 第二次：已是终态
         self.assertEqual(res.data['code'], 400)
-        self.assertEqual(Transaction.objects.filter(order=order).count(), 1)
+        # 陪玩收益流水仅入账一次（幂等），第二次被拒未新增
+        self.assertEqual(
+            Transaction.objects.filter(
+                order=order, tx_type=Transaction.TxType.INCOME,
+            ).count(),
+            1,
+        )
         self.provider.wallet.refresh_from_db()
-        self.assertEqual(self.provider.wallet.balance, 12000)
+        self.assertEqual(self.provider.wallet.balance, 10000)

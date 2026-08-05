@@ -123,22 +123,37 @@
 
 响应 `data[]`：`code, title, desc, icon, unlocked, current, target`（按已完成订单数 / 累计消费实时计算解锁）。
 
-### 1.10 老板每月签到
-`GET /api/users/checkin/` · 权限：CUSTOMER
+### 1.10 老板每月签到（消费型签到）
+`GET /api/users/checkin/` · 权限：CUSTOMER（非 BOSS 返回 `code=403`）
 
-响应 `data`：`year, month, days_in_month, today, today_checked, checked_days[], checked_count, continuous_days, rewards[{seq, amount}], next_reward, balance`。
+响应 `data`：
+- 日历：`year, month, days_in_month, today, today_checked, checked_days[], checked_count, continuous_days`
+- 奖励：`rewards[{seq, amount, name, description, icon}]`（整月阶梯礼物）、`next_reward`、`next_gift{name, description, icon}`、`balance`
+- 消费门槛：`today_spend`（当日已支付额，分）、`daily_spend_required`（日签门槛）、`today_eligible`（是否可签）、`makeup_card_spend_required`（发卡门槛）
+- 补签卡：`makeup_cards`（剩余张数）、`max_makeup_cards`、`card_earned_today`、`makeup_available_days[]`（本月今日之前未签的日期）
+- 全勤：`full_attendance`（本月是否已获奖）、`full_attendance_reward{name, description, icon, tag_code}`
 
-`POST /api/users/checkin/` · 权限：CUSTOMER — 执行签到并发放钱包奖励。
-响应 `data`：`reward_amount, seq_in_month, checked_count, balance`。重复签到返回 `code=400`。
+`POST /api/users/checkin/` · 权限：CUSTOMER — 执行签到/补签并发放钱包奖励。
 
-### 1.11 生成绑定码
+| 参数 | 类型 | 说明 |
+| --- | --- | --- |
+| day | int | 可选。传入即为**补签**（消耗 1 张补签卡，不校验当日消费）；不传为当日签到（校验 `today_spend >= daily_spend_required`） |
+
+响应 `data`：`reward_amount, gift{name, description, icon}, seq_in_month, checked_count, balance, makeup_cards, full_attendance_awarded`。
+错误：重复签到 / 当日消费未达门槛（返回还差金额）/ 补签卡不足 / 补签日期非法 均返回 `code=400`。当月签满时自动发放全勤 Tag 并推送站内消息。
+
+> 门槛、阶梯礼物、补签卡上限、全勤奖名称均由后台配置（`GET|PUT /api/admin/config/checkin`、`/api/admin/checkin-gifts/`）。
+
+### 1.11 生成绑定码（⚠️ 已废弃）
 `POST /api/users/bind-code/` · 权限：OPERATOR
+
+> **该端点已废弃，请勿调用。** 绑定码机制已下线：生成的 code 不落库、无任何消费方，登录端点也不再接收/校验 `bindCode`（`/wechat-login/`、`/account-login/` 响应中的 `bindCode` 恒为 `null`、`bindStatus` 恒为 `"direct"`）。陪玩/客服统一由后台开户后用账号密码登录。端点保留仅为兼容历史前端，后续版本将移除。
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
 | role | string | `provider`(前缀 PW) / 其它(前缀 KF) |
 
-响应 `data`：`bindCode`。
+响应 `data`：`bindCode`（随机生成、不落库，无实际用途）。
 
 ---
 

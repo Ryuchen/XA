@@ -99,3 +99,91 @@ class AdminAuditLog(models.Model):
 
     def __str__(self):
         return f'{self.operator_name} {self.method} {self.path}'
+
+
+class AccountBan(models.Model):
+    """封禁记录：替代直接 PATCH 三个布尔开关（is_active/can_login/can_view）的无语义封禁。
+
+    - 封禁时强制记录原因与操作人，并翻转目标 ClubAccount 的开关（锁定登录与数据可见性）；
+    - 支持到期自动解封（expires_at 非空时由 beat/命令扫描回滚）；
+    - 提供可追溯的专用封禁审计表，配合 AdminAuditLog 的 HTTP 层日志形成业务语义审计。
+    """
+
+    class Status(models.TextChoices):
+        ACTIVE = 'ACTIVE', '封禁中'
+        LIFTED = 'LIFTED', '已手动解封'
+        EXPIRED = 'EXPIRED', '已到期自动解封'
+
+    class Scope(models.TextChoices):
+        FULL = 'FULL', '全量封禁（锁定 is_active/can_login/can_view）'
+
+    account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.PROTECT,
+        related_name='bans',
+        verbose_name='被封禁账户',
+    )
+    reason = models.TextField(verbose_name='封禁原因')
+    scope = models.CharField(
+        max_length=10,
+        choices=Scope.choices,
+        default=Scope.FULL,
+        verbose_name='封禁范围',
+    )
+    operator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='issued_bans',
+        verbose_name='操作人',
+    )
+    operator_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='issued_bans_by_account',
+        verbose_name='业务操作人',
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        db_index=True,
+        verbose_name='状态',
+    )
+    expires_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='自动解封时间（null=永久）',
+    )
+    banned_at = models.DateTimeField(auto_now_add=True, verbose_name='封禁时间')
+    lifted_at = models.DateTimeField(null=True, blank=True, verbose_name='解封时间')
+    lifted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lifted_bans',
+        verbose_name='解封人',
+    )
+    lifted_by_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lifted_bans_by_account',
+        verbose_name='业务解封人',
+    )
+    lift_reason = models.TextField(blank=True, default='', verbose_name='解封原因')
+
+    class Meta:
+        verbose_name = '封禁记录'
+        verbose_name_plural = '封禁记录'
+        ordering = ['-banned_at']
+        indexes = [
+            models.Index(fields=['account', 'status']),
+            models.Index(fields=['status', 'expires_at']),
+        ]
+
+    def __str__(self):
+        return f'封禁#{self.pk} 账户{self.account_id} [{self.status}]'

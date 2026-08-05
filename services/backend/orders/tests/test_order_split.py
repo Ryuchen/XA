@@ -172,9 +172,13 @@ class CompleteOrderSplitSettlementTest(APITestCase):
         self.assertEqual(inv_tx.amount, 1000)
         self.assertEqual(inv_tx.tx_type, Transaction.TxType.INCOME)
 
-    def test_legacy_order_without_split_credits_full_amount(self):
-        # provider_income=0 的旧订单回落全额入账，保证向后兼容
-        order = self._in_service_order()  # 默认 provider_income=0
-        self._complete(order)
+    def test_single_provider_zero_income_credits_nothing(self):
+        # P0-2：抽成率 100% 时 provider_income=0 是合法配置，完成订单不得凭空造钱。
+        # 陪玩实得恒为 0，平台全额留存，订单仍正常完成（绝不可回落成全额入账）。
+        order = self._in_service_order(provider_income=0, shop_income=10000)
+        res = self._complete(order)
+        self.assertEqual(res.data['code'], 0)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.COMPLETED)
         self.provider.wallet.refresh_from_db()
-        self.assertEqual(self.provider.wallet.balance, 10000)
+        self.assertEqual(self.provider.wallet.balance, 0)  # 不造钱

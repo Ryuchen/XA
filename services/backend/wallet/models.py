@@ -63,6 +63,10 @@ class Transaction(models.Model):
         SHOP_INCOME = 'SHOP_INCOME', '平台收入'
         REFUND = 'REFUND', '订单退款'
         PASS_PURCHASE = 'PASS_PURCHASE', '通行证购买'
+        # 提现代扣税费：记在平台钱包侧，与陪玩侧的 WITHDRAW 流水配对，保证税额不脱账。
+        WITHDRAW_TAX = 'WITHDRAW_TAX', '提现税费'
+        # 后台人工调账：金额正负即调增/调减，原因见 remark；不再借用 REWARD/WITHDRAW 语义。
+        ADJUST = 'ADJUST', '后台调账'
 
     class Status(models.TextChoices):
         PENDING = 'PENDING', '处理中'
@@ -120,6 +124,7 @@ class Transaction(models.Model):
                     tx_type__in=[
                         'TOPUP', 'PAY', 'INCOME', 'WITHDRAW', 'REWARD', 'GIFT',
                         'PENALTY', 'DEPOSIT', 'SHOP_INCOME', 'REFUND', 'PASS_PURCHASE',
+                        'WITHDRAW_TAX', 'ADJUST',
                     ]
                 ),
                 name='transaction_type_valid',

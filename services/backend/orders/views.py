@@ -13,6 +13,7 @@ from club_accounts.models import ClubAccount, LegacyAccountMap
 from club_accounts.permissions import IsClubAccountAuthenticated
 from users.models import EscortProfile, EscortSchedule
 from wallet.models import ProviderReport, Transaction, Wallet, get_platform_wallet
+from wallet.services import get_wallet
 from common.media import build_media_url
 
 from .models import (
@@ -839,33 +840,46 @@ class CompleteOrderView(APIView):
                 for row in provider_rows:
                     if not row.provider_id or row.settled_at:
                         continue
-                    provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                        user_id=row.provider_id,
-                    )
-                    balance_before = provider_wallet.balance
-                    provider_wallet.balance += row.provider_income
-                    provider_wallet.save(update_fields=['balance'])
-                    Transaction.objects.create(
-                        wallet=provider_wallet, order=order, amount=row.provider_income,
-                        tx_type=Transaction.TxType.INCOME,
-                        balance_before=balance_before, balance_after=provider_wallet.balance,
-                        remark=f'订单收入：{order.order_no}',
-                    )
+                    # 抽成率 100% 时 provider_income=0 是合法配置：
+                    # 不入账、不落 0 元流水，但仍要打 settled_at 结束本行。
+                    if row.provider_income > 0:
+                        provider_wallet = get_wallet(
+                            user_id=row.provider_id,
+                            account_id=row.provider_account_id,
+                            for_update=True,
+                        )
+                        balance_before = provider_wallet.balance
+                        provider_wallet.balance += row.provider_income
+                        provider_wallet.save(update_fields=['balance'])
+                        Transaction.objects.create(
+                            wallet=provider_wallet, order=order, amount=row.provider_income,
+                            tx_type=Transaction.TxType.INCOME,
+                            balance_before=balance_before, balance_after=provider_wallet.balance,
+                            remark=f'订单收入：{order.order_no}',
+                        )
                     row.settled_at = timezone.now()
                     row.save(update_fields=['settled_at'])
                     settled_provider_ids.append(row.provider_id)
             else:
-                provider_income = order.provider_income or order.amount
-                provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=request.legacy_user)
-                balance_before = provider_wallet.balance
-                provider_wallet.balance += provider_income
-                provider_wallet.save(update_fields=['balance'])
-                Transaction.objects.create(
-                    wallet=provider_wallet, order=order, amount=provider_income,
-                    tx_type=Transaction.TxType.INCOME,
-                    balance_before=balance_before, balance_after=provider_wallet.balance,
-                    remark=f'订单收入：{order.order_no}',
-                )
+                # 兼容无打手明细的旧单：按订单级 provider_income 入账。
+                # 为 0 就是 0（抽成率 100% 是合法配置），绝不回落成 order.amount ——
+                # 那会让陪玩拿走全款、平台留存还照发，凭空造钱。
+                provider_income = order.provider_income or 0
+                if provider_income > 0:
+                    provider_wallet = get_wallet(
+                        account=request.account,
+                        user=request.legacy_user,
+                        for_update=True,
+                    )
+                    balance_before = provider_wallet.balance
+                    provider_wallet.balance += provider_income
+                    provider_wallet.save(update_fields=['balance'])
+                    Transaction.objects.create(
+                        wallet=provider_wallet, order=order, amount=provider_income,
+                        tx_type=Transaction.TxType.INCOME,
+                        balance_before=balance_before, balance_after=provider_wallet.balance,
+                        remark=f'订单收入：{order.order_no}',
+                    )
                 settled_provider_ids.append(request.legacy_user.id)
             # 推荐人分佣入账
             if order.inviter_id and order.inviter_commission:

@@ -13,21 +13,29 @@ from .models import (
     ProviderReport,
     ProviderReportImage,
     Transaction,
-    Wallet,
     WithdrawRequest,
     compute_withdraw_tax,
     get_min_withdraw_amount,
     get_withdraw_tax_rate,
 )
 from .serializers import ReportSerializer, WithdrawRequestSerializer
+from .services import get_wallet
 
 
 def _get_wallet(request, *, for_update=False):
-    queryset = Wallet.objects.select_for_update() if for_update else Wallet.objects
-    return queryset.get_or_create(
+    """当前登录主体的钱包。
+
+    统一走 ``wallet.services.get_wallet``：它会同时按 account / user 两个维度
+    寻址并自愈缺失的绑定，避免历史上「user 维度已建号、account 维度查不到
+    又去创建」撞唯一约束 500 的死循环。
+
+    返回二元组是为了兼容既有调用方的 ``wallet, _ = _get_wallet(...)`` 写法。
+    """
+    return get_wallet(
         account=request.account,
-        defaults={'user': request.legacy_user},
-    )
+        user=request.legacy_user,
+        for_update=for_update,
+    ), False
 
 
 class WalletInfoView(APIView):
@@ -219,7 +227,11 @@ class WithdrawView(APIView):
                 balance_before=balance_before,
                 balance_after=wallet.balance,
                 status=Transaction.Status.PENDING,
-                remark='提现申请',
+                remark=(
+                    f'提现申请（税前 {amount / 10:g}，代扣税 {tax_amount / 10:g}，'
+                    f'预计到账 {actual_amount / 10:g} 兴安币）'
+                    if tax_amount else '提现申请'
+                ),
             )
             withdraw = WithdrawRequest.objects.create(
                 user=request.legacy_user,
@@ -235,9 +247,15 @@ class WithdrawView(APIView):
                 transaction=tx,
             )
 
+        submit_msg = '提现申请已提交，等待审核'
+        if tax_amount:
+            submit_msg += (
+                f'；代扣税 {tax_rate}% 计 {tax_amount / 10:g} 兴安币，'
+                f'实际到账 {actual_amount / 10:g} 兴安币'
+            )
         return Response({
             'code': 0,
-            'msg': '提现申请已提交，等待审核',
+            'msg': submit_msg,
             'data': {
                 'balance': wallet.balance,
                 'frozen_amount': wallet.frozen_amount,

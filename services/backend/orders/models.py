@@ -295,6 +295,18 @@ class Order(models.Model):
                 condition=models.Q(payment_status__in=['UNPAID', 'PAID', 'REFUNDED']),
                 name='order_payment_status_valid',
             ),
+            # 资金守恒硬闸门：订单级三项分账之和不得超过实付金额。
+            # 用 <= 而非 == 是为了兼容历史上分账字段全为 0 的旧订单。
+            models.CheckConstraint(
+                condition=models.Q(
+                    provider_income__lte=(
+                        models.F('amount')
+                        - models.F('inviter_commission')
+                        - models.F('shop_income')
+                    )
+                ),
+                name='order_split_not_exceed_amount',
+            ),
             models.CheckConstraint(
                 condition=models.Q(escort_mode__in=['SINGLE', 'DOUBLE']),
                 name='order_escort_mode_valid',
@@ -375,10 +387,19 @@ class KookDispatchRecord(models.Model):
 class OrderProvider(models.Model):
     """订单打手明细：一笔订单可关联一个（单陪）或两个（双陪）打手。
 
-    每个打手以订单实付金额为结算基数，按各自计算方式得出实得：
-        - 百分比抽成：provider_income = amount * (100 - commission_rate) / 100
-        - 固定金额抽成：provider_income = max(amount - commission_fixed, 0)
-    订单完成时由客服后台触发，逐条给打手钱包入账并记 settled_at。
+    **结算基数口径（资金守恒的关键）**：订单实付金额先在所有打手之间
+    **均分**得到各自的 ``settlement_base``（余数给靠前打手），再由每个打手
+    按**自己的**抽成规则从各自基数中算出实得：
+
+        - 百分比抽成：provider_income = settlement_base * (100 - commission_rate) / 100
+        - 固定金额抽成：provider_income = max(settlement_base - commission_fixed, 0)
+
+    因此恒有 ``sum(settlement_base) == order.amount``，两个打手可以有
+    完全不同的抽成比例，互不影响。严禁让每个打手都以订单全额为基数
+    ——那会导致双陪订单总流出超过实付，平台净亏一份钱。
+
+    计算逻辑统一收敛在 ``orders.settlement.build_provider_shares``，
+    落库前请勿手写公式。订单完成时逐条给打手钱包入账并记 settled_at。
     """
 
     class CommissionType(models.TextChoices):

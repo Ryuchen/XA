@@ -32,7 +32,13 @@ from orders.models import (
     ServiceItem,
 )
 from orders.ratings import rollback_escort_rating
-from orders.settlement import compute_split
+from orders.settlement import (
+    SettlementError,
+    aggregate_order_split,
+    build_provider_shares,
+    compute_split,
+)
+from wallet.services import WalletAddressingError, get_wallet
 from orders.state_machine import IllegalTransitionError, log_only, transition
 from orders.views import (
     PENDING_TIMEOUT_MINUTES,
@@ -151,6 +157,39 @@ def _business_account(account_id, account_type):
     return account
 
 
+def _legacy_user_id_from_account_id(account_id):
+    """把 ClubAccount.id 单向归一为 legacy ``CustomUser.id``（经 ``LegacyAccountMap``）。
+
+    ``UserViewSet`` 列表返回的是 ``ClubAccount.id``，而充值 / 奖惩 / 记录落库用的是
+    legacy ``CustomUser.id``。两套 ID 空间都是小整数自增，**bare integer 无法区分**——
+    若把前端传入的标识当"可能是 ClubAccount.id 也可能是 legacy id"去猜，就会错充到
+    恰好同号的另一位用户（两套 ID 空间错充）。因此前端必须显式用 ``account_id`` 字段
+    透传 ClubAccount.id，本函数只做 ClubAccount.id → legacy 的**单向**映射，绝不反向
+    把 bare integer 当 legacy 猜。
+
+    * ``ClubAccount`` 存在且有映射：返回 ``legacy_user_id``；
+    * ``ClubAccount`` 存在但缺映射：尝试用同号 legacy 用户自愈补链（仅当该 legacy 用户存在）；
+    * ``ClubAccount`` 不存在或无对应 legacy 用户：返回 ``None``，由调用方判 404。
+    """
+    if account_id is None:
+        return None
+    try:
+        account_id = int(account_id)
+    except (TypeError, ValueError):
+        return None
+    account = ClubAccount.objects.filter(id=account_id).first()
+    if account is None:
+        return None
+    mapping = LegacyAccountMap.objects.filter(account_id=account.id).first()
+    if mapping is not None:
+        return mapping.legacy_user_id
+    legacy = User.objects.filter(id=account_id).first()
+    if legacy is not None:
+        link_legacy_relations(legacy, account)
+        return legacy.id
+    return None
+
+
 def _truthy(value):
     return str(value).lower() in ('1', 'true', 'yes')
 
@@ -162,6 +201,68 @@ def _resolve_provider_report_commission(provider):
     if level is not None and level.is_active:
         return level.commission_rate, f'等级抽成（{level.name}）'
     return get_commission_rate(), '全局默认'
+
+
+def _resolve_report_order_share(report):
+    """取报单人在该订单中「自己那条」结算明细（OrderProvider）。
+
+    双陪订单下 ``order.provider_income`` 是两名打手的汇总值，直接拿它回填
+    报单的 ``payout_amount`` 会让副陪看到的审核金额远大于钱包实际到账。
+    优先按 ClubAccount 维度定位，回落 legacy user 维度；老单没有明细行时
+    返回 None，由调用方回退订单级字段（单陪场景两者等价）。
+    """
+    shares = report.order.providers.all()
+    if report.provider_account_id:
+        share = next(
+            (s for s in shares if s.provider_account_id == report.provider_account_id), None
+        )
+        if share is not None:
+            return share
+    if report.provider_id:
+        share = next((s for s in shares if s.provider_id == report.provider_id), None)
+        if share is not None:
+            return share
+    return None
+
+
+def _require_order_evidence(order):
+    """结算前凭证校验：每个参与结算的陪玩都必须有入队图 + 结单图。
+
+    顾客端与后台是同一个「把钱打给陪玩」的动作，凭证要求必须一致，
+    否则后台就成了绕过风控的后门，报单审核退化为事后追认。
+
+    仅当 ``REQUIRE_ORDER_EVIDENCE_IMAGES`` 开启时生效。
+
+    Raises:
+        SettlementError: 任一陪玩凭证缺失；调用方事务整体回滚。
+    """
+    if not getattr(settings, 'REQUIRE_ORDER_EVIDENCE_IMAGES', False):
+        return
+
+    provider_rows = list(order.providers.all())
+    if provider_rows:
+        provider_ids = [row.provider_id for row in provider_rows if row.provider_id]
+    elif order.provider_id:
+        provider_ids = [order.provider_id]
+    else:
+        provider_ids = []
+    if not provider_ids:
+        return
+
+    reports = {
+        report.provider_id: report
+        for report in ProviderReport.objects.filter(
+            order=order, provider_id__in=provider_ids,
+        )
+    }
+    for provider_id in provider_ids:
+        report = reports.get(provider_id)
+        if report is None:
+            raise SettlementError(f'陪玩 #{provider_id} 缺少服务报单凭证，无法结算')
+        if not report.entry_image:
+            raise SettlementError(f'陪玩 #{provider_id} 缺少入队截图，无法结算')
+        if not report.completion_image:
+            raise SettlementError(f'陪玩 #{provider_id} 缺少结单截图，无法结算')
 
 
 # ---------------- 仪表盘 ----------------
@@ -470,7 +571,11 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
         signed = amount if is_reward else -amount
 
         with transaction.atomic():
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=profile.user_id)
+            wallet = get_wallet(
+                user_id=profile.user_id,
+                account_id=profile.account_id,
+                for_update=True,
+            )
             if wallet.balance + signed < 0:
                 return Response({'code': 400, 'msg': '罚款后余额不能为负'})
             balance_before = wallet.balance
@@ -746,15 +851,17 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     else:
                         old_income = pool * cmd['split_value'] // 100
                     new_income = pool - old_income
+                    # 结算基数同步拆分：旧行定格到它实拿的部分，剩余基数随份额
+                    # 转给新行，保证全单 sum(settlement_base) 始终等于实付金额。
+                    old_base_kept = min(old_income, old_row.settlement_base)
+                    transferred_base = old_row.settlement_base - old_base_kept
 
                     # 旧打手：结算入账应得份额
-                    old_wallet, _ = Wallet.objects.select_for_update().get_or_create(
+                    old_wallet = get_wallet(
                         user_id=old_row.provider_id,
-                        defaults={'account_id': old_row.provider_account_id},
+                        account_id=old_row.provider_account_id,
+                        for_update=True,
                     )
-                    if old_wallet.account_id != old_row.provider_account_id:
-                        old_wallet.account_id = old_row.provider_account_id
-                        old_wallet.save(update_fields=['account'])
                     if old_income:
                         before = old_wallet.balance
                         old_wallet.balance += old_income
@@ -801,17 +908,22 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         old_profile.total_penalty += penalty
                         old_profile.save(update_fields=['total_penalty'])
 
-                    # 旧打手行：定格已结算份额并标记已结算
+                    # 旧打手行：定格已结算份额与对应基数，并标记已结算
                     old_row.provider_income = old_income
+                    old_row.settlement_base = old_base_kept
                     old_row.settled_at = timezone.now()
-                    old_row.save(update_fields=['provider_income', 'settled_at'])
+                    old_row.save(update_fields=[
+                        'provider_income', 'settlement_base', 'settled_at',
+                    ])
                     EscortProfile.objects.filter(
                         account_id=old_row.provider_account_id,
                     ).update(
                         status=EscortProfile.Status.AVAILABLE,
                     )
 
-                    # 新打手行：承接剩余份额，订单完成时结算
+                    # 新打手行：承接剩余份额与剩余基数，订单完成时结算。
+                    # 基数必须跟着份额一起转移，不能再取整单金额，
+                    # 否则 sum(settlement_base) 会膨胀，超额分账又会重新打开。
                     new_provider = cmd['new_provider']
                     new_name = cmd['new_profile'].display_name or new_provider.nickname or new_provider.username
                     new_row, created = OrderProvider.objects.get_or_create(
@@ -820,7 +932,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         defaults={
                             'provider': new_provider,
                             'provider_name_snapshot': new_name,
-                            'settlement_base': locked_order.amount,
+                            'settlement_base': transferred_base,
                             'commission_type': OrderProvider.CommissionType.PERCENT,
                             'commission_rate': locked_order.commission_rate,
                             'provider_income': new_income,
@@ -828,8 +940,11 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     )
                     if not created:
                         new_row.provider_income += new_income
+                        new_row.settlement_base += transferred_base
                         new_row.settled_at = None
-                        new_row.save(update_fields=['provider_income', 'settled_at'])
+                        new_row.save(update_fields=[
+                            'provider_income', 'settlement_base', 'settled_at',
+                        ])
                     EscortProfile.objects.filter(user=new_provider).update(
                         status=EscortProfile.Status.BUSY,
                     )
@@ -1037,19 +1152,14 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             return Response({'code': 400, 'msg': str(exc)})
         amount = pricing.amount
 
-        # 资金守恒：实付金额先在打手之间平均分配（余数给靠前打手），
-        # 再按各自抽成规则结算，避免双陪按两份全额结算造成平台超付。
+        # 资金守恒：实付金额先在打手之间均分为各自结算基数（余数给靠前打手），
+        # 再由每人按自己的抽成规则从各自基数中算实得。口径实现统一在
+        # orders.settlement，这里只负责把客服填的参数整理成 spec。
         from orders.models import OrderProvider as _OP
-        provider_rows = []
-        provider_count = len(provider_objs)
-        settlement_bases = []
-        if provider_count:
-            base, remainder = divmod(amount, provider_count)
-            settlement_bases = [base + (1 if idx < remainder else 0) for idx in range(provider_count)]
-        for idx, (row_account, pu, item) in enumerate(provider_objs):
-            settlement_base = settlement_bases[idx]
+        provider_specs = []
+        for row_account, pu, item in provider_objs:
             escort_profile = row_account.escort_profile
-            ctype = item.get('commission_type') or _OP.CommissionType.PERCENT
+            ctype = (item.get('commission_type') or _OP.CommissionType.PERCENT).upper()
             if ctype == _OP.CommissionType.FIXED:
                 try:
                     fixed = int(item.get('commission_fixed') or 0)
@@ -1057,15 +1167,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     return Response({'code': 400, 'msg': '固定抽成额必须为非负兴安币'})
                 if fixed < 0:
                     return Response({'code': 400, 'msg': '固定抽成额必须为非负兴安币'})
-                fixed = min(fixed, settlement_base)
-                provider_rows.append({
-                    'provider_account': row_account,
-                    'provider': pu,
-                    'settlement_base': settlement_base,
+                provider_specs.append({
                     'commission_type': _OP.CommissionType.FIXED,
-                    'commission_rate': 0,
                     'commission_fixed': fixed,
-                    'provider_income': settlement_base - fixed,
                 })
             else:
                 rate_in = item.get('commission_rate')
@@ -1076,41 +1180,38 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         rate = min(max(int(rate_in), 0), 100)
                     except (TypeError, ValueError):
                         return Response({'code': 400, 'msg': '抽成率必须为 0-100 的整数'})
-                provider_rows.append({
-                    'provider_account': row_account,
-                    'provider': pu,
-                    'settlement_base': settlement_base,
+                provider_specs.append({
                     'commission_type': _OP.CommissionType.PERCENT,
                     'commission_rate': rate,
-                    'commission_fixed': 0,
-                    'provider_income': settlement_base * (100 - rate) // 100,
                 })
 
-        # 订单级拆账汇总，保证打手实得总和 + 推荐分佣 + 平台留存 = 实付。
-        if provider_rows:
-            primary = provider_rows[0]
-            total_provider_income = sum(row['provider_income'] for row in provider_rows)
-            platform_cut = amount - total_provider_income
-            inviter_rate = (
-                customer_account.inviter_commission_rate
-                if customer_account.inviter_id else 0
-            )
-            inviter_commission = platform_cut * min(max(int(inviter_rate), 0), 100) // 100
-            from orders.settlement import OrderSplit
-            split = OrderSplit(
-                commission_rate=primary['commission_rate'],
-                provider_income=total_provider_income,
-                inviter_commission=inviter_commission,
-                shop_income=platform_cut - inviter_commission,
-            )
+        shares = build_provider_shares(amount, provider_specs)
+        provider_rows = [
+            {
+                'provider_account': row_account,
+                'provider': pu,
+                'settlement_base': share.settlement_base,
+                'commission_type': share.commission_type,
+                'commission_rate': share.commission_rate,
+                'commission_fixed': share.commission_fixed,
+                'provider_income': share.provider_income,
+            }
+            for (row_account, pu, _item), share in zip(provider_objs, shares)
+        ]
+
+        # 订单级拆账汇总，保证打手实得总和 + 推荐分佣 + 平台留存 == 实付。
+        inviter_rate = (
+            customer_account.inviter_commission_rate
+            if customer_account.inviter_id else 0
+        )
+        if shares:
+            try:
+                split = aggregate_order_split(amount, shares, inviter_rate)
+            except SettlementError as exc:
+                return Response({'code': 400, 'msg': str(exc)})
         else:
             primary_rate = resolve_commission_rate(service, None, promotion)
-            split = compute_split(
-                amount,
-                primary_rate,
-                customer_account.inviter_commission_rate
-                if customer_account.inviter_id else 0,
-            )
+            split = compute_split(amount, primary_rate, inviter_rate)
         inviter_account = customer_account.inviter
         inviter = (
             _legacy_user_for_account(inviter_account)
@@ -1119,13 +1220,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
         # ---- 扣款建单 ----
         with transaction.atomic():
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                user=customer,
-                defaults={'account': customer_account},
+            wallet = get_wallet(
+                user=customer, account=customer_account, for_update=True,
             )
-            if wallet.account_id != customer_account.id:
-                wallet.account = customer_account
-                wallet.save(update_fields=['account'])
             if not wallet.is_active:
                 return Response({'code': 403, 'msg': '该老板钱包不可用'})
             if wallet.balance < amount:
@@ -1285,50 +1382,68 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
         逐个给打手钱包入账（按 OrderProvider 各自实得），推荐人分佣与平台留存按单份入账，
         并恢复相关陪玩状态、累加完成计数。无 OrderProvider 明细时回落主打手单份口径。
+
+        后台与顾客端是同一个「把钱打给陪玩」的动作，因此共用同一套凭证闸门
+        （``REQUIRE_ORDER_EVIDENCE_IMAGES``），否则后台就成了绕过风控的后门。
         """
         order = self.get_object()
 
         def side_effect(o):
+            # 出账前先过凭证闸门：任一参与结算的陪玩缺凭证即整体回滚。
+            _require_order_evidence(o)
+
             provider_rows = list(o.providers.select_for_update().all())
             settled_provider_ids = []
             if provider_rows:
                 for row in provider_rows:
                     if not row.provider_id or row.settled_at:
                         continue
-                    p_wallet, _ = Wallet.objects.select_for_update().get_or_create(
-                        user_id=row.provider_id,
+                    # 抽成率 100% 时 provider_income=0 是合法配置：
+                    # 不入账、不落 0 元流水，但仍要打 settled_at 结束本行。
+                    if row.provider_income > 0:
+                        p_wallet = get_wallet(
+                            user_id=row.provider_id,
+                            account_id=row.provider_account_id,
+                            for_update=True,
+                        )
+                        before = p_wallet.balance
+                        p_wallet.balance += row.provider_income
+                        p_wallet.save(update_fields=['balance'])
+                        Transaction.objects.create(
+                            wallet=p_wallet,
+                            order=o,
+                            amount=row.provider_income,
+                            tx_type=Transaction.TxType.INCOME,
+                            balance_before=before,
+                            balance_after=p_wallet.balance,
+                            remark=f'订单收入：{o.order_no}',
+                        )
+                    row.settled_at = timezone.now()
+                    row.save(update_fields=['settled_at'])
+                    settled_provider_ids.append(row.provider_id)
+            elif o.provider_id:
+                # 兼容旧订单：无打手明细时按订单级 provider_income 给主打手入账。
+                # 为 0 就是 0（抽成率 100% 是合法配置），绝不回落成 o.amount ——
+                # 那会让陪玩拿走全款、平台留存还照发，凭空造钱。
+                income = o.provider_income or 0
+                if income > 0:
+                    p_wallet = get_wallet(
+                        user_id=o.provider_id,
+                        account_id=o.provider_account_id,
+                        for_update=True,
                     )
                     before = p_wallet.balance
-                    p_wallet.balance += row.provider_income
+                    p_wallet.balance += income
                     p_wallet.save(update_fields=['balance'])
                     Transaction.objects.create(
                         wallet=p_wallet,
                         order=o,
-                        amount=row.provider_income,
+                        amount=income,
                         tx_type=Transaction.TxType.INCOME,
                         balance_before=before,
                         balance_after=p_wallet.balance,
                         remark=f'订单收入：{o.order_no}',
                     )
-                    row.settled_at = timezone.now()
-                    row.save(update_fields=['settled_at'])
-                    settled_provider_ids.append(row.provider_id)
-            elif o.provider_id:
-                # 兼容旧订单：无打手明细时按订单级 provider_income 给主打手入账
-                income = o.provider_income or o.amount
-                p_wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=o.provider_id)
-                before = p_wallet.balance
-                p_wallet.balance += income
-                p_wallet.save(update_fields=['balance'])
-                Transaction.objects.create(
-                    wallet=p_wallet,
-                    order=o,
-                    amount=income,
-                    tx_type=Transaction.TxType.INCOME,
-                    balance_before=before,
-                    balance_after=p_wallet.balance,
-                    remark=f'订单收入：{o.order_no}',
-                )
                 settled_provider_ids.append(o.provider_id)
 
             # 推荐人分佣入账（单份）
@@ -1381,6 +1496,11 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             )
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许完成'})
+        except SettlementError as exc:
+            # 凭证缺失 / 分账超额已阻断，事务整体回滚，订单保持原状待人工核对
+            return Response({'code': 400, 'msg': str(exc)})
+        except WalletAddressingError as exc:
+            return Response({'code': 400, 'msg': f'钱包数据异常：{exc}'})
         notify_order_update(order)
         _push_message_safe(
             recipient_id=order.customer_id,
@@ -1440,7 +1560,11 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
         def side_effect(order):
             if order.payment_status == Order.PaymentStatus.PAID:
-                wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=order.customer_id)
+                wallet = get_wallet(
+                    user_id=order.customer_id,
+                    account_id=order.customer_account_id,
+                    for_update=True,
+                )
                 balance_before = wallet.balance
                 wallet.balance += order.amount
                 wallet.save(update_fields=['balance'])
@@ -1596,7 +1720,7 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             Transaction.objects.create(
                 wallet=wallet,
                 amount=amount,
-                tx_type=Transaction.TxType.REWARD if amount > 0 else Transaction.TxType.WITHDRAW,
+                tx_type=Transaction.TxType.ADJUST,
                 balance_before=balance_before,
                 balance_after=wallet.balance,
                 remark=remark,
@@ -1607,10 +1731,28 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['post'])
     def recharge(self, request):
-        """确认企微客服收款，并按 1:10 兑换规则录入兴安币。"""
+        """确认企微客服收款，并按 1:10 兑换规则录入兴安币。
+
+        用户标识收口：前端 user 选择器返回 ``ClubAccount.id``，统一用 ``account_id``
+        字段透传；legacy ``CustomUser.id`` 仍可由 ``user_id`` 字段兼容传入（旧后台 /
+        内部工具）。两者是不同的 ID 空间，分字段传入可彻底避免"两套 ID 空间错充"。
+        """
+        account_id = request.data.get('account_id')
         user_id = request.data.get('user_id')
-        if not user_id:
+        if account_id not in (None, ''):
+            legacy_user_id = _legacy_user_id_from_account_id(account_id)
+        elif user_id not in (None, ''):
+            try:
+                legacy_user_id = int(user_id)
+            except (TypeError, ValueError):
+                return Response({'code': 400, 'msg': '非法的用户标识'})
+            if not User.objects.filter(pk=legacy_user_id).exists():
+                legacy_user_id = None
+        else:
             return Response({'code': 400, 'msg': '请指定充值用户'})
+        if legacy_user_id is None:
+            return Response({'code': 404, 'msg': '用户不存在'})
+
         try:
             amount = int(request.data.get('amount', 0))
             gift_amount = int(request.data.get('gift_amount', 0) or 0)
@@ -1624,11 +1766,8 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         trade_no = (request.data.get('trade_no') or '').strip()[:64]
         proof_image = request.FILES.get('proof_image')
 
-        if not User.objects.filter(pk=user_id).exists():
-            return Response({'code': 404, 'msg': '用户不存在'})
-
         with transaction.atomic():
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=user_id)
+            wallet = get_wallet(user_id=legacy_user_id, for_update=True)
             balance_before = wallet.balance
             recharge_tx = Transaction.objects.create(
                 wallet=wallet,
@@ -1658,7 +1797,7 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             wallet.save(update_fields=['balance', 'total_recharge', 'total_gift'])
 
             record = RechargeRecord.objects.create(
-                user_id=user_id,
+                user_id=legacy_user_id,
                 amount=amount,
                 gift_amount=gift_amount,
                 trade_no=trade_no,
@@ -1690,8 +1829,13 @@ class RechargeRecordViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = RechargeRecord.objects.select_related('user', 'user__boss_type', 'operator').order_by('-created_at')
+        account_id = self.request.query_params.get('account_id')
         user_id = self.request.query_params.get('user_id')
-        if user_id:
+        if account_id:
+            # 前端 user 选择器返回 ClubAccount.id，单向映射为 legacy 用户 id 再筛选
+            legacy_user_id = _legacy_user_id_from_account_id(account_id)
+            qs = qs.filter(user_id=legacy_user_id if legacy_user_id is not None else -1)
+        elif user_id:
             qs = qs.filter(user_id=user_id)
         # 编号 / 昵称 / 手机号 三个独立条件，相互 AND 叠加（支持输入即查提示）
         boss_no = self.request.query_params.get('boss_no')
@@ -1714,8 +1858,12 @@ class DisposeRecordViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = DisposeRecord.objects.select_related('user', 'operator').order_by('-created_at')
+        account_id = self.request.query_params.get('account_id')
         user_id = self.request.query_params.get('user_id')
-        if user_id:
+        if account_id:
+            legacy_user_id = _legacy_user_id_from_account_id(account_id)
+            qs = qs.filter(user_id=legacy_user_id if legacy_user_id is not None else -1)
+        elif user_id:
             qs = qs.filter(user_id=user_id)
         dispose_type = self.request.query_params.get('dispose_type')
         if dispose_type:
@@ -1759,7 +1907,9 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = ProviderReport.objects.select_related(
             'provider', 'provider__escort_profile__level', 'auditor', 'order',
-        ).prefetch_related('result_images').exclude(status=ProviderReport.Status.DRAFT).order_by('-created_at')
+        ).prefetch_related(
+            'result_images', 'order__providers',
+        ).exclude(status=ProviderReport.Status.DRAFT).order_by('-created_at')
         status_filter = self.request.query_params.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter.upper())
@@ -1791,9 +1941,16 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             rate, source_label = _resolve_provider_report_commission(report.provider)
             # 平台完成订单已在完成动作中结算，报单审核仅核验凭证，禁止重复入账。
             if report.order_id:
+                # 双陪订单必须取「该报单人自己那条」OrderProvider 的实得，
+                # 否则副陪看到的是订单级汇总，与钱包实际到账对不上。
+                own_share = _resolve_report_order_share(report)
                 report.status = ProviderReport.Status.APPROVED
-                report.commission_rate = report.order.commission_rate
-                report.payout_amount = report.order.provider_income
+                report.commission_rate = (
+                    own_share.commission_rate if own_share else report.order.commission_rate
+                )
+                report.payout_amount = (
+                    own_share.provider_income if own_share else report.order.provider_income
+                )
                 report.auditor = request.legacy_user
                 report.auditor_account = request.account
                 report.audited_at = timezone.now()
@@ -1810,7 +1967,11 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
             payout = report.amount * (100 - rate) // 100
 
-            wallet, _ = Wallet.objects.select_for_update().get_or_create(user_id=report.provider_id)
+            wallet = get_wallet(
+                user_id=report.provider_id,
+                account_id=report.provider_account_id,
+                for_update=True,
+            )
             balance_before = wallet.balance
             wallet.balance += payout
             wallet.save(update_fields=['balance'])
@@ -1946,7 +2107,14 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if withdraw.status != WithdrawRequest.Status.PENDING:
                 return Response({'code': 400, 'msg': '该提现已审核，无法重复操作'})
 
-            wallet = Wallet.objects.select_for_update().get(user_id=withdraw.user_id)
+            wallet = get_wallet(
+                user_id=withdraw.user_id,
+                account_id=withdraw.account_id,
+                for_update=True,
+                create=False,
+            )
+            if wallet is None:
+                return Response({'code': 400, 'msg': '申请人钱包不存在，无法通过'})
             if wallet.frozen_amount < withdraw.amount:
                 return Response({'code': 400, 'msg': '冻结金额异常，无法通过'})
             wallet.frozen_amount -= withdraw.amount
@@ -1955,7 +2123,35 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if withdraw.transaction_id:
                 Transaction.objects.filter(pk=withdraw.transaction_id).update(
                     status=Transaction.Status.SUCCESS,
-                    remark=f'提现到账：{withdraw.get_payee_method_display()} {withdraw.payee_account}',
+                    remark=(
+                        f'提现到账：{withdraw.get_payee_method_display()} {withdraw.payee_account}'
+                        + (
+                            f'（税前 {withdraw.amount / 10:g}，代扣税 {withdraw.tax_amount / 10:g}，'
+                            f'实付 {withdraw.actual_amount / 10:g} 兴安币）'
+                            if withdraw.tax_amount else ''
+                        )
+                    ),
+                )
+
+            # 代扣税额必须落到平台钱包并留痕，否则这部分钱在账面上凭空消失。
+            # 陪玩侧扣的是全额 amount，平台侧收 tax_amount，实际打款 actual_amount，三者守恒。
+            if withdraw.tax_amount:
+                platform_wallet = get_platform_wallet(for_update=True)
+                tax_before = platform_wallet.balance
+                platform_wallet.balance += withdraw.tax_amount
+                platform_wallet.save(update_fields=['balance'])
+                Transaction.objects.create(
+                    wallet=platform_wallet,
+                    amount=withdraw.tax_amount,
+                    tx_type=Transaction.TxType.WITHDRAW_TAX,
+                    balance_before=tax_before,
+                    balance_after=platform_wallet.balance,
+                    operator=request.legacy_user,
+                    operator_account=request.account,
+                    remark=(
+                        f'提现代扣税费：申请 #{withdraw.pk}，'
+                        f'税前 {withdraw.amount / 10:g} 兴安币 × {withdraw.tax_rate}%'
+                    ),
                 )
 
             withdraw.status = WithdrawRequest.Status.APPROVED
@@ -1969,12 +2165,18 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 'auditor_account', 'audited_at',
             ])
 
+        # 通知一律以实际到账口径为准，避免陪玩按税前金额对账产生客诉。
+        tax_note = (
+            f'（税前 {withdraw.amount / 10:g} 兴安币，'
+            f'代扣税 {withdraw.tax_rate}% 计 {withdraw.tax_amount / 10:g} 兴安币）'
+            if withdraw.tax_amount else ''
+        )
         create_message(
             recipient_id=withdraw.user_id,
             title='提现审核通过',
-            preview=f'提现 {withdraw.amount / 10:g} 兴安币已通过',
-            detail=f'您申请的 {withdraw.amount / 10:g} 兴安币提现已审核通过，将结算至 '
-                   f'{withdraw.get_payee_method_display()}（{withdraw.payee_account}）。',
+            preview=f'提现已通过，实际到账 {withdraw.actual_amount / 10:g} 兴安币',
+            detail=f'您申请的提现已审核通过，实际到账 {withdraw.actual_amount / 10:g} 兴安币{tax_note}，'
+                   f'将结算至 {withdraw.get_payee_method_display()}（{withdraw.payee_account}）。',
         )
         return Response({'code': 0, 'data': self.get_serializer(withdraw).data, 'msg': '已通过'})
 
@@ -1988,7 +2190,14 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if withdraw.status != WithdrawRequest.Status.PENDING:
                 return Response({'code': 400, 'msg': '该提现已审核，无法重复操作'})
 
-            wallet = Wallet.objects.select_for_update().get(user_id=withdraw.user_id)
+            wallet = get_wallet(
+                user_id=withdraw.user_id,
+                account_id=withdraw.account_id,
+                for_update=True,
+                create=False,
+            )
+            if wallet is None:
+                return Response({'code': 400, 'msg': '申请人钱包不存在，无法驳回'})
             if wallet.frozen_amount < withdraw.amount:
                 return Response({'code': 400, 'msg': '冻结金额异常，无法驳回'})
             wallet.frozen_amount -= withdraw.amount
@@ -2539,15 +2748,29 @@ class MessageViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         broadcast = _truthy(request.data.get('broadcast', False))
         audience = (request.data.get('audience') or '').upper()
         recipient_ids = request.data.get('recipient_ids') or []
+        recipient_account_ids = request.data.get('recipient_account_ids') or []
 
         if broadcast:
             targets = list(User.objects.filter(is_active=True).values_list('id', flat=True))
         elif audience in (User.Role.CUSTOMER, User.Role.PROVIDER):
             targets = list(User.objects.filter(is_active=True, role=audience).values_list('id', flat=True))
         else:
-            if not recipient_ids:
+            if not recipient_ids and not recipient_account_ids:
                 return Response({'code': 400, 'msg': '请选择接收人或勾选全员广播'})
-            targets = list(recipient_ids)
+            # 前端 user 选择器返回 ClubAccount.id，用 recipient_account_ids 显式透传，
+            # 单向映射为 legacy 用户 id，避免两套 ID 空间错充；recipient_ids 为 legacy 兼容。
+            targets = []
+            for rid in recipient_account_ids:
+                lid = _legacy_user_id_from_account_id(rid)
+                if lid is not None:
+                    targets.append(lid)
+            for rid in recipient_ids:
+                try:
+                    lid = int(rid)
+                except (TypeError, ValueError):
+                    continue
+                if User.objects.filter(pk=lid).exists():
+                    targets.append(lid)
 
         count = 0
         for uid in targets:

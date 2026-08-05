@@ -38,7 +38,7 @@ from wallet.models import (
 )
 from common.media import build_media_url
 
-from .models import AdminAuditLog, AdminMembership, AdminRole
+from .models import AccountBan, AdminAuditLog, AdminMembership, AdminRole
 
 User = get_user_model()
 
@@ -958,3 +958,48 @@ class AdminAuditLogSerializer(serializers.ModelSerializer):
         model = AdminAuditLog
         fields = ['id', 'operator', 'operator_name', 'method', 'path', 'resource',
                   'object_id', 'request_body', 'status_code', 'ip', 'created_at']
+
+
+# ---------------- 封禁审计 ----------------
+class BanRecordSerializer(serializers.ModelSerializer):
+    """封禁记录只读序列化：供审计列表/详情查看。"""
+    account_id = serializers.IntegerField(source='account_id', read_only=True)
+    account_nickname = serializers.CharField(
+        source='account.nickname', read_only=True, default='',
+    )
+    account_type = serializers.CharField(
+        source='account.account_type', read_only=True, default='',
+    )
+    operator_name = serializers.CharField(
+        source='operator_account.nickname', read_only=True, default='',
+    )
+    lifted_by_name = serializers.CharField(
+        source='lifted_by_account.nickname', read_only=True, default='',
+    )
+    status_display = serializers.CharField(
+        source='get_status_display', read_only=True,
+    )
+    scope_display = serializers.CharField(
+        source='get_scope_display', read_only=True,
+    )
+
+    class Meta:
+        model = AccountBan
+        fields = [
+            'id', 'account_id', 'account_nickname', 'account_type',
+            'reason', 'scope', 'scope_display',
+            'operator', 'operator_account', 'operator_name',
+            'status', 'status_display',
+            'expires_at', 'banned_at',
+            'lifted_at', 'lifted_by', 'lifted_by_name', 'lift_reason',
+        ]
+
+
+class BanActionSerializer(serializers.Serializer):
+    """封禁/解封入参：原因必填，可选到期时间。"""
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=2000)
+    expires_at = serializers.DateTimeField(required=False, allow_null=True)
+
+    def validate_reason(self, value):
+        # 封禁时原因必填；解封时可选。由调用方区分 required。
+        return value

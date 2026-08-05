@@ -3,7 +3,6 @@ from django.urls import path
 from .views import (
     AccountLoginView,
     AccountRefreshView,
-    BindCodeGenerateView,
     CheckinView,
     ProviderPassView,
     CustomerAchievementView,
@@ -31,5 +30,4 @@ urlpatterns = [
     path('provider-pass/', ProviderPassView.as_view()),
     path('achievements/', CustomerAchievementView.as_view()),
     path('checkin/', CheckinView.as_view()),
-    path('bind-code/', BindCodeGenerateView.as_view()),
 ]
