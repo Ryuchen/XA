@@ -14,6 +14,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // 仓库内共享金额包，与 tsconfig paths 对齐，使 `@xa/money` 真实可解析。
+      '@xa/money': fileURLToPath(new URL('../../packages/money/src', import.meta.url)),
     },
   },
   server: {

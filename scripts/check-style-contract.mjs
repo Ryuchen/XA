@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises'
+import { access, readdir, readFile } from 'node:fs/promises'
 import { extname, join, relative, resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
@@ -111,8 +111,54 @@ async function visitMoney(directory) {
   }
 }
 
+// ---------- @xa/money 可解析性检查 ----------
+// 上面的金额规则会提示「请改用 @xa/money」。如果这个包名只是装饰性的（没有任何
+// 构建器能解析它），开发者照提示修改后会直接构建失败。这里把「提示里的写法必须
+// 真的能用」固化成契约：包产物齐全，且两个消费方都声明了别名。
+async function exists(path) {
+  try {
+    await access(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function checkMoneyPackageResolvable() {
+  // 1) 运行时入口必须是不带类型注解的 .js —— Taro 的 TS/babel loader 只覆盖各 app
+  //    的 sourceRoot，包目录下的 .ts 会撞上没有 loader 的 webpack（ModuleParseError）。
+  const runtimeEntry = resolve(moneyRoot, 'src/index.js')
+  const typesEntry = resolve(moneyRoot, 'src/index.d.ts')
+  if (!(await exists(runtimeEntry))) {
+    violations.push('packages/money/src/index.js 缺失：共享金额包的运行时入口必须是纯 JS')
+  }
+  if (!(await exists(typesEntry))) {
+    violations.push('packages/money/src/index.d.ts 缺失：共享金额包必须手写类型声明')
+  }
+  if (await exists(resolve(moneyRoot, 'src/index.ts'))) {
+    violations.push(
+      'packages/money/src/index.ts 不允许存在：Taro webpack 无法解析 sourceRoot 之外的 .ts 源码',
+    )
+  }
+
+  // 2) 两个消费方都必须能把 `@xa/money` 解析到该包（构建器别名 + tsconfig paths）。
+  const aliasSites = [
+    ['apps/provider-miniapp/config/index.ts', "'@xa/money'"],
+    ['apps/provider-miniapp/tsconfig.json', '"@xa/money"'],
+    ['apps/admin-web/vite.config.ts', "'@xa/money'"],
+    ['apps/admin-web/tsconfig.json', '"@xa/money"'],
+  ]
+  for (const [file, needle] of aliasSites) {
+    const content = await readFile(resolve(root, file), 'utf8')
+    if (!content.includes(needle)) {
+      violations.push(`${file} 必须声明 @xa/money 别名，否则金额规则的提示无法照做`)
+    }
+  }
+}
+
 await Promise.all(styleSourceRoots.map(visitStyle))
 await Promise.all(moneySourceRoots.map(visitMoney))
+await checkMoneyPackageResolvable()
 
 // design-system 转发检查（保持原行为）
 const expectedEntrypoint = "@forward '../../../../packages/design-system/src/miniapp';"

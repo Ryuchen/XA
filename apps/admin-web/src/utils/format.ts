@@ -1,4 +1,4 @@
-import { formatXaCoin, toRawAmount } from '../../../../packages/money/src'
+import { formatXaCoin, toRawAmount } from '@xa/money'
 
 /** 后端账务单位转兴安币。 */
 export function amountToXaCoin(amount?: number | null): string {

@@ -3,7 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "description": "XA 三端共享金额换算与兴安币格式化工具（内部账务单位口径：10 = 1 兴安币）",
+  "type": "module",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "types": "./src/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
-  }
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "sideEffects": false
 }

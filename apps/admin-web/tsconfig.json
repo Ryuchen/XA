@@ -16,7 +16,8 @@
     "noUnusedParameters": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@xa/money": ["../../packages/money/src"]
     },
     "types": ["element-plus/global"]
   },

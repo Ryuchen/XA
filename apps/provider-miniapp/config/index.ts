@@ -1,9 +1,20 @@
+import * as path from 'node:path';
 import { defineConfig, type UserConfigExport } from '@tarojs/cli';
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin';
 import devConfig from './dev';
 import prodConfig from './prod';
 
+// 仓库内共享金额包。用绝对路径别名而不是相对 import，让 `@xa/money` 这个包名在
+// weapp / h5 两个 target 下都能被 webpack 真实解析（与 tsconfig paths 对齐）。
+// 该包的运行时入口是不带类型注解的 ESM .js（类型由同目录 .d.ts 提供），因此不需要
+// 为它额外挂 TS / babel loader —— Taro 的 loader 只覆盖 sourceRoot，包里的 .ts
+// 源码会直接撞上没有 loader 的 webpack 并报 ModuleParseError。
+const moneyPackageEntry = path.resolve(__dirname, '../../../packages/money/src');
+
 export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
+  // 微信开发者工具固定读取 dist/。H5 使用独立目录，避免后构建的网页产物
+  // 覆盖 dist/app.json，导致小程序项目无法启动。（与 boss-miniapp 保持一致）
+  const defaultOutputRoot = process.env.TARO_ENV === 'h5' ? 'dist-h5' : 'dist';
   const baseConfig: UserConfigExport<'webpack5'> = {
     projectName: 'xa-provider-app',
     date: '2026-07-03',
@@ -15,8 +26,11 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
       828: 1.81 / 2,
     },
     sourceRoot: 'src',
-    outputRoot: process.env.TARO_OUTPUT_DIR || 'dist',
+    outputRoot: process.env.TARO_OUTPUT_DIR || defaultOutputRoot,
     plugins: ['@tarojs/plugin-html'],
+    alias: {
+      '@xa/money': moneyPackageEntry,
+    },
     defineConstants: {
       'process.env.TARO_APP_API': JSON.stringify(process.env.TARO_APP_API || ''),
       'process.env.TARO_APP_MEDIA': JSON.stringify(process.env.TARO_APP_MEDIA || ''),
