@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { useCatalogStore, useServices } from '@/store';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';

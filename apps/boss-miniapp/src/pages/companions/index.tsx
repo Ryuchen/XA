@@ -3,7 +3,7 @@ import { View, Text, Image, Input, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchEscorts, EscortProfile } from '@/services/user';
 import { fetchRankings, RankingData, RankingPeriod } from '@/services/ranking';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { useCatalogStore, useServices } from '@/store';
 import { getStoredToken } from '@/utils/auth';
 import { useLoginGuard } from '@/hooks/useLoginGuard';

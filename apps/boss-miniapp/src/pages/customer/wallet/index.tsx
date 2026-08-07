@@ -3,7 +3,7 @@ import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { fetchTransactions, TransactionRecord } from '@/services/wallet';
 import { openWecomCustomerService } from '@/services/support';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { useWalletStore } from '@/store';
 import { Empty, Skeleton } from '@/components';
 import Icon from '@/components/Icon';

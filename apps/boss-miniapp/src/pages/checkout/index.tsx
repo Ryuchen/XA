@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import { createOrder, quoteOrder, CreateOrderPayload, OrderQuote } from '@/services/order';
 import { fetchMyCoupons, UserCoupon } from '@/services/coupon';
 import { fetchMe, fetchEscorts, EscortProfile, MeProfile } from '@/services/user';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { openWecomCustomerService, SupportContactCard } from '@/services/support';
 import { useCatalogStore, useOrderStore, useWalletStore } from '@/store';
 import { useLoginGuard } from '@/hooks/useLoginGuard';

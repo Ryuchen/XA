@@ -4,7 +4,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { openWecomCustomerService } from '@/services/support';
 import { getStoredToken, roleTextMap } from '@/utils/auth';
 import { fetchMe, MeProfile } from '@/services/user';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { useOrderStore, useUserStore, useWalletStore } from '@/store';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import Icon, { IconName } from '@/components/Icon';

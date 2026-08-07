@@ -5,7 +5,7 @@ import { GameCategoryInfo } from '@/services/order';
 import { fetchEscorts, EscortProfile } from '@/services/user';
 import { SupportContactCard } from '@/services/support';
 import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { useCatalogStore } from '@/store';
 import { Empty, Icon, Skeleton } from '@/components';
 import { resolveImageUrl } from '@/utils/media';

@@ -3,7 +3,7 @@ import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { fetchFavorites, toggleFavorite } from '@/services/favorite';
 import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import { resolveImageUrl } from '@/utils/media';

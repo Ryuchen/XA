@@ -1,9 +1,13 @@
 import { defineConfig, type UserConfigExport } from '@tarojs/cli';
+import path from 'path';
 import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin';
 import devConfig from './dev';
 import prodConfig from './prod';
 
 export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
+  // 仓库内共享金额包。用绝对路径别名而不是相对 import，让 `@xa/money` 在 weapp / h5
+  // 两个 target 下都能被 webpack 真实解析（与 tsconfig paths 对齐；provider 端同款接法）。
+  const moneyPackageEntry = path.resolve(__dirname, '../../../packages/money/src');
   // 微信开发者工具固定读取 dist/。H5 使用独立目录，避免后构建的网页产物
   // 覆盖 dist/app.json，导致小程序项目无法启动。
   const defaultOutputRoot = process.env.TARO_ENV === 'h5' ? 'dist-h5' : 'dist';
@@ -30,6 +34,9 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
       options: {},
     },
     framework: 'react',
+    alias: {
+      '@xa/money': moneyPackageEntry,
+    },
     compiler: {
       type: 'webpack5',
       prebundle: {

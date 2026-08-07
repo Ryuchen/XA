@@ -21,7 +21,8 @@
     "resolveJsonModule": true,
     "typeRoots": ["node_modules/@types"],
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@xa/money": ["../../packages/money/src"]
     }
   },
   "include": ["src", "types"],

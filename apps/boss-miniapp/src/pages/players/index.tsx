@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import { fetchEscorts, EscortProfile } from '@/services/user';
 import { fetchServiceDetail, fetchServices } from '@/services/order';
 import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import { useVoicePreview } from '@/hooks/useVoicePreview';

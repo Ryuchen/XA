@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchMyCoupons, UserCoupon, UserCouponStatus } from '@/services/coupon';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import Icon, { IconName } from '@/components/Icon';
 import styles from './index.module.scss';
 

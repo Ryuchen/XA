@@ -9,7 +9,7 @@ import {
 } from '@/services/order';
 import { wsService } from '@/services/websocket';
 import { useCatalogStore, useOrderStore, useServices, useWalletStore } from '@/store';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import {
   EscortOrderStatus,
   EscortOrder,

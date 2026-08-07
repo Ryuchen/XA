@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, View, Text } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchCheckinCalendar, doCheckin, doMakeupCheckin, CheckinCalendar } from '@/services/checkin';
-import { formatXaCoin } from '@/utils/money';
+import { formatXaCoin } from '@xa/money';
 import { useWalletStore } from '@/store';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
