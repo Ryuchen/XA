@@ -1,44 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { openWecomCustomerService } from '@/services/support';
-import { clearStoredUser, getStoredToken, getStoredUser, roleTextMap, LoginUser } from '@/utils/auth';
-import { fetchOrderStats } from '@/services/order';
-import { fetchWalletInfo } from '@/services/wallet';
+import { getStoredToken, roleTextMap } from '@/utils/auth';
 import { fetchMe, MeProfile } from '@/services/user';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
+import { useOrderStore, useUserStore, useWalletStore } from '@/store';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import Icon, { IconName } from '@/components/Icon';
 import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
 const MinePage: React.FC = () => {
-  const [user, setUser] = useState<LoginUser | null>(getStoredUser());
+  const user = useUserStore(state => state.user);
+  const logout = useUserStore(state => state.logout);
+  const stats = useOrderStore(state => state.stats);
+  const loadStats = useOrderStore(state => state.load);
+  const balance = useWalletStore(state => state.balance);
+  const loadBalance = useWalletStore(state => state.load);
   const { ensureLogin, loginSheet } = useLoginGuard();
 
-  const [stats, setStats] = useState({
-    pending: 0,
-    grabbed: 0,
-    in_service: 0,
-    completed: 0,
-  });
-
-  const [balance, setBalance] = useState(0);
   const [profile, setProfile] = useState<MeProfile | null>(null);
 
-  // 拉取需鉴权数据：仅登录后调用，避免匿名态触发无意义 401
-  const loadAuthedData = () => {
+  // 拉取需鉴权数据：仅登录后调用，避免匿名态触发无意义 401。
+  // 余额与订单统计走 store 缓存，30s 内切 tab 回来不再重复请求。
+  const loadAuthedData = (force = false) => {
     if (!getStoredToken()) return;
-    fetchOrderStats()
-      .then((res: any) => {
-        if (res.code === 0 && res.data) setStats(res.data);
-      })
-      .catch(() => {});
-    fetchWalletInfo()
-      .then((res: any) => {
-        if (res.code === 0 && res.data) setBalance(res.data.balance);
-      })
-      .catch(() => {});
+    loadStats(force);
+    loadBalance(force);
     fetchMe()
       .then(res => {
         if (res.code === 0 && res.data) setProfile(res.data);
@@ -46,21 +35,13 @@ const MinePage: React.FC = () => {
       .catch(() => {});
   };
 
-  useEffect(() => {
-    loadAuthedData();
-  }, []);
-
-  // 从设置页返回或登录后刷新资料
+  // useDidShow 首次进入也会触发，统一由它驱动；命中缓存则不发请求
   useDidShow(() => {
-    setUser(getStoredUser());
     loadAuthedData();
   });
 
   const handleLogin = () => {
-    ensureLogin(() => {
-      setUser(getStoredUser());
-      loadAuthedData();
-    });
+    ensureLogin(() => loadAuthedData(true));
   };
 
   const orderStats: { icon: IconName; label: string; count: number; status: string }[] = [
@@ -85,10 +66,8 @@ const MinePage: React.FC = () => {
 
   const handleNavigate = (item) => {
     if (item.logout) {
-      clearStoredUser();
-      setUser(null);
-      setStats({ pending: 0, grabbed: 0, in_service: 0, completed: 0 });
-      setBalance(0);
+      // store 内部会一并清空钱包与订单统计缓存
+      logout();
       setProfile(null);
       Taro.showToast({ title: '已退出登录', icon: 'none' });
       return;

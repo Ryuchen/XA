@@ -121,12 +121,17 @@ const ChatPage: React.FC = () => {
       ensureLogin(() => loadMessages());
       return;
     }
-    const res = await markAllMessagesRead();
-    if (res.code === 0) {
-      Taro.showToast({ title: '已全部标记为已读', icon: 'success' });
-      loadMessages();
-    } else {
-      Taro.showToast({ title: res.msg || '操作失败', icon: 'none' });
+    try {
+      const res = await markAllMessagesRead();
+      if (res.code === 0) {
+        Taro.showToast({ title: '已全部标记为已读', icon: 'success' });
+        loadMessages();
+      } else {
+        Taro.showToast({ title: res.msg || '操作失败', icon: 'none' });
+      }
+    } catch (e) {
+      console.error('标记已读失败', e);
+      Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' });
     }
   };
 
@@ -195,7 +200,7 @@ const ChatPage: React.FC = () => {
                   <Text className={styles.msgTime}>{formatTime(msg.created_at)}</Text>
                 </View>
                 <View className={styles.msgBody}>
-                  <Text className={styles.msgText} numberOfLines={1}>
+                  <Text className={styles.msgText}>
                     {msg.preview}
                   </Text>
                   {!msg.is_read && (

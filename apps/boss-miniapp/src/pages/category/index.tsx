@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { fetchServices } from '@/services/order';
-import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
+import { useCatalogStore, useServices } from '@/store';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import { resolveImageUrl } from '@/utils/media';
@@ -14,24 +13,19 @@ import { getStoredToken } from '@/utils/auth';
 const PLACEHOLDER_IMAGE = 'https://picsum.photos/id/1/400/400';
 
 const CategoryPage: React.FC = () => {
-  const [services, setServices] = useState<ServiceInfo[]>([]);
+  // 服务目录走全局缓存，与「陪玩」「自助下单」「结算」等页共享，5 分钟内不重拉
+  const services = useServices();
+  const loadServices = useCatalogStore(state => state.loadServices);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState('');
   const { ensureLogin, loginSheet } = useLoginGuard();
 
-  const loadServices = () => {
-    setLoading(true);
-    fetchServices()
-      .then(res => {
-        setServices(res.data || []);
-      })
-      .catch(() => setServices([]))
-      .finally(() => setLoading(false));
-  };
-
   useEffect(() => {
-    if (getStoredToken()) loadServices();
-    else setLoading(false);
+    if (!getStoredToken()) {
+      setLoading(false);
+      return;
+    }
+    loadServices().finally(() => setLoading(false));
   }, []);
 
   const handleProductClick = (serviceId: number) => {
@@ -60,11 +54,12 @@ const CategoryPage: React.FC = () => {
           <View className={styles.countPill}>{services.length} 项</View>
         </View>
         <View className={styles.searchBar}>
-          <Icon name="search" size={32} color="#8E8E93" />
+          <Icon name="search" size={32} color="rgba(255,255,255,0.7)" />
           <Input
             className={styles.searchInput}
             value={keyword}
             placeholder="搜索游戏、服务或玩法"
+            placeholderStyle="color: rgba(255,255,255,0.55)"
             onInput={event => setKeyword(event.detail.value)}
             confirmType="search"
           />

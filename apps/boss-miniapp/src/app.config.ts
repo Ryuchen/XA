@@ -13,7 +13,6 @@ export default defineAppConfig({
     'pages/checkout/index',
     'pages/messageDetail/index',
     'pages/players/index',
-    'pages/customerService/index',
     'pages/customer/wallet/index',
     'pages/customer/checkin/index',
     'pages/announcement/index',
@@ -34,7 +33,7 @@ export default defineAppConfig({
   darkmode: true,
   themeLocation: 'theme.json',
   tabBar: {
-    custom: true,
+    custom: false,
     color: '#999999',
     selectedColor: '#6C5CE7',
     backgroundColor: '#FFFFFF',
@@ -42,23 +41,33 @@ export default defineAppConfig({
     list: [
       {
         pagePath: 'pages/home/index',
-        text: '首页'
+        text: '首页',
+        iconPath: 'assets/tabbar/home_normal.png',
+        selectedIconPath: 'assets/tabbar/home_active.png'
       },
       {
         pagePath: 'pages/companions/index',
-        text: '陪玩'
+        text: '陪玩',
+        iconPath: 'assets/tabbar/companions_normal.png',
+        selectedIconPath: 'assets/tabbar/companions_active.png'
       },
       {
         pagePath: 'pages/category/index',
-        text: '服务'
+        text: '服务',
+        iconPath: 'assets/tabbar/service_normal.png',
+        selectedIconPath: 'assets/tabbar/service_active.png'
       },
       {
         pagePath: 'pages/chat/index',
-        text: '消息'
+        text: '消息',
+        iconPath: 'assets/tabbar/message_normal.png',
+        selectedIconPath: 'assets/tabbar/message_active.png'
       },
       {
         pagePath: 'pages/mine/index',
-        text: '我的'
+        text: '我的',
+        iconPath: 'assets/tabbar/mine_normal.png',
+        selectedIconPath: 'assets/tabbar/mine_active.png'
       }
     ]
   }

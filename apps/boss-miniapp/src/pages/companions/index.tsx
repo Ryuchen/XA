@@ -2,10 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, Input, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchEscorts, EscortProfile } from '@/services/user';
-import { fetchServices, fetchGameCategories, GameCategoryInfo } from '@/services/order';
 import { fetchRankings, RankingData, RankingPeriod } from '@/services/ranking';
-import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
+import { useCatalogStore, useServices } from '@/store';
 import { getStoredToken } from '@/utils/auth';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { useVoicePreview } from '@/hooks/useVoicePreview';
@@ -19,10 +18,8 @@ const rankPeriods = [
   { label: '月榜', value: 'month' }
 ] as const;
 
-const DEFAULT_AVATAR = 'https://copilot-cn.bytedance.net/api/ide/v1/text_to_image?prompt=game%20avatar%20round%20icon&image_size=square';
-
 const statusMeta = (status: string) => {
-  const value = status.toLowerCase();
+  const value = (status || '').toLowerCase();
   if (value === 'available' || value === 'online') return { key: 'online', text: '在线' };
   if (value === 'busy') return { key: 'busy', text: '忙碌' };
   return { key: 'offline', text: '离线' };
@@ -33,34 +30,29 @@ const CompanionsPage: React.FC = () => {
   const [rankPeriod, setRankPeriod] = useState<RankingPeriod>('month');
   const [ranking, setRanking] = useState<RankingData>({ consume_rank: [], order_rank: [] });
   const [escorts, setEscorts] = useState<EscortProfile[]>([]);
-  const [gifts, setGifts] = useState<ServiceInfo[]>([]);
-  const [gameCategories, setGameCategories] = useState<GameCategoryInfo[]>([]);
-  const [selectedGame, setSelectedGame] = useState('');
+  // 礼物服务与游戏分类属于平台目录，跨页共享缓存
+  const gifts = useServices('GIFT');
+  const gameCategories = useCatalogStore(state => state.gameCategories);
+  const loadCatalogServices = useCatalogStore(state => state.loadServices);
+  const loadCatalogGameCategories = useCatalogStore(state => state.loadGameCategories);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [escortLoading, setEscortLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { ensureLogin, loginSheet } = useLoginGuard();
   const { playingId, toggle: toggleVoice } = useVoicePreview();
 
-  const loadEscorts = async (game = selectedGame) => {
-    const res = await fetchEscorts(game || undefined);
+  const loadEscorts = async (categoryId: number | null = selectedCategoryId) => {
+    const res = await fetchEscorts(undefined, categoryId ?? undefined);
     if (res.code === 0 && res.data) setEscorts(res.data);
-  };
-
-  const loadGameCategories = async () => {
-    const res = await fetchGameCategories();
-    if (res.code !== 0 || !res.data) return;
-    setGameCategories(res.data);
-  };
-
-  const loadGifts = async () => {
-    const res = await fetchServices('GIFT');
-    if (res.code === 0 && res.data) setGifts(res.data);
   };
 
   const loadRanking = async (period: RankingPeriod) => {
     const res = await fetchRankings(period);
-    if (res.code === 0 && res.data) setRanking(res.data);
+    // 后端可能只返回 consume_rank；以响应为主、缺失字段补默认值，避免 order_rank 为 undefined 导致渲染崩溃
+    if (res.code === 0 && res.data) {
+      setRanking({ ...res.data, consume_rank: res.data.consume_rank || [], order_rank: res.data.order_rank || [] });
+    }
   };
 
   useDidShow(() => {
@@ -69,7 +61,11 @@ const CompanionsPage: React.FC = () => {
       return;
     }
     setLoading(true);
-    Promise.all([loadEscorts(selectedGame), loadGameCategories(), loadGifts()])
+    Promise.all([
+      loadEscorts(selectedCategoryId),
+      loadCatalogGameCategories(),
+      loadCatalogServices('GIFT'),
+    ])
       .catch(e => console.error('加载陪玩人员失败', e))
       .finally(() => setLoading(false));
   });
@@ -79,7 +75,9 @@ const CompanionsPage: React.FC = () => {
     let active = true;
     fetchRankings(rankPeriod)
       .then(res => {
-        if (active && res.code === 0 && res.data) setRanking(res.data);
+        if (active && res.code === 0 && res.data) {
+          setRanking({ ...res.data, consume_rank: res.data.consume_rank || [], order_rank: res.data.order_rank || [] });
+        }
       })
       .catch(e => console.error('加载陪玩接单榜失败', e));
     return () => { active = false; };
@@ -99,23 +97,24 @@ const CompanionsPage: React.FC = () => {
     if (!getStoredToken()) return;
     setRefreshing(true);
     await Promise.all([
-      loadEscorts(selectedGame).catch(() => undefined),
-      loadGameCategories().catch(() => undefined),
-      loadGifts().catch(() => undefined),
+      loadEscorts(selectedCategoryId).catch(() => undefined),
+      // 手动下拉刷新时强制穿透目录缓存
+      loadCatalogGameCategories(true).catch(() => undefined),
+      loadCatalogServices('GIFT', true).catch(() => undefined),
       loadRanking(rankPeriod).catch(() => undefined)
     ]);
     setRefreshing(false);
   };
 
-  const handleGameChange = async (game: string) => {
-    if (game === selectedGame || escortLoading) return;
-    const previousGame = selectedGame;
-    setSelectedGame(game);
+  const handleGameChange = async (categoryId: number | null) => {
+    if (categoryId === selectedCategoryId || escortLoading) return;
+    const previousId = selectedCategoryId;
+    setSelectedCategoryId(categoryId);
     setEscortLoading(true);
     try {
-      await loadEscorts(game);
+      await loadEscorts(categoryId);
     } catch (e) {
-      setSelectedGame(previousGame);
+      setSelectedCategoryId(previousId);
       console.error('按游戏筛选陪玩失败', e);
       Taro.showToast({ title: '筛选失败，请稍后重试', icon: 'none' });
     } finally {
@@ -134,8 +133,12 @@ const CompanionsPage: React.FC = () => {
   const handleLogin = () => {
     ensureLogin(() => {
       setLoading(true);
-      Promise.all([loadEscorts(selectedGame), loadGameCategories(), loadGifts(), loadRanking(rankPeriod)])
-        .finally(() => setLoading(false));
+      Promise.all([
+        loadEscorts(selectedCategoryId),
+        loadCatalogGameCategories(),
+        loadCatalogServices('GIFT'),
+        loadRanking(rankPeriod)
+      ]).finally(() => setLoading(false));
     });
   };
 
@@ -205,7 +208,7 @@ const CompanionsPage: React.FC = () => {
                     <View key={item.user_id} className={styles.rankRow}>
                       <Text className={`${styles.rankNo} ${item.rank <= 3 ? styles.rankNoTop : ''}`}>{item.rank}</Text>
                       <View className={styles.rankPlayer}>
-                        <Image className={styles.rankAvatar} src={resolveImageUrl(item.avatar, DEFAULT_AVATAR)} mode="aspectFill" />
+                        <Image className={styles.rankAvatar} src={resolveImageUrl(item.avatar)} mode="aspectFill" />
                         <Text className={styles.rankName}>{item.nickname}</Text>
                       </View>
                       <Text className={styles.rankOrders}>{item.order_count}单</Text>
@@ -235,7 +238,7 @@ const CompanionsPage: React.FC = () => {
                     <View key={gift.id} className={styles.giftCard} onClick={() => handleGiftTap(gift.id)}>
                       <Image
                         className={styles.giftCover}
-                        src={resolveImageUrl(gift.cover_url, DEFAULT_AVATAR)}
+                        src={resolveImageUrl(gift.cover_url)}
                         mode="aspectFill"
                       />
                       <View className={styles.giftMain}>
@@ -261,16 +264,16 @@ const CompanionsPage: React.FC = () => {
             <View className={styles.gameFilterWrap}>
               <View className={styles.gameFilterRow}>
                 <View
-                  className={`${styles.gameFilterChip} ${selectedGame === '' ? styles.gameFilterChipActive : ''}`}
-                  onClick={() => handleGameChange('')}
+                  className={`${styles.gameFilterChip} ${selectedCategoryId === null ? styles.gameFilterChipActive : ''}`}
+                  onClick={() => handleGameChange(null)}
                 >
                   <Text className={styles.gameFilterText}>全部</Text>
                 </View>
                 {gameCategories.map(category => (
                   <View
                     key={category.id}
-                    className={`${styles.gameFilterChip} ${selectedGame === category.name ? styles.gameFilterChipActive : ''}`}
-                    onClick={() => handleGameChange(category.name)}
+                    className={`${styles.gameFilterChip} ${selectedCategoryId === category.id ? styles.gameFilterChipActive : ''}`}
+                    onClick={() => handleGameChange(category.id)}
                   >
                     {category.icon_url && (
                       <Image className={styles.gameFilterIcon} src={resolveImageUrl(category.icon_url)} mode="aspectFit" />
@@ -287,7 +290,7 @@ const CompanionsPage: React.FC = () => {
                 return (
                   <View key={escort.id} className={styles.playerCard}>
                     <View className={styles.playerAvatarWrap}>
-                      <Image className={styles.playerAvatar} src={resolveImageUrl(escort.avatar, DEFAULT_AVATAR)} mode="aspectFill" />
+                      <Image className={styles.playerAvatar} src={resolveImageUrl(escort.avatar)} mode="aspectFill" />
                       <View className={`${styles.status} ${styles[status.key]}`}>
                         <View className={styles.statusDot} />
                         <Text>{status.text}</Text>
@@ -329,7 +332,7 @@ const CompanionsPage: React.FC = () => {
                 <Empty
                   icon="🔍"
                   title="没有找到相关陪玩"
-                  desc={selectedGame ? `暂无可接${selectedGame}的陪玩，试试其他游戏` : '换一个昵称、段位或城市关键词试试'}
+                  desc={selectedCategoryId != null ? `暂无可接${gameCategories.find(c => c.id === selectedCategoryId)?.name || ''}的陪玩，试试其他游戏` : '换一个昵称、段位或城市关键词试试'}
                 />
               )}
             </View>

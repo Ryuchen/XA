@@ -21,7 +21,7 @@
 |------|-----------|-----------|------|
 | 老板 | `customer` | `CUSTOMER` | 浏览服务、下单、付款、评价、签到、领券 |
 | 陪玩（大神/打手） | `provider` | `PROVIDER` | 接单/拒单、提供服务、设置档期、报单、提现、缴押金 |
-| 客服（运营） | `support` | `OPERATOR` | 派单、生成绑定码、IM 接待、试音招募 |
+| 客服（运营） | `support` | `OPERATOR` | 派单、IM 接待、试音招募 |
 | 平台管理员 | — | `ADMIN` | 后台全功能（通过 RBAC 权限点控制） |
 
 > 另有系统内置账户 `__platform__`（`PLATFORM_SYSTEM_USERNAME`），禁止登录，用于归集平台留存收入（`shop_income`）。
@@ -59,7 +59,7 @@ XA/
 - **微信登录**（`/api/users/wechat-login/`）：小程序端用 code 换 openid 建号/登录，可附带手机号授权 code 回填手机号。
 - **账号密码登录**（`/api/users/account-login/`）：H5/浏览器端使用，走 Django 真实密码校验。
 - **Mock 开关**：`WECHAT_MOCK_LOGIN` 在未配置微信 AppID/Secret 时自动为真，开发期免真实微信调用。
-- **角色绑定码**：陪玩/客服登录须携带 `bindCode`（由客服在 C 端 `/api/users/bind-code/` 生成，前缀 `PW`=陪玩 / `KF`=客服）。
+- **角色绑定码（已废弃）**：原计划陪玩/客服登录须携带 `bindCode`（由客服在 C 端 `/api/users/bind-code/` 生成，前缀 `PW`=陪玩 / `KF`=客服）。**当前实现已废弃该机制**：登录端点不再接收/校验 `bindCode`，统一走微信/账号密码登录；原生成接口为未落库的死接口。本期不实现绑定码登录，陪玩/客服由后台账号密码开户后直接登录。
 
 ---
 
@@ -74,7 +74,7 @@ XA/
 | 下单结算 | 填写游戏账号资料、局数、优惠券、备注，余额支付 |
 | 订单管理 | 订单列表（玩家侧），取消、评价订单 |
 | 钱包 | 余额、充值、资金流水 |
-| 每月签到 | 签到日历 + 阶梯奖励（奖励入钱包） |
+| 每月签到 | 消费型签到：当日消费达门槛（默认 188 元）方可签到；按当月累计天数发放阶梯礼物 + 余额奖励（入钱包）；消费达更高门槛（默认 388 元）额外发补签卡（每月上限 3 张）；当月签满得全勤专属 Tag |
 | 优惠券 | 领券中心、我的券包（未用/已用/过期） |
 | 收藏 | 收藏的服务 |
 | 成就馆 | 按已完成订单数/累计消费实时解锁 |
@@ -96,7 +96,7 @@ XA/
 | 功能模块 | 说明 |
 |----------|------|
 | 工作台 | 工单队列（待派单/处理中/售后/完成），派单给陪玩、完成订单 |
-| 绑定码 | 生成陪玩/客服绑定码 |
+| 绑定码（已废弃） | 原计划生成陪玩/客服绑定码，现机制已废弃，登录不再使用 |
 | 老板信息 | 查看老板联系方式以便服务 |
 | 在线客服 IM | 与用户实时文字/图片沟通（移动端在小程序，后台亦有工作台） |
 | 试音招募 | 通过后台生成招募/试音链接、审核报名 |
@@ -156,7 +156,10 @@ provider_income(陪玩实得) + inviter_commission(推荐人分佣) + shop_incom
 - **EscortLevel**：陪玩等级（对应平台抽成率）。
 - **BossType**：老板分级（对应下单折扣率）。
 - **EscortSchedule**：陪玩每周循环档期（weekday + 分钟时段）。
-- **CheckinRecord**：老板每月签到记录（含本月序号与奖励额）。
+- **CheckinRecord**：老板每月逐日签到记录（含本月序号、奖励额、`is_makeup` 补签标记）。
+- **CheckinRuleConfig**：签到全局规则单例（pk=1）——日签消费门槛、补签卡消费门槛与每月上限、全勤奖名称/描述/Tag code；后台 `GET|PUT /api/admin/config/checkin` 维护。
+- **CheckinGift**：按「当月第 N 天」（1–31 唯一）配置的阶梯礼物（名称/图标/余额奖励/启用开关）。
+- **CheckinMonthProgress**：老板月度签到进度（`(user, year, month)` 唯一）——补签卡库存、发卡日期、全勤奖励发放状态与时间；按自然月天然隔离，无需定时重置。
 - **Achievement**：成就配置（按完成订单数/累计消费维度，目标值解锁）。
 
 ### 5.2 订单与服务（orders）
@@ -218,6 +221,10 @@ provider_income(陪玩实得) + inviter_commission(推荐人分佣) + shop_incom
 
 ### 6.5 营销与内容
 - 优惠券、促销活动、老板分级、陪玩等级、成就配置、首页轮播、公告管理（均为 CRUD）。
+- **签到运营**（权限点 `checkin:view` / `checkin:edit`）：
+  - 签到规则配置（`GET|PUT /api/admin/config/checkin`）——日签消费门槛、补签卡消费门槛、每月补签卡上限、全勤奖名称/描述/Tag code。
+  - 阶梯礼物 CRUD（`/api/admin/checkin-gifts/`）——按当月第 N 天配置礼物名称/图标/余额奖励/启停。
+  - 月度签到进度查询（`/api/admin/checkin-progress/`，只读）——按年/月/是否全勤筛选用户补签卡库存与全勤发放状态。
 
 ### 6.6 客服与试音
 - **客服名片**、**试音链接**、**试音报名审核**、**在线客服 IM 工作台**、**站内消息**（定向/全员广播推送）。
@@ -232,7 +239,7 @@ provider_income(陪玩实得) + inviter_commission(推荐人分佣) + shop_incom
 
 | 模块 | 端点（前缀 `/api/`） | 说明 |
 |------|----------------------|------|
-| 登录 | `users/wechat-login/`、`users/account-login/`、`users/bind-code/` | 登录与绑定码 |
+| 登录 | `users/wechat-login/`、`users/account-login/` | 微信/账号密码登录（绑定码机制已废弃） |
 | 用户 | `users/me/`、`users/achievements/`、`users/checkin/` | 资料/成就/签到 |
 | 陪玩 | `users/escorts/`、`users/escorts/me/`、`users/escorts/status/`、`users/escorts/schedule/`、`users/provider-stats/` | 大神列表/资料/状态/档期/统计 |
 | 服务 | `orders/services/`、`orders/services/{id}/`、`orders/services/{id}/evaluations/` | 服务列表/详情/评价 |
@@ -285,11 +292,11 @@ provider_income(陪玩实得) + inviter_commission(推荐人分佣) + shop_incom
 > 后端根路径 `/` 无路由（纯 API 服务），直接访问返回 404 属正常；业务入口为 C 端 H5 与运营后台，数据查看可用 Django Admin（`/admin/`）。
 
 ### 10.2 测试账号（密码均为 `test1234`）
-| 角色 | 账号 | 登录绑定码 |
+| 角色 | 账号 | 登录方式 |
 |------|------|-----------|
-| 老板（CUSTOMER） | `boss` | 无需 |
-| 陪玩（PROVIDER） | `provider` | 任意非空（如 `PWTEST01`） |
-| 客服（OPERATOR） | `support` | 任意非空（如 `KFTEST01`） |
+| 老板（CUSTOMER） | `boss` | 微信/账号密码 |
+| 陪玩（PROVIDER） | `provider` | 后台账号密码（绑定码机制已废弃） |
+| 客服（OPERATOR） | `support` | 后台账号密码（绑定码机制已废弃） |
 | 超级管理员 | `admin` | 后台登录 |
 
 ### 10.3 全阶段批量联调账号

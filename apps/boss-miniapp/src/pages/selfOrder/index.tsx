@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { fetchServices, fetchGameCategories, GameCategoryInfo } from '@/services/order';
+import { GameCategoryInfo } from '@/services/order';
 import { fetchEscorts, EscortProfile } from '@/services/user';
-import { fetchContactCards, SupportContactCard } from '@/services/support';
+import { SupportContactCard } from '@/services/support';
 import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
+import { useCatalogStore } from '@/store';
 import { Empty, Icon, Skeleton } from '@/components';
 import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
@@ -29,14 +30,13 @@ const SelfOrderPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([fetchServices(), fetchGameCategories(), fetchContactCards()])
-      .then(([serviceRes, categoryRes, contactRes]) => {
-        const availableServices = (serviceRes.data || []).filter(
-          item => !item.service_category_name?.includes('礼')
-        );
-        setServices(availableServices);
-        setCategories(categoryRes.data || []);
-        setContacts(contactRes.data || []);
+    // 三份目录数据全部走全局缓存，从首页/服务页跳进来时通常零请求
+    const { loadServices, loadGameCategories, loadContactCards } = useCatalogStore.getState();
+    Promise.all([loadServices(), loadGameCategories(), loadContactCards()])
+      .then(([serviceList, categoryList, contactList]) => {
+        setServices(serviceList.filter(item => !item.service_category_name?.includes('礼')));
+        setCategories(categoryList);
+        setContacts(contactList);
       })
       .catch(() => Taro.showToast({ title: '下单信息加载失败', icon: 'none' }))
       .finally(() => setLoading(false));

@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro';
 import { getStoredToken } from '@/utils/auth';
-import { BASE_URL } from '@/utils/request';
+import { WS_URL } from '@/utils/env';
 
 type MessageHandler = (data: unknown) => void;
 
@@ -18,7 +18,7 @@ class WebSocketService {
     if (!token) return;
 
     this.shouldReconnect = true;
-    const wsBase = BASE_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+    const wsBase = WS_URL;
     this.wsUrl = `${wsBase}/ws/orders/?token=${token}`;
     this.doConnect();
   }

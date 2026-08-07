@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Input, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { fetchMe, updateMe, MeProfile } from '@/services/user';
-import { fetchGameCategories, GameCategoryInfo } from '@/services/order';
-import { getStoredUser, setStoredUser } from '@/utils/auth';
+import { fetchMe, updateMe, MeProfile, UpdateMePayload } from '@/services/user';
+import { GameCategoryInfo } from '@/services/order';
+import { useCatalogStore, useUserStore } from '@/store';
 import Icon from '@/components/Icon';
 import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
@@ -32,13 +32,15 @@ const SettingsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    Promise.all([fetchMe(), fetchGameCategories()]).then(([profileRes, categoryRes]) => {
-      if (categoryRes.code === 0 && categoryRes.data) {
-        setGameCategories(categoryRes.data);
-        setSelectedGameId(current => current ?? categoryRes.data?.[0]?.id ?? null);
-      }
-      if (profileRes.code === 0 && profileRes.data) applyProfile(profileRes.data);
-    }).catch(() => Taro.showToast({ title: '资料加载失败', icon: 'none' }));
+    Promise.all([fetchMe(), useCatalogStore.getState().loadGameCategories()])
+      .then(([profileRes, categoryList]) => {
+        if (categoryList.length > 0) {
+          setGameCategories(categoryList);
+          setSelectedGameId(current => current ?? categoryList[0]?.id ?? null);
+        }
+        if (profileRes.code === 0 && profileRes.data) applyProfile(profileRes.data);
+      })
+      .catch(() => Taro.showToast({ title: '资料加载失败', icon: 'none' }));
   }, []);
 
   const currentGameProfile = selectedGameId == null
@@ -60,28 +62,38 @@ const SettingsPage: React.FC = () => {
       return;
     }
     setSubmitting(true);
-    const res = await updateMe({
-      nickname: nickname.trim(),
-      phone: phone.trim(),
-      game_profiles: gameCategories.map(category => ({
-        game_category: category.id,
-        region: (gameProfiles[category.id]?.region || '').trim(),
-        nickname: (gameProfiles[category.id]?.nickname || '').trim(),
-        uid: (gameProfiles[category.id]?.uid || '').trim(),
-        is_default: category.id === selectedGameId,
-      })),
-    });
-    setSubmitting(false);
-    if (res.code === 0 && res.data) {
-      applyProfile(res.data);
-      // 同步本地存储的昵称，使「我的」页头部即时刷新
-      const stored = getStoredUser();
-      if (stored) {
-        setStoredUser({ ...stored, nickname: res.data.nickname });
+    try {
+      const payload: UpdateMePayload = {
+        nickname: nickname.trim(),
+        phone: phone.trim(),
+      };
+      // 类目请求失败时 gameCategories 为空，此时不能提交空数组，否则会清空用户已填的游戏资料
+      if (gameCategories.length > 0) {
+        payload.game_profiles = gameCategories.map(category => ({
+          game_category: category.id,
+          region: (gameProfiles[category.id]?.region || '').trim(),
+          nickname: (gameProfiles[category.id]?.nickname || '').trim(),
+          uid: (gameProfiles[category.id]?.uid || '').trim(),
+          is_default: category.id === selectedGameId,
+        }));
       }
-      Taro.showToast({ title: '已保存', icon: 'success' });
-    } else {
-      Taro.showToast({ title: res.msg || '保存失败', icon: 'none' });
+      const res = await updateMe(payload);
+      if (res.code === 0 && res.data) {
+        applyProfile(res.data);
+        // 写回 store（内部同步落盘），「我的」页头部即时刷新，无需等 useDidShow
+        const { user, setUser } = useUserStore.getState();
+        if (user) {
+          setUser({ ...user, nickname: res.data.nickname });
+        }
+        Taro.showToast({ title: '已保存', icon: 'success' });
+      } else {
+        Taro.showToast({ title: res.msg || '保存失败', icon: 'none' });
+      }
+    } catch (e) {
+      console.error('保存资料失败', e);
+      Taro.showToast({ title: '保存失败，请稍后重试', icon: 'none' });
+    } finally {
+      setSubmitting(false);
     }
   };
 

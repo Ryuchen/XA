@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchAnnouncements, Announcement } from '@/services/announcement';
@@ -21,10 +21,7 @@ const AnnouncementListPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
+  // useDidShow 首次进入也会触发，无需额外 useEffect，避免首屏双份请求
   useDidShow(() => {
     load();
   });

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, Button, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { LoginUser, setStoredUser, wechatQuickLogin } from '@/utils/auth';
+import { LoginUser, wechatQuickLogin } from '@/utils/auth';
+import { useUserStore } from '@/store';
 import styles from './index.module.scss';
 
 const IS_DEV = process.env.NODE_ENV === 'development';
@@ -33,7 +34,8 @@ const LoginSheet: React.FC<LoginSheetProps> = ({ visible, onClose, onSuccess }) 
         ...(nickname.trim() ? { nickname: nickname.trim() } : {}),
         ...(avatarPath ? { avatarPath } : {})
       });
-      setStoredUser(user);
+      // 走 store 写入（内部同步落盘），所有已挂载页面即时同步登录态
+      useUserStore.getState().setUser(user);
       Taro.showToast({ title: '登录成功', icon: 'success' });
       onSuccess?.(user);
       onClose();

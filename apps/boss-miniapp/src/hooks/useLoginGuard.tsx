@@ -30,6 +30,7 @@ export const useLoginGuard = () => {
     const cb = pendingRef.current;
     pendingRef.current = null;
     setVisible(false);
+    // 登录态已由 LoginSheet 写入 store（内部同步落盘），此处只需执行暂存回调
     cb?.(user);
   }, []);
 

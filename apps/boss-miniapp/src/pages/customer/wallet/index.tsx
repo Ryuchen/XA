@@ -1,13 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
-import {
-  fetchWalletInfo,
-  fetchTransactions,
-  TransactionRecord,
-} from '@/services/wallet';
+import { fetchTransactions, TransactionRecord } from '@/services/wallet';
 import { openWecomCustomerService } from '@/services/support';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
+import { useWalletStore } from '@/store';
 import { Empty, Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import styles from './index.module.scss';
@@ -24,24 +21,18 @@ const TX_TABS = [
   { label: '全部', value: '' },
   { label: '充值', value: 'TOPUP' },
   { label: '支付', value: 'PAY' },
+  { label: '收益', value: 'INCOME' },
+  { label: '提现', value: 'WITHDRAW' },
+  { label: '押金', value: 'DEPOSIT' },
 ] as const;
 
 const WalletPage: React.FC = () => {
-  const [balance, setBalance] = useState(0);
+  const balance = useWalletStore(state => state.balance);
+  const loadBalance = useWalletStore(state => state.load);
+  const setBalance = useWalletStore(state => state.setBalance);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [txLoading, setTxLoading] = useState(true);
   const [activeTxType, setActiveTxType] = useState<string>('');
-
-  const loadWallet = async () => {
-    try {
-      const res = await fetchWalletInfo();
-      if (res.code === 0 && res.data) {
-        setBalance(res.data.balance);
-      }
-    } catch {
-      Taro.showToast({ title: '加载失败', icon: 'none' });
-    }
-  };
 
   const loadTransactions = async (txType: string) => {
     setTxLoading(true);
@@ -49,6 +40,7 @@ const WalletPage: React.FC = () => {
       const res = await fetchTransactions({ tx_type: txType || undefined, page_size: 50 });
       if (res.code === 0 && res.data) {
         setTransactions(res.data.transactions || []);
+        // 流水接口已返回最新余额，顺带回填 store，省掉一次 /wallet/info/
         setBalance(res.data.balance);
       }
     } catch {
@@ -58,18 +50,14 @@ const WalletPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadWallet();
-    loadTransactions('');
-  }, []);
-
+  // useDidShow 首次进入也会触发，无需再写 useEffect，避免首屏双份请求
   useDidShow(() => {
-    loadWallet();
+    loadBalance();
     loadTransactions(activeTxType);
   });
 
   usePullDownRefresh(async () => {
-    await Promise.all([loadWallet(), loadTransactions(activeTxType)]);
+    await Promise.all([loadBalance(true), loadTransactions(activeTxType)]);
     Taro.stopPullDownRefresh();
   });
 
@@ -91,7 +79,7 @@ const WalletPage: React.FC = () => {
   };
 
   return (
-    <ScrollView className={styles.container}>
+    <ScrollView className={styles.container} scrollY>
       <View className={styles.header}>
         <View className={styles.headerTop}>
           <Icon name="wallet" size={40} color="#FFFFFF" />

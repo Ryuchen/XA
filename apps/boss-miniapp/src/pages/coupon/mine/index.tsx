@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchMyCoupons, UserCoupon, UserCouponStatus } from '@/services/coupon';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
 import Icon, { IconName } from '@/components/Icon';
 import styles from './index.module.scss';
 
@@ -29,8 +29,13 @@ const MyCouponPage: React.FC = () => {
   const [activeStatus, setActiveStatus] = useState<UserCouponStatus>('UNUSED');
 
   const load = async () => {
-    const res = await fetchMyCoupons();
-    if (res.code === 0 && res.data) setCoupons(res.data);
+    try {
+      const res = await fetchMyCoupons();
+      if (res.code === 0 && res.data) setCoupons(res.data);
+    } catch (e) {
+      console.error('加载优惠券失败', e);
+      Taro.showToast({ title: '优惠券加载失败', icon: 'none' });
+    }
   };
 
   useDidShow(() => {

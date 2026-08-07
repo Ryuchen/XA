@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { fetchCoupons, claimCoupon, Coupon } from '@/services/coupon';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import styles from './index.module.scss';
@@ -30,10 +30,7 @@ const CouponPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
+  // useDidShow 首次进入也会触发，无需额外 useEffect，避免首屏双份请求
   useDidShow(() => {
     load();
   });

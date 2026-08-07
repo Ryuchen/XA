@@ -23,6 +23,7 @@ export default defineConfig<'webpack5'>(async (merge, { command, mode }) => {
     defineConstants: {
       'process.env.TARO_APP_API': JSON.stringify(process.env.TARO_APP_API || ''),
       'process.env.TARO_APP_MEDIA': JSON.stringify(process.env.TARO_APP_MEDIA || ''),
+      'process.env.TARO_APP_WS': JSON.stringify(process.env.TARO_APP_WS || ''),
     },
     copy: {
       patterns: [],

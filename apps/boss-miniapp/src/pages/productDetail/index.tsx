@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import { fetchServiceDetail, fetchServiceEvaluations, Evaluation } from '@/services/order';
 import { toggleFavorite } from '@/services/favorite';
 import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { Skeleton, Empty } from '@/components';
 import Icon from '@/components/Icon';

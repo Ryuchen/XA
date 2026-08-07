@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, Button, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { goRoleHome, setStoredUser, wechatQuickLogin } from '@/utils/auth';
+import { goRoleHome, wechatQuickLogin } from '@/utils/auth';
+import { useUserStore } from '@/store';
 import Icon from '@/components/Icon';
 import XaLogo from '@/components/XaLogo';
 import styles from './index.module.scss';
@@ -24,16 +25,17 @@ const LoginPage: React.FC = () => {
         ...(nickname.trim() ? { nickname: nickname.trim() } : {}),
         ...(avatarPath ? { avatarPath } : {})
       });
-      setStoredUser(user);
+      useUserStore.getState().setUser(user);
+      Taro.hideLoading();
       Taro.showToast({ title: '登录成功', icon: 'success' });
       setTimeout(() => goRoleHome(), 500);
     } catch (error) {
+      Taro.hideLoading();
       Taro.showToast({
         title: error instanceof Error ? error.message : '登录失败',
         icon: 'none'
       });
     } finally {
-      Taro.hideLoading();
       setIsSubmitting(false);
     }
   };

@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import { fetchEscorts, EscortProfile } from '@/services/user';
 import { fetchServiceDetail, fetchServices } from '@/services/order';
 import { ServiceInfo } from '@/types/order';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import { useVoicePreview } from '@/hooks/useVoicePreview';
@@ -33,7 +33,7 @@ const statusTextMap: Record<string, string> = {
 
 // 状态归一化：统一大小写映射到样式 key（在线/忙碌/离线）
 const statusKey = (status: string): 'online' | 'busy' | 'offline' => {
-  const value = status.toLowerCase();
+  const value = (status || '').toLowerCase();
   if (value === 'available' || value === 'online') return 'online';
   if (value === 'busy') return 'busy';
   return 'offline';
@@ -62,7 +62,7 @@ const PlayerSelectPage: React.FC = () => {
     if (serviceId) {
       fetchServiceDetail(serviceId).then(res => {
         if (res.code === 0 && res.data) setService(res.data);
-      });
+      }).catch(e => console.warn('加载服务详情失败', e));
     } else {
       // 无 serviceId 入口（如首页大神卡片直接下单）：兜底取第一个可用服务，保证下单链路可继续
       fetchServices().then(res => {
@@ -76,6 +76,7 @@ const PlayerSelectPage: React.FC = () => {
       .then(res => {
         if (res.code === 0 && res.data) setEscorts(res.data);
       })
+      .catch(e => console.warn('加载陪玩列表失败', e))
       .finally(() => setLoading(false));
   }, []);
 
@@ -203,7 +204,7 @@ const PlayerSelectPage: React.FC = () => {
                   </View>
                   <View className={`${styles.status} ${styles[sKey] || ''}`}>
                     <View className={`${styles.statusPillDot} ${styles[`dot_${sKey}`]}`} />
-                    <Text>{statusTextMap[player.status] || player.status}</Text>
+                    <Text>{statusTextMap[player.status] || statusTextMap[statusKey(player.status).toUpperCase()] || '离线'}</Text>
                   </View>
                 </View>
               </View>

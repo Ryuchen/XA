@@ -26,6 +26,15 @@ const TYPE_META: Record<MessageType, TypeMeta> = {
   PROMOTION: { icon: 'gift', color: '#FF3B30', surface: 'rgba(255, 59, 48, 0.14)' },
 };
 
+const formatDateTime = (value?: string): string => {
+  if (!value) return '';
+  // iOS / 微信小程序对 "YYYY-MM-DD HH:mm:ss" 解析为 Invalid Date，
+  // 将空格替换为 T 后按本地时间解析可兼容多端。
+  const date = new Date(value.replace(' ', 'T'));
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+
 const MessageDetailPage: React.FC = () => {
   const [message, setMessage] = useState<SiteMessage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +93,7 @@ const MessageDetailPage: React.FC = () => {
         </View>
         <Text className={styles.title}>{message.title}</Text>
         <Text className={styles.subtitle}>
-          {new Date(message.created_at).toLocaleString()} · {TYPE_LABEL[message.type] || ''}通知
+          {formatDateTime(message.created_at)} · {TYPE_LABEL[message.type] || ''}通知
         </Text>
       </View>
 

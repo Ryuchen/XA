@@ -154,7 +154,7 @@ sequenceDiagram
     rect rgb(255,240,240)
     API->>DB: BEGIN atomic
     API->>DB: 老板钱包 += order.amount (退款)
-    API->>DB: INSERT Transaction(TOPUP, +amount)
+    API->>DB: INSERT Transaction(REFUND, +amount)
     API->>DB: order.payment_status=REFUNDED, refunded_at=now
     opt 强制退款且已有陪玩
         API->>DB: 陪玩 status=AVAILABLE
@@ -326,7 +326,7 @@ sequenceDiagram
     participant DB as MySQL
 
     alt 微信登录
-        C->>API: POST /wechat-login/ {code, role, bindCode, phoneCode?}
+        C->>API: POST /wechat-login/ {code, role, phoneCode?}
         alt WECHAT_MOCK_LOGIN=True
             API->>API: openid='wx_mock_<code>'
         else 真实
@@ -337,11 +337,11 @@ sequenceDiagram
             end
         end
     else 账号登录
-        C->>API: POST /account-login/ {username, password, role, bindCode}
+        C->>API: POST /account-login/ {username, password, role}
         API->>DB: 校验密码(真实 hash)
     end
 
-    API->>API: 非 customer 角色校验 bindCode 非空
+    Note over API: 角色已由后台开户确定，不再校验 bindCode（绑定码机制已废弃）
     API->>DB: get_or_create 用户, 升级 role
     API-->>C: {token(JWT 12h), userInfo}
 ```

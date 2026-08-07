@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Textarea, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { createOrder, fetchServices, quoteOrder, CreateOrderPayload, OrderQuote } from '@/services/order';
+import { createOrder, quoteOrder, CreateOrderPayload, OrderQuote } from '@/services/order';
 import { fetchMyCoupons, UserCoupon } from '@/services/coupon';
 import { fetchMe, fetchEscorts, EscortProfile, MeProfile } from '@/services/user';
-import { formatXaCoin } from '@/utils/format';
-import { fetchContactCards, openWecomCustomerService, SupportContactCard } from '@/services/support';
+import { formatXaCoin } from '@/utils/money';
+import { openWecomCustomerService, SupportContactCard } from '@/services/support';
+import { useCatalogStore, useOrderStore, useWalletStore } from '@/store';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
@@ -75,37 +76,37 @@ const CheckoutPage: React.FC = () => {
       }
     }
 
-    fetchContactCards()
-      .then(res => {
-        if (res.code !== 0 || !res.data) return;
-        setSupportContacts(res.data);
+    // 客服名片与服务目录复用全局缓存，避免每次进结算页都重拉
+    const catalog = useCatalogStore.getState();
+
+    catalog
+      .loadContactCards()
+      .then(list => {
+        if (!list.length) return;
+        setSupportContacts(list);
         const preset = Number(presetSupportContactId);
-        const selected = res.data.find(item => item.id === preset) || res.data[0];
+        const selected = list.find(item => item.id === preset) || list[0];
         setSupportContactId(selected?.id || null);
       })
       .catch(e => console.warn('获取负责客服失败', e));
 
-    const loadServices = async () => {
-      try {
-        const res = await fetchServices();
-        if (res?.code === 0 && res.data) {
-          setServices(
-            isGuidedFlow && presetServiceId
-              ? res.data.filter(service => service.id === Number(presetServiceId))
-              : res.data
-          );
-          if (presetServiceId) {
-            const match = res.data.find(s => s.id === Number(presetServiceId));
-            if (match) setSelectedService(match);
-          } else if (res.data.length > 0) {
-            setSelectedService(res.data[0]);
-          }
+    catalog
+      .loadServices()
+      .then(list => {
+        if (!list.length) return;
+        setServices(
+          isGuidedFlow && presetServiceId
+            ? list.filter(service => service.id === Number(presetServiceId))
+            : list
+        );
+        if (presetServiceId) {
+          const match = list.find(s => s.id === Number(presetServiceId));
+          if (match) setSelectedService(match);
+        } else {
+          setSelectedService(list[0]);
         }
-      } catch (error) {
-        console.warn('获取服务列表失败', error);
-      }
-    };
-    loadServices();
+      })
+      .catch(error => console.warn('获取服务列表失败', error));
   }, []);
 
   useEffect(() => {
@@ -311,6 +312,10 @@ const CheckoutPage: React.FC = () => {
         Taro.showToast({ title: response?.msg || '下单失败，请稍后重试', icon: 'none' });
         return;
       }
+
+      // 下单会扣款并改变订单统计，主动让缓存失效，下次进入相关页面必然拉新
+      useWalletStore.getState().invalidate();
+      useOrderStore.getState().invalidate();
 
       const createdOrderId = response.data?.id;
       const isAssign = dispatchMode === 'assign' && !!providerId;

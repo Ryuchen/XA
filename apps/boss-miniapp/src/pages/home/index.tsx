@@ -6,7 +6,7 @@ import { fetchAnnouncements, Announcement } from '@/services/announcement';
 import { fetchRankings, RankingData, RankingPeriod } from '@/services/ranking';
 import { fetchBanners, Banner } from '@/services/banner';
 import { fetchCoupons, claimCoupon, Coupon } from '@/services/coupon';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
 import { resolveImageUrl } from '@/utils/media';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { Skeleton, Icon, XaLogo } from '@/components';

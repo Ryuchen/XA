@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, View, Text } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { fetchCheckinCalendar, doCheckin, doMakeupCheckin, CheckinCalendar } from '@/services/checkin';
-import { formatXaCoin } from '@/utils/format';
+import { formatXaCoin } from '@/utils/money';
+import { useWalletStore } from '@/store';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import styles from './index.module.scss';
@@ -26,10 +27,7 @@ const CheckinPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadCalendar();
-  }, []);
-
+  // useDidShow 首次进入也会触发，无需额外 useEffect，避免首屏双份请求
   useDidShow(() => {
     loadCalendar();
   });
@@ -61,9 +59,12 @@ const CheckinPage: React.FC = () => {
       const res = await doCheckin();
       if (res.code === 0 && res.data) {
         const rewardText = res.data.reward_amount > 0 ? ` +${formatXaCoin(res.data.reward_amount)}币` : '';
-        Taro.showToast({ title: `${res.data.gift.icon} ${res.data.gift.name}${rewardText}`, icon: 'none' });
+        const gift = res.data.gift || {};
+        Taro.showToast({ title: `${gift.icon || ''} ${gift.name || '签到奖励'}${rewardText}`, icon: 'none' });
+        // 签到奖励会进钱包，让余额缓存失效
+        useWalletStore.getState().invalidate();
         if (res.data.full_attendance_awarded) {
-          await Taro.showModal({ title: '月度全勤达成', content: `恭喜获得 ${calendar.full_attendance_reward.name}`, showCancel: false });
+          await Taro.showModal({ title: '月度全勤达成', content: `恭喜获得 ${calendar.full_attendance_reward?.name || '全勤奖励'}`, showCancel: false });
         }
         await loadCalendar();
       } else {
@@ -94,7 +95,8 @@ const CheckinPage: React.FC = () => {
     try {
       const res = await doMakeupCheckin(day);
       if (res.code !== 0 || !res.data) throw new Error(res.msg || '补签失败');
-      Taro.showToast({ title: `${res.data.gift.icon} 补签成功`, icon: 'none' });
+      const gift = res.data.gift || {};
+      Taro.showToast({ title: `${gift.icon || ''} 补签成功`, icon: 'none' });
       await loadCalendar();
     } catch (e) {
       Taro.showToast({ title: e instanceof Error ? e.message : '补签失败', icon: 'none' });
@@ -140,7 +142,7 @@ const CheckinPage: React.FC = () => {
           <View><Text className={styles.ruleTitle}>今日消费签到</Text><Text className={styles.ruleDesc}>满 {formatXaCoin(calendar.daily_spend_required)} 兴安币可签到</Text></View>
           <Text className={`${styles.ruleState} ${calendar.today_eligible ? styles.ruleStateDone : ''}`}>{calendar.today_eligible ? '已达标' : '未达标'}</Text>
         </View>
-        <View className={styles.progressTrack}><View className={styles.progressFill} style={{ width: `${Math.min(calendar.today_spend / calendar.daily_spend_required * 100, 100)}%` }} /></View>
+        <View className={styles.progressTrack}><View className={styles.progressFill} style={{ width: `${calendar.daily_spend_required ? Math.min(calendar.today_spend / calendar.daily_spend_required * 100, 100) : 0}%` }} /></View>
         <Text className={styles.cardRule}>当日消费满 {formatXaCoin(calendar.makeup_card_spend_required)} 兴安币自动获得 1 张补签卡，最多持有 {calendar.max_makeup_cards} 张</Text>
       </View>
 
@@ -207,7 +209,7 @@ const CheckinPage: React.FC = () => {
                   className={styles.rewardIcon}
                 />
                 <Text className={styles.rewardSeq}>第{reward.seq}天</Text>
-                <Text className={styles.rewardName}>{reward.icon} {reward.name}</Text>
+                <Text className={styles.rewardName}>{reward.icon || ''} {reward.name || '神秘礼物'}</Text>
                 <Text className={styles.rewardAmount}>{reward.amount > 0 ? `${formatXaCoin(reward.amount)}币` : '专属礼物'}</Text>
               </View>
             );
@@ -236,7 +238,7 @@ const CheckinPage: React.FC = () => {
             ? '今日已签到'
             : !calendar.today_eligible
               ? `再消费${formatXaCoin(Math.max(calendar.daily_spend_required - calendar.today_spend, 0))}币可签到`
-              : `立即签到 · ${calendar.next_gift.icon}${calendar.next_gift.name}`}
+              : `立即签到 · ${calendar.next_gift?.icon || ''}${calendar.next_gift?.name || '签到礼物'}`}
         </Text>
       </View>
     </View>

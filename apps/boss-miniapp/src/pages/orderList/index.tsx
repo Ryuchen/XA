@@ -5,11 +5,11 @@ import {
   fetchOrders,
   evaluateOrder,
   cancelOrder,
-  fetchServices,
   tipOrder,
 } from '@/services/order';
 import { wsService } from '@/services/websocket';
-import { formatXaCoin } from '@/utils/format';
+import { useCatalogStore, useOrderStore, useServices, useWalletStore } from '@/store';
+import { formatXaCoin } from '@/utils/money';
 import {
   EscortOrderStatus,
   EscortOrder,
@@ -73,7 +73,8 @@ const OrderListPage: React.FC = () => {
   const [evalContent, setEvalContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(focusedOrderId);
-  const [giftOptions, setGiftOptions] = useState<ServiceInfo[]>([]);
+  // 打赏礼物列表来自全局目录缓存，与「陪玩」页共用
+  const giftOptions = useServices('GIFT');
   const { ensureLogin, loginSheet } = useLoginGuard();
 
   // 用于检测订单状态变化，触发评价引导
@@ -105,18 +106,15 @@ const OrderListPage: React.FC = () => {
     }
   }, []);
 
+  // 打赏礼物目录只需挂载时取一次（命中缓存则不发请求）
   useEffect(() => {
-    if (getStoredToken()) {
-      void loadOrders();
-      fetchServices('GIFT').then(res => {
-        if (res.code === 0 && res.data) setGiftOptions(res.data);
-      }).catch(() => setGiftOptions([]));
-    }
-    else setLoading(false);
-  }, [loadOrders]);
+    if (getStoredToken()) void useCatalogStore.getState().loadServices('GIFT');
+  }, []);
 
+  // 订单列表统一由 useDidShow 驱动，首次进入也会触发，避免首屏双份请求
   useDidShow(() => {
     if (getStoredToken()) void loadOrders();
+    else setLoading(false);
   });
 
   usePullDownRefresh(async () => {
@@ -137,6 +135,9 @@ const OrderListPage: React.FC = () => {
       if (tip) {
         Taro.showToast({ title: tip, icon: 'none', duration: 1500 });
       }
+      // 订单状态变了，「我的」页的统计与余额缓存同步失效
+      useOrderStore.getState().invalidate();
+      useWalletStore.getState().invalidate();
       void loadOrders();
     });
     return unsubscribe;
@@ -203,6 +204,8 @@ const OrderListPage: React.FC = () => {
       const res = (await cancelOrder(order.id, chosenReason)) as { code?: number; msg?: string };
       if (res?.code === 0) {
         Taro.showToast({ title: '已取消，款项原路退回', icon: 'success' });
+        useOrderStore.getState().invalidate();
+        useWalletStore.getState().invalidate();
         void loadOrders();
       } else {
         Taro.showToast({ title: res?.msg || '取消失败', icon: 'none' });
@@ -280,6 +283,7 @@ const OrderListPage: React.FC = () => {
       const response = await tipOrder(order.id, gift.id);
       if (response.code === 0) {
         Taro.showToast({ title: '礼物已送达', icon: 'success' });
+        useWalletStore.getState().invalidate();
         await loadOrders();
       } else {
         Taro.showToast({ title: response.msg || '赠送失败', icon: 'none' });

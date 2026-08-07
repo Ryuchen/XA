@@ -78,3 +78,15 @@
   line-height: $line-height-loose;
   white-space: pre-wrap;
 }
+
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-round;
+  background: $color-primary;
+  color: #fff;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+}

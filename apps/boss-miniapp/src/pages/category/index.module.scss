@@ -6,10 +6,11 @@
 }
 
 .header {
-  padding: 38rpx $page-padding 34rpx;
+  margin: 30rpx $page-padding 0;
+  padding: 34rpx;
   color: #fff;
   background: linear-gradient(145deg,#17171c,#393440 62%,#51455b);
-  border-radius: 0 0 36rpx 36rpx;
+  border-radius: 36rpx;
   box-shadow: 0 18rpx 44rpx rgba(30,25,36,.16);
 }
 
@@ -25,28 +26,29 @@
 .pageSubtitle { display:block; margin-top:6rpx; font-size:22rpx; color:rgba(255,255,255,.62); }
 .countPill { padding:9rpx 16rpx; border-radius:$radius-round; font-size:22rpx; color:rgba(255,255,255,.8); background:rgba(255,255,255,.1); }
 
+// 与首页 hero 搜索框保持统一：半透明玻璃质感，白字
 .searchBar {
   display: flex;
   align-items: center;
   gap: $spacing-sm;
   height: 72rpx;
-  margin-top: 28rpx;
+  margin-top: $spacing-xl;
   padding: 0 $spacing-md;
-  border-radius: $radius-lg;
-  background: rgba(255,255,255,.96);
-  border: 1rpx solid rgba(255,255,255,.2);
+  border-radius: $radius-round;
+  background: rgba(255,255,255,0.12);
+  border: 1rpx solid rgba(255,255,255,0.14);
 }
 
 .searchInput {
   flex: 1;
   height: 72rpx;
-  font-size: $font-size-sm;
-  color: $color-text-primary;
+  font-size: $font-size-md;
+  color: $color-text-white;
 }
-.clearSearch { display:flex; align-items:center; justify-content:center; width:44rpx; height:44rpx; font-size:34rpx; line-height:1; color:$color-text-tertiary; }
+.clearSearch { display:flex; align-items:center; justify-content:center; width:44rpx; height:44rpx; font-size:34rpx; line-height:1; color:rgba(255,255,255,0.7); }
 
 .productList {
-  padding: 28rpx $page-padding 150rpx;
+  padding: $spacing-lg $page-padding 150rpx;
 }
 
 .listHeader {
