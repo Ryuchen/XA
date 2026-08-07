@@ -489,6 +489,16 @@ def _capacity_reject_reason(account_id, *, display_name='', exclude_order_ids=()
     之后总数是 ``others + 1``；要求 ``others + 1 <= MAX`` 即 ``others < MAX``，
     取反就是 ``others >= MAX``。
 
+    **已知偏差，别以为这个计数口径是完备的（ORD-5 处理）**：
+    ``active_orders_for`` 的 ``providers__`` 分支只看订单状态、**不看**
+    ``OrderProvider.settled_at``。转单时旧打手只是被置上 ``settled_at``，
+    中间表的行仍在库、订单仍是 ``IN_SERVICE``，于是他退出本单之后名额**不会
+    释放**——这个人被虚占一个产能位，直到整单结束。方向上偏保守（会误拒、
+    不会击穿），所以不构成资损，但状态线（已结算退出）与计数线（仍算在途）
+    自相矛盾。修法是在那个分支加 ``settled_at__isnull=True``，但会改动 ORD-4
+    已上线的封禁在途检查口径，混在产能这批里等于让已验收的功能重新进入未验证
+    状态，故单列 ORD-5。**在 ORD-5 落地前不要在这里自行"顺手修一下"。**
+
     Returns:
         str | None: 还接得下返回 ``None``；超限返回给客服看的拒绝理由。
     """

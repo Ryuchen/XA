@@ -86,6 +86,25 @@ class Transaction(models.Model):
         GIFT = 'GIFT', '赠送'
         PENALTY = 'PENALTY', '罚款'
         DEPOSIT = 'DEPOSIT', '押金'
+        # 押金收款：记在平台钱包侧，与陪玩侧的 DEPOSIT 流水配对，保证押金不脱账。
+        #
+        # 为什么不复用 DEPOSIT 靠正负号区分两侧：押金对账的唯一标尺是
+        # 「DEPOSIT 金额合计」对上「EscortProfile.deposit_paid 合计」。两侧共用
+        # 一个 tx_type 的话，陪玩侧 -amount 与平台侧 +amount 在 Sum() 里正负
+        # 抵消成 0，这把尺子当场作废。同理，任何按 tx_type 过滤的押金报表都会
+        # 变成"看起来一分没收"。
+        #
+        # 这也是本项目既定范式：WITHDRAW/WITHDRAW_TAX、INCOME/SHOP_INCOME
+        # 两对都是「对手方各用独立枚举」，平台侧从不借用对方的类型。
+        #
+        # **退还语义（DP-1 押金退还的接口约定，现在没实现，先把决定钉死）**：
+        # 退还时**沿用这两个枚举记负数**，不再新开 DEPOSIT_REFUND ——
+        # 陪玩侧 DEPOSIT/+amount（退回钱包），平台侧 DEPOSIT_INCOME/-amount
+        # （平台吐出）。理由是这样能保持恒等式
+        # ``sum(DEPOSIT) == -sum(DEPOSIT_INCOME) == -当前在缴押金总额``
+        # 在缴纳与退还之后都成立，对账脚本一条聚合走到底。若另开
+        # DEPOSIT_REFUND，所有押金口径都要写成两个枚举相加，迟早有人只写一半。
+        DEPOSIT_INCOME = 'DEPOSIT_INCOME', '押金收入'
         SHOP_INCOME = 'SHOP_INCOME', '平台收入'
         REFUND = 'REFUND', '订单退款'
         PASS_PURCHASE = 'PASS_PURCHASE', '通行证购买'
@@ -149,8 +168,8 @@ class Transaction(models.Model):
                 condition=models.Q(
                     tx_type__in=[
                         'TOPUP', 'PAY', 'INCOME', 'WITHDRAW', 'REWARD', 'GIFT',
-                        'PENALTY', 'DEPOSIT', 'SHOP_INCOME', 'REFUND', 'PASS_PURCHASE',
-                        'WITHDRAW_TAX', 'ADJUST',
+                        'PENALTY', 'DEPOSIT', 'DEPOSIT_INCOME', 'SHOP_INCOME',
+                        'REFUND', 'PASS_PURCHASE', 'WITHDRAW_TAX', 'ADJUST',
                     ]
                 ),
                 name='transaction_type_valid',

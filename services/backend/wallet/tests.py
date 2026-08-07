@@ -1,5 +1,7 @@
 """钱包配置回落与提现申请的单元测试。"""
 
+from unittest import mock
+
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
@@ -19,6 +21,7 @@ from wallet.models import (
     WithdrawRequest,
     get_commission_rate,
     get_min_withdraw_amount,
+    get_platform_wallet,
 )
 
 
@@ -238,6 +241,134 @@ class DepositPayTest(APITestCase):
         )
         self.assertEqual(tx.amount, -30000)
         self.assertEqual(tx.status, Transaction.Status.SUCCESS)
+
+    # -- 双边记账 -------------------------------------------------------
+    #
+    # 押金从陪玩钱包扣走后必须在平台钱包落地。此前只有陪玩侧那半边账，
+    # 钱在账面上凭空蒸发，全站 sum(balance) 对不上，退押金时平台账上也没有
+    # 对应的钱可吐。以下用例把「双边余额 + 双边流水 + 同一事务」钉死。
+
+    def test_pay_credits_platform_wallet(self):
+        """缴押金 = 陪玩侧出账 + 平台侧入账，两条流水金额互为相反数。"""
+        platform_wallet = get_platform_wallet()
+        self.assertEqual(platform_wallet.balance, 0)
+
+        self.client.force_authenticate(self.provider)
+        res = self.client.post(self.DEPOSIT_URL, {'amount': 30000})
+        self.assertEqual(res.data['code'], 0)
+
+        provider_wallet = Wallet.objects.get(user=self.provider)
+        platform_wallet.refresh_from_db()
+        # 双边余额：陪玩少多少，平台就多多少，钱没有蒸发
+        self.assertEqual(provider_wallet.balance, 50000)
+        self.assertEqual(platform_wallet.balance, 30000)
+
+        # 流水条数：一进一出各一条，不多不少
+        self.assertEqual(Transaction.objects.count(), 2)
+        out_tx = Transaction.objects.get(tx_type=Transaction.TxType.DEPOSIT)
+        in_tx = Transaction.objects.get(tx_type=Transaction.TxType.DEPOSIT_INCOME)
+        self.assertEqual(out_tx.wallet_id, provider_wallet.pk)
+        self.assertEqual(in_tx.wallet_id, platform_wallet.pk)
+        self.assertEqual(out_tx.amount, -30000)
+        self.assertEqual(in_tx.amount, 30000)
+        # 恒等式 sum(DEPOSIT) == -sum(DEPOSIT_INCOME)：对账脚本的地基
+        self.assertEqual(out_tx.amount + in_tx.amount, 0)
+
+        # 平台侧余额快照要自洽，否则按 balance_after 复算的对账会对不上
+        self.assertEqual(in_tx.balance_before, 0)
+        self.assertEqual(in_tx.balance_after, 30000)
+        self.assertEqual(in_tx.status, Transaction.Status.SUCCESS)
+        # 押金不属于任何订单（与 WITHDRAW_TAX 同理），order 必须为空
+        self.assertIsNone(in_tx.order_id)
+
+    def test_pay_twice_accumulates_on_both_sides(self):
+        """分两笔缴清：双边余额与流水条数逐笔累加，不出现合并/覆盖。"""
+        platform_wallet = get_platform_wallet()
+        self.client.force_authenticate(self.provider)
+
+        self.assertEqual(
+            self.client.post(self.DEPOSIT_URL, {'amount': 20000}).data['code'], 0
+        )
+        self.assertEqual(
+            self.client.post(self.DEPOSIT_URL, {'amount': 30000}).data['code'], 0
+        )
+
+        provider_wallet = Wallet.objects.get(user=self.provider)
+        platform_wallet.refresh_from_db()
+        self.assertEqual(provider_wallet.balance, 30000)
+        self.assertEqual(platform_wallet.balance, 50000)
+        self.assertEqual(self._profile().deposit_paid, 50000)
+
+        out_qs = Transaction.objects.filter(tx_type=Transaction.TxType.DEPOSIT)
+        in_qs = Transaction.objects.filter(tx_type=Transaction.TxType.DEPOSIT_INCOME)
+        self.assertEqual(out_qs.count(), 2)
+        self.assertEqual(in_qs.count(), 2)
+        self.assertEqual(sum(t.amount for t in out_qs), -50000)
+        self.assertEqual(sum(t.amount for t in in_qs), 50000)
+
+    def test_pay_rolls_back_when_platform_credit_fails(self):
+        """平台侧写盘炸掉时，陪玩侧的扣款 / 已缴累加 / 出账流水必须一并回滚。
+
+        构造方式贴近真实故障：平台钱包**能查到**（行锁已拿），倒在
+        ``save()`` 上（行锁超时、约束冲突之类）。这样能证明失败点确实落在
+        平台入账那一步，而不是在进入 ``atomic`` 之前就短路了。
+        """
+        platform_wallet = get_platform_wallet()
+        self.assertEqual(platform_wallet.balance, 0)
+
+        def _broken_platform_wallet(for_update=False):
+            wallet = get_platform_wallet(for_update=for_update)
+            # 实例级属性遮蔽类方法，只让平台钱包这一个对象的 save 炸，
+            # 不影响同一请求里陪玩钱包的正常写入。
+            wallet.save = mock.Mock(side_effect=RuntimeError('平台钱包行锁超时'))
+            return wallet
+
+        self.client.force_authenticate(self.provider)
+        with mock.patch('wallet.views.get_platform_wallet', _broken_platform_wallet):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.DEPOSIT_URL, {'amount': 30000})
+
+        provider_wallet = Wallet.objects.get(user=self.provider)
+        platform_wallet.refresh_from_db()
+        self.assertEqual(provider_wallet.balance, 80000)
+        self.assertEqual(platform_wallet.balance, 0)
+        self.assertEqual(self._profile().deposit_paid, 0)
+        # 半条流水都不许留：留下 DEPOSIT 而没有 DEPOSIT_INCOME 就是脱账
+        self.assertEqual(Transaction.objects.count(), 0)
+
+    def test_pay_rolls_back_when_platform_wallet_unavailable(self):
+        """平台钱包压根取不到（系统账户缺失）时同样整体回滚，不留半边账。"""
+        self.client.force_authenticate(self.provider)
+        with mock.patch(
+            'wallet.views.get_platform_wallet',
+            side_effect=RuntimeError('平台系统账户不存在'),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.DEPOSIT_URL, {'amount': 30000})
+
+        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 80000)
+        self.assertEqual(self._profile().deposit_paid, 0)
+        self.assertFalse(
+            Transaction.objects.filter(tx_type=Transaction.TxType.DEPOSIT).exists()
+        )
+
+    def test_retry_after_platform_failure_reuses_same_request_id(self):
+        """回滚要连幂等键一起回滚，否则用户被自己失败的那次请求永久挡在门外。"""
+        get_platform_wallet()
+        self.client.force_authenticate(self.provider)
+        payload = {'amount': 30000, 'client_request_id': 'deposit-retry-1'}
+
+        with mock.patch(
+            'wallet.views.get_platform_wallet',
+            side_effect=RuntimeError('平台钱包行锁超时'),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.DEPOSIT_URL, payload)
+
+        res = self.client.post(self.DEPOSIT_URL, payload)
+        self.assertEqual(res.data['code'], 0)
+        self.assertEqual(self._profile().deposit_paid, 30000)
+        self.assertEqual(Transaction.objects.count(), 2)
 
     def test_pay_insufficient_balance(self):
         make_wallet(self.provider, balance=10000)

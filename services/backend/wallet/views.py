@@ -16,6 +16,7 @@ from .models import (
     WithdrawRequest,
     compute_withdraw_tax,
     get_min_withdraw_amount,
+    get_platform_wallet,
     get_withdraw_tax_rate,
 )
 from .serializers import ReportSerializer, WithdrawRequestSerializer
@@ -504,8 +505,14 @@ class ReportSubmitView(APIView):
 class DepositView(APIView):
     """陪玩押金：GET 返回应缴/已缴/差额与钱包余额，POST 用余额缴纳押金。
 
-    缴纳在 transaction.atomic + select_for_update 内执行：扣钱包余额、
-    累加 EscortProfile.deposit_paid、记一笔 DEPOSIT 负数流水。
+    缴纳在 transaction.atomic + select_for_update 内执行，**四件事同生共死**：
+    扣陪玩钱包余额、累加 ``EscortProfile.deposit_paid``、记陪玩侧 DEPOSIT
+    负数流水、给平台钱包记 DEPOSIT_INCOME 正数流水并加钱。
+
+    最后一件是补上的：此前只扣陪玩、不给平台入账，这笔钱从陪玩余额里消失后
+    在账面上**没有任何落点**——平台钱包余额不动，全站 ``sum(wallet.balance)``
+    凭空少一块。与提现代扣税（``WITHDRAW`` / ``WITHDRAW_TAX``）、订单结算
+    （``INCOME`` / ``SHOP_INCOME``）一样，收付两侧必须各留一条流水。
     """
 
     permission_classes = [IsClubAccountAuthenticated]
@@ -613,6 +620,33 @@ class DepositView(APIView):
                 status=Transaction.Status.SUCCESS,
                 remark='缴纳押金',
             )
+
+            # ---- 平台侧配对入账 ----
+            #
+            # 押金从陪玩钱包里扣走了，钱得有个去处。不给平台入账的话这笔钱
+            # 在账面上直接蒸发：平台钱包余额不动，全站余额合计凭空变少，
+            # 将来退还押金时平台账上也没有对应的钱可以吐出来。
+            #
+            # 写在同一个 ``transaction.atomic`` 内，与上面三件事同生共死——
+            # 平台侧一旦失败（比如钱包行锁超时），陪玩的扣款、已缴押金累加、
+            # DEPOSIT 流水会一并回滚，不存在"陪玩钱扣了、平台没收到"的中间态。
+            #
+            # 不传 ``order``：押金不属于任何订单，与 WITHDRAW_TAX 同理
+            # （``Transaction.order`` 本就 nullable）。
+            platform_wallet = get_platform_wallet(for_update=True)
+            platform_before = platform_wallet.balance
+            platform_wallet.balance += amount
+            platform_wallet.save(update_fields=['balance'])
+            Transaction.objects.create(
+                wallet=platform_wallet,
+                amount=amount,
+                tx_type=Transaction.TxType.DEPOSIT_INCOME,
+                balance_before=platform_before,
+                balance_after=platform_wallet.balance,
+                status=Transaction.Status.SUCCESS,
+                remark=f'收取押金：{profile.display_name or request.account.username}',
+            )
+
             log_money_event(
                 'deposit.pay',
                 account_id=request.account.pk,
@@ -621,6 +655,15 @@ class DepositView(APIView):
                 amount=-amount,
                 balance_before=balance_before,
                 balance_after=wallet.balance,
+                trace_id=trace_id,
+            )
+            log_money_event(
+                'deposit.platform_credit',
+                account_id=request.account.pk,
+                tx_type=Transaction.TxType.DEPOSIT_INCOME,
+                amount=amount,
+                balance_before=platform_before,
+                balance_after=platform_wallet.balance,
                 trace_id=trace_id,
             )
 
