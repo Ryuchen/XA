@@ -46,6 +46,7 @@ from orders.state_machine import IllegalTransitionError, log_only, transition
 from orders.services import (
     ACTIVE_ORDER_STATUSES,
     active_orders_for,
+    count_active_orders,
     mark_escort_busy,
     pending_timeout_deadline,
     push_message_safe as _push_message_safe,
@@ -459,6 +460,47 @@ def _customer_active_orders(account):
         Order.objects.filter(
             customer_account=account, status__in=ACTIVE_ORDER_STATUSES,
         )
+    )
+
+
+def _capacity_reject_reason(account_id, *, display_name='', exclude_order_ids=()):
+    """产能闸门：把一笔订单交给该陪玩前问一句「他还接得下吗」。
+
+    陪玩端自助抢单（``orders.views.GrabOrderView``）和 C 端派单
+    (``orders.views``) 都查 :attr:`Order.MAX_CONCURRENT_ORDERS`，唯独后台的
+    三条派单入口（指派 / 转单 / 快捷派单）从来不查——客服可以把第 4、第 5 单
+    压给同一个人，绕过全站唯一的产能保护。这个 helper 就是给那三条补上的，
+    口径与 ``orders.services.count_active_orders`` 同源，不另写 Q 条件。
+
+    Args:
+        account_id: 目标陪玩的 ``ClubAccount`` 主键。
+        display_name: 用于拼报错文案的展示名；留空回落「该陪玩」。
+        exclude_order_ids: 计数时排除的订单。**调用方几乎总要传当前这笔单**，
+            原因见下。
+
+    为什么必须能排除当前订单：``active_orders_for`` 的条件是
+    ``provider_account`` 外键 **或** ``OrderProvider`` 中间表命中，转单场景下
+    转入方很可能**已经在本单里**（双陪把 A 转给同单的 B；或同一批次把多名旧
+    打手转给同一个新人——``transfer`` 的 ``seen_new`` 只 add 不查重）。不排除
+    本单就会把「他已经在跑的这一单」当成「他又要多背一单」，误判超限。排除后
+    语义收敛成一句话：**他在别的单上是不是已经占满了**。
+
+    为什么判定是 ``>=`` 而不是 ``>``：``others`` 是排除本单后的数量，接下这单
+    之后总数是 ``others + 1``；要求 ``others + 1 <= MAX`` 即 ``others < MAX``，
+    取反就是 ``others >= MAX``。
+
+    Returns:
+        str | None: 还接得下返回 ``None``；超限返回给客服看的拒绝理由。
+    """
+    others = count_active_orders(
+        account_id=account_id, exclude_order_ids=exclude_order_ids,
+    )
+    if others < Order.MAX_CONCURRENT_ORDERS:
+        return None
+    who = display_name or '该陪玩'
+    return (
+        f'{who}已达同时进行 {Order.MAX_CONCURRENT_ORDERS} 单上限'
+        f'（当前在途 {others} 单）'
     )
 
 
@@ -926,6 +968,17 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 raise IllegalTransitionError('双陪订单请通过快捷派单创建并同时指定两名陪玩')
             if not profile.can_take_service(o.service):
                 raise IllegalTransitionError('该服务要求更高的陪玩档位，所选陪玩不符合')
+            # 产能闸门放在 pre_check 而不是上面的入参解析段：pre_check 由
+            # transition() 在 @transaction.atomic + Order.select_for_update()
+            # 之内回调，解析段在事务外。放外面等于「查完再等一会儿才落库」，
+            # 中间任何一条并发派单都能把这个判断作废。
+            reason = _capacity_reject_reason(
+                provider_account.pk,
+                display_name=profile.display_name,
+                exclude_order_ids=[o.pk],
+            )
+            if reason:
+                raise IllegalTransitionError(reason)
 
         def side_effect(o):
             o.provider = provider
@@ -1070,6 +1123,43 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     for row in locked_order.providers.select_for_update().all()
                     if row.provider_account_id
                 }
+
+                # ---- 产能闸门：转入方还接不接得下 ----
+                #
+                # 必须在锁内做：入参解析段（上面那个 for item in transfers）跑在
+                # 事务外，那里查完到这里落库之间是敞开的。
+                #
+                # 这里用「已校验过的 account 集合」而不是 {account_id: 新增数}
+                # 计数器，因为 transfer 是 detail action，整批指令作用于**同一笔**
+                # locked_order —— 一个人在本批次里最多新增 1 单，不存在累加。
+                # 同一个新打手被重复指定（seen_new 只 add 不查重，允许把多名旧
+                # 打手转给同一人）也只占一个名额，跳过即可。
+                #
+                # 注意：转出方**不会**因为这次转出而腾出名额。转出只是把
+                # old_row.settled_at 置位，OrderProvider 行仍在库、订单仍是
+                # IN_SERVICE，而 active_orders_for 不看 settled_at。所以别指望
+                # 用「转出释放的位子」抵扣转入的占用（转出转入本就是不同的人，
+                # 名额也不通用）。
+                capacity_checked = set()
+                for cmd in parsed:
+                    new_account_id = cmd['new_provider_account'].pk
+                    if new_account_id in capacity_checked:
+                        continue
+                    capacity_checked.add(new_account_id)
+                    new_profile = cmd['new_profile']
+                    new_provider = cmd['new_provider']
+                    reject = _capacity_reject_reason(
+                        new_account_id,
+                        display_name=(
+                            new_profile.display_name
+                            or new_provider.nickname
+                            or new_provider.username
+                        ),
+                        exclude_order_ids=[locked_order.pk],
+                    )
+                    if reject:
+                        raise IllegalTransitionError(reject)
+
                 last_new_provider = None
                 last_new_provider_account = None
                 for cmd in parsed:
@@ -1359,6 +1449,14 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 return Response({'code': 400, 'msg': f'{profile.display_name}当前不在接单档期'})
             if not profile.can_take_service(service):
                 return Response({'code': 400, 'msg': f'{profile.display_name}档位不满足该服务要求'})
+            # 产能闸门前置在扣款之前：这条路径会先扣老板的钱再建单，等到建完
+            # 才发现打手接不下，钱已经出去了。picked_ids 上面已去重，双陪的
+            # 两名打手各算各的，不会互相顶名额。
+            reject = _capacity_reject_reason(
+                provider_account.pk, display_name=profile.display_name,
+            )
+            if reject:
+                return Response({'code': 400, 'msg': reject})
             provider_objs.append((provider_account, pu, item))
 
         # 主打手（回填 Order.provider 兼容旧字段与流转）
@@ -1454,6 +1552,24 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
         # ---- 扣款建单 ----
         with transaction.atomic():
+            # 产能二次校验，收窄上面那次（跑在事务外）到落库之间的窗口。
+            #
+            # 位置很讲究：必须赶在扣款之前。``transaction.atomic`` 块里的**正常
+            # return 会提交事务**（只有异常才回滚），钱要是先扣了再在这里拒绝，
+            # 那笔扣款就实打实落库了。这里之前只做过读，提交的是空事务。
+            #
+            # 残留窗口：本段只是重新计数，并没有锁住「打手」这个资源，两笔不同
+            # 订单同时派给同一个人时各自锁的是不同的订单行，仍可能双双放行。
+            # 彻底关闭需要对 EscortProfile 加行锁并统一全局锁序，影响面覆盖
+            # 陪玩端抢单与 C 端派单，单列治理，不在本次范围内。
+            for row_account, _pu, _item in provider_objs:
+                reject = _capacity_reject_reason(
+                    row_account.pk,
+                    display_name=row_account.escort_profile.display_name,
+                )
+                if reject:
+                    return Response({'code': 400, 'msg': reject})
+
             wallet = get_wallet(
                 user=customer, account=customer_account, for_update=True,
             )

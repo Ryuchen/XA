@@ -194,6 +194,47 @@ class AdminEscortSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'total_reward', 'total_penalty',
                             'rating_avg', 'rating_count', 'completed_order_count', 'created_at']
 
+    # 只能由资金流程写入的账务字段 -> 拒绝理由。
+    #
+    # 为什么不直接塞进 read_only_fields：前端「编辑陪玩」表单是整体提交的
+    # （apps/admin-web/src/views/escort/index.vue 每次保存都无条件回传
+    # deposit_paid 的当前值）。设成 read_only 后 DRF 会**静默丢弃**这个键，
+    # 客服改完押金按保存、页面提示成功、值却没变——现场只会归因成「系统抽风」，
+    # 排查成本远高于直接报错。因此这里走 validate() 显式拒绝，让失败可见。
+    FUND_MANAGED_FIELDS = {
+        'deposit_paid': '已缴押金不可直接编辑，请走缴纳/退还流程',
+    }
+
+    def validate(self, attrs):
+        """拦截绕过押金流程直改 ``deposit_paid`` 的后台 PATCH/PUT。
+
+        ``deposit_paid`` 是资金字段：唯一合法写入点是 ``wallet.views.DepositView``
+        （扣陪玩钱包 + 累加已缴 + 落 DEPOSIT 流水，三件事在同一事务里）。
+        从「编辑陪玩」表单直接改它，会造成「已缴押金变了，但没有任何一笔流水
+        对得上」——对账时这笔差额无法归因，也无法追责到操作人。
+
+        与 :class:`AdminUserSerializer` 同款：**只在值真的发生变化时拒绝**。
+        表单整体提交会带上当前值，一律拒绝会导致改个昵称都保存失败。
+
+        ``deposit_required``（应缴）保持可改：它是运营策略参数不是资金余额，
+        调高调低都不动钱，改完由 DepositView 按新差额收款。
+        """
+        instance = self.instance
+        if instance is None:
+            # 创建走 AdminCreateEscortSerializer（EscortViewSet.create 已覆写），
+            # 那个序列化器压根没有 deposit_paid 字段，到不了这里。
+            return attrs
+
+        attempted = [
+            field for field in self.FUND_MANAGED_FIELDS
+            if field in attrs and attrs[field] != getattr(instance, field)
+        ]
+        if attempted:
+            raise serializers.ValidationError({
+                field: self.FUND_MANAGED_FIELDS[field] for field in attempted
+            })
+        return attrs
+
     def _abs_url(self, field):
         return build_media_url(self.context.get('request'), field)
 
