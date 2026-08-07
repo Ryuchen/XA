@@ -12,6 +12,13 @@ services/backend/.env.*
 **/dist-h5/
 **/.swc/
 *.tsbuildinfo
+# Vite 构建时生成的临时配置文件，如 vite.config.ts.timestamp-1700000000000-abc.mjs
+**/*.timestamp-*
+# 构建验证时的临时输出目录（dist-verify / dist-verify-h5 等）
+dist-verify*/
+
+# Logs
+*.log
 
 # Python build/runtime output
 services/backend/venv/
