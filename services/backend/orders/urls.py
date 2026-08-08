@@ -1,5 +1,13 @@
 from django.urls import path
 
+from .reservation_views import (
+    ReservationCancelView,
+    ReservationConfirmView,
+    ReservationConvertView,
+    ReservationDetailView,
+    ReservationListCreateView,
+    ReservationRejectView,
+)
 from .views import (
     AssignOrderView,
     CancelOrderView,
@@ -45,6 +53,13 @@ urlpatterns = [
     path('orders/<int:order_id>/reject/', RejectOrderView.as_view()),
     path('orders/<int:order_id>/refund/', RefundOrderView.as_view()),
     path('orders/<int:order_id>/assign/', AssignOrderView.as_view()),
+    # 预约（ORD-1/2）：与订单共用前缀但独立 ID 空间，路径上用 reservations 区分
+    path('reservations/', ReservationListCreateView.as_view(), name='reservation-list'),
+    path('reservations/<int:reservation_id>/', ReservationDetailView.as_view()),
+    path('reservations/<int:reservation_id>/confirm/', ReservationConfirmView.as_view()),
+    path('reservations/<int:reservation_id>/reject/', ReservationRejectView.as_view()),
+    path('reservations/<int:reservation_id>/cancel/', ReservationCancelView.as_view()),
+    path('reservations/<int:reservation_id>/convert/', ReservationConvertView.as_view()),
     path('evaluate/', EvaluateOrderView.as_view()),
     path('evaluations/mine/', MyEvaluationListView.as_view()),
     path('evaluations/<int:evaluation_id>/reply/', ReplyEvaluationView.as_view()),

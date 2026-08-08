@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import Coalesce
+from django.http import Http404
 from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -84,6 +85,7 @@ from wallet.services import WalletAddressingError, get_wallet
 from common.media import build_media_url
 
 from .ban_utils import active_ban_for, apply_ban, lift_ban
+from .deposit_refund import refund_deposit
 from .mixins import EnvelopeViewSetMixin
 from .models import AccountBan, AdminAuditLog, AdminMembership, AdminRole
 from .permissions import (
@@ -719,10 +721,37 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
         'partial_update': 'escort:edit',
         'verify': 'escort:verify',
         'dispose': 'escort:dispose',
+        # 押金退还是出账动作，与奖惩分开授权：能改档案的人未必能动押金池。
+        'deposit_refund': 'escort:deposit_refund',
         # 封禁权限点跨老板/陪玩共用一套，运营心智里「封人」就是一件事。
         'ban': 'user:ban',
         'unban': 'user:ban',
     }
+
+    @action(detail=True, methods=['post'], url_path='deposit-refund')
+    def deposit_refund(self, request, pk=None):
+        """押金退还：把陪玩已缴押金按金额退回其钱包（DP-1）。
+
+        账务编排全部收敛在 ``console.deposit_refund.refund_deposit``，
+        这里只做路由层的前置分支与 ``{code,data,msg}`` 信封包装。
+        """
+        try:
+            profile = self.get_object()
+        except Http404:
+            return Response({'code': 404, 'msg': '陪玩不存在'})
+        if profile.account_id is None:
+            return Response({'code': 403, 'msg': '该陪玩未绑定业务账户'})
+
+        code, msg, data = refund_deposit(
+            request,
+            profile_id=profile.pk,
+            amount=request.data.get('amount', 0),
+            reason=request.data.get('reason', ''),
+            client_request_id=request.data.get('client_request_id'),
+        )
+        if code != 0:
+            return Response({'code': code, 'msg': msg})
+        return Response({'code': 0, 'msg': msg, 'data': data})
 
     @action(detail=True, methods=['post'])
     def ban(self, request, pk=None):

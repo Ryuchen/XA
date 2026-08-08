@@ -47,6 +47,7 @@ PERMISSION_GROUPS = [
             ('escort:edit', '编辑陪玩'),
             ('escort:verify', '认证审核'),
             ('escort:dispose', '奖励罚款'),
+            ('escort:deposit_refund', '押金退还'),
             ('dispose:view', '查看奖罚记录'),
         ],
     },

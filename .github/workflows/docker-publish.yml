@@ -126,9 +126,9 @@ jobs:
             "DOCKERHUB_USERNAME='$DOCKERHUB_USERNAME' DOCKERHUB_TOKEN='$DOCKERHUB_TOKEN' IMAGE_TAG='$IMAGE_TAG' sh -s" <<'REMOTE'
           set -eu
           cd /opt/xa
-          git fetch origin agent/restructure-wechat-login
-          git checkout --force agent/restructure-wechat-login
-          git reset --hard origin/agent/restructure-wechat-login
+          git fetch origin ${{ github.ref_name }}
+          git checkout --force ${{ github.ref_name }}
+          git reset --hard origin/${{ github.ref_name }}
           printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
           sed -i '/^DOCKERHUB_NAMESPACE=/d; /^XA_IMAGE_TAG=/d' .env.remote
           printf '\nDOCKERHUB_NAMESPACE=%s\nXA_IMAGE_TAG=%s\n' "$DOCKERHUB_USERNAME" "$IMAGE_TAG" >> .env.remote

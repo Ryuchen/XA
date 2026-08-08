@@ -574,3 +574,210 @@ class Evaluation(models.Model):
 
     def __str__(self):
         return f"Evaluation<{self.order_id}>"
+
+
+class Reservation(models.Model):
+    """预约单（ORD-1/2）：老板先锁陪玩的一段时间，到点再转成正式订单。
+
+    与 ``Order`` 是两套独立的 ID 空间和生命周期 —— 预约只占「时间」，
+    不占钱；只有 ``CONFIRMED -> CONVERTED`` 那一刻才走扣款建单。这样
+    「约了没来」不会产生资金流水，也不会污染订单履约率统计。
+    """
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', '待确认'
+        CONFIRMED = 'CONFIRMED', '已确认'
+        REJECTED = 'REJECTED', '已拒绝'
+        CANCELLED = 'CANCELLED', '已取消'
+        CONVERTED = 'CONVERTED', '已转订单'
+        EXPIRED = 'EXPIRED', '已过期'
+
+    # 终态：进入后不可再流转
+    TERMINAL_STATUSES = {
+        Status.REJECTED, Status.CANCELLED, Status.CONVERTED, Status.EXPIRED,
+    }
+    # 占用陪玩时间片的状态：冲突检测只看这两种，被拒/取消/过期的档期立刻释放
+    ACTIVE_STATUSES = {Status.PENDING, Status.CONFIRMED}
+
+    reservation_no = models.CharField(
+        max_length=32, unique=True, blank=True, default='', db_index=True,
+    )
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='placed_reservations',
+    )
+    customer_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='placed_reservations',
+    )
+    provider = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='received_reservations',
+    )
+    provider_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.CASCADE,
+        related_name='received_reservations',
+    )
+    service = models.ForeignKey(ServiceItem, on_delete=models.PROTECT)
+    # 转单产物：一条预约最多转出一张订单，转完即终态
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reservation',
+    )
+    start_time = models.DateTimeField(db_index=True)
+    end_time = models.DateTimeField(db_index=True)
+    duration_minutes = models.PositiveIntegerField(default=0)
+    game_rounds = models.PositiveIntegerField(default=1)
+    # 预约时的报价快照（内部账务单位）。转单时以转单当刻重新计价为准，
+    # 这里只用于列表展示与「价格变了吗」的对比，不参与任何账务计算。
+    estimated_amount = models.PositiveIntegerField(default=0)
+    service_name_snapshot = models.CharField(max_length=100, blank=True, default='')
+    provider_name_snapshot = models.CharField(max_length=50, blank=True, default='')
+    game_region = models.CharField(max_length=50, blank=True, default='')
+    game_nickname = models.CharField(max_length=50, blank=True, default='')
+    game_uid = models.CharField(max_length=50, blank=True, default='')
+    remark = models.CharField(max_length=255, blank=True, default='')
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    confirmed_at = models.DateTimeField(blank=True, null=True)
+    rejected_at = models.DateTimeField(blank=True, null=True)
+    cancelled_at = models.DateTimeField(blank=True, null=True)
+    converted_at = models.DateTimeField(blank=True, null=True)
+    expired_at = models.DateTimeField(blank=True, null=True)
+    cancel_reason = models.CharField(max_length=255, blank=True, default='')
+    reject_reason = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_time', '-id']
+        indexes = [
+            # 冲突检测主路径：先按陪玩 + 占用态收窄，再按开始时间做范围扫描
+            models.Index(
+                fields=['provider_account', 'status', 'start_time'],
+                name='reservation_provider_idx',
+            ),
+            models.Index(
+                fields=['customer_account', 'status', '-start_time'],
+                name='reservation_customer_idx',
+            ),
+            # 过期扫描：找「还占着时间片但已经过了结束时间」的预约
+            models.Index(
+                fields=['status', 'end_time'],
+                name='reservation_expire_scan_idx',
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(end_time__gt=models.F('start_time')),
+                name='reservation_time_window_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(duration_minutes__gte=1),
+                name='reservation_duration_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(game_rounds__gte=1),
+                name='reservation_rounds_positive',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    status__in=[
+                        'PENDING', 'CONFIRMED', 'REJECTED',
+                        'CANCELLED', 'CONVERTED', 'EXPIRED',
+                    ]
+                ),
+                name='reservation_status_valid',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.reservation_no:
+            self.reservation_no = f"RSV{uuid.uuid4().hex[:20].upper()}"
+        if not self.service_name_snapshot and self.service_id:
+            self.service_name_snapshot = self.service.name
+        if not self.provider_name_snapshot and self.provider_account_id:
+            account = self.provider_account
+            profile = getattr(account, 'escort_profile', None)
+            self.provider_name_snapshot = (
+                (profile.display_name if profile else '')
+                or account.nickname
+                or account.username
+            )
+        if self.start_time and self.end_time and not self.duration_minutes:
+            delta = self.end_time - self.start_time
+            self.duration_minutes = max(int(delta.total_seconds() // 60), 0)
+        super().save(*args, **kwargs)
+
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in self.TERMINAL_STATUSES
+
+    def __str__(self):
+        return f"Reservation<{self.reservation_no} {self.status}>"
+
+
+class ReservationStatusLog(models.Model):
+    """预约状态变更审计日志：与 ``OrderStatusLog`` 同构，但独立成表。
+
+    合表会让两套生命周期的 action 枚举互相污染（订单没有「转单」，
+    预约没有「接单」），查询时还得处处带 kind 过滤，得不偿失。
+    """
+
+    class Action(models.TextChoices):
+        CREATE = 'CREATE', '创建预约'
+        CONFIRM = 'CONFIRM', '确认预约'
+        REJECT = 'REJECT', '拒绝预约'
+        CANCEL = 'CANCEL', '取消预约'
+        CONVERT = 'CONVERT', '转为订单'
+        EXPIRE = 'EXPIRE', '过期失效'
+
+    reservation = models.ForeignKey(
+        Reservation, on_delete=models.CASCADE, related_name='status_logs',
+    )
+    action = models.CharField(max_length=20, choices=Action.choices, db_index=True)
+    from_status = models.CharField(max_length=20, blank=True, default='')
+    to_status = models.CharField(max_length=20, blank=True, default='')
+    operator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reservation_status_logs',
+    )
+    operator_account = models.ForeignKey(
+        'club_accounts.ClubAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reservation_status_logs',
+    )
+    reason = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [
+            models.Index(fields=['reservation', 'created_at']),
+        ]
+
+    def __str__(self):
+        return (
+            f"ReservationStatusLog<{self.reservation_id} "
+            f"{self.from_status}->{self.to_status}>"
+        )
