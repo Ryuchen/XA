@@ -16,8 +16,11 @@
     "admin:dev": "pnpm --filter xa-admin-web run dev",
     "admin:build": "pnpm --filter xa-admin-web run build",
     "build:mini": "pnpm run boss:build && pnpm run provider:build",
-    "build:all": "pnpm run build:mini && pnpm run admin:build",
+    "build:all": "pnpm run boss:build && pnpm run provider:build:h5 && pnpm run admin:build",
+    "release:check": "node scripts/check-release-config.mjs",
+    "build:release": "pnpm run release:check && node scripts/check-native.mjs --require-compiler && pnpm run typecheck && pnpm run provider:build:h5 && pnpm run admin:build",
+    "typecheck": "pnpm --filter xa-boss-miniapp run typecheck && pnpm --filter xa-provider-miniapp run typecheck && pnpm --filter xa-admin-web run typecheck",
     "style:check": "node scripts/check-style-contract.mjs",
-    "verify:frontend": "pnpm run style:check && pnpm run build:all"
+    "verify:frontend": "pnpm run style:check && pnpm run typecheck && pnpm run build:all"
   }
 }

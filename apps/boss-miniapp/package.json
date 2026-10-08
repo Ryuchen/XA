@@ -10,9 +10,12 @@
     "framework": "React"
   },
   "scripts": {
-    "build:weapp": "taro build --type weapp",
-    "deploy:weapp": "taro build --type weapp",
-    "dev:weapp": "npm run build:weapp -- --watch",
+    "typecheck": "tsc --noEmit",
+    "build:weapp": "node ../../scripts/check-native.mjs",
+    "deploy:weapp": "node ../../scripts/check-release-config.mjs && node ../../scripts/check-native.mjs --require-compiler",
+    "dev:weapp": "node ../../scripts/check-native.mjs",
+    "build:legacy:weapp": "taro build --type weapp",
+    "test:native": "node --test ../../scripts/test-native*.cjs",
     "build:h5": "taro build --type h5",
     "dev:h5": "npm run build:h5 -- --watch"
   },

@@ -1,6 +1,45 @@
 // XA Design System
 // 只在这里维护品牌、状态和语义颜色。业务端只消费 --xa-* 语义变量。
 
+// Miniapp brand: Klein blue on warm milk-white surfaces.
+@mixin klein-milk {
+  color-scheme: light;
+  --xa-brand-50: #e9eefb;
+  --xa-brand-100: #d4def8;
+  --xa-brand-200: #afc1ee;
+  --xa-brand-300: #7997df;
+  --xa-brand-400: #365bc2;
+  --xa-brand-500: #002fa7;
+  --xa-brand-600: #00278d;
+  --xa-brand-700: #002172;
+  --xa-color-primary: #002fa7;
+  --xa-color-primary-hover: #00278d;
+  --xa-color-primary-soft: #e9eefb;
+  --xa-color-on-primary: #fffdf5;
+  --xa-color-info: #002fa7;
+  --xa-color-price: #002fa7;
+  --xa-color-price-soft: #365bc2;
+  --xa-color-surface-page: #f5f1e9;
+  --xa-color-surface-card: #fffdf5;
+  --xa-color-surface-subtle: #f7f4ec;
+  --xa-color-surface-hover: #e9eefb;
+  --xa-color-surface-elevated: #fffdf5;
+  --xa-color-text-primary: #192847;
+  --xa-color-text-secondary: #59677f;
+  --xa-color-text-tertiary: #6b778b;
+  --xa-color-text-disabled: #abb2bf;
+  --xa-color-text-inverse: #fffdf5;
+  --xa-color-border: #dbe0e7;
+  --xa-color-divider: #eeeae1;
+  --xa-color-focus-ring: rgba(0, 47, 167, .22);
+  --xa-gradient-primary: linear-gradient(135deg, #0038bf, #002fa7);
+  --xa-gradient-dark: linear-gradient(135deg, #142750, #002172);
+  --xa-gradient-header: var(--xa-gradient-primary);
+  --xa-primary-rgb: 0, 47, 167;
+  --xa-price-rgb: 0, 47, 167;
+  --xa-surface-card-rgb: 255, 253, 245;
+}
+
 @mixin light {
   // Primitive palette
   --xa-brand-50: #e8f2ff;

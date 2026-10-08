@@ -10,7 +10,7 @@ import styles from './index.module.scss';
 import { openWecomCustomerService } from '@/services/support';
 
 const quickActions: Array<{ icon: IconName; label: string; color: string; url?: string; type?: MessageType; wecom?: boolean }> = [
-  { icon: 'message-circle', label: '在线客服', color: '#007AFF', wecom: true },
+  { icon: 'message-circle', label: '在线客服', color: '#002fa7', wecom: true },
   { icon: 'package', label: '订单消息', color: '#34C759', type: 'ORDER' },
   { icon: 'bell', label: '系统通知', color: '#FF9500', type: 'SYSTEM' },
 ];
@@ -30,9 +30,9 @@ const TYPE_ICON: Record<MessageType, IconName> = {
 };
 
 const TYPE_COLOR: Record<MessageType, string> = {
-  SYSTEM: '#007AFF',
+  SYSTEM: '#002fa7',
   ORDER: '#34C759',
-  SUPPORT: '#007AFF',
+  SUPPORT: '#002fa7',
   PROMOTION: '#FF9500',
 };
 
@@ -150,7 +150,7 @@ const ChatPage: React.FC = () => {
         {quickActions.map((action, index) => (
           <View key={index} className={styles.actionItem} onClick={() => handleQuickAction(action)}>
             <View className={styles.actionIcon} style={{ backgroundColor: action.color }}>
-              <Icon name={action.icon} size={44} color="#FFFFFF" strokeWidth={2} />
+              <Icon name={action.icon} size={40} color="#fffdf5" strokeWidth={2} />
             </View>
             <Text className={styles.actionLabel}>{action.label}</Text>
           </View>
@@ -161,7 +161,7 @@ const ChatPage: React.FC = () => {
         <View className={styles.sectionHeader}>
           <Text className={styles.sectionTitle}>消息列表</Text>
           <View className={styles.clearBtn} onClick={handleMarkAllRead}>
-            <Icon name="check-check" size={30} color="#007AFF" strokeWidth={2} />
+            <Icon name="check-check" size={32} color="#002fa7" strokeWidth={2} />
             <Text className={styles.clearBtnText}>全部已读</Text>
           </View>
         </View>
@@ -190,9 +190,9 @@ const ChatPage: React.FC = () => {
             >
               <View
                 className={styles.msgIcon}
-                style={{ backgroundColor: TYPE_COLOR[msg.type] || '#007AFF' }}
+                style={{ backgroundColor: TYPE_COLOR[msg.type] || '#002fa7' }}
               >
-                <Icon name={TYPE_ICON[msg.type] || 'bell'} size={40} color="#FFFFFF" strokeWidth={2} />
+                <Icon name={TYPE_ICON[msg.type] || 'bell'} size={40} color="#fffdf5" strokeWidth={2} />
               </View>
               <View className={styles.msgContent}>
                 <View className={styles.msgHeader}>

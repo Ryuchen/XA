@@ -1,0 +1,11 @@
+.page > .eyebrow { overflow-wrap: anywhere; }.page > .subtitle { margin-bottom: 28rpx; }.panel { margin-top: 20rpx; }.timeline { padding: 8rpx 0 24rpx 30rpx; margin-left: 10rpx; border-left: 2rpx solid #e9eefb; position: relative; }.timeline::before { content: ''; position: absolute; top: 18rpx; left: -8rpx; width: 14rpx; height: 14rpx; border-radius: 50%; background: var(--xa-color-primary); }.timeline:last-child { padding-bottom: 8rpx; }.timeline text { display: block; }.timeline .small { margin-top: 6rpx; }.result { margin-top: 24rpx; padding: 24rpx; background: var(--xa-color-primary-soft); border-radius: 20rpx; }.panel .menu-row { align-items: flex-start; }.panel .menu-row > text:last-child { max-width: 70%; font-size: 26rpx; }.panel > .between { flex-wrap: wrap; }.panel > .between .price { font-size: 35rpx; margin-left: auto; }
+
+.order-detail-page .score-slider { min-height: var(--xa-control-secondary); margin: 12rpx 0 20rpx; }
+.order-detail-page .anonymous-control { min-height: var(--xa-control-height); padding: 12rpx 0; align-items: center; gap: 24rpx; }
+.order-detail-page .anonymous-control switch { flex-shrink: 0; }
+.order-detail-page textarea.input { min-height: max(144rpx, 72px); height: max(144rpx, 72px); padding: 16rpx 18rpx; font-size: var(--xa-control-font); }
+.order-detail-page .xa-button.button { min-height: var(--xa-control-height); padding: 8rpx 20rpx; font-size: var(--xa-control-font); border-radius: 16rpx; }
+.order-detail-page .xa-button.button-secondary { min-height: var(--xa-control-secondary); padding: 8rpx 20rpx; font-size: var(--xa-control-font); font-weight: 500; border-radius: 16rpx; }
+.order-detail-page .xa-button.button-quiet { min-height: var(--xa-control-compact); padding: 6rpx 16rpx; font-size: var(--xa-control-small-font); }
+
+.application{padding:24rpx 0;border-top:1rpx solid #f7f4ec}.application .button-secondary{margin-top:12rpx}

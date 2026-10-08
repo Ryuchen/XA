@@ -1,8 +1,20 @@
 @use '@/styles/compat.scss';
 @use '@/styles/variables.scss' as design;
 @use '../../../packages/design-system/src/theme' as theme;
+@use '@/styles/controls.scss';
 
 @include design.install-foundation;
+
+// Hide vertical tracks across pages, nested scrollers and sheets without
+// changing overflow, so wheel, touch and keyboard scrolling keep working.
+*::-webkit-scrollbar {
+  width: 0 !important;
+}
+
+// Firefox does not offer separate scrollbar visibility for each axis.
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: none; }
+}
 
 // Taro H5 renders into body/#app instead of the miniapp `page` node. Keep the
 // same design tokens and typography available on all three platforms.
@@ -15,14 +27,73 @@ body,
   color: var(--xa-color-text-primary);
   background-color: var(--xa-color-surface-page);
   font-family: var(--xa-font-sans);
-  font-size: 28rpx;
+  font-size: 14PX;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
+
+page, body, #app {
+  --xa-color-primary: #002fa7;
+  --xa-color-primary-hover: #00278d;
+  --xa-color-surface-page: #f4f6f9;
+  --xa-color-surface-subtle: #f7f9fc;
+  --xa-color-text-primary: #1c2738;
+  --xa-color-border: #e0e5ec;
+  --xa-color-text-secondary: #566174;
+  --xa-color-text-tertiary: #687487;
+  --xa-color-success: #237945;
+  --xa-color-danger: #c43d43;
+  --xa-color-warning: #966000;
+}
+
+page { font-size: 14PX; }
 
 @media (prefers-color-scheme: dark) {
   body,
   #app {
     @include theme.dark;
+    --xa-color-primary: #76b7ff;
+    --xa-color-primary-hover: #9acaff;
+    --xa-color-on-primary: #10243f;
+    --xa-color-surface-page: #11151c;
+    --xa-color-surface-card: #1b222d;
+    --xa-color-surface-subtle: #222c3a;
+    --xa-color-surface-hover: #273244;
+    --xa-color-border: #344052;
+    --xa-color-divider: #2a3443;
+    --xa-color-text-secondary: #b6bfcc;
+    --xa-color-text-tertiary: #9ca9bc;
   }
 }
+
+@media (prefers-color-scheme: dark) {
+  page {
+    @include theme.dark;
+    --xa-color-primary: #76b7ff;
+    --xa-color-primary-hover: #9acaff;
+    --xa-color-on-primary: #10243f;
+    --xa-color-surface-page: #11151c;
+    --xa-color-surface-card: #1b222d;
+    --xa-color-surface-subtle: #222c3a;
+    --xa-color-surface-hover: #273244;
+    --xa-color-border: #344052;
+    --xa-color-divider: #2a3443;
+    --xa-color-text-secondary: #b6bfcc;
+    --xa-color-text-tertiary: #9ca9bc;
+  }
+}
+
+button:focus-visible, taro-button-core:focus-visible, [tabindex]:focus-visible {
+  outline: 2PX solid var(--xa-color-primary);
+  outline-offset: 3PX;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+// Taro's page host has a white default; transparent work surfaces must follow the theme.
+body .taro_page { background-color:var(--xa-color-surface-page) !important; }
+
+// Consistent brand surfaces, including devices requesting a dark browser theme.
+page, body, #app { @include theme.klein-milk; }

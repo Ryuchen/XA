@@ -86,30 +86,32 @@ class IdCollisionTest(APITestCase):
 
     def setUp(self):
         self.admin = make_superuser()
-        # 先耗掉 ClubAccount 自增序号 1/2/3，使 boss 的 ClubAccount 落到 id=4，
-        # 而 legacy 用户序号里也恰好有 id=4 的另一位——这就是"两套 ID 空间错充"的触发条件。
-        for _ in range(3):
-            u = make_user()
-            make_wallet(u, balance=0)
-            _ensure_account(u)
-        self.legacy4_user = User.objects.get(id=4)  # 撞号对象：legacy id=4 的另一位用户
+        # 显式制造相同数字的不同身份；不依赖数据库回滚自增序列。
+        collision_key = max(
+            User.objects.order_by('-pk').values_list('pk', flat=True).first() or 0,
+            ClubAccount.objects.order_by('-pk').values_list('pk', flat=True).first() or 0,
+        ) + 100
+        self.legacy4_user = make_user(pk=collision_key)
         make_wallet(self.legacy4_user, balance=0)
-        self.boss = make_user()         # legacy id=5
+        self.boss = make_user()
         make_wallet(self.boss, balance=0)
-        self.account = _ensure_account(self.boss)  # ClubAccount id=4 → 映射 legacy 5
+        ClubAccount.objects.create(
+            pk=collision_key, username=self.boss.username, password=self.boss.password,
+            account_type=ClubAccount.AccountType.BOSS,
+        )
+        self.account = _ensure_account(self.boss)
 
     def test_account_id_and_user_id_resolve_to_different_users(self):
-        account_id_num = self.account.id  # boss 的 ClubAccount.id（=4），与 legacy id=4 撞号
-        self.assertEqual(account_id_num, 4)
-        # ClubAccount.id=4 映射到的 legacy 用户是 boss（legacy 5），而非 legacy id=4 的那位
+        account_id_num = self.account.id
+        self.assertEqual(account_id_num, self.legacy4_user.id)
         self.assertNotEqual(self.legacy4_user.id, self.boss.id)
 
-        # account_id=4 → 解析为 boss（legacy 5），正确入账
+        # account_id → 解析为 boss，正确入账
         self._recharge({'account_id': account_id_num, 'amount': 10000})
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 10000)
         self.assertEqual(Wallet.objects.get(user=self.legacy4_user).balance, 0)
 
-        # 同一数字当 user_id（legacy）传入 → 解析为 legacy id=4 的那位，绝不动 boss
+        # 同一数字当 user_id（legacy）传入 → 解析为另一位，绝不动 boss
         self._recharge({'user_id': account_id_num, 'amount': 5000})
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 10000)  # boss 不变
         self.assertEqual(Wallet.objects.get(user=self.legacy4_user).balance, 5000)  # 撞号用户入账

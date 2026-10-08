@@ -68,10 +68,10 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑促销活动' : '新增促销活动'" width="560px">
-    <el-form :model="form" label-width="110px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑促销活动' : '新增促销活动'" width="760px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="活动名称"><el-input v-model="form.title" placeholder="如：双十一限时折扣" /></el-form-item>
-      <el-form-item label="适用范围">
+      <el-form-item label="适用范围" class="ap-field--full">
         <el-radio-group v-model="form.scope">
           <el-radio v-for="(v, k) in PROMOTION_SCOPE" :key="k" :label="k">{{ v.label }}</el-radio>
         </el-radio-group>
@@ -105,7 +105,6 @@
           v-model="form.discount_rate"
           :min="1"
           :max="100"
-          style="margin-left: 12px"
         />
         <span class="tip">{{ discountEnabled ? '100=原价，90=九折；与优惠券互斥' : '关闭=不影响老板实付' }}</span>
       </el-form-item>
@@ -116,7 +115,6 @@
           v-model="form.commission_rate"
           :min="0"
           :max="100"
-          style="margin-left: 12px"
         />
         <span class="tip">{{ commissionEnabled ? '强制使用该抽成率，优先级最高' : '关闭=不覆盖抽成（按等级/店铺）' }}</span>
       </el-form-item>
@@ -131,7 +129,7 @@
         <el-input-number v-model="form.priority" :min="0" />
         <span class="tip">并发多活动时取优先级最高的一条</span>
       </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
+      <el-form-item label="备注" class="ap-field--full"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
     </el-form>
     <template #footer>
@@ -163,7 +161,7 @@ const serviceOptions = ref<any[]>([])
 const serviceCats = ref<any[]>([])
 
 onMounted(async () => {
-  const res = await serviceCategoryApi.list({ page_size: 200 }) as any
+  const res = await serviceCategoryApi.allOptions() as any
   serviceCats.value = res.data?.list || []
 })
 
@@ -181,7 +179,7 @@ function blank() {
 
 async function ensureServices() {
   if (serviceOptions.value.length) return
-  const res = await serviceItemApi.list({ page_size: 200 }) as any
+  const res = await serviceItemApi.allOptions() as any
   serviceOptions.value = res.data?.list || []
 }
 

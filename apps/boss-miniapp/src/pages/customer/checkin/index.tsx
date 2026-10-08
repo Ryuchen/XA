@@ -119,19 +119,19 @@ const CheckinPage: React.FC = () => {
     <View className={styles.container}>
       <View className={styles.summaryCard}>
         <View className={styles.summaryItem}>
-          <Icon name="coins" size={40} color="#FFFFFF" className={styles.summaryIcon} />
+          <Icon name="coins" size={40} color="#fffdf5" className={styles.summaryIcon} />
           <Text className={styles.summaryValue}>{formatXaCoin(calendar.today_spend)}</Text>
           <Text className={styles.summaryLabel}>今日消费（币）</Text>
         </View>
         <View className={styles.summaryDivider} />
         <View className={styles.summaryItem}>
-          <Icon name="calendar-check" size={40} color="#FFFFFF" className={styles.summaryIcon} />
+          <Icon name="calendar-check" size={40} color="#fffdf5" className={styles.summaryIcon} />
           <Text className={styles.summaryValue}>{calendar.checked_count}</Text>
           <Text className={styles.summaryLabel}>本月已签（天）</Text>
         </View>
         <View className={styles.summaryDivider} />
         <View className={styles.summaryItem}>
-          <Icon name="ticket" size={40} color="#FFFFFF" className={styles.summaryIcon} />
+          <Icon name="ticket" size={40} color="#fffdf5" className={styles.summaryIcon} />
           <Text className={styles.summaryValue}>{calendar.makeup_cards}/{calendar.max_makeup_cards}</Text>
           <Text className={styles.summaryLabel}>本月补签卡</Text>
         </View>
@@ -149,7 +149,7 @@ const CheckinPage: React.FC = () => {
       <View className={styles.card}>
         <View className={styles.cardHeader}>
           <View className={styles.cardTitleRow}>
-            <Icon name="calendar" size={32} color="#007AFF" className={styles.cardTitleIcon} />
+            <Icon name="calendar" size={32} color="#002fa7" className={styles.cardTitleIcon} />
             <Text className={styles.cardTitle}>{calendar.year} 年 {calendar.month} 月</Text>
           </View>
           <Text className={styles.cardDesc}>漏签日期可点击使用补签卡</Text>
@@ -204,7 +204,7 @@ const CheckinPage: React.FC = () => {
               >
                 <Icon
                   name={reached ? 'coins' : 'gift'}
-                  size={36}
+                  size={32}
                   color={reached ? '#FF9500' : '#AEAEB2'}
                   className={styles.rewardIcon}
                 />
@@ -230,7 +230,7 @@ const CheckinPage: React.FC = () => {
         <Icon
           name={calendar.today_checked ? 'check-circle' : 'calendar-check'}
           size={40}
-          color="#FFFFFF"
+          color="#fffdf5"
           className={styles.checkinBtnIcon}
         />
         <Text className={styles.checkinBtnText}>

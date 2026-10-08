@@ -106,6 +106,9 @@ class AuditionExchangeView(APIView):
         if not bound_account.is_active or not bound_account.can_login:
             return Response({'code': 403, 'msg': '该账号已被禁用'})
 
+        from club_accounts.otp import otp_required
+        if otp_required(bound_account):
+            return Response({'code':403,'msg':'请使用账号密码并绑定验证器后登录陪玩端'})
         access_token, refresh_token = issue_account_tokens(bound_account)
         frontend_role = ROLE_REVERSE_MAP.get(bound_account.account_type, 'customer')
         legacy_user = link.boss_user if role == 'boss' else link.provider_user

@@ -37,9 +37,9 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑轮播' : '新增轮播'" width="520px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="图片">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑轮播' : '新增轮播'" width="720px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
+      <el-form-item label="图片" class="ap-field--full">
         <div>
           <el-image v-if="previewUrl" :src="previewUrl" fit="cover" style="width: 225px; height: 96px; border-radius: 6px; margin-bottom: 8px" />
           <el-upload
@@ -59,8 +59,20 @@
           <el-option v-for="(v, k) in LINK_TYPE" :key="k" :label="v.label" :value="k" />
         </el-select>
       </el-form-item>
-      <el-form-item label="跳转值">
-        <el-input v-model="form.link_value" placeholder="商品ID/公告ID/URL，无跳转可留空" />
+      <el-form-item v-if="form.link_type === 'PRODUCT'" label="跳转商品">
+        <el-select v-model="form.link_value" filterable placeholder="选择商品" style="width: 100%">
+          <el-option v-for="item in serviceOptions" :key="item.id" :value="String(item.id)" :label="`${item.name}${item.is_active ? '' : '（已停用）'}`" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="form.link_type === 'ANNOUNCEMENT'" label="跳转公告">
+        <el-select v-model="form.link_value" filterable placeholder="选择公告" style="width: 100%">
+          <el-option v-for="item in announcementOptions" :key="item.id" :value="String(item.id)" :label="`${item.title}${item.is_active ? '' : '（已停用）'}`" />
+        </el-select>
+      </el-form-item>
+      <el-form-item v-if="['GAMEPLAY','CONTENT','PAGE'].includes(form.link_type)" label="业务目标"><el-select v-model="form.link_value" filterable placeholder="选择跳转目标" style="width:100%"><el-option v-for="item in form.link_type === 'PAGE' ? pageOptions : form.link_type === 'GAMEPLAY' ? gameplayOptions : contentOptions" :key="item.id" :label="item.name || item.title" :value="String(item.id)"/></el-select></el-form-item>
+      <el-form-item v-if="form.link_type === 'URL'" label="外部链接">
+        <el-input v-model="form.link_value" placeholder="https://" />
+        <span class="tip">老板端点击后复制链接，可在浏览器打开。</span>
       </el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sort_order" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
@@ -73,10 +85,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import CrudTable from '@/components/CrudTable.vue'
-import { bannerApi } from '@/api/modules'
+import { bannerApi, serviceItemApi, announcementApi, gameplayApi } from '@/api/modules'
+import { request } from '@/api/request'
 import { LINK_TYPE } from '@/utils/dict'
 import { useAuthStore } from '@/stores/auth'
 
@@ -92,19 +105,41 @@ const saving = ref(false)
 const previewUrl = ref('')
 const pickedFile = ref<File | null>(null)
 const form = reactive<any>({})
+const serviceOptions = ref<any[]>([])
+const announcementOptions = ref<any[]>([])
+const gameplayOptions = ref<any[]>([])
+const contentOptions = ref<any[]>([])
+const pageOptions = [{id:'catalog',name:'服务商城'},{id:'companions',name:'陪玩列表'},{id:'gifts',name:'礼物单'},{id:'coupons',name:'领券中心'},{id:'checkin',name:'每日签到'},{id:'points',name:'积分好礼'},{id:'membership',name:'会员中心'},{id:'support',name:'联系客服'}]
+
+watch(() => form.link_type, (_type, oldType) => {
+  if (dialogVisible.value && oldType) form.link_value = ''
+}, { flush: 'sync' })
+
+async function loadTargets() {
+  const targets = await Promise.allSettled([
+    serviceItemApi.allOptions({ is_active: '' }), announcementApi.allOptions({ is_active: '' }), gameplayApi.allOptions(), request({url:'/club-content/',params:{page_size:500}}),
+  ])
+  const rows = (i: number) => targets[i].status === 'fulfilled' ? (targets[i] as PromiseFulfilledResult<any>).value.data.list || [] : []
+  serviceOptions.value = rows(0)
+  announcementOptions.value = rows(1)
+  gameplayOptions.value = rows(2)
+  contentOptions.value = rows(3)
+}
 
 function blank() {
   return { id: 0, title: '', link_type: 'NONE', link_value: '', sort_order: 0, is_active: true }
 }
 
-function onCreate() {
+async function onCreate() {
+  await loadTargets()
   Object.assign(form, blank())
   previewUrl.value = ''
   pickedFile.value = null
   dialogVisible.value = true
 }
 
-function onEdit(row: any) {
+async function onEdit(row: any) {
+  await loadTargets()
   Object.assign(form, row)
   previewUrl.value = row.image_url || ''
   pickedFile.value = null
@@ -141,6 +176,7 @@ async function onFileChange(uploadFile: UploadFile) {
 
 async function onSave() {
   if (!form.id && !pickedFile.value) { ElMessage.warning('请上传图片'); return }
+  if (form.link_type !== 'NONE' && !form.link_value) { ElMessage.warning('请选择跳转目标或填写链接'); return }
   saving.value = true
   try {
     const fd = new FormData()

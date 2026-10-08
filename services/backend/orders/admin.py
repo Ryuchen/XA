@@ -1,13 +1,14 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline
 
-from .models import Evaluation, KookDispatchRecord, Order, OrderStatusLog, ServiceItem
+from .models import Evaluation, KookDispatchRecord, WecomDispatchRecord, Order, OrderStatusLog, ServiceItem
 
 
 @admin.register(ServiceItem)
 class ServiceItemAdmin(ModelAdmin):
-    list_display = ['id', 'name', 'game_category', 'service_category', 'price', 'cover_url', 'is_active', 'sort_order']
-    list_filter = ['game_category', 'service_category', 'is_active']
+    list_display = ['id', 'name', 'game_category', 'service_category', 'price', 'price_unit', 'purchase_mode', 'is_active', 'sort_order']
+    list_filter = ['game_category', 'service_category', 'purchase_mode', 'is_active']
+    readonly_fields = ['catalog_key', 'catalog_source']
     search_fields = ['name']
 
 
@@ -46,13 +47,14 @@ class OrderStatusLogAdmin(ModelAdmin):
 
 
 @admin.register(KookDispatchRecord)
+@admin.register(WecomDispatchRecord)
 class KookDispatchRecordAdmin(ModelAdmin):
     list_display = ['id', 'order', 'trigger', 'sequence', 'channel_id', 'status', 'attempts', 'sent_at']
     list_filter = ['trigger', 'status', 'created_at']
     search_fields = ['order__order_no', 'message_id', 'channel_id']
     readonly_fields = [
         'order', 'sequence', 'trigger', 'channel_id', 'status', 'message_id',
-        'attempts', 'last_error', 'created_at', 'sent_at',
+        'attempts', 'last_error', 'created_at', 'sent_at', 'content',
     ]
 
 

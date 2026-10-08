@@ -330,6 +330,7 @@ class PassConfigTest(TestCase):
     """通行证定价/延迟已下沉 SystemConfig，未配置时回落出厂默认。"""
 
     def test_defaults_when_unconfigured(self):
+        SystemConfig.objects.filter(key__startswith='provider_pass_').delete()
         for tier, price in DEFAULT_PASS_DAILY_PRICES.items():
             self.assertEqual(get_pass_daily_price(tier), price)
         for tier, seconds in DEFAULT_PASS_DELAY_SECONDS.items():
@@ -341,14 +342,14 @@ class PassConfigTest(TestCase):
         )
 
     def test_system_config_overrides_default(self):
-        SystemConfig.objects.create(
-            key='provider_pass_daily_price_GOLD', value='4200',
+        SystemConfig.objects.update_or_create(
+            key='provider_pass_daily_price_GOLD', defaults={'value': '4200'},
         )
         self.assertEqual(get_pass_daily_price('GOLD'), 4200)
 
     def test_illegal_config_falls_back(self):
-        SystemConfig.objects.create(
-            key='provider_pass_daily_price_SILVER', value='not-a-number',
+        SystemConfig.objects.update_or_create(
+            key='provider_pass_daily_price_SILVER', defaults={'value': 'not-a-number'},
         )
         self.assertEqual(
             get_pass_daily_price('SILVER'),
@@ -356,8 +357,8 @@ class PassConfigTest(TestCase):
         )
 
     def test_negative_config_falls_back(self):
-        SystemConfig.objects.create(
-            key='provider_pass_delay_seconds_BRONZE', value='-5',
+        SystemConfig.objects.update_or_create(
+            key='provider_pass_delay_seconds_BRONZE', defaults={'value': '-5'},
         )
         self.assertEqual(
             get_pass_delay_seconds('BRONZE'),

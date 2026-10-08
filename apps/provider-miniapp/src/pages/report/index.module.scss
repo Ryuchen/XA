@@ -1,0 +1,28 @@
+@use '@/styles/variables.scss' as *;
+.page { box-sizing: border-box; min-height: 100vh; margin: 0 auto; padding: $spacing-lg $page-padding 90PX; font-size: $font-size-md; color: $color-text-primary; background: $color-bg-page; }
+.heading, .row { display: flex; justify-content: space-between; align-items: center; gap: $spacing-md; flex-wrap: wrap; }
+.heading { margin-bottom: $spacing-lg; }
+.title { display: block; font-size: $font-size-xxl; font-weight: $font-weight-bold; }
+.hint { display: block; color: $color-text-secondary; font-size: $font-size-sm; line-height: $line-height-loose; margin: $spacing-xs 0; overflow-wrap: anywhere; }
+.card { background: $color-bg-card; border: 0.5PX solid $color-border; border-radius: $radius-lg; padding: $card-padding; margin-bottom: $card-gap; }
+.name { font-size: $font-size-lg; font-weight: $font-weight-semibold; }
+.status { font-size: $font-size-sm; color: $color-primary; }
+.notice { padding: $spacing-md; margin: $spacing-md 0; background: $color-bg-page; border-radius: $radius-md; line-height: $line-height-normal; }
+.evidence { display: flex; gap: $spacing-xl; padding: $spacing-lg 0; }
+.evidence > view, .evidence > div { display: flex; flex-direction: column; align-items: flex-start; gap: $spacing-sm; }
+.image { display: block; width: 90PX; height: 90PX; border-radius: $radius-sm; }
+.images { display: flex; gap: $spacing-sm; flex-wrap: wrap; margin: $spacing-md 0; }
+.page .button { @include secondary-control-state; margin: 0; padding: $spacing-sm $spacing-md; border: 0.5PX solid $color-border; border-radius: $radius-sm; font-size: $font-size-sm; line-height: $line-height-normal; color: $color-text-primary; background: $color-bg-hover; cursor: pointer; }
+.page .primary { color: $color-text-white; background: $color-primary; border-color: $color-primary; }
+.page .button[disabled]:not([disabled='false']) { opacity: .5; cursor: not-allowed; }
+@media (min-width: 960px) { .page { max-width: 1000PX; padding: 0; } }
+
+.page { padding-top:24PX; padding-bottom:100PX; min-height:100dvh; }
+.title { font-size:26PX; }
+.card { border-radius:16PX; padding:20PX; }
+.heading .button { min-height:42PX; width:auto; padding:10PX 16PX; border-radius:10PX; }
+@media(min-width:960px) { .page { padding:0; max-width:none; }.title { font-size:30PX; } }
+
+.evidence { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16PX; }.evidence > view,.evidence > :global(taro-view-core) { min-width:0; display:flex; align-items:flex-start; flex-direction:column; gap:12PX; padding:16PX; border:1PX solid $color-border; border-radius:10PX; background:var(--xa-color-surface-subtle); }
+.page .button { width:auto; min-height:44PX; padding:10PX 16PX; border-radius:8PX; font-size:14PX; }.image { width:96PX; height:96PX; }.images { gap:12PX; }.images > view,.images > :global(taro-view-core) { display:flex; flex-direction:column; gap:8PX; }.card { padding:20PX; }.row { gap:12PX; }.name,.hint { overflow-wrap:anywhere; }
+@media(max-width:360px) { .evidence { gap:8PX; }.evidence > view,.evidence > :global(taro-view-core) { padding:12PX; }.page .button { padding:10PX 12PX; font-size:13PX; } }

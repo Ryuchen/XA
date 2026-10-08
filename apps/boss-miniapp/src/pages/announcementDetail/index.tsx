@@ -80,13 +80,13 @@ const AnnouncementDetailPage: React.FC = () => {
     <ScrollView className={styles.container} scrollY>
       <View className={styles.header}>
         <View className={styles.badge}>
-          <Icon name="megaphone" size={26} color="#007AFF" strokeWidth={2} />
+          <Icon name="megaphone" size={24} color="#002fa7" strokeWidth={2} />
           <Text className={styles.badgeText}>平台公告</Text>
         </View>
         <Text className={styles.title}>{detail.title}</Text>
         <View className={styles.meta}>
           <View className={styles.author}>
-            <Icon name="badge-check" size={28} color="#007AFF" strokeWidth={2} />
+            <Icon name="badge-check" size={24} color="#002fa7" strokeWidth={2} />
             <Text className={styles.authorName}>兴安电竞官方</Text>
           </View>
           <Text className={styles.dot}>·</Text>

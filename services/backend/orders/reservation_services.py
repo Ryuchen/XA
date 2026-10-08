@@ -235,6 +235,8 @@ def create_reservation(
         ReservationConflictError: 该时间段已被占用。
         ReservationError: 陪玩不可预约。
     """
+    if service.billing_provider_count == 2:
+        raise ReservationError('该双陪套餐需联系客服安排两名打手')
     duration_minutes = int((end_time - start_time).total_seconds() // 60)
     rounds = max(int(game_rounds or 1), 1)
 
@@ -260,7 +262,7 @@ def create_reservation(
             end_time=end_time,
             duration_minutes=duration_minutes,
             game_rounds=rounds,
-            estimated_amount=service.price * rounds,
+            estimated_amount=service.price * rounds * service.billing_provider_count,
             game_region=game_region,
             game_nickname=game_nickname,
             game_uid=game_uid,
@@ -398,6 +400,10 @@ def convert_reservation_to_order(
         if wallet.balance < amount:
             return 400, '兴安币不足，请联系企业微信客服充值', None
 
+        from .purchase_benefits import lock_purchase, record_paid_benefits
+        locked_coupon = lock_purchase(buyer_account, reservation.service,
+            reservation.game_rounds, data['user_coupon'], data['pricing'])
+
         # 校验全过、即将扣款，此刻才占幂等键：校验失败不占键，用户补足余额后
         # 可以拿同一个键重试。
         allowed, reason = claim_fund_write(
@@ -449,6 +455,9 @@ def convert_reservation_to_order(
             inviter_commission=split.inviter_commission,
             shop_income=split.shop_income,
         )
+        record_paid_benefits(order, locked_coupon)
+        from engagement.services import allocate_order_points
+        allocate_order_points(order, wallet, balance_before)
         Transaction.objects.create(
             wallet=wallet,
             order=order,

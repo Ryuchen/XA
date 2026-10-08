@@ -1,0 +1,25 @@
+.orders-page { background: #f5f1e9; }
+.orders-header { padding: 26rpx 24rpx 0; margin-bottom: 28rpx; background: #fffdf5; border: 1rpx solid var(--xa-color-border); border-radius: 24rpx; }
+.orders-header .title { font-size: 38rpx; }
+.orders-header .subtitle { margin-top: 8rpx; padding-bottom: 24rpx; font-size: 25rpx; }
+.filter-scroll { padding: 20rpx 0; border-top: 1rpx solid var(--xa-color-border); white-space: nowrap; }
+.filters { display: inline-flex; gap: 12rpx; }
+.orders-page .filters .xa-button { width: auto; min-height: var(--xa-control-compact); padding: 6rpx 20rpx; margin: 0; border-radius: 16rpx; border-color: transparent; background: #f5f1e9; font-size:var(--xa-control-small-font); }
+.orders-page .filters .xa-button.chip-active { color: #fffdf5; background: var(--xa-color-primary); }
+.orders-page .order-card { padding: 0; margin-bottom: 24rpx; overflow: hidden; border-radius: 24rpx; }
+.order-card-header { min-height: 80rpx; padding: 18rpx 24rpx; background: #f7f4ec; border-bottom: 1rpx solid var(--xa-color-border); }
+.order-number { font-size: 24rpx; word-break: break-all; }
+.order-card-header .tag { font-size: 23rpx; padding: 5rpx 12rpx; border-radius: 8rpx; }
+.order-card-body { padding: 22rpx 24rpx; }
+.order-title { display: block; margin: 0 0 10rpx; font-size: 31rpx; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.order-provider { display: block; font-size: 25rpx; }
+.footer { margin-top: 24rpx; align-items: flex-end; flex-wrap: wrap; }
+.footer > .small { font-size: 24rpx; }
+.footer .price { margin-left: auto; font-size: 36rpx; }
+.footer .price .small { font-size: 23rpx; }
+.lottery-result { padding: 14rpx 18rpx; margin-top: 20rpx; border-radius: 12rpx; background: var(--xa-color-primary-soft); color: var(--xa-color-primary); font-size: 25rpx; }
+.order-card-actions { min-height: 84rpx; padding: 12rpx 24rpx; border-top: 1rpx solid var(--xa-color-border); }
+.order-card-actions > .small { flex: 1; font-size: 24rpx; }
+.order-card-actions .link { display: inline-flex; align-items: center; justify-content: center; min-height: var(--xa-control-compact); flex-shrink: 0; padding: 6rpx 18rpx; border: 1rpx solid #e9eefb; border-radius: 16rpx; font-size: var(--xa-control-small-font); line-height: 1.5; }
+.status-COMPLETED,.status-CANCELLED { color: var(--xa-color-muted); background: #f7f4ec; }
+.status-IN_SERVICE { color: var(--xa-color-primary); background: var(--xa-color-primary-soft); }

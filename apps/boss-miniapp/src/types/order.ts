@@ -7,6 +7,11 @@ export interface OrderUser {
 }
 
 export interface ServiceInfo {
+  service_type?: string;
+  gameplay?: number; gameplay_name?: string; gameplay_kind?: string;
+  gameplay_theme?: string; gameplay_cover_url?: string;
+  platform?: string; platform_name?: string; security_level?: string; security_level_name?: string; rules?: string;
+  roulette_pool?: import('@/services/gameplay').RouletteTarget[];
   id: number;
   name: string;
   description: string;
@@ -14,6 +19,14 @@ export interface ServiceInfo {
   category?: string;
   cover_url?: string;
   images?: string[];
+  introduction_images?: string[];
+  details_html?: string;
+  details_images?: string[];
+  variants?: ServiceInfo[];
+  catalog_family?: string;
+  catalog_variant?: string;
+  is_addon?: boolean;
+  purchase_mode?: string;
   highlights?: string[];
   sales_count?: number;
   is_favorited?: boolean;
@@ -25,6 +38,9 @@ export interface ServiceInfo {
 }
 
 export interface EscortOrder {
+  fulfillment?: string;
+  gameplay_snapshot?: { name: string; platform_name: string; security_level_name: string; rules: string; pool?: import('@/services/gameplay').RouletteTarget[] };
+  roulette_result?: { index: number; name: string; description: string };
   id: number;
   order_no: string;
   status: EscortOrderStatus;
@@ -34,6 +50,7 @@ export interface EscortOrder {
   boss_discount: number;
   promo_discount: number;
   coupon_discount: number;
+  provider_gender?: 'ANY' | 'MALE' | 'FEMALE';
   game_rounds: number;
   game_region: string;
   game_nickname: string;

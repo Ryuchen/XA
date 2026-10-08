@@ -1,26 +1,26 @@
 @use '@/styles/variables.scss' as *;
 
 .container {
-  min-height: 100vh;
+  min-height: 100dvh;
   box-sizing: border-box;
-  padding: 30rpx $page-padding 150rpx;
+  padding: 15PX $page-padding 75PX;
   background: $color-bg-page;
 }
 
 .header {
   display: flex;
   align-items: center;
-  padding: 34rpx;
-  border-radius: 36rpx;
-  background: linear-gradient(145deg,#17171c,#393440 62%,#51455b);
-  box-shadow: 0 18rpx 44rpx rgba(30,25,36,.19);
+  padding: 17PX;
+  border-radius: 18PX;
+  background: $color-bg-card;
+  border: 1PX solid $color-border;
 }
 
 .avatar {
-  width: 128rpx;
-  height: 128rpx;
+  width: 64PX;
+  height: 64PX;
   border-radius: $radius-round;
-  border: 4rpx solid rgba(255, 255, 255, 0.5);
+  border: 2PX solid rgba(255, 255, 255, 0.5);
 }
 
 .userDetail {
@@ -33,14 +33,14 @@
   display: block;
   font-size: $font-size-xl;
   font-weight: $font-weight-bold;
-  color: $color-text-white;
+  color: $color-text-primary;
 }
 
 .sub {
   display: block;
   margin-top: $spacing-xs;
   font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.85);
+  color: $color-text-secondary;
 }
 
 .badgeRow {
@@ -51,35 +51,35 @@
 
 .statusSwitch {
   font-size: $font-size-xs;
-  padding: 4rpx 16rpx;
+  padding: 2PX 8PX;
   margin-right: $spacing-sm;
   border-radius: $radius-round;
-  color: $color-text-white;
+  color: $color-text-primary;
   background: rgba(255, 255, 255, 0.25);
 }
 
 .badgeVerified {
   font-size: $font-size-xs;
-  padding: 4rpx 16rpx;
+  padding: 2PX 8PX;
   border-radius: $radius-round;
-  color: $color-text-white;
+  color: $color-text-primary;
   background: rgba(52, 199, 89, 0.86);
 }
 
 .badgeUnverified {
   font-size: $font-size-xs;
-  padding: 4rpx 16rpx;
+  padding: 2PX 8PX;
   border-radius: $radius-round;
-  color: $color-text-white;
+  color: $color-text-primary;
   background: rgba(255, 255, 255, 0.3);
 }
 
 .statsCard {
   @include card-base;
   display: flex;
-  margin: 22rpx 0 0;
-  padding: 26rpx 0;
-  border-radius: 28rpx;
+  margin: 11PX 0 0;
+  padding: 13PX 0;
+  border-radius: 14PX;
 }
 
 .statItem {
@@ -103,9 +103,9 @@
 
 .card {
   @include card-base;
-  margin: 18rpx 0 0;
-  padding: 26rpx;
-  border-radius: 28rpx;
+  margin: 9PX 0 0;
+  padding: 13PX;
+  border-radius: 14PX;
 }
 
 .cardHeader {
@@ -152,17 +152,17 @@
 
 .menuCard {
   @include card-base;
-  margin: 18rpx 0 0;
-  padding: 0 26rpx;
-  border-radius: 28rpx;
+  margin: 9PX 0 0;
+  padding: 0 13PX;
+  border-radius: 14PX;
 }
 
 .menuItem {
   display: flex;
   align-items: center;
-  min-height: 86rpx;
-  padding: 10rpx 0;
-  border-bottom: 1rpx solid $color-divider;
+  min-height: 43PX;
+  padding: 5PX 0;
+  border-bottom: 0.5PX solid $color-divider;
 
   &:last-child {
     border-bottom: none;
@@ -173,11 +173,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 58rpx;
-  height: 58rpx;
-  margin-right: 16rpx;
-  border-radius: 17rpx;
-  font-size: 29rpx;
+  width: 29PX;
+  height: 29PX;
+  margin-right: 8PX;
+  border-radius: 8.5PX;
+  font-size: 14.5PX;
   background: $color-bg-page;
 }
 
@@ -193,21 +193,21 @@
 }
 
 .menuBadge {
-  min-width: 32rpx;
-  height: 32rpx;
-  padding: 0 8rpx;
+  min-width: 16PX;
+  height: 16PX;
+  padding: 0 4PX;
   margin-right: $spacing-sm;
   border-radius: $radius-round;
-  color: $color-text-white;
+  color: $color-text-primary;
   background: $color-price;
   font-size: $font-size-xs;
-  line-height: 32rpx;
+  line-height: 16PX;
   text-align: center;
 }
 
 .evalItem {
   padding: $spacing-sm 0;
-  border-bottom: 2rpx solid $color-divider;
+  border-bottom: 1PX solid $color-divider;
 
   &:last-child {
     border-bottom: none;
@@ -254,3 +254,27 @@
   color: $color-primary;
 }
 @media(min-width:960px){.container{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360PX,.85fr);gap:18PX;padding:0;background:transparent}.header{grid-column:1/-1;padding:28PX 32PX;border-radius:24PX}.statsCard{grid-column:1;margin:0;padding:24PX;border-radius:20PX}.card{grid-column:1;margin:0;padding:24PX;border-radius:20PX}.menuCard{grid-column:2;grid-row:2/span 4;margin:0;padding:8PX 24PX;border-radius:20PX}.menuItem{min-height:68PX}.avatar{width:88PX;height:88PX}.nickname{font-size:24PX}}
+
+// Keep the profile readable in both system themes.
+.container { padding-top:24PX; padding-bottom:100PX; }
+.header { padding:24PX; border-radius:18PX; gap:4PX; }
+.nickname { font-size:24PX; overflow-wrap:anywhere; }
+.sub { color:$color-text-secondary; font-size:13PX; }
+.statusSwitch, .badgeVerified, .badgeUnverified { padding:5PX 8PX; font-size:11PX; line-height:1.5; }
+.statusSwitch, .badgeUnverified { color:$color-primary; background:var(--xa-color-primary-soft); }
+.badgeVerified { color:$color-success; background:rgba(var(--xa-success-rgb),.12); }
+.badgeRow { flex-wrap:wrap; gap:6PX; margin-top:10PX; }
+.avatar { width:64PX; height:64PX; border:1PX solid $color-border; }
+.statsCard, .card, .menuCard { border:1PX solid $color-border; border-radius:16PX; }
+.statValue { font-size:24PX; font-variant-numeric:tabular-nums; }
+.statLabel { font-size:12PX; }
+.menuItem { min-height:52PX; cursor:pointer; }
+.menuItem:hover .menuText { color:$color-primary; }
+.menuIcon { width:34PX; height:34PX; border-radius:10PX; font-size:13PX; color:$color-primary; background:var(--xa-color-primary-soft); }
+@media(min-width:960px) { .container { padding:0; align-items:start; }.menuCard { grid-row:2/span 3; }.header { padding:28PX; }.avatar { width:76PX; height:76PX; } }
+
+.container { display:block; }.header { margin-top:0; }.statsCard,.card,.menuCard { padding:20PX; margin-top:16PX; }
+.header { padding:24PX; }.badgeRow { gap:8PX; }.statusSwitch { margin:0; min-height:32PX; display:flex; align-items:center; cursor:pointer; }
+.statItem { min-width:0; }.statItem + .statItem { border-left:1PX solid $color-divider; }.menuCard { padding:4PX 20PX; }.menuItem { min-height:60PX; }.menuIcon { flex:none; }.menuText { min-width:0; margin-right:8PX; }
+@media(min-width:960px) { .container { display:grid; grid-template-columns:minmax(0,1fr) minmax(280PX,.8fr); gap:20PX; }.container > :first-child { grid-column:1/-1; margin:0; }.header { grid-column:1/-1; }.statsCard { grid-column:1; }.card { grid-column:1; }.menuCard { grid-column:2; grid-row:3/span 3; }.statsCard,.card,.menuCard { margin:0; }.nickname { font-size:24PX; } }
+@media(min-width:960px) and (max-width:1100px) { .container { grid-template-columns:minmax(0,1fr); }.menuCard { grid-column:1; grid-row:auto; } }

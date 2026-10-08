@@ -1,0 +1,1 @@
+.title { font-size: 38rpx; line-height: 1.5; }.article { margin-top: 28rpx; padding: 30rpx; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; }

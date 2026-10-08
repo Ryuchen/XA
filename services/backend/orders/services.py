@@ -26,6 +26,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
 
@@ -34,7 +35,7 @@ from users.models import EscortProfile
 from wallet.models import ProviderReport, Transaction, get_platform_wallet
 from wallet.services import get_wallet
 
-from .models import Order
+from .models import Order, OrderProvider, ProviderDispatchLock
 from .settlement import SettlementError, assert_order_conserved
 
 try:  # site_messages 是可选模块，缺失时消息推送降级为 no-op
@@ -49,6 +50,68 @@ PENDING_TIMEOUT_MINUTES = 30
 
 # 「占用陪玩产能」的订单状态：已接单 + 服务中。
 ACTIVE_ORDER_STATUSES = (Order.Status.GRABBED, Order.Status.IN_SERVICE)
+
+
+def lock_provider_dispatch(account_ids):
+    """事务内锁住本次占用的打手名额，直到订单写入提交。
+
+    各入口必须在计数和扣款前调用。多打手按账号 ID 排序，防止双陪交叉派单
+    反向等待。使用独立互斥行，避免与结算中钱包/资料行的锁顺序形成环。
+    已有订单先锁订单再调用；新建订单在建单前调用。释放名额无需取此锁。
+    """
+    if not transaction.get_connection().in_atomic_block:
+        raise RuntimeError('派单名额锁必须在业务事务内获取')
+    for account_id in sorted({int(pk) for pk in account_ids if pk}):
+        ProviderDispatchLock.objects.get_or_create(account_id=account_id)
+        ProviderDispatchLock.objects.select_for_update().get(account_id=account_id)
+
+
+def sync_single_provider_share(order):
+    """持有订单锁时，绑定本轮单陪的完整份额；拒单后重接也复用冻结价格。"""
+    if order.escort_mode != Order.EscortMode.SINGLE or not order.provider_id:
+        return
+    previous = order.providers.first()
+    club_share = None
+    if order.commission_policy != 'LEGACY':
+        from .pricing import club_provider_specs
+        from .settlement import build_provider_shares, aggregate_order_split
+        profile = EscortProfile.objects.select_related('level').get(user_id=order.provider_id)
+        club_share = build_provider_shares(order.amount, club_provider_specs(order, [profile], order.amount))[0]
+        # 未开始服务的指派/重接以本轮陪玩等级生成快照，开始后固定。
+        if order.in_service_at and previous and previous.provider_id == order.provider_id:
+            return
+        inviter_rate = order.inviter_commission_rate_snapshot if order.inviter_id else 0
+        split = aggregate_order_split(order.amount, [club_share], inviter_rate)
+        order.commission_rate = split.commission_rate
+        order.provider_income = split.provider_income
+        order.inviter_commission = split.inviter_commission
+        order.shop_income = split.shop_income
+        order.save(update_fields=['commission_rate', 'provider_income', 'inviter_commission', 'shop_income'])
+    # 兼容旧版本拒单后未释放的参与明细；未开工的回池单没有历史履约收益。
+    if not order.in_service_at:
+        order.providers.exclude(provider_id=order.provider_id).filter(settled_at__isnull=True).update(
+            settlement_base=0, provider_income=0, released_at=timezone.now(),
+        )
+    OrderProvider.objects.update_or_create(
+        order=order, provider_id=order.provider_id,
+        defaults={
+            'provider_account_id': order.provider_account_id,
+            'provider_name_snapshot': order.provider_name_snapshot,
+            'settlement_base': order.amount,
+            'commission_type': club_share.commission_type if club_share else (previous.commission_type if previous else OrderProvider.CommissionType.PERCENT),
+            'commission_rate': order.commission_rate,
+            'commission_fixed': club_share.commission_fixed if club_share else (previous.commission_fixed if previous else 0),
+            'provider_income': order.provider_income,
+            'released_at': None,
+        },
+    )
+
+
+def release_rejected_provider(order):
+    """未开始服务的拒单不产生收益，保留参与记录但释放份额和名额。"""
+    if order.providers.filter(settled_at__isnull=False).exists():
+        raise SettlementError('订单已有结算记录，不能拒单回池')
+    order.providers.update(settlement_base=0, provider_income=0, released_at=timezone.now())
 
 
 # ---------------------------------------------------------------------------
@@ -82,14 +145,14 @@ def active_orders_for(
     """
     condition = Q()
     if account is not None:
-        condition |= Q(provider_account=account) | Q(providers__provider_account=account)
+        condition |= Q(provider_account=account) | Q(providers__provider_account=account, providers__released_at__isnull=True, providers__settled_at__isnull=True)
     if account_id is not None:
         condition |= (
             Q(provider_account_id=account_id)
-            | Q(providers__provider_account_id=account_id)
+            | Q(providers__provider_account_id=account_id, providers__released_at__isnull=True, providers__settled_at__isnull=True)
         )
     if provider_id is not None:
-        condition |= Q(provider_id=provider_id) | Q(providers__provider_id=provider_id)
+        condition |= Q(provider_id=provider_id) | Q(providers__provider_id=provider_id, providers__released_at__isnull=True, providers__settled_at__isnull=True)
     if not condition:
         return Order.objects.none()
 
@@ -226,7 +289,7 @@ def require_order_evidence(order):
 
     provider_rows = list(order.providers.all())
     if provider_rows:
-        provider_ids = [row.provider_id for row in provider_rows if row.provider_id]
+        provider_ids = [row.provider_id for row in provider_rows if row.provider_id and (row.settlement_base > 0 or not row.released_at)]
     elif order.provider_id:
         provider_ids = [order.provider_id]
     else:
@@ -342,12 +405,26 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
         SettlementError: 凭证缺失或分账超额。
         wallet.services.WalletAddressingError: 钱包脏数据。
     """
+    if order.settled_at:
+        return []
+    if order.payment_status != Order.PaymentStatus.PAID:
+        raise SettlementError('订单未付款或已退款，无法结算')
+    if order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL:
+        from engagement.confirmation import settlement_ready
+        if not settlement_ready(order):
+            raise SettlementError('订单售后窗口尚未结束或客诉未处理，暂不能结算')
+        reports = list(order.provider_reports.all())
+        provider_ids = required_report_providers(order)
+        approved_ids = {r.provider_id for r in reports if r.status == ProviderReport.Status.APPROVED}
+        if not provider_ids or None in provider_ids or not provider_ids.issubset(approved_ids):
+            raise SettlementError('所有打手报单审核通过后才能结算')
     trace_id = trace_id or new_trace_id()
     require_order_evidence(order)
 
     provider_rows = list(order.providers.select_for_update().all())
     pending_rows = [
         row for row in provider_rows if row.provider_id and not row.settled_at
+        and (row.settlement_base > 0 or not row.released_at)
     ]
 
     if provider_rows:
@@ -369,11 +446,14 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
 
     settled_provider_ids = []
     settled_account_ids = []
+    from wallet.income import hold_provider_income
+    provider_ids = [row.provider_id for row in pending_rows] if provider_rows else [order.provider_id]
+    profiles = {p.user_id: p for p in EscortProfile.objects.select_for_update().filter(user_id__in=[pk for pk in provider_ids if pk]).order_by('user_id')}
 
     if provider_rows:
         now = timezone.now()
         for row in pending_rows:
-            _credit_wallet(
+            income_tx = _credit_wallet(
                 order=order,
                 amount=row.provider_income,
                 tx_type=Transaction.TxType.INCOME,
@@ -383,13 +463,14 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
                 user_id=row.provider_id,
                 account_id=row.provider_account_id,
             )
+            hold_provider_income(income_tx, profile=profiles.get(row.provider_id), hold_hours=order.income_hold_hours)
             row.settled_at = now
             row.save(update_fields=['settled_at'])
             settled_provider_ids.append(row.provider_id)
             if row.provider_account_id:
                 settled_account_ids.append(row.provider_account_id)
     elif order.provider_id:
-        _credit_wallet(
+        income_tx = _credit_wallet(
             order=order,
             amount=order.provider_income,
             tx_type=Transaction.TxType.INCOME,
@@ -399,6 +480,7 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
             user_id=order.provider_id,
             account_id=order.provider_account_id,
         )
+        hold_provider_income(income_tx, profile=profiles.get(order.provider_id), hold_hours=order.income_hold_hours)
         settled_provider_ids.append(order.provider_id)
         if order.provider_account_id:
             settled_account_ids.append(order.provider_account_id)
@@ -447,6 +529,10 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
         operator_id=getattr(operator, 'pk', None),
         reason=f'providers={settled_provider_ids}',
     )
+    order.settled_at = timezone.now()
+    order.save(update_fields=['settled_at'])
+    from engagement.services import award_order_points
+    award_order_points(order)
     return settled_provider_ids
 
 
@@ -454,17 +540,132 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
 # 退款
 # ---------------------------------------------------------------------------
 
+
+def ensure_fulfillment_reports(order):
+    """创建每个参与人的报单，金额取该参与人的分账快照。调用方持有订单锁。"""
+    rows = list(order.providers.all())
+    # 极小金额均分可能产生 0 基数，仍在服务的成员也必须提供履约凭证。
+    participants = [
+        (r.provider_id, r.provider_account_id, r.settlement_base, r.commission_rate)
+        for r in rows if r.settlement_base > 0 or not r.released_at
+    ]
+    if not rows and order.provider_id:
+        participants = [(order.provider_id, order.provider_account_id, order.amount, order.commission_rate)]
+    for user_id, account_id, amount, rate in participants:
+        if not user_id:
+            continue
+        report, _ = ProviderReport.objects.get_or_create(
+            provider_id=user_id, order=order,
+            defaults={
+                'provider_account_id': account_id, 'amount': amount,
+                'game_name': order.service_name_snapshot or order.service.name,
+                'description': order.remark, 'status': ProviderReport.Status.DRAFT,
+                'commission_rate': rate,
+            },
+        )
+        if report.status in (ProviderReport.Status.DRAFT, ProviderReport.Status.REJECTED):
+            report.amount = amount
+            report.commission_rate = rate
+            report.save(update_fields=['amount', 'commission_rate', 'updated_at'])
+
+
+def complete_fulfillment(order, *, operator=None, operator_account=None):
+    """完成服务释放接单名额；新单等待全体报单通过，旧单继续原结算方式。"""
+    if order.settlement_mode == Order.SettlementMode.COMPLETION:
+        settled = settle_order(order, operator=operator, operator_account=operator_account)
+        ensure_fulfillment_reports(order)
+        return settled
+    ensure_fulfillment_reports(order)
+    provider_ids = list(order.providers.values_list('provider_id', flat=True)) or [order.provider_id]
+    refresh_escort_status(provider_ids=[p for p in provider_ids if p], exclude_order_ids=[order.pk])
+    return []
+
+
+def missing_report_evidence(report):
+    missing = []
+    if not report.entry_image:
+        missing.append('入队截图')
+    if not report.completion_image:
+        missing.append('结单截图')
+    if not report.result_images.exists():
+        missing.append('战绩截图')
+    return missing
+
+
+def required_report_providers(order):
+    rows = list(order.providers.all())
+    return {r.provider_id for r in rows if r.settlement_base > 0 or not r.released_at} if rows else {order.provider_id}
+
+
+def report_edit_error(report):
+    if report.status not in (ProviderReport.Status.DRAFT, ProviderReport.Status.REJECTED):
+        return '当前报单不可修改凭证'
+    if not report.order_id:
+        return ''
+    order = report.order
+    if order.status not in (Order.Status.GRABBED, Order.Status.IN_SERVICE, Order.Status.COMPLETED) or order.payment_status != Order.PaymentStatus.PAID:
+        return '订单已取消、退款或已回到待接单池，报单流程已停止'
+    if report.provider_id not in required_report_providers(order):
+        return '本人已退出服务且无结算份额，无需提交报单'
+    return ''
+
+
+@transaction.atomic
+def approve_order_report(report_id, *, operator, operator_account):
+    initial = ProviderReport.objects.only('order_id').get(pk=report_id)
+    # 所有入口统一先锁订单、再锁报单，双陪同时审核不会互相反向等待。
+    order = Order.objects.select_for_update().get(pk=initial.order_id)
+    report = ProviderReport.objects.select_for_update().get(pk=report_id)
+    if report.status != ProviderReport.Status.PENDING:
+        raise SettlementError('该报单不是待审核状态，无法重复操作')
+    if order.status != Order.Status.COMPLETED or order.payment_status != Order.PaymentStatus.PAID:
+        raise SettlementError('订单未完成或已退款，不能通过报单')
+    missing = missing_report_evidence(report) if (
+        order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL
+        or settings.REQUIRE_ORDER_EVIDENCE_IMAGES
+    ) else []
+    if missing:
+        raise SettlementError('报单缺少：' + '、'.join(missing))
+    own_share = order.providers.filter(provider_id=report.provider_id).first()
+    if not own_share and order.provider_id != report.provider_id:
+        raise SettlementError('报单人不属于该订单')
+    report.status = ProviderReport.Status.APPROVED
+    report.commission_rate = own_share.commission_rate if own_share else order.commission_rate
+    report.payout_amount = own_share.provider_income if own_share else order.provider_income
+    report.auditor = operator
+    report.auditor_account = operator_account
+    report.audited_at = timezone.now()
+    report.save(update_fields=['status', 'commission_rate', 'payout_amount', 'auditor', 'auditor_account', 'audited_at'])
+    if order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL and not order.settled_at:
+        provider_ids = required_report_providers(order)
+        approved_ids = set(order.provider_reports.filter(status=ProviderReport.Status.APPROVED).values_list('provider_id', flat=True))
+        from engagement.confirmation import settlement_ready, refresh_report_clock
+        refresh_report_clock(order)
+        if provider_ids.issubset(approved_ids) and settlement_ready(order):
+            settle_order(order, operator=operator, operator_account=operator_account)
+    transaction.on_commit(lambda: push_message_safe(
+        recipient_id=report.provider_id, title='报单审核通过',
+        preview='收益已结算到账' if order.settled_at else '凭证已通过，全部打手审核通过且售后期结束后自动结算',
+        msg_type='ORDER', related_order_id=order.pk,
+    ))
+    return report
+
 def refund_to_customer(order, reason='订单退款', *, trace_id=None):
     """全额退款到客户钱包并写流水。必须在 ``transaction.atomic`` 中调用。
 
-    同时把订单占用的优惠券退回未使用状态 —— 单都退了还扣着券，
-    等于用户白白损失一张券。
+    普通优惠券退回未使用状态；资格券按核销时冻结的政策保持已使用。
 
     Args:
         order: 待退款订单（调用方负责加锁）。
         reason: 流水备注前缀。
         trace_id: 追踪 ID；不传则自动生成。
     """
+    if order.payment_status != Order.PaymentStatus.PAID:
+        return
+    from engagement.confirmation import aftersale_deadline
+    cutoff = aftersale_deadline(order)
+    if order.consumption_confirmed_at or (cutoff and timezone.now() >= cutoff and not order.aftersales.filter(status='OPEN').exists()):
+        raise SettlementError('售后期限已结束，订单不再支持退款')
     trace_id = trace_id or new_trace_id()
     customer_wallet = get_wallet(
         user_id=order.customer_id,
@@ -498,11 +699,12 @@ def refund_to_customer(order, reason='订单退款', *, trace_id=None):
     )
     order.payment_status = Order.PaymentStatus.REFUNDED
     order.refunded_at = timezone.now()
+    from engagement.services import reverse_order_points, release_order_allocations
+    reverse_order_points(order)
+    release_order_allocations(order)
 
-    from coupons.models import UserCoupon
-    UserCoupon.objects.filter(
-        order=order, status=UserCoupon.Status.USED,
-    ).update(status=UserCoupon.Status.UNUSED, order=None, used_at=None)
+    from coupons.benefits import restore_order_coupons
+    restore_order_coupons(order)
 
 
 # ---------------------------------------------------------------------------

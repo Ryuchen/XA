@@ -3,10 +3,14 @@
     <div class="page-toolbar">
       <slot name="toolbar" :reload="reload" />
     </div>
+    <el-alert v-if="loadFailed" title="数据加载失败，请重试" type="error" :closable="false">
+      <el-button text type="primary" @click="load">重新加载</el-button>
+    </el-alert>
 
     <el-table
       v-loading="loading"
       :data="rows"
+      show-overflow-tooltip
       border
       stripe
       style="width: 100%"
@@ -45,6 +49,8 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
 const loading = ref(false)
+const loadFailed = ref(false)
+let loadSequence = 0
 const isMobile = ref(false)
 const mobileQuery = window.matchMedia('(max-width: 720px)')
 const paginationLayout = computed(() =>
@@ -56,14 +62,28 @@ function syncViewport(event?: MediaQueryListEvent) {
 }
 
 async function load() {
+  const sequence = ++loadSequence
   loading.value = true
+  loadFailed.value = false
   try {
     const params = { page: page.value, page_size: pageSize.value, ...(props.query || {}) }
     const res = await props.fetcher(params)
+    if (sequence !== loadSequence) return
     rows.value = res.data.list || []
     total.value = res.data.total || 0
+  } catch (error: any) {
+    if (sequence !== loadSequence) return
+    rows.value = []
+    total.value = 0
+    if (error?.response?.status === 404 && page.value > 1) {
+      // 最后一页的末条记录删除后，回到首屏，避免停在不存在的页码。
+      page.value = 1
+      await load()
+      return
+    }
+    loadFailed.value = true
   } finally {
-    loading.value = false
+    if (sequence === loadSequence) loading.value = false
   }
 }
 
@@ -83,7 +103,10 @@ onMounted(() => {
   mobileQuery.addEventListener('change', syncViewport)
   load()
 })
-onBeforeUnmount(() => mobileQuery.removeEventListener('change', syncViewport))
+onBeforeUnmount(() => {
+  ++loadSequence
+  mobileQuery.removeEventListener('change', syncViewport)
+})
 
 defineExpose({ reload, load })
 </script>

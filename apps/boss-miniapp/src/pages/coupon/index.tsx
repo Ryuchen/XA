@@ -72,7 +72,7 @@ const CouponPage: React.FC = () => {
       ) : error ? (
         <View className={styles.empty}>
           <View className={styles.emptyIcon}>
-            <Icon name="info" size={72} color="#FF3B30" />
+            <Icon name="info" size={64} color="#FF3B30" />
           </View>
           <Text className={styles.emptyTitle}>加载失败</Text>
           <Text className={styles.emptyDesc}>网络异常，请稍后重试</Text>
@@ -92,11 +92,11 @@ const CouponPage: React.FC = () => {
                 <View className={styles.notchBottom} />
                 <View className={styles.left}>
                   <Text className={styles.amount}>
-                    <Text className={styles.currency}>币</Text>
-                    {formatXaCoin(coupon.amount)}
+                    <Text className={styles.currency}>{coupon.discount_type === 'QUALIFICATION' ? '券' : '币'}</Text>
+                    {coupon.discount_type === 'QUALIFICATION' ? '资格' : formatXaCoin(coupon.amount)}
                   </Text>
                   <Text className={styles.threshold}>
-                    {coupon.discount_type === 'DIRECT'
+                    {coupon.discount_type === 'QUALIFICATION' ? '指定套餐 · 核销后不返券' : coupon.discount_type === 'DIRECT'
                       ? '无门槛'
                       : `满${formatXaCoin(coupon.threshold)}兴安币可用`}
                   </Text>
@@ -107,13 +107,13 @@ const CouponPage: React.FC = () => {
                       <Icon name="ticket-percent" size={32} color="#FF9500" />
                       <Text className={styles.name}>{coupon.name}</Text>
                     </View>
-                    <Text className={styles.valid}>有效期至 {coupon.valid_to?.slice(0, 10)}</Text>
+                    <Text className={styles.valid}>{coupon.valid_to ? '有效期至 ' + coupon.valid_to.slice(0, 10) : coupon.experience_kind === 'DAILY_VALUE' ? '领取当日有效' : '永久有效'} {coupon.max_discount ? ' · 最高优惠¥' + coupon.max_discount/100 : ''}</Text>
                   </View>
                   <View
                     className={`${styles.btn} ${disabled ? styles.btnDisabled : ''}`}
                     onClick={() => handleClaim(coupon)}
                   >
-                    {claimed && <Icon name="check" size={28} color="#AEAEB2" />}
+                    {claimed && <Icon name="check" size={24} color="#AEAEB2" />}
                     <Text className={styles.btnText}>
                       {claimed ? '已领取' : soldOut ? '已抢光' : '立即领取'}
                     </Text>
@@ -126,7 +126,7 @@ const CouponPage: React.FC = () => {
           {coupons.length === 0 && (
             <View className={styles.empty}>
               <View className={styles.emptyIcon}>
-                <Icon name="ticket" size={72} color="#AEAEB2" />
+                <Icon name="ticket" size={64} color="#AEAEB2" />
               </View>
               <Text className={styles.emptyTitle}>暂无可领取的优惠券</Text>
               <Text className={styles.emptyDesc}>敬请期待更多福利活动</Text>

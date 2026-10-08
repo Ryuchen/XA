@@ -25,4 +25,4 @@ COPY . .
 EXPOSE 8000
 
 # 默认以 daphne 提供 HTTP + WebSocket；worker / beat 在 compose 中覆盖 command。
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
+CMD ["python", "-m", "config.serve", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]

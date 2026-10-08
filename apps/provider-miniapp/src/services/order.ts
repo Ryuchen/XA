@@ -1,8 +1,10 @@
 import { ApiResponse, request, uploadFile } from '@/utils/request';
-import { EvaluationListData, ProviderOrder, ProviderStats } from '@/types/order';
+import { Evaluation, EvaluationListData, ProviderOrder, ProviderStats } from '@/types/order';
+import { orderAlerts } from './orderAlerts';
 
 /** 订单列表。status=pending 且 role=provider 时返回待接单池。 */
 export const fetchOrders = (params?: { status?: string; role?: string }) => {
+  if (params?.status === 'pending' && params.role === 'provider') return orderAlerts.loadPending();
   const parts: string[] = [];
   if (params?.status) parts.push(`status=${encodeURIComponent(params.status)}`);
   if (params?.role) parts.push(`role=${encodeURIComponent(params.role)}`);
@@ -10,8 +12,8 @@ export const fetchOrders = (params?: { status?: string; role?: string }) => {
   return request<ApiResponse<ProviderOrder[]>>(`/orders/orders/${qs ? '?' + qs : ''}`, 'GET');
 };
 
-export const grabOrder = (orderId: number | string) => {
-  return request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/grab/`, 'POST');
+export const grabOrder = (orderId: number | string, teamSize: number = 1, partnerId?: number) => {
+  return request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/grab/`, 'POST', { team_size: teamSize, ...(partnerId ? { partner_id: partnerId } : {}) });
 };
 
 /** 开始服务：必须上传入队截图。 */
@@ -41,7 +43,11 @@ export const fetchMyEvaluations = () => {
 };
 
 export const replyEvaluation = (evaluationId: number | string, replyContent: string) => {
-  return request<ApiResponse<unknown>>(`/orders/evaluations/${evaluationId}/reply/`, 'POST', {
+  return request<ApiResponse<Evaluation>>(`/orders/evaluations/${evaluationId}/reply/`, 'POST', {
     reply_content: replyContent,
   });
 };
+
+export interface Teammate { id: number; nickname: string; level: string; pass_tier: string }
+export const fetchTeammates = (orderId: number) => request<ApiResponse<Teammate[]>>(`/orders/orders/${orderId}/teammates/`);
+export const applicationAction = (orderId: number, applicationId: number, action: 'CONFIRM_TEAM' | 'WITHDRAW') => request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/applications/${applicationId}/action/`, 'POST', { action });

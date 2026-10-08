@@ -15,6 +15,21 @@ from club_accounts.services import (
 
 # 权限点分组定义：用于前端权限分配树展示与后端校验。
 PERMISSION_GROUPS = [
+    {'group': 'order_traffic', 'label': '订单峰谷限流', 'permissions': [('order:traffic', '配置限流与自主下单开关')]},
+    {'group': 'deposit_rule', 'label': '押金与结款规则', 'permissions': [
+        ('deposit_rule:view', '查看结款比例'), ('deposit_rule:edit', '配置结款比例'),
+    ]},
+    {'group': 'registration', 'label': '陪玩注册审核', 'permissions': [
+        ('registration:view', '查看注册资料'), ('registration:audit', '审核注册申请'),
+    ]},
+    {'group': 'dispatch_config', 'label': 'KOOK 派单配置', 'permissions': [
+        ('dispatch_config:view', '查看频道与文案'),
+        ('dispatch_config:edit', '配置机器人、频道与文案'),
+    ]},
+    {'group': 'engagement', 'label': '会员运营', 'permissions': [
+        ('engagement:view', '查看会员运营'), ('engagement:edit', '配置会员运营'),
+        ('engagement:fulfill', '处理积分奖品交付'), ('engagement:points', '核对外部积分'),
+    ]},
     {
         'group': 'dashboard',
         'label': '仪表盘',

@@ -1,0 +1,3 @@
+<view class="state" wx:if="{{loading}}" role="status" aria-label="正在加载"><view class="skeleton-card"><view class="skeleton-icon"></view><view class="skeleton-copy"><view class="skeleton wide"></view><view class="skeleton"></view></view></view><text class="state-copy">正在加载，请稍候</text></view>
+<view class="state" wx:elif="{{error}}" role="alert"><view class="state-symbol">!</view><text class="state-copy state-title">暂时无法加载</text><text class="state-copy">{{error}}</text><button class="state-action" hover-class="state-action-hover" bindtap="retry">重新加载</button></view>
+<view class="state" wx:elif="{{empty}}"><image class="state-image" src="/assets/icons/chat.png"/><text class="state-copy state-title">{{emptyText}}</text><text class="state-copy">有新内容时将在这里显示</text></view>

@@ -1,0 +1,16 @@
+# Optional real WeChat credentials for the isolated local environment.
+# Values come from the root-only /etc/xa-local-validation/wechat.env in WSL.
+x-local-wechat: &local-wechat
+  WECHAT_APPID: ${WECHAT_APPID:?local miniapp AppID required}
+  WECHAT_SECRET: ${WECHAT_SECRET:?local miniapp secret required}
+  WECHAT_MOCK_LOGIN: "false"
+
+services:
+  migrate:
+    environment: *local-wechat
+  web:
+    environment: *local-wechat
+  celery-worker:
+    environment: *local-wechat
+  celery-beat:
+    environment: *local-wechat

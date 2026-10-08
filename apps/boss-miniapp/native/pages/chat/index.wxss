@@ -1,0 +1,19 @@
+.chat-page { height: 100vh; display: flex; flex-direction: column; }
+.chat-heading { padding: 22rpx 28rpx; flex-shrink: 0; background: #fffdf5; border-bottom: 1rpx solid var(--xa-color-border); }
+.chat-heading .section-title { margin: 0 0 4rpx; font-size: 30rpx; }
+.chat-heading .small { display: block; font-size: var(--xa-control-small-font); }
+.chat-page > .xa-button.button { width: auto; margin: 24rpx 28rpx; min-height: var(--xa-control-height); font-size: var(--xa-control-font); }
+.history { flex: 1; min-height: 0; height: 0; }
+.message { padding: 16rpx 28rpx; display: flex; align-items: flex-start; flex-direction: column; }
+.message.self { align-items: flex-end; }
+.time { font-size: var(--xa-control-small-font); color: var(--xa-color-muted); margin: 8rpx 0 10rpx; }
+.bubble { max-width: 86%; padding: 18rpx 22rpx; background: #fffdf5; border: 1rpx solid var(--xa-color-border); border-radius: 6rpx 24rpx 24rpx; overflow-wrap: anywhere; white-space: pre-wrap; font-size: var(--xa-control-font); line-height: 1.7; }
+.self .bubble { background: var(--xa-color-primary-soft); border-color: #e9eefb; border-radius: 24rpx 6rpx 24rpx 24rpx; }
+.chat-image { width: 350rpx; max-width: 100%; border-radius: 12rpx; display: block; }
+.composer { display: flex; align-items: flex-end; gap: max(12rpx,6px); padding: 12rpx 24rpx calc(12rpx + env(safe-area-inset-bottom)); background: #fffdf5; flex-shrink: 0; border-top: 1rpx solid var(--xa-color-border); }
+.composer .input { flex: 1; min-width: 0; width: auto; height: var(--xa-input-height); min-height: var(--xa-input-height); max-height: 110px; padding: 6px 8px; border-radius: var(--xa-radius-control); font-size: var(--xa-control-font); line-height: 1.6; }
+.composer .row { flex-shrink: 0; align-items: flex-end; justify-content: flex-end; gap: max(8rpx,4px); margin: 0; }
+.composer .xa-button { width: auto; min-height: var(--xa-input-height); margin: 0; padding: 8rpx 12rpx; border-radius: var(--xa-radius-control); font-size: var(--xa-control-font); white-space: nowrap; }
+.composer .xa-button.button { width: 50px; min-width: 50px; }
+.composer .xa-button.button-secondary { min-width: 32px; padding: 8rpx 4rpx; background: transparent; font-size: var(--xa-control-small-font); font-weight: 500; }
+.end-space { height: 24rpx; }

@@ -2,7 +2,7 @@
   <div class="pd-page" v-loading="loading">
     <!-- 头部操作行 -->
     <div class="ap-page-head">
-      <p class="ap-page-intro">接单额/接单量按「已支付」订单统计；押金/钱包等为实时快照</p>
+      <p class="ap-page-intro">按已支付订单统计；双陪和转单按每人分账份额归属，收入为预计实得，报单审核后入账。押金/钱包为实时快照。</p>
       <div class="ap-page-head-actions">
         <el-date-picker
           v-model="dateRange"

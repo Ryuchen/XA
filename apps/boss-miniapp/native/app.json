@@ -1,0 +1,103 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/catalog/index",
+    "pages/orders/index",
+    "pages/messages/index",
+    "pages/mine/index",
+    "pages/login/index",
+    "pages/service/index",
+    "pages/checkout/index",
+    "pages/order-detail/index",
+    "pages/gifts/index",
+    "pages/points/index",
+    "pages/reward-claim/index",
+    "pages/lottery/index",
+    "pages/membership/index",
+    "pages/club-content/index",
+    "pages/companions/index",
+    "pages/wallet/index",
+    "pages/profile/index",
+    "pages/security/index",
+    "pages/achievements/index",
+    "pages/rankings/index",
+    "pages/message-detail/index",
+    "pages/announcements/index",
+    "pages/announcement-detail/index",
+    "pages/coupons/index",
+    "pages/favorites/index",
+    "pages/checkin/index",
+    "pages/audition/index",
+    "pages/support/index",
+    "pages/chat/index",
+    "pages/gameplay/index",
+    "pages/category/index",
+    "pages/productDetail/index",
+    "pages/serviceCard/index",
+    "pages/orderList/index",
+    "pages/messageDetail/index",
+    "pages/players/index",
+    "pages/customer/wallet/index",
+    "pages/customer/checkin/index",
+    "pages/announcement/index",
+    "pages/announcementDetail/index",
+    "pages/coupon/index",
+    "pages/coupon/mine/index",
+    "pages/favorite/index",
+    "pages/settings/index",
+    "pages/companion-picker/index",
+    "pages/companion-detail/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "兴安电竞",
+    "navigationBarBackgroundColor": "#f5f1e9",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f1e9",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": true
+  },
+  "tabBar": {
+    "color": "#657188",
+    "selectedColor": "#002fa7",
+    "backgroundColor": "#fffdf5",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "assets/tabbar/home.png",
+        "selectedIconPath": "assets/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/companions/index",
+        "text": "陪玩",
+        "iconPath": "assets/tabbar/companions.png",
+        "selectedIconPath": "assets/tabbar/companions-active.png"
+      },
+      {
+        "pagePath": "pages/orders/index",
+        "text": "订单",
+        "iconPath": "assets/tabbar/orders.png",
+        "selectedIconPath": "assets/tabbar/orders-active.png"
+      },
+      {
+        "pagePath": "pages/messages/index",
+        "text": "消息",
+        "iconPath": "assets/tabbar/messages.png",
+        "selectedIconPath": "assets/tabbar/messages-active.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "assets/tabbar/mine.png",
+        "selectedIconPath": "assets/tabbar/mine-active.png"
+      }
+    ]
+  },
+  "usingComponents": {
+    "state-view": "/components/state-view/index"
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

@@ -65,6 +65,14 @@ export const TX_TYPE: Dict = {
   WITHDRAW: { label: '提现', type: 'info' },
   REWARD: { label: '奖励', type: 'primary' },
   PENALTY: { label: '罚款', type: 'danger' },
+  DEPOSIT: { label: '押金', type: 'info' },
+  DEPOSIT_INCOME: { label: '押金收退', type: 'info' },
+  SHOP_INCOME: { label: '平台收入', type: 'success' },
+  REFUND: { label: '订单退款', type: 'warning' },
+  PASS_PURCHASE: { label: '通行证购买', type: 'warning' },
+  PASS_INCOME: { label: '通行证收入', type: 'success' },
+  WITHDRAW_TAX: { label: '提现税费', type: 'info' },
+  ADJUST: { label: '后台调账', type: 'primary' },
 }
 
 export const DISPOSE_TYPE: Dict = {
@@ -81,6 +89,8 @@ export const TX_STATUS: Dict = {
 export const COUPON_TYPE: Dict = {
   THRESHOLD: { label: '满减', type: 'warning' },
   DIRECT: { label: '无门槛', type: 'success' },
+  RATE: { label: '折扣/服务券', type: 'primary' },
+  QUALIFICATION: { label: '套餐资格券', type: 'info' },
 }
 
 export const USER_COUPON_STATUS: Dict = {
@@ -111,6 +121,9 @@ export const LINK_TYPE: Dict = {
   NONE: { label: '无跳转', type: 'info' },
   PRODUCT: { label: '商品详情', type: 'primary' },
   ANNOUNCEMENT: { label: '公告详情', type: 'success' },
+  GAMEPLAY: { label: '玩法服务', type: 'primary' },
+  CONTENT: { label: '活动与权益', type: 'success' },
+  PAGE: { label: '业务入口', type: 'primary' },
   URL: { label: '外部链接', type: 'warning' },
 }
 

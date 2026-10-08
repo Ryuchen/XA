@@ -4,8 +4,10 @@ from unittest import mock
 
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
+from orders.models import Order, OrderProvider
 from orders.tests.factories import (
     make_completed_order, make_order, make_provider, make_service, make_service_category,
     make_user, make_wallet,
@@ -47,10 +49,16 @@ class ProviderBenefitRecordsTest(APITestCase):
         self.provider = make_provider()
         self.customer = make_user(nickname='送礼老板')
         gift_category = make_service_category(is_gift=True)
-        gift_service = make_service(name='心动礼物', price=5000, service_category=gift_category)
-        make_completed_order(
-            self.customer, self.provider, service=gift_service,
-            provider_income=4000,
+        self.gift_service = make_service(name='心动礼物', price=5000, service_category=gift_category)
+        self.gift_order = make_completed_order(
+            self.customer, self.provider, service=self.gift_service,
+            provider_income=4000, payment_status=Order.PaymentStatus.PAID,
+            settled_at=timezone.now(),
+        )
+        self.wallet = make_wallet(self.provider, balance=4000)
+        Transaction.objects.create(
+            wallet=self.wallet, order=self.gift_order, tx_type=Transaction.TxType.INCOME,
+            amount=4000, balance_after=4000,
         )
         DisposeRecord.objects.create(
             user=self.provider, dispose_type=DisposeRecord.DisposeType.REWARD,
@@ -71,7 +79,125 @@ class ProviderBenefitRecordsTest(APITestCase):
         self.assertEqual(data['summary']['total_gift_income'], 4000)
         self.assertEqual(data['summary']['gift_count'], 1)
         self.assertEqual(data['gift_records'][0]['service_name'], '心动礼物')
+        self.assertEqual(data['gift_records'][0]['received_income'], 4000)
+        self.assertEqual(data['gift_records'][0]['settlement_status'], 'SETTLED')
         self.assertEqual(data['dispose_records'][0]['signed_amount'], -300)
+
+    def test_pagination_keeps_full_totals_and_can_read_every_record(self):
+        for _ in range(24):
+            order = make_completed_order(
+                self.customer, self.provider, service=self.gift_service,
+                provider_income=4000, payment_status=Order.PaymentStatus.PAID,
+                settled_at=timezone.now(),
+            )
+            Transaction.objects.create(wallet=self.wallet, order=order, tx_type=Transaction.TxType.INCOME, amount=4000)
+            DisposeRecord.objects.create(user=self.provider, dispose_type=DisposeRecord.DisposeType.REWARD, amount=100)
+        self.client.force_authenticate(self.provider)
+        first = self.client.get(self.URL).data['data']
+        second = self.client.get(self.URL, {'gift_page': 2, 'dispose_page': 2}).data['data']
+        self.assertEqual(first['summary'], second['summary'])
+        self.assertEqual(first['summary']['total_reward'], 3600)
+        self.assertEqual(first['summary']['total_penalty'], 300)
+        self.assertEqual(first['summary']['total_gift_income'], 100000)
+        self.assertEqual(first['summary']['total_gift_amount'], 125000)
+        self.assertEqual(first['pagination']['gift']['total'], 25)
+        self.assertEqual(first['pagination']['dispose']['total'], 26)
+        for kind, total in [('gift_records', 25), ('dispose_records', 26)]:
+            self.assertEqual(len(first[kind]), 20)
+            ids = [row['id'] for row in first[kind] + second[kind]]
+            self.assertEqual(len(ids), total)
+            self.assertEqual(len(set(ids)), total)
+        empty = self.client.get(self.URL, {'gift_page': 3, 'dispose_page': 3}).data['data']
+        self.assertEqual(empty['gift_records'], [])
+        self.assertEqual(empty['dispose_records'], [])
+        self.assertEqual(empty['summary'], first['summary'])
+
+    def test_only_successful_own_income_counts_as_received(self):
+        other_wallet = make_wallet(make_provider())
+        pending = make_completed_order(
+            self.customer, self.provider, service=self.gift_service,
+            provider_income=4000, payment_status=Order.PaymentStatus.PAID,
+        )
+        for status in [Transaction.Status.PENDING, Transaction.Status.FAILED]:
+            Transaction.objects.create(wallet=self.wallet, order=pending, tx_type=Transaction.TxType.INCOME, amount=4000, status=status)
+        Transaction.objects.create(wallet=other_wallet, order=pending, tx_type=Transaction.TxType.INCOME, amount=4000)
+        Transaction.objects.create(wallet=self.wallet, order=pending, tx_type=Transaction.TxType.REWARD, amount=100)
+        missing_credit = make_completed_order(
+            self.customer, self.provider, service=self.gift_service,
+            provider_income=4000, payment_status=Order.PaymentStatus.PAID, settled_at=timezone.now(),
+        )
+        self.client.force_authenticate(self.provider)
+        data = self.client.get(self.URL).data['data']
+        self.assertEqual(data['summary']['total_gift_income'], 4000)
+        by_id = {row['id']: row for row in data['gift_records']}
+        self.assertEqual(by_id[pending.id]['received_income'], 0)
+        self.assertEqual(by_id[pending.id]['settlement_status'], 'PENDING')
+        self.assertEqual(by_id[missing_credit.id]['settlement_status'], 'CHECK_REQUIRED')
+
+    def test_unpaid_and_refunded_gifts_are_excluded(self):
+        for payment_status in [Order.PaymentStatus.UNPAID, Order.PaymentStatus.REFUNDED]:
+            make_completed_order(self.customer, self.provider, service=self.gift_service, payment_status=payment_status)
+        self.client.force_authenticate(self.provider)
+        data = self.client.get(self.URL).data['data']
+        self.assertEqual(data['summary']['gift_count'], 1)
+
+    def test_members_override_header_and_only_own_split_is_counted(self):
+        other = make_provider()
+        OrderProvider.objects.create(order=self.gift_order, provider=other, settlement_base=5000, provider_income=4000)
+        own = make_completed_order(
+            self.customer, other, service=self.gift_service, provider_income=4000,
+            payment_status=Order.PaymentStatus.PAID, settled_at=timezone.now(),
+        )
+        OrderProvider.objects.create(order=own, provider=other, settlement_base=2500, provider_income=2000)
+        OrderProvider.objects.create(order=own, provider=self.provider, settlement_base=2500, provider_income=1800, settled_at=timezone.now())
+        Transaction.objects.create(wallet=self.wallet, order=own, tx_type=Transaction.TxType.INCOME, amount=1800)
+        released = make_completed_order(self.customer, self.provider, service=self.gift_service, payment_status=Order.PaymentStatus.PAID)
+        OrderProvider.objects.create(order=released, provider=self.provider, released_at=timezone.now())
+        self.client.force_authenticate(self.provider)
+        data = self.client.get(self.URL).data['data']
+        self.assertEqual(data['summary']['gift_count'], 1)
+        self.assertEqual(data['summary']['total_gift_income'], 1800)
+        self.assertEqual(data['gift_records'][0]['id'], own.id)
+        self.assertEqual(data['gift_records'][0]['provider_income'], 1800)
+        self.assertEqual(data['gift_records'][0]['settlement_status'], 'SETTLED')
+
+    def test_zero_income_and_released_earned_shares_are_kept(self):
+        for expected in [0, 1000]:
+            order = make_completed_order(self.customer, self.provider, service=self.gift_service, payment_status=Order.PaymentStatus.PAID)
+            OrderProvider.objects.create(
+                order=order, provider=self.provider, settlement_base=2500, provider_income=expected,
+                settled_at=timezone.now(), released_at=timezone.now() if expected else None,
+            )
+            if expected:
+                Transaction.objects.create(wallet=self.wallet, order=order, tx_type=Transaction.TxType.INCOME, amount=expected)
+        self.client.force_authenticate(self.provider)
+        data = self.client.get(self.URL).data['data']
+        self.assertEqual(data['summary']['gift_count'], 3)
+        self.assertEqual(data['summary']['total_gift_income'], 5000)
+        self.assertTrue(all(row['settlement_status'] == 'SETTLED' for row in data['gift_records']))
+
+    def test_invalid_pagination_is_rejected(self):
+        self.client.force_authenticate(self.provider)
+        for params in [{'page_size': 0}, {'page_size': 101}, {'gift_page': -1}, {'dispose_page': '1.5'}, {'gift_page': '9' * 30}]:
+            with self.subTest(params=params):
+                self.assertEqual(self.client.get(self.URL, params).data['code'], 400)
+
+    def test_business_account_owns_gift_even_when_legacy_header_disagrees(self):
+        from club_accounts.models import ClubAccount
+        from club_accounts.tokens import issue_account_tokens
+        owner = ClubAccount.objects.create(username='gift-business-owner', account_type=ClubAccount.AccountType.PROVIDER)
+        self.gift_order.provider_account = owner
+        self.gift_order.save(update_fields=['provider_account'])
+        self.client.force_authenticate(self.provider)
+        self.assertEqual(self.client.get(self.URL).data['data']['summary']['gift_count'], 0)
+        self.client.force_authenticate(None)
+        token, _ = issue_account_tokens(owner)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        data = self.client.get(self.URL).data['data']
+        self.assertEqual(data['summary']['gift_count'], 1)
+        # 旧主体钱包的流水不能记到新的业务主体账上。
+        self.assertEqual(data['summary']['total_gift_income'], 0)
+        self.assertEqual(data['gift_records'][0]['settlement_status'], 'CHECK_REQUIRED')
 
     def test_customer_is_denied(self):
         self.client.force_authenticate(self.customer)

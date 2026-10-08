@@ -11,15 +11,16 @@ import { useVoicePreview } from '@/hooks/useVoicePreview';
 import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
-const COLOR_PRICE = '#FF9500';
+const COLOR_PRICE = '#002fa7';
 const COLOR_TEXT_SECONDARY = '#6E6E73';
-const COLOR_WHITE = '#FFFFFF';
+const COLOR_WHITE = '#fffdf5';
 
 const sortTabs = [
   { label: '推荐', value: 'recommend' },
   { label: '评分', value: 'rating' },
   { label: '接单多', value: 'orders' },
-  { label: '价格低', value: 'price' }
+  { label: '价格低', value: 'price' },
+  { label: '价格高', value: 'priceDesc' }
 ] as const;
 
 const statusTextMap: Record<string, string> = {
@@ -40,6 +41,7 @@ const statusKey = (status: string): 'online' | 'busy' | 'offline' => {
 };
 
 const PlayerSelectPage: React.FC = () => {
+  const fromCheckout = Taro.getCurrentInstance().router?.params.fromCheckout === '1';
   const [service, setService] = useState<ServiceInfo | null>(null);
   const [escorts, setEscorts] = useState<EscortProfile[]>([]);
   const [activeSort, setActiveSort] = useState<typeof sortTabs[number]['value']>('recommend');
@@ -72,7 +74,7 @@ const PlayerSelectPage: React.FC = () => {
       }).catch(e => console.warn('兜底获取默认服务失败', e));
     }
 
-    fetchEscorts()
+    fetchEscorts(undefined, undefined, serviceId ? Number(serviceId) : undefined, Taro.getCurrentInstance().router?.params.provider_gender || 'ANY')
       .then(res => {
         if (res.code === 0 && res.data) setEscorts(res.data);
       })
@@ -80,10 +82,12 @@ const PlayerSelectPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(()=>{if(service)fetchEscorts(undefined,undefined,service.id,Taro.getCurrentInstance().router?.params.provider_gender||'ANY').then(r=>{if(r.code===0&&r.data)setEscorts(r.data)}).catch(()=>{})},[service]);
   const players = useMemo(() => {
     const list = escorts.slice();
     if (activeSort === 'rating') return list.sort((a, b) => b.rating - a.rating);
     if (activeSort === 'orders') return list.sort((a, b) => b.orderCount - a.orderCount);
+    if (activeSort === 'priceDesc') return list.sort((a,b)=>b.pricePerHour-a.pricePerHour);
     if (activeSort === 'price') return list.sort((a, b) => a.pricePerHour - b.pricePerHour);
     return list.sort((a, b) => {
       const onlineScore = (e: EscortProfile) =>
@@ -96,6 +100,11 @@ const PlayerSelectPage: React.FC = () => {
   const handleSmartMatch = () => {
     if (!service) {
       Taro.showToast({ title: '服务加载中，请稍候', icon: 'none' });
+      return;
+    }
+    if (Taro.getCurrentInstance().router?.params.fromCheckout === '1') {
+      Taro.getCurrentInstance().page?.getOpenerEventChannel?.().emit('providerSelected', null);
+      Taro.navigateBack();
       return;
     }
     Taro.redirectTo({
@@ -113,6 +122,13 @@ const PlayerSelectPage: React.FC = () => {
       return;
     }
 
+    if (Taro.getCurrentInstance().router?.params.fromCheckout === '1') {
+      const escort = escorts.find(item => item.id === selectedPlayerId);
+      if (!escort) return;
+      Taro.getCurrentInstance().page?.getOpenerEventChannel?.().emit('providerSelected', escort);
+      Taro.navigateBack();
+      return;
+    }
     Taro.redirectTo({
       url: `/pages/checkout/index?service_id=${service.id}&playerId=${selectedPlayerId}&game_rounds=${gameRounds}`
     });
@@ -151,7 +167,7 @@ const PlayerSelectPage: React.FC = () => {
             <Text className={styles.smartTitle}>平台智能匹配</Text>
             <Text className={styles.smartText}>不纠结人选，客服按时间和需求自动安排</Text>
           </View>
-          <Text className={styles.smartAction}>直接下单</Text>
+          <Text className={styles.smartAction}>{fromCheckout ? '使用平台派单' : '直接下单'}</Text>
         </View>
 
         {players.map(player => {
@@ -165,7 +181,7 @@ const PlayerSelectPage: React.FC = () => {
             >
               {isSelected && (
                 <View className={styles.selectBadge}>
-                  <Icon name="check" size={22} color={COLOR_WHITE} strokeWidth={3} />
+                  <Icon name="check" size={24} color={COLOR_WHITE} strokeWidth={3} />
                 </View>
               )}
               <View className={styles.avatarWrap}>
@@ -190,7 +206,7 @@ const PlayerSelectPage: React.FC = () => {
                   </View>
                 )}
                 <View className={styles.metaRow}>
-                  <Icon name="star" size={26} color={COLOR_PRICE} fill={COLOR_PRICE} className={styles.metaIcon} />
+                  <Icon name="star" size={24} color={COLOR_PRICE} fill={COLOR_PRICE} className={styles.metaIcon} />
                   <Text className={styles.ratingValue}>{player.rating}</Text>
                   <Text className={styles.meta}>
                     · 已接 {player.orderCount}{player.ratingCount ? ` · 评价 ${player.ratingCount}` : ''} · 胜率 {player.winRate}%
@@ -216,7 +232,7 @@ const PlayerSelectPage: React.FC = () => {
 
         {!loading && players.length === 0 && (
           <View className={styles.emptyBox}>
-            <Icon name="gamepad-2" size={96} color="#AEAEB2" className={styles.emptyIcon} />
+            <Icon name="gamepad-2" size={64} color="#AEAEB2" className={styles.emptyIcon} />
             <Text className={styles.emptyTitle}>暂无可选大神</Text>
             <Text className={styles.emptyDesc}>建议使用上方智能匹配，由客服为你安排</Text>
           </View>
@@ -231,7 +247,7 @@ const PlayerSelectPage: React.FC = () => {
           </Text>
         </View>
         <View className={styles.confirmBtn} onClick={handleConfirm}>
-          <Text>选TA下单</Text>
+          <Text>{fromCheckout ? '确认选择' : '选TA下单'}</Text>
         </View>
       </View>
     </View>

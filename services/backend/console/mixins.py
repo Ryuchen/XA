@@ -1,4 +1,7 @@
 from rest_framework import mixins, status
+from django.db import transaction
+from django.db.models.deletion import ProtectedError, RestrictedError
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from .pagination import ConsolePagination
@@ -69,5 +72,9 @@ class EnvelopeViewSetMixin:
         if not isinstance(self, mixins.DestroyModelMixin):
             return self._method_not_allowed(request)
         instance = self.get_object()
-        self.perform_destroy(instance)
+        try:
+            with transaction.atomic():
+                self.perform_destroy(instance)
+        except (ProtectedError, RestrictedError):
+            raise ValidationError('该记录仍被业务数据引用，无法删除；请先停用或处理关联记录') from None
         return Response({'code': 0, 'msg': 'deleted'})

@@ -2,7 +2,7 @@
   <div class="rp-page">
     <!-- 头部操作行 -->
     <div class="ap-page-head">
-      <p class="ap-page-intro">审核已完成订单的入队、结单与战绩凭证；平台订单不会重复结算</p>
+      <p class="ap-page-intro">核验入队、结单与战绩凭证；新订单在全体打手报单通过后统一结算</p>
       <div class="ap-page-head-actions">
         <el-button v-if="auth.hasPerm('report:audit')" type="warning" plain @click="openCommission">
           全局抽成配置：{{ commissionRate }}%
@@ -53,6 +53,7 @@
 
       <el-table-column prop="id" label="ID" width="70" />
     <el-table-column prop="provider_name" label="陪玩" min-width="110" />
+    <el-table-column prop="fulfillment" label="玩法 / 转盘目标" min-width="220" />
     <el-table-column prop="game_name" label="游戏/项目" min-width="140" />
     <el-table-column label="报单金额" width="110">
       <template #default="{ row }">{{ amountToXaCoin(row.amount) }} 币</template>
@@ -62,9 +63,9 @@
         <span>{{ reportCommissionDesc(row) }}</span>
       </template>
     </el-table-column>
-    <el-table-column label="实得" width="130">
+    <el-table-column label="核定收益" width="180">
       <template #default="{ row }">
-        <span v-if="row.status === 'APPROVED'">{{ amountToXaCoin(row.payout_amount) }} 币（{{ row.commission_rate }}%）</span>
+        <span v-if="row.status === 'APPROVED'">{{ amountToXaCoin(row.payout_amount) }} 币（{{ row.order && !row.settled_at ? '待整单结算' : '已入账' }}）</span>
         <span v-else>预计 {{ amountToXaCoin(reportEstimatedPayout(row)) }} 币</span>
       </template>
     </el-table-column>
@@ -88,7 +89,7 @@
     </crud-table>
   </div>
 
-  <el-drawer v-model="detailVisible" title="报单详情" size="480px">
+  <el-drawer v-model="detailVisible" title="报单详情" size="480px" class="ap-panel">
     <template v-if="current">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="陪玩">{{ current.provider_name }}</el-descriptions-item>
@@ -100,8 +101,8 @@
         <el-descriptions-item v-if="current.status === 'PENDING'" label="预计入账">
           {{ amountToXaCoin(reportEstimatedPayout(current)) }} 币
         </el-descriptions-item>
-        <el-descriptions-item v-if="current.status === 'APPROVED'" label="实际入账">
-          {{ amountToXaCoin(current.payout_amount) }} 币（抽成 {{ current.commission_rate }}%）
+        <el-descriptions-item v-if="current.status === 'APPROVED'" label="核定收益">
+          {{ amountToXaCoin(current.payout_amount) }} 币（{{ current.order && !current.settled_at ? '等待本单全部报单通过后入账' : '已入账' }}）
         </el-descriptions-item>
         <el-descriptions-item label="服务内容">{{ current.description || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ current.remark || '-' }}</el-descriptions-item>
@@ -117,31 +118,31 @@
       <template v-if="current.order">
         <div class="evidence-section">
           <div class="evidence-title">入队截图</div>
-          <el-image v-if="current.entry_image_url" :src="current.entry_image_url" :preview-src-list="allEvidenceUrls(current)" fit="cover" class="evidence-image" />
+          <PrivateImage v-if="current.entry_image_url" :src="current.entry_image_url" :preview-src-list="allEvidenceUrls(current)" fit="cover" class="evidence-image" />
           <el-empty v-else description="未上传" :image-size="50" />
         </div>
         <div class="evidence-section">
           <div class="evidence-title">结单截图</div>
-          <el-image v-if="current.completion_image_url" :src="current.completion_image_url" :preview-src-list="allEvidenceUrls(current)" fit="cover" class="evidence-image" />
+          <PrivateImage v-if="current.completion_image_url" :src="current.completion_image_url" :preview-src-list="allEvidenceUrls(current)" fit="cover" class="evidence-image" />
           <el-empty v-else description="未上传" :image-size="50" />
         </div>
         <div class="evidence-section">
           <div class="evidence-title">战绩截图（{{ current.result_image_urls?.length || 0 }} 张）</div>
           <div v-if="current.result_image_urls?.length" class="evidence-grid">
-            <el-image v-for="url in current.result_image_urls" :key="url" :src="url" :preview-src-list="allEvidenceUrls(current)" fit="cover" class="evidence-image" />
+            <PrivateImage v-for="url in current.result_image_urls" :key="url" :src="url" :preview-src-list="allEvidenceUrls(current)" fit="cover" class="evidence-image" />
           </div>
           <el-empty v-else description="未上传" :image-size="50" />
         </div>
       </template>
       <template v-else>
-        <el-image v-if="current.proof_image_url" :src="current.proof_image_url" :preview-src-list="[current.proof_image_url]" fit="contain" style="width: 100%; max-height: 360px" />
+        <PrivateImage v-if="current.proof_image_url" :src="current.proof_image_url" :preview-src-list="[current.proof_image_url]" fit="contain" style="width: 100%; max-height: 360px" />
         <el-empty v-else description="无凭证" :image-size="80" />
       </template>
     </template>
   </el-drawer>
 
-  <el-dialog v-model="commissionVisible" title="全局平台抽成配置" width="380px">
-    <el-form label-width="100px">
+  <el-dialog v-model="commissionVisible" title="全局平台抽成配置" width="440px" class="ap-modal">
+    <el-form  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="抽成率(%)">
         <el-input-number v-model="commissionInput" :min="0" :max="100" :step="1" style="width: 100%" />
         <div class="tip">仅在陪玩未设置启用等级时生效；陪玩实得 = 报单金额 ×（1 − 抽成率）</div>
@@ -155,6 +156,7 @@
 </template>
 
 <script setup lang="ts">
+import PrivateImage from "@/components/PrivateImage.vue"
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
@@ -232,6 +234,7 @@ function reportCommissionDesc(row: any): string {
 }
 
 function reportEstimatedPayout(row: any): number {
+  if (row.expected_income != null) return Number(row.expected_income)
   return Math.floor((Number(row.amount) || 0) * (100 - reportRate(row)) / 100)
 }
 
@@ -244,7 +247,7 @@ async function onApprove(row: any) {
   try {
     await ElMessageBox.confirm(
       isOrderReport
-        ? `确认「${row.provider_name}」提交的订单凭证完整有效？该订单已经结算，本次审核不会重复入账。`
+        ? `确认「${row.provider_name}」的入队、结单和战绩截图完整有效？${row.settled_at || row.settlement_mode === 'COMPLETION' ? '历史订单已结算，本次仅核验凭证。' : '全体打手报单通过后，系统按订单分账快照统一结算。'}`
         : `通过后将按 ${reportCommissionDesc(row)} 给「${row.provider_name}」入账，预计 ${amountToXaCoin(reportEstimatedPayout(row))} 兴安币，确认通过？`,
       '报单审核',
       { type: 'warning', confirmButtonText: '确认通过' },

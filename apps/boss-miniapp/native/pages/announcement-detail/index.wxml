@@ -1,0 +1,5 @@
+<view class="page">
+  <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button>
+<state-view loading="{{loading}}" error="{{error}}" bind:retry="load" />
+  <block wx:if="{{item && !error}}"><view class="eyebrow">兴安电竞 · 官方公告</view><view class="title">{{item.title}}</view><view class="subtitle">{{item.dateText}}</view><view class="panel article"><rich-text nodes="{{item.content}}"/></view></block>
+</view>

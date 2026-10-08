@@ -21,6 +21,7 @@ import {
 import { Skeleton } from '@/components';
 import Icon, { IconName } from '@/components/Icon';
 import { resolveImageUrl } from '@/utils/media';
+import RouletteWheel from '@/components/RouletteWheel';
 import styles from './index.module.scss';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { getStoredToken } from '@/utils/auth';
@@ -53,8 +54,8 @@ const statusIconMap: Record<EscortOrderStatus, IconName> = {
 
 const statusColorMap: Record<EscortOrderStatus, string> = {
   pending: '#FF9500',
-  grabbed: '#007AFF',
-  in_progress: '#007AFF',
+  grabbed: '#002fa7',
+  in_progress: '#002fa7',
   completed: '#34C759',
   cancelled: '#AEAEB2',
 };
@@ -73,6 +74,7 @@ const OrderListPage: React.FC = () => {
   const [evalContent, setEvalContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(focusedOrderId);
+  const [wheelOrderId, setWheelOrderId] = useState<number | null>(null);
   // 打赏礼物列表来自全局目录缓存，与「陪玩」页共用
   const giftOptions = useServices('GIFT');
   const { ensureLogin, loginSheet } = useLoginGuard();
@@ -220,13 +222,14 @@ const OrderListPage: React.FC = () => {
   const handleContactSupport = async (order?: EscortOrder) => {
     Taro.showLoading({ title: '正在连接客服' });
     const result = await openWecomCustomerService({
+      orderId: order?.id,
       title: order ? `订单 ${order.order_no} 咨询` : '订单售后咨询',
       path: order
         ? `/pages/orderList/index?orderId=${order.id}`
         : '/pages/orderList/index',
     });
     Taro.hideLoading();
-    if (!result.opened) Taro.navigateTo({ url: '/pages/serviceCard/index' });
+    if (!result.opened) Taro.navigateTo({ url: `/pages/serviceCard/index${order ? `?orderId=${order.id}` : ''}` });
   };
 
   const startEvaluate = (order: EscortOrder) => {
@@ -302,7 +305,7 @@ const OrderListPage: React.FC = () => {
       return (
         <View className={styles.actionGroup}>
           <View className={styles.secondaryBtn} onClick={() => void handleContactSupport(order)}>
-            <Icon name="headphones" size={26} color="#6E6E73" className={styles.btnIcon} />
+            <Icon name="headphones" size={24} color="#6E6E73" className={styles.btnIcon} />
             <Text>联系客服</Text>
           </View>
           {can('CANCEL', true) && (
@@ -325,7 +328,7 @@ const OrderListPage: React.FC = () => {
       return (
         <View className={styles.actionGroup}>
           <View className={styles.secondaryBtn} onClick={() => void handleContactSupport(order)}>
-            <Icon name="headphones" size={26} color="#6E6E73" className={styles.btnIcon} />
+            <Icon name="headphones" size={24} color="#6E6E73" className={styles.btnIcon} />
             <Text>联系客服</Text>
           </View>
           {can('TIP', !!order.provider && !order.service.is_gift) && (
@@ -333,13 +336,13 @@ const OrderListPage: React.FC = () => {
               className={`${styles.giftBtn} ${loadingOrderId === order.id ? styles.disabledBtn : ''}`}
               onClick={() => void handleTip(order)}
             >
-              <Icon name="gift" size={26} color="#FFFFFF" className={styles.btnIcon} />
+              <Icon name="gift" size={24} color="#fffdf5" className={styles.btnIcon} />
               <Text>{loadingOrderId === order.id ? '赠送中' : '送礼物'}</Text>
             </View>
           )}
           {can('EVALUATE', !evaluated) && (
             <View className={styles.primaryBtn} onClick={() => startEvaluate(order)}>
-              <Icon name="star" size={26} color="#FFFFFF" className={styles.btnIcon} />
+              <Icon name="star" size={24} color="#fffdf5" className={styles.btnIcon} />
               <Text>评价</Text>
             </View>
           )}
@@ -351,7 +354,7 @@ const OrderListPage: React.FC = () => {
     return (
       <View className={styles.actionGroup}>
         <View className={styles.secondaryBtn} onClick={() => void handleContactSupport(order)}>
-          <Icon name="headphones" size={26} color="#6E6E73" className={styles.btnIcon} />
+          <Icon name="headphones" size={24} color="#6E6E73" className={styles.btnIcon} />
           <Text>联系客服</Text>
         </View>
       </View>
@@ -444,7 +447,7 @@ const OrderListPage: React.FC = () => {
                   <Text className={styles.metaText}>
                     大神：{counterpart?.nickname || '待匹配'}
                   </Text>
-                  {!order.service.is_gift && <Text className={styles.metaText}>局数：{order.game_rounds}局</Text>}
+                  {!order.service.is_gift && <Text className={styles.metaText}>{order.roulette_result?.name ? '转盘服务目标：1 个' : `局数：${order.game_rounds}局`}</Text>}
                   <Text className={styles.createTime}>下单时间：{formatDateTime(order.created_at)}</Text>
                 </View>
                 <View className={styles.priceBlock}>
@@ -453,6 +456,12 @@ const OrderListPage: React.FC = () => {
                 </View>
               </View>
 
+              {order.fulfillment && <View className={styles.remarkBlock}><Text className={styles.remarkLabel}>玩法要求</Text><Text className={styles.remarkText}>{order.fulfillment}</Text></View>}
+              {order.gameplay_snapshot?.rules && <View className={styles.remarkBlock}><Text className={styles.remarkLabel}>约定规则</Text><Text className={styles.remarkText}>{order.gameplay_snapshot.rules}</Text></View>}
+              {order.gameplay_snapshot?.pool && order.roulette_result?.name && <>
+                <View className={styles.remarkBlock} onClick={() => setWheelOrderId(wheelOrderId === order.id ? null : order.id)}><Text className={styles.remarkText}>{wheelOrderId === order.id ? '收起本单转盘 ↑' : '查看本单转盘与概率 →'}</Text></View>
+                {wheelOrderId === order.id && <RouletteWheel pool={order.gameplay_snapshot.pool} result={order.roulette_result} />}
+              </>}
               {order.remark && (
                 <View className={styles.remarkBlock}>
                   <Text className={styles.remarkLabel}>备注</Text>
@@ -472,7 +481,7 @@ const OrderListPage: React.FC = () => {
                 onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
               >
                 <Text>{expandedOrderId === order.id ? '收起订单详情' : '查看订单详情'}</Text>
-                <Icon name={expandedOrderId === order.id ? 'chevron-up' : 'chevron-down'} size={28} color="#007AFF" />
+                <Icon name={expandedOrderId === order.id ? 'chevron-up' : 'chevron-down'} size={24} color="#002fa7" />
               </View>
 
               {expandedOrderId === order.id && (
@@ -535,7 +544,7 @@ const OrderListPage: React.FC = () => {
         {visibleOrders.length === 0 && (
           <View className={styles.empty}>
             <View className={styles.emptyIconWrap}>
-              <Icon name="package" size={80} color="#AEAEB2" />
+              <Icon name="package" size={64} color="#AEAEB2" />
             </View>
             <Text className={styles.emptyTitle}>{getStoredToken() ? '暂无相关订单' : '登录后查看订单'}</Text>
             <Text className={styles.emptyDesc}>
@@ -562,7 +571,7 @@ const OrderListPage: React.FC = () => {
                 <Icon
                   key={n}
                   name="star"
-                  size={56}
+                  size={48}
                   color="#FF9500"
                   fill={n <= evalScore ? '#FF9500' : 'none'}
                   className={styles.starIcon}

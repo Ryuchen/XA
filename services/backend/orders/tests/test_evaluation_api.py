@@ -214,3 +214,38 @@ class ReplyEvaluationTest(APITestCase):
             {'reply_content': '回复'},
         )
         self.assertEqual(res.data['code'], 404)
+
+    def test_reply_rejects_invalid_or_overlong_content_without_mutation(self):
+        self.client.force_authenticate(self.provider)
+        for content in ([], {}, 123, None, '字' * 1001):
+            with self.subTest(content=type(content).__name__):
+                res = self.client.post(f'/api/orders/evaluations/{self.evaluation.pk}/reply/',
+                                       {'reply_content': content}, format='json')
+                self.assertEqual(res.data['code'], 400)
+        self.evaluation.refresh_from_db()
+        self.assertEqual(self.evaluation.reply_content, '')
+
+    def test_customer_cannot_use_provider_evaluation_endpoints(self):
+        self.client.force_authenticate(self.customer)
+        self.assertEqual(self.client.get('/api/orders/evaluations/mine/').data['code'], 403)
+        res = self.client.post(f'/api/orders/evaluations/{self.evaluation.pk}/reply/', {'reply_content': '冒充回复'})
+        self.assertEqual(res.data['code'], 403)
+
+    def test_business_account_ownership_takes_precedence_over_legacy_provider_id(self):
+        from club_accounts.models import ClubAccount
+        from club_accounts.tokens import issue_account_tokens
+        owner = ClubAccount.objects.create(username='evaluation-business-owner', account_type=ClubAccount.AccountType.PROVIDER)
+        self.evaluation.provider_account = owner
+        self.evaluation.save(update_fields=['provider_account'])
+        self.client.force_authenticate(self.provider)
+        self.assertEqual(self.client.get('/api/orders/evaluations/mine/').data['data']['total'], 0)
+        res = self.client.post(f'/api/orders/evaluations/{self.evaluation.pk}/reply/', {'reply_content': '旧账号不能覆盖'})
+        self.assertEqual(res.data['code'], 403)
+
+        self.client.force_authenticate(None)
+        token, _ = issue_account_tokens(owner)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        self.assertEqual(self.client.get('/api/orders/evaluations/mine/').data['data']['total'], 1)
+        res = self.client.post(f'/api/orders/evaluations/{self.evaluation.pk}/reply/', {'reply_content': '业务账号回复'})
+        self.assertEqual(res.data['code'], 0, res.data)
+        self.assertEqual(res.data['data']['reply_content'], '业务账号回复')

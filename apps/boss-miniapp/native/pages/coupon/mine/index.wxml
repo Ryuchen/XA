@@ -1,0 +1,1 @@
+<view class="page"><text class="subtitle">正在打开新版页面</text><button class="button-secondary" bindtap="home">返回首页</button></view>

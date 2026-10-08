@@ -1,4 +1,5 @@
 import { ApiResponse, request } from '@/utils/request';
+import { fundRequest } from '@/utils/fundRequest';
 
 // ---------------- 流水 ----------------
 export interface TransactionRecord {
@@ -14,6 +15,7 @@ export interface TransactionRecord {
 }
 
 export interface TransactionsResponse {
+  total_income: number;
   transactions: TransactionRecord[];
   total: number;
   page: number;
@@ -51,12 +53,16 @@ export interface WithdrawRecord {
   audit_remark: string;
   created_at: string;
   audited_at: string | null;
+  payout_reference: string;
+  paid_at: string | null;
 }
 
 export interface WithdrawOverview {
   balance: number;
   frozen_amount: number;
   min_amount: number;
+  balance_threshold?: number | null;
+  can_withdraw?: boolean;
   tax_rate: number;
   requests: WithdrawRecord[];
   /** T8-a 试算字段：仅当调用时传入 amount 才返回。 */
@@ -65,12 +71,31 @@ export interface WithdrawOverview {
   actual_amount?: number;
 }
 
-export interface WithdrawPayload {
-  amount: number;
+export interface SavedWithdrawalAccount {
+  id: number;
   payee_method: PayeeMethod;
   payee_account: string;
   payee_name: string;
+  version: number;
+  updated_at: string;
+}
+
+export const fetchWithdrawalAccounts = () => request<ApiResponse<SavedWithdrawalAccount[]>>('/wallet/withdraw-accounts/');
+export const saveWithdrawalAccount = (method: PayeeMethod, payload: {
+  payee_account: string; payee_name: string; expected_id: number; expected_version: number;
+}) => request<ApiResponse<SavedWithdrawalAccount>>(`/wallet/withdraw-accounts/${method}/`, 'PUT', payload);
+export const deleteWithdrawalAccount = (account: SavedWithdrawalAccount) => request<ApiResponse<null>>(
+  `/wallet/withdraw-accounts/${account.payee_method}/`, 'DELETE', { expected_id: account.id, expected_version: account.version },
+);
+
+export interface WithdrawPayload {
+  amount: number;
+  withdrawal_account_id: number;
+  expected_payee_version: number;
   remark?: string;
+  expected_tax_rate?: number;
+  expected_tax_amount?: number;
+  expected_actual_amount?: number;
 }
 
 /**
@@ -85,15 +110,17 @@ export const fetchWithdrawOverview = (amount?: number) => {
 };
 
 export const withdrawRequest = (payload: WithdrawPayload) => {
-  return request<ApiResponse<{ balance: number; frozen_amount: number; request: WithdrawRecord }>>(
+  return fundRequest<{ balance: number; frozen_amount: number; request: WithdrawRecord }>(
     '/wallet/withdraw/',
-    'POST',
     payload,
   );
 };
 
 // ---------------- 押金 ----------------
 export interface DepositOverview {
+  deposit_mode?: 'CASH' | 'EARNINGS';
+  deposit_percent?: number;
+  hold_hours?: number;
   deposit_required: number;
   deposit_paid: number;
   deposit_remaining: number;
@@ -105,7 +132,7 @@ export const fetchDepositInfo = () => {
 };
 
 export const payDeposit = (amount: number) => {
-  return request<ApiResponse<DepositOverview>>('/wallet/deposit/', 'POST', { amount });
+  return fundRequest<DepositOverview>('/wallet/deposit/', { amount });
 };
 
 // ---------------- 奖惩与礼物 ----------------
@@ -126,6 +153,8 @@ export interface GiftRecord {
   customer_name: string;
   amount: number;
   provider_income: number;
+  received_income: number;
+  settlement_status: 'SETTLED' | 'PENDING' | 'CHECK_REQUIRED';
   completed_at: string;
 }
 
@@ -139,7 +168,12 @@ export interface ProviderBenefits {
   };
   dispose_records: DisposeRecord[];
   gift_records: GiftRecord[];
+  pagination: {
+    page_size: number;
+    dispose: { page: number; total: number };
+    gift: { page: number; total: number };
+  };
 }
 
-export const fetchProviderBenefits = () =>
-  request<ApiResponse<ProviderBenefits>>('/wallet/provider-benefits/', 'GET');
+export const fetchProviderBenefits = (params?: { dispose_page?: number; gift_page?: number; page_size?: number }) =>
+  request<ApiResponse<ProviderBenefits>>('/wallet/provider-benefits/', 'GET', params);

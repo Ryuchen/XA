@@ -116,7 +116,7 @@ const MinePage: React.FC = () => {
               </Text>
               {user && (
                 <View className={styles.memberBadge}>
-                  <Icon name="shield-check" size={24} color="#FFFFFF" />
+                  <Icon name="shield-check" size={24} color="#fffdf5" />
                   <Text className={styles.memberBadgeText}>已登录老板</Text>
                 </View>
               )}
@@ -126,7 +126,7 @@ const MinePage: React.FC = () => {
             className={styles.settingsBtn}
             onClick={() => handleNavigate({ url: '/pages/settings/index' })}
           >
-            <Icon name="settings" size={40} color="#FFFFFF" />
+            <Icon name="settings" size={40} color="#fffdf5" />
           </View>
         </View>
         <View className={styles.walletCard} onClick={() => handleNavigate({ url: '/pages/customer/wallet/index' })}>
@@ -143,7 +143,7 @@ const MinePage: React.FC = () => {
           <Text className={styles.orderTitle}>我的订单</Text>
           <View className={styles.viewAll} onClick={() => handleNavigate({ url: '/pages/orderList/index' })}>
             <Text className={styles.viewAllText}>查看全部</Text>
-            <Icon name="chevron-right" size={28} color="#AEAEB2" />
+            <Icon name="chevron-right" size={24} color="#AEAEB2" />
           </View>
         </View>
         <View className={styles.orderStats}>
@@ -154,7 +154,7 @@ const MinePage: React.FC = () => {
               onClick={() => handleNavigate({ url: `/pages/orderList/index?status=${stat.status}` })}
             >
               <View className={styles.orderIconWrap}>
-                <Icon name={stat.icon} size={48} color="#007AFF" />
+                <Icon name={stat.icon} size={48} color="#002fa7" />
                 {stat.count > 0 && <Text className={styles.orderBadge}>{stat.count}</Text>}
               </View>
               <Text className={styles.orderLabel}>{stat.label}</Text>
@@ -208,7 +208,7 @@ const MinePage: React.FC = () => {
         {menuItems.map((item, index) => (
           <View key={index} className={styles.menuItem} onClick={() => handleNavigate(item)}>
             <View className={styles.menuIcon}>
-              <Icon name={item.icon} size={40} color="#007AFF" />
+              <Icon name={item.icon} size={40} color="#002fa7" />
             </View>
             <Text className={styles.menuText}>{item.text}</Text>
             {item.arrow && (

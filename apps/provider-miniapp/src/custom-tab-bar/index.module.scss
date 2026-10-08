@@ -8,13 +8,13 @@
   z-index: 999;
   display: flex;
   align-items: center;
-  height: 112rpx;
+  height: 62PX;
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
   background: $color-bg-card;
-  border-top: 1rpx solid $color-border;
-  box-shadow: 0 -8rpx 24rpx rgba(0, 0, 0, 0.04);
-  backdrop-filter: blur(28rpx) saturate(180%);
+  border-top: 0.5PX solid $color-border;
+  box-shadow: 0 -4PX 12PX rgba(0, 0, 0, 0.04);
+  backdrop-filter: blur(14PX) saturate(180%);
 }
 
 .tabItem {
@@ -24,7 +24,7 @@
   justify-content: center;
   flex-direction: column;
   height: 100%;
-  gap: 4rpx;
+  gap: 2PX;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -32,14 +32,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 58rpx;
-  height: 52rpx;
-  border-radius: 14rpx;
+  width: 29PX;
+  height: 26PX;
+  border-radius: 7PX;
   transition: background $transition-fast, transform $transition-fast;
 }
 
 .tabText {
-  font-size: 20rpx;
+  font-size: 11PX;
   line-height: 1.2;
   color: $color-text-tertiary;
   transition: color $transition-fast;
@@ -53,3 +53,5 @@
 .tabItemActive .iconWrap {
   background: var(--xa-color-primary-soft);
 }
+
+.tabBar { z-index:30; height:calc(64PX + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom); box-shadow:0 -2PX 12PX rgba(28,39,56,.04); backdrop-filter:none; }.iconWrap { width:32PX; height:28PX; border-radius:8PX; }.tabItem { gap:4PX; }.tabText { font-size:11PX; }

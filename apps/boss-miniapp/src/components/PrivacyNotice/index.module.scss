@@ -1,0 +1,25 @@
+@use '@/styles/variables.scss' as *;
+
+.notice {
+  margin: $spacing-md 0;
+  text-align: center;
+}
+
+.text {
+  display: block;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+  line-height: $line-height-normal;
+}
+
+.link {
+  @include button-reset;
+  display: inline-flex;
+  min-height: 64rpx;
+  padding: 0 $spacing-sm;
+  color: $color-primary;
+  background: transparent;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  text-decoration: underline;
+}

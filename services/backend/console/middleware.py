@@ -10,7 +10,8 @@ from .permissions import is_console_account
 
 WRITE_METHODS = {'POST', 'PUT', 'PATCH', 'DELETE'}
 API_ADMIN_PREFIX = '/api/admin/'
-SENSITIVE_KEYS = {'password', 'old_password', 'new_password', 'token', 'refresh', 'secret'}
+SENSITIVE_KEYS = {'id_number', 'id_number_ciphertext', 'id_number_hash', 'id_front', 'id_back', 'deposit_proof', 'password', 'old_password', 'new_password', 'token', 'refresh', 'secret',
+                  'bot_token', 'bot_token_ciphertext', 'kook_bot_token','otpcode','otpchallenge','otpsecret','otpuri','otpqr','recoverycodes','otprecoverycodes'}
 MAX_BODY_CHARS = 4000
 
 

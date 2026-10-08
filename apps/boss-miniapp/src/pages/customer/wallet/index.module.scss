@@ -93,8 +93,8 @@
 .rechargeIcon {
   width: 72rpx;
   height: 72rpx;
-  border-radius: 22rpx;
-  background: rgba(0, 122, 255, 0.1);
+  border-radius: 24rpx;
+  background: rgba(0, 47, 167, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -113,7 +113,7 @@
 .exchangeChip {
   flex: 1;
   text-align: center;
-  padding: 12rpx 6rpx;
+  padding: 8rpx 16rpx;
   border-radius: $radius-sm;
   background: $color-bg-hover;
   color: $color-text-secondary;
@@ -121,7 +121,7 @@
 }
 
 .rechargeButton {
-  height: 88rpx;
+  height: 96rpx;
   border-radius: $radius-md;
   background: $color-primary;
   color: $color-text-white;
@@ -139,13 +139,14 @@
 .tabRow {
   display: flex;
   flex-direction: row;
-  margin-bottom: 20rpx;
-  gap: 20rpx;
+  margin-bottom: 24rpx;
+  gap: 16rpx;
 }
 
 .tab {
-  padding: 10rpx 30rpx;
-  border-radius: 20rpx;
+  padding: 0 24rpx;
+  height: 64rpx;
+  border-radius: 999rpx;
   background: $color-bg-hover;
   color: $color-text-primary;
   font-size: $font-size-sm;
@@ -235,7 +236,7 @@
 
 .formLabel {
   display: block;
-  margin: 20rpx 0 10rpx;
+  margin: 16rpx 0 8rpx;
   font-size: $font-size-sm;
   color: $color-text-secondary;
 }
@@ -243,7 +244,8 @@
 .formInput {
   width: 100%;
   box-sizing: border-box;
-  padding: 18rpx 24rpx;
+  padding: 0 24rpx;
+  height: 64rpx;
   background: $color-bg-card;
   border: 2rpx solid $color-border;
   border-radius: 12rpx;
@@ -279,7 +281,7 @@
   margin-top: 24rpx;
   background: $color-bg-card;
   border-radius: 16rpx;
-  padding: 20rpx;
+  padding: 24rpx;
 }
 
 .withdrawStatus {

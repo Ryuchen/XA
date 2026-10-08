@@ -45,7 +45,7 @@
     </crud-table>
   </div>
 
-  <el-drawer v-model="detailVisible" title="报名详情" size="480px">
+  <el-drawer v-model="detailVisible" title="报名详情" size="480px" class="ap-panel">
     <template v-if="current">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="试音活动">{{ current.link_title }}</el-descriptions-item>

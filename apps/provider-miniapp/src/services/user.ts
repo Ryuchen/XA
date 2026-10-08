@@ -1,8 +1,14 @@
 import { ApiResponse, request, uploadFile } from '@/utils/request';
+import { fundRequest } from '@/utils/fundRequest';
 
 export type EscortStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
 
+export interface ProviderQualification { id:number; game_category:number; game_category_name:string; provider_kind:string; platform:string; security_level:string; grade:string; grade_name:string; label:string; is_active:boolean }
 export interface EscortMeProfile {
+  qualifications: ProviderQualification[];
+  dispatch_notification_preferences: Record<string,boolean>;
+  dispatch_notification_options: Array<{key:string;label:string;eligible:boolean;enabled:boolean}>;
+  active_pass_tier:string;
   display_name: string;
   gender: string;
   bio: string;
@@ -24,11 +30,13 @@ export interface EscortMeProfile {
 }
 
 export interface UpdateEscortProfilePayload {
+  dispatch_notification_preferences?: Record<string,boolean>;
   display_name?: string;
   gender?: 'MALE' | 'FEMALE' | 'UNKNOWN';
   bio?: string;
   city?: string;
   service_area?: string;
+  remove_voice_card?: boolean;
 }
 
 export interface EscortScheduleSlot {
@@ -48,8 +56,9 @@ export const updateEscortProfile = (payload: UpdateEscortProfilePayload) => {
 export const uploadEscortAsset = (
   field: 'avatar' | 'intro_video' | 'voice_card' | 'cheat_proof',
   filePath: string,
+  fileName?: string,
 ) => uploadFile<ApiResponse<EscortMeProfile>>(
-  '/users/escorts/me/', filePath, {}, field,
+  '/users/escorts/me/', filePath, {}, field, false, fileName,
 );
 
 export const updateEscortStatus = (status: EscortStatus) => {
@@ -65,9 +74,17 @@ export const saveEscortSchedule = (slots: EscortScheduleSlot[]) => {
 };
 
 export interface SkillOptionItem {
+  qualified?:boolean;
+  provider_requirement?: {label:string};
   id: number;
   name: string;
   price: number;
+  price_unit: string;
+  required_level_name: string;
+  platform: string;
+  platform_name: string;
+  security_level: string;
+  security_level_name: string;
 }
 
 export interface SkillOptionGroup {
@@ -108,5 +125,5 @@ export interface ProviderPassData {
 export const fetchProviderPass = () =>
   request<ApiResponse<ProviderPassData>>('/users/provider-pass/', 'GET');
 
-export const purchaseProviderPass = (tier: PassProduct['tier']) =>
-  request<ApiResponse<ProviderPassData>>('/users/provider-pass/', 'POST', { tier, days: 1 });
+export const purchaseProviderPass = (tier: PassProduct['tier'], expectedDailyPrice: number) =>
+  fundRequest<ProviderPassData>('/users/provider-pass/', { tier, days: 1, expected_daily_price: expectedDailyPrice });

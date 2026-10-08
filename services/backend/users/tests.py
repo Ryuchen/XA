@@ -100,6 +100,9 @@ class EscortPublicListOrderingTest(APITestCase):
 
     def _provider(self, name, tier='', scores=(), service_area=''):
         provider = make_provider(display_name=name, is_verified=True)
+        from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
+        account = get_or_create_account_for_legacy_user(provider)
+        link_legacy_relations(provider, account)
         profile = provider.escort_profile
         profile.pass_tier = tier
         profile.pass_expires_at = timezone.now() + timedelta(days=1) if tier else None
@@ -153,10 +156,10 @@ class ProviderPassTest(APITestCase):
         self.assertEqual(purchase.transaction.tx_type, Transaction.TxType.PASS_PURCHASE)
 
     def test_same_tier_renewal_extends_from_expiry(self):
-        self.client.post(self.URL, {'tier': 'BRONZE', 'days': 1})
+        self.client.post(self.URL, {'tier': 'BRONZE', 'days': 1, 'client_request_id': 'first-pass'})
         self.provider.escort_profile.refresh_from_db()
         first_expiry = self.provider.escort_profile.pass_expires_at
-        self.client.post(self.URL, {'tier': 'BRONZE', 'days': 1})
+        self.client.post(self.URL, {'tier': 'BRONZE', 'days': 1, 'client_request_id': 'renew-pass'})
         self.provider.escort_profile.refresh_from_db()
         self.assertAlmostEqual(
             (self.provider.escort_profile.pass_expires_at - first_expiry).total_seconds(),
@@ -251,6 +254,7 @@ class EscortMeUpdateTest(APITestCase):
     def setUp(self):
         self.provider = make_provider(
             display_name='初始昵称',
+            is_verified=False,
             price_per_hour=5000,
             rank_tier='钻石',
         )
@@ -301,6 +305,26 @@ class EscortMeUpdateTest(APITestCase):
 
 
 class ProviderStatsExtensionTest(APITestCase):
+    def test_today_orders_uses_shanghai_day_after_local_midnight(self):
+        from datetime import datetime, timedelta, timezone as utc_timezone
+        from unittest.mock import patch
+        from orders.models import Order
+        from orders.tests.factories import make_order
+
+        provider = make_provider()
+        customer = make_user()
+        # UTC 仍为前一天，北京已经是次日凌晨。
+        instant = datetime(2026, 9, 9, 17, tzinfo=utc_timezone.utc)
+        current = make_order(customer, provider=provider)
+        previous = make_order(customer, provider=provider)
+        Order.objects.filter(pk=current.pk).update(created_at=instant)
+        Order.objects.filter(pk=previous.pk).update(created_at=instant - timedelta(hours=2))
+        self.client.force_authenticate(provider)
+        with patch('django.utils.timezone.now', return_value=instant):
+            response = self.client.get('/api/users/provider-stats/')
+        self.assertEqual(response.data['code'], 0)
+        self.assertEqual(response.data['data']['today_orders'], 1)
+
     def test_stats_returns_income_and_status(self):
         provider = make_provider(status=EscortProfile.Status.AVAILABLE)
         wallet = make_wallet(provider, balance=8000)

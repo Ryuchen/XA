@@ -4,6 +4,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.utils import timezone
+from club_accounts.services import get_or_create_account_for_legacy_user
 from rest_framework.test import APITestCase
 
 from audition.models import AuditionLink
@@ -12,6 +13,7 @@ from orders.models import Evaluation
 from orders.ratings import apply_escort_rating
 from orders.tests.factories import (
     Transaction,
+    User,
     make_boss_type,
     make_completed_order,
     make_console_user,
@@ -536,11 +538,13 @@ class UserBossFieldsAdminTest(APITestCase):
         boss.boss_type = boss_type
         boss.boss_no = 'B001'
         boss.save()
+        boss_account = get_or_create_account_for_legacy_user(boss)
+        inviter_account = get_or_create_account_for_legacy_user(inviter)
         self.client.force_authenticate(self.admin)
-        res = self.client.get(f'/api/admin/users/{boss.id}/')
+        res = self.client.get(f'/api/admin/users/{boss_account.id}/')
         self.assertEqual(res.data['code'], 0)
         data = res.data['data']
-        self.assertEqual(data['inviter'], inviter.id)
+        self.assertEqual(data['inviter'], inviter_account.id)
         self.assertEqual(data['inviter_name'], '推荐人甲')
         self.assertEqual(data['inviter_commission_rate'], 30)
         self.assertEqual(data['boss_type_name'], 'VIP')
@@ -550,9 +554,11 @@ class UserBossFieldsAdminTest(APITestCase):
         boss_type = make_boss_type(name='钻石', discount_rate=80)
         inviter = make_user()
         boss = make_user()
+        boss_account = get_or_create_account_for_legacy_user(boss)
+        inviter_account = get_or_create_account_for_legacy_user(inviter)
         self.client.force_authenticate(self.admin)
-        res = self.client.patch(f'/api/admin/users/{boss.id}/', {
-            'inviter': inviter.id,
+        res = self.client.patch(f'/api/admin/users/{boss_account.id}/', {
+            'inviter': inviter_account.id,
             'inviter_commission_rate': 20,
             'boss_type': boss_type.id,
             'boss_no': 'B999',
@@ -992,8 +998,9 @@ class CustomerServiceAdminTest(APITestCase):
         self.role = AdminRole.objects.create(name='派单客服', code='cs', permissions=['order:view'])
 
     def _row_by_user(self, rows, user_id):
+        account_id = get_or_create_account_for_legacy_user(User.objects.get(pk=user_id)).pk
         for row in rows:
-            if row['user'] == user_id:
+            if row['user'] == account_id:
                 return row
         return None
 

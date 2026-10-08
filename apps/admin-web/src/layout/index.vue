@@ -21,25 +21,31 @@
         </span>
       </div>
 
+      <button class="ap-nav-search" type="button" @click="openSearch">
+        <el-icon><Search /></el-icon><span>搜索功能</span><kbd>⌘ / Ctrl K</kbd>
+      </button>
       <nav class="ap-nav" aria-label="功能导航">
-        <template v-for="group in navGroups" :key="group.name">
-          <p class="ap-nav-group-label">{{ group.name }}</p>
-          <router-link
-            v-for="item in group.items"
-            :key="item.path"
-            class="ap-nav-item"
-            :to="'/' + item.path"
-            :data-active="activeMenu === '/' + item.path"
-            @click="mobileOpen = false"
-          >
-            <el-icon v-if="item.meta?.icon"><component :is="item.meta.icon" /></el-icon>
-            <span class="ap-nav-label">{{ item.meta?.title }}</span>
-          </router-link>
-        </template>
+        <section v-for="group in navGroups" :key="group.id" class="ap-nav-group"
+          :aria-labelledby="'nav-group-' + group.id">
+          <h2 :id="'nav-group-' + group.id" class="ap-nav-group-label">{{ group.title }}</h2>
+          <div class="ap-nav-links">
+            <router-link
+              v-for="item in group.centers"
+              :key="item.id"
+              class="ap-nav-item"
+              :to="activeCenter?.id === item.id ? route.fullPath : '/' + item.features[0].path"
+              :data-active="activeCenter?.id === item.id"
+              :aria-current="activeCenter?.id === item.id ? 'page' : undefined"
+              @click="mobileOpen = false"
+            >
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span class="ap-nav-label">{{ item.title }}</span>
+            </router-link>
+          </div>
+        </section>
       </nav>
 
       <div class="ap-sidebar-bottom">
-        <div class="ap-sidebar-divider" role="presentation" />
         <a class="ap-nav-item" href="#" @click.prevent="toggleTheme">
           <el-icon><component :is="isDark ? 'Sunny' : 'Moon'" /></el-icon>
           <span class="ap-nav-label">{{ isDark ? '浅色模式' : '深色模式' }}</span>
@@ -71,24 +77,15 @@
         </div>
 
         <div class="ap-topbar-right">
-          <el-input
-            v-model="searchText"
-            class="ap-search"
-            placeholder="搜索菜单 / 页面"
-            :prefix-icon="Search"
-            clearable
-            @keyup.enter="onSearch"
-          />
+          <button class="ap-search" type="button" @click="openSearch"><el-icon><Search /></el-icon><span>搜索功能</span><kbd>Ctrl K</kbd></button>
 
-          <el-dropdown trigger="click" @command="onNavCommand">
+          <el-dropdown v-if="notificationItems.length" trigger="click" @command="onNavCommand">
             <button class="ap-icon-btn" type="button" aria-label="通知消息">
               <el-icon><Bell /></el-icon>
-              <span class="ap-badge-dot" aria-hidden="true" />
             </button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="messages">站内消息</el-dropdown-item>
-                <el-dropdown-item command="chat">消息与客服</el-dropdown-item>
+                <el-dropdown-item v-for="item in notificationItems" :key="item.path" :command="item.path">{{ item.title }}</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -114,20 +111,41 @@
       </header>
 
       <main class="ap-main">
+        <nav v-if="activeCenter && activeCenter.features.length > 1" class="ap-workspace-nav" :aria-label="activeCenter.title + '功能'">
+          <router-link v-for="feature in activeCenter.features" :key="feature.path"
+            :to="'/' + feature.path" :data-active="route.path === '/' + feature.path"
+            :aria-current="route.path === '/' + feature.path ? 'page' : undefined">
+            {{ feature.title }}
+          </router-link>
+        </nav>
         <router-view v-slot="{ Component }">
           <component :is="Component" />
         </router-view>
       </main>
     </div>
+    <el-dialog v-model="searchOpen" title="查找功能" width="min(560px, calc(100vw - 24px))"
+      class="ap-function-search" append-to-body @opened="searchInput?.focus()" @closed="searchText = ''">
+      <el-input ref="searchInput" v-model="searchText" placeholder="搜索功能，例如：注册、提现、声卡" :prefix-icon="Search" clearable
+        aria-label="搜索后台功能" @keydown.enter.prevent="onSearchEnter" @keydown.down.prevent="firstSearchResult?.focus()" />
+      <p class="ap-search-summary">{{ searchText.trim() ? '找到 ' + searchResults.length + ' 项功能' : '按业务分类浏览全部可访问功能' }}</p>
+      <div class="ap-search-results" aria-label="功能搜索结果">
+        <button v-for="(item, index) in searchResults" :key="item.path" :ref="element => setSearchResultRef(element, index)"
+          type="button" class="ap-search-result" @click="goToFeature(item.path)">
+          <strong>{{ item.title }}</strong><span>{{ item.domain }} / {{ item.center }}</span><el-icon><ArrowRight /></el-icon>
+        </button>
+        <el-empty v-if="!searchResults.length" :image-size="60" description="没有匹配功能，请尝试其他关键词" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, type InputInstance } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { buildNavigation, flattenNavigation, searchNavigation } from '@/router/navigation'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -135,6 +153,9 @@ const router = useRouter()
 
 const mobileOpen = ref(false)
 const searchText = ref('')
+const searchOpen = ref(false)
+const searchInput = ref<InputInstance>()
+const firstSearchResult = ref<HTMLButtonElement | null>(null)
 
 function closeMobileNav() {
   mobileOpen.value = false
@@ -142,6 +163,10 @@ function closeMobileNav() {
 
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') closeMobileNav()
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    openSearch()
+  }
 }
 
 function onViewportChange() {
@@ -176,52 +201,37 @@ function toggleTheme() {
   applyTheme()
 }
 
-const activeMenu = computed(() => route.path)
-const pageTitle = computed(() => (route.meta?.title as string) || '')
+const pageTitle = computed(() => activeCenter.value?.title || (route.meta?.title as string) || '')
 const breadcrumb = computed(() => {
   const group = (route.meta?.group as string) || ''
-  return ['首页', group, pageTitle.value].filter(Boolean).join(' / ')
+  return [...new Set(['首页', group, pageTitle.value, route.meta.title as string].filter(Boolean))].join(' / ')
 })
 const roleName = computed(() =>
   auth.isSuperuser ? '超级管理员' : auth.profile?.role?.name || '客服',
 )
 
-// 按 meta.group 分组，过滤隐藏项与无权限项，保留路由声明顺序
 const navGroups = computed(() => {
   const root = router.getRoutes().find((r) => r.path === '/')
-  const children = (root?.children || []) as any[]
-  const visible = children.filter(
-    (c) => !c.meta?.hidden && (!c.meta?.perm || auth.hasPerm(c.meta.perm)),
-  )
-  const groups: { name: string; items: any[] }[] = []
-  for (const item of visible) {
-    const name = item.meta?.group || '其他'
-    let g = groups.find((x) => x.name === name)
-    if (!g) {
-      g = { name, items: [] }
-      groups.push(g)
-    }
-    g.items.push(item)
-  }
-  return groups
+  return buildNavigation(root?.children || [], code => auth.hasPerm(code))
 })
-
-function onSearch() {
-  const kw = searchText.value.trim()
-  if (!kw) return
-  const root = router.getRoutes().find((r) => r.path === '/')
-  const children = (root?.children || []) as any[]
-  const hit = children.find(
-    (c) =>
-      !c.meta?.hidden &&
-      (!c.meta?.perm || auth.hasPerm(c.meta.perm)) &&
-      (c.meta?.title as string)?.includes(kw),
-  )
-  if (hit) {
-    router.push('/' + hit.path)
-    searchText.value = ''
-    mobileOpen.value = false
-  }
+const activeCenter = computed(() => navGroups.value.flatMap(group => group.centers)
+  .find(center => center.id === route.meta.center))
+const notificationItems = computed(() => flattenNavigation(navGroups.value).filter(item => ['messages', 'chat'].includes(item.path)))
+const searchResults = computed(() => searchNavigation(navGroups.value, searchText.value))
+function openSearch() {
+  mobileOpen.value = false
+  searchOpen.value = true
+}
+function setSearchResultRef(element: Element | ComponentPublicInstance | null, index: number) {
+  if (index === 0) firstSearchResult.value = element as HTMLButtonElement | null
+}
+function goToFeature(path: string) {
+  router.push('/' + path)
+  searchOpen.value = false
+}
+function onSearchEnter() {
+  if (searchResults.value.length === 1) goToFeature(searchResults.value[0].path)
+  else firstSearchResult.value?.focus()
 }
 
 function onNavCommand(command: string) {
@@ -245,7 +255,7 @@ function onLogout() {
 <style scoped lang="scss">
 .ap-shell {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--background);
   color: var(--foreground);
 }
@@ -255,15 +265,14 @@ function onLogout() {
   position: sticky;
   top: 0;
   align-self: flex-start;
-  flex: 0 0 176px;
-  width: 176px;
-  height: 100vh;
+  flex: 0 0 224px;
+  width: 224px;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--sidebar) 90%, transparent);
-  backdrop-filter: blur(24px) saturate(160%);
+  background: var(--sidebar);
   border-right: 1px solid var(--sidebar-border);
-  overflow-y: auto;
+  overflow: hidden;
 }
 .ap-brand {
   display: flex;
@@ -311,25 +320,46 @@ function onLogout() {
 }
 
 /* ---- Navigation ---- */
+.ap-nav-search { display: none; }
 .ap-nav {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+  padding: 8px 12px 12px;
+}
+.ap-nav-group + .ap-nav-group {
+  margin-top: 8px;
 }
 .ap-nav-group-label {
-  padding: 16px 22px 6px;
   margin: 0;
-  font-size: 11px;
+  padding: 0 12px 6px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  line-height: 18px;
+  letter-spacing: 0.04em;
   color: var(--muted-foreground);
+}
+.ap-nav-links {
+  display: grid;
+  gap: 2px;
+}
+.ap-nav-item:focus-visible,
+.ap-workspace-nav a:focus-visible,
+.ap-search:focus-visible,
+.ap-nav-search:focus-visible,
+.ap-search-result:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 .ap-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 40px;
-  margin: 2px 12px;
+  min-height: 36px;
+  margin: 0;
   padding: 0 14px;
   border-radius: calc(var(--radius) * 0.6);
   color: var(--sidebar-foreground);
@@ -362,13 +392,12 @@ function onLogout() {
 }
 
 .ap-sidebar-bottom {
+  display: grid;
+  gap: 4px;
+  flex: 0 0 auto;
   margin-top: auto;
-  padding-bottom: 14px;
-}
-.ap-sidebar-divider {
-  height: 1px;
-  margin: 8px 20px;
-  background: var(--sidebar-border);
+  padding: 12px;
+  border-top: 1px solid var(--sidebar-border);
 }
 
 /* ---- Content column ---- */
@@ -404,9 +433,9 @@ function onLogout() {
   display: none;
   align-items: center;
   justify-content: center;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
+  flex: 0 0 var(--control-height-sm);
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -450,10 +479,27 @@ function onLogout() {
   flex: 0 0 auto;
 }
 .ap-search {
-  width: 260px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 220px;
+  height: var(--control-height-md);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  color: var(--muted-foreground);
+  background: var(--secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }
-.ap-search :deep(.el-input__wrapper) {
-  border-radius: 999px;
+.ap-search kbd,
+.ap-nav-search kbd {
+  margin-left: auto;
+  font: inherit;
+  font-size: 10px;
+  opacity: 0.8;
+  white-space: nowrap;
 }
 
 .ap-icon-btn {
@@ -461,9 +507,9 @@ function onLogout() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
+  flex: 0 0 var(--control-height-sm);
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--card);
@@ -477,17 +523,6 @@ function onLogout() {
 .ap-icon-btn:hover {
   background: var(--secondary);
 }
-.ap-badge-dot {
-  position: absolute;
-  top: 8px;
-  right: 9px;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--destructive);
-  border: 2px solid var(--card);
-}
-
 .ap-admin {
   display: flex;
   align-items: center;
@@ -534,9 +569,60 @@ function onLogout() {
 .ap-main {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: 1664px;
+  margin: 0 auto;
   padding: 28px 32px;
   background: var(--background);
 }
+.ap-workspace-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.ap-workspace-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+.ap-workspace-nav a:hover { background: var(--secondary); color: var(--foreground); }
+.ap-workspace-nav a[data-active='true'] {
+  background: var(--sidebar-accent);
+  color: var(--primary);
+  font-weight: 600;
+}
+.ap-search-summary { margin: 16px 0 8px; font-size: 12px; color: var(--muted-foreground); }
+.ap-search-results { max-height: min(55dvh, 450px); overflow-y: auto; }
+.ap-search-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.ap-search-result:hover, .ap-search-result:focus-visible { background: var(--secondary); }
+.ap-search-result strong { font-size: 14px; font-weight: 600; }
+.ap-search-result span { grid-column: 1; font-size: 12px; color: var(--muted-foreground); }
+.ap-search-result .el-icon { grid-column: 2; grid-row: 1 / 3; align-self: center; color: var(--muted-foreground); }
 
 .ap-scrim {
   display: none;
@@ -559,6 +645,9 @@ function onLogout() {
 }
 
 @media (max-width: 900px) {
+  .ap-nav-item {
+    min-height: 44px;
+  }
   .ap-menu-toggle {
     display: inline-flex;
   }
@@ -606,5 +695,22 @@ function onLogout() {
   .ap-search {
     display: none;
   }
+  .ap-nav-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 12px 0;
+    padding: 12px;
+    border: 1px solid var(--sidebar-border);
+    border-radius: 8px;
+    background: var(--sidebar-accent);
+    color: var(--sidebar-foreground);
+    text-align: left;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .ap-workspace-nav { gap: 4px; padding: 4px; margin-bottom: 16px; }
+  .ap-workspace-nav a { padding: 8px 10px; min-height: 40px; }
 }
 </style>

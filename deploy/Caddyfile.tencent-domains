@@ -1,0 +1,9 @@
+import Caddyfile.core
+
+{$XA_ROOT_DOMAIN}, www.{$XA_ROOT_DOMAIN} {
+    redir https://{$XA_PROVIDER_DOMAIN}{uri} permanent
+}
+
+http://{$XA_SERVER_IP} {
+    redir https://{$XA_PROVIDER_DOMAIN}{uri} permanent
+}

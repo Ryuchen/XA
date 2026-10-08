@@ -13,7 +13,7 @@ on:
 
 concurrency:
   group: docker-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   REGISTRY: docker.io
@@ -72,7 +72,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-
+            type=sha,format=long,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
           labels: |
             org.opencontainers.image.title=XA ${{ matrix.name }}
@@ -107,7 +107,12 @@ jobs:
     needs: build
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    concurrency:
+      group: xa-production-deployment
+      cancel-in-progress: false
     steps:
+      - uses: actions/checkout@v6
+
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.9.1
         with:
@@ -119,20 +124,16 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          IMAGE_TAG: sha-${{ github.sha }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+          XA_DATABASE_MODE: ${{ vars.XA_DATABASE_MODE || 'embedded' }}
         run: |
-          set -eu
-          ssh -o StrictHostKeyChecking=accept-new "$DEPLOY_USER@$DEPLOY_HOST" \
-            "DOCKERHUB_USERNAME='$DOCKERHUB_USERNAME' DOCKERHUB_TOKEN='$DOCKERHUB_TOKEN' IMAGE_TAG='$IMAGE_TAG' sh -s" <<'REMOTE'
-          set -eu
-          cd /opt/xa
-          git fetch origin ${{ github.ref_name }}
-          git checkout --force ${{ github.ref_name }}
-          git reset --hard origin/${{ github.ref_name }}
-          printf '%s' "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
-          sed -i '/^DOCKERHUB_NAMESPACE=/d; /^XA_IMAGE_TAG=/d' .env.remote
-          printf '\nDOCKERHUB_NAMESPACE=%s\nXA_IMAGE_TAG=%s\n' "$DOCKERHUB_USERNAME" "$IMAGE_TAG" >> .env.remote
-          docker compose --env-file .env.remote -f docker-compose.remote.yml pull
-          docker compose --env-file .env.remote -f docker-compose.remote.yml up -d --remove-orphans
-          docker image prune -f
-          REMOTE
+          set -euo pipefail
+          : "${DEPLOY_HOST:?}" "${DEPLOY_USER:?}" "${DOCKERHUB_TOKEN:?}"
+          [[ "$DOCKERHUB_USERNAME" =~ ^[a-z0-9]+([_.-][a-z0-9]+)*$ ]]
+          [[ "$DEPLOY_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$XA_DATABASE_MODE" == embedded || "$XA_DATABASE_MODE" == managed ]]
+          printf '%s' "$DOCKERHUB_TOKEN" | ssh -T -o StrictHostKeyChecking=accept-new "$DEPLOY_USER@$DEPLOY_HOST" \
+            "docker login --username '$DOCKERHUB_USERNAME' --password-stdin"
+          ssh -T -o StrictHostKeyChecking=accept-new "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DOCKERHUB_NAMESPACE='$DOCKERHUB_USERNAME' XA_IMAGE_TAG='sha-$DEPLOY_COMMIT' DEPLOY_COMMIT='$DEPLOY_COMMIT' XA_DATABASE_MODE='$XA_DATABASE_MODE' bash -s" \
+            < deploy/deploy-release.sh

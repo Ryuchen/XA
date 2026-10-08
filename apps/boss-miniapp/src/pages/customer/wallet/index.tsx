@@ -82,7 +82,7 @@ const WalletPage: React.FC = () => {
     <ScrollView className={styles.container} scrollY>
       <View className={styles.header}>
         <View className={styles.headerTop}>
-          <Icon name="wallet" size={40} color="#FFFFFF" />
+          <Icon name="wallet" size={40} color="#fffdf5" />
           <Text className={styles.headerTitle}>我的钱包</Text>
         </View>
         <Text className={styles.headerLabel}>兴安币余额</Text>
@@ -93,7 +93,7 @@ const WalletPage: React.FC = () => {
         <Text className={styles.sectionTitle}>企微客服充值</Text>
         <View className={styles.rechargeCard}>
           <View className={styles.rechargeIntro}>
-            <View className={styles.rechargeIcon}><Icon name="message-circle" size={36} color="#007AFF" /></View>
+            <View className={styles.rechargeIcon}><Icon name="message-circle" size={32} color="#002fa7" /></View>
             <View className={styles.rechargeCopy}>
               <Text className={styles.rechargeTitle}>兴安币充值 · 客服确认入账</Text>
               <Text className={styles.rechargeDesc}>统一兑换比例：1:10，到账统一记为兴安币</Text>
@@ -106,7 +106,7 @@ const WalletPage: React.FC = () => {
           </View>
           <View className={styles.rechargeButton} onClick={handleContactRecharge}>
             <Text>联系企业微信客服充值</Text>
-            <Icon name="chevron-right" size={30} color="#FFFFFF" />
+            <Icon name="chevron-right" size={32} color="#fffdf5" />
           </View>
           <Text className={styles.rechargeHint}>付款后由客服核对金额，兴安币到账后会出现在资金流水中</Text>
         </View>
@@ -114,7 +114,7 @@ const WalletPage: React.FC = () => {
 
       <View className={styles.section}>
         <View className={styles.sectionHeader}>
-          <Icon name="receipt" size={36} color="#007AFF" />
+          <Icon name="receipt" size={32} color="#002fa7" />
           <Text className={styles.sectionTitle}>资金流水</Text>
         </View>
         <ScrollView className={styles.tabRow} scrollX>

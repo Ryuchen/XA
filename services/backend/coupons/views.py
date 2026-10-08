@@ -14,18 +14,12 @@ class CouponListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        coupons = Coupon.objects.filter(is_active=True, valid_to__gt=timezone.now())
-        claimed_ids = set(
-            UserCoupon.objects.filter(
-                account=request.account,
-                coupon__in=coupons,
-            ).values_list('coupon_id', flat=True)
-        )
-        serializer = CouponSerializer(
-            coupons,
-            many=True,
-            context={'claimed_ids': claimed_ids},
-        )
+        from django.db.models import Q
+        from .claims import already_claimed
+        coupons = list(Coupon.objects.filter(is_active=True, is_public=True).filter(
+            Q(valid_to__isnull=True) | Q(valid_to__gt=timezone.now())))
+        claimed_ids = {row.pk for row in coupons if already_claimed(request.account, row)}
+        serializer = CouponSerializer(coupons, many=True, context={'claimed_ids': claimed_ids})
         return Response({'code': 0, 'data': serializer.data})
 
 
@@ -33,24 +27,13 @@ class CouponClaimView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, coupon_id):
+        from .claims import claim
         try:
-            with transaction.atomic():
-                try:
-                    coupon = Coupon.objects.select_for_update().get(id=coupon_id)
-                except Coupon.DoesNotExist:
-                    return Response({'code': 404, 'msg': '优惠券不存在'})
-
-                if not coupon.is_claimable:
-                    return Response({'code': 400, 'msg': '该券已抢光或已过期'})
-
-                UserCoupon.objects.create(
-                    user=request.legacy_user,
-                    account=request.account,
-                    coupon=coupon,
-                )
-                Coupon.objects.filter(id=coupon.id).update(claimed_qty=F('claimed_qty') + 1)
+            claim(request.account, request.legacy_user, coupon_id)
+        except Coupon.DoesNotExist:
+            return Response({'code': 404, 'msg': '优惠券不存在'})
         except IntegrityError:
-            return Response({'code': 400, 'msg': '您已领取过该券'})
+            return Response({'code': 400, 'msg': '本周期或今日已领取该项资格券'})
 
         return Response({'code': 0, 'msg': '领取成功'})
 
@@ -60,11 +43,14 @@ class MyCouponListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        qs = UserCoupon.objects.filter(account=request.account).select_related('coupon')
+        from .benefits import grant_periodic, applies_to
+        grant_periodic(request.account)
+        qs = UserCoupon.objects.filter(account=request.account, business_cycle=request.account.business_cycle).select_related('coupon')
 
         usable = request.query_params.get('usable')
         if usable in ('1', 'true', 'True'):
-            qs = qs.filter(status=UserCoupon.Status.UNUSED, coupon__valid_to__gt=timezone.now())
+            from orders.purchase_benefits import usable_coupons
+            qs = usable_coupons(request.account)
             amount = request.query_params.get('amount')
             if amount is not None:
                 try:
@@ -73,5 +59,10 @@ class MyCouponListView(APIView):
                 except (TypeError, ValueError):
                     pass
 
+        service_id = request.query_params.get('service_id')
+        if service_id and service_id.isdigit():
+            from orders.models import ServiceItem
+            service = ServiceItem.objects.filter(pk=int(service_id)).select_related('service_category','required_level').first()
+            qs = [row for row in qs if service and applies_to(row.coupon, service)]
         serializer = UserCouponSerializer(qs, many=True)
         return Response({'code': 0, 'data': serializer.data})

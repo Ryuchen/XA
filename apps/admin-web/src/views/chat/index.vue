@@ -1,7 +1,7 @@
 <template>
   <div class="chat-page">
     <div class="ap-page-head">
-      <p class="ap-page-intro">统一处理用户咨询会话，实时收发消息与图片</p>
+      <p class="ap-page-intro">处理站内咨询会话，实时收发消息与图片；微信客服会话由企业微信工作台接待。</p>
     </div>
     <div class="chat-workbench">
     <!-- 左侧会话列表 -->
@@ -12,8 +12,8 @@
           placeholder="搜索用户账号/昵称"
           clearable
           size="small"
-          @keyup.enter="loadSessions"
-          @clear="loadSessions"
+          @keyup.enter="loadSessions()"
+          @clear="loadSessions()"
         />
         <el-button size="small" :type="onlyUnread ? 'primary' : 'default'" @click="toggleUnread">
           未读
@@ -39,6 +39,7 @@
           </div>
         </div>
         <el-empty v-if="!sessions.length" description="暂无会话" :image-size="60" />
+        <el-button v-if="sessions.length < sessionTotal" :loading="sessionsLoading" class="load-more-sessions" @click="loadSessions(false)">加载更多会话</el-button>
       </el-scrollbar>
     </div>
 
@@ -58,7 +59,7 @@
           >
             <div class="msg-wrap">
               <div class="msg-time">{{ formatDateTime(m.created_at) }}</div>
-              <el-image
+              <PrivateImage
                 v-if="m.content_type === 'IMAGE'"
                 :src="m.image_url"
                 :preview-src-list="[m.image_url]"
@@ -87,6 +88,8 @@
             v-model="input"
             type="textarea"
             :rows="3"
+            maxlength="1000"
+            show-word-limit
             resize="none"
             placeholder="输入回复内容，Enter 发送 / Shift+Enter 换行"
             @keydown.enter.exact.prevent="onSendText"
@@ -104,6 +107,7 @@
 </template>
 
 <script setup lang="ts">
+import PrivateImage from "@/components/PrivateImage.vue"
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
@@ -116,6 +120,11 @@ const auth = useAuthStore()
 const keyword = ref('')
 const onlyUnread = ref(false)
 const sessions = ref<any[]>([])
+const sessionPage = ref(1)
+const sessionTotal = ref(0)
+const sessionsLoading = ref(false)
+let sessionSequence = 0
+let messageSequence = 0
 const current = ref<any>(null)
 const messages = ref<any[]>([])
 const input = ref('')
@@ -129,12 +138,24 @@ function shortTime(value?: string | null): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-async function loadSessions() {
-  const params: Record<string, any> = {}
+async function loadSessions(reset = true) {
+  if (!reset && sessionsLoading.value) return
+  const sequence = ++sessionSequence
+  const page = reset ? 1 : sessionPage.value + 1
+  sessionsLoading.value = true
+  const params: Record<string, any> = { page, page_size: 20 }
   if (keyword.value) params.keyword = keyword.value
   if (onlyUnread.value) params.only_unread = 1
-  const res = await chatApi.list(params)
-  sessions.value = res.data.list || []
+  try {
+    const res = await chatApi.list(params)
+    if (sequence !== sessionSequence) return
+    const items = res.data.list || []
+    sessions.value = reset ? items : [...new Map([...sessions.value, ...items].map(item => [item.id, item])).values()]
+    sessionPage.value = page
+    sessionTotal.value = res.data.total
+  } finally {
+    if (sequence === sessionSequence) sessionsLoading.value = false
+  }
 }
 
 function toggleUnread() {
@@ -149,11 +170,15 @@ async function scrollToBottom() {
 }
 
 async function openSession(s: any) {
+  const sequence = ++messageSequence
   current.value = s
+  messages.value = []
+  input.value = ''
   const res = await chatApi.messages(s.id)
+  if (sequence !== messageSequence || current.value?.id !== s.id) return
   messages.value = res.data.list || []
   scrollToBottom()
-  if (s.unread_support) {
+  if (s.unread_support && auth.hasPerm('chat:reply')) {
     await chatApi.read(s.id)
     s.unread_support = 0
   }
@@ -162,13 +187,14 @@ async function openSession(s: any) {
 async function onSendText() {
   const content = input.value.trim()
   if (!content || sending.value || !current.value) return
+  const sessionId = current.value.id
   sending.value = true
   try {
     const fd = new FormData()
     fd.append('content', content)
-    const res: any = await chatApi.reply(current.value.id, fd)
-    if (res.code === 0 && res.data) {
-      input.value = ''
+    const res: any = await chatApi.reply(sessionId, fd)
+    if (res.code === 0 && res.data && current.value?.id === sessionId) {
+      if (input.value.trim() === content) input.value = ''
       appendMessage(res.data)
     }
   } catch {
@@ -179,13 +205,14 @@ async function onSendText() {
 }
 
 async function onPickImage(file: File) {
-  if (!current.value) return false
+  if (!current.value || sending.value) return false
+  const sessionId = current.value.id
   sending.value = true
   try {
     const fd = new FormData()
     fd.append('image', file)
-    const res: any = await chatApi.reply(current.value.id, fd)
-    if (res.code === 0 && res.data) {
+    const res: any = await chatApi.reply(sessionId, fd)
+    if (res.code === 0 && res.data && current.value?.id === sessionId) {
       appendMessage(res.data)
     }
   } catch {
@@ -220,6 +247,7 @@ function bumpSession(sessionId: number, preview: string, fromSupport: boolean) {
 }
 
 let offMessage: (() => void) | null = null
+let offConnected: (() => void) | null = null
 
 onMounted(() => {
   loadSessions()
@@ -230,15 +258,31 @@ onMounted(() => {
     bumpSession(data.session_id, preview, data.message.is_from_support)
     if (current.value?.id === data.session_id) {
       appendMessage(data.message)
-      if (!data.message.is_from_support) {
-        chatApi.read(data.session_id)
+      if (!data.message.is_from_support && auth.hasPerm('chat:reply')) {
+        void chatApi.read(data.session_id).catch(() => {})
       }
     }
+  })
+  offConnected = adminWs.on('connected', () => {
+    void loadSessions().catch(() => {})
+    // Restore missed messages without clearing an operator's unsent draft.
+    const sessionId = current.value?.id
+    if (!sessionId) return
+    const sequence = ++messageSequence
+    void chatApi.messages(sessionId).then(res => {
+      if (sequence !== messageSequence || current.value?.id !== sessionId) return
+      messages.value = [...new Map([...(res.data.list || []), ...messages.value]
+        .map(message => [message.id, message])).values()].sort((a, b) => a.id - b.id)
+      scrollToBottom()
+    }).catch(() => {})
   })
 })
 
 onUnmounted(() => {
+  ++sessionSequence
+  ++messageSequence
   offMessage?.()
+  offConnected?.()
 })
 </script>
 

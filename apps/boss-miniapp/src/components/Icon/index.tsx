@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Image } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import { ICON_PATHS, IconName } from './icons';
 
 export type { IconName } from './icons';
@@ -75,9 +76,12 @@ const Icon: React.FC<IconProps> = ({
     return `data:image/svg+xml;base64,${encodeBase64(svg)}`;
   }, [name, color, strokeWidth, fill]);
 
+  // size 使用 750rpx 口径；H5 内联样式不会经过 PostCSS，需按 375 设计稿换算。
+  const dimension = process.env.TARO_ENV === 'h5' ? Taro.pxTransform(size / 2) : `${size}rpx`;
   const mergedStyle: React.CSSProperties = {
-    width: `${size}rpx`,
-    height: `${size}rpx`,
+    width: dimension,
+    height: dimension,
+    flexShrink: 0,
     ...style
   };
 

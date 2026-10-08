@@ -1,0 +1,16 @@
+.panel { padding:30rpx 24rpx; border-radius:26rpx; background:#f7f4ec; color:#002fa7; margin:24rpx 0; }
+.title { display:block; font-size:34rpx; font-weight:600; }
+.hint { display:block; font-size:23rpx; line-height:1.7; color:#657188; margin-top:12rpx; }
+.stage { width:480rpx; height:480rpx; margin:36rpx auto 24rpx; position:relative; max-width:100%; }
+.wheel { position:absolute; inset:0; border:14rpx solid #e9eefb; border-radius:50%; box-sizing:border-box; box-shadow:0 0 0 7rpx #e9eefb, 0 16rpx 24rpx rgba(89,50,16,.17); transition:transform 3.2s cubic-bezier(.12,.65,.15,1); }
+.pointer { position:absolute; z-index:2; top:-9rpx; left:calc(50% - 17rpx); width:0; height:0; border-left:17rpx solid transparent; border-right:17rpx solid transparent; border-top:46rpx solid #002fa7; }
+.label { position:absolute; top:50%; left:50%; width:116rpx; height:68rpx; margin-left:-58rpx; margin-top:-34rpx; font-size:22rpx; line-height:1.4; text-align:center; }
+.radial { width:100%; height:100%; transform:translateY(-154rpx); }
+.labelText { width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.spin { position:absolute; top:calc(50% - 57rpx); left:calc(50% - 57rpx); width:114rpx; height:114rpx; margin:0; border-radius:50%; background:#00278d; color:#fffdf5; font-size:28rpx; line-height:114rpx; padding:0; border:6rpx solid #e9eefb; box-sizing:border-box; }
+.spin::after { border:0; }
+.result { border:1rpx solid #e9eefb; border-radius:16rpx; padding:20rpx; font-size:28rpx; }
+.pool { margin:28rpx 0 16rpx; }
+.poolRow { display:flex; justify-content:space-between; gap:20rpx; padding:18rpx 0; border-bottom:1rpx solid #e9eefb; font-size:25rpx; }
+.description { display:block; margin-top:6rpx; font-size:22rpx; line-height:1.5; color:#657188; }
+.probability { flex-shrink:0; font-size:23rpx; }

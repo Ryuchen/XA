@@ -1,0 +1,10 @@
+<view class="page">
+  <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button>
+
+  <state-view loading="{{loading}}" error="{{error}}" bind:retry="load" />
+  <block wx:if="{{item && !error}}">
+    <view class="eyebrow">平台通知 · 已读</view><view class="title">{{item.title}}</view><view class="subtitle">{{item.dateText}}</view>
+    <view class="panel message-body"><text selectable>{{item.detail || item.preview}}</text></view>
+    <button wx:if="{{target}}" class="xa-button button" bindtap="action" hover-class="xa-button-hover">{{item.related_order_id ? '查看关联订单' : '查看相关内容'}}</button>
+  </block>
+</view>

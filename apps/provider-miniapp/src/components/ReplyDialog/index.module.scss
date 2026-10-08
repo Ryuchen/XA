@@ -1,26 +1,5 @@
 @use '@/styles/variables.scss' as *;
-
-.mask { position: fixed; inset: 0; z-index: 5000; display: flex; align-items: flex-end; justify-content: center; background: var(--xa-color-overlay); backdrop-filter: blur(8rpx); }
-.dialog { width: 100%; box-sizing: border-box; padding: 14rpx $page-padding calc(30rpx + env(safe-area-inset-bottom)); border-radius: 36rpx 36rpx 0 0; background: $color-bg-card; box-shadow: $shadow-popup; }
-.handle { width: 72rpx; height: 8rpx; margin: 0 auto 24rpx; border-radius: 8rpx; background: $color-border; }
-.header, .meta { display: flex; align-items: center; justify-content: space-between; }
-.title { font-size: $font-size-xl; font-weight: 700; color: $color-text-primary; }
-.close { padding: 12rpx 0 12rpx 24rpx; font-size: $font-size-sm; color: $color-primary; }
-.textarea { display: block; width: 100%; height: 240rpx; box-sizing: border-box; margin-top: 24rpx; padding: 22rpx; border: 2rpx solid transparent; border-radius: 22rpx; font-size: $font-size-md; line-height: 1.55; color: $color-text-primary; background: $color-bg-page; transition: border-color .18s ease, background .18s ease; }
-.textarea:focus { border-color: $color-primary; background: $color-bg-card; outline: 4rpx solid var(--xa-color-focus-ring); }
-.meta { margin-top: 10rpx; }
-.hint, .counter { font-size: $font-size-xs; color: $color-text-tertiary; }
-.submit { @include primary-control-state; height: 88rpx; margin-top: 24rpx; border: none; border-radius: 22rpx; font-size: $font-size-md; font-weight: 650; line-height: 88rpx; }
-.submit::after { border: none; }
-
-@media (min-width: 960px) {
-  .mask { align-items: center; padding: 32PX; }
-  .dialog { width: 560PX; padding: 24PX 26PX 26PX; border-radius: 24PX; box-shadow: 0 24PX 70PX rgba(0,0,0,.2); }
-  .handle { display: none; }
-  .title { font-size: 22PX; }
-  .close { padding: 8PX 0 8PX 20PX; font-size: 14PX; cursor: pointer; }
-  .textarea { height: 180PX; margin-top: 20PX; padding: 16PX; border-width: 1PX; border-radius: 14PX; font-size: 15PX; }
-  .meta { margin-top: 8PX; }
-  .hint, .counter { font-size: 12PX; }
-  .submit { height: 46PX; margin-top: 20PX; border-radius: 13PX; font-size: 15PX; line-height: 46PX; cursor: pointer; }
-}
+.textarea { display:block; width:100%; min-height:160PX; height:160PX; margin:0; padding:12PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:15PX; color:$color-text-primary; line-height:1.65; }
+.meta { display:flex; justify-content:space-between; align-items:flex-start; gap:16PX; margin-top:10PX; }
+.hint,.counter { color:$color-text-secondary; font-size:12PX; line-height:1.6; }.counter { flex:none; }
+.submit { @include button-reset; @include primary-control-state; margin:0; padding:10PX 24PX; min-height:44PX; border:0; border-radius:8PX; font-size:14PX; }

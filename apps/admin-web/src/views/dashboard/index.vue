@@ -149,7 +149,7 @@ const kpis = computed(() => [
   {
     label: '订单总成交额',
     value: amountToXaCoin(stats.value.order_amount_total) + '币',
-    note: `实付合计 ${amountToXaCoin(stats.value.paid_amount_total)}兴安币`,
+    note: `已支付 ${stats.value.paid_order_total ?? 0} 单，已排除未付和退款`,
     icon: 'Money',
   },
   {

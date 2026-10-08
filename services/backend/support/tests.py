@@ -53,3 +53,21 @@ class SupportContactCardApiTest(APITestCase):
         })
         self.assertFalse(serializer.is_valid())
         self.assertIn('wecom_service_url', serializer.errors)
+
+    def test_admin_configuration_rejects_incomplete_or_redirecting_service_links(self):
+        for url in ['https://work.weixin.qq.com/kfid/', 'https://work.weixin.qq.com/kfid/id/extra',
+                    'https://work.weixin.qq.com/kfid/../login', 'https://work.weixin.qq.com.evil.test/kfid/id']:
+            with self.subTest(url=url):
+                serializer = AdminSupportCardSerializer(data={'name': '客服', 'wecom_corp_id': 'wwtest', 'wecom_service_url': url})
+                self.assertFalse(serializer.is_valid())
+                self.assertIn('wecom_service_url', serializer.errors)
+
+    def test_admin_partial_update_keeps_pair_and_accepts_service_link_scene(self):
+        card = SupportContactCard.objects.create(name='客服', wecom_corp_id='wwtest',
+            wecom_service_url='https://work.weixin.qq.com/kfid/kfc_test')
+        unchanged = AdminSupportCardSerializer(card, data={'tips': '欢迎咨询'}, partial=True)
+        self.assertTrue(unchanged.is_valid(), unchanged.errors)
+        broken = AdminSupportCardSerializer(card, data={'wecom_corp_id': ''}, partial=True)
+        self.assertFalse(broken.is_valid())
+        scene = AdminSupportCardSerializer(card, data={'wecom_service_url': 'https://work.weixin.qq.com/kfid/kfc_test?scene=miniapp'}, partial=True)
+        self.assertTrue(scene.is_valid(), scene.errors)

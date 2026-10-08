@@ -1,7 +1,7 @@
 <template>
   <div class="ad-page">
     <div class="ap-page-head">
-      <p class="ap-page-intro">管理平台客服账号、职位分配与在职状态（PRD 7.14）</p>
+      <p class="ap-page-intro">管理客服账号、职位分配与在职状态</p>
       <div class="ap-page-head-actions">
         <el-button v-if="auth.hasPerm('admin:edit')" type="primary" @click="onCreate">新增客服</el-button>
       </div>
@@ -61,8 +61,8 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑客服' : '新增客服'" width="480px">
-    <el-form :model="form" label-width="90px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑客服' : '新增客服'" width="680px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="账号">
         <el-input v-if="!form.id" v-model="form.username" />
         <el-input v-else :model-value="form.username" disabled />
@@ -80,7 +80,7 @@
       <el-form-item v-if="form.id" label="在职状态">
         <el-switch v-model="form.is_active" :disabled="form.is_superuser" />
       </el-form-item>
-      <el-form-item label="备注">
+      <el-form-item label="备注" class="ap-field--full">
         <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填" />
       </el-form-item>
     </el-form>
@@ -109,7 +109,7 @@ const saving = ref(false)
 const form = reactive<any>({})
 
 onMounted(async () => {
-  const res = await roleApi.list({ page_size: 100 }) as any
+  const res = await roleApi.allOptions() as any
   roles.value = res.data?.list || []
 })
 

@@ -7,6 +7,13 @@
  */
 :root {
   @include xa-theme.light;
+  --xa-color-surface-page: #f4f6f9;
+  --xa-color-surface-hover: #f0f3f7;
+  --xa-color-surface-subtle: #f7f9fc;
+  --xa-color-text-primary: #1c2738;
+  --xa-color-text-secondary: #566174;
+  --xa-color-text-tertiary: #687487;
+  --xa-color-border: #e0e5ec;
 
   --brand-50: var(--xa-brand-50);
   --brand-100: var(--xa-brand-100);
@@ -35,8 +42,8 @@
   --text-200: #c7c7cc;
   --text-300: var(--xa-neutral-400);
   --text-400: var(--xa-neutral-500);
-  --text-500: var(--xa-neutral-600);
-  --text-600: var(--xa-neutral-700);
+  --text-500: var(--xa-color-text-secondary);
+  --text-600: var(--xa-color-text-primary);
   --text-700: #3c3c43;
   --text-800: var(--xa-neutral-800);
   --text-900: var(--xa-neutral-900);
@@ -76,7 +83,7 @@
   --chart-4: #5856d6;
   --chart-5: #af52de;
 
-  --sidebar: var(--xa-color-surface-hover);
+  --sidebar: var(--xa-color-surface-card);
   --sidebar-foreground: var(--xa-color-text-primary);
   --sidebar-primary: var(--xa-color-primary);
   --sidebar-primary-foreground: var(--xa-color-on-primary);
@@ -92,6 +99,15 @@
   --control-height-sm: 32px;
   --control-height-md: 40px;
   --control-height-lg: 48px;
+  --control-radius: 6px;
+  --control-padding-x: 10px;
+  --control-button-min-width: 72px;
+  --control-filter-width: 180px;
+  --control-range-width: 280px;
+  --control-datetime-range-width: 360px;
+  --control-number-width: 140px;
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -111,6 +127,15 @@
 
 .dark {
   @include xa-theme.dark;
+  --xa-color-surface-page: #11151c;
+  --xa-color-surface-card: #1b222d;
+  --xa-color-surface-hover: #252f3d;
+  --xa-color-surface-subtle: #222c3a;
+  --xa-color-surface-elevated: #283342;
+  --xa-color-text-primary: #edf2f8;
+  --xa-color-text-secondary: #b6bfcc;
+  --xa-color-text-tertiary: #9ca9bc;
+  --xa-color-border: #344052;
 
   --background: var(--xa-color-surface-page);
   --foreground: var(--xa-color-text-primary);

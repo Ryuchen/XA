@@ -1,0 +1,7 @@
+.audition-page .panel { margin-top: 24rpx; }
+.audition-page .panel .section-title { font-size: 30rpx; }
+.audition-page .panel > text { overflow-wrap: anywhere; }
+.audition-page .panel .small { font-size: var(--xa-control-small-font); }
+.audition-page .panel .xa-button.button { min-height: var(--xa-control-height); padding: 12rpx 20rpx; margin-top: 24rpx; border-radius: var(--xa-radius-control); font-size: var(--xa-control-font); }
+.audition-page .panel > .subtitle:last-child { padding-top: 20rpx; border-top: 1rpx solid var(--xa-color-border); }
+.audition-page > .xa-button.button-quiet { min-height: var(--xa-control-secondary); padding: 8rpx; margin-top: 8rpx; font-size: max(26rpx,13px); }

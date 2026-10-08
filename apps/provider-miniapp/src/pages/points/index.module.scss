@@ -1,0 +1,18 @@
+@use '@/styles/variables.scss' as *;
+.container { padding:0 $page-padding 60PX; color:$color-text-primary; }
+.overview { display:flex;align-items:center;gap:16PX;flex-wrap:wrap;padding:24PX 0; }
+.total { font-size:36PX;font-weight:700; }
+.caption,.description { display:block;font-size:13PX;line-height:1.7;color:$color-text-secondary; }
+.card { padding:20PX;border:1PX solid $color-border;border-radius:16PX;background:$color-bg-card;margin-bottom:16PX; }
+.title { display:block;font-size:18PX;font-weight:600;margin-bottom:8PX; }
+.tabs { display:flex;gap:8PX;flex-wrap:wrap;margin:20PX 0; }
+.primary,.secondary { @include button-reset; min-height:44PX;width:auto;margin:8PX 0;padding:10PX 16PX;border-radius:8PX;font-size:14PX; }
+.primary { @include primary-control-state; }.secondary { @include secondary-control-state; }
+.input { height:44PX;border:1PX solid $color-border;border-radius:8PX;padding:0 12PX;margin-top:12PX;font-size:14PX; }
+.grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240PX),1fr));gap:16PX; }
+.cost { display:block;font-size:16PX;font-weight:600;color:$color-primary;margin:12PX 0; }
+.row { display:flex;align-items:center;justify-content:space-between;gap:16PX;padding:14PX 0;border-bottom:1PX solid $color-border; }
+.notice { padding:16PX;background:$color-bg-card;border-left:2PX solid $color-primary; }
+
+.container { min-height:100dvh; background:$color-bg-page; padding-bottom:100PX; }
+@media(min-width:960px) { .container { padding:0; } }

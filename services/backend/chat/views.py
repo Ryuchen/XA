@@ -1,4 +1,5 @@
 from django.db import transaction
+from PIL import Image, UnidentifiedImageError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -48,10 +49,24 @@ class ChatSendView(APIView):
         if request.account.account_type == ClubAccount.AccountType.STAFF:
             return Response({'code': 403, 'msg': '客服请使用后台工作台'})
 
-        content = (request.data.get('content') or '').strip()
+        content = request.data.get('content') or ''
+        if not isinstance(content, str) or len(content) > 2000:
+            return Response({'code': 400, 'msg': '消息须为不超过 2000 字的文本'})
+        content = content.strip()
         image = request.FILES.get('image')
         if not content and not image:
             return Response({'code': 400, 'msg': '消息内容不能为空'})
+        if image:
+            if image.size > 5 * 1024 * 1024:
+                return Response({'code': 400, 'msg': '图片不能超过 5MB'})
+            try:
+                picture = Image.open(image)
+                if picture.format not in ('JPEG', 'PNG', 'WEBP'):
+                    return Response({'code': 400, 'msg': '请上传 JPG、PNG 或 WebP 图片'})
+                picture.verify()
+                image.seek(0)
+            except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+                return Response({'code': 400, 'msg': '图片内容无效'})
 
         content_type = (
             ChatMessage.ContentType.IMAGE if image else ChatMessage.ContentType.TEXT

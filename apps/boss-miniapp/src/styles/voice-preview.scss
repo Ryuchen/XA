@@ -10,7 +10,7 @@
   height: 48rpx;
   padding: 0 $spacing-sm;
   border-radius: $radius-round;
-  background: rgba(0, 122, 255, 0.10);
+  background: rgba(0, 47, 167, 0.10);
   color: $color-primary;
   font-size: $font-size-sm;
   font-weight: $font-weight-medium;
@@ -23,6 +23,6 @@
 
   &.voicePreviewPlaying {
     background: $color-primary;
-    color: #ffffff;
+    color: #fffdf5;
   }
 }

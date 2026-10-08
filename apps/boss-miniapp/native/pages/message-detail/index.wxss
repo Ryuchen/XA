@@ -1,0 +1,1 @@
+.title { font-size: 38rpx; line-height: 1.5; }.message-body { margin: 28rpx 0; padding: 30rpx; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }

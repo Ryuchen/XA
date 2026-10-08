@@ -43,8 +43,8 @@ const AnnouncementListPage: React.FC = () => {
             <View className={`${styles.iconWrap} ${item.is_pinned ? styles.iconWrapPinned : ''}`}>
               <Icon
                 name="megaphone"
-                size={44}
-                color={item.is_pinned ? '#FFFFFF' : '#007AFF'}
+                size={48}
+                color={item.is_pinned ? '#fffdf5' : '#002fa7'}
                 strokeWidth={2}
               />
             </View>
@@ -52,7 +52,7 @@ const AnnouncementListPage: React.FC = () => {
               {item.is_pinned && (
                 <View className={styles.badgeRow}>
                   <View className={styles.tag}>
-                    <Icon name="pin" size={22} color="#FFFFFF" strokeWidth={2} />
+                    <Icon name="pin" size={24} color="#fffdf5" strokeWidth={2} />
                     <Text className={styles.tagText}>置顶</Text>
                   </View>
                 </View>
@@ -64,13 +64,13 @@ const AnnouncementListPage: React.FC = () => {
 
           <View className={`${styles.metaRow} ${item.is_pinned ? styles.metaRowPinned : ''}`}>
             <View className={styles.time}>
-              <Icon name="calendar" size={26} color="#AEAEB2" strokeWidth={2} />
+              <Icon name="calendar" size={24} color="#AEAEB2" strokeWidth={2} />
               <Text className={styles.timeText}>{item.created_at?.slice(0, 10)}</Text>
             </View>
             {item.is_pinned && (
               <View className={styles.detailLink}>
                 <Text className={styles.detailText}>查看详情</Text>
-                <Icon name="chevron-right" size={28} color="#007AFF" strokeWidth={2} />
+                <Icon name="chevron-right" size={24} color="#002fa7" strokeWidth={2} />
               </View>
             )}
           </View>
@@ -80,7 +80,7 @@ const AnnouncementListPage: React.FC = () => {
       {loaded && list.length === 0 && (
         <View className={styles.empty}>
           <View className={styles.emptyIcon}>
-            <Icon name="megaphone" size={80} color="#AEAEB2" strokeWidth={1.5} />
+            <Icon name="megaphone" size={64} color="#AEAEB2" strokeWidth={1.5} />
           </View>
           <Text className={styles.emptyTitle}>暂无公告</Text>
           <Text className={styles.emptyDesc}>平台最新动态会在这里发布</Text>

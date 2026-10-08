@@ -1,0 +1,15 @@
+.support-page .panel { margin-top: 24rpx; }
+.support-page .panel > .row { align-items: center; gap: 18rpx; }
+.support-page .panel > .row > view { flex: 1; }
+.support-page .panel .avatar { width: max(88rpx,44px); height: max(88rpx,44px); }
+.support-page .panel .section-title { margin: 0 0 4rpx; font-size: 30rpx; }
+.support-page .panel .small { font-size: var(--xa-control-small-font); }
+.support-page .xa-button.button, .support-page .xa-button.button-secondary { min-height: var(--xa-control-height); padding: 12rpx 20rpx; border-radius: var(--xa-radius-control); font-size: var(--xa-control-font); }
+.support-page .xa-button.button-secondary { min-height: var(--xa-control-secondary); padding: 10rpx 20rpx; }
+.support-page .panel .xa-button.button { margin-top: 24rpx; }
+.support-page .xa-button.button-quiet { min-height: var(--xa-control-secondary); padding: 8rpx; margin-top: 8rpx; font-size: max(26rpx,13px); }
+.support-page .panel .menu-row { min-height: var(--xa-control-height); gap: 16rpx; padding: 8rpx 0; font-size: max(26rpx,13px); }
+.support-page .panel .menu-row > text:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.support-page .panel .menu-row .link { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; min-height: var(--xa-control-secondary); min-width: 36px; padding: 6rpx 0 6rpx 10rpx; font-size: max(26rpx,13px); }
+.qrcode { display: block; width: max(280rpx,140px); height: max(280rpx,140px); padding: 16rpx; background: #fffdf5; border: 1rpx solid var(--xa-color-border); border-radius: 16rpx; margin: 20rpx auto; }
+.support-page .panel > .small { display: block; overflow-wrap: anywhere; }

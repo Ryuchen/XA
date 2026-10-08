@@ -60,10 +60,10 @@ const moneySourceRoots = [
 const moneyExtensions = new Set(['.ts', '.tsx', '.vue'])
 
 // 合法百分比计算（非单位换算），显式豁免。
-const moneyExemptLines = new Set([
-  'apps/admin-web/src/views/report/index.vue:235',
-  'apps/admin-web/src/views/order/index.vue:692',
-  'apps/admin-web/src/views/dashboard/index.vue:185',
+const moneyExemptExpressions = new Map([
+  ['apps/admin-web/src/views/report/index.vue', 'Math.floor((Number(row.amount) || 0) * (100 - reportRate(row)) / 100)'],
+  ['apps/admin-web/src/views/order/index.vue', 'Math.floor((providerBase(slot) * rate) / 100)'],
+  ['apps/admin-web/src/views/dashboard/index.vue', 'Math.round((count / total) * 100)'],
 ])
 
 // 裸的单位换算：/10 /100 *10 *100（带词边界，避免误伤 *1000 等）。
@@ -96,10 +96,10 @@ async function visitMoney(directory) {
     if (!moneyExtensions.has(extname(entry.name))) continue
     if (path.startsWith(moneyRoot)) continue
     const content = await readFile(path, 'utf8')
-    const rel = relative(root, path)
+    const rel = relative(root, path).replaceAll('\\', '/')
     for (const { line, text } of scriptLines(content, extname(entry.name))) {
-      const key = `${rel}:${line}`
-      if (moneyExemptLines.has(key)) continue
+      const exempt = moneyExemptExpressions.get(rel)
+      if (exempt && text.includes(exempt)) continue
       // 去掉行内注释，避免把说明文字误判为换算。
       const code = text.split('//')[0]
       if (moneyPattern.test(code)) {
@@ -161,11 +161,12 @@ await Promise.all(moneySourceRoots.map(visitMoney))
 await checkMoneyPackageResolvable()
 
 // design-system 转发检查（保持原行为）
-const expectedEntrypoint = "@forward '../../../../packages/design-system/src/miniapp';"
+// Sass `hide` permits H5-specific font sizing while forwarding shared tokens.
+const expectedEntrypoint = /@forward\s+['"]\.\.\/\.\.\/\.\.\/\.\.\/packages\/design-system\/src\/miniapp['"](?:\s+hide\s+\$[\w-]+(?:\s*,\s*\$[\w-]+)*)?\s*;/
 for (const app of ['boss-miniapp', 'provider-miniapp']) {
   const entry = resolve(root, `apps/${app}/src/styles/variables.scss`)
   const content = await readFile(entry, 'utf8')
-  if (!content.includes(expectedEntrypoint)) {
+  if (!expectedEntrypoint.test(content)) {
     violations.push(`${relative(root, entry)} 必须转发共享小程序设计系统`)
   }
 }

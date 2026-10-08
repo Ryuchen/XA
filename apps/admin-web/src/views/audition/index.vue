@@ -58,10 +58,10 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑试音链接' : '新增试音链接'" width="520px">
-    <el-form :model="form" label-width="90px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑试音链接' : '新增试音链接'" width="680px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="标题"><el-input v-model="form.title" placeholder="如：王者荣耀招募" /></el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
+      <el-form-item label="备注" class="ap-field--full"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
       <el-form-item label="截止时间">
         <el-date-picker
           v-model="form.expire_at"

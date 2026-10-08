@@ -5,6 +5,7 @@ import { goRoleHome, wechatQuickLogin } from '@/utils/auth';
 import { useUserStore } from '@/store';
 import Icon from '@/components/Icon';
 import XaLogo from '@/components/XaLogo';
+import PrivacyNotice from '@/components/PrivacyNotice';
 import styles from './index.module.scss';
 
 // H5 仅作为本地联调入口；微信小程序仍使用真实微信登录。
@@ -16,6 +17,7 @@ const LoginPage: React.FC = () => {
   const [nickname, setNickname] = useState('');
 
   const runLogin = async (phoneCode?: string) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     Taro.showLoading({ title: '微信登录中' });
 
@@ -70,7 +72,7 @@ const LoginPage: React.FC = () => {
     <View className={styles.container}>
       <View className={styles.brand}>
         <View className={styles.logoBox}>
-          <XaLogo size={96} color="#2E7BD6" />
+          <XaLogo size={96} color="#002fa7" />
         </View>
         <Text className={styles.title}>兴安电竞</Text>
         <Text className={styles.subtitle}>专业电竞陪玩平台</Text>
@@ -88,11 +90,13 @@ const LoginPage: React.FC = () => {
             openType="chooseAvatar"
             onChooseAvatar={handleChooseAvatar}
           >
-            <Image
-              className={styles.avatarImg}
-              src={avatarPath || 'https://picsum.photos/id/64/200/200'}
-              mode="aspectFill"
-            />
+            {avatarPath ? (
+              <Image className={styles.avatarImg} src={avatarPath} mode="aspectFill" />
+            ) : (
+              <View className={`${styles.avatarImg} ${styles.avatarPlaceholder}`}>
+                <Icon name="user" size={64} color="#8E8E93" />
+              </View>
+            )}
             <Text className={styles.avatarTip}>选择头像</Text>
           </Button>
           <Input
@@ -104,6 +108,7 @@ const LoginPage: React.FC = () => {
           />
         </View>
 
+        <PrivacyNotice />
         <Button
           className={styles.loginBtn}
           loading={isSubmitting}
@@ -111,11 +116,11 @@ const LoginPage: React.FC = () => {
           openType="getPhoneNumber"
           onGetPhoneNumber={handleGetPhoneNumber}
         >
-          <Icon name="message-circle" size={44} color="#FFFFFF" strokeWidth={2} />
+          <Icon name="message-circle" size={48} color="#fffdf5" strokeWidth={2} />
           <Text className={styles.loginBtnText}>微信一键登录</Text>
         </Button>
         <View className={styles.loginHint}>
-          <Icon name="shield-check" size={28} color="#34C759" strokeWidth={2} />
+          <Icon name="shield-check" size={24} color="#34C759" strokeWidth={2} />
           <Text className={styles.loginHintText}>推荐使用微信快速登录</Text>
         </View>
         {IS_DEV && (
@@ -129,17 +134,6 @@ const LoginPage: React.FC = () => {
         )}
       </View>
 
-      <View className={styles.agreement}>
-        <View className={styles.agreementCheck}>
-          <Icon name="check" size={24} color="#FFFFFF" strokeWidth={3} />
-        </View>
-        <Text className={styles.agreementText}>
-          我已阅读并同意
-          <Text className={styles.agreementLink}>《用户协议》</Text>
-          和
-          <Text className={styles.agreementLink}>《隐私政策》</Text>
-        </Text>
-      </View>
     </View>
   );
 };

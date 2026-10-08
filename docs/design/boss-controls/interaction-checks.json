@@ -1,0 +1,13 @@
+{
+  "homeToCompanions": true,
+  "companionFilters": true,
+  "giftAdd": {
+    "width": 30,
+    "height": 30
+  },
+  "footerButton": {
+    "width": 137,
+    "height": 40
+  },
+  "emptyFeed": true
+}

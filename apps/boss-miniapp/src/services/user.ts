@@ -1,7 +1,10 @@
 import { ApiResponse, request } from '@/utils/request';
 
 export interface EscortProfile {
+  qualifications?:Array<{id:number;label:string;is_active:boolean}>;
   id: number;
+  gender?: 'MALE' | 'FEMALE' | 'UNKNOWN';
+  can_order?: boolean;
   nickname: string;
   avatar: string;
   rank: string;
@@ -26,16 +29,19 @@ export interface EscortProfile {
  * @param gameCategoryId 按游戏类目 ID 精准筛选（仅展示可接该游戏的陪玩）
  * @param serviceItemId 按服务项 ID 精准筛选（最细粒度，仅展示可接该服务项的陪玩）
  */
-export const fetchEscorts = (game?: string, gameCategoryId?: number, serviceItemId?: number) => {
-  const params: string[] = [];
+export const fetchEscorts = (game?: string, gameCategoryId?: number, serviceItemId?: number, gender: string = 'ANY', scope: Record<string,string> = {}) => {
+  const params: string[] = Object.entries(scope).filter(([,v])=>v).map(([k,v])=>`${k}=${encodeURIComponent(v)}`);
+  params.push(`gender=${encodeURIComponent(gender)}`);
   if (serviceItemId != null) params.push(`service_item=${serviceItemId}`);
   else if (gameCategoryId != null) params.push(`game_category=${gameCategoryId}`);
   else if (game) params.push(`game=${encodeURIComponent(game)}`);
+  if(serviceItemId==null) params.push('directory=1');
   const query = params.length ? `?${params.join('&')}` : '';
   return request<ApiResponse<EscortProfile[]>>(`/users/escorts/${query}`, 'GET');
 };
 
 export interface CustomerAchievement {
+  metric: 'orders' | 'amount';
   code: string;
   title: string;
   desc: string;
@@ -52,6 +58,8 @@ export const fetchCustomerAchievements = () => {
 export interface MeProfile {
   id: string;
   username: string;
+  gender?: 'MALE' | 'FEMALE' | 'UNKNOWN';
+  can_order?: boolean;
   nickname: string;
   role: string;
   phone: string;
@@ -66,6 +74,8 @@ export interface CustomerGameProfile {
   game_category: number;
   game_category_name: string;
   region: string;
+  gender?: 'MALE' | 'FEMALE' | 'UNKNOWN';
+  can_order?: boolean;
   nickname: string;
   uid: string;
   is_default: boolean;
@@ -80,7 +90,9 @@ export interface UpdateMePayload {
   game_profiles?: Array<{
     game_category: number;
     region: string;
-    nickname: string;
+    gender?: 'MALE' | 'FEMALE' | 'UNKNOWN';
+  can_order?: boolean;
+  nickname: string;
     uid: string;
     is_default?: boolean;
   }>;
@@ -93,3 +105,5 @@ export const fetchMe = () => {
 export const updateMe = (payload: UpdateMePayload) => {
   return request<ApiResponse<MeProfile>>('/users/me/', 'PATCH', payload);
 };
+
+export const fetchEscortShortcuts = (serviceId: number, gender: string) => request<ApiResponse<{ recent: EscortProfile[]; recommended: EscortProfile[] }>>(`/users/escorts/?shortcuts=1&service_item=${serviceId}&gender=${gender}`, 'GET');

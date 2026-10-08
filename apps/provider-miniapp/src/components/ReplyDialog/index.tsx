@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Text, Textarea, View } from '@tarojs/components';
-import { createPortal } from 'react-dom';
+import SurfaceDialog from '@/components/SurfaceDialog';
 import styles from './index.module.scss';
 
 interface ReplyDialogProps {
@@ -10,6 +10,8 @@ interface ReplyDialogProps {
   placeholder?: string;
   maxLength?: number;
   submitting?: boolean;
+  hint?: string;
+  submitText?: string;
   onClose: () => void;
   onSubmit: (content: string) => void | Promise<void>;
 }
@@ -21,6 +23,8 @@ const ReplyDialog: React.FC<ReplyDialogProps> = ({
   placeholder = '请输入回复内容',
   maxLength = 1000,
   submitting = false,
+  hint = '回复发布后老板可见',
+  submitText = '发布回复',
   onClose,
   onSubmit,
 }) => {
@@ -30,13 +34,6 @@ const ReplyDialog: React.FC<ReplyDialogProps> = ({
     if (open) setDraft(initialValue);
   }, [open, initialValue]);
 
-  useEffect(() => {
-    if (!open || typeof document === 'undefined') return undefined;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previous; };
-  }, [open]);
-
   if (!open) return null;
 
   const submit = () => {
@@ -44,14 +41,10 @@ const ReplyDialog: React.FC<ReplyDialogProps> = ({
     if (content && !submitting) onSubmit(content);
   };
 
-  const dialog = (
-    <View className={styles.mask}>
-      <View className={styles.dialog}>
-        <View className={styles.handle} />
-        <View className={styles.header}>
-          <Text className={styles.title}>{title}</Text>
-          <Text className={styles.close} onClick={() => !submitting && onClose()}>取消</Text>
-        </View>
+  return (
+    <SurfaceDialog open={open} title={title} busy={submitting} onClose={onClose} footer={
+      <Button className={`xa-button-primary ${styles.submit}`} loading={submitting} disabled={submitting || !draft.trim()} onClick={submit}>{submitText}</Button>
+    }>
         <Textarea
           className={styles.textarea}
           value={draft}
@@ -64,22 +57,11 @@ const ReplyDialog: React.FC<ReplyDialogProps> = ({
           onInput={event => setDraft(event.detail.value)}
         />
         <View className={styles.meta}>
-          <Text className={styles.hint}>回复发布后老板可见</Text>
+          <Text className={styles.hint}>{hint}</Text>
           <Text className={styles.counter}>{draft.length}/{maxLength}</Text>
         </View>
-        <Button
-          className={styles.submit}
-          loading={submitting}
-          disabled={submitting || !draft.trim()}
-          onClick={submit}
-        >
-          发布回复
-        </Button>
-      </View>
-    </View>
+    </SurfaceDialog>
   );
-
-  return typeof document !== 'undefined' ? createPortal(dialog, document.body) : dialog;
 };
 
 export default ReplyDialog;

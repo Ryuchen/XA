@@ -1,0 +1,162 @@
+// Taro H5 host elements need the same box model as their native counterparts.
+*, *::before, *::after { box-sizing: border-box; }
+taro-view-core, taro-scroll-view-core, taro-picker-core, taro-input-core,
+taro-textarea-core, taro-button-core { min-width: 0; }
+taro-picker-core { display: block; }
+
+button, taro-button-core {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 44PX;
+  height: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 9PX 16PX;
+  border: 1PX solid var(--xa-color-border);
+  border-radius: 8PX;
+  color: var(--xa-color-primary);
+  background: var(--xa-color-surface-card);
+  font: inherit;
+  font-size: 14PX;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+  &::after { border: 0; }
+  &[size='mini'] { min-height: 36PX; padding: 6PX 12PX; font-size: 13PX; line-height: 1.5 !important; }
+  &[disabled]:not([disabled='false']), &[aria-disabled='true'] {
+    color: var(--xa-color-text-disabled) !important;
+    background: var(--xa-color-surface-subtle) !important;
+    border-color: var(--xa-color-border) !important;
+    opacity: 1;
+    cursor: not-allowed;
+    box-shadow: none !important;
+    transform: none;
+  }
+}
+
+// Taro lazily injects host defaults, which otherwise reinstate its native
+// pill buttons and large line heights after navigating to another page.
+body taro-button-core { border-style:solid; font-family:var(--xa-font-sans); }
+body taro-button-core[disabled='false'] {
+  color: var(--provider-button-color, var(--xa-color-primary)) !important;
+}
+.xa-button-primary { --provider-button-color: var(--xa-color-on-primary); color:var(--xa-color-on-primary); }
+button.xa-button-primary, body taro-button-core.xa-button-primary { color: var(--xa-color-on-primary) !important; }
+body taro-button-core[disabled]:not([disabled='false']) {
+  color: var(--xa-color-text-secondary) !important;
+  background: var(--xa-color-surface-subtle) !important;
+  border-color: var(--xa-color-border) !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
+
+input:not([type='file']), textarea, .taro-textarea {
+  min-width: 0;
+  font: inherit;
+  font-size: 15PX;
+  color: var(--xa-color-text-primary);
+  caret-color: var(--xa-color-primary);
+}
+taro-input-core { display: flex; align-items: center; }
+taro-input-core .weui-input { width: 100%; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; }
+taro-textarea-core { display: block; }
+body .taro-textarea {
+  width: 100%;
+  min-height: 84PX;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--xa-color-text-primary);
+  background: transparent;
+  resize: vertical;
+  line-height: 1.7;
+}
+input::placeholder, textarea::placeholder, .taro-textarea::placeholder { color: var(--xa-color-text-tertiary); opacity: 1; }
+input:focus-visible, textarea:focus-visible, taro-input-core:focus-within,
+taro-textarea-core:focus-within, taro-picker-core:focus-within {
+  outline: 2PX solid var(--xa-color-focus-ring);
+  outline-offset: 2PX;
+}
+.xa-provider-desktop .xa-provider-page {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+.xa-provider-mobile .xa-provider-page {
+  padding-bottom: calc(92PX + env(safe-area-inset-bottom));
+}
+
+// Built-in confirmation and selection surfaces retain Taro's behavior.
+.weui-dialog, .weui-actionsheet {
+  color: var(--xa-color-text-primary);
+  background: var(--xa-color-surface-card);
+  border-radius: 16PX;
+}
+.weui-dialog__hd { padding: 22PX 24PX 12PX; }
+.weui-dialog__title { font-size: 18PX; font-weight: 650; }
+.weui-dialog__bd { padding: 4PX 24PX 24PX; color: var(--xa-color-text-secondary); font-size: 14PX; line-height: 1.7; }
+.weui-dialog__ft { font-size: 14PX; }
+.weui-dialog__btn_primary { color: var(--xa-color-primary); }
+.weui-actionsheet__menu, .weui-actionsheet__action { background: var(--xa-color-surface-card); }
+.weui-actionsheet__cell { padding: 14PX 20PX; color: var(--xa-color-text-primary); font-size: 15PX; }
+
+body .weui-picker {
+  left: 50%;
+  width: min(100%, 600PX);
+  color: var(--xa-color-text-primary);
+  background: var(--xa-color-surface-card);
+  border-radius: 16PX 16PX 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  transform: translateX(-50%) !important;
+  animation: none;
+  overflow: hidden;
+}
+body .weui-picker__hd { min-height: 52PX; align-items: center; padding: 4PX 16PX; background: var(--xa-color-surface-card); border-bottom: 1PX solid var(--xa-color-divider); }
+body .weui-picker__action { min-height: 44PX; display: flex; align-items: center; color: var(--xa-color-text-secondary); font-size: 14PX; }
+body .weui-picker__action:last-child { justify-content: flex-end; color: var(--xa-color-primary); font-weight: 600; }
+body .weui-picker__mask { background: linear-gradient(var(--xa-color-surface-card), transparent 40%, transparent 60%, var(--xa-color-surface-card)); }
+body .weui-picker__item { color: var(--xa-color-text-primary); font-size: 15PX; }
+body .weui-picker__indicator::before, body .weui-picker__indicator::after { border-color: var(--xa-color-divider); }
+body .weui-actionsheet { max-width: 600PX; left: 50%; transform: translateX(-50%) !important; max-height: calc(100dvh - 32PX); overflow: auto; padding-bottom: env(safe-area-inset-bottom); }
+body .weui-actionsheet__cell { overflow-wrap: anywhere; }
+@media (min-width: 960px) {
+  body .weui-picker, body .weui-actionsheet { top: 50%; bottom: auto; transform: translate(-50%, -50%) !important; border-radius: 16PX; box-shadow: 0 16PX 48PX rgba(15, 23, 42, .2); }
+  body .weui-dialog { width: 480PX; max-width: calc(100vw - 64PX); }
+}
+
+// Taro's API dialogs use inline styles rather than component hosts.
+body .taro-modal__content {
+  width: calc(100vw - 32PX) !important;
+  max-width: 480PX !important;
+  border-radius: 16PX !important;
+  color: var(--xa-color-text-primary) !important;
+  background: var(--xa-color-surface-card) !important;
+  box-shadow: 0 16PX 48PX rgba(15, 23, 42, .2);
+}
+body .taro-modal__title { padding: 24PX 24PX 12PX !important; color: var(--xa-color-text-primary); font-weight: 650; }
+body .taro-modal__text { padding: 0 24PX 24PX !important; color: var(--xa-color-text-secondary) !important; font-size: 14PX !important; line-height: 1.7 !important; word-break: normal !important; overflow-wrap: anywhere; }
+body .taro-modal__foot { border-top: 1PX solid var(--xa-color-divider); font-size: 14PX !important; }
+body .taro-model__cancel { color: var(--xa-color-text-secondary) !important; border-right: 1PX solid var(--xa-color-divider); }
+body .taro-model__confirm { color: var(--xa-color-primary) !important; font-weight: 600; }
+body .taro__actionSheet > div:last-child {
+  left: 50% !important;
+  width: min(100%, 600PX) !important;
+  max-height: calc(100dvh - 32PX);
+  overflow: auto;
+  background: var(--xa-color-surface-subtle) !important;
+  transform: translateX(-50%) !important;
+  transition: none !important;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+body .taro__actionSheet > div:last-child > div { color: var(--xa-color-text-primary) !important; background: var(--xa-color-surface-card) !important; }
+body .taro__actionSheet > div:last-child > div:last-child,
+body .taro-actionsheet__cell { padding: 14PX 20PX !important; font-size: 14PX !important; line-height: 1.7; overflow-wrap: anywhere; }
+body .taro-actionsheet__cell { color: var(--xa-color-text-primary) !important; border-bottom: 1PX solid var(--xa-color-divider); }
+@media (min-width: 960px) {
+  body .taro__actionSheet > div:last-child { top: 50%; bottom: auto !important; transform: translate(-50%, -50%) !important; border-radius: 16PX !important; box-shadow: 0 16PX 48PX rgba(15, 23, 42, .2); }
+}

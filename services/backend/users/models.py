@@ -222,6 +222,9 @@ class EscortProfile(models.Model):
         related_name='escort_profile',
     )
     display_name = models.CharField(max_length=50)
+    recommendation_slot = models.PositiveSmallIntegerField(
+        null=True, blank=True, unique=True, choices=[(n, f'推荐位 {n}') for n in range(1, 5)],
+    )
     gender = models.CharField(
         max_length=10, choices=Gender.choices, default=Gender.UNKNOWN, db_index=True
     )
@@ -265,6 +268,9 @@ class EscortProfile(models.Model):
     escort_no = models.CharField(max_length=32, blank=True, default='', db_index=True)  # 陪玩编号
     deposit_required = models.PositiveIntegerField(default=0)  # 应缴押金兴安币（内部账务单位）
     deposit_paid = models.PositiveIntegerField(default=0)  # 已缴押金兴安币（内部账务单位）
+    deposit_mode = models.CharField(
+        max_length=10, default='CASH', choices=[('CASH', '现金缴纳'), ('EARNINGS', '打单抵扣')],
+    )
     total_reward = models.PositiveIntegerField(default=0)  # 累计奖励兴安币（内部账务单位）
     total_penalty = models.PositiveIntegerField(default=0)  # 累计罚款兴安币（内部账务单位）
     rating_avg = models.DecimalField(
@@ -292,6 +298,8 @@ class EscortProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    dispatch_notification_preferences = models.JSONField(default=dict, db_default={}, blank=True, verbose_name='派单通知偏好')
+
     class Meta:
         verbose_name = 'Escort Profile'
         verbose_name_plural = 'Escort Profiles'
@@ -299,6 +307,10 @@ class EscortProfile(models.Model):
             models.CheckConstraint(
                 condition=models.Q(win_rate__range=(0, 100)),
                 name='escort_profile_win_rate_valid',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(recommendation_slot__isnull=True) | models.Q(recommendation_slot__range=(1, 4)),
+                name='escort_recommendation_slot_valid',
             ),
             models.CheckConstraint(
                 condition=models.Q(rating_avg__range=(0, 5)),
@@ -350,7 +362,7 @@ class EscortProfile(models.Model):
     @property
     def level_rank(self):
         """陪玩档位高低数值：未设档位视为最低(-1)。值越大档位越高。"""
-        if self.level_id is None or self.level is None:
+        if self.level_id is None or self.level is None or not self.level.is_active:
             return -1
         return self.level.sort_order
 
@@ -359,10 +371,71 @@ class EscortProfile(models.Model):
 
         服务未绑定档位(required_level 为空)时视为不限档，任何陪玩可接。
         """
-        required = getattr(service, 'required_level', None)
+        from .qualifications import service_requirement, matching_qualification
+        requirement=service_requirement(service)
+        if requirement is not None:
+            return matching_qualification(self,requirement) is not None
+        required = getattr(getattr(service,'service',service), 'required_level', None)
         if required is None:
             return True
         return self.level_rank >= required.sort_order
+
+    def order_acceptance_error(self, service=None, *, club_rules_enabled=None, provider_gender="ANY"):
+        """老板指定、客服派单和抢单共用准入；BUSY 不替代并发名额校验。"""
+        account = self.account if self.account_id else None
+        if (account and (not account.is_active or not account.can_login)) or not self.user.is_active:
+            return '陪玩账号已停用'
+        if not self.is_verified:
+            return '陪玩尚未通过认证'
+        if self.deposit_mode != 'EARNINGS':
+            if club_rules_enabled is None:
+                required = self.effective_deposit_required
+            else:
+                required = 20000 if club_rules_enabled else self.deposit_required
+            if self.deposit_paid < required:
+                return '陪玩押金未缴齐'
+        if self.status == self.Status.OFFLINE:
+            return '陪玩当前处于离线状态'
+        if not EscortSchedule.provider_is_scheduled_now(self.user):
+            return '当前时间不在陪玩的接单档期内'
+        if provider_gender != 'ANY' and self.gender != provider_gender:
+            return '陪玩性别不符合老板选择，请重新选择陪玩'
+        if service and not self.can_take_service(service):
+            return '陪玩未开通对应端手游、难度或档位的接单资格'
+        # 已归类游戏按具体技能准入；历史未归类服务继续使用原有准入规则。
+        from .qualifications import service_skill
+        source=getattr(service,'service',service)
+        if source and source.game_category_id and not service_skill(self,service):
+            return '陪玩尚未配置该服务技能'
+        return ''
+
+    @property
+    def effective_deposit_required(self):
+        from wallet.club_rules import club_income_rules_enabled, deposit_target
+        return deposit_target(self.deposit_mode) if club_income_rules_enabled() else self.deposit_required
+
+
+class ProviderQualification(models.Model):
+    profile = models.ForeignKey(EscortProfile, on_delete=models.CASCADE, related_name='qualifications')
+    game_category = models.ForeignKey('orders.GameCategory', on_delete=models.PROTECT, related_name='provider_qualifications')
+    provider_kind = models.CharField(max_length=12, choices=[('GUARD','护航'),('COMPANION','陪玩'),('GRIND','代肝'),('RANK','上分')])
+    platform = models.CharField(max_length=10, choices=[('PC','端游'),('MOBILE','手游')])
+    security_level = models.CharField(max_length=15, choices=[('CONFIDENTIAL','机密'),('TOP_SECRET','绝密'),('ANY','不限难度')])
+    grade = models.CharField(max_length=16, choices=[('ENTERTAINMENT','娱乐'),('TECHNICAL','技术'),('MASTER','大师'),('KING','王者'),('LEGEND','传奇'),('GLORY','荣耀'),('STAR','明星'),('OPEN','不分档')])
+    price_per_hour = models.PositiveIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['game_category_id','provider_kind','platform','security_level','id']
+        constraints = [models.UniqueConstraint(fields=['profile','game_category','provider_kind','platform','security_level'],name='unique_provider_qualification_scope')]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        from .qualifications import grade_options
+        if self.grade not in grade_options(self.provider_kind,self.platform,self.security_level):
+            raise ValidationError({'grade':'该资格范围不支持此档位'})
 
 
 class ProviderPassPurchase(models.Model):
@@ -652,6 +725,13 @@ class EscortSchedule(models.Model):
         from django.utils import timezone
 
         now = timezone.localtime(now or timezone.now())
+        cached = getattr(provider, '_prefetched_objects_cache', {}).get('schedules')
+        if cached is not None:
+            minute = now.hour * 60 + now.minute
+            return not cached or any(
+                row.weekday == now.weekday() and row.start_minute <= minute < row.end_minute
+                for row in cached
+            )
         schedules = cls.objects.filter(provider=provider)
         if not schedules.exists():
             return True
@@ -662,3 +742,16 @@ class EscortSchedule(models.Model):
 
     def __str__(self) -> str:
         return f"{self.provider_id} - w{self.weekday} {self.start_minute}-{self.end_minute}"
+
+
+class WechatPhoneLock(models.Model):
+    """Stable lock even before a phone has an owner; use only inside atomic()."""
+
+    phone = models.CharField(max_length=20, primary_key=True)
+
+    class Meta:
+        verbose_name = '微信手机号绑定锁'
+        verbose_name_plural = '微信手机号绑定锁'
+
+
+from .registration_models import ProviderRegistration  # noqa: E402,F401

@@ -1,2 +1,39 @@
 // Compatibility entry point. All new tokens live in the shared design system.
-@forward '../../../../packages/design-system/src/miniapp';
+@forward '../../../../packages/design-system/src/miniapp' hide $font-size-xs, $font-size-sm, $font-size-md, $font-size-lg, $font-size-xl, $font-size-xxl, $font-size-display,
+  $page-padding, $page-spacing, $spacing-xs, $spacing-sm, $spacing-md, $spacing-lg, $spacing-xl, $spacing-2xl, $spacing-3xl,
+  $radius-xs, $radius-sm, $radius-md, $radius-lg, $radius-xl, $radius-button, $radius-round,
+  $button-height-sm, $button-height-md, $button-height-lg, $card-padding, $card-gap;
+
+// H5 work surfaces need a stable reading size on both phone and desktop.
+// Uppercase PX is preserved by Taro's pxtransform; shared brand tokens stay intact.
+$font-size-xs: 12PX;
+$font-size-sm: 14PX;
+$font-size-md: 15PX;
+$font-size-lg: 18PX;
+$font-size-xl: 22PX;
+$font-size-xxl: 26PX;
+$font-size-display: 32PX;
+
+// Stable control and spacing sizes. Reflow at breakpoints instead of scaling
+// desktop controls with the viewport; PX is preserved by both Taro builds.
+$page-padding: 16PX;
+$page-spacing: 20PX;
+$spacing-xs: 4PX;
+$spacing-sm: 8PX;
+$spacing-md: 12PX;
+$spacing-lg: 16PX;
+$spacing-xl: 24PX;
+$spacing-2xl: 32PX;
+$spacing-3xl: 44PX;
+$radius-xs: 4PX;
+$radius-sm: 8PX;
+$radius-md: 10PX;
+$radius-lg: 16PX;
+$radius-xl: 20PX;
+$radius-button: 8PX;
+$radius-round: 999PX;
+$button-height-sm: 36PX;
+$button-height-md: 44PX;
+$button-height-lg: 48PX;
+$card-padding: 20PX;
+$card-gap: 16PX;

@@ -1,0 +1,12 @@
+.companion-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20rpx; }
+.page .xa-button.companion-card { display: block; width: 100%; min-width: 0; margin: 0; padding: 16rpx 16rpx 20rpx; border: 1rpx solid var(--xa-color-border); border-radius: var(--xa-radius); background: var(--xa-color-surface); text-align: left; white-space: normal; overflow: hidden; }
+.companion-portrait { position: relative; width: 100%; }
+.companion-avatar { display: block; width: 100%; height: 268rpx; border-radius: 16rpx; background: var(--xa-color-primary-soft); }
+.companion-initial { display: flex; align-items: center; justify-content: center; color: var(--xa-color-primary); font-size: 72rpx; font-weight: 500; }
+.companion-badge { position: absolute; top: 12rpx; left: 12rpx; padding: 4rpx 14rpx; border-radius: 10rpx; background: var(--xa-color-primary); color: var(--xa-color-surface); font-size: 22rpx; font-weight: 500; }
+.companion-name { display: block; margin-top: 16rpx; font-size: 28rpx; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.companion-level { display: block; margin-top: 6rpx; color: var(--xa-color-muted); font-size: 23rpx; font-weight: 400; overflow-wrap: anywhere; }
+.companion-monthly { margin-top: 14rpx; padding-top: 12rpx; border-top: 1rpx solid var(--xa-color-border); }
+.companion-monthly-label { display: block; color: var(--xa-color-muted); font-size: 21rpx; font-weight: 400; }
+.companion-monthly-value { display: block; margin-top: 4rpx; color: var(--xa-color-primary); font-size: 28rpx; font-weight: 600; overflow-wrap: anywhere; }
+.companion-monthly-unit { color: var(--xa-color-muted); font-size: 20rpx; font-weight: 400; }

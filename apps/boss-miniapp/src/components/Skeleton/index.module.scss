@@ -37,8 +37,8 @@
 }
 
 .avatar {
-  width: 120rpx;
-  height: 120rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: $radius-md;
   flex-shrink: 0;
 }
@@ -54,7 +54,7 @@
   @include card-base;
   display: flex;
   gap: $spacing-md;
-  padding: $spacing-md;
+  padding: $card-padding;
 }
 
 .cardBody {

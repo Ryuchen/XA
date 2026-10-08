@@ -6,6 +6,7 @@ import styles from './index.module.scss';
 
 const TAB_LIST = [
   { pagePath: '/pages/orders/index', text: '接单', icon: 'gamepad' as const },
+  { pagePath: '/pages/report/index', text: '报单', icon: 'receipt' as const },
   { pagePath: '/pages/messages/index', text: '消息', icon: 'bell' as const },
   { pagePath: '/pages/wallet/index', text: '钱包', icon: 'wallet' as const },
   { pagePath: '/pages/mine/index', text: '我的', icon: 'user' as const }
@@ -15,7 +16,7 @@ interface TabBarState {
   selected: number;
 }
 
-export default class CustomTabBar extends Component<{}, TabBarState> {
+export default class CustomTabBar extends Component<{ active?: 'orders' | 'report' | 'messages' | 'wallet' | 'mine' }, TabBarState> {
   state: TabBarState = {
     selected: this.resolveSelected()
   };
@@ -36,7 +37,7 @@ export default class CustomTabBar extends Component<{}, TabBarState> {
   }
 
   render() {
-    const { selected } = this.state;
+    const selected = this.props.active ? TAB_LIST.findIndex(item => item.pagePath === `/pages/${this.props.active}/index`) : this.state.selected;
     return (
       <View className={styles.tabBar}>
         {TAB_LIST.map((item, index) => {
@@ -48,7 +49,7 @@ export default class CustomTabBar extends Component<{}, TabBarState> {
               onClick={() => this.switchTab(item.pagePath)}
             >
               <View className={styles.iconWrap}>
-                <TabIcon name={item.icon} color={active ? '#007AFF' : '#8E8E93'} />
+                <TabIcon name={item.icon} color={active ? '#002fa7' : '#8E8E93'} />
               </View>
               <Text className={`${styles.tabText} ${active ? styles.tabTextActive : ''}`}>{item.text}</Text>
             </View>

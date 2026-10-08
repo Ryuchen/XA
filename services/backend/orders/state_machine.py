@@ -30,6 +30,7 @@ TRANSITIONS: Dict[Tuple[str, str], str] = {
     (Order.Status.GRABBED, Order.Status.CANCELLED): OrderStatusLog.Action.CANCEL,
     (Order.Status.IN_SERVICE, Order.Status.COMPLETED): OrderStatusLog.Action.COMPLETE,
     (Order.Status.IN_SERVICE, Order.Status.CANCELLED): OrderStatusLog.Action.REFUND,
+    (Order.Status.COMPLETED, Order.Status.CANCELLED): OrderStatusLog.Action.REFUND,
 }
 
 
@@ -49,6 +50,7 @@ def transition(
     pre_check: Optional[Callable[[Order], None]] = None,
     side_effect: Optional[Callable[[Order], None]] = None,
     update_fields: Optional[list] = None,
+    dispatch_account_ids=(),
 ) -> Order:
     """统一的状态切换入口。
 
@@ -62,6 +64,7 @@ def transition(
         pre_check: 前置校验回调，参数为加锁后的 order；不通过应抛异常
         side_effect: 副作用回调（如钱包退款、EscortProfile 状态更新）
         update_fields: 额外需要保存的字段名（除 status 与时间戳外）
+        dispatch_account_ids: 接单/派单目标账号，容量校验前锁定其名额
 
     Returns:
         更新后的 Order 实例
@@ -71,13 +74,22 @@ def transition(
         IllegalTransitionError
         其他业务异常（由 pre_check / side_effect 抛出）
     """
-    order = Order.objects.select_for_update().select_related('customer', 'provider', 'service').get(id=order_id)
+    # 只锁订单，关联用户/服务的查询不能把无关订单串行化或反转资源锁序。
+    order = Order.objects.select_for_update().get(id=order_id)
 
     from_status = order.status
+    if from_status == Order.Status.COMPLETED and (
+        order.settlement_mode != Order.SettlementMode.REPORT_APPROVAL or order.settled_at
+    ):
+        raise IllegalTransitionError('订单已结算，无法再次流转')
     if not can_transition(from_status, to_status):
         raise IllegalTransitionError(
             f'非法状态转换: {from_status} -> {to_status}'
         )
+
+    if dispatch_account_ids:
+        from .services import lock_provider_dispatch
+        lock_provider_dispatch(dispatch_account_ids)
 
     if pre_check:
         pre_check(order)
@@ -98,6 +110,12 @@ def transition(
         fields_to_save.append(timestamp_field)
 
     order.status = to_status
+
+    if to_status == Order.Status.COMPLETED and order.customer_account_id:
+        # Acquire the customer's wallet before fulfillment credits other wallets.
+        # This also serializes two completions crossing a VIP threshold together.
+        from wallet.services import get_wallet
+        get_wallet(account_id=order.customer_account_id, for_update=True)
 
     if side_effect:
         side_effect(order)

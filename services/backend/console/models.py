@@ -1,6 +1,40 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
+
+
+class KookDispatchConfig(models.Model):
+    """单机器人、多频道路由；凭据只保存密文，不通过 API 回显。"""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    enabled = models.BooleanField(default=False)
+    bot_token_ciphertext = models.TextField(blank=True, default='')
+    auto_new_orders = models.BooleanField(default=True)
+    auto_rejected_orders = models.BooleanField(default=True)
+    routes = models.JSONField(default=list)
+    provider_order_url = models.URLField(max_length=500, blank=True, default='')
+    revision = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='kook_config_singleton')]
+
+    def __str__(self):
+        return 'KOOK 派单配置'
+
+
+class KookDispatchProbe(models.Model):
+    """标明测试的卡片投递，与真实订单/资金完全无关。"""
+    id = models.UUIDField(primary_key=True, editable=False)
+    route_key = models.CharField(max_length=64)
+    channel_id = models.CharField(max_length=64)
+    content = models.TextField()
+    status = models.CharField(max_length=12, default='SENDING')
+    message_id = models.CharField(max_length=100, blank=True, default='')
+    last_error = models.CharField(max_length=500, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(
+            condition=models.Q(status__in=['SENDING', 'SENT', 'FAILED', 'UNKNOWN']), name='kook_probe_status_valid')]
 
 
 class AdminRole(models.Model):
@@ -191,6 +225,17 @@ class AccountBan(models.Model):
         ),
     )
 
+    # MySQL 不支持条件唯一索引。数据库生成 ACTIVE 的账号键，历史记录为 NULL，
+    # 配合普通唯一索引，在 MySQL / SQLite 上都能阻止第二条生效封禁。
+    active_account_key = models.GeneratedField(
+        expression=models.Case(
+            models.When(status='ACTIVE', then=models.F('account_id')),
+            default=models.Value(None),
+        ),
+        output_field=models.BigIntegerField(), db_persist=True,
+        null=True, unique=True,
+    )
+
     class Meta:
         verbose_name = '封禁记录'
         verbose_name_plural = '封禁记录'
@@ -198,16 +243,6 @@ class AccountBan(models.Model):
         indexes = [
             models.Index(fields=['account', 'status']),
             models.Index(fields=['status', 'expires_at']),
-        ]
-        constraints = [
-            # 单账户至多一条生效封禁。应用层已在 apply_ban 里先收口旧封禁，
-            # 但并发双写只有数据库约束才拦得住，否则会出现两条 ACTIVE 记录，
-            # 解封一条后账户仍被另一条「悬空封禁」标记着。
-            models.UniqueConstraint(
-                fields=['account'],
-                condition=Q(status='ACTIVE'),
-                name='uniq_active_ban_per_account',
-            ),
         ]
 
     def __str__(self):

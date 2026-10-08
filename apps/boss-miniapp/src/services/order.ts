@@ -1,7 +1,10 @@
 import { ApiResponse, request } from '@/utils/request';
+import { fundRequest } from '@/utils/fundRequest';
 import { EscortOrder, ServiceInfo } from '@/types/order';
 
 export interface CreateOrderPayload {
+  provider_gender?: 'ANY' | 'MALE' | 'FEMALE';
+  dispatch_mode?: 'BOSS_SELECT' | 'AUTO_GRAB';
   service_id?: number;
   product_id?: number;
   provider_id?: number;
@@ -35,7 +38,7 @@ export const fetchServiceDetail = (serviceId: number | string) => {
 };
 
 export const createOrder = (payload: CreateOrderPayload) => {
-  return request<ApiResponse<EscortOrder>>('/orders/create/', 'POST', payload);
+  return fundRequest<EscortOrder>('/orders/create/', payload);
 };
 
 export interface OrderQuote {
@@ -66,7 +69,7 @@ export const cancelOrder = (orderId: number | string, reason?: string) => {
 };
 
 export const tipOrder = (orderId: number | string, giftServiceId: number) => {
-  return request<ApiResponse<EscortOrder>>(`/orders/orders/${orderId}/tip/`, 'POST', {
+  return fundRequest<EscortOrder>(`/orders/orders/${orderId}/tip/`, {
     gift_service_id: giftServiceId,
   });
 };

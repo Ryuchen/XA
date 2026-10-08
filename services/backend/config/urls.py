@@ -1,11 +1,16 @@
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from common.private_media import private_media, public_media, RenewPrivateMediaView
+from common.health import readiness
 
 urlpatterns = [
+    path('api/health/', readiness),
+    path('api/media/renew/', RenewPrivateMediaView.as_view()),
+    path('api/media/private/<str:ticket>/', private_media, name='private-media'),
+    path('media/<path:path>', public_media, name='public-media'),
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
+    path('api/provider-registration/', include('users.registration_urls')),
     path('api/wallet/', include('wallet.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/support/', include('support.urls')),
@@ -16,11 +21,5 @@ urlpatterns = [
     path('api/chat/', include('chat.urls')),
     path('api/audition/', include('audition.urls')),
     path('api/admin/', include('console.urls')),
+    path('api/club/', include('engagement.urls')),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-elif not settings.MEDIA_BASE_URL:
-    # 生产环境未接入对象存储 / 独立媒体域名时，由 Django 兜底提供 media，
-    # 避免 DEBUG=False 后上传图片 404。接入对象存储后此分支自动跳过。
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

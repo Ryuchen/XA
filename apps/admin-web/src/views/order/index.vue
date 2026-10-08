@@ -4,7 +4,9 @@
     <div class="ap-page-head">
       <p class="ap-page-intro">管理平台全部陪玩订单与售后</p>
       <div class="ap-page-head-actions">
+        <el-button v-if="auth.hasPerm('order:view')" :icon="Setting" @click="trafficConfigVisible = true">峰谷限流与监控</el-button>
         <el-button v-if="auth.hasPerm('order:dispatch')" type="primary" :icon="Plus" @click="onDispatch">快捷派单</el-button>
+        <el-button v-if="auth.hasPerm(['dispatch_config:view', 'dispatch_config:edit'])" :icon="Setting" @click="dispatchConfigVisible = true">配置</el-button>
       </div>
     </div>
 
@@ -98,6 +100,10 @@
         <template #default="{ row }">
           <el-button link type="primary" @click="onDetail(row)">详情</el-button>
           <el-button
+            v-if="auth.hasPerm('order:dispatch') && row.status === 'PENDING' && row.payment_status === 'PAID'"
+            link type="primary" @click="onDispatchMessage(row)"
+          >一键发单</el-button>
+          <el-button
             v-if="auth.hasPerm('order:dispatch') && row.status === 'PENDING'"
             link
             type="primary"
@@ -128,7 +134,7 @@
             @click="onCancel(row)"
           >取消</el-button>
           <el-button
-            v-if="auth.hasPerm('order:refund') && ['GRABBED', 'IN_SERVICE'].includes(row.status)"
+            v-if="auth.hasPerm('order:refund') && (['GRABBED', 'IN_SERVICE'].includes(row.status) || (row.status === 'COMPLETED' && row.settlement_mode === 'REPORT_APPROVAL' && !row.settled_at))"
             link
             type="danger"
             @click="onRefund(row)"
@@ -138,16 +144,21 @@
     </crud-table>
   </div>
 
-  <el-drawer v-model="detailVisible" title="订单详情" size="520px">
+  <el-drawer v-model="detailVisible" title="订单详情" size="520px" class="ap-panel">
     <template v-if="current">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="订单号">{{ current.order_no }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ current.status_display }}</el-descriptions-item>
         <el-descriptions-item label="支付状态">{{ current.payment_status_display }}</el-descriptions-item>
         <el-descriptions-item label="老板">{{ current.customer_name }}（{{ current.customer_phone_snapshot }}）</el-descriptions-item>
+        <el-descriptions-item label="陪玩选择">{{ ({ ANY: '不限', MALE: '男陪', FEMALE: '女陪' } as any)[current.provider_gender || 'ANY'] }}</el-descriptions-item>
         <el-descriptions-item label="陪玩模式">{{ current.escort_mode_display }}</el-descriptions-item>
         <el-descriptions-item label="陪玩">{{ providerText(current) }}</el-descriptions-item>
         <el-descriptions-item label="服务">{{ current.service_name_snapshot }}</el-descriptions-item>
+        <el-descriptions-item v-if="current.provider_requirement?.label" label="接单范围">{{ current.provider_requirement.label }}</el-descriptions-item>
+        <el-descriptions-item v-if="current.gameplay_snapshot?.name" label="玩法规格">{{ current.gameplay_snapshot.name }} · {{ current.gameplay_snapshot.platform_name }} · {{ current.gameplay_snapshot.security_level_name }}</el-descriptions-item>
+        <el-descriptions-item v-if="current.roulette_result?.name" label="转盘目标">{{ current.roulette_result.name }}：{{ current.roulette_result.description }}</el-descriptions-item>
+        <el-descriptions-item v-if="current.gameplay_snapshot?.rules" label="规则快照">{{ current.gameplay_snapshot.rules }}</el-descriptions-item>
         <el-descriptions-item label="负责客服">{{ current.support_contact_name_snapshot || '-' }}</el-descriptions-item>
         <el-descriptions-item label="单价">{{ amountToXaCoin(current.unit_price_snapshot) }} 币</el-descriptions-item>
         <el-descriptions-item label="局数">{{ current.game_rounds }}</el-descriptions-item>
@@ -176,8 +187,11 @@
         <el-descriptions-item label="店铺留存">{{ amountToXaCoin(current.shop_income) }} 币</el-descriptions-item>
         <el-descriptions-item label="备注">{{ current.remark || '-' }}</el-descriptions-item>
         <el-descriptions-item label="取消原因">{{ current.cancel_reason || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="售后截止">{{ formatDateTime(current.aftersale_deadline) }}</el-descriptions-item>
+        <el-descriptions-item label="实销确认时间">{{ current.consumption_confirmed_at ? formatDateTime(current.consumption_confirmed_at) : current.consumption_ready_at ? '预计 ' + formatDateTime(current.consumption_ready_at) : '等待全部有效报单' }}</el-descriptions-item>
         <el-descriptions-item label="下单时间">{{ formatDateTime(current.created_at) }}</el-descriptions-item>
       </el-descriptions>
+      <div v-for="ticket in aftersales" :key="ticket.id" class="ap-section"><p>售后 #{{ticket.id}} · {{ticket.status === 'OPEN' ? '处理中' : '已处理'}}</p><p>{{ticket.reason}}</p><p v-if="ticket.resolution">处理说明：{{ticket.resolution}}</p><template v-if="ticket.status === 'OPEN'"><el-button v-if="auth.hasPerm('order:settle')" @click="processAfterSale(ticket,'resolve')">处理完成</el-button><el-button v-if="auth.hasPerm('order:refund')" type="danger" @click="processAfterSale(ticket,'refund')">退款结案</el-button></template></div>
 
       <el-divider>状态流水</el-divider>
       <el-timeline>
@@ -195,8 +209,13 @@
     </template>
   </el-drawer>
 
-  <el-dialog v-model="dispatchVisible" title="客服快捷派单" width="640px">
-    <el-form label-position="top">
+  <DispatchMessageDialog v-model="dispatchMessageVisible" :order-id="dispatchMessageOrderId" />
+  <el-dialog v-model="trafficConfigVisible" title="订单峰谷限流与网络监控" width="960px" class="ap-modal" destroy-on-close :close-on-click-modal="false"><TrafficConfig /></el-dialog>
+  <el-dialog v-model="dispatchConfigVisible" title="KOOK 派单配置" width="1100px" class="ap-modal" destroy-on-close :close-on-click-modal="false">
+    <KookDispatchConfig />
+  </el-dialog>
+  <el-dialog v-model="dispatchVisible" title="客服快捷派单" width="800px" class="ap-modal">
+    <el-form  class="ap-modal-form ap-form-grid" label-position="top">
       <div class="od-form-section">
         <p class="od-section-title">下单信息</p>
         <el-row :gutter="16">
@@ -252,7 +271,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="陪玩模式">
+            <el-form-item label="陪玩模式" class="ap-field--full">
               <el-radio-group v-model="dispatchForm.escort_mode" @change="onEscortModeChange">
                 <el-radio-button label="SINGLE">单陪</el-radio-button>
                 <el-radio-button label="DOUBLE">双陪</el-radio-button>
@@ -261,6 +280,7 @@
           </el-col>
         </el-row>
 
+<el-form-item label="陪玩选择"><el-select v-model="dispatchForm.provider_gender"><el-option label="不限" value="ANY"/><el-option label="男陪" value="MALE"/><el-option label="女陪" value="FEMALE"/></el-select></el-form-item>
         <div
           v-for="(slot, idx) in dispatchForm.providers"
           :key="idx"
@@ -284,7 +304,7 @@
                   <el-option
                     v-for="p in providerOptions"
                     :key="p.user"
-                    :label="`${p.display_name || p.username}<${p.escort_no || '-'}>${p.level_name || '未定级'}`"
+                    :label="`${p.display_name || p.username}<${p.escort_no || '-'}>${(p.qualifications || []).map((q: any) => q.label).join(' / ') || '资格待配置'}`"
                     :value="p.user"
                   />
                 </el-select>
@@ -292,7 +312,7 @@
             </el-col>
             <el-col :span="5">
               <el-form-item label="抽成方式">
-                <el-select v-model="slot.commission_type" style="width: 100%">
+                <el-select v-model="slot.commission_type" :disabled="!!dispatchQuote?.commission_policy && dispatchQuote.commission_policy !== 'LEGACY'" style="width: 100%">
                   <el-option label="百分比" value="PERCENT" />
                   <el-option label="固定金额" value="FIXED" />
                 </el-select>
@@ -303,6 +323,7 @@
                 <el-input-number
                   v-if="slot.commission_type === 'PERCENT'"
                   v-model="slot.commission_rate"
+                  :disabled="!!dispatchQuote?.commission_policy && dispatchQuote.commission_policy !== 'LEGACY'"
                   :min="0"
                   :max="100"
                   :step="1"
@@ -312,6 +333,7 @@
                 <el-input-number
                   v-else
                   v-model="slot.commission_fixed"
+                  :disabled="!!dispatchQuote?.commission_policy && dispatchQuote.commission_policy !== 'LEGACY'"
                   :min="0"
                   :precision="2"
                   :step="1"
@@ -336,7 +358,7 @@
           </p>
         </div>
 
-        <el-form-item label="备注">
+        <el-form-item label="备注" class="ap-field--full">
           <el-input v-model="dispatchForm.remark" type="textarea" :rows="2" placeholder="可选" />
         </el-form-item>
       </div>
@@ -347,8 +369,8 @@
           <span class="od-summary-value">{{ currentBoss ? `${amountToXaCoin(currentBoss.wallet_balance)}币` : '—' }}</span>
         </div>
         <div class="od-summary-item">
-          <span class="od-summary-label">预计扣款</span>
-          <span class="od-summary-value">{{ estimateAmount > 0 ? `${amountToXaCoin(estimateAmount)}币` : '—' }}</span>
+          <span class="od-summary-label">折后预计扣款</span>
+          <span class="od-summary-value">{{ quoteLoading ? '计算中…' : dispatchQuote ? `${amountToXaCoin(estimateAmount)}币` : '—' }}</span>
         </div>
         <div v-if="insufficient" class="od-summary-warn">余额不足以支付本次派单</div>
       </div>
@@ -359,8 +381,8 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="assignVisible" title="指派待接单订单" width="460px">
-    <el-form label-position="top">
+  <el-dialog v-model="assignVisible" title="指派待接单订单" width="480px" class="ap-modal">
+    <el-form  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="订单">
         <el-input :model-value="assignOrder ? `${assignOrder.order_no} · ${assignOrder.service_name_snapshot}` : ''" disabled />
       </el-form-item>
@@ -390,13 +412,13 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="transferVisible" title="订单转单" width="720px">
+  <el-dialog v-model="transferVisible" title="订单转单" width="880px" class="ap-modal">
     <template v-if="transferOrder">
       <el-alert
         type="info"
         :closable="false"
         show-icon
-        title="勾选要转出的打手，填写其应得份额与罚款；剩余份额将转给新打手，订单完成时随新打手结算。"
+        title="填写转出打手的应得份额与罚款，剩余份额转给新打手。新订单的双方收益均需报单审核后结算，罚款从当前可用余额扣除。"
         style="margin-bottom: 16px"
       />
       <div v-for="row in transferRows" :key="row.old_provider_id" class="od-provider-row">
@@ -469,7 +491,7 @@
           </el-col>
         </el-row>
       </div>
-      <el-form-item label="转单原因">
+      <el-form-item label="转单原因" class="ap-field--full">
         <el-input v-model="transferReason" type="textarea" :rows="2" placeholder="可选，将记入订单流水与罚款记录" />
       </el-form-item>
     </template>
@@ -481,11 +503,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, Setting } from '@element-plus/icons-vue'
 import CrudTable from '@/components/CrudTable.vue'
-import { orderApi, serviceItemApi, userApi, escortApi } from '@/api/modules'
+import DispatchMessageDialog from '@/components/DispatchMessageDialog.vue'
+import { orderApi, aftersaleApi, serviceItemApi, userApi, escortApi } from '@/api/modules'
 import { request } from '@/api/request'
 import { ORDER_STATUS, PAYMENT_STATUS } from '@/utils/dict'
 import { amountToXaCoin, formatDateTime, xaCoinToAmount } from '@/utils/format'
@@ -493,6 +516,16 @@ import { useAuthStore } from '@/stores/auth'
 import { adminWs } from '@/utils/ws'
 
 const auth = useAuthStore()
+const KookDispatchConfig = defineAsyncComponent(() => import('@/views/kook-dispatch/index.vue'))
+const trafficConfigVisible = ref(false)
+const TrafficConfig = defineAsyncComponent(() => import('./TrafficConfig.vue'))
+const dispatchConfigVisible = ref(false)
+const dispatchMessageVisible = ref(false)
+const dispatchMessageOrderId = ref<number>()
+function onDispatchMessage(order: any) {
+  dispatchMessageOrderId.value = order.id
+  dispatchMessageVisible.value = true
+}
 const tableRef = ref()
 const query = reactive<Record<string, any>>({
   order_no: '',
@@ -534,16 +567,27 @@ function querySuggest(field: 'order_no' | 'customer_username' | 'customer_nickna
 const detailVisible = ref(false)
 const current = ref<any>(null)
 const logs = ref<any[]>([])
+const aftersales = ref<any[]>([])
 const assignVisible = ref(false)
 const assigning = ref(false)
 const assignOrder = ref<any>(null)
 const assignProviderId = ref<number | undefined>()
 
 async function onDetail(row: any) {
-  current.value = row
+  current.value = (await orderApi.retrieve(row.id)).data
+  aftersales.value = (await aftersaleApi.list({order:row.id})).data.list
   detailVisible.value = true
   const res = await request({ url: `/orders/${row.id}/logs/`, method: 'get' }) as any
   logs.value = res.data || []
+}
+
+async function processAfterSale(ticket: any, action: 'resolve' | 'refund') {
+  const resolution = await askReason(action === 'refund' ? '售后退款结案' : '售后处理完成')
+  if (!resolution || resolution.trim().length < 2) return
+  await aftersaleApi.action(ticket.id, action, { resolution })
+  ElMessage.success('售后已处理')
+  await onDetail(current.value)
+  tableRef.value?.load()
 }
 
 async function askReason(title: string): Promise<string | null> {
@@ -613,7 +657,7 @@ function onTransfer(row: any) {
   providerOptions.value = []
   // 未结算的打手行才可转出；无明细行时回落订单级主打手
   const rows = (row.providers && row.providers.length)
-    ? row.providers.filter((p: any) => p.provider && !p.settled_at)
+    ? row.providers.filter((p: any) => p.provider && !p.settled_at && !p.released_at)
     : (row.provider
       ? [{ provider: row.provider, provider_name: row.provider_name, provider_income: row.provider_income }]
       : [])
@@ -662,6 +706,7 @@ async function onTransferSave() {
 // ---------------- 客服快捷派单 ----------------
 const dispatchVisible = ref(false)
 const dispatching = ref(false)
+const dispatchRequestId = ref('')
 const bossLoading = ref(false)
 const providerLoading = ref(false)
 const bossOptions = ref<any[]>([])
@@ -673,31 +718,68 @@ const dispatchForm = reactive<any>({
   customer_id: undefined,
   service_id: undefined,
   game_rounds: 1,
+  provider_gender: 'ANY',
   escort_mode: 'SINGLE',
   providers: [{ provider_id: undefined, commission_type: 'PERCENT', commission_rate: 0, commission_fixed: 0 }],
   remark: '',
 })
 
-const estimateAmount = computed(() => {
-  if (!currentService.value) return 0
-  return currentService.value.price * (dispatchForm.game_rounds || 1)
-})
+const dispatchQuote = ref<{ amount: number; original_amount: number; boss_discount: number; promo_discount: number; commission_policy?: string; commission_fixed_total?: number | null }>()
+const quoteLoading = ref(false)
+let quoteSequence = 0
+const estimateAmount = computed(() => dispatchQuote.value?.amount || 0)
+async function refreshDispatchQuote() {
+  const sequence = ++quoteSequence
+  dispatchQuote.value = undefined
+  quoteLoading.value = false
+  if (!dispatchVisible.value || !dispatchForm.customer_id || !dispatchForm.service_id) return
+  quoteLoading.value = true
+  try {
+    const result = await request({ url: '/orders/dispatch-quote/', params: {
+      customer_id: dispatchForm.customer_id, service_id: dispatchForm.service_id, game_rounds: dispatchForm.game_rounds,
+    } })
+    if (sequence === quoteSequence) {
+      dispatchQuote.value = result.data
+      if (dispatchQuote.value?.commission_policy && dispatchQuote.value.commission_policy !== 'LEGACY') {
+        dispatchForm.providers.forEach((slot: any) => { slot.commission_type = 'PERCENT' })
+      }
+    }
+  } catch {
+    // 请求层显示失败原因，禁止使用过期报价继续派单。
+  } finally {
+    if (sequence === quoteSequence) quoteLoading.value = false
+  }
+}
+watch(() => [dispatchVisible.value, dispatchForm.customer_id, dispatchForm.service_id, dispatchForm.game_rounds], refreshDispatchQuote)
+
+function providerBase(slot: any): number {
+  const count = dispatchForm.escort_mode === 'DOUBLE' ? 2 : 1
+  const index = dispatchForm.providers.indexOf(slot)
+  return Math.floor(estimateAmount.value / count) + (index < estimateAmount.value % count ? 1 : 0)
+}
 
 function providerIncome(slot: any): number {
+  if (dispatchQuote.value?.commission_fixed_total != null) {
+    const count = dispatchForm.escort_mode === 'DOUBLE' ? 2 : 1
+    const total = dispatchQuote.value.commission_fixed_total
+    const index = dispatchForm.providers.indexOf(slot)
+    return providerBase(slot) - Math.floor(total / count) - (index < total % count ? 1 : 0)
+  }
   if (slot.commission_type === 'FIXED') {
     const fixedRawAmount = Math.max(xaCoinToAmount(slot.commission_fixed), 0)
-    return Math.max(estimateAmount.value - Math.min(fixedRawAmount, estimateAmount.value), 0)
+    return Math.max(providerBase(slot) - Math.min(fixedRawAmount, providerBase(slot)), 0)
   }
   const rate = Math.min(Math.max(Number(slot.commission_rate) || 0, 0), 100)
-  return Math.floor((estimateAmount.value * (100 - rate)) / 100)
+  return providerBase(slot) - Math.floor((providerBase(slot) * rate) / 100)
 }
 
 function providerIncomeDesc(slot: any): string {
+  if (dispatchQuote.value?.commission_fixed_total != null) return '整单固定抽成3元，由参与打手均分承担'
   if (slot.commission_type === 'FIXED') {
     const fixedRawAmount = Math.max(xaCoinToAmount(slot.commission_fixed), 0)
-    return `订单金额 ${amountToXaCoin(estimateAmount.value)}币 - 固定抽成 ${amountToXaCoin(fixedRawAmount)}币`
+    return `本人折后份额 ${amountToXaCoin(providerBase(slot))}币 - 固定抽成 ${amountToXaCoin(fixedRawAmount)}币`
   }
-  return `订单金额 ${amountToXaCoin(estimateAmount.value)}币 × ${100 - (slot.commission_rate || 0)}%`
+  return `本人折后份额 ${amountToXaCoin(providerBase(slot))}币 × ${100 - (slot.commission_rate || 0)}%`
 }
 
 function orderProviderCommissionDesc(provider: any): string {
@@ -733,6 +815,7 @@ async function onProviderPicked(idx: number) {
       params: { service_id: dispatchForm.service_id, provider_id: slot.provider_id },
     }) as any
     if (res.data && typeof res.data.commission_rate === 'number') {
+      if (dispatchQuote.value?.commission_policy && dispatchQuote.value.commission_policy !== 'LEGACY') slot.commission_type = 'PERCENT'
       slot.commission_rate = res.data.commission_rate
       slot.suggested_rate = res.data.commission_rate
       slot.source_label = res.data.source_label || ''
@@ -751,11 +834,13 @@ function restoreSuggestedRate(idx: number) {
 }
 
 async function onDispatch() {
+  dispatchRequestId.value = `dispatch-${Date.now()}-${Math.random().toString(36).slice(2)}`
   Object.assign(dispatchForm, {
     customer_id: undefined,
     service_id: undefined,
     game_rounds: 1,
-    escort_mode: 'SINGLE',
+    provider_gender: 'ANY',
+  escort_mode: 'SINGLE',
     providers: [{ provider_id: undefined, commission_type: 'PERCENT', commission_rate: 0, commission_fixed: 0 }],
     remark: '',
   })
@@ -765,7 +850,7 @@ async function onDispatch() {
   providerOptions.value = []
   dispatchVisible.value = true
   // 预加载服务列表
-  const res = await serviceItemApi.list({ is_active: 1, page_size: 200 }) as any
+  const res = await serviceItemApi.allOptions({ is_active: 1 }) as any
   serviceOptions.value = res.data?.list || []
 }
 
@@ -773,7 +858,7 @@ async function searchBoss(keyword: string) {
   if (!keyword) { bossOptions.value = []; return }
   bossLoading.value = true
   try {
-    const res = await userApi.list({ role: 'CUSTOMER', keyword, page_size: 20 }) as any
+    const res = await userApi.options({ keyword, page_size: 20 }) as any
     bossOptions.value = res.data?.list || []
   } finally {
     bossLoading.value = false
@@ -798,14 +883,15 @@ async function searchProvider(keyword: string) {
   if (!keyword) { providerOptions.value = []; return }
   providerLoading.value = true
   try {
-    const res = await escortApi.list({ keyword, page_size: 20 }) as any
-    providerOptions.value = res.data?.list || []
+    const res = await escortApi.options({ keyword, service_id: dispatchForm.service_id || undefined, page_size: 20 }) as any
+    providerOptions.value = (res.data?.list || []).map((p: any) => ({...p,qualifications: (p.qualifications || []).filter((q: any) => !currentService.value?.provider_kind || (q.provider_kind === currentService.value.provider_kind && q.platform === currentService.value.platform && q.security_level === currentService.value.security_level && q.game_category === currentService.value.game_category_id))}))
   } finally {
     providerLoading.value = false
   }
 }
 
 async function onDispatchSave() {
+  if (dispatching.value) return
   if (!dispatchForm.customer_id) { ElMessage.warning('请选择下单老板'); return }
   if (!dispatchForm.service_id) { ElMessage.warning('请选择服务'); return }
   if (!dispatchForm.game_rounds || dispatchForm.game_rounds < 1) {
@@ -818,6 +904,7 @@ async function onDispatchSave() {
     const ids = picked.map((s: any) => s.provider_id)
     if (new Set(ids).size !== ids.length) { ElMessage.warning('不可重复指派同一打手'); return }
   }
+  if (quoteLoading.value || !dispatchQuote.value) { ElMessage.warning('请等待成交价计算完成后再派单'); return }
   if (insufficient.value) { ElMessage.warning('老板余额不足，无法派单'); return }
   const providersPayload = picked.map((s: any) => (
     s.commission_type === 'FIXED'
@@ -834,17 +921,25 @@ async function onDispatchSave() {
   ))
   dispatching.value = true
   try {
-    await orderApi.collectionAction('dispatch', {
+    const result = await orderApi.collectionAction('dispatch', {
+      client_request_id: dispatchRequestId.value,
       customer_id: dispatchForm.customer_id,
       service_id: dispatchForm.service_id,
       game_rounds: dispatchForm.game_rounds,
+      expected_amount: dispatchQuote.value.amount,
       escort_mode: dispatchForm.escort_mode,
+      provider_gender: dispatchForm.provider_gender,
       providers: providersPayload,
       remark: dispatchForm.remark,
     })
     ElMessage.success('派单成功')
     dispatchVisible.value = false
     tableRef.value.load()
+    if (result.data?.status === 'PENDING') onDispatchMessage(result.data)
+  } catch (error: any) {
+    if ((error?.response?.data || error)?.errorCode === 'PRICE_CHANGED') {
+      await refreshDispatchQuote()
+    }
   } finally {
     dispatching.value = false
   }
@@ -865,7 +960,7 @@ async function onStart(row: any) {
 
 async function onComplete(row: any) {
   try {
-    await ElMessageBox.confirm('确认完成该订单？将给打手钱包结算入账。', '完成结算', {
+    await ElMessageBox.confirm('确认服务已经完成？新订单需全体打手报单审核通过后结算。', '完成服务', {
       type: 'warning',
     })
   } catch {
@@ -877,16 +972,19 @@ async function onComplete(row: any) {
 }
 
 let offOrderWs: (() => void) | null = null
+let offConnected: (() => void) | null = null
 
 onMounted(() => {
   adminWs.connect()
   offOrderWs = adminWs.on('order_status_update', () => {
     tableRef.value?.load()
   })
+  offConnected = adminWs.on('connected', () => { tableRef.value?.load() })
 })
 
 onUnmounted(() => {
   offOrderWs?.()
+  offConnected?.()
 })
 </script>
 
@@ -910,24 +1008,6 @@ onUnmounted(() => {
   color: var(--muted-foreground);
 }
 
-.od-form-section {
-  margin-bottom: 4px;
-}
-.od-form-section + .od-form-section {
-  margin-top: 8px;
-}
-.od-section-title {
-  margin: 0 0 12px;
-  padding-left: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--foreground);
-  border-left: 3px solid var(--primary);
-  line-height: 1.2;
-}
-.od-form-section :deep(.el-form-item) {
-  margin-bottom: 16px;
-}
 
 .od-provider-row {
   padding: 12px 12px 0;

@@ -1,0 +1,1 @@
+.page > .subtitle { margin-bottom: 28rpx; }.announcement { margin-top: 20rpx; }.announcement .section-title { margin: 18rpx 0 2rpx; font-size: 30rpx; line-height: 1.65; }.announcement .between { gap: 12rpx; }.announcement .between .small { flex: 1; }

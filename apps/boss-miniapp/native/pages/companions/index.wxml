@@ -1,0 +1,27 @@
+<view class="page companions">
+  <view wx:if="{{!logged}}" class="panel companion-guest"><image class="guest-icon" src="/assets/icons/headphones.png"/><view class="section-title">找到合拍的陪玩</view><view class="muted">登录后按游戏挑选，试听声音，查看服务记录。</view><button class="xa-button button login-button" bindtap="login" hover-class="xa-button-hover">微信快捷登录</button></view>
+  <block wx:else>
+    <view wx:if="{{serviceId}}" class="panel service-context"><view class="small muted">为这项服务挑选陪玩</view><view class="section-title">{{serviceName || '正在读取服务'}}</view><view wx:if="{{serviceRequirement}}" class="small muted">{{serviceRequirement}} · 同范围高档可接低档</view><button class="xa-button button-secondary" bindtap="platform" hover-class="xa-button-hover">交给平台派单</button></view>
+    <view class="companion-search-panel">
+      <view class="companion-heading"><view class="title">找到合拍的陪玩</view><text class="subtitle">挑选游戏，听听声音，再约下一局</text></view>
+      <view class="search-field"><image src="/assets/icons/search.png"/><input class="input" placeholder="搜索昵称、段位或城市" value="{{keyword}}" bindinput="search" aria-label="搜索陪玩" /></view>
+      <view wx:if="{{!serviceId && categories.length}}" class="game-filter-group"><text class="filter-group-label">游戏</text><scroll-view scroll-x class="category-scroll" show-scrollbar="{{false}}"><view class="chips"><button wx:for="{{categories}}" wx:key="id" class="xa-button game-filter-button {{category === item.id ? 'game-filter-active' : ''}}" data-id="{{item.id}}" bindtap="chooseCategory" aria-pressed="{{category === item.id}}" hover-class="xa-button-hover"><image class="game-icon" src="{{item.iconUrl}}" mode="aspectFit" aria-hidden="true"/><text>{{item.name}}</text></button></view></scroll-view></view>
+      <view class="filter-grid">
+        <block wx:if="{{!serviceId}}"><picker wx:for="{{scopeFields}}" wx:key="key" range="{{item.options}}" range-key="label" value="{{item.index}}" disabled="{{item.disabled}}" data-key="{{item.key}}" bindchange="chooseScope"><view class="filter-control {{item.disabled ? 'filter-disabled' : ''}} {{item.index ? 'filter-selected' : ''}}"><view class="filter-control-copy"><text class="filter-caption">{{item.label}}</text><text class="filter-value">{{item.options[item.index].label}}</text></view><image class="filter-arrow" src="/assets/icons/chevron.png" aria-hidden="true"/></view></picker></block>
+        <picker range="{{genderOptions}}" value="{{genderIndex}}" bindchange="chooseGender" disabled="{{fromCheckout}}"><view class="filter-control {{genderIndex ? 'filter-selected' : ''}}"><view class="filter-control-copy"><text class="filter-caption">性别{{fromCheckout ? '（按订单）' : ''}}</text><text class="filter-value">{{genderOptions[genderIndex]}}</text></view><image wx:if="{{!fromCheckout}}" class="filter-arrow" src="/assets/icons/chevron.png" aria-hidden="true"/></view></picker>
+        <picker mode="selector" range="{{sortOptions}}" value="{{sort}}" bindchange="chooseSort"><view class="filter-control {{sort ? 'filter-selected' : ''}}"><view class="filter-control-copy"><text class="filter-caption">排序</text><text class="filter-value">{{sortLabels[sort]}}</text></view><image class="filter-arrow" src="/assets/icons/chevron.png" aria-hidden="true"/></view></picker>
+      </view>
+      <view class="filter-tools"><button class="xa-button filter-control filter-toggle {{voiceOnly ? 'filter-selected' : ''}}" bindtap="toggleVoice" aria-pressed="{{voiceOnly}}" hover-class="xa-button-hover"><image src="/assets/icons/headphones.png" aria-hidden="true"/><text>只看有语音</text><view class="filter-check {{voiceOnly ? 'filter-check-active' : ''}}"/></button><button class="xa-button filter-control filter-clear reset-filters" bindtap="resetFilters" disabled="{{!(voiceOnly || sort || keyword || hasScope || category || (genderIndex && !fromCheckout))}}" hover-class="xa-button-hover">重置筛选</button></view>
+      <view class="result-summary"><text>陪玩列表</text><text class="muted">{{visible.length}} 位符合条件</text></view>
+    </view>
+    <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !visible.length}}" bind:retry="load" />
+    <view wx:if="{{!loading && !error}}" class="companion-grid">
+      <button wx:for="{{visible}}" wx:key="id" class="xa-button companion-card" data-id="{{item.id}}" bindtap="openDetail" hover-class="xa-button-hover" aria-label="{{'查看陪玩 ' + item.nickname + ' 的详情'}}">
+        <view class="companion-portrait"><image wx:if="{{item.avatarUrl}}" class="companion-avatar" src="{{item.avatarUrl}}" mode="aspectFill" lazy-load/><view wx:else class="companion-avatar companion-initial">{{item.initial}}</view></view>
+        <text class="companion-name">{{item.nickname}}</text>
+        <text class="companion-level">{{item.level_name || '等级暂未设置'}}{{item.gender === 'MALE' ? ' · 男陪' : item.gender === 'FEMALE' ? ' · 女陪' : ''}}</text>
+        <view class="companion-monthly"><text class="companion-monthly-label">本月接单额</text><text class="companion-monthly-value">{{item.monthlyAmountText}}<text class="companion-monthly-unit"> 兴安币</text></text></view>
+      </button>
+    </view>
+  </block>
+</view>

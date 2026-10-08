@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, ScrollView } from '@tarojs/components';
+import { View, Text, Image } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { clearStoredUser, getStoredUser, LoginUser } from '@/utils/auth';
 import { fetchEscortMe, EscortMeProfile, updateEscortStatus, EscortStatus } from '@/services/user';
@@ -9,6 +9,7 @@ import { fetchDepositInfo, payDeposit, DepositOverview } from '@/services/wallet
 import { formatXaCoin } from '@/utils/format';
 import styles from './index.module.scss';
 import PlatformLayout from '@/components/PlatformLayout';
+import PageHeading from '@/components/PageHeading';
 import ReplyDialog from '@/components/ReplyDialog';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -150,7 +151,8 @@ const MinePage: React.FC = () => {
   };
 
   return (
-    <PlatformLayout active='mine'><ScrollView className={styles.container} scrollY>
+    <PlatformLayout active='mine'><View className={`xa-provider-page ${styles.container}`}>
+      <PageHeading title='个人中心' hint='维护展示资料、服务档期与接单状态' />
       <View className={styles.header}>
         <Image
           className={styles.avatar}
@@ -198,7 +200,7 @@ const MinePage: React.FC = () => {
         <View className={styles.card}>
           <View className={styles.cardHeader}>
             <Text className={styles.cardTitle}>押金</Text>
-            {deposit.deposit_remaining > 0 && (
+            {deposit.deposit_remaining > 0 && deposit.deposit_mode !== 'EARNINGS' && (
               <Text className={styles.cardAction} onClick={handlePayDeposit}>去缴纳</Text>
             )}
           </View>
@@ -206,6 +208,7 @@ const MinePage: React.FC = () => {
             <Text className={styles.depositLabel}>应缴</Text>
             <Text className={styles.depositValue}>{formatXaCoin(deposit.deposit_required)}币</Text>
           </View>
+          {deposit.deposit_mode === 'EARNINGS' && <Text>单抵押金为现金的2倍：净收益{deposit.deposit_percent ?? 60}%抵押金、{100 - (deposit.deposit_percent ?? 60)}%结款，抵满后全部结款；结款部分{deposit.hold_hours ? '冻结' + deposit.hold_hours + '小时后解冻' : '按订单规则入账'}。</Text>}
           <View className={styles.depositRow}>
             <Text className={styles.depositLabel}>已缴</Text>
             <Text className={styles.depositValue}>{formatXaCoin(deposit.deposit_paid)}币</Text>
@@ -242,18 +245,21 @@ const MinePage: React.FC = () => {
       )}
 
       <View className={styles.menuCard}>
+        <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/points/index' })}>
+          <Text className={styles.menuIcon}>积</Text><Text className={styles.menuText}>我的积分与兑换</Text><Text className={styles.menuArrow}>›</Text>
+        </View>
         <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/profile/index' })}>
-          <Text className={styles.menuIcon}>🪪</Text>
+          <Text className={styles.menuIcon}>档</Text>
           <Text className={styles.menuText}>资料与档期</Text>
           <Text className={styles.menuArrow}>›</Text>
         </View>
         <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/skills/index' })}>
-          <Text className={styles.menuIcon}>🎮</Text>
+          <Text className={styles.menuIcon}>技</Text>
           <Text className={styles.menuText}>我的技能</Text>
           <Text className={styles.menuArrow}>›</Text>
         </View>
         <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/evaluations/index' })}>
-          <Text className={styles.menuIcon}>⭐️</Text>
+          <Text className={styles.menuIcon}>评</Text>
           <Text className={styles.menuText}>评价管理</Text>
           {evaluations.some(item => !item.reply_content) && (
             <Text className={styles.menuBadge}>{evaluations.filter(item => !item.reply_content).length}</Text>
@@ -261,12 +267,12 @@ const MinePage: React.FC = () => {
           <Text className={styles.menuArrow}>›</Text>
         </View>
         <View className={styles.menuItem} onClick={() => Taro.switchTab({ url: '/pages/wallet/index' })}>
-          <Text className={styles.menuIcon}>💰</Text>
+          <Text className={styles.menuIcon}>币</Text>
           <Text className={styles.menuText}>我的钱包</Text>
           <Text className={styles.menuArrow}>›</Text>
         </View>
         <View className={styles.menuItem} onClick={handleLogout}>
-          <Text className={styles.menuIcon}>🚪</Text>
+          <Text className={styles.menuIcon}>退</Text>
           <Text className={styles.menuText}>退出登录</Text>
           <Text className={styles.menuArrow}>›</Text>
         </View>
@@ -280,7 +286,7 @@ const MinePage: React.FC = () => {
         onClose={() => setReplying(null)}
         onSubmit={handleReplyEvaluation}
       />
-    </ScrollView></PlatformLayout>
+    </View></PlatformLayout>
   );
 };
 

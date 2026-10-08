@@ -1,4 +1,10 @@
 export interface ProviderOrder {
+  provider_requirement?: {game_category_id:number;provider_kind:string;platform:string;security_level:string;grade:string;label:string};
+  dispatch_notification_enabled?:boolean;
+  requires_boss_selection?: boolean;
+  escort_mode?: 'SINGLE' | 'DOUBLE';
+  participants?: Array<{ id: number; nickname: string }>;
+  my_applications?: Array<{ id: number; team_size: number; status: string; ready: boolean; is_partner: boolean; partner_confirmed: boolean; members: Array<{ id: number; nickname: string; level: string }> }>;
   id: number;
   order_no: string;
   status: 'PENDING' | 'GRABBED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED';
@@ -6,11 +12,13 @@ export interface ProviderOrder {
   amount: number;
   expected_income: number;
   commission_rate: number;
+  provider_gender?: 'ANY' | 'MALE' | 'FEMALE';
   game_rounds: number;
   game_region: string;
   game_nickname: string;
   game_uid: string;
   remark: string;
+  fulfillment?: string;
   service?: { id: number; name: string };
   customer?: {
     id: number;

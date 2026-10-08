@@ -1,0 +1,43 @@
+.checkout { background: #f5f1e9; padding-bottom: calc(170rpx + env(safe-area-inset-bottom)); }
+.checkout-header { padding: 26rpx 24rpx 0; margin-bottom: 28rpx; border: 1rpx solid var(--xa-color-border); border-radius: 24rpx; background: #fffdf5; }
+.checkout-header .title { font-size: 38rpx; }
+.checkout-header .subtitle { margin-top: 8rpx; font-size: 25rpx; }
+.checkout-steps { display: flex; align-items: center; justify-content: space-between; gap: 10rpx; padding: 22rpx 0; margin-top: 24rpx; border-top: 1rpx solid var(--xa-color-border); color: var(--xa-color-muted); font-size: 24rpx; }
+.checkout-steps > text { flex-shrink: 0; }
+.checkout-steps .current { color: var(--xa-color-primary); font-weight: 600; }
+.checkout .panel { padding: 26rpx; margin: 0 0 24rpx; border-radius: 24rpx; }
+.checkout .panel > .section-title { margin: 0 0 24rpx; padding-bottom: 20rpx; border-bottom: 1rpx solid var(--xa-color-border); font-size: 30rpx; }
+.checkout .checkout-service { align-items: center; gap: 22rpx; }
+.checkout-service > view { flex: 1; min-width: 0; }
+.service-cover { width: 128rpx; height: 144rpx; border-radius: 16rpx; flex-shrink: 0; }
+.checkout-service .section-title { margin-bottom: 12rpx; font-size: 29rpx; line-height: 1.5; }
+.checkout-service .price { font-size: 36rpx; }
+.checkout-service .small { font-size: 23rpx; }
+.checkout .panel .field { margin: 24rpx 0; }
+.checkout .panel .field:last-child { margin-bottom: 0; }
+.checkout .label { margin-bottom: 12rpx; font-size: var(--xa-control-font); }
+.checkout .input { min-height: var(--xa-input-height); border-radius: 16rpx; background: #f7f4ec; border-color: #f7f4ec; font-size: var(--xa-control-font); }
+.checkout .input:focus { border-color: var(--xa-color-primary); }
+.checkout textarea.input { height: max(144rpx, 72px); padding: 16rpx 18rpx; }
+.checkout .arrangement-panel > .field { display: flex; align-items: center; justify-content: space-between; gap: 24rpx; margin-top: 0; padding-bottom: 24rpx; border-bottom: 1rpx solid var(--xa-color-border); }
+.checkout .arrangement-panel > .field .label { margin: 0; flex-shrink: 0; }
+.checkout .arrangement-panel > .field .input { width: max(128rpx, 64px); min-height: var(--xa-input-height); height: var(--xa-input-height); padding: 0 12rpx; text-align: center; }
+.checkout .menu-row { min-height: var(--xa-control-height); padding: 12rpx 0; font-size: 27rpx; }
+.checkout .menu-row > text:last-child { max-width: 68%; font-size: 25rpx; }
+.checkout .arrangement-panel > .menu-row { padding-top: 0; }
+.checkout .arrangement-panel > picker .menu-row { border-top: 1rpx solid var(--xa-color-border); padding-bottom: 0; }
+.checkout .payment-panel > picker .menu-row { padding-top: 0; padding-bottom: 22rpx; margin-bottom: 20rpx; border-bottom: 1rpx solid var(--xa-color-border); }
+.checkout .payment-panel .between { margin: 18rpx 0; font-size: 26rpx; }
+.checkout .payment-panel .price { font-size: 36rpx; }
+.checkout .payment-panel .subtitle { padding: 16rpx 18rpx; margin-top: 20rpx; background: #f5f1e9; border-radius: 12rpx; font-size: 24rpx; }
+.checkout .bottom-bar .xa-button.button { min-height: var(--xa-control-height); padding: 8rpx 20rpx; border-radius: 16rpx; font-size: var(--xa-control-font); }
+
+.shortcut-heading { margin: 24rpx 0 16rpx; font-size: 27rpx; font-weight: 600; }
+.shortcut-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12rpx; }
+.checkout .shortcut-card { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 14rpx 6rpx; margin: 0; line-height: 1.5; border: 2rpx solid var(--xa-color-border); border-radius: 16rpx; background: var(--xa-color-surface); color: var(--xa-color-text); }
+.checkout .shortcut-selected { border-color: var(--xa-color-primary); background: var(--xa-color-primary-soft); }
+.shortcut-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; flex-shrink: 0; }
+.shortcut-initial { display: flex; align-items: center; justify-content: center; background: var(--xa-color-primary-soft); color: var(--xa-color-primary); }
+.shortcut-name { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: 24rpx; margin-top: 10rpx; }
+.shortcut-card .small { font-size: 21rpx; }
+.shortcut-unavailable { opacity: .6; }

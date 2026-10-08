@@ -5,6 +5,19 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
+def default_settlement_mode():
+    return getattr(settings, 'ORDER_SETTLEMENT_MODE', 'REPORT_APPROVAL')
+
+
+class ProviderDispatchLock(models.Model):
+    """每名打手一个派单互斥行，生命周期与业务账号一致。"""
+
+    account = models.OneToOneField(
+        'club_accounts.ClubAccount', on_delete=models.CASCADE,
+        primary_key=True, related_name='dispatch_lock',
+    )
+
+
 class GameCategory(models.Model):
     """游戏类目字典：具体游戏（王者荣耀、和平精英等），供服务项下拉选择。"""
 
@@ -33,6 +46,7 @@ class ServiceCategory(models.Model):
     """分类字典：服务性质（陪玩服务/礼品套餐等），is_gift 标记是否礼物类。"""
 
     name = models.CharField(max_length=50, unique=True)
+    order_kind = models.CharField(max_length=16, blank=True, default='', choices=[('', '其他'), ('GUARD', '护航'), ('COMPANION', '陪玩'), ('GRIND', '代肝'), ('RANK', '上分')])
     is_gift = models.BooleanField(default=False, help_text='是否礼物类：影响看板礼物/游戏流水拆分')
     remark = models.CharField(max_length=255, blank=True, default='')
     sort_order = models.PositiveIntegerField(default=0)
@@ -46,8 +60,96 @@ class ServiceCategory(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        if not self.order_kind and not self.is_gift:
+            self.order_kind = {'护航':'GUARD','陪玩':'COMPANION','陪玩单':'COMPANION','代肝':'GRIND','上分':'RANK'}.get(self.name, '')
+        super().save(*args, **kwargs)
+
+
+class Gameplay(models.Model):
+    class Kind(models.TextChoices):
+        STANDARD = 'STANDARD', '普通玩法'
+        ROULETTE = 'ROULETTE', '转盘单'
+
+    name = models.CharField(max_length=40, unique=True)
+    code = models.SlugField(max_length=40, unique=True)
+    kind = models.CharField(max_length=12, choices=Kind.choices, default=Kind.STANDARD)
+    subtitle = models.CharField(max_length=100, blank=True, default='')
+    cover_url = models.URLField(blank=True, default='')
+    theme = models.CharField(max_length=20, default='roulette', choices=[
+        (v, v) for v in ['roulette', 'experience', 'companion', 'fun', 'mission', 'extraction', 'prison', 'custom']
+    ])
+    rules = models.TextField(blank=True, default='')
+    details_html = models.TextField(blank=True, default='', help_text='价目下方的玩法富文本；商品可单独覆盖')
+    is_archived = models.BooleanField(default=False, db_index=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sort_order', 'id']
+
+    def __str__(self):
+        return self.name
+
 
 class ServiceItem(models.Model):
+    class CommissionPolicy(models.TextChoices):
+        LEGACY = 'LEGACY', '原有抽成规则'
+        EXPERIENCE = 'EXPERIENCE', '体验单：低于100元抽3元，100元及以上抽10%'
+        COMPANION = 'COMPANION', '陪玩单：20%'
+        REGULAR = 'REGULAR', '常规单：陪玩等级抽成'
+        FUN = 'FUN', '趣味单：陪玩等级抽成'
+
+    class ExperienceKind(models.TextChoices):
+        NONE = '', '普通服务'
+        NEW_FIRST = 'NEW_FIRST', '新客首单'
+        NEW_VALUE = 'NEW_VALUE', '新客超值'
+        DAILY = 'DAILY', '每日一单'
+        DAILY_VALUE = 'DAILY_VALUE', '每日超值'
+
+    experience_kind = models.CharField(max_length=16, choices=ExperienceKind.choices, blank=True, default='')
+    allows_discount_coupons = models.BooleanField(default=False, help_text='仅开启的普通服务可使用折扣券')
+    service_type = models.CharField(max_length=20, default='REGULAR', choices=[('REGULAR', '常规单'), ('ACTIVITY_LIMITED', '活动限定单'), ('PROMOTIONAL', '促销单'), ('COMPANION', '陪玩单'), ('EXPERIENCE', '体验单')])
+    benefit_kind = models.CharField(max_length=20, blank=True, default='', choices=[('', '无'), ('COMPANION_HOUR', '小时陪玩'), ('SAFEBOX_33', '33安全箱代肝主套餐')])
+    commission_policy = models.CharField(max_length=12, choices=CommissionPolicy.choices, default=CommissionPolicy.LEGACY)
+    provider_kind = models.CharField(max_length=12, blank=True, default='', db_default='', choices=[('','未配置'),('GUARD','护航'),('COMPANION','陪玩'),('GRIND','代肝'),('RANK','上分')])
+    provider_grade = models.CharField(max_length=16, blank=True, default='', db_default='', choices=[('','不限档位'),('ENTERTAINMENT','娱乐'),('TECHNICAL','技术'),('MASTER','大师'),('KING','王者'),('LEGEND','传奇'),('GLORY','荣耀'),('STAR','明星'),('OPEN','不分档')])
+    class PurchaseMode(models.TextChoices):
+        DIRECT = 'DIRECT', '直接下单'
+        CONSULT = 'CONSULT', '客服确认'
+
+    class Platform(models.TextChoices):
+        MOBILE = 'MOBILE', '手游'
+        PC = 'PC', '端游'
+
+    class SecurityLevel(models.TextChoices):
+        CONFIDENTIAL = 'CONFIDENTIAL', '机密'
+        TOP_SECRET = 'TOP_SECRET', '绝密'
+        ANY = 'ANY', '不限难度'
+
+    catalog_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    catalog_source = models.TextField(blank=True, default='')
+    catalog_family = models.CharField(max_length=100, blank=True, default='', help_text='同一游戏、目录下相同名称的玩法合并展示')
+    catalog_variant = models.CharField(max_length=150, blank=True, default='', help_text='玩法详情内的套餐档位名称')
+    price_unit = models.CharField(max_length=20, default='份')
+    billing_provider_count = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(2)], help_text='每人计价的双陪套餐为2；已含全部陪玩的总价为1')
+    gift_naming_days = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(3650)], help_text='每件礼物累计的冠名天数，0 表示无冠名权益')
+    gift_festival = models.CharField(max_length=40, blank=True, default='', help_text='节日限定标识；为空表示常规礼物')
+    gift_starts_at = models.DateTimeField(null=True, blank=True)
+    gift_ends_at = models.DateTimeField(null=True, blank=True)
+    is_addon = models.BooleanField(default=False, help_text='须关联主订单的加仓、升级或其他附加费用')
+    purchase_mode = models.CharField(max_length=10, choices=PurchaseMode.choices, default=PurchaseMode.DIRECT)
+    purchase_note = models.CharField(max_length=255, blank=True, default='')
+
+    gameplay = models.ForeignKey(Gameplay, null=True, blank=True, on_delete=models.PROTECT, related_name='services')
+    platform = models.CharField(max_length=10, choices=Platform.choices, blank=True, default='')
+    security_level = models.CharField(max_length=15, choices=SecurityLevel.choices, blank=True, default='')
+    rules = models.TextField(blank=True, default='')
+    details_html = models.TextField(blank=True, default='', help_text='当前价目玩法详情；留空使用所属玩法的富文本')
+    rules_images = models.JSONField(default=list, blank=True)
+    introduction_images = models.JSONField(default=list, blank=True, help_text='玩法简介广告，与完整履约规则分别展示')
+    roulette_pool = models.JSONField(default=list, blank=True)
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=255, blank=True, default='')
     price = models.PositiveIntegerField()  # 兴安币价格（内部账务单位）
@@ -150,6 +252,10 @@ class ServiceFavorite(models.Model):
 
 
 class Order(models.Model):
+    class SettlementMode(models.TextChoices):
+        COMPLETION = 'COMPLETION', '完成服务结算'
+        REPORT_APPROVAL = 'REPORT_APPROVAL', '报单审核后结算'
+
     class Status(models.TextChoices):
         PENDING = 'PENDING', '待接单'
         GRABBED = 'GRABBED', '已接单'
@@ -172,6 +278,12 @@ class Order(models.Model):
     # 单个陪玩同时进行中订单（已接单 + 服务中）的数量上限
     MAX_CONCURRENT_ORDERS = 3
 
+    business_cycle = models.PositiveIntegerField(default=1, editable=False)
+    experience_kind = models.CharField(max_length=16, blank=True, default='', editable=False)
+    is_gift_snapshot = models.BooleanField(default=False, editable=False)
+    report_ready_at = models.DateTimeField(null=True, blank=True, editable=False)
+    consumption_ready_at = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
+    consumption_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
     order_no = models.CharField(max_length=32, unique=True, blank=True, default='', db_index=True)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='placed_orders')
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_orders')
@@ -199,10 +311,20 @@ class Order(models.Model):
         related_name='orders',
     )
     support_contact_name_snapshot = models.CharField(max_length=50, blank=True, default='')
+    class ProviderGender(models.TextChoices):
+        ANY = 'ANY', '不限'
+        MALE = 'MALE', '男陪'
+        FEMALE = 'FEMALE', '女陪'
+
+    provider_gender = models.CharField(max_length=6, choices=ProviderGender.choices, default=ProviderGender.ANY, db_default=ProviderGender.ANY)
     amount = models.PositiveIntegerField()
     game_rounds = models.PositiveIntegerField(default=1)
     customer_phone_snapshot = models.CharField(max_length=20, blank=True, default='')
+    requires_boss_selection = models.BooleanField(default=False)
     provider_name_snapshot = models.CharField(max_length=50, blank=True, default='')
+    provider_requirement_snapshot = models.JSONField(default=dict, db_default={}, blank=True)
+    gameplay_snapshot = models.JSONField(default=dict, blank=True)
+    roulette_result = models.JSONField(default=dict, blank=True)
     service_name_snapshot = models.CharField(max_length=100, blank=True, default='')
     unit_price_snapshot = models.PositiveIntegerField(default=0)
     # 兴安币计价明细（下单时以内部账务单位落库）
@@ -216,6 +338,8 @@ class Order(models.Model):
     )  # 命中的促销活动快照
     # 兴安币拆账字段（下单时按服务抽成率计算并以内部账务单位落库）
     commission_rate = models.PositiveSmallIntegerField(default=0)  # 平台抽成率快照(%)
+    commission_policy = models.CharField(max_length=12, choices=ServiceItem.CommissionPolicy.choices, default='LEGACY')
+    income_hold_hours = models.PositiveSmallIntegerField(default=0)
     provider_income = models.PositiveIntegerField(default=0)  # 陪玩实得
     inviter = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -229,6 +353,7 @@ class Order(models.Model):
         related_name='referred_orders',
     )
     inviter_commission = models.PositiveIntegerField(default=0)  # 推荐人分佣
+    inviter_commission_rate_snapshot = models.PositiveSmallIntegerField(default=0)
     shop_income = models.PositiveIntegerField(default=0)  # 店铺/平台留存
     # 老板下单时填写的游戏账号资料（结构化落库，供陪玩端与后台读取）
     game_region = models.CharField(max_length=50, blank=True, default='')
@@ -248,6 +373,8 @@ class Order(models.Model):
     grabbed_at = models.DateTimeField(blank=True, null=True)
     in_service_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
+    settlement_mode = models.CharField(max_length=20, choices=SettlementMode.choices, default=default_settlement_mode)
+    settled_at = models.DateTimeField(blank=True, null=True)
     cancelled_at = models.DateTimeField(blank=True, null=True)
     refunded_at = models.DateTimeField(blank=True, null=True)
     cancel_reason = models.CharField(max_length=255, blank=True, default='')
@@ -314,6 +441,20 @@ class Order(models.Model):
         ]
 
     def save(self, *args, **kwargs):
+        if self._state.adding and self.service_id:
+            from .gameplay import make_order_snapshot
+            from wallet.club_rules import order_hold_hours
+            self.business_cycle = self.customer_account.business_cycle if self.customer_account_id else 1
+            self.experience_kind = self.service.experience_kind
+            self.is_gift_snapshot = bool(self.service.service_category_id and self.service.service_category.is_gift)
+            self.commission_policy = self.service.commission_policy
+            from users.qualifications import service_requirement
+            requirement=service_requirement(self.service)
+            self.provider_requirement_snapshot = dict(requirement, commission_rate=self.commission_rate) if requirement else {}
+            self.income_hold_hours = order_hold_hours()
+            if self.inviter_id:
+                self.inviter_commission_rate_snapshot = self.customer_account.inviter_commission_rate if self.customer_account_id else self.customer.inviter_commission_rate
+            self.gameplay_snapshot, self.roulette_result = make_order_snapshot(self.service, self.game_rounds, companion_assignment=self.escort_mode == self.EscortMode.DOUBLE)
         if not self.order_no:
             self.order_no = f"ORD{uuid.uuid4().hex[:20].upper()}"
         if not self.service_name_snapshot and self.service_id:
@@ -329,6 +470,11 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def fulfillment(self):
+        from .gameplay import fulfillment_text
+        return fulfillment_text(self)
+
+    @property
     def is_terminal(self) -> bool:
         return self.status in self.TERMINAL_STATUSES
 
@@ -342,8 +488,10 @@ class KookDispatchRecord(models.Model):
 
     class Status(models.TextChoices):
         PENDING = 'PENDING', '待发送'
+        SENDING = 'SENDING', '发送中'
         SENT = 'SENT', '已发送'
         FAILED = 'FAILED', '发送失败'
+        UNKNOWN = 'UNKNOWN', '结果待核对'
         SKIPPED = 'SKIPPED', '已跳过'
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='kook_dispatches')
@@ -357,6 +505,9 @@ class KookDispatchRecord(models.Model):
     last_error = models.CharField(max_length=500, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(blank=True, null=True)
+    content = models.TextField(blank=True, default='')
+    route_key = models.CharField(max_length=64, blank=True, default='')
+    card_content = models.TextField(blank=True, default='')
 
     class Meta:
         ordering = ['-created_at']
@@ -369,7 +520,7 @@ class KookDispatchRecord(models.Model):
                 name='kook_dispatch_trigger_valid',
             ),
             models.CheckConstraint(
-                condition=models.Q(status__in=['PENDING', 'SENT', 'FAILED', 'SKIPPED']),
+                condition=models.Q(status__in=['PENDING', 'SENDING', 'SENT', 'FAILED', 'UNKNOWN', 'SKIPPED']),
                 name='kook_dispatch_status_valid',
             ),
         ]
@@ -382,6 +533,34 @@ class KookDispatchRecord(models.Model):
 
     def __str__(self):
         return f'KookDispatch<{self.order_id}:{self.sequence} {self.status}>'
+
+
+class WecomDispatchRecord(models.Model):
+    """企微群投递记录；只保存目标指纹，Webhook 密钥留在环境配置中。"""
+
+    Status = KookDispatchRecord.Status
+    Trigger = KookDispatchRecord.Trigger
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='wecom_dispatches')
+    sequence = models.PositiveIntegerField(default=0)
+    trigger = models.CharField(max_length=30, choices=Trigger.choices)
+    channel_id = models.CharField(max_length=64)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    message_id = models.CharField(max_length=100, blank=True, default='')
+    attempts = models.PositiveSmallIntegerField(default=0)
+    last_error = models.CharField(max_length=500, blank=True, default='')
+    content = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['order', 'sequence'], name='uniq_wecom_dispatch_sequence'),
+            models.CheckConstraint(
+                condition=models.Q(status__in=['PENDING', 'SENDING', 'SENT', 'FAILED', 'UNKNOWN', 'SKIPPED']),
+                name='wecom_dispatch_status_valid',
+            ),
+        ]
 
 
 class OrderProvider(models.Model):
@@ -429,6 +608,7 @@ class OrderProvider(models.Model):
     commission_fixed = models.PositiveIntegerField(default=0)  # 固定抽成额快照（内部账务单位）
     provider_income = models.PositiveIntegerField(default=0)  # 该打手实得（内部账务单位）
     settled_at = models.DateTimeField(blank=True, null=True)  # 入账时间，空表示未结算
+    released_at = models.DateTimeField(blank=True, null=True)  # 转出时间，与财务结算时间分开
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -781,3 +961,34 @@ class ReservationStatusLog(models.Model):
             f"ReservationStatusLog<{self.reservation_id} "
             f"{self.from_status}->{self.to_status}>"
         )
+
+from .applications_models import OrderApplication  # noqa: E402,F401
+
+from .traffic_models import OrderTrafficConfig  # noqa: E402,F401
+
+
+class ExperienceUse(models.Model):
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField()
+    kind = models.CharField(max_length=16)
+    platform = models.CharField(max_length=10, blank=True)
+    period = models.CharField(max_length=10)
+    order = models.OneToOneField(Order, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['account', 'business_cycle', 'kind', 'platform', 'period'], name='unique_experience_quota')]
+
+
+class AfterSale(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='aftersales')
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    reason = models.CharField(max_length=1000)
+    status = models.CharField(max_length=16, default='OPEN', choices=[('OPEN', '处理中'), ('RESOLVED', '处理完成'), ('REFUNDED', '已退款')])
+    resolution = models.CharField(max_length=1000, blank=True)
+    operator = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['order'], name='one_aftersale_per_order')]

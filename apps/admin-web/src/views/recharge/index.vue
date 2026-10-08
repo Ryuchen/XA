@@ -54,6 +54,9 @@
       </el-table-column>
       <el-table-column prop="username" label="账号" min-width="130" />
       <el-table-column prop="nickname" label="昵称" min-width="120" />
+      <el-table-column label="对象" width="80">
+        <template #default="{ row }">{{ row.user_role === 'PROVIDER' ? '打手' : '老板' }}</template>
+      </el-table-column>
       <el-table-column prop="phone" label="手机号" width="130" />
       <el-table-column label="老板分级" width="110">
         <template #default="{ row }">{{ row.boss_type_name || '-' }}</template>
@@ -74,7 +77,7 @@
       </el-table-column>
       <el-table-column label="凭证" width="80">
         <template #default="{ row }">
-          <el-image
+          <PrivateImage
             v-if="row.proof_image_url"
             :src="row.proof_image_url"
             :preview-src-list="[row.proof_image_url]"
@@ -95,6 +98,7 @@
 </template>
 
 <script setup lang="ts">
+import PrivateImage from "@/components/PrivateImage.vue"
 import { reactive, ref } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import CrudTable from '@/components/CrudTable.vue'

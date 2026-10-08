@@ -1,4 +1,9 @@
 .git/
+.venv/
+.tools/
+**/private.wx*.key
+.pnpm-store/
+**/*.log
 .github/
 .idea/
 .vscode/

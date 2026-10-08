@@ -1,0 +1,10 @@
+.reward-claim-page>.tag { margin:16rpx 0 24rpx; }
+.reward-claim-page .panel { border-radius:24rpx; }
+.reward-claim-page .label { display:block;margin:24rpx 0 12rpx;font-size:var(--xa-control-font);line-height:1.5; }
+.reward-claim-page .input { box-sizing:border-box;width:100%;border-radius:16rpx;font-size:var(--xa-control-font); }
+.reward-claim-page input.input { height:var(--xa-input-height);min-height:var(--xa-input-height);padding:0 18rpx;line-height:1.5; }
+.reward-claim-page textarea.input { min-height:max(144rpx,72px);height:max(160rpx,80px);padding:16rpx 18rpx;line-height:1.65; }
+.reward-claim-page .xa-button.button,.reward-claim-page .xa-button.button-secondary { display:flex;align-items:center;justify-content:center;min-height:var(--xa-control-height);padding:12rpx 24rpx;border-radius:var(--xa-radius-control);font-size:var(--xa-control-font); }
+.reward-claim-page .xa-button.button-secondary { min-height:var(--xa-control-secondary);padding:10rpx 24rpx; }
+.reward-claim-page .panel .xa-button.button { margin:24rpx 0 16rpx; }
+.reward-claim-page .small { display:block;font-size:var(--xa-control-small-font);line-height:1.7; }

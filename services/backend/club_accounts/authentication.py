@@ -5,8 +5,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
-from .models import ClubAccount
-from .tokens import ACCOUNT_TOKEN_KIND
+from .tokens import ACCOUNT_TOKEN_KIND, account_for_claims
 
 
 class ClubAccountAuthentication(BaseAuthentication):
@@ -32,14 +31,10 @@ class ClubAccountAuthentication(BaseAuthentication):
         if token.get('token_kind') != ACCOUNT_TOKEN_KIND:
             return None
 
-        account_id = token.get('account_id')
         try:
-            account = ClubAccount.objects.get(pk=account_id)
-        except ClubAccount.DoesNotExist as exc:
-            raise AuthenticationFailed('业务账户不存在') from exc
-
-        if not account.is_active or not account.can_login:
-            raise AuthenticationFailed('业务账户已被禁用')
+            account = account_for_claims(token)
+        except TokenError as exc:
+            raise AuthenticationFailed(str(exc)) from exc
 
         request.account = account
         if hasattr(request, '_request'):

@@ -185,7 +185,7 @@ const SettingsPage: React.FC = () => {
       </View>
 
       <View className={styles.saveBtn} onClick={handleSave}>
-        <Icon name="check" size={36} color="#FFFFFF" />
+        <Icon name="check" size={32} color="#fffdf5" />
         <Text className={styles.saveBtnText}>{submitting ? '保存中...' : '保存'}</Text>
       </View>
     </ScrollView>

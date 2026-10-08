@@ -1,0 +1,36 @@
+<view class="page companion-picker">
+  <view wx:if="{{!logged}}" class="panel login-panel">
+    <view class="title">挑选陪玩</view><view class="subtitle">登录后查看当前服务的可选陪玩。</view>
+    <button class="xa-button button" bindtap="login" hover-class="xa-button-hover">微信快捷登录</button>
+  </view>
+  <block wx:else>
+    <view class="panel picker-heading">
+      <view class="title">挑选陪玩</view>
+      <view wx:if="{{serviceName}}" class="subtitle">{{serviceName}}</view>
+      <view wx:if="{{serviceRequirement}}" class="small muted">{{serviceRequirement}}</view>
+      <button wx:if="{{serviceId || fromCheckout}}" class="xa-button button-secondary" bindtap="platform" disabled="{{loading || !!error}}" hover-class="xa-button-hover">由平台安排</button>
+    </view>
+    <view class="panel picker-filters">
+      <input class="input" value="{{keyword}}" bindinput="search" placeholder="搜索陪玩昵称" confirm-type="search" maxlength="50"/>
+      <view class="between picker-summary">
+        <text class="small muted">{{loading ? '正在更新陪玩…' : visible.length + ' 位可选陪玩'}}</text>
+        <picker range="{{genderOptions}}" value="{{genderIndex}}" bindchange="chooseGender" disabled="{{fromCheckout}}">
+          <view class="picker-gender">{{genderOptions[genderIndex]}}{{fromCheckout ? '' : ' ▾'}}</view>
+        </picker>
+      </view>
+    </view>
+    <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !visible.length}}" bind:retry="load"/>
+    <view wx:if="{{!loading && !error}}" class="companion-grid">
+      <button wx:for="{{visible}}" wx:key="id" class="xa-button companion-card" data-id="{{item.id}}" bindtap="openDetail" hover-class="xa-button-hover" aria-label="{{'查看陪玩 ' + item.nickname + ' 的详情'}}">
+        <view class="companion-portrait">
+          <image wx:if="{{item.avatarUrl}}" class="companion-avatar" src="{{item.avatarUrl}}" mode="aspectFill" lazy-load/>
+          <view wx:else class="companion-avatar companion-initial">{{item.initial}}</view>
+          <text wx:if="{{item.picker_group}}" class="companion-badge">{{item.picker_group === 'recommended' ? '推荐' : '人气'}}</text>
+        </view>
+        <text class="companion-name">{{item.nickname}}</text>
+        <text class="companion-level">{{item.level_name || '等级暂未设置'}}{{item.gender === 'MALE' ? ' · 男陪' : item.gender === 'FEMALE' ? ' · 女陪' : ''}}</text>
+        <view class="companion-monthly"><text class="companion-monthly-label">本月接单额</text><text class="companion-monthly-value">{{item.monthlyAmountText}}<text class="companion-monthly-unit"> 兴安币</text></text></view>
+      </button>
+    </view>
+  </block>
+</view>

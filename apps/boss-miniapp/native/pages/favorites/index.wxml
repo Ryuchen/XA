@@ -1,0 +1,10 @@
+<view class="page favorites-page">
+  <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button>
+<view class="title">我的收藏</view><view class="subtitle">再次预约，从这里开始</view>
+  <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" bind:retry="load" />
+  <view wx:for="{{items}}" wx:key="id" class="card favorite" data-id="{{item.id}}" bindtap="open" role="button">
+    <image wx:if="{{item.cover}}" class="cover favorite-cover" src="{{item.cover}}" mode="aspectFit" />
+    <view class="favorite-copy"><view class="favorite-name">{{item.name}}</view><view class="small muted">{{item.game_category_name || item.category}} {{item.service_category_name}}</view><view class="row between"><text class="price">{{item.priceText}}<text class="small"> 兴安币</text></text><button class="xa-button button-quiet" data-id="{{item.id}}" catchtap="remove" disabled="{{removing}}" loading="{{removing === item.id}}" hover-class="xa-button-hover">取消收藏</button></view></view>
+  </view>
+  <button class="xa-button button-secondary browse" bindtap="browse" hover-class="xa-button-hover">探索更多服务</button>
+</view>

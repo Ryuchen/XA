@@ -1,0 +1,1 @@
+.page > .subtitle { margin-bottom: 28rpx; }.panel { margin-top: 20rpx; }.panel .section-title { margin: 0; font-size: 30rpx; }.panel > .muted { display: block; font-size: 26rpx; margin-top: 16rpx; }.panel > .subtitle { padding-top: 18rpx; border-top: 1rpx solid var(--xa-color-border); font-variant-numeric: tabular-nums; color: var(--xa-color-primary); font-size: 29rpx; }

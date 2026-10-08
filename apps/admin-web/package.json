@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "typecheck": "vue-tsc --noEmit",
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
+    "@tiptap/extension-image": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
+    "@tiptap/vue-3": "^3.31.4",
     "axios": "^1.7.7",
     "echarts": "^6.1.0",
     "element-plus": "^2.8.4",

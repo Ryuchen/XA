@@ -1,146 +1,19 @@
 @use '@/styles/variables.scss' as *;
-
-.mobileContent {
-  min-height: 100vh;
-}
-
-.desktopShell {
-  min-height: 100vh;
-  background: $color-bg-page;
-}
-
-.sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  width: 248PX;
-  padding: 28PX 18PX;
-  color: $color-text-white;
-  background: $color-gradient-dark;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12PX;
-  padding: 0 10PX 28PX;
-  border-bottom: 1PX solid rgba(255, 255, 255, 0.1);
-}
-
-.brandMark {
-  @include flex-center;
-  width: 44PX;
-  height: 44PX;
-  border-radius: 14PX;
-  color: $color-text-primary;
-  font-size: 14PX;
-  font-weight: $font-weight-bold;
-  background: linear-gradient(145deg, #fff0b5, #e8be55);
-}
-
-.brandName,
-.brandSub,
-.navLabel,
-.navCaption {
-  display: block;
-}
-
-.brandName {
-  font-size: 17PX;
-  font-weight: $font-weight-bold;
-}
-
-.brandSub {
-  margin-top: 2PX;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11PX;
-}
-
-.navList {
-  display: flex;
-  flex-direction: column;
-  gap: 7PX;
-  margin-top: 24PX;
-}
-
-.navItem {
-  display: flex;
-  align-items: center;
-  gap: 12PX;
-  padding: 12PX;
-  border-radius: 14PX;
-  cursor: pointer;
-  transition: background $transition-fast, transform $transition-fast;
-
-  &:active {
-    transform: scale(0.98);
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.07);
-  }
-}
-
-.navActive {
-  background: rgba(255, 255, 255, 0.13);
-}
-
-.navIcon {
-  @include flex-center;
-  width: 36PX;
-  height: 36PX;
-  border-radius: 11PX;
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.navActive .navIcon {
-  background: $color-primary;
-}
-
-.navLabel {
-  color: $color-text-white;
-  font-size: 14PX;
-  font-weight: $font-weight-semibold;
-}
-
-.navCaption {
-  margin-top: 2PX;
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 10PX;
-}
-
-.sidebarFoot {
-  margin-top: auto;
-  padding: 10PX;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10PX;
-  text-align: center;
-}
-
-.desktopMain {
-  box-sizing: border-box;
-  min-height: 100vh;
-  margin-left: 248PX;
-  padding: 28PX 36PX 48PX;
-}
-
-.desktopContent {
-  width: 100%;
-  max-width: 1180PX;
-  margin: 0 auto;
-}
-
-.desktopContent > view,
-.desktopContent > scroll-view {
-  min-height: calc(100vh - 76PX) !important;
-  padding-bottom: 32PX !important;
-}
-
-@media (min-width: 960px) {
-  .desktopContent :global(.taro-scroll-view__scroll-y) {
-    max-height: none !important;
-  }
-}
+.mobileContent { min-height:100dvh; }
+.desktopShell { min-height:100dvh; background:$color-bg-page; }
+.sidebar { position:fixed; inset:0 auto 0 0; z-index:30; display:flex; flex-direction:column; width:224PX; padding:24PX 16PX; color:$color-text-primary; background:$color-bg-card; border-right:1PX solid $color-border; overflow-y:auto; }
+.brand { display:flex; align-items:center; gap:12PX; padding:0 8PX 24PX; border-bottom:1PX solid $color-divider; }
+.brandMark { @include flex-center; flex:none; width:40PX; height:40PX; border-radius:12PX; color:#3d3216; font-size:14PX; font-weight:700; background:linear-gradient(145deg,#fff0b5,#e8be55); }
+.brandName,.brandSub,.navLabel,.navCaption { display:block; }
+.brandName { font-size:17PX; font-weight:700; }.brandSub { margin-top:2PX; font-size:12PX; color:$color-text-secondary; }
+.navList { display:flex; flex-direction:column; gap:8PX; margin-top:24PX; }
+.navList .navItem { @include button-reset; display:flex; align-items:center; justify-content:flex-start; width:100%; min-height:64PX; gap:12PX; padding:12PX; border:0; border-radius:10PX; color:$color-text-primary; text-align:left; background:transparent; white-space:normal; }
+.navList .navItem:hover { background:var(--xa-color-surface-subtle); }
+.navList .navActive, .navList .navActive:hover { background:var(--xa-color-primary-soft); }
+.navIcon { @include flex-center; flex:none; width:32PX; height:32PX; border-radius:8PX; background:var(--xa-color-surface-subtle); }
+.navActive .navIcon { background:#002fa7; }
+.navCopy { min-width:0; }.navLabel { font-size:14PX; font-weight:600; }.navCaption { margin-top:3PX; font-size:12PX; color:$color-text-secondary; }
+.sidebarFoot { margin-top:auto; padding:28PX 8PX 0; font-size:12PX; color:$color-text-tertiary; }
+.desktopMain { min-height:100dvh; margin-left:224PX; padding:32PX 32PX 48PX; }
+.desktopContent { width:100%; max-width:1280PX; min-width:0; margin:0 auto; }
+@media(min-width:960px) and (max-width:1199px) { .sidebar { width:208PX; padding:24PX 12PX; }.desktopMain { margin-left:208PX; padding:28PX 24PX 40PX; } }

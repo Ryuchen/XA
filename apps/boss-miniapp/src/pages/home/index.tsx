@@ -10,6 +10,7 @@ import { formatXaCoin } from '@xa/money';
 import { resolveImageUrl } from '@/utils/media';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { Skeleton, Icon, XaLogo } from '@/components';
+import GameplayLobby from '@/components/GameplayLobby';
 import styles from './index.module.scss';
 import { getStoredToken } from '@/utils/auth';
 import { openWecomCustomerService } from '@/services/support';
@@ -102,7 +103,7 @@ const HomePage: React.FC = () => {
 
   const handleSelfOrder = () => {
     ensureLogin(() => {
-      Taro.navigateTo({ url: '/pages/selfOrder/index' });
+      Taro.switchTab({ url: '/pages/category/index' });
     });
   };
 
@@ -175,13 +176,14 @@ const HomePage: React.FC = () => {
       <View className={styles.header}>
         <View className={styles.brandRow}>
           <View className={styles.brandLogo}>
-            <XaLogo size={44} color="#FFFFFF" />
+            <XaLogo size={48} color="#fffdf5" />
           </View>
           <Text className={styles.headerTitle}>兴安电竞</Text>
         </View>
         <Text className={styles.headerSubtitle}>专业电竞陪玩 · 高手在线</Text>
       </View>
 
+      <GameplayLobby />
       {loading ? (
         <Skeleton variant="card-list" rows={4} />
       ) : (
@@ -193,7 +195,7 @@ const HomePage: React.FC = () => {
             indicatorDots
             autoplay
             circular
-            indicatorActiveColor="#007AFF"
+            indicatorActiveColor="#002fa7"
           >
             {banners.map(banner => (
               <SwiperItem key={banner.id} onClick={() => handleBannerTap(banner)}>
@@ -207,16 +209,16 @@ const HomePage: React.FC = () => {
       <View className={styles.section}>
         <View className={styles.quickRow}>
           <View className={styles.quickCard} onClick={() => handleSelfOrder()}>
-            <Icon name="gamepad-2" size={48} color="#FFFFFF" className={styles.quickIcon} />
+            <Icon name="gamepad-2" size={48} color="#fffdf5" className={styles.quickIcon} />
             <Text className={styles.quickTitle}>自助下单</Text>
             <Text className={styles.quickDesc}>自己挑选心仪大神</Text>
-            <Icon name="chevron-right" size={36} color="rgba(255,255,255,0.7)" className={styles.quickArrow} />
+            <Icon name="chevron-right" size={32} color="rgba(255,255,255,0.7)" className={styles.quickArrow} />
           </View>
           <View className={`${styles.quickCard} ${styles.quickCardAlt}`} onClick={handleSupportOrder}>
-            <Icon name="headphones" size={48} color="#007AFF" className={styles.quickIcon} />
+            <Icon name="headphones" size={48} color="#002fa7" className={styles.quickIcon} />
             <Text className={styles.quickTitle}>客服下单</Text>
             <Text className={styles.quickDesc}>专属客服为你安排</Text>
-            <Icon name="chevron-right" size={36} color="#AEAEB2" className={styles.quickArrow} />
+            <Icon name="chevron-right" size={32} color="#AEAEB2" className={styles.quickArrow} />
           </View>
         </View>
       </View>
@@ -234,7 +236,7 @@ const HomePage: React.FC = () => {
             </View>
             <View className={styles.bossMore} onClick={handleBossRankMore}>
               <Text className={styles.bossMoreText}>我的账单</Text>
-              <Icon name="chevron-right" size={28} color="#FFE9B8" />
+              <Icon name="chevron-right" size={24} color="#FFE9B8" />
             </View>
           </View>
 
@@ -297,7 +299,7 @@ const HomePage: React.FC = () => {
         <View className={styles.section}>
           <View className={styles.announceBar} onClick={handleAnnouncementMore}>
             <View className={styles.announceBadge}>
-              <Icon name="megaphone" size={24} color="#007AFF" />
+              <Icon name="megaphone" size={24} color="#002fa7" />
               <Text className={styles.announceBadgeText}>公告</Text>
             </View>
             <Swiper
@@ -319,7 +321,7 @@ const HomePage: React.FC = () => {
                 </SwiperItem>
               ))}
             </Swiper>
-            <Icon name="chevron-right" size={28} color="#AEAEB2" className={styles.announceMore} />
+            <Icon name="chevron-right" size={24} color="#AEAEB2" className={styles.announceMore} />
           </View>
         </View>
       )}
@@ -343,7 +345,7 @@ const HomePage: React.FC = () => {
                   <Text className={styles.achievementTitle}>{item.title}</Text>
                   <Text className={styles.achievementDesc}>{item.desc}</Text>
                   {!item.unlocked && (
-                    <Text className={styles.achievementProgress}>{item.current}/{item.target}</Text>
+                    <Text className={styles.achievementProgress}>{item.metric === 'amount' ? `${formatXaCoin(item.current)}/${formatXaCoin(item.target)} 币` : `${item.current}/${item.target} 单`}</Text>
                   )}
                 </View>
               ))}
@@ -358,7 +360,7 @@ const HomePage: React.FC = () => {
             <Text className={styles.sectionTitle}>优惠专区</Text>
             <View className={styles.sectionMore} onClick={handleCouponMore}>
               <Text className={styles.sectionDesc}>全部</Text>
-              <Icon name="chevron-right" size={28} color="#AEAEB2" />
+              <Icon name="chevron-right" size={24} color="#AEAEB2" />
             </View>
           </View>
           <ScrollView className={styles.chipScroll} scrollX>

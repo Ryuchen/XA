@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Input, ScrollView, Text, Textarea, View } from '@tarojs/components';
+import { Button, Input, Text, Textarea, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import {
   AuditionInfo,
@@ -8,7 +8,7 @@ import {
   submitAuditionSignup,
   exchangeAuditionToken,
 } from '@/services/audition';
-import { getStoredToken, persistLoginData } from '@/utils/auth';
+import { getStoredToken, getSessionRevision, persistLoginData } from '@/utils/auth';
 import { Empty, Loading } from '@/components';
 import styles from './index.module.scss';
 import PlatformLayout from '@/components/PlatformLayout';
@@ -59,8 +59,9 @@ const AuditionPage: React.FC = () => {
         setInfo(res.data);
         // 专属链接可直接换发登录态；普通招募链接则保留给已登录陪玩报名。
         if (!getStoredToken()) {
+          const revision = getSessionRevision();
           const exchange = await exchangeAuditionToken(linkToken);
-          if (exchange.code === 0 && exchange.data) persistLoginData(exchange.data);
+          if (exchange.code === 0 && exchange.data) persistLoginData(exchange.data, revision);
         }
         await loadMySignups();
         setState('ready');
@@ -95,16 +96,15 @@ const AuditionPage: React.FC = () => {
     }
   };
 
-  if (state === 'loading') return <Loading fullscreen text="加载试音活动…" />;
-  if (state === 'error' || !info) return <View className={styles.center}><Empty icon="🎧" title="无法打开试音链接" desc={error} /></View>;
+  if (state === 'loading' || !info || state === 'error') return <PlatformLayout active='mine'><View className={`xa-provider-page ${styles.container}`}><PageNav title="试音报名" fallbackUrl="/pages/mine/index" /><View className={styles.center}>{state === 'loading' ? <Loading text="加载试音活动…" /> : <Empty icon="🎧" title="无法打开试音链接" desc={error} />}</View></View></PlatformLayout>;
 
   const hasSubmitted = mySignups.some(item => item.link === info.id);
   return (
-    <PlatformLayout active='mine'><ScrollView className={styles.container} scrollY>
+    <PlatformLayout active='mine'><View className={`xa-provider-page ${styles.container}`}>
       <PageNav title="试音报名" />
       <View className={styles.hero}><Text className={styles.tag}>陪玩招募</Text><Text className={styles.title}>{info.title}</Text><Text className={styles.remark}>{info.remark || '欢迎报名本次试音活动'}</Text><Text className={styles.expire}>截止：{formatExpire(info.expire_at)}</Text></View>
       {!getStoredToken() ? (
-        <View className={styles.card}><Text className={styles.notice}>请先使用陪玩账号登录后报名。专属链接已绑定账号时会自动登录。</Text><Button className={styles.primaryButton} onClick={goLogin}>去登录</Button></View>
+        <View className={styles.card}><Text className={styles.notice}>请先使用陪玩账号登录后报名。专属链接已绑定账号时会自动登录。</Text><Button className={`xa-button-primary ${styles.primaryButton}`} onClick={goLogin}>去登录</Button></View>
       ) : hasSubmitted ? (
         <View className={styles.card}><Text className={styles.notice}>你已报名本次试音活动，请等待运营审核。</Text></View>
       ) : (
@@ -113,11 +113,11 @@ const AuditionPage: React.FC = () => {
           <Text className={styles.label}>联系方式</Text><Input className={styles.input} value={contact} maxlength={100} placeholder="微信号或手机号" onInput={e => setContact(e.detail.value)} />
           <Text className={styles.label}>擅长游戏</Text><Input className={styles.input} value={game} maxlength={100} placeholder="例如：王者荣耀" onInput={e => setGame(e.detail.value)} />
           <Text className={styles.label}>补充说明（选填）</Text><Textarea className={styles.textarea} value={remark} maxlength={255} placeholder="段位、可接档期、试音经验等" autoHeight onInput={e => setRemark(e.detail.value)} />
-          <Button className={styles.primaryButton} loading={submitting} disabled={submitting || !contact.trim() || !game.trim()} onClick={submit}>提交报名</Button>
+          <Button className={`xa-button-primary ${styles.primaryButton}`} loading={submitting} disabled={submitting || !contact.trim() || !game.trim()} onClick={submit}>提交报名</Button>
         </View>
       )}
       {mySignups.length > 0 && <View className={styles.card}><Text className={styles.sectionTitle}>我的报名记录</Text>{mySignups.map(item => <View key={item.id} className={styles.record}><View><Text className={styles.recordTitle}>{item.link_title}</Text><Text className={styles.recordSub}>{item.game} · {item.contact}</Text>{item.audit_remark && <Text className={styles.recordSub}>审核备注：{item.audit_remark}</Text>}</View><Text className={styles.status}>{item.status_display}</Text></View>)}</View>}
-    </ScrollView></PlatformLayout>
+    </View></PlatformLayout>
   );
 };
 

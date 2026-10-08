@@ -1,0 +1,74 @@
+{
+	auto_https off
+}
+
+# Resolve every replica separately; one DNS-named upstream otherwise shares
+# a keep-alive pool and does not guarantee balanced requests across replicas.
+# Only these published assets may bypass API authorization.
+(media) {
+	handle /media/* {
+		@public_media path /media/accounts/avatars/* /media/customers/avatars/* /media/escorts/avatars/* /media/escorts/videos/* /media/escorts/voice_cards/* /media/game_categories/* /media/banners/* /media/club-catalog/*
+		route {
+			handle @public_media {
+				uri strip_prefix /media
+				root * /srv/media
+				file_server
+			}
+			respond 404
+		}
+	}
+}
+
+(backend) {
+	reverse_proxy {
+		dynamic a web 8000 {
+			refresh 5s
+			versions ipv4
+		}
+		lb_policy round_robin
+		fail_duration 10s
+		max_fails 1
+		lb_try_duration 5s
+		lb_try_interval 100ms
+		lb_retry_match method GET HEAD
+		transport http {
+			dial_timeout 1s
+		}
+	}
+}
+
+:80 {
+	encode gzip
+	import media
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+	handle {
+		import backend
+	}
+}
+
+:81 {
+	encode gzip
+	@backend path /api/* /ws/*
+	handle @backend {
+		import backend
+	}
+	import media
+	handle {
+		reverse_proxy admin-web:80
+	}
+}
+
+:82 {
+	encode gzip
+	@backend path /api/* /ws/*
+	handle @backend {
+		import backend
+	}
+	import media
+	handle {
+		reverse_proxy provider-h5:80
+	}
+}

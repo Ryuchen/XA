@@ -6,13 +6,16 @@ import urllib.request
 import uuid
 from datetime import datetime, time, timedelta
 
+from PIL import Image, UnidentifiedImageError
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Case, Count, ExpressionWrapper, F, FloatField, IntegerField, Q, Sum, Value, When
-from django.db.models.functions import TruncDate
+from django.db.models import Case, Count, ExpressionWrapper, F, FloatField, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework import serializers
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -26,6 +29,7 @@ from club_accounts.services import (
 )
 from club_accounts.tokens import issue_account_tokens, refresh_account_access_token
 from orders.models import GameCategory, Order, ServiceItem
+from orders.catalog import skill_service_q, visible_service_q
 from site_messages.utils import create_message
 from wallet.models import (
     Transaction,
@@ -33,14 +37,17 @@ from wallet.models import (
     get_pass_daily_price,
     get_pass_daily_prices,
     get_pass_delay_seconds,
+    get_platform_wallet,
 )
-from wallet.services import get_wallet
+from wallet.services import get_wallet, claim_fund_write, peek_fund_write
+from wallet.receipts import fund_success, recover_fund_result
 from common.logging_utils import log_money_event
 from common.media import build_media_url
 
 from .models import (
     Achievement, CheckinGift, CheckinMonthProgress, CheckinRecord, CheckinRuleConfig,
     CustomerGameProfile, EscortProfile, EscortSchedule, ProviderPassPurchase,
+    WechatPhoneLock,
 )
 
 User = get_user_model()
@@ -52,6 +59,81 @@ ROLE_REVERSE_MAP = {
 }
 
 WECHAT_API_TIMEOUT = 5
+
+
+def _validate_avatar(avatar):
+    if avatar.size > 5 * 1024 * 1024:
+        raise ValueError('头像不能超过 5MB')
+    try:
+        picture = Image.open(avatar)
+        extension = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}.get(picture.format)
+        if not extension or picture.width * picture.height > 20_000_000:
+            raise ValueError('请使用不超过 2000 万像素的 JPG、PNG 或 WebP 头像')
+        picture.verify()
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        raise ValueError('头像图片内容无效') from exc
+    avatar.seek(0)
+    avatar.name = f'{uuid.uuid4().hex}.{extension}'
+
+
+class WechatLoginError(ValueError):
+    def __init__(self, message, error_code='WECHAT_UNAVAILABLE', code=400):
+        super().__init__(message)
+        self.error_code = error_code
+        self.code = code
+
+
+def _wechat_error_response(exc):
+    return Response({
+        'code': getattr(exc, 'code', 400),
+        'errorCode': getattr(exc, 'error_code', 'WECHAT_UNAVAILABLE'),
+        'msg': str(exc) if isinstance(exc, WechatLoginError) else '微信服务暂不可用，请稍后重试',
+    })
+
+
+def _wechat_binding_info(account):
+    wechat_bound = bool(account.openid and account.is_openid_bound)
+    phone_verified = bool(account.phone and account.is_phone_verified)
+    return {
+        'isWechatBound': wechat_bound,
+        'isPhoneVerified': phone_verified,
+        'bindingState': 'PHONE_BOUND' if wechat_bound and phone_verified else (
+            'WECHAT_BOUND' if wechat_bound else 'UNBOUND'
+        ),
+    }
+
+
+def _ensure_boss_login_allowed(account):
+    if account is None or account.account_type != ClubAccount.AccountType.BOSS:
+        raise WechatLoginError('该微信号非老板账号，请使用对应端登录', 'ACCOUNT_ROLE_MISMATCH', 403)
+    if not account.is_active or not account.can_login:
+        raise WechatLoginError('该老板账号已被禁用，请联系客服', 'ACCOUNT_DISABLED', 403)
+
+
+def _legacy_user_for_account(account):
+    mapping = getattr(account, 'legacy_mapping', None)
+    return User.objects.filter(pk=mapping.legacy_user_id).first() if mapping else None
+
+
+def _assert_phone_available(account, phone):
+    """A verified phone may not silently merge or replace another boss account."""
+    mapping = getattr(account, 'legacy_mapping', None)
+    accounts = ClubAccount.objects.filter(account_type=ClubAccount.AccountType.BOSS, phone=phone)
+    legacy_users = User.objects.filter(role=User.Role.CUSTOMER, phone=phone)
+    if account.pk:
+        accounts = accounts.exclude(pk=account.pk)
+    if mapping:
+        legacy_users = legacy_users.exclude(pk=mapping.legacy_user_id)
+    if accounts.exists() or legacy_users.exists():
+        raise WechatLoginError('该手机号已关联其他老板账号，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
+
+
+def _lock_wechat_phone(phone):
+    # Account rows cannot lock an as-yet-unowned phone. Both entry points must
+    # acquire this stable row BEFORE account locks and hold it until commit.
+    if phone:
+        WechatPhoneLock.objects.get_or_create(phone=phone)
+        WechatPhoneLock.objects.select_for_update().get(phone=phone)
 
 
 def _wechat_http_get(url):
@@ -69,10 +151,12 @@ def _wechat_code2session(code):
     })
     data = _wechat_http_get(f'https://api.weixin.qq.com/sns/jscode2session?{params}')
     if data.get('errcode'):
-        raise ValueError(data.get('errmsg') or '微信登录失败')
+        if str(data['errcode']) in ('40029', '40163'):
+            raise WechatLoginError('微信登录凭证已失效，请重新登录', 'WECHAT_CODE_INVALID')
+        raise WechatLoginError('微信登录服务暂不可用，请稍后重试')
     openid = data.get('openid')
     if not openid:
-        raise ValueError('未获取到 openid')
+        raise WechatLoginError('微信未返回有效身份，请重新登录')
     return openid
 
 
@@ -85,7 +169,7 @@ def _wechat_get_access_token():
     data = _wechat_http_get(f'https://api.weixin.qq.com/cgi-bin/token?{params}')
     token = data.get('access_token')
     if not token:
-        raise ValueError(data.get('errmsg') or '获取 access_token 失败')
+        raise WechatLoginError('微信手机号服务暂不可用，请稍后重试')
     return token
 
 
@@ -103,8 +187,17 @@ def _wechat_get_phone(phone_code):
     with urllib.request.urlopen(req, timeout=WECHAT_API_TIMEOUT) as resp:
         data = json.loads(resp.read().decode('utf-8'))
     if data.get('errcode'):
-        raise ValueError(data.get('errmsg') or '获取手机号失败')
-    return (data.get('phone_info') or {}).get('purePhoneNumber', '')
+        if str(data['errcode']) in ('40029', '40163'):
+            raise WechatLoginError('手机号授权已失效，请重新授权', 'WECHAT_PHONE_CODE_INVALID')
+        raise WechatLoginError('微信手机号服务暂不可用，请稍后重试')
+    phone_info = data.get('phone_info') or {}
+    watermark = phone_info.get('watermark') or {}
+    if watermark.get('appid') and watermark['appid'] != settings.WECHAT_MINIAPP_APPID:
+        raise WechatLoginError('手机号授权身份不匹配', 'WECHAT_PHONE_CODE_INVALID')
+    phone = phone_info.get('purePhoneNumber', '')
+    if not isinstance(phone, str) or not phone.isdigit() or not 5 <= len(phone) <= 20:
+        raise WechatLoginError('未获取到有效手机号，请重新授权', 'WECHAT_PHONE_CODE_INVALID')
+    return phone
 
 
 class WechatLoginView(APIView):
@@ -115,12 +208,13 @@ class WechatLoginView(APIView):
     """
 
     permission_classes = [AllowAny]
+    authentication_classes = []
     # 未鉴权入口：必须限流，否则是免费的枚举/刷号通道（仅作用于 POST）。
     throttle_scope = 'login'
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     @staticmethod
-    def _resolve_customer(openid, phone, defaults, allow_phone_binding):
+    def _resolve_customer(openid, phone, defaults, allow_phone_binding, check_only=False):
         """按稳定微信身份解析老板，手机号仅用于真实微信登录的首次绑定。
 
         匹配顺序固定为：openid -> 唯一手机号老板 -> 新建。手机号冲突时不
@@ -129,6 +223,9 @@ class WechatLoginView(APIView):
         with transaction.atomic():
             account = ClubAccount.objects.select_for_update().filter(openid=openid).first()
             if account is not None:
+                _ensure_boss_login_allowed(account)
+                if phone:
+                    _assert_phone_available(account, phone)
                 return account, False, 'openid'
 
             legacy_openid_user = (
@@ -138,7 +235,13 @@ class WechatLoginView(APIView):
             )
             if legacy_openid_user is not None:
                 account = get_or_create_account_for_legacy_user(legacy_openid_user)
+                _ensure_boss_login_allowed(account)
+                if phone:
+                    _assert_phone_available(account, phone)
                 return account, False, 'openid'
+
+            if check_only:
+                return None, False, 'unbound'
 
             if allow_phone_binding and phone:
                 account_candidates = list(
@@ -158,7 +261,7 @@ class WechatLoginView(APIView):
                     .order_by('id')[:2]
                 )
                 if len(account_candidates) + len(legacy_candidates) > 1:
-                    raise ValueError('该手机号关联了多个老板账号，请联系客服处理')
+                    raise WechatLoginError('该手机号关联了多个老板账号，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
                 if account_candidates or legacy_candidates:
                     legacy_user = legacy_candidates[0] if legacy_candidates else None
                     account = (
@@ -166,16 +269,27 @@ class WechatLoginView(APIView):
                         if account_candidates
                         else get_or_create_account_for_legacy_user(legacy_user)
                     )
+                    _ensure_boss_login_allowed(account)
+                    migrating_appid = bool(account.openid and account.openid != openid and account.wechat_appid
+                        and account.is_phone_verified and account.wechat_appid != settings.WECHAT_MINIAPP_APPID and not settings.WECHAT_MOCK_LOGIN)
+                    if account.openid and account.openid != openid and not migrating_appid:
+                        raise WechatLoginError('该老板账号已绑定其他微信，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
+                    legacy_user = legacy_user or _legacy_user_for_account(account)
+                    if legacy_user and legacy_user.openid and legacy_user.openid != openid and not (migrating_appid and legacy_user.openid == account.openid):
+                        raise WechatLoginError('历史账号的微信绑定不一致，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
+                    if migrating_appid:
+                        import hashlib
+                        from club_accounts.models import WechatBindingChange
+                        WechatBindingChange.objects.create(account=account,from_appid=account.wechat_appid,
+                            to_appid=settings.WECHAT_MINIAPP_APPID,old_openid_hash=hashlib.sha256(account.openid.encode()).hexdigest(),
+                            new_openid_hash=hashlib.sha256(openid.encode()).hexdigest())
+                    account.wechat_appid = settings.WECHAT_MINIAPP_APPID if not settings.WECHAT_MOCK_LOGIN else ''
                     account.openid = openid
                     account.is_openid_bound = True
                     account.is_phone_verified = True
                     account.save(update_fields=[
-                        'openid', 'is_openid_bound', 'is_phone_verified', 'updated_at',
+                        'openid', 'wechat_appid', 'is_openid_bound', 'is_phone_verified', 'updated_at',
                     ])
-                    if legacy_user is None:
-                        legacy_user = User.objects.filter(
-                            pk=account.legacy_mapping.legacy_user_id,
-                        ).first()
                     if legacy_user:
                         legacy_user.openid = openid
                         legacy_user.is_openid_bound = True
@@ -189,9 +303,14 @@ class WechatLoginView(APIView):
                 # The nested savepoint keeps a uniqueness race from breaking
                 # the surrounding select-for-update transaction.
                 with transaction.atomic():
+                    from .boss_types import default_miniapp_boss_type
+                    boss_type = default_miniapp_boss_type()
+                    if not boss_type.is_active:
+                        raise WechatLoginError('默认老板类型暂不可用，请联系客服', 'DEFAULT_BOSS_TYPE_UNAVAILABLE', 503)
                     account = ClubAccount.objects.create_account(
                         password=None,
                         openid=openid,
+                        boss_type=boss_type,
                         **defaults,
                     )
                     legacy_user = User.objects.create_user(
@@ -203,6 +322,7 @@ class WechatLoginView(APIView):
                         nickname=account.nickname,
                         is_phone_verified=account.is_phone_verified,
                         is_openid_bound=True,
+                        boss_type=boss_type,
                     )
                     LegacyAccountMap.objects.create(
                         legacy_user_id=legacy_user.id,
@@ -213,35 +333,57 @@ class WechatLoginView(APIView):
                 return account, True, 'created'
             except IntegrityError:
                 # 唯一约束处理两个并发 code2session 请求的竞态。
-                account = ClubAccount.objects.select_for_update().get(openid=openid)
+                account = ClubAccount.objects.select_for_update().filter(openid=openid).first()
+                if account is None:
+                    raise WechatLoginError('账号绑定发生冲突，请重试或联系客服', 'ACCOUNT_CONFLICT', 409)
+                _ensure_boss_login_allowed(account)
+                if phone:
+                    _assert_phone_available(account, phone)
                 return account, False, 'openid'
 
+    @transaction.atomic
     def post(self, request):
         code = request.data.get('code')
-        phone_code = (request.data.get('phoneCode') or '').strip()
-        nickname = (request.data.get('nickname') or '').strip()[:50]
+        phone_code = request.data.get('phoneCode') or ''
+        nickname = request.data.get('nickname') or ''
+        check_only = request.data.get('checkOnly', False)
         avatar_file = request.FILES.get('avatar')
 
-        if not code:
-            return Response({'code': 400, 'msg': '缺少微信登录code'})
+        if not isinstance(code, str) or not code.strip() or len(code) > 256:
+            return Response({'code': 400, 'errorCode': 'WECHAT_CODE_INVALID', 'msg': '缺少有效的微信登录code'})
+        if not isinstance(phone_code, str) or len(phone_code) > 256 or not isinstance(nickname, str):
+            return Response({'code': 400, 'errorCode': 'INVALID_INPUT', 'msg': '登录参数格式错误'})
+        if not isinstance(check_only, bool):
+            return Response({'code': 400, 'errorCode': 'INVALID_INPUT', 'msg': 'checkOnly 必须为布尔值'})
+        phone_code = phone_code.strip() if not check_only else ''
+        nickname = nickname.strip()[:50] if not check_only else ''
+        avatar_file = avatar_file if not check_only else None
+        code = code.strip()
+        if avatar_file:
+            try:
+                _validate_avatar(avatar_file)
+            except ValueError as exc:
+                return Response({'code': 400, 'errorCode': 'INVALID_AVATAR', 'msg': str(exc)})
 
         if settings.WECHAT_MOCK_LOGIN:
             openid = f"wx_mock_{code[:10]}"
             phone = f"138{code[:8].zfill(8)[-8:]}" if phone_code else ''
         else:
             if not settings.WECHAT_MINIAPP_APPID or not settings.WECHAT_MINIAPP_SECRET:
-                return Response({'code': 503, 'msg': '微信登录尚未完成配置，请联系管理员'})
+                return Response({'code': 503, 'errorCode': 'WECHAT_NOT_CONFIGURED', 'msg': '微信登录尚未完成配置，请联系管理员'})
             try:
                 openid = _wechat_code2session(code)
                 phone = _wechat_get_phone(phone_code) if phone_code else ''
-            except (ValueError, urllib.error.URLError) as exc:
-                return Response({'code': 400, 'msg': f'微信登录失败：{exc}'})
+            except (ValueError, OSError) as exc:
+                return _wechat_error_response(exc)
 
         try:
+            _lock_wechat_phone(phone)
             account, created, bind_status = self._resolve_customer(
                 openid=openid,
                 phone=phone,
                 allow_phone_binding=not settings.WECHAT_MOCK_LOGIN,
+                check_only=check_only,
                 defaults={
                     'username': f"xa_{uuid.uuid4().hex[:8]}",
                     'account_type': ClubAccount.AccountType.BOSS,
@@ -251,8 +393,14 @@ class WechatLoginView(APIView):
                     'is_openid_bound': True,
                 },
             )
-        except ValueError as exc:
-            return Response({'code': 409, 'msg': str(exc)})
+        except WechatLoginError as exc:
+            return _wechat_error_response(exc)
+
+        if account is None:
+            return Response({'code': 0, 'data': {
+                'requiresBinding': True,
+                'bindingState': 'UNBOUND',
+            }})
 
         # 老板端仅允许老板登录：已存在的非老板账号（陪玩/客服/管理员）拒绝从此入口进入。
         if not created and account.account_type != ClubAccount.AccountType.BOSS:
@@ -262,7 +410,13 @@ class WechatLoginView(APIView):
             return Response({'code': 403, 'msg': '该老板账号已被禁用，请联系客服'})
 
         updated_fields = []
-        if phone and account.phone != phone:
+        if not settings.WECHAT_MOCK_LOGIN and account.wechat_appid != settings.WECHAT_MINIAPP_APPID:
+            account.wechat_appid = settings.WECHAT_MINIAPP_APPID
+            updated_fields.append('wechat_appid')
+        if not account.is_openid_bound:
+            account.is_openid_bound = True
+            updated_fields.append('is_openid_bound')
+        if phone and (account.phone != phone or not account.is_phone_verified):
             account.phone = phone
             account.is_phone_verified = True
             updated_fields.extend(['phone', 'is_phone_verified'])
@@ -288,9 +442,7 @@ class WechatLoginView(APIView):
         if updated_fields:
             account.save(update_fields=list(dict.fromkeys(updated_fields)))
 
-        legacy_user = User.objects.filter(
-            pk=account.legacy_mapping.legacy_user_id,
-        ).first()
+        legacy_user = _legacy_user_for_account(account)
         if legacy_user:
             legacy_fields = []
             for field in ('phone', 'nickname', 'avatar_url'):
@@ -301,6 +453,9 @@ class WechatLoginView(APIView):
             if account.is_phone_verified != legacy_user.is_phone_verified:
                 legacy_user.is_phone_verified = account.is_phone_verified
                 legacy_fields.append('is_phone_verified')
+            if account.is_openid_bound != legacy_user.is_openid_bound:
+                legacy_user.is_openid_bound = account.is_openid_bound
+                legacy_fields.append('is_openid_bound')
             if legacy_fields:
                 legacy_user.save(update_fields=legacy_fields)
 
@@ -316,6 +471,7 @@ class WechatLoginView(APIView):
             'data': {
                 'token': access_token,
                 'refreshToken': refresh_token,
+                'requiresBinding': False,
                 'userInfo': {
                     'id': str(response_id),
                     'username': account.username,
@@ -327,9 +483,81 @@ class WechatLoginView(APIView):
                     'phone': account.phone,
                     'bindCode': None,
                     'bindStatus': bind_status,
+                    **_wechat_binding_info(account),
                 }
             }
         })
+
+
+class WechatBindView(APIView):
+    """Bind fresh WeChat proof to the authenticated boss without moving assets."""
+
+    permission_classes = [IsClubAccountAuthenticated]
+    throttle_scope = 'login'
+
+    def post(self, request):
+        code = request.data.get('code')
+        phone_code = request.data.get('phoneCode') or ''
+        if not isinstance(code, str) or not code.strip() or len(code) > 256:
+            return Response({'code': 400, 'errorCode': 'WECHAT_CODE_INVALID', 'msg': '请重新获取微信登录凭证'})
+        if not isinstance(phone_code, str) or len(phone_code) > 256:
+            return Response({'code': 400, 'errorCode': 'INVALID_INPUT', 'msg': '手机号授权参数格式错误'})
+        try:
+            _ensure_boss_login_allowed(request.account)
+            if settings.WECHAT_MOCK_LOGIN:
+                openid = f'wx_mock_{code.strip()[:10]}'
+                phone = f"138{code.strip()[:8].zfill(8)[-8:]}" if phone_code else ''
+            else:
+                if not settings.WECHAT_MINIAPP_APPID or not settings.WECHAT_MINIAPP_SECRET:
+                    raise WechatLoginError('微信登录尚未完成配置，请联系管理员', 'WECHAT_NOT_CONFIGURED', 503)
+                openid = _wechat_code2session(code.strip())
+                phone = _wechat_get_phone(phone_code.strip()) if phone_code.strip() else ''
+            with transaction.atomic():
+                _lock_wechat_phone(phone)
+                account = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
+                _ensure_boss_login_allowed(account)
+                legacy_user = _legacy_user_for_account(account)
+                if account.openid and account.openid != openid:
+                    raise WechatLoginError('该账号已绑定其他微信，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
+                owners = ClubAccount.objects.filter(openid=openid).exclude(pk=account.pk)
+                legacy_owners = User.objects.filter(openid=openid)
+                if legacy_user:
+                    legacy_owners = legacy_owners.exclude(pk=legacy_user.pk)
+                    if legacy_user.openid and legacy_user.openid != openid:
+                        raise WechatLoginError('历史账号的微信绑定不一致，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
+                if owners.exists() or legacy_owners.exists():
+                    raise WechatLoginError('当前微信已绑定其他账号，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
+                if phone:
+                    _assert_phone_available(account, phone)
+                already_bound = bool(account.openid == openid and account.is_openid_bound)
+                account.openid = openid
+                account.is_openid_bound = True
+                account.wechat_appid = settings.WECHAT_MINIAPP_APPID if not settings.WECHAT_MOCK_LOGIN else ''
+                updated_fields = ['openid', 'wechat_appid', 'is_openid_bound']
+                if phone:
+                    account.phone = phone
+                    account.is_phone_verified = True
+                    updated_fields.extend(['phone', 'is_phone_verified'])
+                account.save(update_fields=[*updated_fields, 'updated_at'])
+                if legacy_user:
+                    legacy_fields = [field for field in updated_fields if field != 'wechat_appid']
+                    for field in legacy_fields:
+                        setattr(legacy_user, field, getattr(account, field))
+                    legacy_user.save(update_fields=legacy_fields)
+        except (ValueError, OSError) as exc:
+            return _wechat_error_response(exc)
+        except IntegrityError:
+            return _wechat_error_response(WechatLoginError(
+                '当前微信已绑定其他账号，请刷新后重试', 'ACCOUNT_CONFLICT', 409,
+            ))
+        return Response({'code': 0, 'msg': '绑定成功', 'data': {
+            'bindStatus': 'already_bound' if already_bound else 'bound',
+            'userInfo': {
+                'id': str(account.pk),
+                'phone': account.phone or '',
+                **_wechat_binding_info(account),
+            },
+        }})
 
 
 class AccountLoginView(APIView):
@@ -341,6 +569,7 @@ class AccountLoginView(APIView):
     生产环境用 ClubAccount 密码哈希校验真实密码。
     """
     permission_classes = [AllowAny]
+    authentication_classes = []
     # 口令登录：爆破的首选目标，限流优先级最高。
     throttle_scope = 'login'
 
@@ -350,6 +579,10 @@ class AccountLoginView(APIView):
 
         if not username:
             return Response({'code': 400, 'msg': '请输入账号'})
+
+        from .models import ProviderRegistration
+        if ProviderRegistration.objects.filter(username__iexact=username).exclude(status='APPROVED').exists():
+            return Response({'code': 403, 'msg': '注册申请尚未通过，请查询审核结果'})
 
         if settings.WECHAT_MOCK_LOGIN:
             account = ClubAccount.objects.filter(username=username).first()
@@ -414,12 +647,16 @@ class AccountLoginView(APIView):
         if not account.is_active or not account.can_login:
             return Response({'code': 403, 'msg': '账号已被禁用'})
 
-        access_token, refresh_token = issue_account_tokens(account)
+        from club_accounts.otp import otp_login_gate
+        otp=otp_login_gate(account,request.data,'provider')
+        if isinstance(otp,Response):return otp
+        access_token, refresh_token = issue_account_tokens(account,otp_verified=bool(otp and otp['otp_verified']))
 
         return Response({
             'code': 0,
             'msg': 'success',
             'data': {
+                'recoveryCodes': otp.get('recoveryCodes',[]) if otp else [],
                 'token': access_token,
                 'refreshToken': refresh_token,
                 'userInfo': {
@@ -439,6 +676,7 @@ class AccountLoginView(APIView):
 
 class AccountRefreshView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         raw_refresh_token = request.data.get('refresh')
@@ -483,6 +721,7 @@ class MeView(APIView):
             'game_nickname': account.game_nickname,
             'game_uid': account.game_uid,
             'game_profiles': game_profiles,
+            **_wechat_binding_info(account),
         }
 
     def get(self, request):
@@ -491,6 +730,26 @@ class MeView(APIView):
     def patch(self, request):
         account = request.account
         legacy_user = request.legacy_user
+        if 'phone' in request.data:
+            phone = request.data.get('phone') or ''
+            if not isinstance(phone, str):
+                return Response({'code': 400, 'errorCode': 'INVALID_INPUT', 'msg': '手机号格式错误'})
+            if account.account_type == ClubAccount.AccountType.BOSS and phone.strip() != (account.phone or ''):
+                return Response({
+                    'code': 400,
+                    'errorCode': 'PHONE_VERIFICATION_REQUIRED',
+                    'msg': '请通过微信手机号授权修改绑定手机号',
+                })
+        # Validate every scalar before game profile writes, so malformed mixed
+        # updates cannot save one part and then report a validation failure.
+        editable = {'nickname': 50, 'phone': 20, 'game_region': 50,
+                    'game_nickname': 50, 'game_uid': 50}
+        for field, max_len in editable.items():
+            if field not in request.data:
+                continue
+            value = request.data.get(field) or ''
+            if not isinstance(value, str) or len(value.strip()) > max_len:
+                return Response({'code': 400, 'msg': f'{field} 格式或长度无效'})
         game_profiles = request.data.get('game_profiles')
         if game_profiles is not None:
             if account.account_type != ClubAccount.AccountType.BOSS:
@@ -512,7 +771,10 @@ class MeView(APIView):
             for item in game_profiles:
                 values = {}
                 for source, target in (('region', 'region'), ('nickname', 'nickname'), ('uid', 'uid')):
-                    value = (item.get(source) or '').strip()
+                    raw_value = item.get(source) or ''
+                    if not isinstance(raw_value, str):
+                        return Response({'code': 400, 'msg': f'{source} 格式无效'})
+                    value = raw_value.strip()
                     if len(value) > 50:
                         return Response({'code': 400, 'msg': f'{source} 长度不能超过 50'})
                     values[target] = value
@@ -581,6 +843,9 @@ class MeView(APIView):
             value = (request.data.get(field) or '').strip()
             if len(value) > max_len:
                 return Response({'code': 400, 'msg': f'{field} 长度不能超过 {max_len}'})
+            if field == 'phone' and value != (account.phone or ''):
+                account.is_phone_verified = False
+                updated_fields.append('is_phone_verified')
             setattr(account, field, value)
             updated_fields.append(field)
 
@@ -594,33 +859,109 @@ class MeView(APIView):
         return Response({'code': 0, 'msg': '已更新', 'data': self._serialize(account)})
 
 
+class MeAvatarView(APIView):
+    """用户主动选择微信头像后，仅更新当前登录老板的头像。"""
+    permission_classes = [IsClubAccountAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        if request.account.account_type != ClubAccount.AccountType.BOSS:
+            return Response({'code': 403, 'msg': '仅老板可通过此入口修改头像'})
+        avatar = request.FILES.get('avatar')
+        if not avatar:
+            return Response({'code': 400, 'msg': '请选择头像'})
+        try:
+            _validate_avatar(avatar)
+        except ValueError as exc:
+            return Response({'code': 400, 'errorCode': 'INVALID_AVATAR', 'msg': str(exc)})
+        with transaction.atomic():
+            account = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
+            account.avatar = avatar
+            account.save(update_fields=['avatar'])
+            account.avatar_url = build_media_url(request, account.avatar)
+            account.save(update_fields=['avatar_url'])
+            if request.legacy_user:
+                User.objects.filter(pk=request.legacy_user.pk).update(avatar_url=account.avatar_url)
+        return Response({'code': 0, 'data': {'avatar': account.avatar_url}})
+
+
 class EscortProfileListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
-    def get(self, request):
+    def get(self, request, provider_id=None):
         game = request.query_params.get('game', '').strip()
         game_category_id = request.query_params.get('game_category', '').strip()
         service_item_id = request.query_params.get('service_item', '').strip()
+        gender = request.query_params.get('gender', 'ANY')
+        if gender not in ('ANY', 'MALE', 'FEMALE'):
+            return Response({'code': 400, 'msg': '陪玩性别参数无效'}, status=400)
+        detail = provider_id is not None
+        shortcuts = not detail and request.query_params.get('shortcuts') == '1'
+        picker = not detail and request.query_params.get('picker') == '1' and not shortcuts
+        directory = detail or shortcuts or (request.query_params.get('directory') == '1' and not service_item_id)
+        service = None
+        if service_item_id:
+            if not service_item_id.isascii() or not service_item_id.isdigit() or len(service_item_id) > 18:
+                return Response({'code': 400, 'msg': '服务项目参数无效'}, status=400)
+            service = ServiceItem.objects.filter(visible_service_q(), pk=int(service_item_id)).select_related('required_level').first()
+            if service is None:
+                if detail:
+                    return Response({'code': 404, 'msg': '服务已下架，请返回重新选择'}, status=404)
+                return Response({'code': 0, 'data': []})
+        if game_category_id and (not game_category_id.isascii() or not game_category_id.isdigit() or len(game_category_id) > 18):
+            return Response({'code': 400, 'msg': '游戏类目参数无效'}, status=400)
         profiles = EscortProfile.objects.filter(
-            status=EscortProfile.Status.AVAILABLE,
             is_verified=True,
-        ).select_related('account', 'user').prefetch_related(
+            account__is_active=True, account__can_login=True, account__can_view=True,
+        ).select_related('account', 'user', 'level').prefetch_related(
             'game_categories',
             'service_items',
+            'user__schedules', 'qualifications__game_category',
         )
-        if service_item_id.isdigit():
+        from .qualifications import filtered_qualifications,serialize_qualification,qualification_rows,service_requirement,scope_matches,service_skill
+        if detail:
+            profiles = profiles.filter(account_id=provider_id)
+        qualification_filter = None if detail else filtered_qualifications(request.query_params)
+        if qualification_filter is not None:profiles=profiles.filter(qualification_filter).distinct()
+        recent_ids = []
+        if shortcuts:
+            from .companion_shortcuts import recent_provider_ids
+            recent_ids = recent_provider_ids(request.account)
+            profiles = profiles.filter(Q(account_id__in=recent_ids) | Q(recommendation_slot__isnull=False))
+        if gender != 'ANY' and not detail:
+            profiles = profiles.filter(gender=gender)
+        from wallet.club_rules import club_income_rules_enabled
+        club_rules_enabled = club_income_rules_enabled()
+        if not directory:
+            deposit_rule = Q(deposit_mode='EARNINGS') | (Q(deposit_paid__gte=20000) if club_rules_enabled else Q(deposit_paid__gte=F('deposit_required')))
+            profiles = profiles.filter(deposit_rule, status=EscortProfile.Status.AVAILABLE)
+        if detail:
+            # A visible profile remains browsable when its current availability or
+            # service qualification changes; only the selection action is blocked.
+            pass
+        elif service_item_id.isdigit():
             # 最细粒度：仅展示可接该服务项的陪玩（未勾选该服务项的陪玩不出现）
-            profiles = profiles.filter(service_items__id=int(service_item_id)).distinct()
+            skills=Q(service_items__id=int(service_item_id))
+            if service and service.catalog_family:
+                skills |= Q(service_items__catalog_family=service.catalog_family,service_items__game_category_id=service.game_category_id,service_items__platform=service.platform)
+            profiles = profiles.filter(skills).distinct()
         elif game_category_id.isdigit():
             # 精准筛选：仅展示可接该游戏类目的陪玩（未配置可接游戏的陪玩不出现）
-            profiles = profiles.filter(game_categories__id=int(game_category_id)).distinct()
+            profiles = profiles.filter(game_categories__id=int(game_category_id), game_categories__is_active=True).distinct()
         elif game:
             profiles = profiles.filter(
                 Q(service_area__icontains=game)
                 | Q(user__received_orders__service__game_category__name__iexact=game)
             ).distinct()
 
+        from orders.services import active_orders_for
+        # Reuse the dispatch capacity predicate, including legacy IDs, double
+        # providers and released shares, in one database round trip for the list.
+        active_count = active_orders_for(
+            account_id=OuterRef('account_id'), provider_id=OuterRef('user_id'),
+        ).order_by().values(group=Value(1)).annotate(total=Count('pk', distinct=True)).values('total')
         profiles = profiles.annotate(
+            active_order_count=Coalesce(Subquery(active_count, output_field=IntegerField()), 0),
             pass_priority=Case(
                 When(pass_expires_at__gt=timezone.now(), pass_tier=EscortProfile.PassTier.BLACK, then=Value(4)),
                 When(pass_expires_at__gt=timezone.now(), pass_tier=EscortProfile.PassTier.GOLD, then=Value(3)),
@@ -646,31 +987,95 @@ class EscortProfileListView(APIView):
             )
         ).order_by('-pass_priority', '-favorable_rate', '-rating_avg', '-rating_count', '-completed_order_count', 'id')
 
+        from engagement.models import ProviderNaming
+        naming_map = {}
+        for naming in ProviderNaming.objects.filter(provider_id__in=profiles.values('account_id'),
+                is_visible=True, expires_at__gt=timezone.now()).order_by('-expires_at'):
+            naming_map.setdefault(naming.provider_id, []).append({'id': naming.pk, 'title': naming.title, 'expires_at': naming.expires_at})
         data = []
+        listed_profiles = []
         for p in profiles:
+            # Historical shortcuts may show availability, but never grant a new service qualification.
+            if shortcuts and service and (not p.can_take_service(service) or not service_skill(p,service)):
+                continue
+            acceptance_error = p.order_acceptance_error(service, club_rules_enabled=club_rules_enabled, provider_gender=gender)
+            if detail and service and not acceptance_error:
+                configured = any(s.pk == service.pk or (service.catalog_family
+                    and s.catalog_family == service.catalog_family and s.game_category_id == service.game_category_id
+                    and s.platform == service.platform) for s in p.service_items.all())
+                if not configured:
+                    acceptance_error = '陪玩尚未配置该服务技能'
+            if not acceptance_error and p.active_order_count >= Order.MAX_CONCURRENT_ORDERS:
+                acceptance_error = '该陪玩当前接单已满，请稍后再约'
+            if detail and not acceptance_error and p.status != EscortProfile.Status.AVAILABLE:
+                acceptance_error = '该陪玩暂不可接单，请稍后再约'
+            can_order = not acceptance_error
+            if shortcuts:
+                can_order = can_order and p.status == EscortProfile.Status.AVAILABLE
+            if not directory and not can_order:
+                continue
             identity = p.account or p.user
+            qualified=qualification_rows(p)
+            requirement=service_requirement(service) if service and not detail else None
+            if requirement:qualified=[q for q in qualified if scope_matches(q,requirement)]
+            qualified=[q for q in qualified if q.is_active]
+            for key in ('provider_kind','platform','security_level'):
+                if request.query_params.get(key):qualified=[q for q in qualified if getattr(q,key)==request.query_params[key]]
+            if game_category_id:qualified=[q for q in qualified if q.game_category_id==int(game_category_id)]
+            reference=qualified[0].price_per_hour if len(qualified)==1 and qualified[0].price_per_hour is not None else p.price_per_hour
             item = {
                 'id': p.account_id or p.user_id,
                 'nickname': p.display_name or identity.nickname or identity.username,
+                'gender': p.gender,
+                'recommendation_slot': p.recommendation_slot,
                 'avatar': identity.avatar_url or '',
                 'rank': p.rank_tier,
+                'level_name': p.level.name if p.level_id and p.level.is_active else '',
                 'rating': float(p.rating_avg),
                 'ratingCount': p.rating_count,
                 'favorableRate': round(float(p.favorable_rate or 0), 1),
                 'orderCount': p.completed_order_count,
                 'winRate': float(p.win_rate),
-                'pricePerHour': p.price_per_hour or 0,
+                'pricePerHour': reference or 0,
+                'qualifications': [serialize_qualification(q) for q in qualified],
+                'namings': naming_map.get(p.account_id, []),
+                'hasReferenceHourlyPrice': reference is not None,
                 'bio': p.bio,
                 'city': p.city,
                 'status': p.status,
+                'can_order': can_order,
                 'is_verified': p.is_verified,
                 'voice_card_url': build_media_url(request, p.voice_card),
                 'game_category_ids': [c.id for c in p.game_categories.all()],
+                'game_category_names': [c.name for c in p.game_categories.all() if c.is_active],
                 'service_item_ids': [s.id for s in p.service_items.all()],
             }
+            if detail:
+                item['order_unavailable_reason'] = acceptance_error
             data.append(item)
+            listed_profiles.append(p)
 
+        from .companion_picker import companion_service_amounts, order_service_companions
+        amounts = companion_service_amounts(listed_profiles, include_recent=picker)
+        for item in data:
+            item['monthly_order_amount'] = amounts['monthly'].get(item['id'], 0)
+
+        if detail:
+            if not data:
+                return Response({'code': 404, 'msg': '陪玩资料暂不可查看，请返回列表重新选择'}, status=404)
+            return Response({'code': 0, 'data': data[0]})
+        if shortcuts:
+            by_id = {row['id']: row for row in data}
+            recent = [by_id[pk] for pk in recent_ids if pk in by_id]
+            recommended = sorted((row for row in data if row['recommendation_slot']), key=lambda row: row['recommendation_slot'])[:4]
+            return Response({'code': 0, 'data': {'recent': recent, 'recommended': recommended}})
+        if picker:
+            data = order_service_companions(data, listed_profiles, amounts['recent'])
         return Response({'code': 0, 'data': data})
+
+
+class EscortProfileDetailView(EscortProfileListView):
+    """Use the same public identity, visibility and current metrics as the roster."""
 
 
 class UpdateEscortStatusView(APIView):
@@ -730,7 +1135,7 @@ class ProviderStatsView(APIView):
         orders = Order.objects.filter(provider_account=request.account)
         today = Order.objects.filter(
             provider_account=request.account,
-            created_at__date=timezone.now().date(),
+            created_at__date=timezone.localdate(),
         )
 
         profile = EscortProfile.objects.filter(account=request.account).first()
@@ -752,15 +1157,8 @@ class ProviderStatsView(APIView):
         finished = total_completed + total_cancelled
         completion_rate = round(total_completed / finished * 100) if finished else 0
 
-        active_orders = (
-            Order.objects.filter(
-                Q(provider_account=request.account)
-                | Q(providers__provider_account=request.account),
-                status__in=[Order.Status.GRABBED, Order.Status.IN_SERVICE],
-            )
-            .distinct()
-            .count()
-        )
+        from orders.services import count_active_orders
+        active_orders = count_active_orders(request.account)
 
         return Response({
             'code': 0,
@@ -795,7 +1193,7 @@ class ProviderPassView(APIView):
     def _profile(self, request):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return None
-        return EscortProfile.objects.filter(account=request.account).first()
+        return EscortProfile.objects.filter(account=request.account).prefetch_related('qualifications__game_category').first()
 
     def _data(self, request, profile):
         wallet = get_wallet(account=request.account, user=request.legacy_user)
@@ -831,27 +1229,36 @@ class ProviderPassView(APIView):
             return Response({'code': 403, 'msg': '仅陪玩可购买通行证'})
         return Response({'code': 0, 'data': self._data(request, profile)})
 
+    @recover_fund_result('provider.pass')
     def post(self, request):
         profile = self._profile(request)
         if profile is None:
             return Response({'code': 403, 'msg': '仅陪玩可购买通行证'})
-        tier = (request.data.get('tier') or '').upper()
+        tier = str(request.data.get('tier') or '').upper()
         if tier not in get_pass_daily_prices():
             return Response({'code': 400, 'msg': '请选择有效通行证'})
         try:
-            days = int(request.data.get('days', 1))
-        except (TypeError, ValueError):
+            from rest_framework import serializers
+            days = serializers.IntegerField(min_value=1, max_value=1).run_validation(request.data.get('days', 1))
+        except serializers.ValidationError:
             return Response({'code': 400, 'msg': '购买天数非法'})
         if days != 1:
             return Response({'code': 400, 'msg': '通行证按日采购，每次有效期 1 天'})
 
         daily_price = get_pass_daily_price(tier)
+        if daily_price < 1 or daily_price > 2147483647:
+            return Response({'code': 400, 'msg': '通行证价格配置异常，请联系客服'})
+        if 'expected_daily_price' in request.data and request.data['expected_daily_price'] != daily_price:
+            return Response({'code': 400, 'msg': '通行证价格已更新，请刷新后确认购买'})
         original_amount = daily_price * days
         paid_amount = original_amount
         now = timezone.now()
 
         with transaction.atomic():
             locked_profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
+            replayed, reason = peek_fund_write(account=request.account, request_id=request.data.get('client_request_id'))
+            if replayed:
+                return Response({'code': 409, 'msg': reason})
             if locked_profile.active_pass_tier and locked_profile.active_pass_tier != tier:
                 return Response({
                     'code': 400,
@@ -864,6 +1271,15 @@ class ProviderPassView(APIView):
                 return Response({'code': 403, 'msg': '钱包不可用'})
             if wallet.balance < paid_amount:
                 return Response({'code': 400, 'msg': '兴安币不足，请联系企业微信客服充值'})
+            platform_wallet = get_platform_wallet(for_update=True)
+            if platform_wallet.balance + paid_amount > 2147483647:
+                return Response({'code': 400, 'msg': '平台入账金额超过系统范围，请联系客服'})
+            allowed, reason = claim_fund_write(
+                account=request.account, request_id=request.data.get('client_request_id'),
+                scope='provider.pass', fingerprint=f'{tier}:{days}:{paid_amount}',
+            )
+            if not allowed:
+                return Response({'code': 409, 'msg': reason})
             starts_at = max(now, locked_profile.pass_expires_at or now)
             expires_at = starts_at + timedelta(days=days)
             before = wallet.balance
@@ -875,7 +1291,7 @@ class ProviderPassView(APIView):
                 balance_before=before, balance_after=wallet.balance,
                 remark=f'{dict(EscortProfile.PassTier.choices)[tier]} {days}天',
             )
-            ProviderPassPurchase.objects.create(
+            purchase = ProviderPassPurchase.objects.create(
                 provider=request.legacy_user,
                 account=request.account,
                 tier=tier,
@@ -885,14 +1301,22 @@ class ProviderPassView(APIView):
                 paid_amount=paid_amount, starts_at=starts_at,
                 expires_at=expires_at, transaction=tx,
             )
+            platform_before = platform_wallet.balance
+            platform_wallet.balance += paid_amount
+            platform_wallet.save(update_fields=['balance'])
+            Transaction.objects.create(
+                wallet=platform_wallet, amount=paid_amount,
+                tx_type=Transaction.TxType.PASS_INCOME,
+                balance_before=platform_before, balance_after=platform_wallet.balance,
+                external_tx_id=tx.tx_no, remark=f'通行证购买 #{purchase.pk}：{tx.remark}',
+            )
             locked_profile.pass_tier = tier
             locked_profile.pass_expires_at = expires_at
             locked_profile.save(update_fields=['pass_tier', 'pass_expires_at'])
+            result = fund_success(request, 'provider.pass', msg='通行证购买成功',
+                                  data=self._data(request, locked_profile))
 
-        return Response({
-            'code': 0, 'msg': '通行证购买成功',
-            'data': self._data(request, locked_profile),
-        })
+        return result
 
 
 class EscortScheduleView(APIView):
@@ -978,13 +1402,18 @@ class EscortMeView(APIView):
     def _get_profile(self, request):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return None
-        return EscortProfile.objects.filter(account=request.account).first()
+        return EscortProfile.objects.filter(account=request.account).prefetch_related('qualifications__game_category').first()
 
     def _file_url(self, field, request=None):
         return build_media_url(request, field)
 
     def _serialize(self, profile, request=None):
+        from .qualifications import qualification_rows,serialize_qualification,notification_options
         return {
+            'dispatch_notification_options':notification_options(profile),
+            'dispatch_notification_preferences':profile.dispatch_notification_preferences,
+            'qualifications':[serialize_qualification(q) for q in qualification_rows(profile)],
+            'active_pass_tier':profile.active_pass_tier,
             'display_name': profile.display_name,
             'gender': profile.gender,
             'bio': profile.bio,
@@ -1016,6 +1445,8 @@ class EscortMeView(APIView):
         if profile is None:
             return Response({'code': 403, 'msg': '当前账号未创建大神资料'})
 
+        if 'qualifications' in request.data:
+            return Response({'code':403,'msg':'接单资格只能由管理后台配置'},status=403)
         # 可编辑文本字段及最大长度
         editable = {
             'display_name': 50,
@@ -1023,24 +1454,43 @@ class EscortMeView(APIView):
             'city': 50,
             'service_area': 255,
         }
-        updated_fields = []
+        changes = {}
+        if 'dispatch_notification_preferences' in request.data:
+            from .qualifications import notification_options
+            raw=request.data['dispatch_notification_preferences']
+            allowed={row['key']:row['eligible'] for row in notification_options(profile)}
+            if not isinstance(raw,dict) or any(k not in allowed or type(v) is not bool for k,v in raw.items()):
+                return Response({'code':400,'msg':'派单通知设置无效'},status=400)
+            if any(value and not allowed[key] for key,value in raw.items()):
+                return Response({'code':400,'msg':'只能开启已认证的护航类型通知'},status=400)
+            changes['dispatch_notification_preferences']=raw
         for field, max_len in editable.items():
             if field not in request.data:
                 continue
-            value = (request.data.get(field) or '').strip()
+            value = request.data.get(field)
+            if not isinstance(value, str):
+                return Response({'code': 400, 'msg': f'{field} 必须为文本'})
+            value = value.strip()
             if len(value) > max_len:
                 return Response({'code': 400, 'msg': f'{field} 长度不能超过 {max_len}'})
             if field == 'display_name' and not value:
                 return Response({'code': 400, 'msg': '昵称不能为空'})
-            setattr(profile, field, value)
-            updated_fields.append(field)
+            changes[field] = value
 
         if 'gender' in request.data:
-            gender = (request.data.get('gender') or '').strip().upper()
-            if gender not in self.GENDER_VALUES:
+            gender = request.data.get('gender')
+            if not isinstance(gender, str) or gender.strip().upper() not in self.GENDER_VALUES:
                 return Response({'code': 400, 'msg': '性别取值非法'})
-            profile.gender = gender
-            updated_fields.append('gender')
+            changes['gender'] = gender.strip().upper()
+
+        try:
+            remove_voice = serializers.BooleanField().run_validation(request.data.get('remove_voice_card', False))
+        except serializers.ValidationError:
+            return Response({'code': 400, 'msg': '移除语音卡参数无效'})
+        if remove_voice:
+            if 'voice_card' in request.FILES:
+                return Response({'code': 400, 'msg': '更换和移除语音卡不能同时操作'})
+            changes['voice_card'] = None
 
         upload_rules = {
             'avatar': (5 * 1024 * 1024, '头像不能超过 5MB'),
@@ -1054,26 +1504,60 @@ class EscortMeView(APIView):
                 continue
             if upload.size > max_size:
                 return Response({'code': 400, 'msg': error_message})
-            setattr(profile, field, upload)
-            updated_fields.append(field)
-
-        if updated_fields:
-            profile.save(update_fields=updated_fields)
+            try:
+                if field == 'avatar':
+                    _validate_avatar(upload)
+                else:
+                    validator = serializers.ImageField() if field == 'cheat_proof' else serializers.FileField()
+                    validator.run_validation(upload)
+                EscortProfile._meta.get_field(field).run_validators(upload)
+            except (ValueError, serializers.ValidationError, DjangoValidationError):
+                return Response({'code': 400, 'msg': (
+                    '语音卡请使用 MP3、M4A、WAV、AAC 或 OGG 文件' if field == 'voice_card'
+                    else '请上传有效的图片或文件'
+                )})
+            changes[field] = upload
 
         # 可接服务项：陪玩自助勾选。传入服务项 ID 列表后覆盖设置，
         # 并同步把这些服务项所属游戏并入 game_categories（勾服务项即隐含可接该游戏）。
+        item_ids = None
         if 'service_items' in request.data:
             raw = request.data.get('service_items')
             if isinstance(raw, str):
                 # multipart/表单可能以逗号分隔字符串传入
                 raw = [seg for seg in raw.split(',') if seg.strip()]
-            elif not isinstance(raw, (list, tuple)):
-                raw = [raw]
-            item_ids = [int(v) for v in raw if str(v).strip().isdigit()]
-            items = list(ServiceItem.objects.filter(id__in=item_ids))
-            profile.service_items.set(items)
-            game_ids = {item.game_category_id for item in items if item.game_category_id}
-            profile.game_categories.set(list(game_ids))
+            if not isinstance(raw, (list, tuple)) or any(
+                not isinstance(v, (int, str)) or isinstance(v, bool)
+                or not str(v).strip().isascii() or not str(v).strip().isdigit()
+                or len(str(v).strip()) > 19 or int(v) <= 0 or int(v) > 9223372036854775807
+                for v in raw
+            ):
+                return Response({'code': 400, 'msg': '请选择有效的服务项目'})
+            item_ids = {int(v) for v in raw}
+
+        # 全部校验通过后一次写入；头像同步账号，保证老板端立即显示最新头像。
+        with transaction.atomic():
+            profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
+            if item_ids is not None:
+                items = list(ServiceItem.objects.select_for_update().filter(skill_service_q(), id__in=item_ids).order_by('id'))
+                previous=set(profile.service_items.values_list('pk',flat=True))
+                if any(item.pk not in previous and not profile.can_take_service(item) for item in items):
+                    return Response({'code':400,'msg':'所选服务超出当前接单资格，请联系运营认证'})
+                if len(items) != len(item_ids):
+                    return Response({'code': 400, 'msg': '部分服务已下架或不存在，请刷新后重选'})
+            for field, value in changes.items():
+                if field=='dispatch_notification_preferences':value=dict(profile.dispatch_notification_preferences,**value)
+                setattr(profile, field, value)
+            if changes:
+                profile.save(update_fields=list(changes))
+            if 'avatar' in changes:
+                avatar_url = build_media_url(request, profile.avatar)
+                ClubAccount.objects.filter(pk=profile.account_id).update(avatar_url=avatar_url)
+                if profile.user_id:
+                    User.objects.filter(pk=profile.user_id).update(avatar_url=avatar_url)
+            if item_ids is not None:
+                profile.service_items.set(items)
+                profile.game_categories.set({item.game_category_id for item in items if item.game_category_id}|set(profile.qualifications.values_list('game_category_id',flat=True)))
 
         return Response({'code': 0, 'msg': '已更新', 'data': self._serialize(profile, request)})
 
@@ -1087,10 +1571,12 @@ class EscortSkillOptionsView(APIView):
 
     def get(self, request):
         items = (
-            ServiceItem.objects.filter(is_active=True, game_category__isnull=False)
-            .select_related('game_category')
+            ServiceItem.objects.filter(skill_service_q())
+            .select_related('game_category', 'required_level')
             .order_by('game_category__sort_order', 'game_category_id', 'sort_order', 'id')
         )
+        profile=EscortProfile.objects.filter(account=request.account).prefetch_related('qualifications__game_category').first()
+        from .qualifications import public_requirement
         groups = {}
         order = []
         for item in items:
@@ -1106,6 +1592,14 @@ class EscortSkillOptionsView(APIView):
                 'id': item.id,
                 'name': item.name,
                 'price': item.price,
+                'price_unit': item.price_unit,
+                'provider_requirement':public_requirement(item),
+                'qualified':bool(profile and profile.can_take_service(item)),
+                'required_level_name': item.required_level.name if item.required_level_id else '',
+                'platform': item.platform,
+                'platform_name': item.get_platform_display() if item.platform else '',
+                'security_level': item.security_level,
+                'security_level_name': item.get_security_level_display() if item.security_level else '',
             })
         return Response({'code': 0, 'data': [groups[gid] for gid in order]})
 
@@ -1133,6 +1627,7 @@ class CustomerAchievementView(APIView):
                 'title': item.title,
                 'desc': item.desc,
                 'icon': item.icon,
+                'metric': item.metric,
                 'unlocked': current >= item.target,
                 'current': current,
                 'target': item.target,
@@ -1477,3 +1972,14 @@ class CheckinView(APIView):
                 'full_attendance_awarded': full_attendance_just_awarded,
             }
         })
+
+
+class QualificationOptionsView(APIView):
+    permission_classes=[IsClubAccountAuthenticated]
+    def get(self,request):
+        from .qualifications import options_payload
+        data=options_payload()
+        if request.account.account_type!='STAFF':
+            for scope in data['scopes']:
+                for grade in scope['grades']:grade.pop('commission_rate',None)
+        return Response({'code':0,'data':data})

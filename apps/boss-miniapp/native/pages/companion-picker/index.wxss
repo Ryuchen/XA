@@ -1,0 +1,4 @@
+@import "../../styles/companion-cards.wxss";
+.picker-heading .subtitle { margin-bottom: 8rpx; }
+.picker-summary { margin-top: 20rpx; }
+.picker-gender { display: flex; align-items: center; justify-content: center; min-height: var(--xa-control-height); padding: 0 20rpx; color: var(--xa-color-primary); background: var(--xa-color-primary-soft); border-radius: var(--xa-radius-control); font-size: var(--xa-control-font); }

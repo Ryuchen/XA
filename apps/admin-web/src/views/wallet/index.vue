@@ -1,11 +1,15 @@
 <template>
   <div class="wl-page">
     <div class="ap-page-head">
-      <p class="ap-page-intro">核对企业微信收款后兑换兴安币，并管理钱包余额与调账</p>
+      <p class="ap-page-intro">切换老板或打手钱包，客服核对收款凭证后兑换兴安币；打手奖罚与退押金在陪玩管理办理</p>
     </div>
 
     <crud-table ref="tableRef" :fetcher="walletApi.list" :query="query">
       <template #toolbar="{ reload }">
+        <el-select v-model="query.account_type" style="width: 130px" @change="reload" aria-label="钱包对象">
+          <el-option label="老板钱包" value="BOSS" />
+          <el-option label="打手钱包" value="PROVIDER" />
+        </el-select>
         <el-autocomplete
           v-model="query.boss_no"
           :fetch-suggestions="querySuggest('boss_no')"
@@ -55,7 +59,7 @@
       <el-table-column prop="username" label="账号" min-width="130" />
       <el-table-column prop="nickname" label="昵称" min-width="120" />
       <el-table-column prop="phone" label="手机号" width="130" />
-      <el-table-column label="老板分级" width="110">
+      <el-table-column v-if="query.account_type === 'BOSS'" label="老板分级" width="110">
         <template #default="{ row }">{{ row.boss_type_name || '-' }}</template>
       </el-table-column>
       <el-table-column label="兴安币余额" width="120">
@@ -84,22 +88,22 @@
         fixed="right"
       >
         <template #default="{ row }">
-          <el-button v-if="auth.hasPerm('wallet:recharge')" link type="success" @click="onRecharge(row)">确认企微充值</el-button>
-          <el-button v-if="auth.hasPerm('wallet:adjust')" link type="primary" @click="onAdjust(row)">调账</el-button>
+          <el-button v-if="auth.hasPerm('wallet:recharge')" link type="success" @click="onRecharge(row)">客服充值</el-button>
+          <el-button v-if="auth.hasPerm('wallet:adjust') && row.user_role === 'CUSTOMER'" link type="primary" @click="onAdjust(row)">调账</el-button>
         </template>
       </el-table-column>
     </crud-table>
   </div>
 
-  <el-dialog v-model="adjustVisible" title="钱包调账" width="420px">
-    <el-form label-width="100px">
+  <el-dialog v-model="adjustVisible" title="钱包调账" width="480px" class="ap-modal">
+    <el-form  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="当前余额">{{ amountToXaCoin(current?.balance) }} 兴安币</el-form-item>
       <el-form-item label="调整兴安币">
         <el-input-number v-model="adjustCoin" :precision="1" :step="10" style="width: 100%" />
         <div class="tip">正数增加，负数扣减</div>
       </el-form-item>
-      <el-form-item label="备注">
-        <el-input v-model="adjustRemark" placeholder="调账原因" />
+      <el-form-item label="调账原因" required>
+        <el-input v-model="adjustRemark" placeholder="必填，例如误充纠正" maxlength="255" />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -108,10 +112,10 @@
     </template>
   </el-dialog>
 
-  <el-dialog v-model="rechargeVisible" title="企微充值确认" width="560px" class="wl-dialog">
-    <el-form label-width="92px" label-position="right">
+  <el-dialog v-model="rechargeVisible" title="客服充值确认" width="760px" class="wl-dialog ap-modal">
+    <el-form   class="ap-modal-form ap-form-grid" label-position="top">
       <el-alert
-        title="请先确认企业微信已收款，再按 1:10 兑换比例录入到账兴安币"
+        title="请先核实客服收款，录入实收人民币；系统按 1 元 = 10 兴安币兑换"
         type="info"
         :closable="false"
         show-icon
@@ -121,7 +125,7 @@
         <p class="wl-section-title">充值对象</p>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="老板">{{ current?.nickname || current?.username }}</el-form-item>
+            <el-form-item :label="current?.user_role === 'PROVIDER' ? '打手' : '老板'">{{ current?.nickname || current?.username }}（{{ current?.boss_no }}）</el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="当前余额">{{ amountToXaCoin(current?.balance) }} 币</el-form-item>
@@ -130,11 +134,11 @@
       </div>
 
       <div class="wl-form-section">
-        <p class="wl-section-title">充值金额</p>
+        <p class="wl-section-title">充值金额</p><el-form-item v-if="rechargePackages.length" label="预存档位"><el-select placeholder="选择预存档位，自动填入实付与赠送" @change="choosePackage"><el-option v-for="item in rechargePackages" :key="item.id" :value="item.id" :label="'实付 '+item.amount/100+' 元，赠送 '+item.gift_amount/100+' 元，消费积分 '+item.points_rate/100+' 倍'"/></el-select></el-form-item>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="充值兴安币">
-              <el-input-number v-model="rechargeCoin" :min="0" :precision="1" :step="100" style="width: 100%" />
+              <el-form-item label="实收人民币">
+                <el-input-number v-model="rechargeYuan" :min="0" :precision="2" :step="100" style="width: 100%" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -145,16 +149,16 @@
         </el-row>
         <el-form-item label="预计到账">
           <strong class="wl-credit-preview">{{ rechargeCoin + giftCoin }} 兴安币</strong>
-          <span class="tip">（充值兑换 + 客服赠送）</span>
+          <span class="tip">（{{ rechargeYuan }} 元兑换 {{ rechargeCoin }} 币 + 客服赠送）</span>
         </el-form-item>
       </div>
 
       <div class="wl-form-section">
         <p class="wl-section-title">溯源信息</p>
         <el-form-item label="交易编号">
-          <el-input v-model="tradeNo" placeholder="企业微信收款流水号，建议必填" maxlength="64" />
+          <el-input v-model="tradeNo" placeholder="已核实的收款流水号（必填）" maxlength="64" />
         </el-form-item>
-        <el-form-item label="充值凭证">
+        <el-form-item label="充值凭证" class="ap-field--full">
           <el-upload
             :auto-upload="false"
             :show-file-list="false"
@@ -170,7 +174,7 @@
             fit="contain"
             class="wl-proof-preview"
           />
-          <div class="tip">转账/收款截图，选填但建议上传以便对账溯源</div>
+          <div class="tip">请上传已核实的收款截图，同一收款流水只能充值一次</div>
         </el-form-item>
       </div>
 
@@ -186,7 +190,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { request } from '@/api/request'
+import { computed, ref } from 'vue'
+import { formatRmb, rmbToRawAmount, toCoin } from '@xa/money'
 import { ElMessage, type UploadFile } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import CrudTable from '@/components/CrudTable.vue'
@@ -196,7 +202,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const tableRef = ref()
-const query = ref<Record<string, any>>({ boss_no: '', nickname: '', phone: '' })
+const query = ref<Record<string, any>>({ account_type: 'BOSS', boss_no: '', nickname: '', phone: '' })
 
 /**
  * 生成某字段的输入建议回调：以当前输入为该字段条件查询后端，
@@ -209,7 +215,7 @@ function querySuggest(field: 'boss_no' | 'nickname' | 'phone') {
       return
     }
     try {
-      const res = (await walletApi.list({ [field]: keyword, page: 1, page_size: 10 })) as any
+      const res = (await walletApi.list({ account_type: query.value.account_type, [field]: keyword, page: 1, page_size: 10 })) as any
       const seen = new Set<string>()
       const items: { value: string }[] = []
       for (const w of res.data.list || []) {
@@ -232,15 +238,19 @@ const current = ref<any>(null)
 const adjustVisible = ref(false)
 const adjustCoin = ref<number>(0)
 const adjustRemark = ref('')
+const adjustRequestId = ref('')
 
 function onAdjust(row: any) {
   current.value = row
   adjustCoin.value = 0
   adjustRemark.value = ''
+  adjustRequestId.value = crypto.randomUUID()
   adjustVisible.value = true
 }
 
 async function onAdjustSave() {
+  if (saving.value) return
+  if (!adjustRemark.value.trim()) { ElMessage.warning('请填写调账原因'); return }
   const amount = xaCoinToAmount(adjustCoin.value)
   if (amount === 0) {
     ElMessage.warning('调账金额不能为 0')
@@ -248,7 +258,7 @@ async function onAdjustSave() {
   }
   saving.value = true
   try {
-    await walletApi.action(current.value.id, 'adjust', { amount, remark: adjustRemark.value })
+    await walletApi.action(current.value.id, 'adjust', { amount, remark: adjustRemark.value.trim(), client_request_id: adjustRequestId.value })
     ElMessage.success('调账成功')
     adjustVisible.value = false
     tableRef.value.load()
@@ -257,11 +267,15 @@ async function onAdjustSave() {
   }
 }
 
+const rechargePackages = ref<any[]>([])
+function choosePackage(id:number){const item=rechargePackages.value.find(row=>row.id===id);if(item){rechargeYuan.value=Number(formatRmb(item.amount));giftCoin.value=toCoin(item.gift_amount)}}
 const rechargeVisible = ref(false)
-const rechargeCoin = ref<number>(0)
+const rechargeYuan = ref<number>(0)
+const rechargeCoin = computed(() => toCoin(rmbToRawAmount(rechargeYuan.value)))
 const giftCoin = ref<number>(0)
 const rechargeRemark = ref('')
 const tradeNo = ref('')
+const rechargeRequestId = ref('')
 const proofFile = ref<File | null>(null)
 const proofPreview = ref('')
 
@@ -272,19 +286,27 @@ function onProofChange(uploadFile: UploadFile) {
   proofPreview.value = URL.createObjectURL(raw)
 }
 
-function onRecharge(row: any) {
+async function onRecharge(row: any) {
   current.value = row
-  rechargeCoin.value = 0
+  rechargeYuan.value = 0
   giftCoin.value = 0
   rechargeRemark.value = ''
   tradeNo.value = ''
+  rechargeRequestId.value = `recharge-${Date.now()}-${Math.random().toString(36).slice(2)}`
   proofFile.value = null
   proofPreview.value = ''
   rechargeVisible.value = true
+  rechargePackages.value=[]
+  if(row.user_role !== 'PROVIDER'){try{const res=await request({url:'/wallets/recharge-packages/'});rechargePackages.value=res.data}catch(_){/* 手动核对仍可充值 */}}
 }
 
 async function onRechargeSave() {
-  const amount = xaCoinToAmount(rechargeCoin.value)
+  if (saving.value) return
+  if (!tradeNo.value.trim() || !proofFile.value) {
+    ElMessage.warning('请填写收款流水号并上传收款凭证')
+    return
+  }
+  const amount = rmbToRawAmount(rechargeYuan.value)
   const giftAmount = xaCoinToAmount(giftCoin.value)
   if (amount <= 0) {
     ElMessage.warning('实充金额必须大于 0')
@@ -293,11 +315,12 @@ async function onRechargeSave() {
   saving.value = true
   try {
     const fd = new FormData()
-    fd.append('user_id', String(current.value.user))
+    fd.append(current.value.account_id ? 'account_id' : 'user_id', String(current.value.account_id || current.value.user))
     fd.append('amount', String(amount))
     fd.append('gift_amount', String(giftAmount))
     fd.append('remark', rechargeRemark.value)
     fd.append('trade_no', tradeNo.value)
+    fd.append('client_request_id', rechargeRequestId.value)
     if (proofFile.value) fd.append('proof_image', proofFile.value)
     await walletApi.collectionAction('recharge', fd)
     ElMessage.success(`已入账 ${rechargeCoin.value + giftCoin.value} 兴安币`)
@@ -327,9 +350,6 @@ async function onRechargeSave() {
   font-size: 12px;
   letter-spacing: 0.02em;
 }
-.wl-dialog :deep(.el-dialog__body) {
-  padding-top: 8px;
-}
 .wl-recharge-alert {
   margin-bottom: 18px;
 }
@@ -337,26 +357,6 @@ async function onRechargeSave() {
   margin-right: 8px;
   color: var(--primary);
   font-size: 18px;
-}
-.wl-form-section {
-  padding: 4px 0 2px;
-}
-.wl-form-section + .wl-form-section {
-  margin-top: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-.wl-section-title {
-  margin: 0 0 14px;
-  padding-left: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--foreground);
-  line-height: 1.2;
-  border-left: 3px solid var(--primary);
-}
-.wl-form-section :deep(.el-form-item) {
-  margin-bottom: 16px;
 }
 .wl-proof-preview {
   display: block;

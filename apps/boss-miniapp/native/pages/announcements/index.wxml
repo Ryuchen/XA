@@ -1,0 +1,10 @@
+<view class="page">
+  <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button>
+<view class="eyebrow">平台动态</view><view class="title">公告</view><view class="subtitle">服务调整、活动与使用说明</view>
+  <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" bind:retry="load" />
+  <view wx:for="{{items}}" wx:key="id" class="card announcement" data-id="{{item.id}}" bindtap="open" role="button">
+    <view class="row between"><text wx:if="{{item.is_pinned}}" class="tag">置顶</text><text class="small muted">{{item.dateText}}</text><text class="muted">›</text></view>
+    <view class="section-title">{{item.title}}</view>
+  </view>
+  <view wx:if="{{items.length >= 20}}" class="small muted">当前展示最新 20 条公告</view>
+</view>
