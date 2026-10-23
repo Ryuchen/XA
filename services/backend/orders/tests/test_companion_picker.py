@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
-from orders.models import Order, OrderProvider
+from orders.models import Order, OrderProvider, OrderRefund
 from orders.tests.factories import make_order, make_provider, make_service, make_service_category, make_user
 from users.companion_picker import companion_service_amounts, recent_service_amounts
 from users.models import EscortLevel, EscortProfile, EscortSchedule
@@ -80,6 +80,30 @@ class CompanionPickerTest(APITestCase):
         with self.assertNumQueries(2):
             totals = recent_service_amounts(profiles)
         self.assertEqual(totals, {first.account_id: 1200, second.account_id: 700})
+
+    def test_unrelated_or_old_partial_refunds_keep_the_two_query_budget(self):
+        profile, other = self.provider(), self.provider()
+        self.order(profile, 250)
+        self.order(other, 99999, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
+        self.order(profile, 99999, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED,
+                   grabbed_at=timezone.now() - timedelta(days=31))
+        with self.assertNumQueries(2):
+            totals = recent_service_amounts([profile])
+        self.assertEqual(totals, {profile.account_id: 250})
+
+    def test_partial_legacy_and_team_shares_use_net_amounts_without_double_counting(self):
+        first, second = self.provider(), self.provider()
+        legacy = self.order(first, 1000, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
+        OrderRefund.objects.create(order=legacy, amount=300)
+        team = self.order(first, 1201, escort_mode='DOUBLE', payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
+        OrderRefund.objects.create(order=team, amount=201)
+        for profile, base in ((first, 600), (second, 601)):
+            OrderProvider.objects.create(order=team, provider=profile.user,
+                                         provider_account=profile.account, settlement_base=base)
+        totals = companion_service_amounts([first, second], include_recent=True)
+        expected = {first.account_id: 1200, second.account_id: 500}
+        self.assertEqual(totals['recent'], expected)
+        self.assertEqual(totals['monthly'], expected)
 
     def test_old_unpaid_refunded_cancelled_gifts_and_child_orders_do_not_rank(self):
         profile = self.provider()

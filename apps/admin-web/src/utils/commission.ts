@@ -33,8 +33,9 @@ export function commissionError(type: CommissionType, rate: unknown, fixed: unkn
   }
   if (type !== 'FIXED') return '请选择抽成方式'
   if (typeof fixed !== 'number' || !Number.isFinite(fixed) || fixed < 0) return '请填写不小于 0 的固定抽成金额'
-  if (Math.abs(fixed * 10 - Math.round(fixed * 10)) > 0.000001) return '固定抽成最多保留 1 位小数'
-  if (!Number.isSafeInteger(xaCoinToAmount(fixed)) || xaCoinToAmount(fixed) > 2147483647) return '固定抽成金额过大'
+  const amount = xaCoinToAmount(fixed)
+  if (Math.abs(fixed - Number(amountToXaCoin(amount))) > 0.0000001) return '固定抽成最多保留 1 位小数'
+  if (!Number.isSafeInteger(amount) || amount > 2147483647) return '固定抽成金额过大'
   return ''
 }
 

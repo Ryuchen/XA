@@ -134,12 +134,25 @@ class ProviderBenefitRecordsTest(APITestCase):
         self.assertEqual(by_id[pending.id]['settlement_status'], 'PENDING')
         self.assertEqual(by_id[missing_credit.id]['settlement_status'], 'CHECK_REQUIRED')
 
-    def test_unpaid_and_refunded_gifts_are_excluded(self):
-        for payment_status in [Order.PaymentStatus.UNPAID, Order.PaymentStatus.REFUNDED]:
-            make_completed_order(self.customer, self.provider, service=self.gift_service, payment_status=payment_status)
+    def test_unpaid_gifts_are_excluded_and_refunded_history_keeps_net_income(self):
+        unpaid = make_completed_order(self.customer, self.provider, service=self.gift_service,
+                                      payment_status=Order.PaymentStatus.UNPAID)
+        refunded = make_completed_order(self.customer, self.provider, service=self.gift_service,
+                                        payment_status=Order.PaymentStatus.REFUNDED)
+        refunded.status = Order.Status.CANCELLED
+        refunded.save(update_fields=['status'])
+        original = Transaction.objects.create(wallet=self.wallet, order=refunded,
+                                              tx_type=Transaction.TxType.INCOME, amount=4000)
+        Transaction.objects.create(wallet=self.wallet, order=refunded, tx_type=Transaction.TxType.INCOME,
+                                   amount=-4000, reversal_of=original)
         self.client.force_authenticate(self.provider)
         data = self.client.get(self.URL).data['data']
-        self.assertEqual(data['summary']['gift_count'], 1)
+        self.assertEqual(data['summary']['gift_count'], 2)
+        self.assertEqual(data['summary']['total_gift_income'], 4000)
+        records = {row['id']: row for row in data['gift_records']}
+        self.assertNotIn(unpaid.pk, records)
+        self.assertEqual(records[refunded.pk]['settlement_status'], 'REFUNDED')
+        self.assertEqual(records[refunded.pk]['received_income'], 0)
 
     def test_members_override_header_and_only_own_split_is_counted(self):
         other = make_provider()

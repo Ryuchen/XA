@@ -25,7 +25,7 @@ test('fixed configuration converts coins at the shared boundary and keeps explic
 
 test('fixed validation rejects lossy precision, missing, negative and overflowing values before conversion', () => {
   for (const value of [undefined, null, NaN, Infinity, -1, .01, 1.11, 214748364.8]) assert.ok(commission.commissionError('FIXED', 0, value), String(value));
-  for (const value of [0, .1, 12.3, 214748364.7]) assert.equal(commission.commissionError('FIXED', undefined, value), '', String(value));
+  for (const value of [0, .1, .1 + .2, 12.3, 214748364.7]) assert.equal(commission.commissionError('FIXED', undefined, value), '', String(value));
   assert.equal(commission.commissionPayload('FIXED', 50, 214748364.7).commission_fixed, 2147483647);
 });
 

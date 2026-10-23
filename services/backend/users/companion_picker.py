@@ -2,7 +2,7 @@
 from datetime import timedelta
 from zoneinfo import ZoneInfo
 
-from django.db.models import Q, Sum
+from django.db.models import BigIntegerField, Case, Q, Sum, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
@@ -28,8 +28,6 @@ def _service_amounts(profiles, periods):
     ).exclude(status=Order.Status.CANCELLED).exclude(
         Q(is_gift_snapshot=True) | Q(service__service_category__is_gift=True),
     )
-    partial_orders = orders.filter(payment_status='PARTIALLY_REFUNDED')
-    orders = orders.exclude(payment_status='PARTIALLY_REFUNDED')
     shares = OrderProvider.objects.filter(order__in=orders, created_at__gte=since, created_at__lte=until).filter(
         Q(provider_account_id__in=account_ids)
         | Q(provider_account__isnull=True, provider_id__in=user_ids),
@@ -40,19 +38,33 @@ def _service_amounts(profiles, periods):
         Q(provider_account_id__in=account_ids)
         | Q(provider_account__isnull=True, provider_id__in=user_ids),
     )
-    for queryset, field, date_field in ((shares, 'settlement_base', 'created_at'), (legacy, 'amount', 'accepted_at')):
+    partial_ids = set()
+    for queryset, field, date_field, order_prefix, order_id in (
+        (shares, 'settlement_base', 'created_at', 'order__', 'order_id'),
+        (legacy, 'amount', 'accepted_at', '', 'pk'),
+    ):
         aggregates = {
             name: Sum(field, filter=Q(**{date_field + '__gte': start, date_field + '__lte': end}))
             for name, (start, end) in periods.items()
         }
-        for row in queryset.order_by().values('provider_account_id', 'provider_id').annotate(**aggregates):
+        queryset = queryset.annotate(partial_order_id=Case(
+            When(**{order_prefix + 'payment_status': Order.PaymentStatus.PARTIALLY_REFUNDED}, then=order_id),
+            output_field=BigIntegerField(),
+        ))
+        for row in queryset.order_by().values('provider_account_id', 'provider_id', 'partial_order_id').annotate(**aggregates):
+            if row['partial_order_id'] is not None:
+                partial_ids.add(row['partial_order_id'])
+                continue
             pk = by_account.get(row['provider_account_id']) if row['provider_account_id'] else by_user.get(row['provider_id'])
             if pk is not None:
                 for name in periods:
                     if row[name] is not None:
                         totals[name][pk] = totals[name].get(pk, 0) + row[name]
     from orders.analytics import partial_share_rows
-    for row in partial_share_rows(partial_orders):
+    # Reconcile only partially refunded orders found in the two scoped reads.
+    # Ordinary rosters keep their two-query cost and never scan unrelated history.
+    partial_rows = partial_share_rows(orders.filter(pk__in=partial_ids)) if partial_ids else ()
+    for row in partial_rows:
         pk = by_account.get(row['provider_account_id']) if row['provider_account_id'] else by_user.get(row['provider_id'])
         if pk is not None:
             for name,(start,end) in periods.items():

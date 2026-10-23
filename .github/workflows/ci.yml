@@ -20,17 +20,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
-      - run: node --test scripts/test-fund-request.cjs
-      - run: node --test scripts/test-withdraw-ui.cjs
-      - run: node --test scripts/test-coalesced-refresh.cjs
-      - run: node --test scripts/test-realtime-clients.cjs
-      - run: node --test scripts/test-auth-sessions.cjs
-      - run: node --test scripts/test-private-media-clients.cjs
-      - run: node --test scripts/test-native-core.cjs
-      - run: node --test scripts/test-native-resource-budget.mjs
-      - run: node --test scripts/test-release-config.mjs
-      - run: node --test scripts/test-admin-build-config.mjs
-      - run: node --test scripts/test-deploy-release.mjs
+      - name: Client regression tests
+        run: node --test scripts/test-*.cjs scripts/test-*.mjs apps/admin-web/tests/*.test.cjs apps/provider-miniapp/tests/*.cjs
       - run: python3 scripts/test-managed-compose.py
       - run: pnpm run admin:build
       - run: pnpm run build:mini

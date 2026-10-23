@@ -142,9 +142,14 @@ class ServiceItemDetailSerializer(ServiceItemSerializer):
 
 class OrderListSerializer(serializers.ListSerializer):
     def to_representation(self, data):
-        from django.db.models import prefetch_related_objects
+        from django.db.models import Prefetch, prefetch_related_objects
+        from .models import OrderRefund, RefundRecoveryLine
         rows = list(data.all() if hasattr(data, 'all') else data)
-        prefetch_related_objects(rows, 'aftersales')
+        recoveries = RefundRecoveryLine.objects.select_related('wallet', 'reversal_transaction')
+        refunds = OrderRefund.objects.order_by('-created_at', '-pk').prefetch_related(
+            Prefetch('recovery_lines', queryset=recoveries),
+        )
+        prefetch_related_objects(rows, 'aftersales', Prefetch('refund_records', queryset=refunds))
         scoped=[row for row in rows if row.provider_requirement_snapshot]
         if scoped:prefetch_related_objects(scoped,'applications__applicant__escort_profile__qualifications__game_category','applications__partner__escort_profile__qualifications__game_category')
         return super().to_representation(rows)

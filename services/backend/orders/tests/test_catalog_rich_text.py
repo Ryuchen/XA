@@ -5,6 +5,7 @@ from PIL import Image
 from io import BytesIO
 from django.test import TestCase, override_settings
 from common.rich_text import sanitize_catalog_html, image_source
+from common.catalog_images import DISPLAY_PREFIX
 from console.gameplay import GameplaySerializer
 from console.serializers import AdminServiceItemSerializer
 from orders.models import Gameplay, ServiceItem
@@ -29,7 +30,7 @@ class CatalogRichTextTests(TestCase):
         data = ServiceItemDetailSerializer(self.service).data
         self.assertIn('手游专属', data['details_html'])
         self.assertEqual(len(data['details_images']), 1)
-        self.assertIn('/thumbnails/v3/', data['details_images'][0])
+        self.assertIn(DISPLAY_PREFIX, data['details_images'][0])
         self.assertEqual(data['rules'], '原有履约规则')
         self.assertEqual(data['price'], 16800)
 
@@ -44,12 +45,12 @@ class CatalogRichTextTests(TestCase):
         self.service.details_html = '<img src="/media/club-catalog/display.webp" data-original="/media/club-catalog/original.png" />'
         data = ServiceItemDetailSerializer(self.service).data
         self.assertNotIn('data-original', data['details_html'])
-        self.assertIn('/thumbnails/v3/', data['details_images'][0])
+        self.assertIn(DISPLAY_PREFIX, data['details_images'][0])
         self.assertNotIn('original.png', data['details_html'])
         self.service.details_html = '<img src="/media/club-catalog/display.webp" data-original="/media/provider-registration/secret.png" />'
         data = ServiceItemDetailSerializer(self.service).data
         self.assertNotIn('data-original', data['details_html'])
-        self.assertIn('/thumbnails/v3/', data['details_images'][0])
+        self.assertIn(DISPLAY_PREFIX, data['details_images'][0])
 
     def test_no_inline_scripts_or_private_images(self):
         dirty = '<style>bad</style><svg><script>bad</script></svg><iframe>bad</iframe><p style="color:red">安全 & 内容</p><img src="https://api.xaesports.club/media/registrations/private.png" /><img src="/media/club-catalog/a.png" onerror="bad" />'

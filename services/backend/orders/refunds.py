@@ -35,6 +35,8 @@ def posted_settlement(order):
                 or order.providers.filter(settled_at__isnull=False,provider_income__gt=0).exists())
 
 def refunded_amount(order):
+    if 'refund_records' in getattr(order, '_prefetched_objects_cache', {}):
+        return sum(row.amount for row in order.refund_records.all())
     return OrderRefund.objects.filter(order=order).aggregate(v=Sum('amount'))['v'] or 0
 
 def with_net_amount(qs):
@@ -337,14 +339,19 @@ def apply_admin_refund(order_id,*,reason,operator,operator_account,refund_amount
 
 
 def refund_summary(order,*,detailed=False,account=None):
-    rows = list(OrderRefund.objects.filter(order=order).order_by('-created_at','-pk'))
+    rows = sorted(order.refund_records.all(), key=lambda row: (row.created_at, row.pk), reverse=True)
     if not rows:
         return None
     provider = bool(account and account.account_type == 'PROVIDER')
     records,all_lines = [],[]
     for row in rows:
         item = {'id':row.pk,'amount':row.amount,'created_at':row.created_at,'reason':row.reason,'client_request_id':row.client_request_id}
-        lines = list(row.recovery_lines.select_related('wallet','reversal_transaction')) if detailed or provider else []
+        lines = []
+        if detailed or provider:
+            recovery_lines = row.recovery_lines.all()
+            if 'recovery_lines' not in getattr(row, '_prefetched_objects_cache', {}):
+                recovery_lines = recovery_lines.select_related('wallet', 'reversal_transaction')
+            lines = list(recovery_lines)
         if detailed:
             item.update(recovered_amount=row.recovered_amount,benefit_effects=row.benefit_effects,
                 recovery_lines=[{'original_transaction_id':r.original_transaction_id,'reversal_transaction_id':r.reversal_transaction_id,

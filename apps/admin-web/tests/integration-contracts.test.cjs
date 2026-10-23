@@ -33,24 +33,28 @@ function deferred() {
 
 function orderDetailHarness() {
   const current = { value: null }, aftersales = { value: [] }, logs = { value: [] }, detailVisible = { value: false }
+  const detailOrderId = { value: null }, detailLoading = { value: false }, detailFailed = { value: false }
   const requests = new Map()
   const requestFor = key => {
     const pending = deferred()
     requests.set(key, pending)
     return pending.promise
   }
-  const { onDetail } = pageFunctions('views/order/index.vue', ['onDetail'], {
-    current, aftersales, logs, detailVisible,
+  const { onDetail, refreshCurrentOrder } = pageFunctions('views/order/index.vue',
+    ['onDetail', 'clearOrderDetail', 'isCurrentOrderDetail', 'refreshCurrentOrder'], {
+    current, aftersales, logs, detailVisible, detailOrderId, detailLoading, detailFailed,
+    pageDisposed: false, canReadOrders: { value: true }, auth: { sessionRevision: 1 },
+    refundTarget: { value: null },
     orderApi: { retrieve: id => requestFor(`order-${id}`) },
     aftersaleApi: { list: ({ order }) => requestFor(`tickets-${order}`) },
     request: ({ url }) => requestFor(`logs-${url.match(/orders\/(\d+)/)[1]}`),
-  }, 'let detailSequence = 0')
+  }, 'let detailSequence = 0, detailRefreshPending = false')
   const settle = id => {
     requests.get(`order-${id}`).resolve({ data: { id, order_no: `TEST-${id}` } })
     requests.get(`tickets-${id}`).resolve({ data: { list: [{ order: id }] } })
     requests.get(`logs-${id}`).resolve({ data: [{ order: id }] })
   }
-  return { current, aftersales, logs, detailVisible, requests, onDetail, settle }
+  return { current, aftersales, logs, detailVisible, detailLoading, detailFailed, requests, onDetail, refreshCurrentOrder, settle }
 }
 
 test('late order detail responses cannot mix another order into the selected drawer', async () => {
@@ -70,19 +74,33 @@ test('late order detail responses cannot mix another order into the selected dra
 test('an incomplete order detail load does not publish a mixed financial drawer', async () => {
   const harness = orderDetailHarness()
   const operation = harness.onDetail({ id: 3 })
-  const failure = assert.rejects(operation, /history unavailable/)
   harness.requests.get('order-3').resolve({ data: { id: 3 } })
   harness.requests.get('tickets-3').resolve({ data: { list: [{ order: 3 }] } })
   harness.requests.get('logs-3').reject(new Error('history unavailable'))
-  await failure
-  assert.equal(harness.current.value, null)
-  assert.equal(harness.detailVisible.value, false)
+  await operation
+  assert.equal(harness.current.value.id, 3)
+  assert.equal(harness.aftersales.value.length, 0)
+  assert.equal(harness.logs.value.length, 0)
+  assert.equal(harness.detailVisible.value, true)
+  assert.equal(harness.detailLoading.value, false)
+  assert.equal(harness.detailFailed.value, true, 'the error state hides financial details until all reads succeed')
+  const retry = harness.refreshCurrentOrder()
+  harness.settle(3)
+  await retry
+  assert.equal(harness.detailFailed.value, false)
+  assert.equal(harness.aftersales.value[0].order, 3)
+  assert.equal(harness.logs.value[0].order, 3)
 })
 
 const moneySource = fs.readFileSync(path.resolve(appRoot, '../../packages/money/src/index.js'), 'utf8')
 const moneyModule = { exports: {} }
 vm.runInNewContext(ts.transpileModule(moneySource, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText,
   { module: moneyModule, exports: moneyModule.exports })
+const commissionModule = { exports: {} }
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(appRoot, 'src/utils/commission.ts'), 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS },
+}).outputText, { module: commissionModule, exports: commissionModule.exports,
+  require: () => ({ amountToXaCoin: moneyModule.exports.formatXaCoin, xaCoinToAmount: moneyModule.exports.toRawAmount }) })
 const report = pageFunctions('views/report/index.vue', ['reportRate', 'reportCommissionDesc', 'reportEstimatedPayout'], {
   amountToXaCoin: moneyModule.exports.formatXaCoin,
 })
@@ -123,7 +141,7 @@ test('selecting a package fixes one or two provider slots and shows the per-pers
   ] }
   const handlers = pageFunctions('views/order/index.vue',
     ['serviceProviderCount', 'serviceOptionLabel', 'syncDispatchProviderCount', 'onServiceChange'], {
-      currentService, dispatchForm, serviceOptions, onProviderPicked: async () => {},
+      currentService, dispatchForm, serviceOptions, dispatchCommissionMode: { value: 'FIXED' }, onProviderPicked: async () => {},
       amountToXaCoin: moneyModule.exports.formatXaCoin,
     })
   await handlers.onServiceChange(13)
@@ -138,29 +156,34 @@ test('selecting a package fixes one or two provider slots and shows the per-pers
   assert.equal(handlers.serviceProviderCount({}), null, 'missing backend count is not guessed as one')
 })
 
-function dispatchHarness(count, mode, slots) {
+async function dispatchHarness(count, mode, slots) {
   const warnings = [], sent = []
   const dispatchForm = { customer_id: 10, service_id: 13, game_rounds: 1, escort_mode: mode,
     provider_gender: 'ANY', remark: '', providers: slots }
-  const { onDispatchSave } = pageFunctions('views/order/index.vue', ['serviceProviderCount', 'onDispatchSave'], {
+  const { onDispatchSave, refreshDispatchQuote } = pageFunctions('views/order/index.vue',
+    ['serviceProviderCount', 'dispatchPendingPercentage', 'dispatchQuoteKey', 'dispatchCommissionParams', 'refreshDispatchQuote', 'onDispatchSave'], {
+    pageDisposed: false, auth: { sessionRevision: 1, hasPerm: () => true },
     dispatchForm, currentService: { value: { billing_provider_count: count, price: 2000 } },
     dispatching: { value: false }, quoteLoading: { value: false }, dispatchQuote: { value: { amount: 4000 } },
+    dispatchCommissionMode: { value: 'AUTO' }, dispatchCommissionFixed: { value: 0 }, dispatchPendingRate: { value: undefined },
+    dispatchCommissionError: { value: '' }, dispatchFixed: { value: false }, commissionError: commissionModule.exports.commissionError,
     insufficient: { value: false }, dispatchRequestId: { value: 'test-dispatch' }, dispatchVisible: { value: true },
     tableRef: { value: { load() {} } }, xaCoinToAmount: moneyModule.exports.toRawAmount,
     ElMessage: { warning: value => warnings.push(value), success() {} },
     orderApi: { collectionAction: async (_, payload) => { sent.push(payload); return { data: { status: 'GRABBED' } } } },
-    refreshDispatchQuote: async () => {},
-  })
+    request: async () => ({ data: { amount: 4000, commission_type: 'PERCENT' } }),
+  }, 'let quoteSequence = 0, quotedInputs = "", quotedSession = -1')
+  await refreshDispatchQuote()
   return { onDispatchSave, warnings, sent }
 }
 
 test('single packages cannot submit a manual double override and missing package counts block dispatch', async () => {
   const slots = [20, 21].map(provider_id => ({ provider_id, commission_type: 'PERCENT', commission_rate: 20 }))
-  const single = dispatchHarness(1, 'DOUBLE', slots)
+  const single = await dispatchHarness(1, 'DOUBLE', slots)
   await single.onDispatchSave()
   assert.equal(single.sent.length, 0)
   assert.match(single.warnings[0], /陪玩人数与所选套餐不一致/)
-  const missing = dispatchHarness(undefined, 'SINGLE', slots.slice(0, 1))
+  const missing = await dispatchHarness(undefined, 'SINGLE', slots.slice(0, 1))
   await missing.onDispatchSave()
   assert.equal(missing.sent.length, 0)
   assert.match(missing.warnings[0], /套餐人数尚未加载/)
@@ -168,13 +191,13 @@ test('single packages cannot submit a manual double override and missing package
 
 test('double dispatch submits two different providers with the unchanged server quote', async () => {
   const slots = [20, 21].map(provider_id => ({ provider_id, commission_type: 'PERCENT', commission_rate: 20 }))
-  const valid = dispatchHarness(2, 'DOUBLE', slots)
+  const valid = await dispatchHarness(2, 'DOUBLE', slots)
   await valid.onDispatchSave()
   assert.equal(valid.sent.length, 1)
   assert.equal(valid.sent[0].expected_amount, 4000)
   assert.equal(valid.sent[0].escort_mode, 'DOUBLE')
   assert.deepEqual(Array.from(valid.sent[0].providers, row => row.provider_id), [20, 21])
-  const duplicate = dispatchHarness(2, 'DOUBLE', [slots[0], slots[0]])
+  const duplicate = await dispatchHarness(2, 'DOUBLE', [slots[0], slots[0]])
   await duplicate.onDispatchSave()
   assert.equal(duplicate.sent.length, 0)
   assert.match(duplicate.warnings[0], /不可重复指派/)
@@ -202,8 +225,10 @@ test('late commission suggestions from a previous package cannot alter current p
   const pending = deferred()
   const slot = { provider_id: 20, commission_rate: 10 }
   const dispatchForm = { service_id: 12, providers: [slot] }
-  const { onProviderPicked } = pageFunctions('views/order/index.vue', ['onProviderPicked'], {
+  const { onProviderPicked } = pageFunctions('views/order/index.vue', ['onProviderPicked', 'dispatchPendingPercentage', 'dispatchCommissionParams'], {
     dispatchForm, dispatchQuote: { value: { commission_policy: 'LEGACY' } }, request: () => pending.promise,
+    auth: { sessionRevision: 1 }, pageDisposed: false, dispatchVisible: { value: true },
+    dispatchCommissionMode: { value: 'AUTO' }, dispatchCommissionFixed: { value: 0 }, dispatchPendingRate: { value: undefined },
   })
   const previous = onProviderPicked(0)
   dispatchForm.service_id = 13
