@@ -1,17 +1,17 @@
-.cover { position: relative; height: 256rpx; overflow: hidden; border-radius: 24rpx; background: #24304a; color: #fffdf5; }
+.cover { position: relative; height: 256rpx; overflow: hidden; border-radius: 24rpx; background: #1f3d7c; color: var(--xa-color-surface-card); }
 .image, .shade { position: absolute; inset: 0; width: 100%; height: 100%; }
 .shade { background: linear-gradient(180deg, transparent 45%, rgba(0,0,0,.55)); }
-.roulette { background: linear-gradient(135deg,#52251e,#bc5836); }
-.experience { background: linear-gradient(135deg,#213e3a,#5d9b8b); }
-.companion { background: linear-gradient(135deg,#323357,#7774b4); }
-.fun { background: linear-gradient(135deg,#002fa7,#002fa7); }
-.mission { background: linear-gradient(135deg,#273d58,#5589af); }
-.extraction { background: linear-gradient(135deg,#53421e,#a58b43); }
-.prison { background: linear-gradient(135deg,#273d40,#5a7780); }
-.custom { background: linear-gradient(135deg,#192847,#657188); }
+.roulette { background: linear-gradient(135deg,#003b72,#2475b5); }
+.experience { background: linear-gradient(135deg,#136398,#5d99c0); }
+.companion { background: linear-gradient(135deg,#1d296e,#4f7da2); }
+.fun { background: linear-gradient(135deg,var(--xa-color-primary),var(--xa-color-primary)); }
+.mission { background: linear-gradient(135deg,#003b72,#5796c1); }
+.extraction { background: linear-gradient(135deg,#214ea5,#2684b6); }
+.prison { background: linear-gradient(135deg,#050d3f,#336b9a); }
+.custom { background: linear-gradient(135deg,var(--xa-color-text-primary),var(--xa-color-text-secondary)); }
 .orbit { position:absolute; width:230rpx; height:230rpx; right:-18rpx; top:-30rpx; border:2rpx solid rgba(255,255,255,.35); border-radius:50%; }
 .orbitInner { position:absolute; width:180rpx; height:180rpx; right:7rpx; top:-5rpx; border:18rpx double rgba(255,255,255,.16); border-radius:50%; }
-.mark { position:absolute; right:52rpx; top:15rpx; font-size:110rpx; line-height:1.2; color:#fff3dc; font-weight:300; }
+.mark { position:absolute; right:52rpx; top:15rpx; font-size:110rpx; line-height:1.2; color:var(--xa-color-on-primary); font-weight:300; }
 .brand { position:absolute; top:24rpx; left:24rpx; font-size:22rpx; letter-spacing:3rpx; opacity:.75; }
 .name { position:absolute; bottom:24rpx; left:24rpx; font-size:32rpx; font-weight:600; letter-spacing:2rpx; }
 .hero {

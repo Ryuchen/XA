@@ -18,7 +18,7 @@ OPTION_SOURCES = {
     'escort-levels': (EscortLevel, {'escort:view', 'escort:edit', 'service:view', 'service:edit', 'escort_level:view', 'registration:view'}, ('id', 'name', 'commission_rate', 'is_active')),
     'game-categories': (GameCategory, {'escort:view', 'escort:edit', 'service:view', 'service:edit'}, ('id', 'name', 'is_active')),
     'service-categories': (ServiceCategory, {'promotion:view', 'promotion:edit', 'service:view', 'service:edit'}, ('id', 'name', 'is_gift', 'is_active')),
-    'service-items': (ServiceItem, {'order:dispatch', 'escort:edit', 'promotion:edit', 'service:view', 'banner:edit'}, ('id', 'name', 'price', 'price_unit', 'game_category_id', 'platform', 'security_level', 'provider_kind','provider_grade', 'commission_rate', 'is_active')),
+    'service-items': (ServiceItem, {'order:dispatch', 'escort:edit', 'promotion:edit', 'service:view', 'banner:edit'}, ('id', 'name', 'price', 'price_unit', 'billing_provider_count', 'service_type', 'game_category_id', 'platform', 'security_level', 'provider_kind','provider_grade', 'commission_rate', 'is_active')),
     'announcements': (Announcement, {'banner:edit', 'announcement:view'}, ('id', 'title', 'is_active')),
     'roles': (AdminRole, {'admin:view', 'admin:edit', 'role:view'}, ('id', 'name', 'is_active')),
     'users': (ClubAccount, {'order:dispatch'}, ()),

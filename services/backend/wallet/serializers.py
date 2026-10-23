@@ -18,8 +18,12 @@ class ReportSerializer(serializers.ModelSerializer):
     result_image_urls = serializers.SerializerMethodField()
     result_images = serializers.SerializerMethodField()
     order_status = serializers.CharField(source='order.status', read_only=True, default='')
+    payment_status = serializers.CharField(source='order.payment_status', read_only=True, default='')
+    refund_summary = serializers.SerializerMethodField()
     settled_at = serializers.DateTimeField(source='order.settled_at', read_only=True, default=None)
     expected_income = serializers.SerializerMethodField()
+    commission_type = serializers.SerializerMethodField()
+    commission_fixed = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     can_submit = serializers.SerializerMethodField()
     edit_block_reason = serializers.SerializerMethodField()
@@ -32,7 +36,7 @@ class ReportSerializer(serializers.ModelSerializer):
             'completion_image_url', 'result_image_urls', 'result_images',
             'status', 'status_display', 'commission_rate', 'payout_amount',
             'remark', 'audit_remark', 'created_at', 'audited_at', 'submitted_at',
-            'order_status', 'settled_at', 'expected_income', 'can_edit', 'can_submit', 'edit_block_reason',
+            'order_status', 'payment_status', 'refund_summary', 'settled_at', 'expected_income', 'commission_type', 'commission_fixed', 'can_edit', 'can_submit', 'edit_block_reason',
         ]
         read_only_fields = [
             'status', 'commission_rate', 'payout_amount', 'audit_remark', 'audited_at', 'submitted_at',
@@ -41,6 +45,11 @@ class ReportSerializer(serializers.ModelSerializer):
 
     def get_proof_image_url(self, obj):
         return build_media_url(self.context.get('request'), obj.proof_image)
+
+    def get_refund_summary(self,obj):
+        from orders.refunds import refund_summary,authorized_refund
+        account = getattr(self.context.get('request'),'account',None)
+        return refund_summary(obj.order,account=account,detailed=authorized_refund(account)) if obj.order_id else None
 
     def _file_url(self, field):
         return build_media_url(self.context.get('request'), field)
@@ -58,10 +67,22 @@ class ReportSerializer(serializers.ModelSerializer):
         return [{'id': item.pk, 'url': self._file_url(item.image)} for item in obj.result_images.all()]
 
     def get_expected_income(self, obj):
-        if not obj.order_id:
-            return obj.payout_amount
-        share = obj.order.providers.filter(provider_id=obj.provider_id).first()
-        return share.provider_income if share else obj.order.provider_income
+        return self._financial_snapshot(obj)['expected_income']
+
+    def _financial_snapshot(self, obj):
+        from .reporting import report_financial_snapshot
+        cache = getattr(self, '_report_financial_snapshots', None)
+        if cache is None:
+            cache = self._report_financial_snapshots = {}
+        if obj.pk not in cache:
+            cache[obj.pk] = report_financial_snapshot(obj)
+        return cache[obj.pk]
+
+    def get_commission_type(self, obj):
+        return self._financial_snapshot(obj)['commission_type']
+
+    def get_commission_fixed(self, obj):
+        return self._financial_snapshot(obj)['commission_fixed']
 
     def get_edit_block_reason(self, obj):
         from orders.services import report_edit_error

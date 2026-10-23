@@ -90,7 +90,7 @@ def grant_member_coupons():
 def confirm_due_consumption():
     from orders.models import Order
     from .confirmation import process_order
-    ids = (Order.objects.filter(status='COMPLETED', payment_status='PAID',
+    ids = (Order.objects.filter(status='COMPLETED', payment_status__in=['PAID','PARTIALLY_REFUNDED'],
         customer_account__isnull=False).filter(
             Q(is_gift_snapshot=False, consumption_confirmed_at__isnull=True)
             | Q(settlement_mode='REPORT_APPROVAL', settled_at__isnull=True))

@@ -1,12 +1,30 @@
 const { request } = require('../../core/api');
 const { image, go, richText, date, toast } = require('../../core/ui');
+
+// Keep authored HTML while fitting artwork to the content's reading area.
+function responsiveContent(value) {
+  const imageStyle = 'max-width:100% !important;height:auto !important;';
+  return richText(value).replace(/<img\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi, tag => {
+    let styled = false;
+    const image = tag.replace(/(\s+)([^\s"'<>/=]+)(\s*=\s*)(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g,
+      (attribute, space, name, equals, double, single, bare) => {
+        if (name.toLowerCase() !== 'style') return attribute;
+        styled = true;
+        const quote = single !== undefined ? "'" : '"';
+        const style = double !== undefined ? double : single !== undefined ? single : bare;
+        return space + name + equals + quote + style + ';' + imageStyle + quote;
+      });
+    return styled ? image : image.replace(/^<img\b/i, '<img style="' + imageStyle + '"');
+  });
+}
+
 Page({
   data: { loading: false, loadingMore: false, error: '', items: [], item: null, title: '俱乐部规范', activityList: false, imageOnly: false, more: false },
   onLoad(options) { this._alive = true; this._id = Number(options.id) || 0; this._kind = options.kind || 'RULES'; this._seq = 0; this.load(); },
   onUnload() { this._alive = false; this._seq++; },
   async onPullDownRefresh() { await this.load(); wx.stopPullDownRefresh(); },
   onReachBottom() { if (this.data.more) this.more(); },
-  present(row) { return { ...row, image: image(row.image_url), content: richText(row.content), date: date(row.starts_at || row.created_at).slice(0, 10) }; },
+  present(row) { return { ...row, image: image(row.image_url), content: responsiveContent(row.content), date: date(row.starts_at || row.created_at).slice(0, 10) }; },
   async load() {
     const seq = ++this._seq, activityList = !this._id && this._kind === 'HOT';
     this.setData({ loading: true, loadingMore: false, error: '', activityList });

@@ -1,4 +1,23 @@
 export type EscortOrderStatus = 'pending' | 'grabbed' | 'in_progress' | 'completed' | 'cancelled';
+export interface OrderRefundRecord {
+  id: number;
+  amount: number;
+  created_at: string;
+  reason: string;
+  client_request_id?: string;
+  recovered_amount?: number;
+}
+export interface OrderRefundSummary {
+  id?: number;
+  amount: number;
+  original_amount?: number;
+  remaining_amount?: number;
+  refund_count?: number;
+  recovered_amount?: number;
+  created_at?: string;
+  reason?: string;
+  records?: OrderRefundRecord[];
+}
 
 export interface OrderUser {
   id: number;
@@ -79,6 +98,11 @@ export interface EscortOrder {
   completed_at: string | null;
   cancelled_at: string | null;
   refunded_at: string | null;
+  aftersale_deadline?: string | null;
+  aftersale_status?: 'OPEN' | 'RESOLVED' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | '';
+  can_aftersale?: boolean;
+  refund_summary?: OrderRefundSummary | null;
+  consumption_confirmed_at?: string | null;
   cancel_reason: string;
   auto_cancel_at: string | null;
   reject_count: number;

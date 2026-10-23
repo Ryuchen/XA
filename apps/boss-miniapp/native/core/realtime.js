@@ -59,6 +59,7 @@ async function connect(recover = false) {
     events.emit('order.changed');
     events.emit('message.changed');
     events.emit('feed.changed');
+    events.emit('wallet.changed', { account_id: auth.getSession()?.user?.id });
     const ping = () => {
       if (socket !== current) return;
       reply = setTimeout(schedule, 10000);
@@ -74,6 +75,8 @@ async function connect(recover = false) {
       const message = JSON.parse(result.data);
       if (message.type === 'pong') { clearTimeout(reply); reply = null; return; }
       if (message.type === 'order_status_update') events.emit('order.changed', message.data);
+      if (message.type === 'wallet_update' && message.data?.account_id != null
+          && String(message.data.account_id) === String(auth.getSession()?.user?.id)) events.emit('wallet.changed', message.data);
       if (message.type === 'club_feed_update') events.emit('feed.changed');
       if (['chat_message', 'chat_session_update'].includes(message.type)) events.emit('message.changed', message.data);
     } catch (_) { /* Ignore malformed realtime payload; HTTP remains the source of truth. */ }

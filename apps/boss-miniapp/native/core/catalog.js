@@ -37,7 +37,7 @@ function groupServices(items) {
     const first = variants.reduce((best, item) => Number(item.price) < Number(best.price) ? item : best);
     const labels = field => Array.from(new Set(variants.map(item => item[field]).filter(Boolean))).join(' / ');
     return { ...first, familyKey: key, name: first.catalog_family || first.name,
-      description: variants.length > 1 ? variants.length + ' 档套餐，进入详情选择适合你的规格' : first.description,
+      description: first.description,
       platform_name: labels('platform_name'), security_level_name: labels('security_level_name'),
       variantCount: variants.length, cover: image(first.cover_url || first.gameplay_cover_url || first.cover), displayPrice: money(first.price) };
   });

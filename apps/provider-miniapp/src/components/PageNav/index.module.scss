@@ -1,8 +1,8 @@
 @use '@/styles/variables.scss' as *;
 .nav { position:sticky; top:0; z-index:40; display:flex; align-items:center; justify-content:space-between; gap:8PX; min-height:56PX; margin:0 -16PX 20PX; padding:8PX 16PX; border-bottom:1PX solid $color-border; background:$color-bg-page; }
-.nav .back { @include button-reset; width:68PX; min-height:40PX; padding:0; border:0; color:$color-primary; background:transparent; }
+.nav .back { @include button-reset; width:68PX; min-height:44PX; padding:0; border:0; color:$color-primary; background:transparent; }
 .placeholder { width:68PX; flex:none; }.chevron { font-size:26PX; line-height:1; }.backText { margin-left:4PX; font-size:14PX; }
 .title { min-width:0; font-size:16PX; font-weight:650; color:$color-text-primary; text-align:center; }
 .webNav { display:flex; flex-wrap:wrap; align-items:center; gap:16PX; margin-bottom:24PX; }
-.webNav .webBack { width:auto; min-height:36PX; padding:6PX 12PX; font-size:13PX; }
+.webNav .webBack { width:auto; min-height:44PX; padding:8PX 12PX; font-size:13PX; }
 .webTitle { flex:1; font-size:26PX; line-height:1.3; font-weight:700; color:$color-text-primary; }

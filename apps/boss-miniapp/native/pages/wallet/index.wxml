@@ -1,7 +1,17 @@
-<view class="page wallet-page"><text class="title">我的钱包</text><button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看钱包</button>
-  <block wx:if="{{logged}}"><view class="panel balance-panel"><text class="muted">可用余额 · 兴安币</text><text class="balance">{{balance || '待加载'}}</text><text class="small muted">冻结金额 {{frozen || '待加载'}} 兴安币</text><button class="xa-button button" bindtap="recharge" hover-class="xa-button-hover">联系客服充值</button><text class="subtitle small">付款由客服核对，实际入账以余额与流水为准。</text></view>
-  <text class="section-title">资金流水</text><view class="chips"><button wx:for="{{filters}}" wx:key="value" class="xa-button chip {{filter === item.value ? 'chip-active' : ''}}" data-value="{{item.value}}" bindtap="filter" hover-class="xa-button-hover">{{item.text}}</button></view>
-  <state-view loading="{{loading}}" error="{{error}}" empty="{{!items.length}}" empty-text="暂无资金流水" bind:retry="load"/>
-  <view class="panel transaction" wx:for="{{items}}" wx:key="id"><view class="between"><text>{{item.title}}</text><text class="amount {{item.amount > 0 ? 'positive' : ''}}">{{item.displayAmount}}</text></view><text class="small muted block">{{item.remark || item.tx_no}}</text><view class="between small muted"><text>{{item.time}}</text><text>余额 {{item.after}}</text></view></view>
-  <text wx:if="{{moreError}}" class="error">{{moreError}}</text><button wx:if="{{hasMore}}" class="xa-button button-secondary" loading="{{loadingMore}}" disabled="{{loadingMore}}" bindtap="more" hover-class="xa-button-hover">加载更多</button></block>
+<view class="page wallet-page">
+  <view class="section-surface wallet-heading"><text class="title" role="heading" aria-level="1">我的钱包</text><text class="wallet-subtitle">余额、充值与资金明细</text><button wx:if="{{!logged}}" class="xa-button button wallet-login" bindtap="login" hover-class="xa-button-hover">登录后查看钱包</button></view>
+  <block wx:if="{{logged}}">
+    <view class="section-surface balance-panel"><view class="balance-primary"><text class="balance-label">可用余额 · 兴安币</text><text class="balance {{balance.length > 12 ? 'balance-long' : ''}}">{{balance !== '' ? balance : '待加载'}}</text></view><view class="frozen-panel"><text class="balance-label">冻结金额 · 兴安币</text><text class="frozen-value">{{frozen !== '' ? frozen : '待加载'}}</text></view></view>
+    <view class="section-surface recharge-panel"><view class="recharge-copy"><text class="section-label">钱包充值</text><text class="recharge-note">联系客服核对付款，实际入账以余额与流水为准。</text></view><button class="xa-button button-secondary recharge-button" bindtap="recharge" hover-class="xa-button-hover">联系客服充值</button></view>
+
+    <view class="section-surface transaction-controls"><text class="section-label" role="heading" aria-level="2">资金流水</text><view class="chips"><button wx:for="{{filters}}" wx:key="value" class="xa-button chip {{filter === item.value ? 'chip-active' : ''}}" data-value="{{item.value}}" bindtap="filter" aria-pressed="{{filter === item.value}}" hover-class="xa-button-hover">{{item.text}}</button></view></view>
+    <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" empty-text="暂无资金流水" bind:retry="load"/>
+    <view class="transaction" wx:for="{{items}}" wx:key="id" aria-label="{{item.title + '，变动' + item.displayAmount + '兴安币，' + item.time + '，变动后余额' + item.after + '兴安币'}}">
+      <view class="transaction-main"><text class="transaction-title">{{item.title}}</text><view class="transaction-amount"><text class="amount {{item.amount > 0 ? 'positive' : ''}} {{item.displayAmount.length > 12 ? 'amount-long' : ''}}">{{item.displayAmount}}</text><text class="amount-unit">兴安币</text></view></view>
+      <text wx:if="{{item.remark || item.tx_no}}" class="transaction-remark" selectable>{{item.remark || item.tx_no}}</text>
+      <view class="transaction-meta"><text class="transaction-time">{{item.time}}</text><view class="transaction-after"><text>余额</text><text class="after-value">{{item.after}}</text><text>兴安币</text></view></view>
+    </view>
+    <view wx:if="{{moreError || hasMore}}" class="section-surface transaction-actions"><text wx:if="{{moreError}}" class="more-error" role="alert">{{moreError}}</text><button wx:if="{{hasMore}}" class="xa-button button-secondary more-button" loading="{{loadingMore}}" disabled="{{loadingMore}}" bindtap="more" hover-class="xa-button-hover">{{moreError ? '加载失败，点击重试' : '加载更多'}}</button></view>
+  </block>
 </view>
+<bottom-navigation/>

@@ -1,4 +1,5 @@
 import { ApiResponse, request, uploadFile } from '@/utils/request';
+import type { OrderRefundSummary } from '@/types/order';
 
 export interface ProviderReport {
   fulfillment?: string;
@@ -6,13 +7,18 @@ export interface ProviderReport {
   order_id: number;
   order_no: string;
   game_name: string;
+  service_name?: string;
   amount: number;
   commission_rate: number;
+  commission_type?: 'PERCENT' | 'FIXED';
+  commission_fixed?: number;
   payout_amount: number;
   expected_income: number;
   submitted_at: string | null;
   settled_at: string | null;
   order_status: string;
+  payment_status?: string;
+  refund_summary?: OrderRefundSummary | null;
   status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
   status_display: string;
   entry_image_url: string;

@@ -8,7 +8,7 @@
           <el-radio-button :value="true">已归档</el-radio-button>
         </el-radio-group>
       </template>
-      <el-table-column label="封面" width="180"><template #default="{ row }"><div class="cover" :style="{ background: themes[row.theme]?.color || '#51435c' }"><img v-if="row.cover_url" :src="row.cover_url" /><span>{{ themes[row.theme]?.symbol || '+' }}</span><strong>{{ row.name }}</strong></div></template></el-table-column>
+      <el-table-column label="封面" width="180"><template #default="{ row }"><div class="cover" :style="{ background: themes[row.theme]?.color || 'var(--ap-cover-custom)' }"><img v-if="row.cover_url" :src="row.cover_url" :alt="row.name + '封面'" /><span aria-hidden="true">{{ themes[row.theme]?.symbol || '+' }}</span><strong>{{ row.name }}</strong></div></template></el-table-column>
       <el-table-column prop="name" label="玩法" width="120" />
       <el-table-column prop="subtitle" label="介绍" min-width="180" />
       <el-table-column label="类型" width="100"><template #default="{ row }"><el-tag :type="row.kind === 'ROULETTE' ? 'warning' : 'info'">{{ row.kind === 'ROULETTE' ? '转盘单' : '普通玩法' }}</el-tag></template></el-table-column>
@@ -49,7 +49,7 @@ const archived = ref(false)
 const fetchGameplays = (params?: Record<string, any>) => gameplayApi.list({ ...params, is_archived: archived.value })
 const contentUploading = ref(false)
 const themes: Record<string, { name: string; color: string; symbol: string }> = {
-  roulette: { name: '转盘 · 赤金', color: '#a85032', symbol: '✦' }, experience: { name: '体验 · 青绿', color: '#41776b', symbol: '01' }, companion: { name: '陪玩 · 紫罗兰', color: '#595988', symbol: '∞' }, fun: { name: '趣味 · 玫瑰', color: '#8e526a', symbol: '✧' }, mission: { name: '任务 · 蔚蓝', color: '#3a668d', symbol: '✓' }, extraction: { name: '带出 · 琥珀', color: '#8a7238', symbol: '↗' }, prison: { name: '监狱 · 青灰', color: '#49666d', symbol: '▥' }, custom: { name: '定制 · 暮紫', color: '#76617e', symbol: '+' },
+  roulette: { name: '转盘', color: 'var(--ap-cover-roulette)', symbol: '✦' }, experience: { name: '体验', color: 'var(--ap-cover-experience)', symbol: '01' }, companion: { name: '陪玩', color: 'var(--ap-cover-companion)', symbol: '∞' }, fun: { name: '趣味', color: 'var(--ap-cover-fun)', symbol: '✧' }, mission: { name: '任务', color: 'var(--ap-cover-mission)', symbol: '✓' }, extraction: { name: '带出', color: 'var(--ap-cover-extraction)', symbol: '↗' }, prison: { name: '监狱', color: 'var(--ap-cover-prison)', symbol: '▥' }, custom: { name: '定制', color: 'var(--ap-cover-custom)', symbol: '+' },
 }
 function open(row?: any) { Object.assign(form, { id: 0, name: '', code: '', kind: 'STANDARD', subtitle: '', theme: 'custom', cover_url: '', rules: '', details_html: '', sort_order: 0, is_active: true, service_count: 0 }, row || {}); visible.value = true }
 async function save() { if (saving.value) return; if (!form.name.trim() || !/^[a-zA-Z0-9_-]+$/.test(form.code)) { ElMessage.warning('请填写名称与有效的英文标识'); return }; saving.value = true; try { const { id, service_count, ...data } = form; if (id) await gameplayApi.update(id, data); else await gameplayApi.create(data); visible.value = false; ElMessage.success('玩法已保存'); table.value.reload() } finally { saving.value = false } }
@@ -100,9 +100,9 @@ async function restore(row: any) { await gameplayApi.action(row.id, 'restore'); 
   .gameplay-status-switch :deep(.el-radio-button) { flex: 1; min-width: 0; }
   .gameplay-status-switch :deep(.el-radio-button .el-radio-button__inner) { width: 100%; min-width: 0; }
 }
-.cover { width:146px; height:88px; border-radius:10px; color:#fff; overflow:hidden; position:relative; }
+.cover { width:146px; height:88px; border-radius:var(--radius-sm); color:var(--xa-neutral-0); overflow:hidden; position:relative; }
 .cover img { position:absolute; width:100%; height:100%; object-fit:cover; }
 .cover span { position:absolute; right:16px; top:8px; font-size:42px; opacity:.55; }
-.cover strong { position:absolute; left:12px; bottom:10px; text-shadow:0 1px 4px #333; }
+.cover strong { position:absolute; left:12px; right:12px; bottom:10px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; text-shadow:0 1px 4px var(--xa-brand-900); }
 .hint { font-size:12px; color:var(--el-text-color-secondary); line-height:1.6; margin-left:8px; }
 </style>

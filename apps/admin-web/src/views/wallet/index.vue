@@ -4,7 +4,7 @@
       <p class="ap-page-intro">切换老板或打手钱包，客服核对收款凭证后兑换兴安币；打手奖罚与退押金在陪玩管理办理</p>
     </div>
 
-    <crud-table ref="tableRef" :fetcher="walletApi.list" :query="query">
+    <crud-table v-if="canReadWallets" ref="tableRef" :fetcher="walletApi.list" :query="query">
       <template #toolbar="{ reload }">
         <el-select v-model="query.account_type" style="width: 130px" @change="reload" aria-label="钱包对象">
           <el-option label="老板钱包" value="BOSS" />
@@ -191,7 +191,7 @@
 
 <script setup lang="ts">
 import { request } from '@/api/request'
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { formatRmb, rmbToRawAmount, toCoin } from '@xa/money'
 import { ElMessage, type UploadFile } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
@@ -199,10 +199,98 @@ import CrudTable from '@/components/CrudTable.vue'
 import { walletApi } from '@/api/modules'
 import { amountToXaCoin, xaCoinToAmount } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
+import { adminWs } from '@/utils/ws'
 
 const auth = useAuthStore()
+const canReadWallets = computed(() => Boolean(auth.token) && auth.hasPerm('wallet:view'))
 const tableRef = ref()
 const query = ref<Record<string, any>>({ account_type: 'BOSS', boss_no: '', nickname: '', phone: '' })
+let pageDisposed = false
+let pageMounted = false
+let realtimeGeneration = 0
+let detailSequence = 0
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
+let refreshRunning = false
+let refreshPending = false
+let detailRefreshPending = false
+let offWalletUpdate: (() => void) | null = null
+let offConnected: (() => void) | null = null
+
+function walletDialogVisible() { return adjustVisible.value || rechargeVisible.value }
+
+async function refreshCurrentWallet() {
+  const walletId = current.value?.id
+  if (pageDisposed || !canReadWallets.value || !walletDialogVisible() || !walletId) return
+  const sequence = ++detailSequence
+  const revision = auth.sessionRevision
+  const accountType = current.value.user_role === 'PROVIDER' ? 'PROVIDER' : 'BOSS'
+  try {
+    // The detail endpoint defaults to boss wallets; provider drafts need their own account type.
+    const res = await request({ url: `/wallets/${walletId}/`, params: { account_type: accountType } })
+    if (!pageDisposed && canReadWallets.value && revision === auth.sessionRevision && sequence === detailSequence
+      && walletDialogVisible() && current.value?.id === walletId) current.value = res.data
+  } catch { /* Keep the user's draft; the HTTP client reports a failed reconciliation. */ }
+}
+
+function requestWalletRefresh(accountId?: number) {
+  if (pageDisposed || !canReadWallets.value) return
+  refreshPending = true
+  if (walletDialogVisible() && current.value && (accountId == null || current.value.account_id === accountId)) {
+    ++detailSequence
+    detailRefreshPending = true
+  }
+  scheduleWalletRefresh()
+}
+
+function scheduleWalletRefresh() {
+  if (pageDisposed || !canReadWallets.value || !refreshPending || refreshRunning || refreshTimer !== null) return
+  const generation = realtimeGeneration
+  refreshTimer = setTimeout(async () => {
+    refreshTimer = null
+    if (generation !== realtimeGeneration || pageDisposed || !canReadWallets.value) return
+    refreshPending = false
+    refreshRunning = true
+    const refreshDetail = detailRefreshPending
+    detailRefreshPending = false
+    try {
+      await Promise.allSettled([tableRef.value?.load(), ...(refreshDetail ? [refreshCurrentWallet()] : [])])
+    } finally {
+      if (generation === realtimeGeneration) { refreshRunning = false; scheduleWalletRefresh() }
+    }
+  }, 300)
+}
+
+function stopWalletRealtime() {
+  ++realtimeGeneration
+  ++detailSequence
+  offWalletUpdate?.()
+  offConnected?.()
+  offWalletUpdate = offConnected = null
+  if (refreshTimer !== null) clearTimeout(refreshTimer)
+  refreshTimer = null
+  refreshPending = detailRefreshPending = refreshRunning = false
+}
+
+function startWalletRealtime() {
+  if (pageDisposed || !canReadWallets.value) return
+  offWalletUpdate = adminWs.on('wallet_update', data => {
+    if (Number.isSafeInteger(data?.account_id) && data.account_id > 0) requestWalletRefresh(data.account_id)
+  })
+  offConnected = adminWs.on('connected', () => requestWalletRefresh())
+  adminWs.connect()
+}
+
+watch(() => [auth.sessionRevision, canReadWallets.value, auth.hasPerm('wallet:adjust'), auth.hasPerm('wallet:recharge')], () => {
+  stopWalletRealtime()
+  adjustVisible.value = rechargeVisible.value = false
+  current.value = null
+  saving.value = false
+  rechargePackages.value = []
+  if (pageMounted) startWalletRealtime()
+}, { flush: 'sync' })
+
+onMounted(() => { pageMounted = true; startWalletRealtime() })
+onBeforeUnmount(() => { pageDisposed = true; stopWalletRealtime() })
 
 /**
  * 生成某字段的输入建议回调：以当前输入为该字段条件查询后端，
@@ -210,12 +298,14 @@ const query = ref<Record<string, any>>({ account_type: 'BOSS', boss_no: '', nick
  */
 function querySuggest(field: 'boss_no' | 'nickname' | 'phone') {
   return async (keyword: string, cb: (items: any[]) => void) => {
-    if (!keyword) {
+    const revision = auth.sessionRevision
+    if (!keyword || !canReadWallets.value || pageDisposed) {
       cb([])
       return
     }
     try {
       const res = (await walletApi.list({ account_type: query.value.account_type, [field]: keyword, page: 1, page_size: 10 })) as any
+      if (revision !== auth.sessionRevision || !canReadWallets.value || pageDisposed) { cb([]); return }
       const seen = new Set<string>()
       const items: { value: string }[] = []
       for (const w of res.data.list || []) {
@@ -241,6 +331,8 @@ const adjustRemark = ref('')
 const adjustRequestId = ref('')
 
 function onAdjust(row: any) {
+  if (!canReadWallets.value || !auth.hasPerm('wallet:adjust') || pageDisposed || saving.value) return
+  ++detailSequence
   current.value = row
   adjustCoin.value = 0
   adjustRemark.value = ''
@@ -249,7 +341,11 @@ function onAdjust(row: any) {
 }
 
 async function onAdjustSave() {
-  if (saving.value) return
+  if (saving.value || pageDisposed || !canReadWallets.value || !auth.hasPerm('wallet:adjust') || !adjustVisible.value || !current.value) return
+  const revision = auth.sessionRevision
+  const generation = realtimeGeneration
+  const isCurrent = () => !pageDisposed && revision === auth.sessionRevision && generation === realtimeGeneration
+    && canReadWallets.value && auth.hasPerm('wallet:adjust')
   if (!adjustRemark.value.trim()) { ElMessage.warning('请填写调账原因'); return }
   const amount = xaCoinToAmount(adjustCoin.value)
   if (amount === 0) {
@@ -259,11 +355,12 @@ async function onAdjustSave() {
   saving.value = true
   try {
     await walletApi.action(current.value.id, 'adjust', { amount, remark: adjustRemark.value.trim(), client_request_id: adjustRequestId.value })
+    if (!isCurrent()) return
     ElMessage.success('调账成功')
     adjustVisible.value = false
-    tableRef.value.load()
+    requestWalletRefresh()
   } finally {
-    saving.value = false
+    if (isCurrent()) saving.value = false
   }
 }
 
@@ -287,6 +384,10 @@ function onProofChange(uploadFile: UploadFile) {
 }
 
 async function onRecharge(row: any) {
+  if (!canReadWallets.value || !auth.hasPerm('wallet:recharge') || pageDisposed || saving.value) return
+  const revision = auth.sessionRevision
+  const generation = realtimeGeneration
+  ++detailSequence
   current.value = row
   rechargeYuan.value = 0
   giftCoin.value = 0
@@ -297,11 +398,15 @@ async function onRecharge(row: any) {
   proofPreview.value = ''
   rechargeVisible.value = true
   rechargePackages.value=[]
-  if(row.user_role !== 'PROVIDER'){try{const res=await request({url:'/wallets/recharge-packages/'});rechargePackages.value=res.data}catch(_){/* 手动核对仍可充值 */}}
+  if(row.user_role !== 'PROVIDER'){try{const res=await request({url:'/wallets/recharge-packages/'});if(!pageDisposed && revision===auth.sessionRevision && generation===realtimeGeneration && canReadWallets.value && auth.hasPerm('wallet:recharge') && rechargeVisible.value && current.value?.id===row.id)rechargePackages.value=res.data}catch(_){/* 手动核对仍可充值 */}}
 }
 
 async function onRechargeSave() {
-  if (saving.value) return
+  if (saving.value || pageDisposed || !canReadWallets.value || !auth.hasPerm('wallet:recharge') || !rechargeVisible.value || !current.value) return
+  const revision = auth.sessionRevision
+  const generation = realtimeGeneration
+  const isCurrent = () => !pageDisposed && revision === auth.sessionRevision && generation === realtimeGeneration
+    && canReadWallets.value && auth.hasPerm('wallet:recharge')
   if (!tradeNo.value.trim() || !proofFile.value) {
     ElMessage.warning('请填写收款流水号并上传收款凭证')
     return
@@ -323,11 +428,12 @@ async function onRechargeSave() {
     fd.append('client_request_id', rechargeRequestId.value)
     if (proofFile.value) fd.append('proof_image', proofFile.value)
     await walletApi.collectionAction('recharge', fd)
+    if (!isCurrent()) return
     ElMessage.success(`已入账 ${rechargeCoin.value + giftCoin.value} 兴安币`)
     rechargeVisible.value = false
-    tableRef.value.load()
+    requestWalletRefresh()
   } finally {
-    saving.value = false
+    if (isCurrent()) saving.value = false
   }
 }
 </script>

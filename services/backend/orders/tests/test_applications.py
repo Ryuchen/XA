@@ -62,6 +62,16 @@ class ApplicationTest(APITestCase):
     def detail(self,a):
         self.auth(a);return self.client.get(f'/api/orders/orders/{self.order.pk}/')
 
+    def use_double_package(self):
+        self.order.delete()
+        self.service = make_service(name='双陪报名测试套餐', price=5001, commission_rate=20,
+                                    billing_provider_count=2)
+        self.order = make_order(self.boss, service=self.service, customer_account=self.boss_account,
+                                requires_boss_selection=True, amount=10001,
+                                original_amount=10002, coupon_discount=1)
+        Order.objects.filter(pk=self.order.pk).update(created_at=timezone.now()-timedelta(hours=1))
+        self.order.refresh_from_db()
+
     def test_multiple_people_apply_without_consuming_capacity_or_money(self):
         before=list(Wallet.objects.values_list('balance','frozen_amount'))
         for index in range(3): self.assertEqual(self.apply(index).data['code'],0)
@@ -85,6 +95,7 @@ class ApplicationTest(APITestCase):
         self.assertEqual(self.select(self.row(0)).data['code'],400)
 
     def test_double_requires_actual_partner_consent_and_conserves_odd_amount(self):
+        self.use_double_package()
         self.assertEqual(self.apply(team_size=2,partner_id=self.accounts[1].pk).data['code'],0)
         row=self.row()
         self.assertEqual(self.select(row).data['code'],400)
@@ -100,7 +111,9 @@ class ApplicationTest(APITestCase):
         self.assertIn('START',self.detail(self.accounts[1]).data['data']['allowed_actions'])
 
     def test_double_group_sorted_by_its_lower_level(self):
-        self.apply(team_size=2,partner_id=self.accounts[2].pk);self.apply(1)
+        self.use_double_package()
+        self.apply(team_size=2,partner_id=self.accounts[2].pk)
+        self.apply(1,team_size=2,partner_id=self.accounts[2].pk)
         rows=self.detail(self.boss_account).data['data']['applications']
         self.assertEqual(rows[0]['members'][0]['level_rank'],2)
         self.assertEqual(rows[1]['team_size'],2)
@@ -113,6 +126,7 @@ class ApplicationTest(APITestCase):
         self.assertEqual(len(data['my_applications']),1)
 
     def test_withdraw_and_reapply_reset_partner_consent(self):
+        self.use_double_package()
         self.apply(team_size=2,partner_id=self.accounts[1].pk);row=self.row()
         self.action(row,self.accounts[1],'CONFIRM_TEAM')
         self.action(row,self.accounts[1],'WITHDRAW')
@@ -122,6 +136,7 @@ class ApplicationTest(APITestCase):
         self.assertEqual(self.apply().data['code'],400)
 
     def test_disabled_partner_or_full_capacity_at_selection_roll_back_everything(self):
+        self.use_double_package()
         self.apply(team_size=2,partner_id=self.accounts[1].pk);row=self.row()
         self.action(row,self.accounts[1],'CONFIRM_TEAM')
         EscortProfile.objects.filter(account=self.accounts[1]).update(status='OFFLINE')
@@ -134,6 +149,7 @@ class ApplicationTest(APITestCase):
         self.order.refresh_from_db();self.assertEqual(self.order.status,'PENDING')
 
     def test_pass_delay_applies_to_both_members(self):
+        self.use_double_package()
         Order.objects.filter(pk=self.order.pk).update(created_at=timezone.now())
         self.assertEqual(self.apply().data['code'],400)
         for a in self.accounts:
@@ -153,6 +169,7 @@ class ApplicationTest(APITestCase):
         self.assertEqual(self.apply(1).data['code'],400)
 
     def test_two_members_submit_evidence_before_progress_and_reports_use_their_shares(self):
+        self.use_double_package()
         self.apply(team_size=2,partner_id=self.accounts[1].pk);row=self.row()
         self.action(row,self.accounts[1],'CONFIRM_TEAM');self.select(row)
         for phase,field,before,after in [('start-service','entry_image','GRABBED','IN_SERVICE'),('complete','completion_image','IN_SERVICE','COMPLETED')]:

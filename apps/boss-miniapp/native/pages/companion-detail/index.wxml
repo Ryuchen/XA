@@ -4,18 +4,20 @@
     <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
     <block wx:if="{{!loading && !error && provider}}">
       <view class="panel detail-profile">
-        <image wx:if="{{provider.avatarUrl}}" class="detail-avatar" src="{{provider.avatarUrl}}" mode="aspectFill"/>
-        <view wx:else class="detail-avatar detail-initial">{{provider.initial}}</view>
-        <view class="detail-identity"><view class="title">{{provider.nickname}}</view><text class="detail-level">{{provider.level_name || '等级暂未设置'}}{{provider.gender === 'MALE' ? ' · 男陪' : provider.gender === 'FEMALE' ? ' · 女陪' : ''}}</text><text wx:if="{{provider.city || provider.rank}}" class="small muted">{{provider.city}}{{provider.city && provider.rank ? ' · ' : ''}}{{provider.rank}}</text></view>
-        <view class="detail-monthly"><text class="small muted">本月接单额</text><view class="detail-amount">{{provider.monthlyAmountText}}<text class="detail-unit"> 兴安币</text></view></view>
-        <button wx:if="{{provider.voiceUrl}}" class="xa-button button-secondary detail-voice" bindtap="voice" hover-class="xa-button-hover"><image src="/assets/icons/headphones.png"/><text>{{playing ? '停止试听' : '试听声音'}}</text></button>
+        <view class="detail-profile-main">
+          <image wx:if="{{provider.avatarUrl}}" class="detail-avatar" src="{{provider.avatarUrl}}" mode="aspectFill" aria-hidden="true"/>
+          <view wx:else class="detail-avatar detail-initial" aria-hidden="true">{{provider.initial}}</view>
+          <view class="detail-identity"><view class="title" role="heading" aria-level="1">{{provider.nickname}}</view><text class="detail-level">{{provider.level_name || '等级暂未设置'}}{{provider.gender === 'MALE' ? ' · 男陪' : provider.gender === 'FEMALE' ? ' · 女陪' : ''}}</text><text wx:if="{{provider.city || provider.rank}}" class="small muted detail-location">{{provider.city}}{{provider.city && provider.rank ? ' · ' : ''}}{{provider.rank}}</text></view>
+        </view>
+        <view class="detail-profile-footer"><view class="detail-monthly"><text class="small muted">本月接单额</text><view class="detail-amount">{{provider.monthlyAmountText}}<text class="detail-unit"> 兴安币</text></view></view><button wx:if="{{provider.voiceUrl}}" class="xa-button button-secondary detail-voice" bindtap="voice" aria-pressed="{{playing}}" hover-class="xa-button-hover"><image src="/assets/icons/headphones.png" aria-hidden="true"/><text>{{playing ? '停止试听' : '试听声音'}}</text></button></view>
       </view>
       <view wx:if="{{serviceName}}" class="panel detail-context"><text class="small muted">当前选择的服务</text><view>{{serviceName}}</view></view>
       <view wx:if="{{!provider.can_order}}" class="detail-unavailable">{{provider.order_unavailable_reason || '该陪玩暂不可接单，请稍后再约'}}</view>
       <view class="panel"><view class="section-title">关于 TA</view><view class="detail-bio">{{provider.bio || 'TA 还没有填写个人介绍'}}</view><view wx:if="{{provider.game_category_names.length}}" class="detail-tags"><text wx:for="{{provider.game_category_names}}" wx:key="*this" class="tag">{{item}}</text></view></view>
       <view wx:if="{{provider.qualifications.length || provider.hasHourlyPrice}}" class="panel"><view class="section-title">接单信息</view><view wx:for="{{provider.qualifications}}" wx:key="id" class="detail-qualification">{{item.label}}</view><view wx:if="{{provider.hasHourlyPrice}}" class="detail-reference small muted">参考时价 {{provider.hourlyPriceText}} 兴安币 / 小时</view></view>
       <view wx:if="{{provider.namings.length}}" class="panel"><view class="section-title">专属冠名</view><view wx:for="{{provider.namings}}" wx:key="id" class="detail-qualification">{{item.title}}</view></view>
-      <view class="bottom-bar detail-actions"><button class="xa-button button-secondary" bindtap="gift" hover-class="xa-button-hover">送礼物</button><button class="xa-button button" bindtap="select" disabled="{{!provider.can_order}}" hover-class="xa-button-hover">{{!provider.can_order ? '暂不可约' : fromCheckout ? '选择 TA' : serviceId ? '选择 TA 下单' : '选择 TA 的服务'}}</button></view>
+      <view class="bottom-bar detail-actions"><button class="xa-button button-secondary" bindtap="gift" hover-class="xa-button-hover">送礼物</button><button class="xa-button button" bindtap="select" disabled="{{!draftSelected && (!provider.can_order || (pickerDraft && draftFull))}}" hover-class="xa-button-hover">{{pickerDraft && draftSelected ? '已选 · 返回列表' : !provider.can_order ? '暂不可约' : pickerDraft && draftFull ? '已选齐，请先更换' : pickerDraft ? '选中 TA，继续挑选' : fromCheckout ? '选择 TA' : serviceId ? '选择 TA 下单' : '选择 TA 的服务'}}</button></view>
     </block>
   </block>
 </view>
+<bottom-navigation/>

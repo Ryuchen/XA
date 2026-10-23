@@ -23,6 +23,6 @@
 
   &.voicePreviewPlaying {
     background: $color-primary;
-    color: #fffdf5;
+    color: var(--xa-color-surface-card);
   }
 }

@@ -412,6 +412,20 @@ class AdminOrderProviderSerializer(serializers.ModelSerializer):
 
 
 class AdminOrderSerializer(serializers.ModelSerializer):
+    can_aftersale = serializers.SerializerMethodField()
+    refund_summary = serializers.SerializerMethodField()
+    def get_can_aftersale(self,obj):
+        from orders.refunds import can_request_aftersale
+        return can_request_aftersale(obj)
+    def get_refund_summary(self,obj):
+        from orders.refunds import refund_summary, authorized_refund
+        account = getattr(self.context.get('request'),'account',None)
+        return refund_summary(obj,detailed=authorized_refund(account),account=account)
+    required_team_size = serializers.SerializerMethodField()
+
+    def get_required_team_size(self, obj):
+        from orders.team_rules import required_team_size
+        return required_team_size(obj)
     provider_requirement=serializers.SerializerMethodField()
     def get_provider_requirement(self,obj):
         from users.qualifications import public_requirement
@@ -454,18 +468,19 @@ class AdminOrderSerializer(serializers.ModelSerializer):
             'provider_requirement',
             'id', 'order_no', 'status', 'status_display', 'payment_status', 'settled_at', 'settlement_mode',
             'payment_status_display', 'escort_mode', 'escort_mode_display', 'provider_gender',
+            'required_provider_count', 'required_team_size',
             'amount', 'game_rounds', 'service_name_snapshot', 'gameplay_snapshot', 'roulette_result',
             'support_contact', 'support_contact_name_snapshot',
             'unit_price_snapshot', 'customer', 'customer_name', 'customer_username',
             'customer_nickname', 'customer_phone', 'customer_phone_snapshot',
-            'provider', 'provider_name', 'commission_rate', 'provider_income',
+            'provider', 'provider_name', 'commission_type', 'commission_fixed', 'commission_override', 'commission_source', 'commission_rate', 'provider_income',
             'providers',
             'inviter', 'inviter_name', 'inviter_commission', 'shop_income',
             'original_amount', 'boss_discount', 'promo_discount', 'coupon_discount',
             'promotion', 'promotion_title',
             'remark', 'cancel_reason', 'reject_count',
             'grabbed_at', 'in_service_at', 'completed_at', 'cancelled_at', 'refunded_at',
-            'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status',
+            'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status', 'can_aftersale', 'refund_summary',
             'created_at', 'updated_at',
         ]
 
@@ -562,6 +577,9 @@ class AdminWalletSerializer(serializers.ModelSerializer):
 
 
 class AdminTransactionSerializer(serializers.ModelSerializer):
+    is_reversal = serializers.SerializerMethodField()
+    def get_is_reversal(self,obj):
+        return bool(obj.reversal_of_id)
     tx_type_display = serializers.CharField(source='get_tx_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     username = serializers.SerializerMethodField()
@@ -571,7 +589,7 @@ class AdminTransactionSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = ['id', 'tx_no', 'wallet', 'username', 'order', 'amount', 'tx_type',
                   'tx_type_display', 'balance_before', 'balance_after', 'status',
-                  'status_display', 'remark', 'operator', 'operator_name', 'created_at']
+                  'status_display', 'remark', 'operator', 'operator_name', 'created_at','reversal_of','is_reversal']
 
     def get_username(self, obj):
         return obj.wallet.user.username if obj.wallet_id else ''
@@ -632,6 +650,7 @@ class AdminDisposeRecordSerializer(serializers.ModelSerializer):
 
 # ---------------- 陪玩报单 ----------------
 class AdminProviderReportSerializer(serializers.ModelSerializer):
+    submitted_at = serializers.DateTimeField(read_only=True)
     fulfillment = serializers.CharField(source='order.fulfillment', read_only=True, default='')
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     provider_name = serializers.SerializerMethodField()
@@ -648,6 +667,8 @@ class AdminProviderReportSerializer(serializers.ModelSerializer):
     settled_at = serializers.DateTimeField(source='order.settled_at', read_only=True, default=None)
     settlement_mode = serializers.CharField(source='order.settlement_mode', read_only=True, default='COMPLETION')
     expected_income = serializers.SerializerMethodField()
+    commission_type = serializers.SerializerMethodField()
+    commission_fixed = serializers.SerializerMethodField()
 
     class Meta:
         model = ProviderReport
@@ -656,9 +677,9 @@ class AdminProviderReportSerializer(serializers.ModelSerializer):
             'game_name', 'description', 'amount', 'order', 'order_no', 'fulfillment',
             'proof_image_url', 'entry_image_url', 'completion_image_url', 'result_image_urls',
             'status', 'status_display', 'commission_rate',
-            'suggested_commission_rate', 'commission_source_label', 'payout_amount',
+            'suggested_commission_rate', 'commission_source_label', 'commission_type', 'commission_fixed', 'payout_amount',
             'remark', 'audit_remark', 'auditor', 'auditor_name', 'transaction',
-            'created_at', 'audited_at',
+            'created_at', 'submitted_at', 'audited_at',
             'settled_at', 'settlement_mode', 'expected_income',
         ]
 
@@ -668,10 +689,22 @@ class AdminProviderReportSerializer(serializers.ModelSerializer):
         return obj.provider.nickname or obj.provider.username
 
     def get_expected_income(self, obj):
-        if obj.order_id:
-            share = obj.order.providers.filter(provider_id=obj.provider_id).first()
-            return share.provider_income if share else obj.order.provider_income
-        return obj.amount * (100 - self.get_suggested_commission_rate(obj)) // 100
+        return self._financial_snapshot(obj)['expected_income']
+
+    def _financial_snapshot(self, obj):
+        from wallet.reporting import report_financial_snapshot
+        cache = getattr(self, '_report_financial_snapshots', None)
+        if cache is None:
+            cache = self._report_financial_snapshots = {}
+        if obj.pk not in cache:
+            cache[obj.pk] = report_financial_snapshot(obj)
+        return cache[obj.pk]
+
+    def get_commission_type(self, obj):
+        return self._financial_snapshot(obj)['commission_type']
+
+    def get_commission_fixed(self, obj):
+        return self._financial_snapshot(obj)['commission_fixed']
 
     def get_auditor_name(self, obj):
         if not obj.auditor_id:
@@ -694,30 +727,10 @@ class AdminProviderReportSerializer(serializers.ModelSerializer):
         return [self._file_url(item.image) for item in obj.result_images.all()]
 
     def get_suggested_commission_rate(self, obj):
-        if obj.status == ProviderReport.Status.APPROVED:
-            return obj.commission_rate
-        rate, _ = self._resolve_commission(obj)
-        return rate
+        return self._financial_snapshot(obj)['suggested_commission_rate']
 
     def get_commission_source_label(self, obj):
-        if obj.status == ProviderReport.Status.APPROVED:
-            return '审核快照'
-        _, label = self._resolve_commission(obj)
-        return label
-
-    def _resolve_commission(self, obj):
-        if obj.order_id:
-            share = obj.order.providers.filter(provider_id=obj.provider_id).first()
-            return (share.commission_rate if share else obj.order.commission_rate), '订单分账快照'
-        provider = getattr(obj, 'provider', None)
-        try:
-            profile = provider.escort_profile if provider else None
-        except EscortProfile.DoesNotExist:
-            profile = None
-        level = getattr(profile, 'level', None)
-        if level is not None and level.is_active:
-            return level.commission_rate, f'等级抽成（{level.name}）'
-        return get_commission_rate(), '全局默认'
+        return self._financial_snapshot(obj)['commission_source_label']
 
 
 # ---------------- 提现申请 ----------------
@@ -1103,6 +1116,11 @@ class AdminServiceItemSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError('已有订单的套餐不能变更体验资格或VIP权益类型，请新建套餐')
         category = get('service_category')
         is_gift = bool(category and category.is_gift)
+        if get('commission_override',False):
+            if is_gift:
+                raise serializers.ValidationError('礼物使用独立抽成规则，不支持自定义订单抽成')
+            if get('commission_type','PERCENT') == 'PERCENT' and get('commission_rate') is None:
+                raise serializers.ValidationError({'commission_rate':'自定义百分比抽成须填写抽成率'})
         if not is_gift and (get('gift_naming_days', 0) or get('gift_festival', '') or get('gift_starts_at') or get('gift_ends_at')):
             raise serializers.ValidationError('冠名天数与节日限定仅适用于礼物')
         if get('gift_festival', '') and get('price', 0) < 2100:
@@ -1141,7 +1159,7 @@ class AdminServiceItemSerializer(serializers.ModelSerializer):
                   'game_category', 'game_category_name',
                   'service_category', 'service_category_name', 'is_gift',
                   'required_level', 'required_level_name', 'provider_kind', 'provider_grade',
-                  'commission_rate', 'commission_policy', 'experience_kind', 'benefit_kind', 'service_type', 'allows_discount_coupons', 'cover_url', 'images', 'highlights', 'sort_order',
+                  'commission_override', 'commission_type', 'commission_fixed', 'commission_rate', 'commission_policy', 'experience_kind', 'benefit_kind', 'service_type', 'allows_discount_coupons', 'cover_url', 'images', 'highlights', 'sort_order',
                   'is_active', 'created_at', 'price_unit', 'billing_provider_count', 'purchase_mode', 'purchase_note',
                   'catalog_key', 'catalog_source', 'is_addon', 'catalog_family', 'catalog_variant']
         read_only_fields = ['catalog_key', 'catalog_source']
@@ -1155,7 +1173,7 @@ class AdminPromotionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Promotion
-        fields = ['id', 'title', 'remark', 'discount_rate', 'commission_rate',
+        fields = ['id', 'title', 'remark', 'discount_rate', 'commission_type', 'commission_fixed', 'commission_rate',
                   'scope', 'scope_display', 'category', 'category_name', 'items', 'item_names',
                   'start_at', 'end_at', 'priority', 'is_active',
                   'created_at', 'updated_at']

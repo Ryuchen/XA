@@ -3,11 +3,13 @@ const auth = require('../../core/auth');
 const { present } = require('../../core/orders');
 const { on, emit } = require('../../core/events');
 const { go, toast, date } = require('../../core/ui');
+const aftersaleStatus = { OPEN: '处理中', RESOLVED: '已解决', PARTIALLY_REFUNDED: '已部分退款', REFUNDED: '已退款' };
+const isPastAftersale = (item, current) => item.status !== 'OPEN' && (current.client_request_id ? item.client_request_id !== current.client_request_id : !current.created_at || Date.parse(item.created_at) !== Date.parse(current.created_at));
 Page({
-  data: { logged: false, loading: false, error: '', order: null, busy: false, score: 5, content: '', anonymous: false, gifts: [], giftIndex: 0, giftError: '' },
+  data: { logged: false, loading: false, error: '', order: null, aftersale: null, aftersaleError: '', busy: false, score: 5, content: '', anonymous: false, gifts: [], giftIndex: 0, giftError: '' },
   onLoad(options) {
     this._id = Number(options.id) || 0; this._alive = true;
-    this._off = on('session.changed', () => { this._seq++; this.setData({ order: null, gifts: [], content: '' }); if (this._visible) this.load(); });
+    this._off = on('session.changed', () => { this._seq++; this._aftersaleRequestId = ''; this.setData({ order: null, aftersale: null, aftersaleError: '', gifts: [], content: '' }); if (this._visible) this.load(); });
     this._orderOff = on('order.changed', () => { if (this._visible && !this.data.busy) this.load(); });
   },
   onShow() { this._visible = true; this.load(); },
@@ -21,8 +23,14 @@ Page({
     try {
       if (!this._id) throw new Error('缺少订单编号');
       const order = await request('/orders/orders/' + this._id + '/');
+      let aftersale = null, aftersaleError = '';
+      if (order.aftersale_status) {
+        try { aftersale = await request('/orders/orders/' + this._id + '/aftersale/'); }
+        catch (error) { aftersaleError = error.message || '售后详情加载失败，请重试'; }
+      }
       if (!this._alive || seq !== this._seq) return;
-      this.setData({ order: Object.assign(present(order), { aftersaleDeadlineText: date(order.aftersale_deadline), consumptionReadyText: date(order.consumption_ready_at), canAfterSale: order.status === 'COMPLETED' && order.payment_status === 'PAID' && !order.aftersale_status && !!order.aftersale_deadline && Date.parse(order.aftersale_deadline) > Date.now() }) });
+      if (aftersale) aftersale = Object.assign({}, aftersale, { history: (Array.isArray(aftersale.history) ? aftersale.history : []).filter(item => isPastAftersale(item, aftersale)).map((item, index) => Object.assign({}, item, { historyKey: item.client_request_id || index, statusText: aftersaleStatus[item.status] || item.status, createdText: date(item.created_at), resolvedText: date(item.resolved_at) })) });
+      this.setData({ aftersale, aftersaleError, order: Object.assign(present(order), { aftersaleStatusText: aftersaleStatus[order.aftersale_status] || '', consumptionReadyText: date(order.consumption_confirmed_at || order.consumption_ready_at), canAfterSale: order.can_aftersale === true && order.status === 'COMPLETED' && ['PAID', 'PARTIALLY_REFUNDED'].includes(order.payment_status) && order.aftersale_status !== 'REFUNDED' }) });
     } catch (error) { if (this._alive && seq === this._seq) this.setData({ error: error.message, order: null }); }
     finally { if (this._alive && seq === this._seq) this.setData({ loading: false }); }
   },
@@ -45,9 +53,10 @@ Page({
   },
   cancel() {
     if (!this.data.order.canCancel || this.data.busy) return;
+    const revision = auth.revision();
     return this.operate(async () => {
       const answer = await new Promise(resolve => wx.showModal({ title: '取消订单', content: '订单仍待接单时可以取消，成功后余额原路退回。', editable: true, placeholderText: '可填写取消原因', confirmText: '确认取消', success: resolve, fail: () => resolve({ confirm: false }) }));
-      if (answer.confirm && this._alive) { await request('/orders/orders/' + this._id + '/cancel/', 'POST', { reason: (answer.content || '').slice(0, 255) }); toast('订单已取消，请查看退款流水'); }
+      if (answer.confirm && this._alive && revision === auth.revision()) { await request('/orders/orders/' + this._id + '/cancel/', 'POST', { reason: (answer.content || '').slice(0, 255) }); toast('订单已取消，请查看退款流水'); }
     });
   },
   score(event) { this.setData({ score: Number(event.detail.value) }); },
@@ -63,9 +72,12 @@ Page({
   },
   aftersale() {
     if (!this.data.order.canAfterSale || this.data.busy) return;
+    const revision = auth.revision();
+    if (!this._aftersaleRequestId) this._aftersaleRequestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, token => { const value = Math.floor(Math.random() * 16); return (token === 'x' ? value : (value & 3) | 8).toString(16); });
     return this.operate(async () => {
-      const answer = await new Promise(resolve => wx.showModal({ title: '提交订单售后', content: '请说明问题，客服处理完成前暂停确认实销。', editable: true, placeholderText: '至少2字问题说明', success: resolve, fail: () => resolve({ confirm: false }) }));
-      if (answer.confirm && this._alive) { await request('/orders/orders/' + this._id + '/aftersale/', 'POST', { reason: (answer.content || '').trim() }); toast('售后已提交'); }
+      const answer = await new Promise(resolve => wx.showModal({ title: '提交订单售后', content: '请说明问题，平台客服将核对订单并处理。', editable: true, placeholderText: '至少2字问题说明', success: resolve, fail: () => resolve({ confirm: false }) }));
+      if (answer.confirm && this._alive && this._visible && revision === auth.revision()) { await request('/orders/orders/' + this._id + '/aftersale/', 'POST', { reason: (answer.content || '').trim(), client_request_id: this._aftersaleRequestId }); if (this._alive && revision === auth.revision()) { this._aftersaleRequestId = ''; toast('售后已提交'); } }
+      else if (revision === auth.revision()) this._aftersaleRequestId = '';
     });
   },
   copy() { wx.setClipboardData({ data: this.data.order.order_no }); },

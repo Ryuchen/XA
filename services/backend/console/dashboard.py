@@ -18,15 +18,18 @@ class DashboardRangeSerializer(serializers.Serializer):
 
 
 def player_order_metrics(order_qs):
+    from orders.refunds import with_net_amount
+    from orders.analytics import partial_share_rows
     kpi = dict.fromkeys(('total_amount', 'game_amount', 'gift_amount', 'male_game',
                          'female_game', 'male_gift', 'female_gift'), 0)
-    for row in order_qs.values('service__service_category__is_gift').annotate(amount=Sum('amount')):
+    for row in with_net_amount(order_qs).values('service__service_category__is_gift').annotate(amount=Sum('_net_paid_amount')):
         amount = row['amount'] or 0
         kpi['total_amount'] += amount
         kpi['gift_amount' if row['service__service_category__is_gift'] else 'game_amount'] += amount
 
     # 先按成员和商品类型在数据库聚合，避免读取全量订单到进程内存。
-    shares = OrderProvider.objects.filter(order__in=order_qs).filter(
+    snapshots = order_qs.exclude(payment_status='PARTIALLY_REFUNDED')
+    shares = OrderProvider.objects.filter(order__in=snapshots).filter(
         Q(released_at__isnull=True) | Q(settlement_base__gt=0) | Q(provider_income__gt=0),
     )
     rows = []
@@ -34,10 +37,11 @@ def player_order_metrics(order_qs):
         amount=Sum('settlement_base'), income=Sum('provider_income'), count=Count('order_id', distinct=True),
     ):
         rows.append({**row, 'is_gift': row['order__service__service_category__is_gift']})
-    for row in order_qs.filter(providers__isnull=True).values(
+    for row in snapshots.filter(providers__isnull=True).values(
         'provider_account_id', 'provider_id', 'service__service_category__is_gift',
     ).annotate(amount=Sum('amount'), income=Sum('provider_income'), count=Count('id')):
         rows.append({**row, 'is_gift': row['service__service_category__is_gift']})
+    rows.extend(partial_share_rows(order_qs))
 
     legacy_ids = {row['provider_id'] for row in rows if row['provider_id']}
     mappings = dict(LegacyAccountMap.objects.filter(legacy_user_id__in=legacy_ids).values_list('legacy_user_id', 'account_id'))

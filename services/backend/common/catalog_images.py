@@ -10,9 +10,10 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 DISPLAY_MAX_WIDTH = 1080
 # Use decimal KB as the stricter interpretation of the product requirement.
-DISPLAY_MAX_BYTES = 400_000
-DISPLAY_PREFIX = 'club-catalog/thumbnails/v3/'
-CATALOG_PREFIXES = ('club-catalog/', 'banners/', 'game_categories/')
+DISPLAY_MAX_BYTES = 200_000
+DISPLAY_PREFIX = 'club-catalog/thumbnails/v4/'
+CATALOG_PREFIXES = ('club-catalog/', 'banners/', 'game_categories/',
+                    'accounts/avatars/', 'customers/avatars/', 'escorts/avatars/')
 
 
 def compress_catalog_image(source):
@@ -36,7 +37,7 @@ def compress_catalog_image(source):
                 if len(result) <= DISPLAY_MAX_BYTES:
                     return result, display.size
             if width == 1:
-                raise ValueError('无法生成400KB以内的展示图片')
+                raise ValueError('无法生成200KB以内的展示图片')
             width = max(1, min(width - 1, round(width * .85)))
 
 
@@ -112,3 +113,17 @@ def save_catalog_upload(upload, prefix):
     path = default_storage.save(f'{DISPLAY_PREFIX}{key}.jpg', ContentFile(display))
     return {'url': default_storage.url(path), 'original_url': default_storage.url(original),
             'width': width, 'height': height, 'bytes': len(display)}
+
+
+def bounded_public_image_url(value):
+    """Keep small public files stable; replace oversized local images only."""
+    base = getattr(settings, 'MEDIA_BASE_URL', '').rstrip('/')
+    local_value = value[len(base):] if base and str(value).startswith(base + '/media/') else value
+    path = _catalog_path(local_value)
+    if path:
+        try:
+            if default_storage.size(path) > DISPLAY_MAX_BYTES:
+                return catalog_display_url(local_value)
+        except OSError:
+            pass
+    return value

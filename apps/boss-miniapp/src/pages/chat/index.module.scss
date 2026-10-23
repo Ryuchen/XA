@@ -7,7 +7,7 @@
   @include safe-area-bottom($spacing-lg);
 }
 
-.hero { display:flex; align-items:center; justify-content:space-between; padding:32rpx; margin-bottom:24rpx; border-radius:32rpx; color:#fffdf5; background:linear-gradient(145deg,#17171c,#393440 62%,#657188); box-shadow:0 18rpx 44rpx rgba(30,25,36,.18); }
+.hero { display:flex; align-items:center; justify-content:space-between; padding:32rpx; margin-bottom:24rpx; border-radius:32rpx; color:var(--xa-color-surface-card); background:linear-gradient(145deg,#17171c,#393440 62%,var(--xa-color-text-secondary)); box-shadow:0 18rpx 44rpx rgba(30,25,36,.18); }
 .eyebrow { display:block; font-size:22rpx; font-weight:650; letter-spacing:2rpx; color:rgba(255,255,255,.5); }
 .heroTitle { display:block; margin-top:8rpx; font-size:40rpx; line-height:1.2; font-weight:720; }
 .heroSub { display:block; margin-top:8rpx; font-size:22rpx; color:rgba(255,255,255,.62); }
@@ -84,7 +84,7 @@
   font-size: 24rpx;
   text-align: center;
 }
-.filterActive { color:$color-primary; font-weight:650; background:#fffdf5; box-shadow:0 3rpx 10rpx rgba(0,0,0,.08); }
+.filterActive { color:$color-primary; font-weight:650; background:var(--xa-color-surface-card); box-shadow:0 3rpx 10rpx rgba(0,0,0,.08); }
 
 .clearBtn {
   display: flex;
@@ -176,4 +176,4 @@
   color: $color-text-white;
   font-weight: $font-weight-medium;
 }
-.loginBtn { padding:16rpx 32rpx; border-radius:999rpx; color:#fffdf5; font-size:24rpx; font-weight:650; background:$color-primary; }
+.loginBtn { padding:16rpx 32rpx; border-radius:999rpx; color:var(--xa-color-surface-card); font-size:24rpx; font-weight:650; background:$color-primary; }

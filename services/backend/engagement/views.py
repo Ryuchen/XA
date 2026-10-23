@@ -14,8 +14,8 @@ from wallet.models import RechargeRecord
 from .models import (Broadcast, ClubContent, LotteryCampaign, LotteryDraw, MemberProfile,
     MemberTag, PointLedger, RechargePackage, RewardClaim, RewardItem, VipTier)
 from .serializers import (CampaignSerializer, ClaimDetailsSerializer, ClaimSerializer, ContentSerializer,
-    MemberEditSerializer, RewardSerializer, TierSerializer)
-from .services import draw, locked_profile, redeem, completed_consumption
+    MemberEditSerializer, RewardSerializer, TierSerializer, lottery_daily_remaining)
+from .services import draw_batch, lottery_batch_draws, lottery_rarity, lottery_ten_guarantee, locked_profile, redeem, completed_consumption
 
 
 class IsBoss(IsClubAccountAuthenticated):
@@ -33,7 +33,9 @@ def available_tags(account):
     tags = [{'key': f'tag:{tag.pk}', 'title': tag.title, 'priority': tag.priority,
         'highlighted': tag.highlighted, 'expires_at': tag.expires_at}
         for tag in MemberTag.objects.filter(account=account, is_active=True).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))]
-    stats = Order.objects.filter(customer_account=account, business_cycle=account.business_cycle, is_gift_snapshot=False, consumption_confirmed_at__isnull=False, status='COMPLETED', payment_status='PAID').aggregate(amount=Sum('amount'), count=Count('id'))
+    from orders.refunds import with_net_amount
+    stats = with_net_amount(Order.objects.filter(customer_account=account,business_cycle=account.business_cycle,is_gift_snapshot=False,
+        consumption_confirmed_at__isnull=False,status='COMPLETED',payment_status__in=['PAID','PARTIALLY_REFUNDED'])).aggregate(amount=Sum('_net_paid_amount'),count=Count('id'))
     for item in Achievement.objects.filter(is_active=True):
         metric = (stats['amount'] or 0) if item.metric == 'amount' else (stats['count'] or 0)
         if metric >= item.target:
@@ -44,6 +46,7 @@ def available_tags(account):
 
 
 def member_data(account):
+    from orders.refunds import with_net_amount
     profile, _ = MemberProfile.objects.get_or_create(account=account)
     tags = available_tags(account)
     preferred = [tag for key in profile.selected_tags for tag in tags if tag['key'] == key]
@@ -58,7 +61,9 @@ def member_data(account):
         'tags': tags, 'display_tags': preferred or tags[:3], 'recharge_amount': recharge,
         'consumption_amount': consumption, 'upgrade_basis':'CONFIRMED_CONSUMPTION',
         'business_cycle': account.business_cycle,
-        'pending_consumption_amount': Order.objects.filter(customer_account=account, business_cycle=account.business_cycle, status='COMPLETED', payment_status='PAID', is_gift_snapshot=False, consumption_confirmed_at__isnull=True).aggregate(value=Sum('amount'))['value'] or 0,
+        'pending_consumption_amount': with_net_amount(Order.objects.filter(customer_account=account,business_cycle=account.business_cycle,
+            status='COMPLETED',payment_status__in=['PAID','PARTIALLY_REFUNDED'],is_gift_snapshot=False,
+            consumption_confirmed_at__isnull=True)).aggregate(value=Sum('_net_paid_amount'))['value'] or 0,
         'boss_type': {'id':boss_type.pk, 'name':boss_type.name, 'discount_rate':boss_type.discount_rate} if boss_type else None,
         'vip': TierSerializer(current).data if current else None,
         'next_vip': TierSerializer(upcoming).data if upcoming else None,
@@ -151,7 +156,7 @@ class RewardsView(APIView):
     permission_classes = [IsPointsMember]
     def get(self, request):
         rows = RewardItem.objects.filter(is_active=True, in_shop=True,audience__in=['ALL',request.account.account_type])
-        return Response({'code': 0, 'data': RewardSerializer(rows, many=True).data})
+        return Response({'code': 0, 'data': RewardSerializer(rows, many=True, context={'display_images':True}).data})
 
 
 class RedeemView(APIView):
@@ -189,11 +194,26 @@ class LotteryView(APIView):
     permission_classes = [IsBoss]
     def get(self, request):
         campaign = LotteryCampaign.objects.order_by('-id').first()
-        return Response({'code': 0, 'data': CampaignSerializer(campaign).data if campaign else None})
+        return Response({'code': 0, 'data': CampaignSerializer(campaign, context={'display_images':True, 'account':request.account}).data if campaign else None})
     def post(self, request):
         campaign_id = serializers.IntegerField(min_value=1).run_validation(request.data.get('campaign_id'))
         version = serializers.IntegerField(min_value=1).run_validation(request.data.get('version'))
-        get_object_or_404(LotteryCampaign, pk=campaign_id)
-        result = draw(request.account, campaign_id, request.data.get('client_request_id'), version)
-        return Response({'code': 0, 'data': {'id': result.pk, 'prize_id': result.prize_id,
-            'point_cost': result.point_cost, 'claim': ClaimSerializer(result.claim).data}})
+        campaign = get_object_or_404(LotteryCampaign, pk=campaign_id)
+        count = request.data.get('count', 1)
+        if type(count) is not int or count not in (1, 10):
+            raise serializers.ValidationError('抽奖次数仅支持 1 次或 10 次')
+        batch = draw_batch(request.account, campaign_id, request.data.get('client_request_id'), version, count=count)
+        draws = [{'id': row.pk, 'prize_id': row.prize_id, 'point_cost': row.point_cost,
+            'claim': ClaimSerializer(row.claim).data, 'rarity': row.rarity or lottery_rarity(row.prize.reward),
+            'is_pity': row.is_pity, 'pity_before': row.pity_before, 'pity_after': row.pity_after,
+            'is_ten_guarantee': row.is_ten_guarantee}
+            for row in lottery_batch_draws(batch)]
+        # 抽奖与幂等重放均返回当前可用次数；积分和保底仍取原批次快照。
+        campaign.refresh_from_db()
+        data = {'batch_id': batch.pk, 'count': batch.count, 'total_point_cost': batch.total_point_cost,
+            'points_balance': batch.points_balance / 100, 'pity': batch.pity_snapshot, 'draws': draws,
+            'daily_remaining': lottery_daily_remaining(request.account, campaign),
+            'ten_guarantee': lottery_ten_guarantee(campaign)}
+        if count == 1:
+            data.update({key: draws[0][key] for key in ['id', 'prize_id', 'point_cost', 'claim']})
+        return Response({'code': 0, 'data': data})

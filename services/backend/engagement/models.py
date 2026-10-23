@@ -51,6 +51,7 @@ class OrderPointAllocation(models.Model):
     amount = models.PositiveIntegerField()
     points_amount = models.PositiveBigIntegerField()
     released = models.BooleanField(default=False)
+    refunded_amount = models.PositiveIntegerField(default=0)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['order', 'lot'], name='unique_order_point_lot')]
@@ -241,6 +242,37 @@ class LotteryPrize(models.Model):
         ]
 
 
+class LotteryPityState(models.Model):
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    campaign = models.ForeignKey(LotteryCampaign, on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField(default=1, editable=False)
+    count = models.PositiveSmallIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['account', 'campaign', 'business_cycle'], name='unique_lottery_personal_pity'),
+            models.CheckConstraint(condition=models.Q(count__lt=240), name='lottery_pity_below_guarantee'),
+        ]
+
+
+class LotteryBatch(models.Model):
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    campaign = models.ForeignKey(LotteryCampaign, on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField(default=1, editable=False)
+    event_key = models.CharField(max_length=160, unique=True)
+    request_fingerprint = models.CharField(max_length=64)
+    count = models.PositiveSmallIntegerField()
+    campaign_version = models.PositiveIntegerField()
+    total_point_cost = models.PositiveBigIntegerField()
+    points_balance = models.BigIntegerField()  # 与 MemberProfile 一致，以百分之一积分存储
+    pity_snapshot = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(count__in=[1, 10]), name='lottery_batch_one_or_ten')]
+
+
 class LotteryDraw(models.Model):
     business_cycle = models.PositiveIntegerField(default=1, editable=False)
     account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='lottery_draws')
@@ -252,7 +284,18 @@ class LotteryDraw(models.Model):
     campaign_version = models.PositiveIntegerField()
     random_ticket = models.PositiveSmallIntegerField()
     probability_snapshot = models.JSONField()
+    batch = models.ForeignKey(LotteryBatch, on_delete=models.PROTECT, null=True, blank=True, related_name='draws')
+    draw_index = models.PositiveSmallIntegerField(default=1)
+    rarity = models.CharField(max_length=3, blank=True, default='')
+    is_pity = models.BooleanField(default=False)
+    is_ten_guarantee = models.BooleanField(default=False)
+    selection_pool = models.JSONField(default=list)
+    pity_before = models.PositiveSmallIntegerField(default=0)
+    pity_after = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['batch', 'draw_index'], name='unique_lottery_batch_draw_index')]
 
 
 class MemberTag(models.Model):
@@ -360,6 +403,9 @@ class ConsumptionConfirmation(models.Model):
     business_cycle = models.PositiveIntegerField()
     amount = models.PositiveIntegerField()
     confirmed_at = models.DateTimeField(default=timezone.now)
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reversed_by_refund = models.ForeignKey('orders.OrderRefund', on_delete=models.PROTECT, null=True, blank=True, related_name='consumption_reversals')
+    refunded_amount = models.PositiveIntegerField(default=0)
 
     class Meta:
         indexes = [models.Index(fields=['account', 'business_cycle'], name='confirmed_cycle_idx')]

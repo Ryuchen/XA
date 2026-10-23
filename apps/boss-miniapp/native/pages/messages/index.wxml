@@ -1,34 +1,41 @@
 <view class="page messages-page">
   <view class="message-overview">
-    <view class="row between message-heading"><view class="title">消息中心</view><text wx:if="{{unread}}" class="tag">{{unread}} 未读</text></view>
+    <view class="message-heading"><text class="title">消息中心</text><text wx:if="{{unread}}" class="unread-total" aria-label="{{'共' + unread + '条未读通知'}}">{{unread > 99 ? '99+' : unread}} 未读通知</text></view>
     <view class="shortcuts">
-      <button class="xa-button shortcut" bindtap="support" hover-class="xa-button-hover"><view class="shortcut-icon"><image src="/assets/icons/support.png"/></view><view><text class="shortcut-title">联系客服</text><text class="small muted">咨询与帮助</text></view><image class="shortcut-arrow" src="/assets/icons/chevron.png"/></button>
-      <button class="xa-button shortcut" bindtap="chat" hover-class="xa-button-hover"><view class="shortcut-icon"><image src="/assets/icons/chat.png"/></view><view><text class="shortcut-title">平台会话</text><text class="small muted">查看与回复</text></view><image class="shortcut-arrow" src="/assets/icons/chevron.png"/></button>
+      <button class="xa-button shortcut" bindtap="support" hover-class="xa-button-hover"><view class="shortcut-icon"><image src="/assets/icons/support.png" aria-hidden="true"/></view><view><text class="shortcut-title">联系客服</text><text class="shortcut-note">咨询与帮助</text></view></button>
+      <button class="xa-button shortcut" bindtap="chat" hover-class="xa-button-hover"><view class="shortcut-icon"><image src="/assets/icons/chat.png" aria-hidden="true"/></view><view><text class="shortcut-title">平台会话</text><text class="shortcut-note">查看与回复</text></view></button>
     </view>
     <button wx:if="{{!logged}}" class="xa-button button login-button" bindtap="login" hover-class="xa-button-hover">登录后查看通知</button>
   </view>
-  <button class="xa-button announcement-entry" bindtap="announcements" hover-class="xa-button-hover"><view class="announcement-icon"><image src="/assets/icons/bell.png"/></view><view><text class="announcement-title">平台公告</text><text class="small muted">官方发布 · 服务安排与重要通知</text></view><image class="entry-arrow" src="/assets/icons/chevron.png"/></button>
+
+  <button class="xa-button announcement-entry" bindtap="announcements" hover-class="xa-button-hover"><view class="announcement-icon"><image src="/assets/icons/bell.png" aria-hidden="true"/></view><view class="announcement-copy"><text class="announcement-title">平台公告</text><text class="announcement-note">官方发布 · 服务安排与重要通知</text></view><image class="entry-arrow" src="/assets/icons/chevron.png" aria-hidden="true"/></button>
+
   <view class="message-panel">
-    <view class="message-segments"><button class="xa-button {{section === 'feed' ? 'active' : ''}}" data-section="feed" bindtap="section" hover-class="xa-button-hover">俱乐部动态</button><button class="xa-button {{section === 'private' ? 'active' : ''}}" data-section="private" bindtap="section" hover-class="xa-button-hover">我的通知<text wx:if="{{unread}}" class="segment-count">{{unread}}</text></button></view>
-    <block wx:if="{{section === 'feed' && logged}}">
-      <scroll-view scroll-x class="feed-filter-scroll"><view class="chips"><button wx:for="{{feedKinds}}" wx:key="value" class="xa-button chip {{feedKind === item.value ? 'chip-active' : ''}}" data-kind="{{item.value}}" bindtap="feedFilter" hover-class="xa-button-hover">{{item.label}}</button></view></scroll-view>
-      <state-view loading="{{feedLoading && !feed.length}}" error="{{feedError}}" empty="{{!feedLoading && !feedError && !feed.length}}" empty-text="新的精彩即将发生" bind:retry="loadFeed"/>
-      <view class="broadcast-list"><view class="broadcast-card" wx:for="{{feed}}" wx:key="id"><view class="broadcast-symbol"><image src="/assets/icons/{{item.icon}}.png"/></view><view class="broadcast-copy"><view class="between"><text class="broadcast-label">{{item.label}}</text><text class="small muted">{{item.time}}</text></view><text class="broadcast-text">{{item.content}}</text></view></view></view>
-      <button wx:if="{{feedMore}}" class="xa-button button-quiet more-feed" bindtap="moreFeed" loading="{{feedLoadingMore}}" hover-class="xa-button-hover">查看更多动态</button>
-      <text class="feed-end" wx:if="{{feed.length && !feedMore}}">已展示全部动态</text>
-    </block>
+    <view class="message-segments"><button class="xa-button {{section === 'feed' ? 'active' : ''}}" data-section="feed" bindtap="section" aria-pressed="{{section === 'feed'}}" hover-class="xa-button-hover">俱乐部动态</button><button class="xa-button {{section === 'private' ? 'active' : ''}}" data-section="private" bindtap="section" aria-pressed="{{section === 'private'}}" hover-class="xa-button-hover">我的通知<text wx:if="{{unread}}" class="segment-count" aria-label="{{'共' + unread + '条未读通知'}}">{{unread > 99 ? '99+' : unread}}</text></button></view>
+    <scroll-view wx:if="{{section === 'feed' && logged}}" scroll-x class="feed-filter-scroll"><view class="chips"><button wx:for="{{feedKinds}}" wx:key="value" class="xa-button chip {{feedKind === item.value ? 'chip-active' : ''}}" data-kind="{{item.value}}" bindtap="feedFilter" aria-pressed="{{feedKind === item.value}}" hover-class="xa-button-hover">{{item.label}}</button></view></scroll-view>
     <block wx:if="{{section === 'private' && logged}}">
-      <view class="private-toolbar"><text class="small muted">订单、账户与服务提醒</text><button class="xa-button button-quiet" loading="{{marking}}" disabled="{{!unread || marking}}" bindtap="markRead" hover-class="xa-button-hover">全部已读</button></view>
-      <scroll-view scroll-x class="filter-scroll"><view class="chips"><button wx:for="{{filters}}" wx:key="value" class="xa-button chip {{filter === item.value ? 'chip-active' : ''}}" data-value="{{item.value}}" bindtap="filter" hover-class="xa-button-hover">{{item.label}}</button></view></scroll-view>
-      <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" bind:retry="load" />
-      <view class="notice {{!item.is_read ? 'notice-unread' : ''}}" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}" bindtap="open" role="button">
-        <view class="row between"><text class="tag">{{item.typeText}}</text><text class="small muted">{{item.dateText}}</text></view>
-        <view class="notice-title"><text wx:if="{{!item.is_read}}" class="unread-dot"></text>{{item.title}}</view>
-        <view class="muted preview">{{item.preview}}</view>
-      </view>
-      <button wx:if="{{hasMore}}" class="xa-button button-secondary more" loading="{{loadingMore}}" disabled="{{loadingMore}}" bindtap="loadMore" hover-class="xa-button-hover">{{moreError ? '加载失败，点击重试' : '加载更多'}}</button>
-      <view wx:if="{{moreError}}" class="small error">{{moreError}}</view>
+      <view class="private-toolbar"><text>订单、账户与服务提醒</text><button class="xa-button button-quiet mark-read" loading="{{marking}}" disabled="{{!unread || marking}}" bindtap="markRead" hover-class="xa-button-hover">全部已读</button></view>
+      <scroll-view scroll-x class="filter-scroll"><view class="chips"><button wx:for="{{filters}}" wx:key="value" class="xa-button chip {{filter === item.value ? 'chip-active' : ''}}" data-value="{{item.value}}" bindtap="filter" aria-pressed="{{filter === item.value}}" hover-class="xa-button-hover">{{item.label}}</button></view></scroll-view>
     </block>
-    <view wx:if="{{!logged}}" class="message-guest muted">登录后接收俱乐部动态与专属通知</view>
+    <text wx:if="{{!logged}}" class="message-guest">登录后接收俱乐部动态与专属通知</text>
   </view>
+
+  <block wx:if="{{section === 'feed' && logged}}">
+    <state-view loading="{{feedLoading && !feed.length}}" error="{{feedError}}" empty="{{!feedLoading && !feedError && !feed.length}}" empty-text="新的精彩即将发生" bind:retry="loadFeed"/>
+    <view class="broadcast-list">
+      <view class="broadcast-card" wx:for="{{feed}}" wx:key="id"><view class="broadcast-symbol"><image src="/assets/icons/{{item.icon}}.png" aria-hidden="true"/></view><view class="broadcast-copy"><view class="broadcast-meta"><text class="broadcast-label">{{item.label}}</text><text class="broadcast-time">{{item.time}}</text></view><text class="broadcast-text">{{item.content}}</text></view></view>
+    </view>
+    <view wx:if="{{feedMore}}" class="section-surface list-actions"><button class="xa-button button-quiet more-feed" bindtap="moreFeed" loading="{{feedLoadingMore}}" disabled="{{feedLoadingMore}}" hover-class="xa-button-hover">查看更多动态</button></view>
+    <text wx:if="{{feed.length && !feedMore}}" class="feed-end">已展示全部动态</text>
+  </block>
+
+  <block wx:if="{{section === 'private' && logged}}">
+    <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" empty-text="还没有这类通知" bind:retry="load"/>
+    <view class="notice {{!item.is_read ? 'notice-unread' : ''}}" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}" bindtap="open" role="button" aria-label="{{(item.is_read ? '已读' : '未读') + '，' + item.typeText + '通知，' + item.title + '，' + item.dateText}}" hover-class="notice-hover">
+      <view class="notice-meta"><view class="notice-labels"><text class="notice-type">{{item.typeText}}</text><view class="notice-state {{!item.is_read ? 'is-unread' : ''}}"><text wx:if="{{!item.is_read}}" class="unread-dot" aria-hidden="true"></text><text>{{item.is_read ? '已读' : '未读'}}</text></view></view><text class="notice-time">{{item.dateText}}</text></view>
+      <text class="notice-title">{{item.title}}</text>
+      <text wx:if="{{item.preview}}" class="preview">{{item.preview}}</text>
+    </view>
+    <view wx:if="{{hasMore || moreError}}" class="section-surface list-actions"><button wx:if="{{hasMore}}" class="xa-button button-secondary more" loading="{{loadingMore}}" disabled="{{loadingMore}}" bindtap="loadMore" hover-class="xa-button-hover">{{moreError ? '加载失败，点击重试' : '加载更多'}}</button><text wx:if="{{moreError}}" class="error more-error">{{moreError}}</text></view>
+  </block>
 </view>

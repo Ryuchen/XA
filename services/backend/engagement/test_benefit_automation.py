@@ -302,6 +302,11 @@ class BenefitAutomationTest(APITestCase):
         r=self.client.post(f'/api/orders/orders/{order.pk}/aftersale/',{'reason':'订单体验有问题'},format='json')
         self.assertEqual(r.data['code'],0)
         expired=self.completed(age=73)
+        # The 72h cutoff remains for unposted orders; an actually settled order
+        # now has a separately authorized recovery-based aftersale path.
+        expired.settled_at=None
+        expired.settlement_mode='REPORT_APPROVAL'
+        expired.save(update_fields=['settled_at','settlement_mode'])
         self.assertNotEqual(self.client.post(f'/api/orders/orders/{expired.pk}/aftersale/',{'reason':'超时客诉'},format='json').data.get('code',400),0)
 
     def test_discount_coupons_follow_service_setting_for_all_types(self):

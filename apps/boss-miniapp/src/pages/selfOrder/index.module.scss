@@ -11,7 +11,7 @@
 
 .progressItem { position: relative; display: flex; flex: 1; flex-direction: column; align-items: center; }
 .progressNo { z-index: 1; display: flex; align-items: center; justify-content: center; width: 48rpx; height: 48rpx; border-radius: 50%; color: $color-text-tertiary; background: $color-bg-hover; font-size: 22rpx; }
-.progressNoActive { color: #fffdf5; background: $color-primary; }
+.progressNoActive { color: var(--xa-color-surface-card); background: $color-primary; }
 .progressText { margin-top: 8rpx; color: $color-text-tertiary; font-size: 22rpx; }
 .progressTextActive { color: $color-text-primary; font-weight: 600; }
 .progressLine { position: absolute; top: 24rpx; left: calc(50% + 22rpx); right: calc(-50% + 22rpx); height: 2rpx; background: $color-border; }
@@ -44,6 +44,6 @@
 .footer { position: fixed; right: 0; bottom: 0; left: 0; display: flex; gap: $spacing-md; padding: $spacing-md $page-padding calc($spacing-md + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1rpx solid $color-border; }
 .backButton, .nextButton { display: flex; align-items: center; justify-content: center; height: 96rpx; border-radius: 24rpx; font-size: $font-size-md; font-weight: 600; }
 .backButton { width: 184rpx; color: $color-text-primary; background: $color-bg-hover; }
-.nextButton { flex: 1; color: #fffdf5; background: $color-primary; }
+.nextButton { flex: 1; color: var(--xa-color-surface-card); background: $color-primary; }
 .backButtonDisabled { color: $color-text-disabled; }
 .nextButtonDisabled { opacity: .45; }

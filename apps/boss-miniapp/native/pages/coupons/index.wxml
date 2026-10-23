@@ -1,9 +1,9 @@
 <view class="page coupons-page">
+  <view class="page-heading"><view class="title">优惠券</view><view class="subtitle">领取后，结算时选择符合条件的优惠券</view>
   <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button>
-<view class="title">优惠券</view><view class="subtitle">领取后，结算时选择符合条件的优惠券</view>
   <view class="coupon-tabs"><button class="xa-button chip {{tab === 'available' ? 'chip-active' : ''}}" data-tab="available" bindtap="tab" hover-class="xa-button-hover">领券中心</button><button class="xa-button chip {{tab === 'mine' ? 'chip-active' : ''}}" data-tab="mine" bindtap="tab" hover-class="xa-button-hover">我的券</button></view>
-  <view wx:if="{{tab === 'mine'}}" class="chips status-filter"><button wx:for="{{statuses}}" wx:key="value" class="xa-button chip {{status === item.value ? 'chip-active' : ''}}" data-status="{{item.value}}" bindtap="filter" hover-class="xa-button-hover">{{item.label}}</button></view>
-  <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" bind:retry="load" />
+  <view wx:if="{{tab === 'mine'}}" class="chips status-filter"><button wx:for="{{statuses}}" wx:key="value" class="xa-button chip {{status === item.value ? 'chip-active' : ''}}" data-status="{{item.value}}" bindtap="filter" hover-class="xa-button-hover">{{item.label}}</button></view></view>
+  <state-view loading="{{loading}}" error="{{error}}" empty="{{logged && !loading && !error && !items.length}}" bind:retry="load" />
   <view wx:for="{{items}}" wx:key="id" class="card coupon {{item.status && item.status !== 'UNUSED' ? 'coupon-inactive' : ''}}">
     <view class="coupon-value {{item.amountText.length > 6 ? 'coupon-value-long' : ''}}"><text class="price">{{item.amountText}}</text><text class="small muted">{{item.unitText}}</text></view>
     <view class="coupon-copy"><view class="coupon-title">{{item.name}}</view><view class="small">{{item.thresholdText}}</view><view class="small muted">{{item.dateText}} {{item.platformText}}</view><view wx:if="{{item.capText}}" class="small">{{item.capText}} · 与VIP折扣取优</view>
@@ -13,3 +13,4 @@
     </view>
   </view>
 </view>
+<bottom-navigation/>

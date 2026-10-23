@@ -43,6 +43,7 @@ from wallet.services import get_wallet, claim_fund_write, peek_fund_write
 from wallet.receipts import fund_success, recover_fund_result
 from common.logging_utils import log_money_event
 from common.media import build_media_url
+from common.catalog_images import bounded_public_image_url
 
 from .models import (
     Achievement, CheckinGift, CheckinMonthProgress, CheckinRecord, CheckinRuleConfig,
@@ -476,7 +477,7 @@ class WechatLoginView(APIView):
                     'id': str(response_id),
                     'username': account.username,
                     'nickname': account.nickname or account.username,
-                    'avatar': account.avatar_url or '',
+                    'avatar': bounded_public_image_url(account.avatar_url or ''),
                     'role': 'customer',
                     'backendRole': account.account_type,
                     'openid': account.openid,
@@ -716,7 +717,7 @@ class MeView(APIView):
             'nickname': account.nickname or account.username,
             'role': ROLE_REVERSE_MAP.get(account.account_type, 'customer'),
             'phone': account.phone or '',
-            'avatar': account.avatar_url or '',
+            'avatar': bounded_public_image_url(account.avatar_url or ''),
             'game_region': account.game_region,
             'game_nickname': account.game_nickname,
             'game_uid': account.game_uid,
@@ -1613,7 +1614,8 @@ class CustomerAchievementView(APIView):
             customer_account=request.account,
             status=Order.Status.COMPLETED,
         )
-        agg = completed.aggregate(order_count=Count('id'), total=Sum('amount'))
+        from orders.refunds import with_net_amount
+        agg = with_net_amount(completed.filter(payment_status__in=['PAID','PARTIALLY_REFUNDED'])).aggregate(order_count=Count('id'),total=Sum('_net_paid_amount'))
         metrics = {
             Achievement.Metric.ORDERS: agg['order_count'] or 0,
             Achievement.Metric.AMOUNT: agg['total'] or 0,
@@ -1753,12 +1755,13 @@ def _daily_paid_amount(account, target_date):
     tz = timezone.get_current_timezone()
     start = timezone.make_aware(datetime.combine(target_date, time.min), tz)
     end = start + timedelta(days=1)
-    return Order.objects.filter(
+    from orders.refunds import with_net_amount
+    return with_net_amount(Order.objects.filter(
         customer_account=account,
-        payment_status=Order.PaymentStatus.PAID,
+        payment_status__in=[Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED],
         created_at__gte=start,
         created_at__lt=end,
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    )).aggregate(total=Sum('_net_paid_amount'))['total'] or 0
 
 
 def _sync_makeup_card(progress, rule, today_spend, today):

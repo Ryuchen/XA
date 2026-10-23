@@ -4,6 +4,7 @@
 - check_pending_timeouts：兜底任务（Celery beat 定时调用，扫描所有过期 PENDING 订单）
 """
 from celery import shared_task
+from django.db import transaction
 from django.utils import timezone
 
 from .models import KookDispatchRecord, Order, OrderStatusLog
@@ -19,6 +20,7 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
     # （那会把 DRF/序列化器这一整条依赖拖进 worker 进程）。
     from .services import refund_to_customer
     from .state_machine import IllegalTransitionError, transition
+    from .settlement import SettlementError
     from .notifier import notify_order_update
 
     try:
@@ -57,10 +59,10 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
             side_effect=side_effect,
             update_fields=['cancel_reason', 'payment_status', 'refunded_at'],
         )
-    except (Order.DoesNotExist, IllegalTransitionError):
+    except (Order.DoesNotExist, IllegalTransitionError, SettlementError):
         return 'skip'
 
-    notify_order_update(order)
+    transaction.on_commit(lambda: notify_order_update(order))
     return 'cancelled'
 
 

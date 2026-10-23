@@ -14,7 +14,7 @@
 .liveDot { display:none; }
 .dashboardBottom { gap:40PX; margin-top:20PX; padding-top:20PX; border-top:1PX solid $color-divider; }
 .metricValue { display:block; margin-top:5PX; font-size:20PX; font-weight:650; font-variant-numeric:tabular-nums; }
-.passCard { margin-top:12PX; padding:16PX; border:1PX solid $color-border; border-radius:14PX; background:$color-bg-card; cursor:pointer; }
+.passCard { --provider-button-color:var(--xa-color-text-primary); justify-content:flex-start; width:100%; margin-top:16PX; padding:16PX; border:1PX solid $color-border; border-radius:14PX; background:$color-bg-card; text-align:left; white-space:normal; cursor:pointer; }
 .passCard:hover { border-color:$color-primary; }
 .passEmblem { flex:none; display:flex; align-items:center; justify-content:center; width:42PX; height:42PX; margin-right:12PX; border-radius:12PX; font-size:17PX; font-weight:650; color:$color-primary; background:var(--xa-color-primary-soft); }
 .passInfo { flex:1; min-width:0; }
@@ -25,7 +25,7 @@
 .passMeta { display:block; margin-top:4PX; font-size:12PX; color:$color-text-secondary; line-height:1.5; }
 .passAction { flex:none; margin-left:12PX; font-size:13PX; font-weight:600; color:$color-primary; }
 .tabs { position:sticky; top:0; z-index:10; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4PX; margin:24PX 0 16PX; padding:5PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-page; }
-.tabItem { display:flex; align-items:center; justify-content:center; min-height:42PX; border-radius:8PX; cursor:pointer; transition:background 150ms ease; }
+.tabItem { @include button-reset; --provider-button-color:var(--xa-color-text-secondary); display:flex; align-items:center; justify-content:center; min-height:44PX; margin:0; padding:8PX 4PX; border:0; border-radius:8PX; background:transparent; cursor:pointer; transition:background 150ms ease; }
 .tabItemActive { background:$color-bg-card; box-shadow:$shadow-card; }
 .tabText { font-size:14PX; color:$color-text-secondary; }
 .tabItemActive .tabText { color:$color-primary; font-weight:650; }
@@ -36,7 +36,7 @@
 .loadError { display:flex; align-items:center; justify-content:space-between; gap:12PX; margin-bottom:16PX; padding:16PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-card; font-size:14PX; }
 .orderCard { min-width:0; padding:20PX; border:1PX solid $color-border; border-radius:16PX; background:$color-bg-card; }
 .vipRow { display:flex; align-items:center; gap:8PX; margin-bottom:14PX; }
-.vipBadge { flex:none; padding:3PX 8PX; border-radius:5PX; font-size:11PX; font-weight:600; color:#fffdf5; background:$color-primary; }
+.vipBadge { flex:none; padding:3PX 8PX; border-radius:5PX; font-size:11PX; font-weight:600; color:var(--xa-color-on-primary); background:$color-primary; }
 .bossName { @include text-ellipsis; flex:1; font-size:13PX; font-weight:600; }
 .discountChip { padding:4PX 8PX; border-radius:6PX; font-size:11PX; color:$color-primary; background:var(--xa-color-primary-soft); }
 .cardHeader { gap:12PX; align-items:flex-start; }
@@ -105,5 +105,8 @@
 .networkPanel { margin: 16PX 0; padding: 16PX; border-radius: 14PX; background: $color-bg-card; border: 1PX solid $color-border; display: flex; flex-direction: column; gap: 8PX; font-size: 13PX; line-height: 1.6; }
 .networkTitle { font-weight: 600; }
 .networkHint { color: $color-text-secondary; font-size: 12PX; line-height: 1.6; }
+.attendance { display:flex; align-items:center; justify-content:space-between; gap:16PX; margin:20PX 0; padding:14PX 16PX; border:1PX solid $color-border; border-radius:10PX; background:var(--xa-color-surface-subtle); color:$color-text-secondary; font-size:14PX; }
 
-.scopeBar{margin:12px 0;padding:12px 16px;border-radius:12px;background:var(--xa-card,#fff);font-size:14px;line-height:1.5}.orderScope{display:block;font-size:12px;color:var(--xa-text-secondary,#758293);margin:5px 0}
+.scopeBar { margin:16PX 0; padding:0 16PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-card; font-size:14PX; line-height:1.6; }
+.scopeBar :global(taro-picker-core),.scopeBar > picker { min-height:48PX; cursor:pointer; }.scopeBar :global(taro-picker-core) > :first-child { display:flex; align-items:center; min-height:48PX; padding:10PX 0; overflow-wrap:anywhere; }
+.orderScope { display:block; margin:6PX 0; color:$color-text-secondary; font-size:12PX; line-height:1.7; overflow-wrap:anywhere; }

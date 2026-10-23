@@ -95,6 +95,10 @@ def resolve_commission_rate_with_source(service, escort_profile, promotion):
 
 def club_provider_specs(service_or_order, profiles, amount):
     """固定3元为整单抽成，多陪份额只分配一次，不重复收取。"""
+    from .commission import provider_specs
+    custom = provider_specs(service_or_order,profiles,amount)
+    if custom is not None:
+        return custom
     policy = getattr(service_or_order, 'commission_policy', 'LEGACY')
     kind = getattr(service_or_order, 'experience_kind', '')
     if kind:

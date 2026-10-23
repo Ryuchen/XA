@@ -28,8 +28,8 @@ export default defineAppConfig({
   tabBar: {
     custom: true,
     color: '#999999',
-    selectedColor: '#002fa7',
-    backgroundColor: '#fffdf5',
+    selectedColor: '#136398',
+    backgroundColor: '#ffffff',
     borderStyle: 'black',
     list: [
       {

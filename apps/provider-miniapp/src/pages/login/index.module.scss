@@ -7,7 +7,7 @@
 .formTitle { display:block; font-size:22PX; font-weight:650; color:$color-text-primary; }
 .formTip { display:block; margin:8PX 0 24PX; color:$color-text-secondary; font-size:13PX; line-height:1.7; }
 .formItem { margin-bottom:20PX; }.formLabel { display:block; margin-bottom:8PX; color:$color-text-primary; font-size:14PX; font-weight:500; }
-.formInput { width:100%; height:44PX; padding:0 12PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:15PX; color:$color-text-primary; }
+.formInput { width:100%; height:48PX; padding:0 14PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:16PX; color:$color-text-primary; }
 .loginBtn { @include button-reset; @include primary-control-state; width:100%; min-height:44PX; margin:0; border:0; border-radius:8PX; font-size:15PX; }
 @media(min-width:960px) { .container { display:grid; grid-template-columns:minmax(0,380PX) minmax(0,420PX); gap:64PX; justify-content:center; align-content:center; }.header { align-items:flex-start; margin:0; }.title { font-size:30PX; }.formCard { padding:32PX; } }
 @media(max-width:360px) { .formCard { padding:24PX 20PX; }.title { font-size:23PX; } }
@@ -25,6 +25,6 @@
 .recoveryCodes { white-space:pre-wrap; }
 
 .registerEntry { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4PX 8PX; margin-top:24PX; padding-top:20PX; border-top:1PX solid $color-divider; color:$color-text-secondary; font-size:13PX; }
-.registerLink { @include button-reset; width:auto; min-height:40PX; padding:8PX 4PX; margin:0; border:0; color:$color-primary; background:transparent; font-size:13PX; }
+.registerLink { @include button-reset; width:auto; min-height:44PX; padding:8PX; margin:0; border:0; color:$color-primary; background:transparent; font-size:13PX; }
 
 @media(max-width:959px) { .otpHeader { flex-direction:row; justify-content:center; gap:12PX; margin-bottom:20PX; }.otpHeader .title { font-size:22PX; }.otpHeader .subtitle { display:none; } }

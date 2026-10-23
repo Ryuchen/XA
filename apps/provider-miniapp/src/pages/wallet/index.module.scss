@@ -15,7 +15,7 @@
 .overviewValue { font-size:18PX; font-weight:650; color:$color-success; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; text-align:center; }.red { color:$color-error; }
 .overviewLabel { display:block; margin-top:6PX; font-size:12PX; color:$color-text-secondary; }
 .tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4PX; padding:4PX; margin:24PX 0 16PX; border:1PX solid $color-border; border-radius:10PX; background:$color-bg-page; }
-.tab { display:flex; justify-content:center; align-items:center; min-height:40PX; padding:8PX; border-radius:7PX; color:$color-text-secondary; font-size:14PX; cursor:pointer; }
+.tab { @include button-reset; --provider-button-color:var(--xa-color-text-secondary); display:flex; justify-content:center; align-items:center; min-height:44PX; margin:0; padding:8PX; border:0; border-radius:7PX; background:transparent; color:$color-text-secondary; font-size:14PX; cursor:pointer; }
 .tabActive { color:$color-primary; font-weight:600; background:$color-bg-card; }
 .listCard { overflow:hidden; min-height:250PX; padding:0 20PX; }
 .listItem { display:flex; align-items:center; gap:12PX; min-height:84PX; padding:18PX 0; border-bottom:1PX solid $color-divider; }.listItem:last-child { border:0; }
@@ -31,8 +31,9 @@
 .moneyInput { display:flex; align-items:center; gap:12PX; min-height:56PX; padding:8PX 14PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:18PX; }
 .moneyInput input,.moneyInput :global(taro-input-core) { flex:1; min-width:0; height:38PX; font-size:26PX; font-weight:650; background:transparent; }
 .formHint { display:block; margin-top:8PX; color:$color-text-secondary; font-size:12PX; line-height:1.7; overflow-wrap:anywhere; }
-.methodRow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8PX; }.method { display:flex; align-items:center; justify-content:center; min-height:44PX; padding:8PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:14PX; color:$color-text-secondary; cursor:pointer; }
+.methodRow { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8PX; }.method { --provider-button-color:var(--xa-color-text-secondary); display:flex; align-items:center; justify-content:center; min-height:44PX; margin:0; padding:8PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:14PX; color:$color-text-secondary; cursor:pointer; }
 .methodActive { border-color:$color-primary; background:var(--xa-color-primary-soft); color:$color-primary; font-weight:600; }
+.methodActive,.tabActive { --provider-button-color:var(--xa-color-primary); }
 .selectedAccount { margin-top:16PX; padding:16PX; border:1PX solid $color-border; border-radius:10PX; background:var(--xa-color-surface-subtle); }.selectedAccount button,.selectedAccount :global(taro-button-core) { margin-top:12PX; }
 .accountNumber { display:block; margin-top:8PX; font-size:15PX; color:$color-text-primary; overflow-wrap:anywhere; }
 .confirm { @include button-reset; @include primary-control-state; min-height:44PX; margin:0; padding:10PX 24PX; border:0; border-radius:8PX; font-size:14PX; }

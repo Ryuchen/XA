@@ -23,11 +23,11 @@ button, taro-button-core {
   font-weight: 600;
   line-height: 1.5;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
   &::after { border: 0; }
-  &[size='mini'] { min-height: 36PX; padding: 6PX 12PX; font-size: 13PX; line-height: 1.5 !important; }
+  &[size='mini'] { min-height: 44PX; padding: 8PX 12PX; font-size: 13PX; line-height: 1.5 !important; }
   &[disabled]:not([disabled='false']), &[aria-disabled='true'] {
     color: var(--xa-color-text-disabled) !important;
     background: var(--xa-color-surface-subtle) !important;

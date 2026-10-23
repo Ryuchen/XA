@@ -1,1 +1,20 @@
-.chips { margin: 28rpx 0 12rpx; display: flex; }.rankings-page .chips .xa-button.chip { flex: 1; min-height: var(--xa-control-compact); padding: 6rpx 8rpx; font-size: var(--xa-control-small-font); border-radius: 16rpx; }.rank-row { display: flex; gap: 18rpx; align-items: center; min-height: 120rpx; padding: 20rpx 0; }.rank-row + .rank-row { border-top: 1rpx solid var(--xa-color-border); }.rank { color: var(--xa-color-primary); font-size: 34rpx; font-weight: 600; width: 40rpx; text-align: center; flex-shrink: 0; }.avatar { width: 72rpx; height: 72rpx; }.rank-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }.rank-name text { display: block; }.rank-name .small { margin-top: 4rpx; }.rank-row > text:last-child { font-size: 25rpx; text-align: right; max-width: 210rpx; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }.panel { padding: 6rpx 24rpx; }
+.rankings-page .page-heading, .rankings-page .panel { margin-bottom:20rpx; padding:24rpx; border-color:var(--xa-color-border); border-radius:20rpx; }
+.rankings-page .title { font-size:20px; letter-spacing:0; }
+.rankings-page .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.rankings-page .page-heading > .xa-button { min-height:36px; margin-top:12rpx; padding:6px 12px; border-radius:12rpx; font-size:var(--xa-control-small-font); }
+.rankings-page .chips { display:flex; flex-wrap:nowrap; gap:12rpx; margin:16rpx 0 0; }
+.rankings-page .chips .xa-button.chip { flex:1; min-width:0; min-height:30px; margin:0; padding:4px 8px; border:0; border-radius:10rpx; background:var(--xa-color-surface-subtle); font-size:var(--xa-control-small-font); line-height:1.5; }
+.rankings-page .chips .xa-button.chip-active { color:var(--xa-color-primary); background:var(--xa-color-primary-soft); }
+.rankings-page .panel > .section-title { margin:0; padding-bottom:12rpx; border-bottom:1rpx solid var(--xa-color-border); font-size:var(--xa-control-font); line-height:1.5; }
+.rank-row { display:flex; align-items:center; gap:12rpx; min-height:48px; padding:12rpx 0; }
+.rank-row + .rank-row { border-top:1rpx solid var(--xa-color-border); }
+.rank-row:last-child { padding-bottom:0; }
+.rank { width:22px; flex-shrink:0; color:var(--xa-color-primary); font-size:16px; font-weight:600; line-height:1.4; text-align:center; overflow-wrap:anywhere; }
+.rank-avatar { width:32px; height:32px; flex-shrink:0; border-radius:10rpx; background:var(--xa-color-surface-subtle); }
+.rank-name { flex:1; min-width:0; overflow-wrap:anywhere; }
+.rank-nickname { display:block; font-size:var(--xa-control-font); font-weight:500; line-height:1.4; }
+.rank-note { display:block; margin-top:4rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.rank-result { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:flex-end; gap:4rpx; max-width:40%; min-width:0; text-align:right; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.rank-value { max-width:100%; color:var(--xa-color-primary); font-size:var(--xa-control-font); font-weight:600; line-height:1.4; }
+.rank-unit { color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.rank-empty { display:block; padding:24rpx 0 4rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; text-align:center; }

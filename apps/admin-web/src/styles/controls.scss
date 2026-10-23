@@ -130,10 +130,12 @@ input[type='file']::file-selector-button:hover { border-color: var(--primary); }
   line-height: var(--ap-control-height);
 }
 .el-form-item .el-form-item__label { height: var(--ap-control-height); }
+.el-form-item { margin-bottom: var(--space-5); }
 .el-form--label-top .el-form-item__label {
   height: auto;
   min-height: 0;
   line-height: 22px;
+  margin-bottom: var(--space-2);
 }
 .el-form-item__content > :is(.el-select, .el-autocomplete, .el-cascader, .el-date-editor) {
   width: 100%;

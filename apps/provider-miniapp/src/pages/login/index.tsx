@@ -63,7 +63,7 @@ const LoginPage: React.FC = () => {
   return (
     <View className={`xa-provider-page ${styles.container}`}>
       <View className={`${styles.header} ${otp ? styles.otpHeader : ''}`}>
-        <XaLogo size={otp ? 80 : 120} color="#002fa7" style={{ marginBottom: otp ? '0' : '16px' }} />
+        <XaLogo size={otp ? 80 : 120} color="#136398" style={{ marginBottom: otp ? '0' : '16px' }} />
         <Text className={styles.title}>兴安电竞 · 陪玩端</Text>
         <Text className={styles.subtitle}>报单与提款，尽在掌中</Text>
       </View>
@@ -81,6 +81,7 @@ const LoginPage: React.FC = () => {
             <View className={styles.formItem}>
               <Text className={styles.formLabel}>账号</Text>
               <Input
+                aria-label='账号'
                 className={styles.formInput}
                 value={username}
                 disabled={isSubmitting || !!otp}
@@ -92,6 +93,7 @@ const LoginPage: React.FC = () => {
             <View className={styles.formItem}>
               <Text className={styles.formLabel}>密码</Text>
               <Input
+                aria-label='密码'
                 className={styles.formInput}
                 value={password}
                 disabled={isSubmitting || !!otp}
@@ -113,7 +115,7 @@ const LoginPage: React.FC = () => {
             </View> : <Text className={styles.otpTip}>输入验证器 App 的6位动态码，也可使用一个备用恢复码。</Text>}
             <View className={styles.otpField}>
               <Text className={styles.formLabel}>{otp.requiresOTPSetup ? '动态验证码' : '动态验证码 / 备用恢复码'}</Text>
-              <Input className={styles.formInput} value={otpCode} placeholder={otp.requiresOTPSetup ? '请输入6位动态码' : '动态验证码 / 备用恢复码'} maxlength={20} disabled={isSubmitting} onInput={event => setOtpCode(event.detail.value.trim())} />
+              <Input aria-label={otp.requiresOTPSetup ? '动态验证码' : '动态验证码或备用恢复码'} className={styles.formInput} value={otpCode} placeholder={otp.requiresOTPSetup ? '请输入6位动态码' : '动态验证码 / 备用恢复码'} maxlength={20} disabled={isSubmitting} onInput={event => setOtpCode(event.detail.value.trim())} />
             </View>
           </View>}
           <View className={styles.loginActions}>

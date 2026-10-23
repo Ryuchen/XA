@@ -33,6 +33,7 @@ function setup(kind, defer = false) {
   };
   const module = { exports: {} };
   const file = kind === 'native' ? 'apps/boss-miniapp/native/core/realtime.js'
+    : kind === 'boss' ? 'apps/boss-miniapp/src/services/websocket.ts'
     : kind === 'provider' ? 'apps/provider-miniapp/src/services/websocket.ts' : 'apps/admin-web/src/utils/ws.ts';
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
@@ -47,9 +48,10 @@ function setup(kind, defer = false) {
       if (name === '@tarojs/taro') return { default: taro };
       if (name === '@/utils/auth') return { getStoredToken: () => token };
       if (name === '@/utils/request') return { BASE_URL: '/api', request: async () => ({ code: 0, data: {} }) };
+      if (name === '@/utils/env') return { WS_URL: 'ws://localhost:18083' };
       if (name === '@/stores/auth') return { useAuthStore: () => auth };
-      if (name === './auth') return { getSession: () => token ? { token } : null };
-      if (name === './events') return { on: (name, fn) => events.set(name, fn), emit: name => events.get(name)?.() };
+      if (name === './auth') return { getSession: () => token ? { token, user: { id: '10' } } : null };
+      if (name === './events') return { on: (name, fn) => events.set(name, fn), emit: (name, data) => events.get(name)?.(data) };
       if (name === './config') return { config: () => ({ socketBase: 'ws://localhost:18080' }) };
       if (name === './api') return { request: async () => ({}) };
       throw Error('Unexpected test dependency: ' + name);
@@ -57,7 +59,7 @@ function setup(kind, defer = false) {
   });
   return {
     service: kind === 'native' ? { connect: module.exports.show, disconnect: module.exports.hide }
-      : module.exports.wsService || module.exports.adminWs, sockets, pending, timers,
+      : module.exports.wsService || module.exports.adminWs, sockets, pending, timers, events,
     setToken(value) { token = value; },
     async advance(ms) {
       const until = clock + ms;
@@ -73,7 +75,7 @@ function setup(kind, defer = false) {
   };
 }
 
-for (const kind of ['provider', 'admin']) {
+for (const kind of ['provider', 'admin', 'boss']) {
   test(`${kind}: repeated page/app connection calls keep one connection`, async () => {
     const s = setup(kind); s.service.connect(); s.service.connect(); s.service.connect(); await tick();
     assert.equal(s.sockets.length, 1);
@@ -120,6 +122,16 @@ test('provider: disconnect during asynchronous connect closes the late task with
   const s = setup('provider', true); s.service.connect(); s.service.disconnect();
   s.pending[0](); await tick(); s.sockets[0].emit('open'); await s.advance(60000);
   assert.equal(s.sockets[0].closed, true); assert.equal(s.sockets.length, 1); assert.equal(s.timers.size, 0);
+});
+
+test('native: wallet invalidation is owner-scoped and reconnect announces a reconciliation', async () => {
+  const s = setup('native'), updates = [];
+  s.events.set('wallet.changed', data => updates.push(data));
+  s.service.connect(); await tick(); const socket = s.sockets[0]; socket.emit('open');
+  assert.equal(updates.length, 1); assert.equal(updates[0].account_id, '10');
+  socket.message({ type: 'wallet_update', data: { account_id: 99 } }); assert.equal(updates.length, 1);
+  socket.message({ type: 'wallet_update', data: { account_id: 10 } }); assert.equal(updates.length, 2);
+  s.service.disconnect();
 });
 test('native: a missing pong recovers the connection; a hidden app never reconnects', async () => {
   const s = setup('native'); s.service.connect(); await tick(); const old = s.sockets[0]; old.emit('open');

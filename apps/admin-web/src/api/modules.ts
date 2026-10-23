@@ -103,8 +103,8 @@ export const permissionApi = {
 }
 
 export const commissionApi = {
-  get: () => request<{ rate: number }>({ url: '/config/commission', method: 'get' }),
-  update: (rate: number) => request<{ rate: number }>({ url: '/config/commission', method: 'put', data: { rate } }),
+  get: () => request<{ rate: number; commission_type?: 'PERCENT' | 'FIXED'; commission_fixed?: number }>({ url: '/config/commission', method: 'get' }),
+  update: (value: number | { rate: number; commission_type: 'PERCENT' | 'FIXED'; commission_fixed: number }) => request<{ rate: number; commission_type?: 'PERCENT' | 'FIXED'; commission_fixed?: number }>({ url: '/config/commission', method: 'put', data: typeof value === 'number' ? { rate: value } : value }),
 }
 
 export const withdrawConfigApi = {

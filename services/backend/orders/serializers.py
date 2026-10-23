@@ -2,6 +2,7 @@ from users.qualifications import service_skill
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
 from club_accounts.models import ClubAccount
@@ -150,6 +151,17 @@ class OrderListSerializer(serializers.ListSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    settled_at = serializers.DateTimeField(read_only=True)
+    can_aftersale = serializers.SerializerMethodField()
+    refund_summary = serializers.SerializerMethodField()
+    def get_can_aftersale(self,obj):
+        from .refunds import can_request_aftersale
+        return can_request_aftersale(obj)
+    def get_refund_summary(self,obj):
+        from .refunds import refund_summary, authorized_refund
+        request = self.context.get('request')
+        account = getattr(request,'account',None)
+        return refund_summary(obj,detailed=authorized_refund(account),account=account)
     dispatch_notification_enabled = serializers.SerializerMethodField()
     def get_dispatch_notification_enabled(self,obj):
         request=self.context.get('request');account=getattr(request,'account',None)
@@ -187,6 +199,22 @@ class OrderSerializer(serializers.ModelSerializer):
     applications = serializers.SerializerMethodField()
     my_applications = serializers.SerializerMethodField()
     participants = serializers.SerializerMethodField()
+    required_team_size = serializers.SerializerMethodField()
+    can_team_apply = serializers.SerializerMethodField()
+    quantity_unit = serializers.SerializerMethodField()
+
+    def get_quantity_unit(self, obj):
+        snapshot = obj.gameplay_snapshot
+        unit = snapshot.get('price_unit') if isinstance(snapshot, dict) else None
+        # Historical orders without a saved unit must not inherit catalog edits.
+        return unit.strip() if isinstance(unit, str) and unit.strip() else '份'
+
+    def get_required_team_size(self, obj):
+        from .team_rules import required_team_size
+        return required_team_size(obj)
+
+    def get_can_team_apply(self, obj):
+        return self.get_required_team_size(obj) == 2
 
     def get_applications(self, obj):
         from .applications import applications_data
@@ -211,6 +239,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'dispatch_notification_enabled','provider_requirement',
             'id',
             'requires_boss_selection', 'escort_mode', 'applications', 'my_applications', 'participants',
+            'required_provider_count', 'required_team_size', 'can_team_apply',
             'order_no', 'gameplay_snapshot', 'roulette_result', 'fulfillment',
             'service_name_snapshot', 'unit_price_snapshot', 'provider_name_snapshot',
             'status',
@@ -221,8 +250,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'promo_discount',
             'coupon_discount',
             'expected_income',
-            'commission_rate',
+            'commission_type', 'commission_fixed', 'commission_override', 'commission_source', 'commission_rate',
             'game_rounds',
+            'quantity_unit',
             'game_region',
             'game_nickname',
             'game_uid',
@@ -240,7 +270,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'allowed_actions',
             'grabbed_at',
             'in_service_at',
-            'completed_at', 'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status',
+            'completed_at', 'settled_at', 'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status', 'can_aftersale', 'refund_summary',
             'cancelled_at',
             'refunded_at',
             'cancel_reason',
@@ -305,7 +335,7 @@ class OrderSerializer(serializers.ModelSerializer):
             is_gift = bool(obj.service.service_category and obj.service.service_category.is_gift)
             if obj.status == Order.Status.COMPLETED and not is_gift and not hasattr(obj, 'evaluation'):
                 actions.append('EVALUATE')
-            if obj.status == Order.Status.COMPLETED and obj.payment_status == Order.PaymentStatus.PAID and not is_gift and (obj.provider_id or obj.escort_mode == Order.EscortMode.DOUBLE):
+            if obj.status == Order.Status.COMPLETED and obj.payment_status in (Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED) and not is_gift and (obj.provider_id or obj.escort_mode == Order.EscortMode.DOUBLE):
                 actions.append('TIP')
             return actions
 
@@ -412,6 +442,10 @@ class CreateOrderSerializer(serializers.Serializer):
     service_id = serializers.IntegerField(required=False, allow_null=True)
     product_id = serializers.IntegerField(required=False, allow_null=True)
     provider_id = serializers.IntegerField(required=False, allow_null=True)
+    provider_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), required=False, max_length=2,
+        allow_empty=True,
+    )
     support_contact_id = serializers.IntegerField(required=False, allow_null=True)
     user_coupon_id = serializers.IntegerField(required=False, allow_null=True)
     game_rounds = serializers.IntegerField(required=False, min_value=1, default=1)
@@ -445,8 +479,12 @@ class CreateOrderSerializer(serializers.Serializer):
             raise serializers.ValidationError('礼物请从赠送礼物入口购买')
 
         from .gameplay import validate_service_gameplay
-        validate_service_gameplay(service, attrs.get('game_rounds', 1))
+        # A purchased double package can enter the existing two-person
+        # application flow, or be assigned to a complete selected team.
+        validate_service_gameplay(service, attrs.get('game_rounds', 1),
+                                  companion_assignment=service.billing_provider_count == 2)
         attrs['service'] = service
+        attrs['required_provider_count'] = service.billing_provider_count
         if attrs['provider_gender'] != 'ANY' and service.service_type != 'COMPANION':
             raise serializers.ValidationError('仅陪玩服务可选择男陪或女陪')
         original_amount = service.price * attrs.get('game_rounds', 1) * service.billing_provider_count
@@ -464,14 +502,25 @@ class CreateOrderSerializer(serializers.Serializer):
             raise serializers.ValidationError('多人服务请使用老板选人方式下单')
 
         # 指定陪玩下单（可选）：需在解析抽成率前确定，等级抽成依赖陪玩
-        provider = None
         provider_id = attrs.get('provider_id')
-        if provider_id:
+        selected_ids = attrs.get('provider_ids')
+        if selected_ids is not None and provider_id:
+            if selected_ids != [provider_id]:
+                raise serializers.ValidationError('指定陪玩参数不一致，请重新选择')
+        selected_ids = selected_ids if selected_ids is not None else ([provider_id] if provider_id else [])
+        if len(set(selected_ids)) != len(selected_ids):
+            raise serializers.ValidationError('不能重复选择同一位陪玩')
+        if selected_ids and len(selected_ids) != service.billing_provider_count:
+            raise serializers.ValidationError(f'该套餐须选择{service.billing_provider_count}位陪玩')
+        providers, provider_accounts, provider_profiles = [], [], []
+        for selected_id in selected_ids:
             try:
                 provider_account = None
-                if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False):
+                # The array contract always addresses business accounts. The
+                # historical scalar retains legacy-ID fixture compatibility.
+                if 'provider_ids' not in attrs and getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False):
                     legacy_provider = get_user_model().objects.filter(
-                        id=provider_id,
+                        id=selected_id,
                         role='PROVIDER',
                     ).first()
                     if legacy_provider is not None:
@@ -484,7 +533,7 @@ class CreateOrderSerializer(serializers.Serializer):
                         'escort_profile__level',
                         'legacy_mapping',
                     ).filter(
-                        id=provider_id,
+                        id=selected_id,
                         account_type=ClubAccount.AccountType.PROVIDER,
                     ).first()
                 if provider_account is None:
@@ -492,7 +541,7 @@ class CreateOrderSerializer(serializers.Serializer):
                 provider = get_user_model().objects.get(
                     id=provider_account.legacy_mapping.legacy_user_id,
                 )
-            except (ClubAccount.DoesNotExist, get_user_model().DoesNotExist) as exc:
+            except ObjectDoesNotExist as exc:
                 raise serializers.ValidationError('指定的大神不存在') from exc
             profile = getattr(provider_account, 'escort_profile', None)
             if profile is None or profile.status != profile.Status.AVAILABLE:
@@ -503,7 +552,15 @@ class CreateOrderSerializer(serializers.Serializer):
             from .services import count_active_orders
             if count_active_orders(provider_account) >= Order.MAX_CONCURRENT_ORDERS:
                 raise serializers.ValidationError('该大神接单名额已满，请重新选择')
-        attrs['provider'] = provider
+            providers.append(provider)
+            provider_accounts.append(provider_account)
+            provider_profiles.append(profile)
+        if len({account.pk for account in provider_accounts}) != len(provider_accounts):
+            raise serializers.ValidationError('不能重复选择同一位陪玩')
+        attrs['providers'] = providers
+        attrs['provider_accounts'] = provider_accounts
+        attrs['provider_profiles'] = provider_profiles
+        attrs['provider'] = providers[0] if providers else None
 
         support_contact = None
         support_contact_id = attrs.get('support_contact_id')
@@ -529,11 +586,28 @@ class CreateOrderSerializer(serializers.Serializer):
         attrs['pricing'] = result
 
         # 拆账参数：抽成率 活动>陪玩等级>店铺；推荐人分佣按下单老板配置计提
-        escort_profile = getattr(provider, 'escort_profile', None) if provider else None
-        attrs['commission_rate'] = resolve_commission_rate(service, escort_profile, promotion)
+        escort_profile = provider_profiles[0] if provider_profiles else None
+        from .commission import resolve, snapshot
+        plan = resolve(service, result.amount, profile=escort_profile, promotion=promotion)
+        attrs['commission_snapshot'] = snapshot(plan)
+        attrs['commission_rate'] = plan['commission_rate']
         from .pricing import club_provider_specs
         specs = club_provider_specs(service, [escort_profile], result.amount)
-        attrs['commission_spec'] = specs[0] if specs else {'commission_rate': attrs['commission_rate']}
+        attrs['commission_spec'] = ({'commission_type':'FIXED','commission_fixed':plan['commission_fixed'],'commission_rate':0}
+            if plan['commission_type'] == 'FIXED' else specs[0] if specs else {'commission_rate': attrs['commission_rate']})
+        if len(provider_profiles) == 2:
+            from .commission import fixed_specs
+            if plan['commission_type'] == 'FIXED':
+                selected_specs = fixed_specs(result.amount, 2, plan['commission_fixed'])
+            else:
+                selected_specs = club_provider_specs(service, provider_profiles, result.amount)
+                if selected_specs is None:
+                    selected_specs = [
+                        {'commission_rate': resolve(service, result.amount, profile=profile,
+                                                    promotion=promotion)['commission_rate']}
+                        for profile in provider_profiles
+                    ]
+            attrs['provider_specs'] = selected_specs
         attrs['inviter'] = getattr(user, 'inviter', None)
         attrs['inviter_commission_rate'] = (
             user.inviter_commission_rate if attrs['inviter'] else 0

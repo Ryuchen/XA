@@ -213,18 +213,27 @@ class EngagementTests(APITestCase):
         self.assertEqual(response.data['code'], 0, response.data)
         self.assertEqual(response.data['data']['amount'], 10000)
 
-    def test_experience_lottery_cannot_discount_poster_experience_orders(self):
+    def test_experience_lottery_claim_cannot_discount_poster_experience_orders(self):
         from coupons.models import UserCoupon
         campaign = LotteryCampaign.objects.create(name='体验', point_cost=100, enabled=True)
         reward = RewardItem.objects.create(code='lottery-experience-68', name='68 体验单', kind='SERVICE', in_shop=False, is_active=True)
         LotteryPrize.objects.create(campaign=campaign, reward=reward, probability=10000)
-        from rest_framework.exceptions import ValidationError
         from .models import MemberProfile
         before=MemberProfile.objects.get(account=self.account).points_balance
-        with self.assertRaises(ValidationError): draw(self.account,campaign.pk,'experience-draw-001',1)
-        self.assertEqual(MemberProfile.objects.get(account=self.account).points_balance,before)
+        result = draw(self.account,campaign.pk,'experience-draw-001',1)
+        self.assertEqual(result.claim.status, 'PENDING')
+        self.assertEqual(result.claim.reward_id, reward.pk)
+        self.assertEqual(result.claim.source, 'LOTTERY')
+        self.assertEqual(MemberProfile.objects.get(account=self.account).points_balance,before-10000)
         self.assertEqual(UserCoupon.objects.count(),0)
-        self.assertEqual(LotteryDraw.objects.count(),0)
+        self.assertEqual(LotteryDraw.objects.count(),1)
+        # Winning is a dedicated fulfillment entitlement, never a coupon that
+        # could change the price of a paid poster experience service.
+        service = make_service(name='海报68体验单', price=6800, service_type='EXPERIENCE',
+                               experience_kind='DAILY', platform='PC', allows_discount_coupons=False)
+        response = self.client.post('/api/orders/create/', {'service_id': service.pk}, format='json')
+        self.assertEqual(response.data['code'], 0, response.data)
+        self.assertEqual(response.data['data']['amount'], 6800)
 
     def test_disabled_points_at_payment_are_not_awarded_if_later_enabled(self):
         from .services import config

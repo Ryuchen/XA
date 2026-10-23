@@ -7,9 +7,18 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from club_accounts.permissions import IsClubAccountAuthenticated
+from wallet.services import WalletAddressingError
 from console.mixins import EnvelopeViewSetMixin
 from .models import Order, AfterSale
+from .notifier import notify_order_update
 from engagement.confirmation import aftersale_deadline
+from .refunds import can_request_aftersale, RefundError
+
+
+def append_history(row):
+    row.history = [*row.history, {'status':row.status,'reason':row.reason,'resolution':row.resolution,
+        'created_at':row.created_at.isoformat(), 'resolved_at':row.resolved_at.isoformat() if row.resolved_at else None,
+        'operator_id':row.operator_id,'client_request_id':row.client_request_id}]
 
 
 class AfterSaleSerializer(serializers.ModelSerializer):
@@ -30,15 +39,26 @@ class AfterSaleView(APIView):
     def post(self, request, order_id):
         order = get_object_or_404(Order.objects.select_for_update(), pk=order_id, customer_account=request.account)
         reason = serializers.CharField(min_length=2, max_length=1000).run_validation(request.data.get('reason'))
+        request_id = serializers.CharField(max_length=64, allow_blank=True).run_validation(request.data.get('client_request_id',''))
         existing = order.aftersales.first()
-        if existing:
+        if existing and (existing.status in ('OPEN','REFUNDED') or (request_id and any(item.get('client_request_id') == request_id for item in existing.history))):
             return Response({'code': 0, 'data': AfterSaleSerializer(existing).data, 'msg': '售后已提交'})
-        deadline = aftersale_deadline(order)
-        if (order.status != 'COMPLETED' or order.payment_status != 'PAID'
-                or not deadline or timezone.now() >= deadline or order.consumption_confirmed_at):
+        if not can_request_aftersale(order):
             raise serializers.ValidationError('订单已结束售后期或不符合售后条件')
-        row = AfterSale.objects.create(order=order, account=request.account, reason=reason)
-        return Response({'code': 0, 'data': AfterSaleSerializer(row).data, 'msg': '售后已提交，处理完成前暂停实销确认'})
+        if existing:
+            row = existing
+            if not row.history:
+                append_history(row)
+            row.status, row.reason, row.resolution = 'OPEN', reason, ''
+            row.operator, row.resolved_at, row.created_at = None, None, timezone.now()
+            row.client_request_id = request_id
+        else:
+            row = AfterSale(order=order, account=request.account, reason=reason, client_request_id=request_id)
+            row.created_at = timezone.now()
+        append_history(row)
+        row.save()
+        transaction.on_commit(lambda: notify_order_update(order))
+        return Response({'code': 0, 'data': AfterSaleSerializer(row).data, 'msg': '售后已提交，等待平台处理'})
 
 
 class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
@@ -59,7 +79,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     @transaction.atomic
     def resolve(self, request, pk=None):
         initial = self.get_object()
-        Order.objects.select_for_update().get(pk=initial.order_id)
+        order = Order.objects.select_for_update().get(pk=initial.order_id)
         row = AfterSale.objects.select_for_update().get(pk=initial.pk)
         if row.status != 'OPEN':
             raise serializers.ValidationError('该售后已处理')
@@ -67,30 +87,43 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         row.status = 'RESOLVED'
         row.operator = request.account
         row.resolved_at = timezone.now()
+        append_history(row)
         row.save()
+        transaction.on_commit(lambda: notify_order_update(order))
         return Response({'code': 0, 'data': self.get_serializer(row).data})
 
     @action(detail=True, methods=['post'])
     @transaction.atomic
     def refund(self, request, pk=None):
-        from .state_machine import transition, IllegalTransitionError
-        from .services import refund_to_customer
+        from .state_machine import IllegalTransitionError
         from .settlement import SettlementError
         initial = self.get_object()
         order = Order.objects.select_for_update().get(pk=initial.order_id)
         row = AfterSale.objects.select_for_update().get(pk=initial.pk)
-        if row.status != 'OPEN':
-            raise serializers.ValidationError('该售后已处理')
+        from .refunds import replay_refund,apply_admin_refund
         resolution = serializers.CharField(min_length=2, max_length=1000).run_validation(request.data.get('resolution'))
         try:
-            transition(order.pk, 'CANCELLED', operator=request.legacy_user, operator_account=request.account,
-                reason=resolution, side_effect=lambda o: refund_to_customer(o, resolution),
-                update_fields=['payment_status', 'refunded_at'])
-        except (IllegalTransitionError, SettlementError) as exc:
+            existing = replay_refund(order,request.data.get('client_request_id'),request.data.get('refund_amount'),resolution)
+        except RefundError as exc:
+            return Response({'code':409,'errorCode':exc.code,'msg':str(exc),'data':exc.data})
+        if existing:
+            return Response({'code':0,'data':self.get_serializer(row).data})
+        if row.status != 'OPEN':
+            raise serializers.ValidationError('该售后已处理')
+        try:
+            order = apply_admin_refund(order.pk,reason=resolution,operator=request.legacy_user,operator_account=request.account,
+                plan_token=request.data.get('plan_token'),refund_amount=request.data.get('refund_amount'),
+                client_request_id=request.data.get('client_request_id'),notify=False)
+        except RefundError as exc:
+            return Response({'code':409 if exc.code in ('REFUND_PLAN_CHANGED','REFUND_REQUEST_CONFLICT') else 400,
+                             'errorCode':exc.code,'msg':str(exc),'data':exc.data})
+        except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
             raise serializers.ValidationError(str(exc)) from exc
-        row.status = 'REFUNDED'
+        row.status = 'REFUNDED' if order.payment_status == 'REFUNDED' else 'PARTIALLY_REFUNDED'
         row.resolution = resolution
         row.operator = request.account
         row.resolved_at = timezone.now()
+        append_history(row)
         row.save()
+        transaction.on_commit(lambda: notify_order_update(order))
         return Response({'code': 0, 'data': self.get_serializer(row).data})

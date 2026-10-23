@@ -64,7 +64,7 @@
           <button
             class="ap-menu-toggle"
             type="button"
-            aria-label="打开主导航"
+            :aria-label="mobileOpen ? '关闭主导航' : '打开主导航'"
             :aria-expanded="mobileOpen"
             @click="mobileOpen = !mobileOpen"
           >
@@ -91,7 +91,7 @@
           </el-dropdown>
 
           <el-dropdown trigger="click" @command="onCommand">
-            <div class="ap-admin">
+            <button class="ap-admin" type="button" aria-label="管理员账户菜单">
               <span class="ap-avatar" aria-hidden="true">
                 {{ (auth.profile?.nickname || '管').charAt(0) }}
               </span>
@@ -100,7 +100,7 @@
                 <span class="ap-admin-role">{{ roleName }}</span>
               </span>
               <el-icon class="ap-admin-caret"><CaretBottom /></el-icon>
-            </div>
+            </button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>
@@ -313,7 +313,7 @@ function onLogout() {
   white-space: nowrap;
 }
 .ap-brand-caption {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.3;
   color: var(--muted-foreground);
   white-space: nowrap;
@@ -447,7 +447,6 @@ function onLogout() {
 .ap-menu-toggle:hover,
 .ap-menu-toggle:focus-visible {
   background: var(--secondary);
-  outline: none;
 }
 .ap-topbar-titles {
   display: flex;
@@ -456,7 +455,7 @@ function onLogout() {
   min-width: 0;
 }
 .ap-breadcrumb {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted-foreground);
   white-space: nowrap;
   overflow: hidden;
@@ -527,9 +526,15 @@ function onLogout() {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--control-radius);
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
   cursor: pointer;
-  outline: none;
 }
+.ap-admin:hover { background: var(--secondary); }
 .ap-avatar {
   display: flex;
   align-items: center;
@@ -556,7 +561,7 @@ function onLogout() {
   white-space: nowrap;
 }
 .ap-admin-role {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
   color: var(--muted-foreground);
   white-space: nowrap;
@@ -668,7 +673,7 @@ function onLogout() {
     position: fixed;
     inset: 0;
     z-index: 30;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--xa-color-overlay);
   }
 }
 

@@ -50,16 +50,16 @@
   ],
   "window": {
     "navigationBarTitleText": "兴安电竞",
-    "navigationBarBackgroundColor": "#f5f1e9",
+    "navigationBarBackgroundColor": "#f1f6f9",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f5f1e9",
+    "backgroundColor": "#f1f6f9",
     "backgroundTextStyle": "dark",
     "enablePullDownRefresh": true
   },
   "tabBar": {
-    "color": "#657188",
-    "selectedColor": "#002fa7",
-    "backgroundColor": "#fffdf5",
+    "color": "#336b9a",
+    "selectedColor": "#136398",
+    "backgroundColor": "#ffffff",
     "borderStyle": "white",
     "list": [
       {
@@ -95,7 +95,8 @@
     ]
   },
   "usingComponents": {
-    "state-view": "/components/state-view/index"
+    "state-view": "/components/state-view/index",
+    "bottom-navigation": "/components/bottom-navigation/index"
   },
   "style": "v2",
   "lazyCodeLoading": "requiredComponents",

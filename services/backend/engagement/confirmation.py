@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 from orders.models import Order
+from orders.notifier import notify_order_update
 from wallet.models import ProviderReport
 from .models import ConsumptionConfirmation
 
@@ -36,11 +37,15 @@ def process_order(order_id):
     from wallet.services import get_wallet
     from .services import update_vip
     from coupons.benefits import grant_periodic
-    order = Order.objects.select_for_update().select_related('customer_account').get(pk=order_id)
-    if (order.status != 'COMPLETED' or order.payment_status != 'PAID'
+    # Lock only the order before the cross-wallet mutex. A joined account row
+    # would reverse the account/mutex order against refund VIP reconciliation.
+    order = Order.objects.select_for_update().get(pk=order_id)
+    if (order.status != 'COMPLETED' or order.payment_status not in ('PAID','PARTIALLY_REFUNDED')
             or not order.customer_account_id):
         return False
     account = order.customer_account
+    from orders.financial_lock import lock_order_money
+    lock_order_money()
     get_wallet(account_id=account.pk, for_update=True)
     account.refresh_from_db(fields=['business_cycle', 'boss_type'])
     if order.business_cycle != account.business_cycle:
@@ -50,17 +55,26 @@ def process_order(order_id):
     approved = set(order.provider_reports.filter(status='APPROVED').values_list('provider_id', flat=True))
     if not required or None in required or not required.issubset(approved) or not settlement_ready(order):
         return False
+    previous_state = (order.settled_at, order.consumption_confirmed_at)
+
+    def notify_changed_order():
+        if (order.settled_at, order.consumption_confirmed_at) != previous_state:
+            transaction.on_commit(lambda: notify_order_update(order))
+
     # Settle after the completion-based aftersale window; confirmation below
     # independently waits 72 hours from the last effective report submission.
     if order.settlement_mode == 'REPORT_APPROVAL' and not order.settled_at:
         settle_order(order)
     if order.is_gift_snapshot or not ready or ready > timezone.now():
+        notify_changed_order()
         return False
+    from orders.refunds import refunded_amount
     row, new = ConsumptionConfirmation.objects.get_or_create(order=order, defaults={
-        'account': account, 'business_cycle': order.business_cycle, 'amount': order.amount})
+        'account': account, 'business_cycle': order.business_cycle, 'amount': order.amount,'refunded_amount':refunded_amount(order)})
     if not order.consumption_confirmed_at:
         order.consumption_confirmed_at = row.confirmed_at
         order.save(update_fields=['consumption_confirmed_at'])
     update_vip(account)
     grant_periodic(account)
+    notify_changed_order()
     return new

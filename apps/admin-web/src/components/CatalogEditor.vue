@@ -81,18 +81,19 @@ async function uploadImage(event: Event) {
 
 <style scoped>
 .catalog-editor { width:100%; border:1px solid var(--el-border-color); border-radius:10px; overflow:hidden; }
-.editor-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:5px; padding:10px; border-bottom:1px solid var(--el-border-color-lighter); background:var(--el-fill-color-light); }
-.editor-toolbar button, .image-upload { border:0; border-radius:5px; background:transparent; color:var(--el-text-color-primary); padding:7px 10px; font-size:13px; cursor:pointer; line-height:20px; }
+.editor-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); padding:var(--space-3); border-bottom:1px solid var(--el-border-color-lighter); background:var(--el-fill-color-light); }
+.editor-toolbar button, .image-upload { display:inline-flex; align-items:center; justify-content:center; min-height:var(--control-height-sm); border:0; border-radius:var(--control-radius); background:transparent; color:var(--el-text-color-primary); padding:6px 10px; font-size:13px; cursor:pointer; line-height:20px; }
 .editor-toolbar button.active, .editor-toolbar button:hover, .image-upload:hover { color:var(--el-color-primary); background:var(--el-color-primary-light-9); }
 .editor-toolbar button:disabled, .busy { opacity:.5; pointer-events:none; }
 .image-upload input { display:none; }
 .editor-hint { padding:10px 14px; line-height:1.6; font-size:12px; color:var(--el-text-color-secondary); border-top:1px solid var(--el-border-color-lighter); }
-:deep(.catalog-document) { min-height:220px; max-height:480px; overflow:auto; outline:none; padding:18px; font-size:14px; line-height:1.8; overflow-wrap:anywhere; }
+:deep(.catalog-document) { min-height:220px; max-height:480px; overflow:auto; padding:var(--space-5); font-size:14px; line-height:1.8; overflow-wrap:anywhere; }
+:deep(.catalog-document:focus-visible) { outline:2px solid var(--primary); outline-offset:-2px; }
 :deep(.catalog-document p) { margin:0 0 12px; }
 :deep(.catalog-document h2), :deep(.catalog-document h3) { margin:20px 0 10px; line-height:1.4; }
 :deep(.catalog-document img) { display:block; max-width:100%; height:auto; margin:12px 0; }
 :deep(.catalog-document img.ProseMirror-selectednode) { outline:3px solid var(--el-color-primary); }
 :deep(.catalog-document ul), :deep(.catalog-document ol) { padding-left:24px; }
-.preview-wrap { padding:20px; background:#e7e8ea; }
-.mobile-preview { max-width:375px; margin:auto; background:#fffdf5; color:#182445; border-radius:12px; }
+.preview-wrap { padding:var(--space-5); background:var(--xa-color-surface-hover); }
+.mobile-preview { max-width:375px; margin:auto; background:var(--xa-color-surface-card); color:var(--xa-color-text-primary); border:1px solid var(--border); border-radius:var(--radius-sm); }
 </style>

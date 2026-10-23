@@ -41,10 +41,12 @@ def send_basket(view, request, *, order_id=None):
             return Response({'code': 400, 'msg': '单款礼物最多赠送 999 件'})
     try:
         with transaction.atomic():
-            wallet = get_wallet(account=request.account, user=request.legacy_user, for_update=True)
             if order_id is not None:
-                # Use the same source-before-services order as single gifting.
+                # Match single gifts and source-order refunds before wallets.
                 list(Order.objects.select_for_update().filter(pk=order_id, customer_account=request.account))
+            from .financial_lock import lock_order_money
+            lock_order_money()
+            wallet = get_wallet(account=request.account, user=request.legacy_user, for_update=True)
             services = list(ServiceItem.objects.select_for_update().select_related('service_category').filter(
                 pk__in=quantities, is_active=True, service_category__is_active=True, service_category__is_gift=True,
                 purchase_mode='DIRECT', is_addon=False, gameplay__isnull=True).order_by('pk'))

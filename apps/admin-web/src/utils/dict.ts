@@ -30,6 +30,7 @@ export const ORDER_STATUS: Dict = {
 export const PAYMENT_STATUS: Dict = {
   UNPAID: { label: '未支付', type: 'info' },
   PAID: { label: '已支付', type: 'success' },
+  PARTIALLY_REFUNDED: { label: '部分退款', type: 'warning' },
   REFUNDED: { label: '已退款', type: 'danger' },
 }
 
@@ -62,6 +63,8 @@ export const TX_TYPE: Dict = {
   GIFT: { label: '赠送', type: 'success' },
   PAY: { label: '支付', type: 'warning' },
   INCOME: { label: '收益', type: 'success' },
+  EARNINGS_FREEZE: { label: '收益冻结', type: 'info' },
+  EARNINGS_RELEASE: { label: '收益解冻', type: 'success' },
   WITHDRAW: { label: '提现', type: 'info' },
   REWARD: { label: '奖励', type: 'primary' },
   PENALTY: { label: '罚款', type: 'danger' },

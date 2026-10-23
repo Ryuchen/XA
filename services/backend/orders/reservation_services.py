@@ -386,9 +386,7 @@ def convert_reservation_to_order(
         data = serializer.validated_data
         amount = data['amount']
         provider = data['provider']
-        split = compute_split(
-            amount, data['commission_rate'], data['inviter_commission_rate'],
-        )
+        split = compute_split(amount, inviter_commission_rate=data['inviter_commission_rate'], **data['commission_spec'])
         inviter = data.get('inviter')
         inviter_account = _account_for_legacy_user(inviter)
 
@@ -448,6 +446,7 @@ def convert_reservation_to_order(
             promo_discount=data['promo_discount'],
             coupon_discount=data['coupon_discount'],
             promotion=data.get('promotion'),
+            **data['commission_snapshot'],
             commission_rate=split.commission_rate,
             provider_income=split.provider_income,
             inviter=inviter,
@@ -502,6 +501,9 @@ def convert_reservation_to_order(
                 or provider.nickname
                 or provider.username
             )
+            if o.commission_type == 'FIXED' or o.commission_override:
+                from .services import sync_single_provider_share
+                sync_single_provider_share(o)
             mark_escort_busy(
                 provider_ids=[provider.id],
                 account_ids=[getattr(provider_account, 'pk', None)],

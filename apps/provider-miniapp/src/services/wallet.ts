@@ -12,6 +12,8 @@ export interface TransactionRecord {
   status: string;
   remark: string;
   created_at: string;
+  reversal_of?: number | null;
+  is_reversal?: boolean;
 }
 
 export interface TransactionsResponse {
@@ -154,7 +156,7 @@ export interface GiftRecord {
   amount: number;
   provider_income: number;
   received_income: number;
-  settlement_status: 'SETTLED' | 'PENDING' | 'CHECK_REQUIRED';
+  settlement_status: 'SETTLED' | 'PENDING' | 'CHECK_REQUIRED' | 'PARTIALLY_REFUNDED' | 'REFUNDED';
   completed_at: string;
 }
 

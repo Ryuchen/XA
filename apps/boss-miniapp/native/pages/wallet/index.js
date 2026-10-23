@@ -5,10 +5,18 @@ const { on } = require('../../core/events');
 const labels = { TOPUP: '充值入账', PAY: '订单支付', REFUND: '订单退款', INCOME: '收入', WITHDRAW: '提现', DEPOSIT: '押金', REWARD: '奖励', ADJUST: '账务调整' };
 Page({
   data: { logged: false, loading: false, loadingMore: false, error: '', moreError: '', balance: '', frozen: '', items: [], page: 0, hasMore: false, filter: '', filters: [{ value: '', text: '全部' }, { value: 'TOPUP', text: '充值' }, { value: 'PAY', text: '支付' }, { value: 'REFUND', text: '退款' }] },
-  onLoad() { this._alive = true; this._off = on('session.changed', () => { this._seq++; this.setData({ balance: '', frozen: '', items: [] }); if (this._visible) this.load(); }); },
+  onLoad() {
+    this._alive = true; this._seq = 0;
+    this._off = on('session.changed', () => { this._seq++; clearTimeout(this._refreshTimer); this._refreshTimer = null; this.setData({ balance: '', frozen: '', items: [] }); if (this._visible) this.load(); });
+    this._walletOff = on('wallet.changed', payload => {
+      if (!this._visible || !auth.getSession() || (payload?.account_id != null && String(payload.account_id) !== String(auth.getSession().user.id))) return;
+      ++this._seq;
+      if (!this._refreshTimer) this._refreshTimer = setTimeout(() => { this._refreshTimer = null; if (this._alive && this._visible) this.load(); }, 300);
+    });
+  },
   onShow() { this._visible = true; this.load(); },
-  onHide() { this._visible = false; },
-  onUnload() { this._alive = false; this._off(); },
+  onHide() { this._visible = false; clearTimeout(this._refreshTimer); this._refreshTimer = null; },
+  onUnload() { this._alive = false; this._seq++; this._off(); this._walletOff(); clearTimeout(this._refreshTimer); },
   onPullDownRefresh() { return this.load().finally(() => wx.stopPullDownRefresh()); },
   onReachBottom() { this.more(); },
   async load() {

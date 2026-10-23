@@ -4,12 +4,12 @@ import secrets
 import string
 from datetime import timedelta
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, F
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from .models import (
     Broadcast, BroadcastRule, ClubOperationConfig, LotteryCampaign, LotteryDraw,
-    LotteryPrize, MemberProfile, MemberTag, PointLedger, RewardClaim, RewardItem,
+    LotteryPrize, LotteryBatch, LotteryPityState, MemberProfile, MemberTag, PointLedger, RewardClaim, RewardItem,
     VipTier, MemberBenefitGrant,
     RechargePackage, PointFundingLot, OrderPointAllocation, GiftBenefitRule,
 )
@@ -150,7 +150,23 @@ def allocate_order_points(order, wallet, balance_before):
         raise ValidationError('积分来源余额核对失败，请重试')
 
 
-def release_order_allocations(order):
+def release_order_allocations(order,*,refund=None):
+    if refund is not None:
+        from orders.refunds import refunded_amount,proportional_targets
+        rows = list(order.point_allocations.select_for_update().order_by('lot_id'))
+        if not rows:
+            return
+        targets = proportional_targets({row.pk:row.amount for row in rows},refunded_amount(order))
+        for allocation in rows:
+            delta = targets[allocation.pk]-allocation.refunded_amount
+            if delta:
+                lot = PointFundingLot.objects.select_for_update().get(pk=allocation.lot_id)
+                lot.remaining += delta
+                lot.save(update_fields=['remaining'])
+                allocation.refunded_amount = targets[allocation.pk]
+                allocation.released = allocation.refunded_amount == allocation.amount
+                allocation.save(update_fields=['refunded_amount','released'])
+        return
     for allocation in order.point_allocations.select_for_update().filter(released=False).order_by('lot_id'):
         lot = PointFundingLot.objects.select_for_update().get(pk=allocation.lot_id)
         lot.remaining += allocation.amount
@@ -159,12 +175,21 @@ def release_order_allocations(order):
         allocation.save(update_fields=['released'])
 
 
-def reverse_order_points(order):
+def reverse_order_points(order,*,refund=None):
     if not order.customer_account_id:
         return
     original = PointLedger.objects.filter(event_key=f'order:{order.pk}:points').first()
     if original:
         profile = locked_profile(order.customer_account)
+        if refund is not None:
+            from orders.refunds import refunded_amount
+            target = original.amount*refunded_amount(order)//order.amount
+            previous = -(PointLedger.objects.filter(order=order,kind='REFUND').aggregate(v=Sum('amount'))['v'] or 0)
+            delta = target-previous
+            if delta > 0:
+                key = f'order:{order.pk}:points-refund' if target == original.amount and not previous else f'order:{order.pk}:points-refund:{refund.pk}'
+                change_points(profile,-delta,key,'REFUND','订单退款按累计净额冲回消费积分',order=order,allow_debt=True)
+            return
         change_points(profile, -original.amount, f'order:{order.pk}:points-refund', 'REFUND',
                       '订单退款冲回原消费积分', order=order, allow_debt=True)
 
@@ -202,6 +227,8 @@ def reserve_reward(reward):
 
 
 def create_claim(account, reward, key, *, source, points_spent=0, details=None, request_fingerprint='', profile=None, wallet=None):
+    if reward.code == 'lottery-experience-68' and (source != 'LOTTERY' or reward.kind != 'SERVICE' or reward.in_shop):
+        raise ValidationError('68 体验单仅作为抽奖专属服务权益交付，不能在积分商城兑换')
     reserve_reward(reward)
     claim = RewardClaim.objects.create(account=account, reward=reward, event_key=key, source=source,
         name_snapshot=reward.name, kind_snapshot=reward.kind, duration_days=reward.duration_days,
@@ -224,7 +251,9 @@ def create_claim(account, reward, key, *, source, points_spent=0, details=None, 
             remark=f'积分兑换：{reward.name}（兑换记录 {claim.pk}）')
         claim.status = RewardClaim.Status.COMPLETED
     elif reward.code == 'lottery-experience-68':
-        raise ValidationError('体验单不参与抽奖优惠，请调整奖池配置')
+        # 专属中奖记录由俱乐部履约；不创建任何通用券或海报体验单抵扣券。
+        claim.delivery_note = '68 体验单专属中奖权益，请补充游戏资料后由俱乐部安排服务，不作为通用优惠券使用'
+        claim.save(update_fields=['delivery_note'])
     if claim.status == RewardClaim.Status.COMPLETED:
         claim.completed_at = timezone.now()
         claim.save(update_fields=['status', 'completed_at', 'delivery_note'])
@@ -262,58 +291,189 @@ def validate_campaign(campaign, prizes):
         raise ValidationError('请先配置每次抽奖消耗的积分')
     if not prizes or sum(p.probability for p in prizes) != 10000:
         raise ValidationError('所有奖项概率之和必须为 10000（100%）')
-    if any(p.reward.code == 'lottery-experience-68' for p in prizes if p.probability):
-        raise ValidationError('体验单不参与抽奖优惠，请调整奖池配置')
-    if any(not p.reward.is_active for p in prizes if p.probability):
+    target = next((p for p in prizes if p.reward.code == LOTTERY_PITY_REWARD), None)
+    if target and (target.reward.kind != 'SERVICE' or target.reward.in_shop):
+        raise ValidationError('68 体验单必须配置为不上架商城的专属服务权益')
+    eligible = [p for p in prizes if p.probability or p is target]
+    if any(not p.reward.is_active for p in eligible):
         raise ValidationError('具有中奖概率的奖品必须全部启用')
-    if any(p.reward.stock is not None and p.reward.stock < 1 for p in prizes if p.probability):
+    if any(p.reward.audience not in ['ALL', 'BOSS'] for p in eligible):
+        raise ValidationError('抽奖奖品必须允许老板领取')
+    if any(p.reward.stock is not None and p.reward.stock < 1 for p in eligible):
         raise ValidationError('奖品库存不足，抽奖暂时关闭，请联系俱乐部补货')
 
 
-@transaction.atomic
-def draw(account, campaign_id, client_request_id, expected_version=None):
-    key = f'draw:{account.pk}:{account.business_cycle}:{request_key(client_request_id)}'
-    campaign = LotteryCampaign.objects.select_for_update().get(pk=campaign_id)
-    existing = LotteryDraw.objects.select_related('claim').filter(event_key=key).first()
+LOTTERY_PITY_REWARD = 'lottery-experience-68'
+LOTTERY_PITY_LIMIT = 240
+
+
+def lottery_rarity(reward):
+    return 'SSR' if reward.code == LOTTERY_PITY_REWARD else ('R' if reward.kind == 'POINTS' else 'SR')
+
+
+def historical_pity_count(account, campaign, *, through_id=None):
+    rows = LotteryDraw.objects.filter(account=account, business_cycle=account.business_cycle, campaign=campaign)
+    if through_id is not None:
+        rows = rows.filter(pk__lte=through_id)
+    last = rows.filter(Q(rarity='SSR') | Q(prize__reward__code=LOTTERY_PITY_REWARD)).order_by('-id').values_list('id', flat=True).first()
+    if last:
+        rows = rows.filter(pk__gt=last)
+    return min(LOTTERY_PITY_LIMIT - 1, rows.count())
+
+
+def lottery_pity(account, campaign, *, prizes=None, count=None):
+    prizes = list(campaign.prizes.select_related('reward')) if prizes is None else prizes
+    target = next((p for p in prizes if p.reward.code == LOTTERY_PITY_REWARD), None)
+    if count is None:
+        state = LotteryPityState.objects.filter(account=account, business_cycle=account.business_cycle, campaign=campaign).first()
+        count = state.count if state else historical_pity_count(account, campaign)
+    return {'enabled': target is not None, 'target_reward_code': LOTTERY_PITY_REWARD,
+        'target_prize_id': target.pk if target else None, 'target_name': target.reward.name if target else '68 体验单',
+        'limit': LOTTERY_PITY_LIMIT, 'count': count if target else 0,
+        'remaining': LOTTERY_PITY_LIMIT - count if target else None}
+
+
+def lottery_ten_guarantee(campaign, *, prizes=None):
+    prizes = list(campaign.prizes.select_related('reward')) if prizes is None else prizes
+    candidates = [p for p in prizes if p.probability and p.reward.kind != 'POINTS'
+        and p.reward.is_active and p.reward.audience in ['ALL', 'BOSS']
+        and (p.reward.stock is None or p.reward.stock > 0)]
+    now = timezone.now()
+    reason = ''
+    if not campaign.enabled or (campaign.starts_at and now < campaign.starts_at) or (campaign.ends_at and now >= campaign.ends_at):
+        reason = '抽奖活动尚未开始或已经结束'
+    else:
+        try:
+            validate_campaign(campaign, prizes)
+        except ValidationError as error:
+            reason = str(error.detail[0])
+        if not reason and not candidates:
+            reason = '奖池尚未配置正概率非积分奖，暂不支持十连抽'
+    return {'enabled': True, 'count': 10, 'min_non_points': 1, 'available': not bool(reason),
+        'eligible_prize_ids': [p.pk for p in candidates], 'pity_priority': True, 'unavailable_reason': reason}
+
+
+def lottery_batch_draws(batch):
+    if hasattr(batch, '_legacy_draw'):
+        return [batch._legacy_draw]
+    return list(batch.draws.select_related('claim', 'prize__reward').order_by('draw_index'))
+
+
+def _existing_lottery_batch(key, campaign_id, count, fp, expected_version, account):
+    existing = LotteryBatch.objects.filter(event_key=key).first()
     if existing:
-        if existing.campaign_id != campaign.pk:
-            raise ValidationError('同一操作凭证不能用于不同活动')
+        if existing.request_fingerprint != fp:
+            raise ValidationError('同一操作凭证不能更改活动、抽奖次数或奖池版本')
+        return existing
+    # 升级前的单抽仍可重放，不改写历史中奖、库存或积分记录。
+    legacy = LotteryDraw.objects.select_related('claim', 'prize__reward').filter(event_key=key, batch__isnull=True).first()
+    if legacy:
+        if legacy.campaign_id != campaign_id or count != 1 or (expected_version is not None and expected_version != legacy.campaign_version):
+            raise ValidationError('同一操作凭证不能更改活动、抽奖次数或奖池版本')
+        last_ledger = PointLedger.objects.filter(event_key__in=[key, key + ':award']).order_by('-id').first()
+        batch = LotteryBatch(account=account, campaign_id=campaign_id, business_cycle=legacy.business_cycle,
+            event_key=key, request_fingerprint=fp, count=1, campaign_version=legacy.campaign_version,
+            total_point_cost=legacy.point_cost, points_balance=last_ledger.balance_after if last_ledger else 0,
+            pity_snapshot={'enabled': False, 'target_reward_code': LOTTERY_PITY_REWARD, 'target_prize_id': None,
+                'target_name': '68 体验单', 'limit': LOTTERY_PITY_LIMIT, 'count': 0, 'remaining': None})
+        batch._legacy_draw = legacy
+        return batch
+
+
+@transaction.atomic
+def draw_batch(account, campaign_id, client_request_id, expected_version=None, count=1):
+    if type(count) is not int or count not in (1, 10):
+        raise ValidationError('抽奖次数仅支持 1 次或 10 次')
+    key = f'draw:{account.pk}:{account.business_cycle}:{request_key(client_request_id)}'
+    fp = fingerprint({'campaign_id': campaign_id, 'count': count, 'version': expected_version})
+    campaign = LotteryCampaign.objects.select_for_update().get(pk=campaign_id)
+    existing = _existing_lottery_batch(key, campaign.pk, count, fp, expected_version, account)
+    if existing:
         return existing
     now = timezone.now()
     if not campaign.enabled or (campaign.starts_at and now < campaign.starts_at) or (campaign.ends_at and now >= campaign.ends_at):
         raise ValidationError('抽奖活动尚未开始或已经结束')
     if expected_version is not None and expected_version != campaign.version:
         raise ValidationError('抽奖配置已更新，请刷新奖池后再试')
-    prizes = list(campaign.prizes.select_related('reward').order_by('sort_order', 'id'))
-    validate_campaign(campaign, prizes)
-    if campaign.daily_limit and LotteryDraw.objects.filter(account=account, business_cycle=account.business_cycle, campaign=campaign,
-            created_at__date=timezone.localdate()).count() >= campaign.daily_limit:
-        raise ValidationError('今天的抽奖次数已用完')
-    ticket = secrets.randbelow(10000)
-    upper = 0
-    selected = None
+    prizes = list(campaign.prizes.order_by('sort_order', 'id'))
+    # 与兑换/奖励交付一致，先按主键锁奖品，再锁钱包和积分，避免跨奖池锁反转。
+    rewards = {r.pk: r for r in RewardItem.objects.select_for_update().filter(pk__in=[p.reward_id for p in prizes]).order_by('id')}
     for prize in prizes:
-        upper += prize.probability
-        if ticket < upper:
-            selected = prize
-            break
-    reward = RewardItem.objects.select_for_update().get(pk=selected.reward_id)
-    wallet = reward_wallet(account, reward)
+        prize.reward = rewards[prize.reward_id]
+    validate_campaign(campaign, prizes)
+    ten_candidates = [p for p in prizes if p.probability and p.reward.kind != 'POINTS']
+    if count == 10 and not ten_candidates:
+        raise ValidationError('奖池尚未配置正概率非积分奖，暂不支持十连抽')
+    if campaign.daily_limit and LotteryDraw.objects.filter(account=account, business_cycle=account.business_cycle, campaign=campaign,
+            created_at__date=timezone.localdate()).count() + count > campaign.daily_limit:
+        raise ValidationError('今天剩余抽奖次数不足，无法完成本次抽奖')
+    if any(p.reward.kind == 'BALANCE' and p.probability for p in prizes):
+        from wallet.services import get_wallet
+        get_wallet(account_id=account.pk, for_update=True)
     profile = locked_profile(account)
-    existing = LotteryDraw.objects.select_related('claim').filter(event_key=key).first()
+    # 同一会员在不同奖池同时使用同一凭证时，在共同的积分锁后再次核对。
+    existing = _existing_lottery_batch(key, campaign.pk, count, fp, expected_version, account)
     if existing:
-        if existing.campaign_id != campaign.pk:
-            raise ValidationError('同一操作凭证不能用于不同活动')
         return existing
-    change_points(profile, -campaign.point_cost * 100, key, 'LOTTERY_COST', f'参与 {campaign.name}')
-    claim = create_claim(account, reward, key, source='LOTTERY', profile=profile, wallet=wallet)
-    result = LotteryDraw.objects.create(account=account, business_cycle=account.business_cycle, campaign=campaign, prize=selected, claim=claim,
-        event_key=key, point_cost=campaign.point_cost, campaign_version=campaign.version, random_ticket=ticket,
-        probability_snapshot=[{'id': p.pk, 'reward': p.reward_id, 'name': p.reward.name, 'probability': p.probability} for p in prizes])
-    kind = {'SERVICE': 'LOTTERY_SERVICE', 'NAMING': 'LOTTERY_NAMING', 'TAG': 'LOTTERY_TAG'}.get(reward.kind, 'LOTTERY')
-    if kind:
-        broadcast(kind, key, account=account, reward=reward.name)
-    return result
+    from club_accounts.models import ClubAccount
+    if ClubAccount.objects.values_list('business_cycle', flat=True).get(pk=account.pk) != account.business_cycle:
+        raise ValidationError('会员周期已更新，请刷新后重试')
+    total_cost = campaign.point_cost * count
+    if profile.points_balance < total_cost * 100:
+        raise ValidationError('积分不足，请先备足本次全部抽奖积分')
+    target = next((p for p in prizes if p.reward.code == LOTTERY_PITY_REWARD), None)
+    state = None
+    if target:
+        state, _ = LotteryPityState.objects.get_or_create(account=account, campaign=campaign, business_cycle=account.business_cycle,
+            defaults={'count': historical_pity_count(account, campaign)})
+        state = LotteryPityState.objects.select_for_update().get(pk=state.pk)
+    batch = LotteryBatch.objects.create(account=account, campaign=campaign, business_cycle=account.business_cycle,
+        event_key=key, request_fingerprint=fp, count=count, campaign_version=campaign.version,
+        total_point_cost=total_cost, points_balance=profile.points_balance)
+    snapshot = [{'id': p.pk, 'reward': p.reward_id, 'name': p.reward.name, 'probability': p.probability} for p in prizes]
+    has_non_points = False
+    for index in range(1, count + 1):
+        before = state.count if state else 0
+        is_pity = bool(target and before + 1 >= LOTTERY_PITY_LIMIT)
+        is_ten_guarantee = bool(count == 10 and index == 10 and not has_non_points and not is_pity)
+        selection_prizes = ten_candidates if is_ten_guarantee else prizes
+        selection_pool = ([{'id': target.pk, 'reward': target.reward_id, 'weight': 1}] if is_pity else
+            [{'id': p.pk, 'reward': p.reward_id, 'weight': p.probability} for p in selection_prizes])
+        ticket = 0 if is_pity else secrets.randbelow(sum(p.probability for p in selection_prizes))
+        selected = target if is_pity else None
+        if selected is None:
+            upper = 0
+            for prize in selection_prizes:
+                upper += prize.probability
+                if ticket < upper:
+                    selected = prize
+                    break
+        reward = selected.reward
+        wallet = reward_wallet(account, reward)
+        draw_key = key if count == 1 else f'{key}:{index}'
+        change_points(profile, -campaign.point_cost * 100, draw_key, 'LOTTERY_COST', f'参与 {campaign.name}（{index}/{count}）')
+        claim = create_claim(account, reward, draw_key, source='LOTTERY', profile=profile, wallet=wallet)
+        after = 0 if target and selected.pk == target.pk else (before + 1 if target else 0)
+        LotteryDraw.objects.create(account=account, business_cycle=account.business_cycle, campaign=campaign, prize=selected, claim=claim,
+            event_key=draw_key, point_cost=campaign.point_cost, campaign_version=campaign.version, random_ticket=ticket,
+            probability_snapshot=snapshot, batch=batch, draw_index=index, rarity=lottery_rarity(reward),
+            is_pity=is_pity, pity_before=before, pity_after=after, is_ten_guarantee=is_ten_guarantee,
+            selection_pool=selection_pool)
+        has_non_points = has_non_points or reward.kind != 'POINTS'
+        if state:
+            state.count = after
+        kind = {'SERVICE': 'LOTTERY_SERVICE', 'NAMING': 'LOTTERY_NAMING', 'TAG': 'LOTTERY_TAG'}.get(reward.kind, 'LOTTERY')
+        broadcast(kind, draw_key, account=account, reward=reward.name)
+    if state:
+        state.save(update_fields=['count', 'updated_at'])
+    batch.points_balance = profile.points_balance
+    batch.pity_snapshot = lottery_pity(account, campaign, prizes=prizes, count=state.count if state else 0)
+    batch.save(update_fields=['points_balance', 'pity_snapshot'])
+    return batch
+
+
+def draw(account, campaign_id, client_request_id, expected_version=None):
+    return lottery_batch_draws(draw_batch(account, campaign_id, client_request_id, expected_version, count=1))[0]
 
 
 @transaction.atomic
@@ -321,7 +481,8 @@ def process_claim(claim_id, status, note, operator):
     # 先锁奖品再锁领取记录，与兑换/抽奖库存锁顺序一致。
     initial = RewardClaim.objects.get(pk=claim_id)
     reward = RewardItem.objects.select_for_update().get(pk=initial.reward_id)
-    claim = RewardClaim.objects.select_for_update().select_related('account').get(pk=claim_id)
+    # Do not implicitly lock ClubAccount before the member points profile.
+    claim = RewardClaim.objects.select_for_update().get(pk=claim_id)
     transitions = {'PENDING': {'FULFILLING', 'COMPLETED', 'CANCELLED'}, 'FULFILLING': {'COMPLETED', 'CANCELLED'}}
     if claim.status == status:
         return claim
@@ -387,7 +548,7 @@ def completed_consumption(account):
     """Only matured net paid non-gift consumption in the current business cycle."""
     from .models import ConsumptionConfirmation
     return ConsumptionConfirmation.objects.filter(account=account, business_cycle=account.business_cycle,
-        order__payment_status='PAID').aggregate(value=Sum('amount'))['value'] or 0
+        order__payment_status__in=['PAID','PARTIALLY_REFUNDED'], reversed_at__isnull=True).aggregate(value=Sum(F('amount')-F('refunded_amount')))['value'] or 0
 
 
 @transaction.atomic
@@ -411,6 +572,8 @@ def update_vip(account):
     if not tiers:
         return
     top = tiers[-1]
+    from .refunds import restore_requalified_benefits
+    restore_requalified_benefits(account, top)
     if account.boss_type_id != top.boss_type_id:
         current = VipTier.objects.filter(boss_type_id=account.boss_type_id).first()
         if not current or current.level < top.level:
@@ -496,11 +659,12 @@ def award_gift_benefits(order):
     for rule in rules:
         total = order.amount
         if rule.cumulative:
-            history = Order.objects.filter(customer_account=order.customer_account, service__service_category__is_gift=True,
-                status='COMPLETED', payment_status='PAID', created_at__lte=now)
+            from orders.refunds import with_net_amount
+            history = with_net_amount(Order.objects.filter(customer_account=order.customer_account, service__service_category__is_gift=True,
+                status='COMPLETED', payment_status__in=['PAID','PARTIALLY_REFUNDED'], created_at__lte=now))
             if rule.category_id: history=history.filter(service__service_category_id=rule.category_id)
             if rule.starts_at: history=history.filter(created_at__gte=rule.starts_at)
-            total=history.aggregate(value=Sum('amount'))['value'] or 0
+            total=history.aggregate(value=Sum('_net_paid_amount'))['value'] or 0
         if total < rule.threshold or (total == rule.threshold and not rule.inclusive):
             continue
         target = f'account:{order.customer_account_id}' if rule.once_per_account else f'order:{order.pk}'

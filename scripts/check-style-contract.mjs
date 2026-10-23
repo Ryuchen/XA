@@ -1,15 +1,18 @@
 import { access, readdir, readFile } from 'node:fs/promises'
 import { extname, join, relative, resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 const root = resolve(import.meta.dirname, '..')
+execFileSync(process.execPath, [resolve(root, 'scripts/sync-native-theme.mjs'), '--check'], { stdio: 'inherit' })
 
 // ---------- 颜色 / Token 检查（保持原行为，覆盖全部三端） ----------
 const styleSourceRoots = [
   resolve(root, 'apps/boss-miniapp/src'),
   resolve(root, 'apps/provider-miniapp/src'),
   resolve(root, 'apps/admin-web/src'),
+  resolve(root, 'apps/boss-miniapp/native'),
 ]
-const styleExtensions = new Set(['.css', '.scss', '.vue'])
+const styleExtensions = new Set(['.css', '.scss', '.vue', '.wxss'])
 const forbiddenPalette = [
   '#007aff',
   '#0a84ff',
@@ -46,6 +49,9 @@ async function visitStyle(directory) {
       if (/--c-[\w-]+\s*:/.test(line)) {
         violations.push(`${relative(root, path)}:${index + 1} 旧 --c-* Token 只能在设计系统适配层定义`)
       }
+      if (/#(?:002fa7|00278d|fffdf5|f5f1e9|f7f4ec)\b/i.test(line)) {
+        violations.push(`${relative(root, path)}:${index + 1} 旧克莱因蓝/奶白品牌色应使用共享传统蓝语义 Token`)
+      }
     })
   }
 }
@@ -64,6 +70,8 @@ const moneyExemptExpressions = new Map([
   ['apps/admin-web/src/views/report/index.vue', 'Math.floor((Number(row.amount) || 0) * (100 - reportRate(row)) / 100)'],
   ['apps/admin-web/src/views/order/index.vue', 'Math.floor((providerBase(slot) * rate) / 100)'],
   ['apps/admin-web/src/views/dashboard/index.vue', 'Math.round((count / total) * 100)'],
+  // Backend discount_rate is a percentage; 90% displays as 9折, not a money unit.
+  ['apps/provider-miniapp/src/pages/orders/index.tsx', 'bossType!.discount_rate / 10'],
 ])
 
 // 裸的单位换算：/10 /100 *10 *100（带词边界，避免误伤 *1000 等）。

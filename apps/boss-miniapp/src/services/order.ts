@@ -68,6 +68,30 @@ export const cancelOrder = (orderId: number | string, reason?: string) => {
   return request<ApiResponse<EscortOrder>>(`/orders/orders/${orderId}/cancel/`, 'POST', { reason });
 };
 
+export interface AfterSaleHistory {
+  status: 'OPEN' | 'RESOLVED' | 'PARTIALLY_REFUNDED' | 'REFUNDED';
+  reason: string;
+  resolution: string;
+  created_at: string;
+  resolved_at: string | null;
+  client_request_id?: string;
+  refund_amount?: number;
+  refund_id?: number;
+}
+export interface AfterSaleRecord extends AfterSaleHistory {
+  id: number;
+  history?: AfterSaleHistory[];
+}
+export const fetchAfterSale = (orderId: number) => request<ApiResponse<AfterSaleRecord | null>>(`/orders/orders/${orderId}/aftersale/`);
+export function newAfterSaleRequestId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, token => {
+    const value = Math.floor(Math.random() * 16);
+    return (token === 'x' ? value : (value & 3) | 8).toString(16);
+  });
+}
+export const submitAfterSale = (orderId: number, reason: string, clientRequestId: string) =>
+  request<ApiResponse<AfterSaleRecord>>(`/orders/orders/${orderId}/aftersale/`, 'POST', { reason, client_request_id: clientRequestId });
+
 export const tipOrder = (orderId: number | string, giftServiceId: number) => {
   return fundRequest<EscortOrder>(`/orders/orders/${orderId}/tip/`, {
     gift_service_id: giftServiceId,

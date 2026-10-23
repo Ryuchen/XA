@@ -11,7 +11,14 @@ from .models import IncomeHold, Transaction, Wallet, get_platform_wallet
 def hold_provider_income(income_tx, *, profile, hold_hours):
     if not transaction.get_connection().in_atomic_block:
         raise RuntimeError('收益冻结须与收益入账处于同一事务')
-    if hold_hours <= 0 or income_tx is None:
+    if income_tx is None:
+        return None
+    from .notifier import notify_wallet_update
+    wallet = income_tx.wallet
+    # All provider settlement callers pass through here, including zero-hour
+    # holds. Publish once after both the credit and any freeze have committed.
+    transaction.on_commit(lambda: notify_wallet_update(wallet))
+    if hold_hours <= 0:
         return None
     wallet = Wallet.objects.select_for_update().get(pk=income_tx.wallet_id)
     from .club_rules import deposit_income_percent
@@ -57,26 +64,35 @@ def hold_provider_income(income_tx, *, profile, hold_hours):
 
 def release_due_income(*, now=None, limit=500):
     now = now or timezone.now()
-    due = list(IncomeHold.objects.filter(released_at__isnull=True, release_at__lte=now)
-               .order_by('wallet_id', 'pk').values_list('pk', 'wallet_id')[:limit])
+    due = list(IncomeHold.objects.filter(released_at__isnull=True, cancelled_at__isnull=True, release_at__lte=now)
+               .order_by('wallet_id', 'pk').values_list('pk', 'wallet_id','income_transaction__order_id')[:limit])
     released = 0
-    for hold_id, wallet_id in due:
+    for hold_id, wallet_id, order_id in due:
         with transaction.atomic():
+            # The release ledger INSERT checks its order FK. Lock that order
+            # before its wallet, matching refund/settlement and avoiding the
+            # implicit wallet -> order shared-lock cycle on MySQL.
+            if order_id is not None:
+                from orders.models import Order
+                Order.objects.select_for_update().get(pk=order_id)
             wallet = Wallet.objects.select_for_update().get(pk=wallet_id)
             hold = IncomeHold.objects.select_for_update().get(pk=hold_id)
-            if hold.released_at or hold.release_at > now:
+            if hold.released_at or hold.cancelled_at or hold.release_at > now:
                 continue
-            if wallet.frozen_amount < hold.amount:
+            remaining = hold.amount-hold.recovered_amount
+            if remaining < 0 or wallet.frozen_amount < remaining:
                 raise ValueError(f'收益冻结余额不足：hold={hold.pk}')
             before = wallet.balance
-            wallet.balance += hold.amount
-            wallet.frozen_amount -= hold.amount
+            wallet.balance += remaining
+            wallet.frozen_amount -= remaining
             wallet.save(update_fields=['balance', 'frozen_amount'])
             Transaction.objects.create(wallet=wallet, order=hold.income_transaction.order,
-                                       amount=hold.amount, tx_type=Transaction.TxType.EARNINGS_RELEASE,
+                                       amount=remaining, tx_type=Transaction.TxType.EARNINGS_RELEASE,
                                        balance_before=before, balance_after=wallet.balance,
                                        remark='订单收益冻结到期解冻')
             hold.released_at = now
             hold.save(update_fields=['released_at'])
+            from .notifier import notify_wallet_update
+            transaction.on_commit(lambda wallet=wallet: notify_wallet_update(wallet))
             released += 1
     return released

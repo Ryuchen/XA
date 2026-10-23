@@ -14,6 +14,8 @@ export interface TransactionRecord {
   status: string;
   remark: string;
   created_at: string;
+  reversal_of?: number | null;
+  is_reversal?: boolean;
 }
 
 export const fetchWalletInfo = () => {

@@ -8,8 +8,8 @@
 .header {
   margin: 32rpx $page-padding 0;
   padding: 32rpx;
-  color: #fffdf5;
-  background: linear-gradient(145deg,#17171c,#393440 62%,#657188);
+  color: var(--xa-color-surface-card);
+  background: linear-gradient(145deg,#17171c,#393440 62%,var(--xa-color-text-secondary));
   border-radius: 32rpx;
   box-shadow: 0 18rpx 44rpx rgba(30,25,36,.16);
 }
@@ -20,7 +20,7 @@
   display: block;
   font-size: 48rpx;
   font-weight: $font-weight-bold;
-  color: #fffdf5;
+  color: var(--xa-color-surface-card);
   letter-spacing: $letter-spacing-tight;
 }
 .pageSubtitle { display:block; margin-top:8rpx; font-size:22rpx; color:rgba(255,255,255,.62); }
@@ -158,4 +158,4 @@
   font-size: $font-size-sm;
   color: $color-text-tertiary;
 }
-.loginBtn { margin-top:24rpx; padding:16rpx 32rpx; border-radius:999rpx; color:#fffdf5; font-size:24rpx; font-weight:600; background:$color-primary; }
+.loginBtn { margin-top:24rpx; padding:16rpx 32rpx; border-radius:999rpx; color:var(--xa-color-surface-card); font-size:24rpx; font-weight:600; background:$color-primary; }

@@ -26,6 +26,7 @@
         <el-table-column v-if="tab === 'rewards'" prop="kind_label" label="交付方式" width="130"/>
         <el-table-column v-if="tab === 'claims'" label="老板 / 状态" min-width="180"><template #default="{row}">{{row.account_name || row.account}} · {{row.status_label}}</template></el-table-column>
         <el-table-column v-if="tab === 'lotteries'" label="每次积分 / 概率合计" min-width="180"><template #default="{row}">{{row.point_cost}} / {{row.prizes.reduce((n:number,p:any)=>n+p.probability,0)}} 万分点</template></el-table-column>
+        <el-table-column v-if="tab === 'lotteries'" label="连抽与保底" min-width="230"><template #default="{row}"><div>十连 {{row.point_cost * 10}} 积分 · 至少1份非积分奖</div><span class="hint" v-if="row.pity?.enabled">68体验单 · 最多240抽必得</span><span class="hint" v-else>未配置68体验单保底奖</span></template></el-table-column>
         <el-table-column v-if="tab === 'rules'" prop="template" label="模板" min-width="320"/>
         <el-table-column v-if="tab === 'tiers'" label="累计消费门槛" min-width="160"><template #default="{row}">¥{{formatRmb(row.consumption_threshold)}} · {{row.discount_rate / 10}} 折</template></el-table-column>
         <el-table-column v-if="tab === 'packages'" label="赠送 / 积分倍率" min-width="180"><template #default="{row}">¥{{formatRmb(row.gift_amount)}} / {{row.points_rate / POINTS_RATE_SCALE}} 倍</template></el-table-column>
@@ -53,6 +54,9 @@
         </template>
         <template v-if="tab === 'lotteries'">
           <el-form-item label="活动名称"><el-input v-model="form.name"/></el-form-item><el-form-item label="每次消耗积分"><el-input-number v-model="form.point_cost" :min="1" :precision="0"/></el-form-item>
+          <el-alert class="ap-field--full" title="十连至少1份非积分奖，消耗10倍积分" description="前9抽若全为积分奖，第10抽从基础概率大于0的非积分奖中按原权重抽取。68体验单也算非积分奖，240抽保底优先。十连兜底会提高实际获得非积分奖的机会，基础概率公示保持不变。" type="info" :closable="false"/>
+          <el-alert v-if="!hasTenGuaranteeCandidates" class="ap-field--full" title="十连暂不可用：请为至少1个非积分奖配置大于0的基础概率" description="概率为0的68体验单只参与240抽保底，不作为十连兜底候选。单抽仍按完整奖池校验。" type="warning" :closable="false"/>
+          <el-alert class="ap-field--full" :title="hasExperiencePity ? '68体验单：最多240抽必得，提前抽中立即重置' : '奖池尚未加入68体验单，未启用240抽保底'" description="本活动单抽、十连共用240抽进度；十连在第240抽出奖后，剩余抽数继续累计。奖品须启用且库存充足。" :closable="false"/>
           <template v-if="form.id"><el-form-item label="每天次数上限"><el-input-number v-model="form.daily_limit" :min="0"/><span class="hint">0 不限</span></el-form-item><el-form-item label="活动开始"><el-date-picker v-model="form.starts_at" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" clearable/></el-form-item><el-form-item label="活动结束"><el-date-picker v-model="form.ends_at" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" clearable/></el-form-item>
             <el-alert :title="'概率合计：'+ probabilityTotal +' / 10000；1 = 0.01%，100 = 1%。启用时必须恰好为 10000。'" :type="probabilityTotal === 10000 ? 'success' : 'warning'" :closable="false"/>
             <el-table :data="form.prizes"><el-table-column label="奖品" min-width="240"><template #default="{row}"><el-select v-model="row.reward" filterable><el-option v-for="reward in rewards" :key="reward.id" :value="reward.id" :label="reward.name"/></el-select></template></el-table-column><el-table-column label="中奖概率（万分点）" width="230"><template #default="{row}"><el-input-number v-model="row.probability" :min="0" :max="10000" :precision="0"/></template></el-table-column><el-table-column width="70"><template #default="{$index}"><el-button link @click="form.prizes.splice($index,1)">移除</el-button></template></el-table-column></el-table>
@@ -113,6 +117,8 @@ const broadcastKinds:Record<string,string>={GIFT:'礼物单播报',LOTTERY:'转�
 const detailLabels:Record<string,string>={recipient:'收件人',phone:'联系电话',address:'收货地址',game_uid:'游戏 UID',note:'补充说明',tag:'指定 TAG',provider_name:'冠名陪玩'}
 const external=reactive({account_id:undefined as number|undefined,kind:'KOOK_CHECKIN',day:'',online_seconds:7200,source_id:''})
 const canEdit=computed(()=>auth.hasPerm('engagement:edit')),probabilityTotal=computed(()=>form.value.prizes?.reduce((n:number,p:any)=>n+(Number(p.probability)||0),0)||0)
+const hasExperiencePity=computed(()=>form.value.prizes?.some((prize:any)=>rewards.value.some(reward=>reward.id===prize.reward && reward.code==='lottery-experience-68')) || false)
+const hasTenGuaranteeCandidates=computed(()=>form.value.prizes?.some((prize:any)=>Number(prize.probability)>0 && rewards.value.some(reward=>reward.id===prize.reward && reward.kind!=='POINTS')) || false)
 const active=(row:any)=>row.is_active??row.enabled??row.is_visible??true,kindLabel=(kind:string)=>broadcastKinds[kind]||'',media=(path:string)=>path.startsWith('/media/')?new URL(import.meta.env.VITE_API_BASE||'/api/admin',location.origin).origin+path:path
 const settings=ref<any>({}),companionServices=ref<any[]>([])
 async function saveSettings(){saving.value=true;try{await request({url:'/club-config/',method:'put',data:settings.value});ElMessage.success('已保存')}finally{saving.value=false}}

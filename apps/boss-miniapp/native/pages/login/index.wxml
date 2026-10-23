@@ -1,13 +1,14 @@
 <view class="page login-page">
-  <image class="login-art" src="{{companionshipArt}}" mode="aspectFit" aria-hidden="true"/><text class="eyebrow">兴安电竞</text><view class="title">欢迎回来，<view>开始你的游戏时间</view></view>
-  <text class="subtitle">登录后查看订单、钱包与专属服务</text>
+  <view class="page-heading login-heading"><view class="login-heading-copy"><text class="eyebrow">兴安电竞</text><text class="title" role="heading" aria-level="1">欢迎回来</text><text class="subtitle">登录后查看订单、钱包与专属服务</text></view><image class="login-art" src="{{companionshipArt}}" mode="aspectFit" aria-hidden="true"/></view>
   <view class="panel login-panel">
-    <text class="section-title">{{requiresBinding ? '当前微信尚未绑定账号' : '微信快捷登录'}}</text>
+    <text class="section-title" role="heading" aria-level="2">{{requiresBinding ? '当前微信尚未绑定账号' : '微信快捷登录'}}</text>
     <text class="muted">{{requiresBinding ? '授权手机号可识别已有老板账号，保留原有余额与订单。' : '识别已绑定的老板账号，安全进入你的个人中心。'}}</text>
-    <checkbox-group bindchange="agree"><label class="agreement"><checkbox value="agree" checked="{{agreed}}" color="#002fa7"/><view class="agreement-copy"><text>我已阅读并同意</text><text class="link" catchtap="privacy">隐私保护指引</text></view></label></checkbox-group>
+    <checkbox-group bindchange="agree"><label class="agreement"><checkbox value="agree" checked="{{agreed}}" color="#136398"/><view class="agreement-copy"><text>我已阅读并同意</text><text class="link" catchtap="privacy">隐私保护指引</text></view></label></checkbox-group>
     <button wx:if="{{!requiresBinding}}" class="xa-button button" disabled="{{!agreed || busy}}" loading="{{busy}}" bindtap="quickLogin" hover-class="xa-button-hover">微信快捷登录</button>
     <block wx:else><button class="xa-button button" open-type="getPhoneNumber" bindgetphonenumber="phone" disabled="{{!agreed || busy}}" loading="{{busy}}" hover-class="xa-button-hover">授权手机号并绑定</button><button class="xa-button button-secondary" bindtap="createAccount" disabled="{{!agreed || busy}}" hover-class="xa-button-hover">我是新用户，创建账号</button></block>
     <text wx:if="{{error}}" class="error" role="alert">{{error}}</text>
     <button class="xa-button button-quiet" bindtap="support" hover-class="xa-button-hover">账号有问题？联系客服</button>
-  </view><text class="small muted">微信授权不会自动读取聊天记录。手机号用于识别和绑定你的老板账号。</text>
+    <text class="small muted">微信授权不会自动读取聊天记录。手机号用于识别和绑定你的老板账号。</text>
+  </view>
 </view>
+<bottom-navigation/>

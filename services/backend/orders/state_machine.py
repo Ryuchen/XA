@@ -51,6 +51,7 @@ def transition(
     side_effect: Optional[Callable[[Order], None]] = None,
     update_fields: Optional[list] = None,
     dispatch_account_ids=(),
+    allow_settled_refund=False,
 ) -> Order:
     """统一的状态切换入口。
 
@@ -78,7 +79,14 @@ def transition(
     order = Order.objects.select_for_update().get(id=order_id)
 
     from_status = order.status
-    if from_status == Order.Status.COMPLETED and (
+    authorized_settled_refund = False
+    if allow_settled_refund:
+        from .refunds import authorized_refund
+        authorized_settled_refund = (to_status == Order.Status.CANCELLED
+            and action == OrderStatusLog.Action.REFUND and authorized_refund(operator_account))
+        if not authorized_settled_refund:
+            raise IllegalTransitionError('仅授权后台退款可流转已结算订单')
+    if from_status == Order.Status.COMPLETED and not authorized_settled_refund and (
         order.settlement_mode != Order.SettlementMode.REPORT_APPROVAL or order.settled_at
     ):
         raise IllegalTransitionError('订单已结算，无法再次流转')
@@ -115,6 +123,8 @@ def transition(
         # Acquire the customer's wallet before fulfillment credits other wallets.
         # This also serializes two completions crossing a VIP threshold together.
         from wallet.services import get_wallet
+        from .financial_lock import lock_order_money
+        lock_order_money()
         get_wallet(account_id=order.customer_account_id, for_update=True)
 
     if side_effect:

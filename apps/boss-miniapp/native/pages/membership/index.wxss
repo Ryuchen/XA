@@ -1,27 +1,31 @@
-.membership-card { padding:28rpx;background:#f7f4ec;border-radius:24rpx;margin-bottom:24rpx; }
-.membership-card .title { margin:10rpx 0 18rpx;font-size:46rpx;line-height:1.4;color:#002fa7; }
-.vip-progress { height:10rpx;background:#e9eefb;border-radius:20rpx;overflow:hidden;margin:24rpx 0 12rpx; }
-.vip-progress>view { height:100%;background:var(--xa-color-primary);border-radius:20rpx; }
-.membership-card .subtitle { font-size:var(--xa-control-small-font); }
-.membership-page .membership-card>.xa-button.button-quiet { display:flex;align-items:center;justify-content:flex-start;min-height:var(--xa-control-secondary);margin-top:10rpx;padding:8rpx 0;font-size:var(--xa-control-font);color:var(--xa-color-primary); }
-.membership-page .panel { border-radius:24rpx; }
-.membership-page .panel>.between { gap:16rpx; }
-.membership-page .panel>.between>.section-title { margin:0; }
-.tier-picker { flex-shrink:0;max-width:58%; }
-.picker-control { display:flex;align-items:center;justify-content:flex-end;gap:8rpx;min-height:var(--xa-input-height);padding:8rpx 0 8rpx 12rpx; }
-.membership-page .picker-control .link { font-size:var(--xa-control-font);line-height:1.5;text-align:right;overflow-wrap:anywhere; }
-.picker-control>image { flex-shrink:0;width:var(--xa-icon-small);height:var(--xa-icon-small); }
+.membership-page .page-heading,.membership-page .panel,.membership-card { padding:24rpx; margin-bottom:16rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; background:var(--xa-color-surface); }
+.membership-page .title { font-size:20px; letter-spacing:0; }
+.member-level { display:block; margin:12rpx 0; color:var(--xa-color-primary); font-size:22px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
+.member-spend { display:flex; flex-wrap:wrap; align-items:baseline; gap:4rpx 12rpx; margin-bottom:4rpx; }
+.member-amount { color:var(--xa-color-primary); font-size:18px; font-weight:600; line-height:1.4; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.vip-progress { height:6px; margin:16rpx 0 8rpx; border-radius:12rpx; overflow:hidden; background:var(--xa-color-primary-soft); }
+.vip-progress>view { height:100%; border-radius:12rpx; background:var(--xa-color-primary); }
+.membership-page .subtitle,.membership-page .small { display:block; font-size:var(--xa-control-small-font); line-height:1.6; overflow-wrap:anywhere; }
+.membership-page .subtitle { margin-top:8rpx; }
+.membership-page .membership-card>.xa-button.button-quiet { display:flex; align-items:center; justify-content:flex-end; min-height:30px; margin:8rpx 0 0; padding:4px 0; color:var(--xa-color-primary); font-size:var(--xa-control-small-font); }
+.membership-page .section-title { margin:0 0 12rpx; font-size:var(--xa-control-font); line-height:1.5; }
+.panel-heading { gap:12rpx; padding-bottom:8rpx; border-bottom:1rpx solid var(--xa-color-border); }
+.membership-page .panel-heading>.section-title { margin:0; }
+.tier-picker { flex-shrink:0; max-width:58%; }
+.picker-control { display:flex; align-items:center; justify-content:flex-end; gap:8rpx; min-height:30px; padding:4px 0 4px 8rpx; }
+.membership-page .picker-control .link { min-width:0; font-size:var(--xa-control-small-font); line-height:1.5; text-align:right; overflow-wrap:anywhere; }
+.picker-control>image { flex-shrink:0; width:14px; height:14px; }
 .tier-chevron { transform:rotate(90deg); }
-.benefit-row { display:flex;justify-content:space-between;gap:24rpx;padding:20rpx 0;line-height:1.6;font-size:var(--xa-control-font);border-bottom:1rpx solid #f7f4ec; }
-.benefit-row>text:first-child { flex:1;min-width:0; }
-.benefit-row>text:last-child { max-width:58%;text-align:right;overflow-wrap:anywhere; }
-.tags { display:flex;flex-wrap:wrap;gap:12rpx;margin:24rpx 0; }
-.membership-page .tags .xa-button.chip { display:inline-flex;align-items:center;justify-content:center;min-height:var(--xa-control-compact);max-width:100%;padding:8rpx 16rpx;border-radius:var(--xa-radius-control);font-size:var(--xa-control-small-font);white-space:normal;overflow-wrap:anywhere; }
-.membership-page .xa-button.button,.membership-page .xa-button.button-secondary { display:flex;align-items:center;justify-content:center;min-height:var(--xa-control-height);padding:12rpx 24rpx;border-radius:var(--xa-radius-control);font-size:var(--xa-control-font); }
-.membership-page .xa-button.button-secondary { min-height:var(--xa-control-secondary);padding:10rpx 24rpx; }
-.membership-page .panel>.xa-button.button-secondary { margin-top:24rpx; }
-.membership-page .menu-row { gap:16rpx;min-height:var(--xa-control-height);padding:14rpx 0;font-size:var(--xa-control-font); }
-.membership-page .menu-row>text:first-child { flex:1;min-width:0; }
-.membership-page .menu-row switch { flex-shrink:0;transform:scale(.82);transform-origin:right center; }
-.birthday-picker { flex-shrink:0;max-width:60%; }
-.membership-page .small { font-size:var(--xa-control-small-font);line-height:1.7; }
+.benefit-row { display:flex; justify-content:space-between; gap:16rpx; padding:16rpx 0; border-bottom:1rpx solid var(--xa-color-border); font-size:var(--xa-control-font); line-height:1.5; }
+.benefit-row>text:first-child { flex:1; min-width:0; overflow-wrap:anywhere; }
+.benefit-row>text:last-child { max-width:58%; text-align:right; overflow-wrap:anywhere; }
+.tags { display:flex; flex-wrap:wrap; gap:12rpx; margin:16rpx 0; }
+.membership-page .tags .xa-button.chip { min-height:30px; max-width:100%; padding:4px 12rpx; border-radius:10rpx; font-size:var(--xa-control-small-font); white-space:normal; overflow-wrap:anywhere; }
+.member-empty { display:block; font-size:var(--xa-control-font); line-height:1.5; }
+.membership-page .xa-button.button,.membership-page .xa-button.button-secondary { min-height:40px; padding:6px 12px; border-radius:12rpx; font-size:var(--xa-control-font); }
+.membership-page .xa-button.button-secondary { min-height:36px; font-size:var(--xa-control-small-font); }
+.membership-page .panel>.xa-button.button-secondary { margin-top:16rpx; }
+.membership-page .menu-row { gap:12rpx; min-height:40px; padding:10rpx 0; font-size:var(--xa-control-font); line-height:1.5; }
+.membership-page .menu-row>text:first-child { flex:1; min-width:0; flex-shrink:1; overflow-wrap:anywhere; }
+.membership-page .menu-row switch { flex-shrink:0; transform:scale(.82); transform-origin:right center; }
+.birthday-picker { flex-shrink:0; max-width:60%; }

@@ -8,6 +8,7 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, fileURLToPath(new URL('.', import.meta.url)), 'VITE_')
   const apiBase = process.env.VITE_API_BASE || env.VITE_API_BASE || '/api/admin'
+  const devApiTarget = process.env.XA_ADMIN_DEV_API_TARGET || 'http://127.0.0.1:8000'
   if (command === 'build') {
     const apiUrl = new URL(apiBase, 'http://localhost')
     if (!/^\/api\/admin\/?$/.test(apiUrl.pathname) || apiUrl.search || apiUrl.hash) {
@@ -31,15 +32,15 @@ export default defineConfig(({ command, mode }) => {
     port: 5180,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: devApiTarget,
         changeOrigin: true,
       },
       '/media': {
-        target: 'http://127.0.0.1:8000',
+        target: devApiTarget,
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://127.0.0.1:8000',
+        target: devApiTarget.replace(/^http/, 'ws'),
         ws: true,
         changeOrigin: true,
       },

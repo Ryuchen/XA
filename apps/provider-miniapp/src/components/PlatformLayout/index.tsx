@@ -24,7 +24,7 @@ const PlatformLayout: React.FC<React.PropsWithChildren<{ active: MainSection }>>
     <View className={styles.sidebar}>
       <View className={styles.brand}><View className={styles.brandMark}>XA</View><View><Text className={styles.brandName}>兴安电竞</Text><Text className={styles.brandSub}>陪玩工作台</Text></View></View>
       <View className={styles.navList}>{NAV.map(item => <Button key={item.key} className={`${styles.navItem} ${active === item.key ? styles.navActive : ''}`} aria-label={item.label} onClick={() => Taro.switchTab({ url: item.path })}>
-        <View className={styles.navIcon}><TabIcon name={item.icon} color={active === item.key ? '#fffdf5' : '#8593a7'} /></View><View className={styles.navCopy}><Text className={styles.navLabel}>{item.label}</Text><Text className={styles.navCaption}>{item.caption}</Text></View>
+        <View className={styles.navIcon}><TabIcon name={item.icon} color={active === item.key ? '#ffffff' : '#336b9a'} /></View><View className={styles.navCopy}><Text className={styles.navLabel}>{item.label}</Text><Text className={styles.navCaption}>{item.caption}</Text></View>
       </Button>)}</View>
       <Text className={styles.sidebarFoot}>兴安电竞陪玩端</Text>
     </View>

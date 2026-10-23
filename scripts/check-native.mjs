@@ -19,6 +19,12 @@ for (const route of manifest.pages) {
 }
 const files = walk(root);
 const mediaBudget = auditNativeResources(root);
+const brandRoot = path.join(repo, 'services/backend/engagement/static/miniapp/brand');
+for (const file of walk(brandRoot)) {
+  if (/\.(png|jpe?g|webp|gif)$/i.test(file) && fs.statSync(file).size > 200_000) {
+    errors.push(`Remote brand image exceeds 200KB: ${path.relative(repo, file)}`);
+  }
+}
 if (!mediaBudget.passed) errors.push(`Packaged images/audio exceed the combined 200KB budget: ${mediaBudget.totalBytes} bytes. Move large artwork/audio to the approved HTTPS asset origin.`);
 for (const file of files) {
   const relative = path.relative(root, file);

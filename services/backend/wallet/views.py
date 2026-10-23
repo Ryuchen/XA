@@ -80,6 +80,7 @@ class IncomeRecordsView(APIView):
             'tx_no': t.tx_no,
             'amount': t.amount,
             'tx_type': t.tx_type,
+            'reversal_of':t.reversal_of_id, 'is_reversal':bool(t.reversal_of_id),
             'balance_before': t.balance_before,
             'balance_after': t.balance_after,
             'status': t.status,
@@ -146,12 +147,12 @@ class ProviderBenefitRecordsView(APIView):
         if request.legacy_user is not None:
             credit_owner |= Q(wallet__account__isnull=True, wallet__user=request.legacy_user)
         credits = Transaction.objects.filter(credit_owner).filter(
-            order_id=OuterRef('pk'), tx_type=Transaction.TxType.INCOME,
-            status=Transaction.Status.SUCCESS, amount__gte=0,
+            order_id=OuterRef('pk'), tx_type__in=[Transaction.TxType.INCOME,Transaction.TxType.GIFT],
+            status=Transaction.Status.SUCCESS,
         ).order_by()
         # 有成员分账时以成员为准；旧订单才回退订单头。实得只来自成功入账流水。
         gift_orders = Order.objects.filter(
-            status=Order.Status.COMPLETED, payment_status=Order.PaymentStatus.PAID,
+            status__in=[Order.Status.COMPLETED,Order.Status.CANCELLED], payment_status__in=[Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED,Order.PaymentStatus.REFUNDED],
             service__service_category__is_gift=True,
         ).annotate(
             has_assignments=Exists(assignments), has_own_assignment=Exists(own_assignments),
@@ -177,7 +178,11 @@ class ProviderBenefitRecordsView(APIView):
         gift_start = (gift_page - 1) * page_size
         for order in gift_orders[gift_start:gift_start + page_size]:
             settled_at = order.assignment_settled_at or order.settled_at
-            if (order.has_credit or settled_at) and order.received_income == order.expected_income:
+            if order.payment_status == 'REFUNDED':
+                settlement_status = 'REFUNDED'
+            elif order.payment_status == 'PARTIALLY_REFUNDED':
+                settlement_status = 'PARTIALLY_REFUNDED'
+            elif (order.has_credit or settled_at) and order.received_income == order.expected_income:
                 settlement_status = 'SETTLED'
             elif settled_at or order.received_income > order.expected_income:
                 settlement_status = 'CHECK_REQUIRED'
@@ -438,6 +443,9 @@ class WithdrawView(APIView):
                 'balance': wallet.balance, 'frozen_amount': wallet.frozen_amount,
                 'request': WithdrawRequestSerializer(withdraw).data,
             })
+            from .notifier import notify_wallet_update, notify_withdraw_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
+            transaction.on_commit(lambda: notify_withdraw_update(withdraw))
         return result
 
 
@@ -468,6 +476,7 @@ class TransactionsView(APIView):
             'tx_no': t.tx_no,
             'amount': t.amount,
             'tx_type': t.tx_type,
+            'reversal_of':t.reversal_of_id, 'is_reversal':bool(t.reversal_of_id),
             'balance_before': t.balance_before,
             'balance_after': t.balance_after,
             'status': t.status,
@@ -481,7 +490,6 @@ class TransactionsView(APIView):
                 'transactions': data,
                 'total_income': wallet.transactions.filter(
                     tx_type=Transaction.TxType.INCOME, status=Transaction.Status.SUCCESS,
-                    amount__gt=0,
                 ).aggregate(total=Sum('amount'))['total'] or 0,
                 'total': total,
                 'page': page,
@@ -527,7 +535,7 @@ class ReportListCreateView(APIView):
         share = order.providers.filter(provider_account=request.account).first()
         if share and share.released_at and share.settlement_base <= 0:
             return Response({'code': 400, 'msg': '转单后本人无结算份额，无需提交报单'})
-        report, _ = ProviderReport.objects.get_or_create(
+        report, created = ProviderReport.objects.get_or_create(
             provider=request.legacy_user,
             order=order,
             defaults={
@@ -541,6 +549,10 @@ class ReportListCreateView(APIView):
         if not report.provider_account_id:
             report.provider_account = request.account
             report.save(update_fields=['provider_account'])
+            created = True
+        if created:
+            from orders.notifier import notify_report_update
+            transaction.on_commit(lambda: notify_report_update(report))
         serializer = ReportSerializer(report, context={'request': request})
         return Response({'code': 0, 'msg': '报单草稿已创建', 'data': serializer.data})
 
@@ -655,6 +667,8 @@ class ReportSubmitView(APIView):
         if report.order_id:
             from engagement.confirmation import refresh_report_clock
             refresh_report_clock(report.order)
+        from orders.notifier import notify_report_update
+        transaction.on_commit(lambda: notify_report_update(report))
         return Response({'code': 0, 'msg': '报单已提交，等待审核', 'data': ReportSerializer(report, context={'request': request}).data})
 
 

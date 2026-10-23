@@ -8,6 +8,8 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AccountBanDialog: typeof import('./src/components/AccountBanDialog.vue')['default']
+    CatalogEditor: typeof import('./src/components/CatalogEditor.vue')['default']
+    CommissionEditor: typeof import('./src/components/CommissionEditor.vue')['default']
     CrudTable: typeof import('./src/components/CrudTable.vue')['default']
     DispatchMessageDialog: typeof import('./src/components/DispatchMessageDialog.vue')['default']
     EChart: typeof import('./src/components/EChart.vue')['default']
@@ -50,6 +52,7 @@ declare module 'vue' {
     ElRow: typeof import('element-plus/es')['ElRow']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ElSelect: typeof import('element-plus/es')['ElSelect']
+    ElSkeleton: typeof import('element-plus/es')['ElSkeleton']
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
@@ -62,6 +65,8 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     EscortSkillSelect: typeof import('./src/components/EscortSkillSelect.vue')['default']
     PrivateImage: typeof import('./src/components/PrivateImage.vue')['default']
+    ProviderQualificationsEditor: typeof import('./src/components/ProviderQualificationsEditor.vue')['default']
+    QualificationFilters: typeof import('./src/components/QualificationFilters.vue')['default']
     RoulettePoolEditor: typeof import('./src/components/RoulettePoolEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

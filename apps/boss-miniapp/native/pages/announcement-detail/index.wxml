@@ -1,5 +1,17 @@
-<view class="page">
-  <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button>
-<state-view loading="{{loading}}" error="{{error}}" bind:retry="load" />
-  <block wx:if="{{item && !error}}"><view class="eyebrow">兴安电竞 · 官方公告</view><view class="title">{{item.title}}</view><view class="subtitle">{{item.dateText}}</view><view class="panel article"><rich-text nodes="{{item.content}}"/></view></block>
+<view class="page announcement-detail-page">
+  <view wx:if="{{!logged}}" class="section-surface announcement-login"><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button></view>
+  <state-view wx:if="{{logged}}" loading="{{loading}}" error="{{error}}" bind:retry="load" />
+  <block wx:if="{{logged && item && !error}}">
+    <view class="section-surface announcement-heading">
+      <view class="announcement-meta"><text class="announcement-source">兴安电竞 · 官方公告</text><text wx:if="{{item.is_pinned}}" class="announcement-pin">置顶</text></view>
+      <text class="announcement-title" role="heading" aria-level="1" selectable>{{item.title}}</text>
+      <view class="announcement-time"><text class="time-label">发布时间</text><text>{{item.dateText}}</text></view>
+    </view>
+    <view class="section-surface announcement-body">
+      <text class="announcement-section-title" role="heading" aria-level="2">公告内容</text>
+      <rich-text wx:if="{{item.content}}" class="announcement-content" nodes="{{item.content}}"/>
+      <text wx:else class="announcement-empty">暂无公告正文</text>
+    </view>
+  </block>
 </view>
+<bottom-navigation/>

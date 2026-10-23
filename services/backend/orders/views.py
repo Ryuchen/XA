@@ -252,20 +252,22 @@ class RankingView(APIView):
             timezone.get_current_timezone(),
         )
 
-        completed = Order.objects.filter(
+        from .refunds import with_net_amount,PAID_STATES
+        completed = with_net_amount(Order.objects.filter(
             status=Order.Status.COMPLETED,
+            payment_status__in=PAID_STATES,
             completed_at__gte=start_dt,
-        )
+        ))
 
         consume_rows = (
             completed.values('customer_id')
-            .annotate(total=Sum('amount'), order_count=Count('id'))
+            .annotate(total=Sum('_net_paid_amount'), order_count=Count('id'))
             .order_by('-total')[:RANKING_LIMIT]
         )
         order_rows = (
             completed.exclude(provider_id=None)
             .values('provider_id')
-            .annotate(order_count=Count('id'), total=Sum('amount'))
+            .annotate(order_count=Count('id'), total=Sum('_net_paid_amount'))
             .order_by('-order_count')[:RANKING_LIMIT]
         )
 
@@ -459,11 +461,13 @@ class CreateOrderView(APIView):
             return Response({'code': 409, 'msg': '价格或优惠已变化，请刷新报价后重新确认',
                              'errorCode': 'PRICE_CHANGED'})
         provider = serializer.validated_data.get('provider')
+        providers = serializer.validated_data['providers']
+        provider_accounts = serializer.validated_data['provider_accounts']
         support_contact = serializer.validated_data.get('support_contact')
         user_coupon = serializer.validated_data.get('user_coupon')
         commission_rate = serializer.validated_data['commission_rate']
         inviter = serializer.validated_data.get('inviter')
-        provider_account = _account_for_legacy_user(provider)
+        provider_account = provider_accounts[0] if provider_accounts else None
         inviter_account = _account_for_legacy_user(inviter)
         inviter_commission_rate = serializer.validated_data['inviter_commission_rate']
         promotion = serializer.validated_data.get('promotion')
@@ -474,6 +478,11 @@ class CreateOrderView(APIView):
 
         commission_spec = serializer.validated_data['commission_spec']
         split = compute_split(amount, inviter_commission_rate=inviter_commission_rate, **commission_spec)
+        selected_shares = None
+        if len(providers) == 2:
+            from .settlement import build_provider_shares, aggregate_order_split
+            selected_shares = build_provider_shares(amount, serializer.validated_data['provider_specs'])
+            split = aggregate_order_split(amount, selected_shares, inviter_commission_rate)
         trace_id = new_trace_id()
 
         # 只读探测重放：首单成功后余额已扣，重放会先撞「余额不足」返回 400，
@@ -493,13 +502,16 @@ class CreateOrderView(APIView):
             return Response({'code': 409, 'msg': replay_reason})
 
         with transaction.atomic():
-            if provider_account:
-                lock_provider_dispatch([provider_account.pk])
-                current_profile = EscortProfile.objects.select_related('account', 'user', 'level').get(account=provider_account)
+            if provider_accounts:
+                lock_provider_dispatch([account.pk for account in provider_accounts])
+            for selected_account in provider_accounts:
+                current_profile = EscortProfile.objects.select_related('account', 'user', 'level').get(account=selected_account)
+                if current_profile.status != EscortProfile.Status.AVAILABLE:
+                    return Response({'code': 400, 'msg': '指定的大神当前不可接单'})
                 reason = current_profile.order_acceptance_error(service, provider_gender=provider_gender)
                 if reason:
                     return Response({'code': 400, 'msg': reason})
-                if count_active_orders(provider_account) >= Order.MAX_CONCURRENT_ORDERS:
+                if count_active_orders(selected_account) >= Order.MAX_CONCURRENT_ORDERS:
                     return Response({'code': 400, 'msg': '该大神接单名额已满，请重新选择'})
             wallet = get_wallet(
                 account=request.account, user=request.legacy_user, for_update=True,
@@ -512,6 +524,8 @@ class CreateOrderView(APIView):
             from .purchase_benefits import lock_purchase, record_paid_benefits
             locked_coupon = lock_purchase(request.account, service, game_rounds,
                 user_coupon, serializer.validated_data['pricing'])
+            if service.billing_provider_count != serializer.validated_data['required_provider_count']:
+                raise rest_serializers.ValidationError('套餐人数已变化，请刷新后重新选择陪玩')
 
             # 下单是出账动作。幂等键在「校验全过、即将扣款」这一刻抢占：
             # 弱网重试的第二个请求会在这里被拦下，而不是变成两笔扣款 + 两张单。
@@ -521,7 +535,7 @@ class CreateOrderView(APIView):
                 account=request.account,
                 request_id=request.data.get('client_request_id'),
                 scope='order.create',
-                fingerprint=f'{service.id}|{amount}|{game_rounds}|{game_uid}|{provider_gender}|{getattr(provider_account, "pk", "")}',
+                fingerprint=f'{service.id}|{amount}|{game_rounds}|{game_uid}|{provider_gender}|{",".join(str(account.pk) for account in provider_accounts)}',
             )
             if not allowed:
                 log_money_event(
@@ -542,6 +556,7 @@ class CreateOrderView(APIView):
                 customer=request.legacy_user,
                 customer_account=request.account,
                 provider=None,
+                escort_mode=Order.EscortMode.DOUBLE if len(providers) == 2 else Order.EscortMode.SINGLE,
                 service=service,
                 support_contact=support_contact,
                 amount=amount,
@@ -553,7 +568,10 @@ class CreateOrderView(APIView):
                 provider_gender=provider_gender,
                 status=Order.Status.PENDING,
                 payment_status=Order.PaymentStatus.PAID,
-                requires_boss_selection=provider is None and serializer.validated_data['dispatch_mode'] == 'BOSS_SELECT',
+                # Keep the team-fulfilment contract used after selecting a
+                # two-person application: each member supplies their evidence.
+                requires_boss_selection=(provider is None or len(providers) == 2)
+                    and serializer.validated_data['dispatch_mode'] == 'BOSS_SELECT',
                 auto_cancel_at=(
                     None if provider is not None
                     else pending_timeout_deadline()
@@ -563,6 +581,7 @@ class CreateOrderView(APIView):
                 promo_discount=promo_discount,
                 coupon_discount=coupon_discount,
                 promotion=promotion,
+                **serializer.validated_data['commission_snapshot'],
                 commission_rate=split.commission_rate,
                 provider_income=split.provider_income,
                 inviter=inviter,
@@ -612,10 +631,22 @@ class CreateOrderView(APIView):
                         provider.escort_profile.display_name
                         or provider.nickname or provider.username
                     )
-                    sync_single_provider_share(o)
+                    if selected_shares is None:
+                        sync_single_provider_share(o)
+                    else:
+                        for selected, selected_account, share in zip(providers, provider_accounts, selected_shares):
+                            OrderProvider.objects.create(
+                                order=o, provider=selected, provider_account=selected_account,
+                                provider_name_snapshot=selected.escort_profile.display_name or selected.nickname or selected.username,
+                                settlement_base=share.settlement_base,
+                                commission_type=share.commission_type,
+                                commission_rate=share.commission_rate,
+                                commission_fixed=share.commission_fixed,
+                                provider_income=share.provider_income,
+                            )
                     mark_escort_busy(
-                        provider_ids=[provider.id],
-                        account_ids=[getattr(provider_account, 'pk', None)],
+                        provider_ids=[selected.pk for selected in providers],
+                        account_ids=[account.pk for account in provider_accounts],
                     )
 
                 order = transition(
@@ -639,13 +670,14 @@ class CreateOrderView(APIView):
             enqueue_kook_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
             enqueue_wecom_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
         else:
-            _push_message_safe(
-                recipient_id=provider.id,
-                title='老板指定你服务',
-                preview=f'你收到一笔「{order.service_name_snapshot}」订单，请尽快开始服务',
-                msg_type='ORDER',
-                related_order_id=order.id,
-            )
+            for selected in providers:
+                _push_message_safe(
+                    recipient_id=selected.id,
+                    title='老板指定你服务',
+                    preview=f'你收到一笔「{order.service_name_snapshot}」订单，请尽快开始服务',
+                    msg_type='ORDER',
+                    related_order_id=order.id,
+                )
 
         notify_order_update(order)
 
@@ -762,10 +794,14 @@ class TipOrderView(APIView):
 
         with transaction.atomic():
             try:
-                # Match basket lock order: buyer wallet, source order, services, recipient wallet.
-                customer_wallet = get_wallet(user=request.legacy_user, account=request.account, for_update=True)
+                # A source-order refund uses order -> money mutex -> wallets.
+                # Gifting follows that direction so neither can hold the
+                # buyer wallet while waiting for the other's source order.
                 source_order, recipients = gift_context(request, order_id=order_id,
                     provider_id=request.data.get('provider_id'), lock=True)
+                from .financial_lock import lock_order_money
+                lock_order_money()
+                customer_wallet = get_wallet(user=request.legacy_user, account=request.account, for_update=True)
                 gift_service = ServiceItem.objects.select_for_update().select_related('service_category').get(
                     id=gift_service_id, is_active=True, service_category__is_active=True,
                     service_category__is_gift=True, purchase_mode='DIRECT', is_addon=False, gameplay__isnull=True,
@@ -997,6 +1033,9 @@ class GrabOrderView(APIView):
         def pre_check(order):
             if order.provider_account_id is not None or order.provider_id is not None:
                 raise IllegalTransitionError('订单已被其他大神接单')
+            from .team_rules import required_team_size
+            if required_team_size(order) != 1:
+                raise IllegalTransitionError('双陪套餐须两名陪玩组队报名，不能单人直接抢单')
             if order.escort_mode != Order.EscortMode.SINGLE or order.source_order_id or (order.service.service_category and order.service.service_category.is_gift):
                 raise IllegalTransitionError('该订单不能进入公共抢单流程')
             if order.payment_status != Order.PaymentStatus.PAID:
@@ -1252,10 +1291,10 @@ class CancelOrderView(APIView):
             )
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
-        except IllegalTransitionError as exc:
+        except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许取消'})
 
-        notify_order_update(order)
+        transaction.on_commit(lambda: notify_order_update(order))
 
         # 若有陪玩抢单后又被取消（理论不会到这里，因 pre_check 限定 PENDING），仍保护性推送
         if order.provider_id:
@@ -1358,48 +1397,23 @@ class RefundOrderView(APIView):
         if not reason:
             return Response({'code': 400, 'msg': '请填写退款原因'})
 
-        def pre_check(order):
-            if order.status not in (Order.Status.GRABBED, Order.Status.IN_SERVICE):
-                raise IllegalTransitionError('当前状态不允许强制退款')
-            if order.providers.filter(settled_at__isnull=False, provider_income__gt=0).exists():
-                raise IllegalTransitionError('订单已有陪玩份额结算，请先处理已结算收入，不能直接全额退款')
-
-        def side_effect(order):
-            _refund_to_customer(order, reason=f'客服强制退款：{reason}')
-            order.cancel_reason = reason
-            # 释放陪玩师状态：按「是否还有其它进行中的单」重算，而不是一律置空闲。
-            provider_ids = list(order.providers.values_list('provider_id', flat=True))
-            account_ids = list(
-                order.providers.values_list('provider_account_id', flat=True)
-            )
-            if order.provider_id:
-                provider_ids.append(order.provider_id)
-            if order.provider_account_id:
-                account_ids.append(order.provider_account_id)
-            refresh_escort_status(
-                provider_ids=provider_ids,
-                account_ids=account_ids,
-                exclude_order_ids=[order.pk],
-            )
-
         try:
-            order = transition(
-                order_id,
-                Order.Status.CANCELLED,
-                operator=request.legacy_user,
-                operator_account=request.account,
-                action=OrderStatusLog.Action.REFUND,
-                reason=reason,
-                pre_check=pre_check,
-                side_effect=side_effect,
-                update_fields=['cancel_reason', 'payment_status', 'refunded_at'],
-            )
+            from .refunds import apply_admin_refund
+            order = apply_admin_refund(order_id,reason=f'客服强制退款：{reason}',operator=request.legacy_user,
+                operator_account=request.account,plan_token=request.data.get('plan_token'),
+                refund_amount=request.data.get('refund_amount'),client_request_id=request.data.get('client_request_id'),notify=False)
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
-        except IllegalTransitionError as exc:
+        except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
+            from .refunds import RefundError
+            if isinstance(exc, RefundError):
+                return Response({'code':409 if exc.code in ('REFUND_PLAN_CHANGED','REFUND_REQUEST_CONFLICT') else 400,
+                                 'errorCode':exc.code,'msg':str(exc),'data':exc.data})
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许退款'})
 
-        notify_order_update(order)
+        if getattr(order,'_refund_replayed',False):
+            return Response({'code':0,'msg':'退款已处理','data':OrderSerializer(order,context={'request':request}).data})
+        transaction.on_commit(lambda: notify_order_update(order))
 
         _push_message_safe(
             recipient_id=order.customer_id,
@@ -1585,7 +1599,8 @@ class AssignOrderView(APIView):
         def pre_check(order):
             if order.payment_status != Order.PaymentStatus.PAID:
                 raise IllegalTransitionError('订单未支付，不能派单')
-            if order.escort_mode != Order.EscortMode.SINGLE:
+            from .team_rules import required_team_size
+            if required_team_size(order) != 1:
                 raise IllegalTransitionError('双陪订单需同时指定两名打手')
             if order.auto_cancel_at and order.auto_cancel_at <= timezone.now():
                 raise IllegalTransitionError('订单已超时，请刷新订单')

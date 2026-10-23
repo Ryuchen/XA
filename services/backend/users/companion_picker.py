@@ -24,10 +24,12 @@ def _service_amounts(profiles, periods):
     since = min(start for start, _ in periods.values())
     until = max(end for _, end in periods.values())
     orders = Order.objects.filter(
-        payment_status=Order.PaymentStatus.PAID, source_order__isnull=True,
+        payment_status__in=[Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED], source_order__isnull=True,
     ).exclude(status=Order.Status.CANCELLED).exclude(
         Q(is_gift_snapshot=True) | Q(service__service_category__is_gift=True),
     )
+    partial_orders = orders.filter(payment_status='PARTIALLY_REFUNDED')
+    orders = orders.exclude(payment_status='PARTIALLY_REFUNDED')
     shares = OrderProvider.objects.filter(order__in=orders, created_at__gte=since, created_at__lte=until).filter(
         Q(provider_account_id__in=account_ids)
         | Q(provider_account__isnull=True, provider_id__in=user_ids),
@@ -49,6 +51,13 @@ def _service_amounts(profiles, periods):
                 for name in periods:
                     if row[name] is not None:
                         totals[name][pk] = totals[name].get(pk, 0) + row[name]
+    from orders.analytics import partial_share_rows
+    for row in partial_share_rows(partial_orders):
+        pk = by_account.get(row['provider_account_id']) if row['provider_account_id'] else by_user.get(row['provider_id'])
+        if pk is not None:
+            for name,(start,end) in periods.items():
+                if start <= row['accepted_at'] <= end:
+                    totals[name][pk] = totals[name].get(pk,0)+row['amount']
     return totals
 
 

@@ -233,7 +233,7 @@ const userDonutOption = computed<EChartsOption>(() => {
         labelLine: { show: false },
         data: [
           { value: customer, name: '老板', itemStyle: { color: 'var(--primary)' } },
-          { value: provider, name: '陪玩', itemStyle: { color: 'var(--success)' } },
+          { value: provider, name: '陪玩', itemStyle: { color: 'var(--chart-2)' } },
           { value: other, name: '其他', itemStyle: { color: 'var(--muted-foreground)' } },
         ].filter((d) => d.value > 0),
       },

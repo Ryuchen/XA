@@ -1,10 +1,15 @@
 <view class="page favorites-page">
-  <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button>
-<view class="title">我的收藏</view><view class="subtitle">再次预约，从这里开始</view>
-  <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" bind:retry="load" />
-  <view wx:for="{{items}}" wx:key="id" class="card favorite" data-id="{{item.id}}" bindtap="open" role="button">
-    <image wx:if="{{item.cover}}" class="cover favorite-cover" src="{{item.cover}}" mode="aspectFit" />
-    <view class="favorite-copy"><view class="favorite-name">{{item.name}}</view><view class="small muted">{{item.game_category_name || item.category}} {{item.service_category_name}}</view><view class="row between"><text class="price">{{item.priceText}}<text class="small"> 兴安币</text></text><button class="xa-button button-quiet" data-id="{{item.id}}" catchtap="remove" disabled="{{removing}}" loading="{{removing === item.id}}" hover-class="xa-button-hover">取消收藏</button></view></view>
-  </view>
-  <button class="xa-button button-secondary browse" bindtap="browse" hover-class="xa-button-hover">探索更多服务</button>
+  <view class="page-heading favorite-heading"><view class="favorite-title-row"><text class="title">我的收藏</text><view class="favorite-badge" aria-hidden="true"><image src="/assets/icons/heart-active.png"/></view></view><text class="subtitle">再次预约，从这里开始</text>
+  <button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button></view>
+  <state-view loading="{{loading}}" error="{{error}}" empty="{{logged && !loading && !error && !items.length}}" empty-text="还没有收藏的服务" bind:retry="load" />
+  <block wx:if="{{logged}}">
+    <view wx:for="{{items}}" wx:key="id" class="card favorite" data-id="{{item.id}}" bindtap="open" role="button" aria-label="{{'查看服务：' + item.name + '，' + item.priceText + '兴安币'}}" hover-class="favorite-card-hover">
+      <image wx:if="{{item.cover}}" class="favorite-cover" src="{{item.cover}}" mode="aspectFit" lazy-load aria-hidden="true"/>
+      <view wx:else class="favorite-cover favorite-placeholder" aria-hidden="true"><image src="/assets/icons/headphones.png"/></view>
+      <view class="favorite-copy"><text class="favorite-name">{{item.name}}</text><view class="favorite-price"><text class="favorite-amount">{{item.priceText}}</text><text class="favorite-unit">兴安币</text></view></view>
+      <button class="xa-button button-quiet favorite-remove" data-id="{{item.id}}" catchtap="remove" disabled="{{removing}}" loading="{{removing === item.id}}" hover-class="xa-button-hover" aria-label="{{'取消收藏：' + item.name}}">{{removing === item.id ? '取消中' : '取消收藏'}}</button>
+    </view>
+    <view class="section-surface favorite-actions"><button class="xa-button button-secondary browse" bindtap="browse" hover-class="xa-button-hover">探索更多服务</button></view>
+  </block>
 </view>
+<bottom-navigation/>

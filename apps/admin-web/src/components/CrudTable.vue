@@ -16,6 +16,11 @@
       style="width: 100%"
     >
       <slot />
+      <template #empty>
+        <el-empty v-if="!loading" :image-size="72"
+          :description="loadFailed ? '数据暂时无法显示，请重新加载' : '暂无符合条件的记录'" />
+        <span v-else role="status">正在加载记录…</span>
+      </template>
     </el-table>
 
     <div class="pagination-wrap">

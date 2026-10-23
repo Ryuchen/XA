@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<{ option: echarts.EChartsOption; height?:
 const el = ref<HTMLElement>()
 let chart: echarts.ECharts | null = null
 let themeObserver: MutationObserver | null = null
+let sizeObserver: ResizeObserver | null = null
 
 const cssVarPattern = /^var\((--[\w-]+)(?:,\s*([^)]*))?\)$/
 
@@ -36,7 +37,12 @@ function resolveThemeTokens<T>(value: T): T {
 }
 
 function render(option = props.option) {
-  chart?.setOption(resolveThemeTokens(option), true)
+  chart?.setOption(resolveThemeTokens({
+    color: ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'],
+    backgroundColor: 'transparent',
+    textStyle: { color: 'var(--foreground)' },
+    ...option,
+  }), true)
 }
 
 function resize() {
@@ -48,6 +54,8 @@ onMounted(() => {
   chart = echarts.init(el.value, isDarkMode() ? 'dark' : undefined)
   render()
   window.addEventListener('resize', resize)
+  sizeObserver = new ResizeObserver(resize)
+  sizeObserver.observe(el.value)
   themeObserver = new MutationObserver(() => {
     if (!el.value) return
     chart?.dispose()
@@ -65,6 +73,8 @@ watch(
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', resize)
+  sizeObserver?.disconnect()
+  sizeObserver = null
   themeObserver?.disconnect()
   themeObserver = null
   chart?.dispose()

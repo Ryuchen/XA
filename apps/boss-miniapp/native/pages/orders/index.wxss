@@ -1,25 +1,39 @@
-.orders-page { background: #f5f1e9; }
-.orders-header { padding: 26rpx 24rpx 0; margin-bottom: 28rpx; background: #fffdf5; border: 1rpx solid var(--xa-color-border); border-radius: 24rpx; }
-.orders-header .title { font-size: 38rpx; }
-.orders-header .subtitle { margin-top: 8rpx; padding-bottom: 24rpx; font-size: 25rpx; }
-.filter-scroll { padding: 20rpx 0; border-top: 1rpx solid var(--xa-color-border); white-space: nowrap; }
-.filters { display: inline-flex; gap: 12rpx; }
-.orders-page .filters .xa-button { width: auto; min-height: var(--xa-control-compact); padding: 6rpx 20rpx; margin: 0; border-radius: 16rpx; border-color: transparent; background: #f5f1e9; font-size:var(--xa-control-small-font); }
-.orders-page .filters .xa-button.chip-active { color: #fffdf5; background: var(--xa-color-primary); }
-.orders-page .order-card { padding: 0; margin-bottom: 24rpx; overflow: hidden; border-radius: 24rpx; }
-.order-card-header { min-height: 80rpx; padding: 18rpx 24rpx; background: #f7f4ec; border-bottom: 1rpx solid var(--xa-color-border); }
-.order-number { font-size: 24rpx; word-break: break-all; }
-.order-card-header .tag { font-size: 23rpx; padding: 5rpx 12rpx; border-radius: 8rpx; }
-.order-card-body { padding: 22rpx 24rpx; }
-.order-title { display: block; margin: 0 0 10rpx; font-size: 31rpx; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
-.order-provider { display: block; font-size: 25rpx; }
-.footer { margin-top: 24rpx; align-items: flex-end; flex-wrap: wrap; }
-.footer > .small { font-size: 24rpx; }
-.footer .price { margin-left: auto; font-size: 36rpx; }
-.footer .price .small { font-size: 23rpx; }
-.lottery-result { padding: 14rpx 18rpx; margin-top: 20rpx; border-radius: 12rpx; background: var(--xa-color-primary-soft); color: var(--xa-color-primary); font-size: 25rpx; }
-.order-card-actions { min-height: 84rpx; padding: 12rpx 24rpx; border-top: 1rpx solid var(--xa-color-border); }
-.order-card-actions > .small { flex: 1; font-size: 24rpx; }
-.order-card-actions .link { display: inline-flex; align-items: center; justify-content: center; min-height: var(--xa-control-compact); flex-shrink: 0; padding: 6rpx 18rpx; border: 1rpx solid #e9eefb; border-radius: 16rpx; font-size: var(--xa-control-small-font); line-height: 1.5; }
-.status-COMPLETED,.status-CANCELLED { color: var(--xa-color-muted); background: #f7f4ec; }
-.status-IN_SERVICE { color: var(--xa-color-primary); background: var(--xa-color-primary-soft); }
+.orders-page { background:var(--xa-color-page); }
+.orders-header { padding:24rpx; margin-bottom:24rpx; background:var(--xa-color-surface); border:1rpx solid var(--xa-color-border); border-radius:24rpx; }
+.orders-header .title { font-size:20px; }
+.orders-header .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.filter-scroll { width:100%; padding-top:16rpx; margin-top:18rpx; border-top:1rpx solid var(--xa-color-border); white-space:nowrap; }
+.filters { display:inline-flex; gap:10rpx; }
+.orders-page .filters .xa-button { flex-shrink:0; width:auto; min-height:30px; margin:0; padding:4px 12px; border-radius:12rpx; border-color:transparent; background:var(--xa-color-surface-subtle); font-size:var(--xa-control-small-font); font-weight:500; line-height:1.3; }
+.orders-page .filters .xa-button.chip-active { color:var(--xa-color-surface); background:var(--xa-color-primary); }
+.orders-page .order-card { padding:16rpx; margin-bottom:16rpx; border-radius:20rpx; }
+.order-card-header { display:flex; align-items:center; justify-content:space-between; gap:16rpx; margin-bottom:14rpx; }
+.order-number { flex:1; min-width:0; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.status-tag { display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; padding:3px 8px; border-radius:8rpx; background:var(--xa-color-primary-soft); color:var(--xa-color-primary); font-size:var(--xa-control-small-font); font-weight:600; line-height:1.3; white-space:nowrap; }
+.status-PENDING { background:rgba(var(--xa-warning-rgb),.1); color:var(--xa-color-warning); }
+.status-COMPLETED { background:rgba(var(--xa-success-rgb),.1); color:var(--xa-color-success); }
+.status-CANCELLED { background:var(--xa-color-surface-subtle); color:var(--xa-color-muted); }
+.order-main-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16rpx; }
+.order-service { flex:1; min-width:0; }
+.order-title { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; font-size:var(--xa-control-font); font-weight:600; line-height:1.35; overflow-wrap:anywhere; }
+.order-meta { display:flex; align-items:center; gap:8rpx; margin-top:6rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.4; }
+.order-provider { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.order-quantity { flex-shrink:0; padding-left:8rpx; border-left:1rpx solid var(--xa-color-border); white-space:nowrap; }
+.order-amount { flex:0 0 auto; min-width:0; max-width:48%; text-align:right; }
+.amount-label { display:block; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.4; }
+.amount-price { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:flex-end; gap:4rpx; margin-top:2rpx; }
+.order-price { color:var(--xa-color-primary); font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.25; white-space:nowrap; }
+.amount-unit { color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.4; white-space:nowrap; }
+.order-created { display:block; margin-top:8rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.4; }
+.lottery-result { display:flex; align-items:baseline; gap:8rpx; margin-top:10rpx; padding:8rpx 12rpx; border-radius:10rpx; background:var(--xa-color-primary-soft); color:var(--xa-color-primary); font-size:var(--xa-control-small-font); line-height:1.4; }
+.lottery-label { flex-shrink:0; }
+.lottery-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.order-card-actions { display:flex; align-items:center; justify-content:space-between; gap:16rpx; min-height:26px; padding-top:10rpx; margin-top:10rpx; border-top:1rpx solid var(--xa-color-border); }
+.order-progress { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.4; }
+.order-progress.needs-review { color:var(--xa-color-primary); font-weight:500; }
+.detail-link { display:flex; flex-shrink:0; align-items:center; gap:4rpx; color:var(--xa-color-primary); font-size:var(--xa-control-small-font); line-height:1.4; }
+.detail-link image { width:12px; height:12px; }
+.order-empty-actions { padding:16rpx; margin-bottom:0; border-radius:20rpx; }
+.orders-page .xa-button.browse { min-height:36px; margin:0; padding:6px 12px; border-radius:12rpx; font-size:var(--xa-control-small-font); }
+.order-card-hover { opacity:.82; }
+@media (prefers-reduced-motion:reduce) { .order-card-hover { opacity:1; } }

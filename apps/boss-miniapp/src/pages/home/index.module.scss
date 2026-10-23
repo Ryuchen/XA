@@ -9,7 +9,7 @@
 .header {
   margin: 32rpx $page-padding 0;
   padding: 32rpx;
-  background: linear-gradient(145deg,#17171c,#393440 62%,#657188);
+  background: linear-gradient(145deg,#17171c,#393440 62%,var(--xa-color-text-secondary));
   border-radius: 32rpx;
   box-shadow: 0 18rpx 44rpx rgba(30,25,36,.19);
 }
@@ -474,7 +474,7 @@
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
 }
-.emptyLoginBtn { padding:15rpx 30rpx; border-radius:18rpx; color:#fffdf5; font-size:24rpx; font-weight:650; background:$color-primary; }
+.emptyLoginBtn { padding:15rpx 30rpx; border-radius:18rpx; color:var(--xa-color-surface-card); font-size:24rpx; font-weight:650; background:$color-primary; }
 
 // 快捷下单
 .quickRow {
@@ -498,7 +498,7 @@
 }
 
 .quickCardAlt {
-  background: #fffdf5;
+  background: var(--xa-color-surface-card);
   border: 1rpx solid $color-border;
   box-shadow: $shadow-card;
 }

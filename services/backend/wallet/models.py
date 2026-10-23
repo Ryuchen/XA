@@ -143,6 +143,7 @@ class Transaction(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUCCESS, db_index=True)
     remark = models.CharField(max_length=255, blank=True, default='')
     external_tx_id = models.CharField(max_length=64, blank=True, default='')
+    reversal_of = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='reversals')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -199,6 +200,9 @@ class IncomeHold(models.Model):
     deposit_amount = models.PositiveIntegerField(default=0)
     release_at = models.DateTimeField(db_index=True)
     released_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    cancelled_by_refund = models.ForeignKey('orders.OrderRefund', on_delete=models.PROTECT, null=True, blank=True, related_name='cancelled_holds')
+    recovered_amount = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

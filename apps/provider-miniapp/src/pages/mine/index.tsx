@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image } from '@tarojs/components';
+import { Button, View, Text, Image } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import { clearStoredUser, getStoredUser, LoginUser } from '@/utils/auth';
 import { fetchEscortMe, EscortMeProfile, updateEscortStatus, EscortStatus } from '@/services/user';
@@ -154,11 +154,11 @@ const MinePage: React.FC = () => {
     <PlatformLayout active='mine'><View className={`xa-provider-page ${styles.container}`}>
       <PageHeading title='个人中心' hint='维护展示资料、服务档期与接单状态' />
       <View className={styles.header}>
-        <Image
+        {user?.avatar ? <Image
           className={styles.avatar}
-          src={user?.avatar || 'https://picsum.photos/id/1005/200/200'}
+          src={user.avatar}
           mode="aspectFill"
-        />
+        /> : <View className={`${styles.avatar} ${styles.avatarFallback}`}>{(profile?.display_name || user?.nickname || '陪玩').slice(0, 1)}</View>}
         <View className={styles.userDetail}>
           <Text className={styles.nickname}>{profile?.display_name || user?.nickname || '陪玩用户'}</Text>
           <Text className={styles.sub}>
@@ -166,9 +166,9 @@ const MinePage: React.FC = () => {
           </Text>
           {profile && (
             <View className={styles.badgeRow}>
-              <Text className={styles.statusSwitch} onClick={handleChangeStatus}>
+              <Button className={styles.statusSwitch} disabled={statusUpdating} aria-label='切换接单状态' onClick={handleChangeStatus}>
                 {STATUS_LABEL[profile.status] || profile.status} ▾
-              </Text>
+              </Button>
               {profile.is_verified ? (
                 <Text className={styles.badgeVerified}>已认证</Text>
               ) : (
@@ -201,7 +201,7 @@ const MinePage: React.FC = () => {
           <View className={styles.cardHeader}>
             <Text className={styles.cardTitle}>押金</Text>
             {deposit.deposit_remaining > 0 && deposit.deposit_mode !== 'EARNINGS' && (
-              <Text className={styles.cardAction} onClick={handlePayDeposit}>去缴纳</Text>
+              <Button className={styles.cardAction} onClick={handlePayDeposit}>去缴纳</Button>
             )}
           </View>
           <View className={styles.depositRow}>
@@ -235,9 +235,9 @@ const MinePage: React.FC = () => {
               {item.reply_content ? (
                 <Text className={styles.evalReply}>我的回复：{item.reply_content}</Text>
               ) : (
-                <Text className={styles.evalReplyBtn} onClick={() => setReplying(item)}>
+                <Button className={styles.evalReplyBtn} onClick={() => setReplying(item)}>
                   回复
-                </Text>
+                </Button>
               )}
             </View>
           ))}
@@ -245,37 +245,37 @@ const MinePage: React.FC = () => {
       )}
 
       <View className={styles.menuCard}>
-        <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/points/index' })}>
+        <Button className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/points/index' })}>
           <Text className={styles.menuIcon}>积</Text><Text className={styles.menuText}>我的积分与兑换</Text><Text className={styles.menuArrow}>›</Text>
-        </View>
-        <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/profile/index' })}>
+        </Button>
+        <Button className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/profile/index' })}>
           <Text className={styles.menuIcon}>档</Text>
           <Text className={styles.menuText}>资料与档期</Text>
           <Text className={styles.menuArrow}>›</Text>
-        </View>
-        <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/skills/index' })}>
+        </Button>
+        <Button className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/skills/index' })}>
           <Text className={styles.menuIcon}>技</Text>
           <Text className={styles.menuText}>我的技能</Text>
           <Text className={styles.menuArrow}>›</Text>
-        </View>
-        <View className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/evaluations/index' })}>
+        </Button>
+        <Button className={styles.menuItem} onClick={() => Taro.navigateTo({ url: '/pages/evaluations/index' })}>
           <Text className={styles.menuIcon}>评</Text>
           <Text className={styles.menuText}>评价管理</Text>
           {evaluations.some(item => !item.reply_content) && (
             <Text className={styles.menuBadge}>{evaluations.filter(item => !item.reply_content).length}</Text>
           )}
           <Text className={styles.menuArrow}>›</Text>
-        </View>
-        <View className={styles.menuItem} onClick={() => Taro.switchTab({ url: '/pages/wallet/index' })}>
+        </Button>
+        <Button className={styles.menuItem} onClick={() => Taro.switchTab({ url: '/pages/wallet/index' })}>
           <Text className={styles.menuIcon}>币</Text>
           <Text className={styles.menuText}>我的钱包</Text>
           <Text className={styles.menuArrow}>›</Text>
-        </View>
-        <View className={styles.menuItem} onClick={handleLogout}>
+        </Button>
+        <Button className={styles.menuItem} onClick={handleLogout}>
           <Text className={styles.menuIcon}>退</Text>
           <Text className={styles.menuText}>退出登录</Text>
           <Text className={styles.menuArrow}>›</Text>
-        </View>
+        </Button>
       </View>
       <ReplyDialog
         open={!!replying}

@@ -15,8 +15,8 @@ html.dark {
 .el-overlay.el-overlay { background-color: var(--modal-scrim); }
 
 .ap-modal.el-dialog {
-  --ap-control-height: 36px;
-  --ap-control-font-size: 14px;
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
   --el-dialog-padding-primary: 0;
   display: flex;
   flex-direction: column;
@@ -41,8 +41,8 @@ html.dark {
 }
 .ap-modal .el-dialog__header.show-close { padding-right: 68px; }
 :is(.ap-modal, .ap-panel, .el-message-box) :is(.el-input--small, .el-select--small, .el-input-number--small, .el-button--small, .el-range-editor--small, .el-cascader--small) {
-  --ap-control-height: 36px;
-  --ap-control-font-size: 14px;
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
 }
 :is(.ap-modal, .ap-panel) .el-table :is(.el-input, .el-select, .el-input-number, .el-button) {
   --ap-control-height: var(--control-height-sm);
@@ -55,7 +55,7 @@ html.dark {
     margin: 0;
     padding: 22px 68px 22px var(--modal-padding);
     border-bottom: 1px solid var(--border);
-    background: var(--card);
+    background: var(--xa-color-surface-subtle);
   }
   .el-dialog__title, .el-drawer__title {
     color: var(--foreground);
@@ -227,8 +227,8 @@ html.dark {
 .ap-modal :is(.es-form-section, .us-form-section, .bt-form-section, .wl-form-section, .od-form-section) .el-form-item { margin-bottom: 0; }
 .ap-modal :is(.es-form-section, .us-form-section, .bt-form-section, .wl-form-section, .od-form-section) .el-row { row-gap: var(--modal-field-gap); }
 .ap-panel.el-drawer {
-  --ap-control-height: 36px;
-  --ap-control-font-size: 14px;
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
   max-width: calc(100vw - 24px);
   border-left: 1px solid var(--border);
   box-shadow: var(--modal-shadow);
@@ -240,8 +240,8 @@ html.dark {
 .el-overlay-message-box { display: flex; align-items: center; justify-content: center; padding: 16px; overflow: hidden; }
 .el-overlay-message-box::after { display: none; }
 .el-message-box.el-message-box {
-  --ap-control-height: 36px;
-  --ap-control-font-size: 14px;
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
   display: flex;
   flex-direction: column;
   width: 440px;

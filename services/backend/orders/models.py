@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 
 def default_settlement_mode():
@@ -94,6 +95,9 @@ class Gameplay(models.Model):
 
 
 class ServiceItem(models.Model):
+    commission_override = models.BooleanField(default=False, help_text='显式自定义抽成；关闭时沿用原自动规则')
+    commission_type = models.CharField(max_length=10, choices=[('PERCENT','百分比'),('FIXED','整单固定金额')], default='PERCENT')
+    commission_fixed = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(2147483647)], help_text='整笔订单只扣一次；内部账务单位')
     class CommissionPolicy(models.TextChoices):
         LEGACY = 'LEGACY', '原有抽成规则'
         EXPERIENCE = 'EXPERIENCE', '体验单：低于100元抽3元，100元及以上抽10%'
@@ -196,6 +200,7 @@ class ServiceItem(models.Model):
             ),
         ]
         constraints = [
+            models.CheckConstraint(condition=models.Q(commission_type__in=['PERCENT','FIXED']), name='service_commission_type_valid'),
             models.CheckConstraint(
                 condition=models.Q(price__gt=0),
                 name='svc_item_price_positive',
@@ -267,6 +272,7 @@ class Order(models.Model):
         UNPAID = 'UNPAID', '未支付'
         PAID = 'PAID', '已支付'
         REFUNDED = 'REFUNDED', '已退款'
+        PARTIALLY_REFUNDED = 'PARTIALLY_REFUNDED', '部分退款'
 
     class EscortMode(models.TextChoices):
         SINGLE = 'SINGLE', '单陪'
@@ -281,6 +287,11 @@ class Order(models.Model):
     business_cycle = models.PositiveIntegerField(default=1, editable=False)
     experience_kind = models.CharField(max_length=16, blank=True, default='', editable=False)
     is_gift_snapshot = models.BooleanField(default=False, editable=False)
+    required_provider_count = models.PositiveSmallIntegerField(
+        null=True, blank=True, editable=False,
+        validators=[MinValueValidator(1), MaxValueValidator(2)],
+        help_text='新订单成交时需要的陪玩人数；历史订单为空，不从后改目录补推',
+    )
     report_ready_at = models.DateTimeField(null=True, blank=True, editable=False)
     consumption_ready_at = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
     consumption_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
@@ -337,6 +348,10 @@ class Order(models.Model):
         related_name='orders',
     )  # 命中的促销活动快照
     # 兴安币拆账字段（下单时按服务抽成率计算并以内部账务单位落库）
+    commission_type = models.CharField(max_length=10, choices=[('PERCENT','百分比'),('FIXED','整单固定金额')], default='PERCENT')
+    commission_fixed = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(2147483647)])  # 整单总扣额快照；旧逐人固定记录不回填
+    commission_override = models.BooleanField(default=False)  # 自定义比例须独立于资格档位冻结
+    commission_source = models.CharField(max_length=32, blank=True, default='')
     commission_rate = models.PositiveSmallIntegerField(default=0)  # 平台抽成率快照(%)
     commission_policy = models.CharField(max_length=12, choices=ServiceItem.CommissionPolicy.choices, default='LEGACY')
     income_hold_hours = models.PositiveSmallIntegerField(default=0)
@@ -408,6 +423,7 @@ class Order(models.Model):
                 condition=models.Q(game_rounds__gte=1),
                 name='order_rounds_positive',
             ),
+            models.CheckConstraint(condition=models.Q(commission_type__in=['PERCENT','FIXED']), name='order_commission_type_valid'),
             models.CheckConstraint(
                 condition=models.Q(commission_rate__range=(0, 100)),
                 name='order_commission_valid',
@@ -419,7 +435,7 @@ class Order(models.Model):
                 name='order_status_valid',
             ),
             models.CheckConstraint(
-                condition=models.Q(payment_status__in=['UNPAID', 'PAID', 'REFUNDED']),
+                condition=models.Q(payment_status__in=['UNPAID', 'PAID', 'REFUNDED','PARTIALLY_REFUNDED']),
                 name='order_payment_status_valid',
             ),
             # 资金守恒硬闸门：订单级三项分账之和不得超过实付金额。
@@ -442,6 +458,8 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.service_id:
+            if self.required_provider_count is None:
+                self.required_provider_count = self.service.billing_provider_count
             from .gameplay import make_order_snapshot
             from wallet.club_rules import order_hold_hours
             self.business_cycle = self.customer_account.business_cycle if self.customer_account_id else 1
@@ -454,7 +472,11 @@ class Order(models.Model):
             self.income_hold_hours = order_hold_hours()
             if self.inviter_id:
                 self.inviter_commission_rate_snapshot = self.customer_account.inviter_commission_rate if self.customer_account_id else self.customer.inviter_commission_rate
-            self.gameplay_snapshot, self.roulette_result = make_order_snapshot(self.service, self.game_rounds, companion_assignment=self.escort_mode == self.EscortMode.DOUBLE)
+            self.gameplay_snapshot, self.roulette_result = make_order_snapshot(
+                self.service, self.game_rounds,
+                companion_assignment=(self.escort_mode == self.EscortMode.DOUBLE
+                                      or self.required_provider_count == 2),
+            )
         if not self.order_no:
             self.order_no = f"ORD{uuid.uuid4().hex[:20].upper()}"
         if not self.service_name_snapshot and self.service_id:
@@ -984,11 +1006,46 @@ class AfterSale(models.Model):
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='aftersales')
     account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
     reason = models.CharField(max_length=1000)
-    status = models.CharField(max_length=16, default='OPEN', choices=[('OPEN', '处理中'), ('RESOLVED', '处理完成'), ('REFUNDED', '已退款')])
+    status = models.CharField(max_length=24, default='OPEN', choices=[('OPEN', '处理中'), ('RESOLVED', '处理完成'), ('REFUNDED', '已退款'), ('PARTIALLY_REFUNDED', '部分退款')])
     resolution = models.CharField(max_length=1000, blank=True)
     operator = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, related_name='+')
     created_at = models.DateTimeField(auto_now_add=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
+    history = models.JSONField(default=list, blank=True)
+    client_request_id = models.CharField(max_length=64, blank=True, default='')
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['order'], name='one_aftersale_per_order')]
+
+
+class OrderRefund(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='refund_records')
+    amount = models.PositiveIntegerField()
+    recovered_amount = models.PositiveIntegerField(default=0)
+    reason = models.CharField(max_length=1000)
+    operator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, related_name='+')
+    operator_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, related_name='+')
+    plan_fingerprint = models.CharField(max_length=64, blank=True)
+    client_request_id = models.CharField(max_length=64, null=True, blank=True)
+    request_fingerprint = models.CharField(max_length=64, blank=True)
+    benefit_effects = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['order','client_request_id'],name='unique_order_refund_request')]
+
+
+class OrderFinancialLock(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1)
+
+
+class RefundRecoveryLine(models.Model):
+    refund = models.ForeignKey(OrderRefund, on_delete=models.PROTECT, related_name='recovery_lines')
+    original_transaction = models.ForeignKey('wallet.Transaction', on_delete=models.PROTECT, related_name='refund_recoveries')
+    reversal_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT, related_name='refund_reversal')
+    wallet = models.ForeignKey('wallet.Wallet', on_delete=models.PROTECT)
+    source = models.CharField(max_length=24)
+    amount = models.IntegerField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['refund','original_transaction'],name='unique_refund_original_transaction')]

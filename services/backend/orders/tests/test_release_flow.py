@@ -240,6 +240,9 @@ class ReleaseFlowTest(APITestCase):
         self.assertIsNone(OrderProvider.objects.get(order=order, provider=second).released_at)
 
     def test_double_dispatch_settles_only_after_both_reports_pass(self):
+        self.service.price = 5000
+        self.service.billing_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count'])
         second = make_provider()
         second_account = get_or_create_account_for_legacy_user(second)
         self.accounts[second.pk] = second_account
@@ -287,15 +290,25 @@ class ReleaseFlowTest(APITestCase):
         self.service.price = 1
         self.service.save(update_fields=['price'])
         self.ok(self.recharge())
-        data = self.ok(self.client.post('/api/admin/orders/dispatch/', {
-            'customer_id': self.accounts[self.boss.pk].pk, 'service_id': self.service.pk,
-            'client_request_id': 'small-double-order', 'escort_mode': 'DOUBLE',
-            'providers': [
-                {'provider_id': self.accounts[self.provider.pk].pk, 'commission_rate': 0},
-                {'provider_id': account.pk, 'commission_rate': 0},
-            ],
-        }, format='json'))
-        order = Order.objects.get(pk=data['id'])
+        # Preserve an already-paid historical total-price DOUBLE order. New
+        # double packages now require per-person price x 2, but historical
+        # odd/zero shares must still fulfill and settle without being rewritten.
+        from orders.tests.factories import make_order
+        order = make_order(self.boss, service=self.service, provider=self.provider,
+            customer_account=self.accounts[self.boss.pk], provider_account=self.accounts[self.provider.pk],
+            amount=1, original_amount=1, provider_income=1, shop_income=0,
+            commission_rate=0, escort_mode='DOUBLE', status='GRABBED',
+            settlement_mode='REPORT_APPROVAL', required_provider_count=None)
+        Order.objects.filter(pk=order.pk).update(required_provider_count=None)
+        for user, member_account, base in [(self.provider,self.accounts[self.provider.pk],1),(second,account,0)]:
+            OrderProvider.objects.create(order=order, provider=user, provider_account=member_account,
+                settlement_base=base, provider_income=base, commission_rate=0)
+        boss_wallet = Wallet.objects.get(user=self.boss)
+        before = boss_wallet.balance
+        boss_wallet.balance -= 1
+        boss_wallet.save(update_fields=['balance'])
+        Transaction.objects.create(wallet=boss_wallet, order=order, tx_type='PAY', amount=-1,
+            balance_before=before, balance_after=boss_wallet.balance)
         self.finish(order)
         self.assertEqual(list(order.providers.order_by('id').values_list('settlement_base', flat=True)), [1, 0])
         self.assertEqual(ProviderReport.objects.filter(order=order).count(), 2)

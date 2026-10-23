@@ -407,6 +407,9 @@ class AdminQuickDispatchCapacityTest(_CapacityTestBase):
         _second, second_account, _profile = self._new_escort('阿乙')
         self._load_active(_second, second_account, 3)
         order_count = Order.objects.count()
+        self.service.price = 5000
+        self.service.billing_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count'])
 
         res = self.client.post(self.URL, {
             'customer_id': self.boss.id,
@@ -429,6 +432,9 @@ class AdminQuickDispatchCapacityTest(_CapacityTestBase):
         _second, second_account, _profile = self._new_escort('阿乙')
         self._load_active(self.provider, self.provider_account, 2)
         self._load_active(_second, second_account, 2)
+        self.service.price = 5000
+        self.service.billing_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count'])
 
         res = self.client.post(self.URL, {
             'customer_id': self.boss.id,

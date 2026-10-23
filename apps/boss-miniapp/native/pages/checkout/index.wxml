@@ -1,7 +1,135 @@
-<view class="page checkout"><view class="checkout-header"><text class="title">确认订单</text><text class="subtitle">核对服务信息，使用余额完成支付</text><view class="checkout-steps"><text>1 选择服务</text><text class="current">2 确认与支付</text><text>3 开始服务</text></view></view><button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后下单</button><state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
-<block wx:if="{{service && !loading && !error}}"><view class="panel row checkout-service"><image wx:if="{{service.cover}}" class="service-cover" src="{{service.cover}}" mode="aspectFit"/><view><text class="section-title">{{service.name}}</text><view wx:if="{{service.provider_requirement.label}}" class="small muted">{{service.provider_requirement.label}}</view><text class="price">{{service.priceText}}</text><text class="small muted"> 兴安币 / {{ service.price_unit || '份' }}</text></view></view>
-<view class="panel arrangement-panel"><text class="section-title">服务安排</text><text wx:if="{{trafficMode}}" class="small muted">当前{{trafficMode}}时段</text><text wx:if="{{!selfOrderEnabled}}" class="error">自主下单暂时关闭，请联系客服</text><picker wx:if="{{!provider}}" range="{{dispatchModes}}" value="{{dispatchIndex}}" bindchange="dispatch" disabled="{{submitting}}"><view class="menu-row"><text>接单方式</text><text class="muted">{{dispatchModes[dispatchIndex]}} ›</text></view></picker><text wx:if="{{!provider}}" class="small muted">{{dispatchIndex === 1 ? '合格陪玩抢到后直接接单' : '陪玩申请后，由你在订单详情选择'}}</text><view class="field"><text class="label">购买数量</text><input class="input" type="number" value="{{rounds}}" data-field="rounds" disabled="{{submitting || !!service.experience_kind || service.gameplay_kind === 'ROULETTE'}}" bindinput="input" maxlength="2"/></view><picker wx:if="{{service.service_type === 'COMPANION'}}" range="{{genderOptions}}" value="{{genderIndex}}" bindchange="gender" disabled="{{submitting}}"><view class="menu-row"><text>男陪 / 女陪</text><text class="muted">{{genderOptions[genderIndex]}} ›</text></view></picker><view class="menu-row" bindtap="chooseProvider"><text>指定陪玩</text><text class="muted">{{provider ? provider.nickname : '平台安排'}} ›</text></view><picker range="{{contacts}}" range-key="name" value="{{contactIndex}}" bindchange="contact" disabled="{{submitting}}"><view class="menu-row"><text>对接客服</text><text class="muted">{{contacts[contactIndex].name}} ›</text></view></picker></view>
-<view class="panel companion-shortcuts"><text class="section-title">挑选陪玩</text><text wx:if="{{shortcutsLoading}}" class="small muted">正在加载陪玩</text><block wx:else><view class="shortcut-heading">最近点过</view><view class="shortcut-grid"><button wx:for="{{recent}}" wx:key="id" class="xa-button shortcut-card {{provider.id === item.id ? 'shortcut-selected' : ''}} {{!item.can_order ? 'shortcut-unavailable' : ''}}" data-id="{{item.id}}" bindtap="selectShortcut" disabled="{{submitting || !item.can_order}}" hover-class="xa-button-hover"><image wx:if="{{item.avatarUrl}}" class="shortcut-avatar" src="{{item.avatarUrl}}" mode="aspectFill"/><view wx:else class="shortcut-avatar shortcut-initial">{{item.initial}}</view><text class="shortcut-name">{{item.nickname}}</text><text class="small muted">{{item.can_order ? (item.genderText || '陪玩') : '暂不可接'}}</text></button></view><text wx:if="{{!recent.length}}" class="small muted">暂无符合当前选择的下单记录</text><view class="shortcut-heading">推荐陪玩</view><view class="shortcut-grid"><button wx:for="{{recommended}}" wx:key="id" class="xa-button shortcut-card {{provider.id === item.id ? 'shortcut-selected' : ''}} {{!item.can_order ? 'shortcut-unavailable' : ''}}" data-id="{{item.id}}" bindtap="selectShortcut" disabled="{{submitting || !item.can_order}}" hover-class="xa-button-hover"><image wx:if="{{item.avatarUrl}}" class="shortcut-avatar" src="{{item.avatarUrl}}" mode="aspectFill"/><view wx:else class="shortcut-avatar shortcut-initial">{{item.initial}}</view><text class="shortcut-name">{{item.nickname}}</text><text class="small muted">{{item.can_order ? (item.genderText || '陪玩') : '暂不可接'}}</text></button></view><text wx:if="{{!recommended.length}}" class="small muted">暂无符合当前选择的推荐陪玩</text></block><view wx:if="{{shortcutsError}}"><text class="error">{{shortcutsError}}</text><button class="xa-button button-secondary" bindtap="loadShortcuts">重新加载</button></view></view>
-<view class="panel game-info-panel"><text class="section-title">游戏信息</text><view class="field"><text class="label">游戏大区 *</text><input class="input" value="{{region}}" data-field="region" maxlength="50" bindinput="input" disabled="{{submitting}}" placeholder="微信区 / QQ区 / 国服"/></view><view class="field"><text class="label">游戏昵称 *</text><input class="input" value="{{nickname}}" data-field="nickname" maxlength="50" bindinput="input" disabled="{{submitting}}" placeholder="填写本次游戏昵称"/></view><view class="field"><text class="label">游戏 UID</text><input class="input" value="{{uid}}" data-field="uid" maxlength="50" bindinput="input" disabled="{{submitting}}" placeholder="便于陪玩找到你"/></view><view class="field"><text class="label">服务备注</text><textarea class="input" value="{{remark}}" data-field="remark" maxlength="255" bindinput="input" disabled="{{submitting}}" placeholder="说明你的偏好与需求"/></view></view>
-<view class="panel payment-panel"><text class="section-title">优惠与支付</text><picker range="{{coupons}}" range-key="name" value="{{couponIndex}}" bindchange="coupon" disabled="{{submitting}}"><view class="menu-row"><text>{{service.experience_kind ? '套餐资格' : '优惠券'}}</text><text class="muted">{{coupons[couponIndex].name}} ›</text></view></picker><text wx:if="{{quoting}}" class="loading">正在获取最新报价</text><block wx:if="{{quote}}"><view class="between"><text class="muted">原价</text><text>{{quote.originalText}} 兴安币</text></view><view wx:if="{{quote.boss_discount}}" class="between"><text class="muted">会员优惠</text><text>-{{quote.bossText}}</text></view><view wx:if="{{quote.promo_discount}}" class="between"><text class="muted">活动优惠</text><text>-{{quote.promotionText}}</text></view><view wx:if="{{quote.coupon_discount}}" class="between"><text class="muted">优惠券抵扣</text><text>-{{quote.couponText}}</text></view><view class="divider"></view><view class="between"><text>实付</text><text class="price">{{quote.amountText}} <text class="small">兴安币</text></text></view><text class="subtitle small">可用余额 {{quote.balanceText}} 兴安币</text><button wx:if="{{!quote.balance_sufficient}}" class="xa-button button-secondary" bindtap="recharge" hover-class="xa-button-hover">余额不足，联系客服充值</button></block><text wx:if="{{quoteError}}" class="error">{{quoteError}}</text><button wx:if="{{quoteError}}" class="xa-button button-secondary" bindtap="refreshQuote" disabled="{{submitting}}" hover-class="xa-button-hover">刷新报价</button></view>
-<view class="bottom-bar"><button class="xa-button button" loading="{{submitting}}" disabled="{{submitting || quoting || !quote || !quote.balance_sufficient || !selfOrderEnabled}}" bindtap="submit" hover-class="xa-button-hover">{{submitting ? '正在处理，请勿重复支付' : '确认并支付 ' + (quote.amountText || '') + ' 兴安币'}}</button></view></block></view>
+<view class="page checkout">
+  <view class="checkout-header">
+    <text class="title">确认订单</text>
+    <text class="subtitle">核对服务与游戏信息，使用余额支付</text>
+    <view class="checkout-steps"><text>1 选择服务</text><text class="current">2 确认订单</text><text>3 开始服务</text></view>
+  </view>
+  <view wx:if="{{!logged}}" class="panel"><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后下单</button></view>
+  <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
+  <block wx:if="{{service && !loading && !error}}">
+    <view class="panel checkout-service">
+      <text class="section-title">服务信息</text>
+      <view class="service-summary">
+        <image wx:if="{{service.cover}}" class="service-cover" src="{{service.cover}}" mode="aspectFit" aria-hidden="true"/>
+        <view class="service-content">
+          <text class="service-name">{{service.name}}</text>
+          <view class="service-meta">
+            <text wx:if="{{service.platform_name}}" class="service-tag">{{service.platform_name}}</text>
+            <text wx:if="{{service.security_level && service.security_level !== 'ANY'}}" class="service-tag">{{service.security_level_name}}</text>
+            <text wx:if="{{service.provider_requirement.label}}" class="service-requirement">{{service.provider_requirement.label}}</text>
+          </view>
+          <view class="service-price"><text class="price">{{service.priceText}}</text><text class="price-unit">兴安币 / {{service.price_unit || '份'}}</text></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="panel arrangement-panel">
+      <view class="section-heading"><text class="section-title">服务安排</text><text wx:if="{{trafficMode}}" class="section-note">{{trafficMode}}时段</text></view>
+      <text wx:if="{{!selfOrderEnabled}}" class="error arrangement-error">自主下单暂时关闭，请联系客服</text>
+      <view class="quantity-row">
+        <label class="row-label" for="checkout-rounds">购买数量</label>
+        <view class="quantity-control">
+          <input id="checkout-rounds" class="input quantity-input" type="number" value="{{rounds}}" data-field="rounds" disabled="{{submitting || service.fixedRounds}}" bindinput="input" maxlength="2" cursor-spacing="150" aria-label="购买数量"/>
+          <text class="quantity-unit">{{service.price_unit || '份'}}</text>
+        </view>
+      </view>
+      <view wx:if="{{!provider && selectionLimit === 1}}" class="setting-group">
+        <picker range="{{dispatchModes}}" value="{{dispatchIndex}}" bindchange="dispatch" disabled="{{submitting}}">
+          <view class="setting-row"><text class="row-label">接单方式</text><view class="row-value"><text>{{dispatchModes[dispatchIndex]}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
+        </picker>
+        <text class="field-hint">{{dispatchIndex === 1 ? '合格陪玩抢到后直接接单' : '陪玩申请后，由你在订单详情选择'}}</text>
+      </view>
+      <picker wx:if="{{service.service_type === 'COMPANION'}}" class="setting-group" range="{{genderOptions}}" value="{{genderIndex}}" bindchange="gender" disabled="{{submitting}}">
+        <view class="setting-row"><text class="row-label">男陪 / 女陪</text><view class="row-value"><text>{{genderOptions[genderIndex]}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
+      </picker>
+      <picker class="setting-group" range="{{contacts}}" range-key="name" value="{{contactIndex}}" bindchange="contact" disabled="{{submitting}}">
+        <view class="setting-row"><text class="row-label">对接客服</text><view class="row-value"><text>{{contacts[contactIndex].name}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
+      </picker>
+    </view>
+
+    <view class="panel companion-shortcuts">
+      <view class="section-heading"><text class="section-title">挑选陪玩</text><text class="section-note">{{selectionLimit === 2 ? '双陪套餐 · 2位' : '单陪套餐 · 1位'}}</text></view>
+      <button class="xa-button provider-select {{providers.length ? 'provider-selected' : ''}}" bindtap="chooseProvider" disabled="{{submitting}}" hover-class="xa-button-hover" aria-label="{{providers.length ? '已选陪玩' + selectedNames + '，点击重新选择' : '指定陪玩，当前由平台安排'}}">
+        <view wx:if="{{providers.length}}" class="selected-provider-list">
+          <view wx:for="{{providers}}" wx:key="id" class="selected-provider">
+            <image wx:if="{{item.avatarUrl}}" class="selected-provider-avatar" src="{{item.avatarUrl}}" mode="aspectFill" aria-hidden="true"/>
+            <view wx:else class="selected-provider-avatar selected-provider-initial" aria-hidden="true">{{item.initial || '陪'}}</view>
+            <view class="selected-provider-info"><text class="selected-provider-label">{{selectionLimit === 2 ? '陪玩 ' + (index + 1) : '已选陪玩'}}</text><text class="selected-provider-name">{{item.nickname}}</text></view>
+          </view>
+        </view>
+        <text wx:else class="row-label">指定陪玩</text>
+        <view class="row-value provider-select-action"><text>{{providers.length ? (selectionComplete ? '重新选择' : '继续选择') : '平台安排'}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view>
+      </button>
+      <text class="field-hint selection-hint {{!selectionComplete ? 'selection-incomplete' : ''}}">{{providers.length ? '已选 ' + providers.length + ' / ' + selectionLimit + ' 位' + (selectionComplete ? '，套餐价格不变' : '，请再选择1位陪玩') : '可指定' + selectionLimit + '位陪玩，也可由平台安排'}}</text>
+      <text wx:if="{{shortcutsLoading}}" class="field-hint shortcut-loading">正在加载陪玩…</text>
+      <block wx:else>
+        <view class="shortcut-group">
+          <text class="shortcut-heading">最近点过</text>
+          <view wx:if="{{recent.length}}" class="shortcut-grid">
+            <button wx:for="{{recent}}" wx:key="id" class="xa-button shortcut-card {{item.selected ? 'shortcut-selected' : ''}} {{!item.can_order ? 'shortcut-unavailable' : ''}}" data-id="{{item.id}}" bindtap="selectShortcut" disabled="{{submitting || !item.can_order}}" hover-class="xa-button-hover" aria-label="{{item.nickname + (item.selected ? '，已选，点击取消' : item.can_order ? '，选择陪玩' : '，暂不可接')}}" aria-pressed="{{item.selected}}">
+              <image wx:if="{{item.avatarUrl}}" class="shortcut-avatar" src="{{item.avatarUrl}}" mode="aspectFill" aria-hidden="true"/><view wx:else class="shortcut-avatar shortcut-initial" aria-hidden="true">{{item.initial}}</view>
+              <text class="shortcut-name">{{item.nickname}}</text><text class="shortcut-status">{{item.selected ? '已选择' : (item.can_order ? (item.genderText || '陪玩') : '暂不可接')}}</text>
+            </button>
+          </view>
+          <text wx:else class="empty-hint">暂无符合当前选择的下单记录</text>
+        </view>
+        <view class="shortcut-group">
+          <text class="shortcut-heading">推荐陪玩</text>
+          <view wx:if="{{recommended.length}}" class="shortcut-grid">
+            <button wx:for="{{recommended}}" wx:key="id" class="xa-button shortcut-card {{item.selected ? 'shortcut-selected' : ''}} {{!item.can_order ? 'shortcut-unavailable' : ''}}" data-id="{{item.id}}" bindtap="selectShortcut" disabled="{{submitting || !item.can_order}}" hover-class="xa-button-hover" aria-label="{{item.nickname + (item.selected ? '，已选，点击取消' : item.can_order ? '，选择陪玩' : '，暂不可接')}}" aria-pressed="{{item.selected}}">
+              <image wx:if="{{item.avatarUrl}}" class="shortcut-avatar" src="{{item.avatarUrl}}" mode="aspectFill" aria-hidden="true"/><view wx:else class="shortcut-avatar shortcut-initial" aria-hidden="true">{{item.initial}}</view>
+              <text class="shortcut-name">{{item.nickname}}</text><text class="shortcut-status">{{item.selected ? '已选择' : (item.can_order ? (item.genderText || '陪玩') : '暂不可接')}}</text>
+            </button>
+          </view>
+          <text wx:else class="empty-hint">暂无符合当前选择的推荐陪玩</text>
+        </view>
+      </block>
+      <view wx:if="{{shortcutsError}}"><text class="error">{{shortcutsError}}</text><button class="xa-button button-secondary" bindtap="loadShortcuts" disabled="{{submitting}}" hover-class="xa-button-hover">重新加载</button></view>
+    </view>
+
+    <view class="panel game-info-panel">
+      <view class="section-heading"><text class="section-title">游戏信息</text><text class="section-note">* 为必填项</text></view>
+      <view class="game-fields">
+        <view class="field"><label class="label" for="checkout-region">游戏大区 <text class="required">*</text></label><input id="checkout-region" class="input" value="{{region}}" data-field="region" maxlength="50" bindinput="input" disabled="{{submitting}}" placeholder="微信区 / QQ区 / 国服" cursor-spacing="150" aria-label="游戏大区，必填"/></view>
+        <view class="field"><label class="label" for="checkout-nickname">游戏昵称 <text class="required">*</text></label><input id="checkout-nickname" class="input" value="{{nickname}}" data-field="nickname" maxlength="50" bindinput="input" disabled="{{submitting}}" placeholder="填写本次游戏昵称" cursor-spacing="150" aria-label="游戏昵称，必填"/></view>
+        <view class="field"><label class="label" for="checkout-uid">游戏 UID</label><input id="checkout-uid" class="input" value="{{uid}}" data-field="uid" maxlength="50" bindinput="input" disabled="{{submitting}}" placeholder="便于陪玩找到你（选填）" cursor-spacing="150" aria-label="游戏 UID，选填"/></view>
+        <view class="field"><label class="label" for="checkout-remark">服务备注</label><textarea id="checkout-remark" class="input" value="{{remark}}" data-field="remark" maxlength="255" bindinput="input" disabled="{{submitting}}" placeholder="说明你的偏好与需求（选填）" cursor-spacing="150" aria-label="服务备注，选填"/></view>
+      </view>
+    </view>
+
+    <view class="panel payment-panel">
+      <text class="section-title">优惠与支付</text>
+      <picker class="coupon-picker" range="{{coupons}}" range-key="name" value="{{couponIndex}}" bindchange="coupon" disabled="{{submitting}}">
+        <view class="setting-row"><text class="row-label">{{service.experience_kind ? '套餐资格' : '优惠券'}}</text><view class="row-value"><text>{{coupons[couponIndex].name || '暂无可用资格券'}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
+      </picker>
+      <text wx:if="{{quoting}}" class="quote-loading">正在获取最新报价…</text>
+      <block wx:if="{{quote}}">
+        <view class="fee-breakdown">
+          <view class="fee-row"><text class="muted">服务原价</text><text>{{quote.originalText}} 兴安币</text></view>
+          <view wx:if="{{quote.boss_discount}}" class="fee-row"><text class="muted">会员优惠</text><text class="discount">-{{quote.bossText}} 兴安币</text></view>
+          <view wx:if="{{quote.promo_discount}}" class="fee-row"><text class="muted">活动优惠</text><text class="discount">-{{quote.promotionText}} 兴安币</text></view>
+          <view wx:if="{{quote.coupon_discount}}" class="fee-row"><text class="muted">优惠券抵扣</text><text class="discount">-{{quote.couponText}} 兴安币</text></view>
+        </view>
+        <view class="fee-row total-row"><text>应付金额</text><view class="total-value"><text class="price">{{quote.amountText}}</text><text class="price-unit">兴安币</text></view></view>
+        <view class="balance-summary"><view class="fee-row"><text>余额支付</text><text>可用 {{quote.balanceText}} 兴安币</text></view><text wx:if="{{!quote.balance_sufficient}}" class="balance-warning">余额不足，请先联系客服充值</text></view>
+        <button wx:if="{{!quote.balance_sufficient}}" class="xa-button button-secondary recharge-button" bindtap="recharge" disabled="{{submitting}}" hover-class="xa-button-hover">联系客服充值</button>
+      </block>
+      <text wx:if="{{quoteError}}" class="error quote-error">{{quoteError}}</text><button wx:if="{{quoteError}}" class="xa-button button-secondary" bindtap="refreshQuote" disabled="{{submitting}}" hover-class="xa-button-hover">刷新报价</button>
+    </view>
+
+    <view class="bottom-bar checkout-payment">
+      <view class="payment-actions">
+        <view class="payable-summary">
+          <text class="payable-label">应付</text>
+          <view wx:if="{{quote}}" class="payable-value"><text class="payable-amount">{{quote.amountText}}</text><text class="payable-unit">兴安币</text></view>
+          <text wx:else class="payable-pending">{{quoting ? '正在报价…' : '报价待确认'}}</text>
+        </view>
+        <button class="xa-button button submit-order" loading="{{submitting}}" disabled="{{submitting || quoting || !quote || !quote.balance_sufficient || !selfOrderEnabled || !selectionComplete}}" bindtap="submit" hover-class="xa-button-hover">{{submitting ? '正在提交' : '提交订单'}}</button>
+      </view>
+      <text wx:if="{{quoteError}}" class="payment-status payment-warning">报价异常，请核对费用明细</text>
+      <text wx:elif="{{!selfOrderEnabled}}" class="payment-status payment-warning">自主下单暂时关闭，请联系客服</text>
+      <text wx:elif="{{quote && !quote.balance_sufficient}}" class="payment-status payment-warning">余额不足，请先联系客服充值</text>
+    </view>
+  </block>
+</view>
+<bottom-navigation/>

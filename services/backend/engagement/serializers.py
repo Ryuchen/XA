@@ -61,6 +61,13 @@ def rich_text(value):
 
 
 class RewardSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if self.context.get('display_images'):
+            from common.catalog_images import catalog_display_url
+            data['image_url'] = catalog_display_url(data['image_url'])
+        return data
+
     kind_label = serializers.CharField(source='get_kind_display', read_only=True)
     class Meta:
         model = RewardItem
@@ -243,17 +250,53 @@ class TierSerializer(serializers.ModelSerializer):
         return attrs
 
 
+def lottery_daily_remaining(account, campaign):
+    if not account or not campaign.daily_limit:
+        return None
+    from django.utils import timezone
+    from .models import LotteryDraw
+    used = LotteryDraw.objects.filter(account=account, campaign=campaign, business_cycle=account.business_cycle,
+        created_at__date=timezone.localdate()).count()
+    return max(0, campaign.daily_limit - used)
+
+
 class CampaignSerializer(serializers.ModelSerializer):
     prizes = serializers.SerializerMethodField()
+    pity = serializers.SerializerMethodField()
+    draw_counts = serializers.SerializerMethodField()
+    ten_draw_cost = serializers.SerializerMethodField()
+    daily_remaining = serializers.SerializerMethodField()
+    ten_guarantee = serializers.SerializerMethodField()
     class Meta:
         model = LotteryCampaign
         fields = '__all__'
         read_only_fields = ['version']
     def get_prizes(self, obj):
+        from common.catalog_images import catalog_display_url
+        from .services import lottery_rarity
         return [{'id': row.pk, 'reward': row.reward_id, 'name': row.reward.name,
-            'kind': row.reward.kind, 'image_url': row.reward.image_url,
+            'reward_code': row.reward.code, 'rarity': lottery_rarity(row.reward),
+            'kind': row.reward.kind, 'image_url': catalog_display_url(row.reward.image_url) if self.context.get('display_images') else row.reward.image_url,
             'probability': row.probability, 'sort_order': row.sort_order}
             for row in obj.prizes.select_related('reward').all()]
+
+    def get_pity(self, obj):
+        from .services import lottery_pity
+        account = self.context.get('account')
+        return lottery_pity(account, obj, count=0 if account is None else None)
+
+    def get_draw_counts(self, obj):
+        return [1, 10]
+
+    def get_ten_draw_cost(self, obj):
+        return obj.point_cost * 10
+
+    def get_daily_remaining(self, obj):
+        return lottery_daily_remaining(self.context.get('account'), obj)
+
+    def get_ten_guarantee(self, obj):
+        from .services import lottery_ten_guarantee
+        return lottery_ten_guarantee(obj)
 
 
 class GiftBenefitSerializer(serializers.ModelSerializer):

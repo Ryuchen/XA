@@ -62,16 +62,18 @@ def gift_context(request, *, order_id=None, provider_id=None, lock=False):
     )
     if order_id is not None:
         order_id = positive_id(order_id, '原订单编号')
-        orders = Order.objects.select_related('service__service_category', 'support_contact')
+        orders = Order.objects.all()
         if lock:
             orders = orders.select_for_update()
+        else:
+            orders = orders.select_related('service__service_category', 'support_contact')
         source = orders.filter(
             Q(customer_account=request.account)
             | Q(customer_account__isnull=True, customer=request.legacy_user), pk=order_id,
         ).first()
         if source is None:
             raise ValidationError('原订单不存在')
-        if source.status != Order.Status.COMPLETED or source.payment_status != Order.PaymentStatus.PAID:
+        if source.status != Order.Status.COMPLETED or source.payment_status not in (Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED):
             raise ValidationError('服务完成后才可以赠送礼物')
         if source.source_order_id or (source.service.service_category and source.service.service_category.is_gift):
             raise ValidationError('礼物单不能重复打赏')

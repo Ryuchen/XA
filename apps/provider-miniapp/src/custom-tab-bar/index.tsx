@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import Taro from '@tarojs/taro';
-import { View, Text } from '@tarojs/components';
+import { Button, View, Text } from '@tarojs/components';
 import TabIcon from '@/components/TabIcon';
 import styles from './index.module.scss';
 
@@ -43,16 +43,18 @@ export default class CustomTabBar extends Component<{ active?: 'orders' | 'repor
         {TAB_LIST.map((item, index) => {
           const active = selected === index;
           return (
-            <View
+            <Button
               key={item.pagePath}
               className={`${styles.tabItem} ${active ? styles.tabItemActive : ''}`}
+              aria-label={item.text}
+              aria-current={active ? 'page' : undefined}
               onClick={() => this.switchTab(item.pagePath)}
             >
               <View className={styles.iconWrap}>
-                <TabIcon name={item.icon} color={active ? '#002fa7' : '#8E8E93'} />
+                <TabIcon name={item.icon} color={active ? '#136398' : '#336b9a'} />
               </View>
               <Text className={`${styles.tabText} ${active ? styles.tabTextActive : ''}`}>{item.text}</Text>
-            </View>
+            </Button>
           );
         })}
       </View>

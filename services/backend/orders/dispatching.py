@@ -22,7 +22,8 @@ def eligibility_error(order):
         return '订单已经指定打手'
     if order.auto_cancel_at and order.auto_cancel_at <= timezone.now():
         return '订单接单时间已过期'
-    if order.escort_mode != Order.EscortMode.SINGLE:
+    from .team_rules import required_team_size
+    if required_team_size(order) != 1:
         return '双陪订单请直接指定两名打手，避免将汇总单钱误认为个人单钱'
     if order.source_order_id or (order.service.service_category and order.service.service_category.is_gift):
         return '礼物订单不进入接单频道'

@@ -33,6 +33,7 @@ from django.utils import timezone
 from common.logging_utils import log_money_event, new_trace_id
 from users.models import EscortProfile
 from wallet.models import ProviderReport, Transaction, get_platform_wallet
+from wallet.notifier import notify_wallet_update
 from wallet.services import get_wallet
 
 from .models import Order, OrderProvider, ProviderDispatchLock
@@ -72,7 +73,7 @@ def sync_single_provider_share(order):
         return
     previous = order.providers.first()
     club_share = None
-    if order.commission_policy != 'LEGACY':
+    if order.commission_policy != 'LEGACY' or order.commission_type == 'FIXED' or order.commission_override:
         from .pricing import club_provider_specs
         from .settlement import build_provider_shares, aggregate_order_split
         profile = EscortProfile.objects.select_related('level').get(user_id=order.provider_id)
@@ -90,7 +91,7 @@ def sync_single_provider_share(order):
     # 兼容旧版本拒单后未释放的参与明细；未开工的回池单没有历史履约收益。
     if not order.in_service_at:
         order.providers.exclude(provider_id=order.provider_id).filter(settled_at__isnull=True).update(
-            settlement_base=0, provider_income=0, released_at=timezone.now(),
+            settlement_base=0, provider_income=0, commission_fixed=0, released_at=timezone.now(),
         )
     OrderProvider.objects.update_or_create(
         order=order, provider_id=order.provider_id,
@@ -111,7 +112,7 @@ def release_rejected_provider(order):
     """未开始服务的拒单不产生收益，保留参与记录但释放份额和名额。"""
     if order.providers.filter(settled_at__isnull=False).exists():
         raise SettlementError('订单已有结算记录，不能拒单回池')
-    order.providers.update(settlement_base=0, provider_income=0, released_at=timezone.now())
+    order.providers.update(settlement_base=0, provider_income=0, commission_fixed=0, released_at=timezone.now())
 
 
 # ---------------------------------------------------------------------------
@@ -407,6 +408,10 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
     """
     if order.settled_at:
         return []
+    from .financial_lock import lock_order_money
+    lock_order_money()
+    if order.customer_account_id or order.customer_id:
+        get_wallet(account_id=order.customer_account_id, user_id=order.customer_id, for_update=True)
     if order.payment_status != Order.PaymentStatus.PAID:
         raise SettlementError('订单未付款或已退款，无法结算')
     if order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL:
@@ -554,7 +559,7 @@ def ensure_fulfillment_reports(order):
     for user_id, account_id, amount, rate in participants:
         if not user_id:
             continue
-        report, _ = ProviderReport.objects.get_or_create(
+        report, created = ProviderReport.objects.get_or_create(
             provider_id=user_id, order=order,
             defaults={
                 'provider_account_id': account_id, 'amount': amount,
@@ -567,6 +572,9 @@ def ensure_fulfillment_reports(order):
             report.amount = amount
             report.commission_rate = rate
             report.save(update_fields=['amount', 'commission_rate', 'updated_at'])
+        if created:
+            from .notifier import notify_report_update
+            transaction.on_commit(lambda report=report: notify_report_update(report))
 
 
 def complete_fulfillment(order, *, operator=None, operator_account=None):
@@ -648,63 +656,73 @@ def approve_order_report(report_id, *, operator, operator_account):
         preview='收益已结算到账' if order.settled_at else '凭证已通过，全部打手审核通过且售后期结束后自动结算',
         msg_type='ORDER', related_order_id=order.pk,
     ))
+    from .notifier import notify_report_update
+    transaction.on_commit(lambda: notify_report_update(report))
     return report
 
-def refund_to_customer(order, reason='订单退款', *, trace_id=None):
-    """全额退款到客户钱包并写流水。必须在 ``transaction.atomic`` 中调用。
-
-    普通优惠券退回未使用状态；资格券按核销时冻结的政策保持已使用。
-
-    Args:
-        order: 待退款订单（调用方负责加锁）。
-        reason: 流水备注前缀。
-        trace_id: 追踪 ID；不传则自动生成。
-    """
-    if order.payment_status != Order.PaymentStatus.PAID:
-        return
+@transaction.atomic
+def refund_to_customer(order, reason='订单退款', *, trace_id=None, operator=None, operator_account=None,
+                       allow_settled_recovery=False, plan_token=None, refund_amount=None, client_request_id=None):
+    """Refund an authorized amount; caller holds the order and saves its state."""
+    from .financial_lock import lock_order_money
+    from .refunds import (PAID_STATES, posted_settlement, recover_settlement, authorized_refund,
+                          refunded_amount, parse_refund_amount, replay_refund, request_fingerprint, RefundError)
+    from .models import OrderRefund
+    existing = replay_refund(order,client_request_id,refund_amount,reason)
+    if existing:
+        order._refund_replayed = True
+        return existing
+    if order.payment_status not in PAID_STATES:
+        # Ordinary cancellation can still close an unpaid legacy order.
+        return None
+    lock_order_money()
+    prior = refunded_amount(order)
+    amount = parse_refund_amount(refund_amount,order.amount-prior)
+    if amount <= 0:
+        raise RefundError('订单已无可退余款',code='REFUND_INVALID_AMOUNT')
+    settled = posted_settlement(order)
+    full = prior+amount == order.amount
+    if not full and (not settled or order.status != 'COMPLETED'):
+        raise RefundError('仅已结算完成订单支持部分退款',code='REFUND_PARTIAL_UNSETTLED')
+    if not full and not client_request_id:
+        raise RefundError('部分退款须提供操作凭证',code='REFUND_INVALID_REQUEST')
+    if settled and not (allow_settled_recovery and authorized_refund(operator_account)):
+        raise SettlementError('已结算订单仅可由有退款权限的后台核算追回')
     from engagement.confirmation import aftersale_deadline
     cutoff = aftersale_deadline(order)
-    if order.consumption_confirmed_at or (cutoff and timezone.now() >= cutoff and not order.aftersales.filter(status='OPEN').exists()):
+    if not settled and (order.consumption_confirmed_at or (cutoff and timezone.now() >= cutoff and not order.aftersales.filter(status='OPEN').exists())):
         raise SettlementError('售后期限已结束，订单不再支持退款')
     trace_id = trace_id or new_trace_id()
-    customer_wallet = get_wallet(
-        user_id=order.customer_id,
-        account_id=order.customer_account_id,
-        for_update=True,
-    )
-    balance_before = customer_wallet.balance
-    customer_wallet.balance += order.amount
+    customer_wallet = get_wallet(user_id=order.customer_id,account_id=order.customer_account_id,for_update=True)
+    refund = OrderRefund.objects.create(order=order,amount=amount,reason=reason,operator=operator,operator_account=operator_account,
+        client_request_id=client_request_id or None,request_fingerprint=request_fingerprint(amount,reason))
+    changed_wallets = [customer_wallet]
+    if settled:
+        changed_wallets += recover_settlement(order,refund,plan_token=plan_token,operator=operator,operator_account=operator_account)
+        customer_wallet.refresh_from_db()
+    before = customer_wallet.balance
+    customer_wallet.balance += amount
     customer_wallet.save(update_fields=['balance'])
-    Transaction.objects.create(
-        wallet=customer_wallet,
-        order=order,
-        amount=order.amount,
-        tx_type=Transaction.TxType.REFUND,
-        balance_before=balance_before,
-        balance_after=customer_wallet.balance,
-        remark=f'{reason}：{order.order_no}',
-    )
-    log_money_event(
-        'order.refund',
-        account_id=order.customer_account_id,
-        user_id=order.customer_id,
-        order_no=order.order_no,
-        order_id=order.pk,
-        tx_type=Transaction.TxType.REFUND,
-        amount=order.amount,
-        balance_before=balance_before,
-        balance_after=customer_wallet.balance,
-        trace_id=trace_id,
-        reason=reason,
-    )
-    order.payment_status = Order.PaymentStatus.REFUNDED
+    Transaction.objects.create(wallet=customer_wallet,order=order,amount=amount,tx_type=Transaction.TxType.REFUND,
+        balance_before=before,balance_after=customer_wallet.balance,remark=f'{reason}：{order.order_no}',
+        operator=operator,operator_account=operator_account)
+    log_money_event('order.refund',account_id=order.customer_account_id,user_id=order.customer_id,
+        order_no=order.order_no,order_id=order.pk,tx_type=Transaction.TxType.REFUND,amount=amount,
+        balance_before=before,balance_after=customer_wallet.balance,trace_id=trace_id,reason=reason)
+    order.payment_status = Order.PaymentStatus.REFUNDED if full else Order.PaymentStatus.PARTIALLY_REFUNDED
     order.refunded_at = timezone.now()
     from engagement.services import reverse_order_points, release_order_allocations
-    reverse_order_points(order)
-    release_order_allocations(order)
-
-    from coupons.benefits import restore_order_coupons
-    restore_order_coupons(order)
+    reverse_order_points(order,refund=refund)
+    release_order_allocations(order,refund=refund)
+    if full:
+        from coupons.benefits import restore_order_coupons
+        restore_order_coupons(order)
+    from engagement.refunds import reverse_refund_benefits
+    refund.benefit_effects = reverse_refund_benefits(order,refund,operator_account)
+    refund.save(update_fields=['benefit_effects','recovered_amount','plan_fingerprint'])
+    for wallet in {row.pk:row for row in changed_wallets}.values():
+        transaction.on_commit(lambda wallet=wallet:notify_wallet_update(wallet))
+    return refund
 
 
 # ---------------------------------------------------------------------------

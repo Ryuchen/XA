@@ -145,6 +145,23 @@ export const uploadFile = async <T = unknown>(
   const header: Record<string, string> = {};
   if (token) header.Authorization = `Bearer ${token}`;
 
+  // Taro H5 reads a chosen object URL back as Blob, losing File.name. Its
+  // fallback `file-<timestamp>` has no extension and Django rejects otherwise
+  // valid images. Preserve supplied names; recover the extension from the
+  // browser's Blob MIME for anonymous local image uploads.
+  if (!fileName && filePath.startsWith('blob:') && process.env.TARO_ENV === 'h5') {
+    const response = await fetch(filePath, { credentials: 'omit' });
+    if (!response.ok) throw new Error('图片读取失败，请重新选择');
+    const blob = await response.blob();
+    assertSession(revision);
+    const extension = ({
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+      'image/gif': 'gif', 'image/bmp': 'bmp', 'image/tiff': 'tiff',
+      'image/x-icon': 'ico', 'image/vnd.microsoft.icon': 'ico',
+    } as Record<string, string>)[blob.type.toLowerCase()];
+    if (extension) fileName = `upload.${extension}`;
+  }
+
   const res = await Taro.uploadFile({
     url: `${BASE_URL}${url}`,
     filePath,

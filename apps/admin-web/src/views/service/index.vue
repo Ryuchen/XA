@@ -65,8 +65,8 @@
         <template #default="{ row }">{{ amountToXaCoin(row.price) }} 币 / {{ row.price_unit || '份' }}</template>
       </el-table-column>
       <el-table-column label="下单方式" width="110"><template #default="{ row }"><el-tag :type="row.purchase_mode === 'CONSULT' ? 'warning' : 'success'">{{ row.purchase_mode === 'CONSULT' ? '客服确认' : '直接下单' }}</el-tag></template></el-table-column>
-      <el-table-column label="抽成率" width="90">
-        <template #default="{ row }">{{ row.commission_rate == null ? '全局' : row.commission_rate + '%' }}</template>
+      <el-table-column label="抽成配置" min-width="140">
+        <template #default="{ row }">{{ row.is_gift ? '礼物独立规则' : row.commission_override ? commissionLabel(row) : '沿用原自动规则' }}</template>
       </el-table-column>
       <el-table-column prop="sort_order" label="排序" width="80" />
       <el-table-column label="状态" width="80">
@@ -86,7 +86,7 @@
   <el-dialog :show-close="!contentUploading" :close-on-click-modal="!contentUploading" :close-on-press-escape="!contentUploading" v-model="dialogVisible" :title="form.id ? '编辑服务项' : '新增服务项'" width="880px" class="ap-modal">
     <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="接单方向"><el-select v-model="form.provider_kind" clearable placeholder="选择护航、陪玩、代肝或上分"><el-option v-for="k in qualificationMeta.kinds" :key="k.value" :value="k.value" :label="k.label" /></el-select></el-form-item>
-      <el-form-item v-if="form.provider_kind" label="订单档位"><el-select v-model="form.provider_grade" placeholder="请先选择平台及难度"><el-option v-for="g in orderGrades" :key="g.value" :value="g.value" :label="g.label" /></el-select><div class="tip">{{ orderCommission == null ? '同一范围高档可接低档；其他范围需另行认证。' : '此订单档位抽成 ' + orderCommission + '%，高档接低档也按此档位结算。' }}</div></el-form-item>
+      <el-form-item v-if="form.provider_kind" label="订单档位"><el-select v-model="form.provider_grade" placeholder="请先选择平台及难度"><el-option v-for="g in orderGrades" :key="g.value" :value="g.value" :label="g.label" /></el-select><div class="tip">{{ orderCommission == null ? '同一范围高档可接低档；其他范围需另行认证。' : '此订单档位默认抽成 ' + orderCommission + '%；开启自定义抽成后按自定义配置。' }}</div></el-form-item>
       <el-form-item label="所属玩法"><el-select v-model="form.gameplay" clearable placeholder="不选则作为普通服务 / 礼物"><el-option v-for="g in gameplays" :key="g.id" :label="g.name" :value="g.id" /></el-select></el-form-item>
       <template v-if="form.gameplay || form.provider_kind">
         <el-form-item label="游戏平台" class="ap-field--full"><el-radio-group v-model="form.platform"><el-radio value="MOBILE">手游</el-radio><el-radio value="PC">端游</el-radio></el-radio-group></el-form-item>
@@ -130,20 +130,20 @@
       </el-form-item>
       <el-form-item label="价格(兴安币)"><el-input-number v-model="priceCoin" :min="0" :precision="1" /></el-form-item>
       <el-form-item label="计价单位"><el-input v-model="form.price_unit" maxlength="20" placeholder="份 / 小时 / 人·小时 / 点" /></el-form-item>
-      <el-form-item label="双陪计价"><el-select v-model="form.billing_provider_count"><el-option :value="1" label="价格已是整单总价" /><el-option :value="2" label="每人价格 × 2，客服指定双陪" /></el-select></el-form-item>
+      <el-form-item label="套餐人数与计价"><el-select v-model="form.billing_provider_count"><el-option :value="1" label="单陪：1 名陪玩" /><el-option :value="2" label="双陪：每人价格 × 2，2 名陪玩" /></el-select></el-form-item>
       <el-form-item label="下单方式" class="ap-field--full"><el-radio-group v-model="form.purchase_mode"><el-radio value="DIRECT">直接下单</el-radio><el-radio value="CONSULT">客服确认</el-radio></el-radio-group></el-form-item>
       <el-form-item label="确认说明"><el-input v-model="form.purchase_note" maxlength="255" placeholder="预约、资格、人数或加购条件" /></el-form-item>
       <el-form-item label="附加费用"><el-switch v-model="form.is_addon" /><span class="tip">关联主套餐使用，不能独立下单，也不计入玩法起价</span></el-form-item>
       <el-form-item v-if="form.catalog_source" label="价目来源"><span class="tip">{{ form.catalog_source }}</span></el-form-item>
-      <el-form-item v-if="orderCommission == null" label="抽成率(%)">
-        <el-input-number v-model="commissionRate" :min="0" :max="100" placeholder="留空" />
-        <div class="tip">留空则按全局抽成率结算</div>
-      </el-form-item>
-      <el-form-item label="体验资格类型"><el-select v-model="form.experience_kind"><el-option value="" label="普通服务"/><el-option value="NEW_FIRST" label="新客首单：每周期一次"/><el-option value="NEW_VALUE" label="新客超值：领券后可见"/><el-option value="DAILY" label="每日一单：每平台每天一次"/><el-option value="DAILY_VALUE" label="每日超值：领券后可见，每平台每天一次"/></el-select><span v-if="form.experience_kind" class="tip">按海报专价，不参加任何活动；新客体验不抽成，每日体验抽成10%</span></el-form-item>
+      <el-form-item v-if="!isGift" label="商品自定义抽成"><el-switch v-model="commissionEnabled" /><div class="tip">{{ commissionEnabled ? '只调整抽成，不改变接单资格及价格；活动命中时以派单试算为准。' : '沿用原有自动抽成规则及等级建议。' }}</div></el-form-item>
+      <CommissionEditor v-if="commissionEnabled && !isGift" v-model:type="commissionType" v-model:rate="commissionRate" v-model:fixed="commissionFixed" />
+      <el-alert v-if="isGift" class="ap-field--full" type="info" :closable="false" title="礼物沿用独立比例规则，不使用订单自定义抽成。" />
+      <el-alert v-else-if="!commissionEnabled && commissionLocked" class="ap-field--full" type="info" :closable="false" title="当前沿用订单档位或体验自动抽成规则；开启商品自定义抽成后可明确覆盖。" />
+      <el-form-item label="体验资格类型"><el-select v-model="form.experience_kind"><el-option value="" label="普通服务"/><el-option value="NEW_FIRST" label="新客首单：每周期一次"/><el-option value="NEW_VALUE" label="新客超值：领券后可见"/><el-option value="DAILY" label="每日一单：每平台每天一次"/><el-option value="DAILY_VALUE" label="每日超值：领券后可见，每平台每天一次"/></el-select><span v-if="form.experience_kind" class="tip">按海报专价，不参加任何活动；默认新客体验不抽成、每日体验抽成10%，自定义抽成仅覆盖抽成。</span></el-form-item>
       <el-form-item label="服务项目类型"><el-select v-model="form.service_type"><el-option value="REGULAR" label="常规单"/><el-option value="ACTIVITY_LIMITED" label="活动限定单"/><el-option value="PROMOTIONAL" label="促销单"/><el-option value="COMPANION" label="陪玩单"/><el-option value="EXPERIENCE" label="体验单"/></el-select></el-form-item>
       <el-form-item label="可使用折扣券"><el-switch v-model="form.allows_discount_coupons"/><span class="tip">折扣券统一按此项目设置校验；默认关闭</span></el-form-item>
       <el-form-item label="VIP权益绑定类型"><el-select v-model="form.benefit_kind"><el-option value="" label="无"/><el-option value="COMPANION_HOUR" label="对应档位1小时陪玩"/><el-option value="SAFEBOX_33" label="33安全箱代肝主套餐"/></el-select></el-form-item>
-      <el-form-item label="订单抽成规则">
+      <el-form-item label="默认订单抽成规则">
         <el-select v-model="form.commission_policy" style="width: 100%">
           <el-option value="LEGACY" label="原有商品抽成规则" />
           <el-option value="EXPERIENCE" label="体验单：低于100元抽3元，100元及以上抽10%" />
@@ -288,9 +288,11 @@ import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import CrudTable from '@/components/CrudTable.vue'
 import CatalogEditor from '@/components/CatalogEditor.vue'
+import CommissionEditor from '@/components/CommissionEditor.vue'
 import { gameplayApi, serviceItemApi, gameCategoryApi, serviceCategoryApi, escortLevelApi } from '@/api/modules'
 import { qualificationOptions,scopeGrades } from '@/utils/qualifications'
 import { amountToXaCoin, xaCoinToAmount } from '@/utils/format'
+import { commissionError, commissionLabel, commissionPayload, readCommission, type CommissionType } from '@/utils/commission'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -331,12 +333,18 @@ const saving = ref(false)
 const contentUploading = ref(false)
 const priceCoin = ref(0)
 const commissionRate = ref<number | undefined>(undefined)
+const commissionType = ref<CommissionType>('PERCENT')
+const commissionFixed = ref<number | undefined>(0)
+const commissionEnabled = ref(false)
 const imagesText = ref('')
 const highlightsText = ref('')
 const form = reactive<any>({ roulette_pool: [] })
+const isGift = computed(() => Boolean(form.service_category && (serviceCats.value.find(c => c.id === form.service_category)?.is_gift ?? form.is_gift)))
+watch(isGift, gift => { if (gift) commissionEnabled.value = false })
 watch(() => form.experience_kind, kind => { if (kind) form.service_type = 'EXPERIENCE' })
 const orderGrades = computed(() => scopeGrades(qualificationMeta.value,form))
 const orderCommission = computed(() => orderGrades.value.find((g: any) => g.value === form.provider_grade)?.commission_rate)
+const commissionLocked = computed(() => orderCommission.value != null || Boolean(form.experience_kind) || ['EXPERIENCE', 'COMPANION'].includes(form.commission_policy))
 watch(() => [form.provider_kind,form.platform,form.security_level], () => { if (form.provider_kind && form.provider_kind !== 'GUARD') form.security_level='ANY'; if (form.provider_kind && !orderGrades.value.some((g: any) => g.value === form.provider_grade)) form.provider_grade='' })
 const isRoulette = computed(() => gameplays.value.find(item => item.id === form.gameplay)?.kind === 'ROULETTE')
 watch(isRoulette, value => { if (value && !form.roulette_pool?.length) form.roulette_pool = [{ name: '', description: '', weight: 1 }, { name: '', description: '', weight: 1 }] })
@@ -357,7 +365,10 @@ function onCreate() {
   Object.assign(form, blank())
   if (isRoulette.value) form.roulette_pool = [{ name: '', description: '', weight: 1 }, { name: '', description: '', weight: 1 }]
   priceCoin.value = 0
-  commissionRate.value = undefined
+  commissionRate.value = 0
+  commissionType.value = 'PERCENT'
+  commissionFixed.value = 0
+  commissionEnabled.value = false
   imagesText.value = ''
   highlightsText.value = ''
   dialogVisible.value = true
@@ -366,15 +377,24 @@ function onCreate() {
 function onEdit(row: any) {
   Object.assign(form, JSON.parse(JSON.stringify(row)))
   priceCoin.value = Number(amountToXaCoin(row.price))
-  commissionRate.value = row.commission_rate ?? undefined
+  const commission = readCommission(row)
+  commissionType.value = commission.type
+  commissionRate.value = commission.rate
+  commissionFixed.value = commission.fixed
+  commissionEnabled.value = row.commission_override === true
   imagesText.value = toLines(row.images)
   highlightsText.value = toLines(row.highlights)
   dialogVisible.value = true
 }
 
 async function onSave() {
+  const overrideEnabled = commissionEnabled.value && !isGift.value
   if (form.provider_kind && !form.provider_grade) { ElMessage.warning('请配置有效的订单档位'); return }
   if (!form.name) { ElMessage.warning('请填写名称'); return }
+  if (overrideEnabled) {
+    const error = commissionError(commissionType.value, commissionRate.value, commissionFixed.value)
+    if (error) { ElMessage.warning(error); return }
+  }
   saving.value = true
   try {
     const payload = {
@@ -391,7 +411,8 @@ async function onSave() {
       price_unit: form.price_unit || '份', purchase_mode: form.purchase_mode || 'DIRECT', purchase_note: form.purchase_note || '', is_addon: !!form.is_addon,
       billing_provider_count: form.billing_provider_count || 1,
       catalog_family: form.catalog_family || '', catalog_variant: form.catalog_variant || '',
-      commission_rate: commissionRate.value == null ? null : commissionRate.value,
+      ...(overrideEnabled ? commissionPayload(commissionType.value, commissionRate.value, commissionFixed.value) : {}),
+      commission_override: overrideEnabled,
       commission_policy: form.commission_policy || 'LEGACY', experience_kind: form.experience_kind || '', benefit_kind: form.benefit_kind || '', service_type: form.service_type || 'REGULAR', allows_discount_coupons: !!form.allows_discount_coupons,
       cover_url: form.cover_url,
       rules_images: form.rules_images || [],

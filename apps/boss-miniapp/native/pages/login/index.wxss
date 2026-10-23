@@ -1,16 +1,18 @@
-.login-page { padding-top: 24rpx; }
-.login-art { display: block; width: 192rpx; height: 178rpx; margin: 0 auto 18rpx; border-radius: 24rpx; }
-.login-page > .eyebrow, .login-page > .title, .login-page > .subtitle { text-align: center; }
-.login-page > .title { font-size: 36rpx; line-height: 1.45; }
-.login-page > .subtitle { font-size: var(--xa-control-small-font); margin-top: 10rpx; }
-.login-panel { margin: 28rpx 0 20rpx; padding: 28rpx; }
-.login-panel .section-title { font-size: 30rpx; }
-.login-panel > .muted { display: block; font-size: max(26rpx,13px); line-height: 1.75; }
-.agreement { display: flex; align-items: center; gap: 0; min-height: var(--xa-control-height); margin: 14rpx 0 6rpx; padding: 6rpx 0; font-size: var(--xa-control-small-font); line-height: 1.7; }
-.agreement checkbox { flex-shrink: 0; transform: scale(.72); transform-origin: left center; margin-right: -6rpx; }
-.agreement-copy { flex: 1; min-width: 0; }
-.agreement .link { display: inline; font-size: inherit; text-decoration: underline; }
-.login-panel .xa-button.button, .login-panel .xa-button.button-secondary { min-height: var(--xa-control-height); padding: 12rpx 20rpx; font-size: var(--xa-control-font); border-radius: var(--xa-radius-control); }
-.login-panel .xa-button.button-secondary { min-height: var(--xa-control-secondary); padding: 10rpx 20rpx; }
-.login-panel .xa-button.button-quiet { min-height: var(--xa-control-secondary); padding: 8rpx; margin-top: 6rpx; font-size: max(26rpx,13px); }
-.login-page > .small { display: block; padding: 0 8rpx; font-size: var(--xa-control-small-font); line-height: 1.8; }
+.login-page .page-heading, .login-page .panel { margin-bottom:20rpx; padding:24rpx; border-color:var(--xa-color-border); border-radius:20rpx; }
+.login-heading { display:flex; align-items:center; gap:20rpx; }
+.login-heading-copy { flex:1; min-width:0; }
+.login-heading .eyebrow { margin-bottom:6rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.login-heading .title { font-size:20px; line-height:1.35; letter-spacing:0; }
+.login-heading .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.login-art { display:block; width:64px; height:64px; flex-shrink:0; border-radius:12rpx; }
+.login-panel .section-title { margin:0 0 12rpx; font-size:var(--xa-control-font); line-height:1.5; }
+.login-panel > .muted { display:block; font-size:var(--xa-control-font); line-height:1.6; overflow-wrap:anywhere; }
+.agreement { display:flex; align-items:center; min-height:44px; margin:12rpx 0 4rpx; padding:4rpx 0; font-size:var(--xa-control-small-font); line-height:1.6; }
+.agreement checkbox { flex-shrink:0; transform:scale(.72); transform-origin:left center; margin-right:-6rpx; }
+.agreement-copy { flex:1; min-width:0; }
+.agreement .link { display:inline; font-size:inherit; text-decoration:underline; }
+.login-page .login-panel .xa-button.button, .login-page .login-panel .xa-button.button-secondary { min-height:40px; margin-top:12rpx; padding:8px 12px; border-radius:12rpx; font-size:var(--xa-control-font); line-height:1.5; }
+.login-page .login-panel .xa-button.button-secondary { min-height:36px; padding:6px 12px; font-size:var(--xa-control-small-font); }
+.login-page .login-panel .xa-button.button-quiet { min-height:30px; margin-top:10rpx; padding:4px 6px; border-radius:10rpx; color:var(--xa-color-primary); font-size:var(--xa-control-small-font); }
+.login-panel > .small { display:block; margin-top:12rpx; font-size:var(--xa-control-small-font); line-height:1.6; }
+.login-panel .error { padding:12rpx 0 0; font-size:var(--xa-control-small-font); line-height:1.5; }

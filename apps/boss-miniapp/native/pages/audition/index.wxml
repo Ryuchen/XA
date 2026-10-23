@@ -1,1 +1,10 @@
-<view class="page audition-page"><text class="eyebrow">老板专属邀请</text><text class="title">试音活动</text><state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/><view class="panel" wx:if="{{info}}"><text class="section-title">{{info.title}}</text><text>{{info.remark || '请联系客服了解本次活动安排'}}</text><text class="subtitle">有效期：{{info.expiry}}</text><text wx:if="{{existingAccount}}" class="subtitle small">当前账号：{{existingAccount}}</text><button class="xa-button button" loading="{{busy}}" disabled="{{busy || !info.is_active}}" bindtap="enter" hover-class="xa-button-hover">确认身份并进入</button><text class="subtitle small">此邀请绑定特定账号，请勿转发。进入后可在账号安全页绑定微信。</text></view><button class="xa-button button-quiet" bindtap="support" hover-class="xa-button-hover">联系活动客服</button></view>
+<view class="page audition-page">
+  <view class="page-heading"><text class="eyebrow">老板专属邀请</text><text class="title" role="heading" aria-level="1">试音活动</text></view>
+  <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
+  <block wx:if="{{info && !loading && !error}}">
+    <view class="panel invitation-card"><text class="section-title" role="heading" aria-level="2">{{info.title}}</text><text class="invitation-remark">{{info.remark || '请联系客服了解本次活动安排'}}</text><view class="invitation-field"><text class="field-label">有效期</text><text class="field-value">{{info.expiry}}</text></view><view wx:if="{{existingAccount}}" class="invitation-field"><text class="field-label">当前账号</text><text class="field-value">{{existingAccount}}</text></view></view>
+    <view class="section-surface invitation-actions"><button class="xa-button button" loading="{{busy}}" disabled="{{busy || !info.is_active}}" bindtap="enter" hover-class="xa-button-hover">确认身份并进入</button><text class="invitation-note">此邀请绑定特定账号，请勿转发。进入后可在账号安全页绑定微信。</text></view>
+  </block>
+  <view class="section-surface audition-support"><text class="support-label">活动安排与邀请问题</text><button class="xa-button button-secondary" bindtap="support" hover-class="xa-button-hover">联系活动客服</button></view>
+</view>
+<bottom-navigation/>

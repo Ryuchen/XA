@@ -1,21 +1,21 @@
 <view class="page content-page {{imageOnly ? 'poster-page' : ''}}">
   <state-view wx:if="{{loading || error}}" loading="{{loading}}" error="{{error}}" bind:retry="load"/>
   <block wx:if="{{item && !loading && !error}}">
-    <text wx:if="{{!imageOnly}}" class="title">{{item.title}}</text>
-    <image wx:if="{{item.image}}" class="poster" src="{{item.image}}" mode="widthFix" data-url="{{item.image}}" bindtap="preview" aria-label="{{item.title}}，点击查看大图"/>
-    <rich-text wx:if="{{!imageOnly && item.content}}" class="rich" nodes="{{item.content}}"/>
+    <view wx:if="{{!imageOnly}}" class="page-heading"><text class="title">{{item.title}}</text></view>
+    <view wx:if="{{item.image}}" class="poster-surface {{imageOnly ? '' : 'panel poster-panel'}}"><image class="poster" src="{{item.image}}" mode="widthFix" data-url="{{item.image}}" bindtap="preview" aria-label="{{item.title}}，点击查看大图"/></view>
+    <rich-text wx:if="{{!imageOnly && item.content}}" class="section-surface rich" nodes="{{item.content}}"/>
     <state-view wx:if="{{imageOnly && !item.image}}" empty empty-text="活动海报准备中"/>
   </block>
   <block wx:elif="{{!loading && !error}}">
-    <text class="title">{{title}}</text>
-    <text wx:if="{{activityList}}" class="subtitle">新活动在最前面，往期精彩也在这里。</text>
+    <view class="page-heading"><text class="title">{{title}}</text><text wx:if="{{activityList}}" class="subtitle">新活动在最前面，往期精彩也在这里。</text></view>
     <view wx:if="{{items.length}}" class="content-list">
       <button wx:for="{{items}}" wx:key="id" class="xa-button content-row" data-id="{{item.id}}" bindtap="open" hover-class="xa-button-hover">
-        <view class="content-mark"><image src="/assets/icons/{{activityList ? 'calendar' : 'shield'}}.png"/></view>
-        <view class="content-copy"><view class="content-name">{{item.title}}</view><text wx:if="{{activityList}}" class="small muted">{{item.date}}{{index === 0 ? ' · 最近发布' : ''}}</text><text wx:else class="small muted">查看完整说明</text></view><text class="content-arrow">›</text>
+        <view class="content-mark" aria-hidden="true"><image src="/assets/icons/{{activityList ? 'calendar' : 'shield'}}.png"/></view>
+        <view class="content-copy"><view class="content-name">{{item.title}}</view><text wx:if="{{activityList}}" class="small muted">{{item.date}}{{index === 0 ? ' · 最近发布' : ''}}</text><text wx:else class="small muted">查看完整说明</text></view><text class="content-arrow" aria-hidden="true">›</text>
       </button>
     </view>
-    <button wx:if="{{more}}" class="xa-button button-quiet load-more" loading="{{loadingMore}}" bindtap="more">查看更多活动</button>
+    <view wx:if="{{more}}" class="section-surface more-surface"><button class="xa-button button-quiet load-more" loading="{{loadingMore}}" bindtap="more">查看更多活动</button></view>
     <state-view wx:if="{{!items.length}}" empty/>
   </block>
 </view>
+<bottom-navigation/>

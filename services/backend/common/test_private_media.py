@@ -1,4 +1,5 @@
 from io import BytesIO
+from random import Random
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -199,6 +200,31 @@ class PrivateMediaTest(APITestCase):
         self.assertEqual(self.fetch('/media/banners/cover.png').status_code, 200)
         with override_settings(MEDIA_BASE_URL='https://assets.example.test'):
             self.assertEqual(build_media_url_from_path(None, '/media/banners/cover.png'), 'https://assets.example.test/media/banners/cover.png')
+
+    def test_oversized_private_image_is_bounded_without_changing_the_evidence(self):
+        source = BytesIO()
+        Image.frombytes('RGB', (900, 900), Random(3).randbytes(900 * 900 * 3)).save(source, 'JPEG', quality=95)
+        raw = source.getvalue()
+        self.assertGreater(len(raw), 200_000)
+        self.report.entry_image.save('large.jpg', SimpleUploadedFile('large.jpg', raw, content_type='image/jpeg'))
+        response = self.fetch(self.url())
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(response.body), 200_000)
+        self.assertEqual(response['Content-Type'], 'image/jpeg')
+        self.assertIn('no-store', response['Cache-Control'])
+        self.assertEqual(Path(self.report.entry_image.path).read_bytes(), raw)
+        self.assertEqual(self.url(account=self.other), '')
+
+    def test_oversized_public_avatar_uses_a_small_display_copy(self):
+        source = BytesIO()
+        Image.frombytes('RGB', (900, 900), Random(4).randbytes(900 * 900 * 3)).save(source, 'JPEG', quality=95)
+        self.account.avatar.save('large.jpg', SimpleUploadedFile('large.jpg', source.getvalue(), content_type='image/jpeg'))
+        url = build_media_url(None, self.account.avatar)
+        self.assertIn('/thumbnails/v4/', url)
+        response = self.fetch(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertLessEqual(len(response.body), 200_000)
+        self.assertEqual(Path(self.account.avatar.path).read_bytes(), source.getvalue())
 
     def test_invalid_file_content_and_missing_file_do_not_stream(self):
         url = self.url()

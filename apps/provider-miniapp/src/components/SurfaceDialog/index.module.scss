@@ -5,7 +5,7 @@
 .handle { flex:none; width:36PX; height:4PX; margin:10PX auto 0; border-radius:4PX; background:$color-border; }
 .header { display:flex; flex:none; justify-content:space-between; align-items:center; gap:16PX; padding:18PX 20PX; border-bottom:1PX solid $color-divider; }
 .title { min-width:0; font-size:20PX; font-weight:650; line-height:1.4; color:$color-text-primary; overflow-wrap:anywhere; }
-.header .close { width:auto; margin:0; min-height:36PX; }
+.header .close { width:auto; margin:0; min-height:44PX; }
 .body { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:20PX; }
 .footer { flex:none; display:flex; justify-content:flex-end; gap:12PX; padding:16PX 20PX calc(16PX + env(safe-area-inset-bottom)); border-top:1PX solid $color-divider; background:$color-bg-card; }
 .footer > button, .footer > :global(taro-button-core) { width:100%; margin:0 !important; min-height:44PX; }

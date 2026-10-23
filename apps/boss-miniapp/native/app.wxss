@@ -1,13 +1,11 @@
-/* Native design foundations: warm light surfaces, rose accents, clear mobile hierarchy. */
+@import "./theme.wxss";
+
+/* Shared traditional blues with compact native controls and clear mobile hierarchy. */
 page {
-  --xa-color-primary: #002fa7;
-  --xa-color-primary-soft: #f7f4ec;
-  --xa-color-page: #f5f1e9;
-  --xa-color-surface: #fffdf5;
-  --xa-color-text: #192847;
-  --xa-color-muted: #657188;
-  --xa-color-border: #dbe0e7;
-  --xa-color-danger: #b42335;
+  --xa-color-page: var(--xa-color-surface-page);
+  --xa-color-surface: var(--xa-color-surface-card);
+  --xa-color-text: var(--xa-color-text-primary);
+  --xa-color-muted: var(--xa-color-text-secondary);
   --xa-radius: 24rpx;
   --xa-radius-control: 16rpx;
   /* Keep controls optically stable on large phones; page layout still uses rpx. */
@@ -20,6 +18,8 @@ page {
   --xa-icon-small: 16px;
   --xa-icon-medium: 18px;
   --xa-icon-feature: 20px;
+  --xa-navigation-height: 56px;
+  --xa-navigation-inset: calc(var(--xa-navigation-height) + env(safe-area-inset-bottom));
   background: var(--xa-color-page); color: var(--xa-color-text);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 28rpx; line-height: 1.6;
@@ -27,6 +27,8 @@ page {
 view, text, .xa-button, input, textarea, scroll-view, image { box-sizing: border-box; }
 input, textarea { font-family: inherit; }
 .page { padding: 28rpx 32rpx calc(40rpx + env(safe-area-inset-bottom)); }
+.page-heading, .section-surface { padding: 24rpx; margin-bottom: 24rpx; background: var(--xa-color-surface); border: 1rpx solid var(--xa-color-surface-subtle); border-radius: 24rpx; }
+.page-heading > .subtitle { margin-bottom: 0; }
 .title { display: block; font-size: 38rpx; font-weight: 700; line-height: 1.35; letter-spacing: -1rpx; overflow-wrap: anywhere; }
 .eyebrow { display: block; color: var(--xa-color-primary); font-size: 23rpx; font-weight: 500; margin-bottom: 10rpx; }
 .subtitle { display: block; color: var(--xa-color-muted); margin-top: 12rpx; font-size: 26rpx; line-height: 1.7; overflow-wrap: anywhere; }
@@ -35,6 +37,7 @@ input, textarea { font-family: inherit; }
 .row, .between { display: flex; align-items: center; gap: 16rpx; }
 .between { justify-content: space-between; }
 .row > view, .between > view { min-width: 0; }
+.row > .xa-button, .between > .xa-button { flex-shrink: 0; }
 .between > text:first-child { min-width: 0; overflow-wrap: anywhere; }
 .stack { display: flex; flex-direction: column; gap: 20rpx; }
 /* Override style:v2 defaults (184px width and auto horizontal margins).
@@ -60,35 +63,35 @@ input, textarea { font-family: inherit; }
 .tag { display: inline-flex; align-items: center; flex-shrink: 0; font-size: 22rpx; font-weight: 500; line-height: 1.5; padding: 5rpx 14rpx; border-radius: 10rpx; color: var(--xa-color-primary); background: var(--xa-color-primary-soft); }
 .xa-button::after { border: none; }
 .xa-button.button, .xa-button.button-secondary, .xa-button.button-quiet { display: flex; align-items: center; justify-content: center; min-height:var(--xa-control-height); padding: 10rpx 24rpx; font-size:var(--xa-control-font); border-radius: var(--xa-radius-control); width: 100%; margin: 16rpx 0 0; white-space: normal; }
-.xa-button.button { color: #fffdf5; background: var(--xa-color-primary); }
+.xa-button.button { color: var(--xa-color-surface); background: var(--xa-color-primary); }
 .xa-button.button-secondary { min-height: var(--xa-control-secondary); color: var(--xa-color-primary); background: var(--xa-color-primary-soft); font-weight: 500; }
 .xa-button.button-quiet { min-height: var(--xa-control-secondary); color: var(--xa-color-muted); background: transparent; font-weight: 400; }
-.page .xa-button[disabled], .bottom-bar .xa-button[disabled], .chat-page .xa-button[disabled], .gift-footer .xa-button[disabled] { background: #f7f4ec; color: #657188; }
+.page .xa-button[disabled], .bottom-bar .xa-button[disabled], .chat-page .xa-button[disabled], .gift-footer .xa-button[disabled] { background: var(--xa-color-surface-subtle); color: var(--xa-color-muted); }
 .xa-button-hover { opacity: .78; }
 .field { margin: 24rpx 0; }
 .field:first-child { margin-top: 0; }.field:last-child { margin-bottom: 0; }
 .label { display: block; font-size: var(--xa-control-font); font-weight: 500; margin-bottom: 12rpx; }
-.input { border: 1rpx solid #f7f4ec; background: #faf9fc; border-radius: var(--xa-radius-control); padding: 14rpx 20rpx; min-height:var(--xa-input-height); width: 100%; font-size:var(--xa-control-font); color: var(--xa-color-text); }
+.input { border: 1rpx solid var(--xa-color-surface-subtle); background: var(--xa-color-surface-subtle); border-radius: var(--xa-radius-control); padding: 14rpx 20rpx; min-height:var(--xa-input-height); width: 100%; font-size:var(--xa-control-font); color: var(--xa-color-text); }
 input.input { height: var(--xa-input-height); padding: 0 20rpx; font-family: inherit; line-height: 1.5; }
 textarea.input { height: max(152rpx, 76px); line-height: 1.65; }
-.input-placeholder { color: #657188; font-family: inherit; font-weight: 400; font-size: 13px; }
+.input-placeholder { color: var(--xa-color-muted); font-family: inherit; font-weight: 400; font-size: 13px; }
 .input:focus { border-color: var(--xa-color-primary); }
 .error { display: block; color: var(--xa-color-danger); padding: 20rpx 0; font-size: 26rpx; overflow-wrap: anywhere; }
 .empty, .loading { text-align: center; padding: 52rpx 24rpx; color: var(--xa-color-muted); }
 .divider { height: 1rpx; background: var(--xa-color-border); margin: 24rpx 0; }
-.chips { display: flex; flex-wrap: wrap; gap: 12rpx; margin: 20rpx 0; }
-.xa-button.chip { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-height: var(--xa-control-compact); padding: 6rpx 18rpx; border-radius: 12rpx; color: var(--xa-color-muted); background: #fffdf5; border: 1rpx solid var(--xa-color-border); font-size: var(--xa-control-small-font); font-weight: 400; width: auto; margin: 0; }
-.xa-button.chip-active { color: var(--xa-color-primary); border-color: #e9eefb; background: var(--xa-color-primary-soft); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 16rpx; margin: 20rpx 0; }
+.xa-button.chip { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; min-height: var(--xa-control-compact); padding: 6rpx 18rpx; border-radius: 12rpx; color: var(--xa-color-muted); background: var(--xa-color-surface); border: 1rpx solid var(--xa-color-border); font-size: var(--xa-control-small-font); font-weight: 400; width: auto; margin: 0; }
+.xa-button.chip-active { color: var(--xa-color-primary); border-color: var(--xa-color-primary-soft); background: var(--xa-color-primary-soft); font-weight: 600; }
 .cover { width: 100%; height: 320rpx; border-radius: 20rpx; background: var(--xa-color-primary-soft); }
 .avatar { width: 96rpx; height: 96rpx; flex-shrink: 0; border-radius: 50%; background: var(--xa-color-primary-soft); }
 .avatar-placeholder { display: flex; align-items: center; justify-content: center; color: var(--xa-color-primary); font-weight: 600; }
-.bottom-bar { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; padding: 14rpx 32rpx calc(14rpx + env(safe-area-inset-bottom)); background: #fffdf5; border-top: 1rpx solid var(--xa-color-border); }
+.bottom-bar { position: fixed; z-index: 10; left: 0; right: 0; bottom: var(--xa-navigation-inset); padding: 14rpx 32rpx; background: var(--xa-color-surface); border-top: 1rpx solid var(--xa-color-border); }
 .bottom-bar .xa-button { margin-top: 0; }
 .link { color: var(--xa-color-primary); font-size: 25rpx; }
 .menu-row { display: flex; align-items: center; justify-content: space-between; gap: 24rpx; min-height: 104rpx; padding: 20rpx 0; }
 .menu-row + .menu-row { border-top: 1rpx solid var(--xa-color-border); }
 .menu-row > text:first-child { flex-shrink: 0; }.menu-row > text:last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
-.menu-row .arrow { color: #657188; font-size: 32rpx; }
+.menu-row .arrow { color: var(--xa-color-muted); font-size: 32rpx; }
 .between > .xa-button.button-quiet { width: auto; margin: 0; min-height:var(--xa-control-secondary); flex-shrink: 0; padding: 10rpx 8rpx; }
 .ui-icon { width: var(--xa-icon-medium); height: var(--xa-icon-medium); flex-shrink: 0; }
 @media (prefers-reduced-motion: reduce) { .xa-button-hover { opacity: 1; } }

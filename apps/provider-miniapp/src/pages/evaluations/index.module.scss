@@ -1,10 +1,10 @@
 @use '@/styles/variables.scss' as *;
 
 .page { min-height: 100vh; box-sizing: border-box; padding: $spacing-md $page-padding 30PX; background: $color-bg-page; }
-.summary { display: flex; padding: 15PX; margin: 11PX 0 9PX; border-radius: 15PX; text-align: center; color:#fffdf5; background:linear-gradient(145deg,#17171c,#393440 62%,#657188); box-shadow:0 8PX 20PX rgba(30,25,36,.17); }
+.summary { display: flex; padding: 15PX; margin: 11PX 0 9PX; border-radius: 15PX; text-align: center; color:var(--xa-color-on-primary); background:linear-gradient(145deg,#17171c,#393440 62%,#657188); box-shadow:0 8PX 20PX rgba(30,25,36,.17); }
 .summary > view { flex: 1; &:first-child { border-right: 1PX solid $color-divider; } }
 .summaryValue, .summaryLabel { display: block; }
-.summaryValue { color: #fffdf5; font-size: $font-size-xl; font-weight: $font-weight-bold; }
+.summaryValue { color: var(--xa-color-on-primary); font-size: $font-size-xl; font-weight: $font-weight-bold; }
 .summaryLabel { margin-top: $spacing-xs; color: rgba(255,255,255,.58); font-size: $font-size-xs; }
 .card { padding: 13PX; margin-bottom: 9PX; border-radius:14PX; background:$color-bg-card; box-shadow:$shadow-card; }
 .head { display: flex; justify-content: space-between; align-items: flex-start; gap: $spacing-sm; }
@@ -19,7 +19,7 @@
 .replyLabel, .replyContent { display: block; }
 .replyLabel { color: $color-primary; font-size: $font-size-xs; font-weight: $font-weight-semibold; }
 .replyContent { margin-top: 3PX; color: $color-text-secondary; font-size: $font-size-sm; }
-.replyButton { @include secondary-control-state; margin: $spacing-md 0 0; border: 0; border-radius: 9PX; color: $color-primary; background: rgba(0, 47, 167,.09); font-size: $font-size-sm; &::after { border: 0; } }
+.replyButton { @include secondary-control-state; margin: $spacing-md 0 0; border: 0; border-radius: 9PX; color: $color-primary; background: var(--xa-color-primary-soft); font-size: $font-size-sm; &::after { border: 0; } }
 .empty { display: block; padding: 50PX 0; text-align: center; color: $color-text-tertiary; }
 .emptyCard { @include card-base; padding: 50PX $spacing-lg; text-align: center; }
 .emptyTitle, .emptyText { display: block; }

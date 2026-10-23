@@ -58,13 +58,15 @@ from orders.services import (
     pending_timeout_deadline,
     push_message_safe as _push_message_safe,
     refresh_escort_status,
+    refund_to_customer,
     schedule_auto_cancel as _schedule_auto_cancel,
     settle_order,
     complete_fulfillment,
     sync_single_provider_share,
     approve_order_report,
 )
-from orders.notifier import notify_order_update
+from orders.notifier import notify_order_update, notify_report_update
+from orders.refunds import RefundError, build_refund_plan
 from orders.kook_dispatch import enqueue_kook_dispatch
 from orders.dispatching import dispatch_preview, enqueue_wecom_dispatch, queue_dispatch, channel_config, eligibility_error
 from promotions.models import Promotion
@@ -266,7 +268,8 @@ class DashboardView(APIView):
         if 'dashboard:view' not in get_account_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'}, status=403)
         orders = Order.objects.all()
-        paid = orders.filter(payment_status=Order.PaymentStatus.PAID).aggregate(amount=Sum('amount'), count=Count('id'))
+        from orders.refunds import with_net_amount,PAID_STATES
+        paid = with_net_amount(orders.filter(payment_status__in=PAID_STATES)).aggregate(amount=Sum('_net_paid_amount'),count=Count('id'))
         today = timezone.localdate()
         today_orders = orders.filter(created_at__date=today)
 
@@ -312,7 +315,8 @@ class PlayerDashboardView(APIView):
         if 'player_dashboard:view' not in get_user_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'}, status=403)
 
-        order_qs = Order.objects.filter(payment_status=Order.PaymentStatus.PAID)
+        from orders.refunds import PAID_STATES
+        order_qs = Order.objects.filter(payment_status__in=PAID_STATES)
         date_range = DashboardRangeSerializer(data=request.query_params)
         date_range.is_valid(raise_exception=True)
         start_date = date_range.validated_data.get('start_date')
@@ -929,6 +933,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     default_perm = 'order:view'
     required_perms = {
         'refund': 'order:refund',
+        'refund_preview': 'order:refund',
         'cancel': 'order:cancel',
         'quick_dispatch': 'order:dispatch',
         'dispatch_message': 'order:dispatch',
@@ -986,11 +991,16 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             return Response({'code': 400, 'msg': '请选择有效的老板、服务和局数'}, status=400)
         from orders.purchase_benefits import prepare_purchase
         coupon_id = rest_serializers.IntegerField(min_value=1, allow_null=True).run_validation(request.query_params.get('user_coupon_id'))
-        pricing, _, coupon = prepare_purchase(boss, service, rounds, coupon_id)
+        pricing, promotion, coupon = prepare_purchase(boss, service, rounds, coupon_id)
         data = asdict(pricing)
         data['user_coupon_id'] = coupon.pk if coupon else None
         data['commission_policy'] = 'EXPERIENCE' if service.experience_kind else service.commission_policy
-        data['commission_fixed_total'] = min(300, pricing.amount) if not service.experience_kind and service.commission_policy == 'EXPERIENCE' and pricing.amount < 10000 else None
+        from orders.commission import quote, override_from
+        from orders.pricing import PricingError
+        try:
+            data.update(quote(service,pricing.amount,promotion=promotion,override=override_from(request.query_params)))
+        except PricingError as exc:
+            return Response({'code':400,'msg':str(exc)},status=400)
         return Response({'code': 0, 'data': data})
 
     @action(detail=True, methods=['get', 'post'], url_path='dispatch-message')
@@ -1052,7 +1062,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 raise IllegalTransitionError(reject)
             if o.auto_cancel_at and o.auto_cancel_at <= timezone.now():
                 raise IllegalTransitionError('订单已超时，请刷新订单')
-            if o.escort_mode != Order.EscortMode.SINGLE:
+            from orders.team_rules import required_team_size
+            if required_team_size(o) != 1:
                 raise IllegalTransitionError('双陪订单请通过快捷派单创建并同时指定两名陪玩')
             if not profile.can_take_service(o.service):
                 raise IllegalTransitionError('该服务要求更高的陪玩档位，所选陪玩不符合')
@@ -1117,8 +1128,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     def transfer(self, request, pk=None):
         """转单：服务中订单将部分或全部打手转交新打手。
 
-        对每一名被转出的旧打手：按客服填写的比例/固定额，从其应得份额(provider_income)
-        中立即结算入账其应得部分，剩余份额转给新打手（订单完成时随新打手结算）；
+        对每一名被转出的旧打手：按客服填写的比例/固定额保留其应得份额，
+        剩余份额转给新打手。审核结算单须旧、新及留守打手全部报单通过后入账；
+        旧完成结算模式保留转出时立即入账的行为。
         同时对旧打手扣除罚款。旧打手余额（含本次刚结算入账的分钱）不足以扣罚款时，
         整笔转单失败并回滚。旧打手状态恢复可接单，新打手置忙碌。
         """
@@ -1195,6 +1207,11 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 locked_order = Order.objects.select_for_update().get(pk=order.pk)
                 if locked_order.status != Order.Status.IN_SERVICE:
                     raise IllegalTransitionError('订单状态已变更，无法转单')
+                # Transfer can touch a wallet and then change provider status.
+                # Join settlement/refund arbitration before any funds/profile
+                # lock, including when the same provider has another order.
+                from orders.financial_lock import lock_order_money
+                lock_order_money()
                 lock_provider_dispatch(cmd['new_provider_account'].pk for cmd in parsed)
                 if not locked_order.providers.exists() and locked_order.provider_id:
                     OrderProvider.objects.create(
@@ -1204,12 +1221,32 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         settlement_base=locked_order.amount,
                         provider_income=locked_order.provider_income,
                         commission_rate=locked_order.commission_rate,
+                        commission_type=locked_order.commission_type,
+                        commission_fixed=locked_order.commission_fixed if locked_order.commission_type == 'FIXED' else 0,
                     )
                 rows = {
                     row.provider_account_id: row
                     for row in locked_order.providers.select_for_update().all()
                     if row.provider_account_id
                 }
+
+                from orders.team_rules import required_team_size
+                if required_team_size(locked_order) == 2:
+                    active_ids = {row.provider_account_id for row in rows.values() if not row.released_at}
+                    for cmd in parsed:
+                        active_ids.discard(cmd['old_provider_account_id'])
+                        active_ids.add(cmd['new_provider_account'].pk)
+                    if len(active_ids) != 2:
+                        raise IllegalTransitionError('双陪转单后须保留两名不同的在单陪玩，不能合并为一人')
+
+                # Cash-deposit refunds lock profile -> wallet. Lock every old
+                # and new profile up front in one deterministic order; taking
+                # an old wallet first would invert that order even at zero fine.
+                profile_user_ids = {row.provider_id for row in rows.values() if row.provider_id}
+                profile_user_ids.update(cmd['new_provider'].pk for cmd in parsed)
+                list(EscortProfile.objects.select_for_update().filter(
+                    user_id__in=profile_user_ids,
+                ).order_by('user_id'))
 
                 # ---- 产能闸门：转入方还接不接得下 ----
                 #
@@ -1219,8 +1256,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 # 这里用「已校验过的 account 集合」而不是 {account_id: 新增数}
                 # 计数器，因为 transfer 是 detail action，整批指令作用于**同一笔**
                 # locked_order —— 一个人在本批次里最多新增 1 单，不存在累加。
-                # 同一个新打手被重复指定（seen_new 只 add 不查重，允许把多名旧
-                # 打手转给同一人）也只占一个名额，跳过即可。
+                # 同一个新打手被重复指定也只占一个名额；双陪已在上方校验
+                # 最终人数，历史单陪仍保留合并份额的兼容行为。
                 #
                 # 转出方释放自己的名额，不能抵扣另一名转入方的占用。
                 capacity_checked = set()
@@ -1319,11 +1356,15 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     # 旧打手行：定格已结算份额与对应基数，并标记已结算
                     old_row.provider_income = old_income
                     old_row.settlement_base = old_base_kept
+                    if locked_order.commission_type == 'FIXED':
+                        old_row.commission_type = OrderProvider.CommissionType.FIXED
+                        old_row.commission_rate = 0
+                        old_row.commission_fixed = old_base_kept - old_income
                     old_row.released_at = timezone.now()
                     if locked_order.settlement_mode == Order.SettlementMode.COMPLETION:
                         old_row.settled_at = timezone.now()
                     old_row.save(update_fields=[
-                        'provider_income', 'settlement_base', 'settled_at', 'released_at',
+                        'provider_income', 'settlement_base', 'settled_at', 'released_at', 'commission_type', 'commission_rate', 'commission_fixed',
                     ])
                     # 旧打手退出本单：按他手上是否还有别的单来定状态，
                     # 不能一律置空闲（他可能同时在跑另一笔订单）。
@@ -1345,8 +1386,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                             'provider': new_provider,
                             'provider_name_snapshot': new_name,
                             'settlement_base': transferred_base,
-                            'commission_type': OrderProvider.CommissionType.PERCENT,
-                            'commission_rate': locked_order.commission_rate,
+                            'commission_type': OrderProvider.CommissionType.FIXED if locked_order.commission_type == 'FIXED' else OrderProvider.CommissionType.PERCENT,
+                            'commission_rate': 0 if locked_order.commission_type == 'FIXED' else locked_order.commission_rate,
+                            'commission_fixed': transferred_base - new_income if locked_order.commission_type == 'FIXED' else 0,
                             'provider_income': new_income,
                         },
                     )
@@ -1355,10 +1397,14 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                             raise IllegalTransitionError('该打手已收到本单转单结算收益，不能重新转入同一历史订单')
                         new_row.provider_income += new_income
                         new_row.settlement_base += transferred_base
+                        if locked_order.commission_type == 'FIXED':
+                            new_row.commission_type = OrderProvider.CommissionType.FIXED
+                            new_row.commission_rate = 0
+                            new_row.commission_fixed = new_row.settlement_base - new_row.provider_income
                         new_row.settled_at = None
                         new_row.released_at = None
                         new_row.save(update_fields=[
-                            'provider_income', 'settlement_base', 'settled_at', 'released_at',
+                            'provider_income', 'settlement_base', 'settled_at', 'released_at', 'commission_type', 'commission_rate', 'commission_fixed',
                         ])
                     mark_escort_busy(
                         provider_ids=[new_provider.id],
@@ -1388,10 +1434,10 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     reason=reason,
                 )
                 order = locked_order
+                transaction.on_commit(lambda: notify_order_update(order))
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '转单失败'})
 
-        notify_order_update(order)
         for cmd in parsed:
             _push_message_safe(
                 recipient_id=rows[cmd['old_provider_account_id']].provider_id,
@@ -1447,7 +1493,14 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 account__account_type=ClubAccount.AccountType.PROVIDER,
             ).select_related('level').first()
         promotion = resolve_active_promotion(service)
-        rate, source = resolve_commission_rate_with_source(service, escort_profile, promotion)
+        from orders.commission import quote, override_from, integer
+        from orders.pricing import PricingError
+        try:
+            amount = integer(request.query_params.get('amount',service.price * service.billing_provider_count),'订单金额')
+            data = quote(service,amount,profile=escort_profile,promotion=promotion,override=override_from(request.query_params))
+        except PricingError as exc:
+            return Response({'code':400,'msg':str(exc)},status=400)
+        rate, source = data['commission_rate'],data['commission_source']
         label_map = {
             'promotion': f'活动定价（{promotion.title}）' if promotion else '活动定价',
             'level': f'等级抽成（{escort_profile.level.name}）'
@@ -1457,11 +1510,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             'club_companion': '陪玩单统一20%',
             'club_experience': '体验单：低于100元整单抽3元，100元及以上抽10%',
         }
-        return Response({'code': 0, 'data': {
-            'commission_rate': rate,
-            'source': source,
-            'source_label': label_map.get(source, ''),
-        }})
+        if source in label_map:
+            data['source_label'] = data['commission_source_label'] = label_map[source]
+        return Response({'code': 0, 'data': data})
 
     @action(detail=False, methods=['post'], url_path='dispatch')
     @transaction.atomic
@@ -1524,6 +1575,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             return Response({'code': 400, 'msg': '陪玩模式无效'})
         if service.billing_provider_count == 2 and escort_mode != Order.EscortMode.DOUBLE:
             return Response({'code': 400, 'msg': '该套餐按两名陪玩计价，请选择双陪并指定两名打手'})
+        if service.billing_provider_count != 2 and escort_mode == Order.EscortMode.DOUBLE:
+            return Response({'code': 400, 'msg': '单陪套餐不能按双陪派单，请选择明确的双陪套餐'})
         providers_input = request.data.get('providers')
         if not providers_input:
             # 兼容旧参数：单个 provider_id
@@ -1634,9 +1687,27 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     'commission_rate': rate,
                 })
 
-        from orders.pricing import club_provider_specs
-        club_specs = club_provider_specs(service, [account.escort_profile for account, _pu, _item in provider_objs], amount)
-        shares = build_provider_shares(amount, club_specs if club_specs is not None else provider_specs)
+        from orders.pricing import club_provider_specs, PricingError
+        from orders.commission import resolve, override_from, fixed_specs, snapshot
+        profiles = [account.escort_profile for account, _pu, _item in provider_objs]
+        try:
+            requested = override_from(request.data)
+            legacy_fixed = [spec for spec in provider_specs if spec['commission_type'] == 'FIXED']
+            if legacy_fixed and requested['commission_type'] == 'PERCENT':
+                raise PricingError('已选择百分比模式，请填写每位陪玩的抽成比例')
+            commission_plan = resolve(service,amount,profile=profiles[0] if profiles else None,promotion=promotion,override=requested)
+            if commission_plan['commission_type'] == 'FIXED':
+                selected_specs = fixed_specs(amount,len(profiles),commission_plan['commission_fixed'])
+            elif requested['commission_type'] == 'PERCENT':
+                selected_specs = provider_specs
+            elif commission_plan['commission_override']:
+                selected_specs = [{'commission_rate':commission_plan['commission_rate']} for _ in profiles]
+            else:
+                club_specs = club_provider_specs(service,profiles,amount)
+                selected_specs = club_specs if club_specs is not None else provider_specs
+        except PricingError as exc:
+            return Response({'code':400,'msg':str(exc)})
+        shares = build_provider_shares(amount, selected_specs)
         provider_rows = [
             {
                 'provider_account': row_account,
@@ -1661,9 +1732,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             except SettlementError as exc:
                 return Response({'code': 400, 'msg': str(exc)})
         else:
-            primary_rate = resolve_commission_rate(service, None, promotion)
-            club_specs = club_provider_specs(service, [None], amount)
-            split = compute_split(amount, inviter_commission_rate=inviter_rate, **(club_specs[0] if club_specs else {'commission_rate': primary_rate}))
+            split = compute_split(amount, inviter_commission_rate=inviter_rate,
+                commission_type=commission_plan['commission_type'],commission_fixed=commission_plan['commission_fixed'],commission_rate=commission_plan['commission_rate'])
         inviter_account = customer_account.inviter
         inviter = (
             _legacy_user_for_account(inviter_account)
@@ -1727,6 +1797,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 promo_discount=pricing.promo_discount,
                 coupon_discount=pricing.coupon_discount,
                 promotion=promotion,
+                **snapshot(commission_plan),
                 commission_rate=split.commission_rate,
                 provider_income=split.provider_income,
                 inviter=inviter,
@@ -1923,10 +1994,24 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 request.legacy_user,
                 request.account,
                 reason,
+                plan_token=request.data.get('plan_token'),
+                refund_amount=request.data.get('refund_amount'),
+                client_request_id=request.data.get('client_request_id'),
             )
-        except IllegalTransitionError as exc:
+        except RefundError as exc:
+            return Response({'code':409 if exc.code in ('REFUND_PLAN_CHANGED','REFUND_REQUEST_CONFLICT') else 400,
+                             'errorCode':exc.code,'msg':str(exc),'data':exc.data})
+        except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许退款'})
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '已退款'})
+
+    @action(detail=True, methods=['get'], url_path='refund-preview')
+    def refund_preview(self, request, pk=None):
+        try:
+            preview, _ = build_refund_plan(self.get_object(),refund_amount=request.query_params.get('refund_amount'))
+            return Response({'code':0,'data':preview})
+        except RefundError as exc:
+            return Response({'code':400,'errorCode':exc.code,'msg':str(exc),'data':exc.data})
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -1942,49 +2027,36 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 reason or '后台取消',
                 action=OrderStatusLog.Action.CANCEL,
             )
-        except IllegalTransitionError as exc:
+        except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许取消'})
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '已取消'})
 
     @staticmethod
+    @transaction.atomic
     def _do_refund(
         order_id,
         operator,
         operator_account,
         reason,
         action=OrderStatusLog.Action.REFUND,
+        plan_token=None,
+        refund_amount=None,
+        client_request_id=None,
     ):
+        if action == OrderStatusLog.Action.REFUND:
+            from orders.refunds import apply_admin_refund
+            order = apply_admin_refund(order_id,reason=reason,operator=operator,operator_account=operator_account,
+                plan_token=plan_token,refund_amount=refund_amount,client_request_id=client_request_id,notify=False)
+            if not getattr(order,'_refund_replayed',False):
+                transaction.on_commit(lambda:notify_order_update(order))
+            return order
         def pre_check(order):
-            if order.status == Order.Status.CANCELLED or (order.status == Order.Status.COMPLETED and (
-                order.settlement_mode != Order.SettlementMode.REPORT_APPROVAL or order.settled_at
-            )):
+            if order.status == Order.Status.CANCELLED:
                 raise IllegalTransitionError('订单已是终态，无法退款')
-            if order.providers.filter(settled_at__isnull=False, provider_income__gt=0).exists():
-                raise IllegalTransitionError('该订单已有打手收益到账，需先核对已结算资金，不能直接全额退款')
 
         def side_effect(order):
-            if order.payment_status == Order.PaymentStatus.PAID:
-                wallet = get_wallet(
-                    user_id=order.customer_id,
-                    account_id=order.customer_account_id,
-                    for_update=True,
-                )
-                balance_before = wallet.balance
-                wallet.balance += order.amount
-                wallet.save(update_fields=['balance'])
-                Transaction.objects.create(
-                    wallet=wallet,
-                    order=order,
-                    amount=order.amount,
-                    tx_type=Transaction.TxType.REFUND,
-                    balance_before=balance_before,
-                    balance_after=wallet.balance,
-                    remark=f'后台退款：{order.order_no}',
-                    operator=operator,
-                    operator_account=operator_account,
-                )
-                order.payment_status = Order.PaymentStatus.REFUNDED
-                order.refunded_at = timezone.now()
+            refund_to_customer(order, reason=reason, operator=operator, operator_account=operator_account,
+                               allow_settled_recovery=action == OrderStatusLog.Action.REFUND, plan_token=plan_token)
             order.cancel_reason = reason
             provider_ids = list(order.providers.values_list('provider_id', flat=True))
             account_ids = list(
@@ -2000,10 +2072,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 account_ids=account_ids,
                 exclude_order_ids=[order.pk],
             )
-            from coupons.benefits import restore_order_coupons
-            restore_order_coupons(order)
 
-        return transition(
+        order = transition(
             order_id,
             Order.Status.CANCELLED,
             operator=operator,
@@ -2013,7 +2083,12 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             pre_check=pre_check,
             side_effect=side_effect,
             update_fields=['cancel_reason', 'payment_status', 'refunded_at'],
+            allow_settled_refund=action == OrderStatusLog.Action.REFUND,
         )
+        # Refund and cancel share this commit boundary. Never announce a state
+        # that an enclosing transaction may still roll back.
+        transaction.on_commit(lambda: notify_order_update(order))
+        return order
 
 
 # ---------------- 评价管理 ----------------
@@ -2433,11 +2508,8 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if report.status != ProviderReport.Status.PENDING:
                 return Response({'code': 400, 'msg': '该报单已审核，无法重复操作'})
 
-            rate, source_label = _resolve_provider_report_commission(report.provider)
-            # 无关联订单的历史手工报单：优先采用陪玩报单时填写的抽成比例。
-            if report.commission_rate:
-                rate = report.commission_rate
-                source_label = '报单填写'
+            from wallet.reporting import legacy_report_commission
+            rate, source_label = legacy_report_commission(report)
 
             payout = report.amount * (100 - rate) // 100
             profile = EscortProfile.objects.select_for_update().filter(user_id=report.provider_id).first()
@@ -2476,6 +2548,7 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 'status', 'commission_rate', 'payout_amount', 'auditor', 'auditor_account',
                 'transaction', 'audited_at',
             ])
+            transaction.on_commit(lambda: notify_report_update(report))
 
         create_message(
             recipient_id=report.provider_id,
@@ -2511,6 +2584,7 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if report.order_id:
                 from engagement.confirmation import refresh_report_clock
                 refresh_report_clock(report.order)
+            transaction.on_commit(lambda: notify_report_update(report))
 
         create_message(
             recipient_id=report.provider_id,
@@ -2529,22 +2603,32 @@ class CommissionConfigView(APIView):
     def put(self, request):
         if 'report:audit' not in get_user_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'})
+        from orders.commission import integer, global_config, TYPE_KEY, FIXED_KEY
+        from orders.pricing import PricingError
+        mode = request.data.get('commission_type','PERCENT')
         try:
-            rate = int(request.data.get('rate'))
-        except (TypeError, ValueError):
-            return Response({'code': 400, 'msg': '请输入合法的抽成率（0-100 的整数）'})
-        if rate < 0 or rate > 100:
-            return Response({'code': 400, 'msg': '抽成率需在 0-100 之间'})
-        SystemConfig.objects.update_or_create(
-            key=COMMISSION_RATE_KEY,
-            defaults={'value': str(rate), 'remark': '平台报单抽成率(%)'},
-        )
-        return Response({'code': 0, 'data': {'rate': rate}, 'msg': '抽成率已更新'})
+            if mode not in ('PERCENT','FIXED'):
+                raise PricingError('请选择百分比或整单固定金额')
+            fixed = integer(request.data.get('commission_fixed'),'整单固定抽成金额') if mode == 'FIXED' else 0
+            rate_value = request.data.get('rate',request.data.get('commission_rate'))
+            rate = integer(rate_value,'抽成率',100) if mode == 'PERCENT' or rate_value is not None else None
+        except PricingError as exc:
+            return Response({'code':400,'msg':str(exc)})
+        with transaction.atomic():
+            SystemConfig.objects.update_or_create(key=TYPE_KEY,defaults={'value':mode,'remark':'订单抽成方式；自动策略除外'})
+            SystemConfig.objects.update_or_create(key=FIXED_KEY,defaults={'value':str(fixed),'remark':'整单固定抽成；内部账务单位'})
+            # Standalone historical/manual reports still use this percentage.
+            if rate is not None:
+                SystemConfig.objects.update_or_create(key=COMMISSION_RATE_KEY,defaults={'value':str(rate),'remark':'默认百分比抽成(%)'})
+        data = global_config();data['rate'] = data['commission_rate']
+        return Response({'code':0,'data':data,'msg':'订单抽成配置已更新'})
 
     def get(self, request):
         if not {'report:view', 'report:audit'}.intersection(get_account_permissions(request.account)):
             return Response({'code': 403, 'msg': '无操作权限'}, status=403)
-        return Response({'code': 0, 'data': {'rate': get_commission_rate()}})
+        from orders.commission import global_config
+        data = global_config();data['rate'] = data['commission_rate']
+        return Response({'code': 0, 'data': data})
 
 
 # ---------------- 提现申请 ----------------
@@ -2650,6 +2734,9 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 'status', 'payout_reference', 'paid_at', 'auditor',
                 'auditor_account', 'audited_at',
             ])
+            from wallet.notifier import notify_wallet_update, notify_withdraw_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
+            transaction.on_commit(lambda: notify_withdraw_update(withdraw))
 
         # 通知一律以实际到账口径为准，避免陪玩按税前金额对账产生客诉。
         tax_note = (
@@ -2704,6 +2791,9 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             withdraw.save(update_fields=[
                 'status', 'audit_remark', 'auditor', 'auditor_account', 'audited_at',
             ])
+            from wallet.notifier import notify_wallet_update, notify_withdraw_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
+            transaction.on_commit(lambda: notify_withdraw_update(withdraw))
 
         create_message(
             recipient_id=withdraw.user_id,

@@ -1,5 +1,5 @@
 const { config } = require('./config');
-const tabs = ['home', 'companions', 'orders', 'messages', 'mine'];
+const tabs = require('./navigation').tabs.map(tab => tab.key);
 // Same boundary as packages/money: 10 ledger units = 1 XA coin.
 function money(raw) {
   const amount = Number(raw == null ? 0 : raw);
@@ -7,7 +7,22 @@ function money(raw) {
   const coins = amount / 10;
   return coins.toFixed(Number.isInteger(coins) ? 0 : 1);
 }
-function date(value) { return value ? String(value).replace('T', ' ').slice(0, 16) : ''; }
+function date(value) {
+  if (!value) return '';
+  const text = String(value), legacy = text.replace('T', ' ').slice(0, 16);
+  const iso = /^(\d{4}-\d{2}-\d{2})[Tt ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?([Zz]|([+-])(\d{2}):?(\d{2}))$/.exec(text);
+  if (!iso) return legacy;
+  const timestamp = Date.parse(text);
+  if (!Number.isFinite(timestamp)) return legacy;
+  const offset = iso[4] ? (iso[4] === '+' ? 1 : -1) * (Number(iso[5]) * 60 + Number(iso[6])) : 0;
+  const format = instant => {
+    const pad = number => String(number).padStart(2, '0');
+    return String(instant.getUTCFullYear()).padStart(4, '0') + '-' + pad(instant.getUTCMonth() + 1) + '-' + pad(instant.getUTCDate()) + ' ' + pad(instant.getUTCHours()) + ':' + pad(instant.getUTCMinutes());
+  };
+  // Reject invalid dates normalized by Date.parse, while preserving old naive values.
+  if (format(new Date(timestamp + offset * 60000)) !== iso[1] + ' ' + iso[2]) return legacy;
+  return format(new Date(timestamp + 8 * 60 * 60000));
+}
 function toast(value) { wx.showToast({ title: (value && value.message) || String(value || '操作失败，请重试'), icon: 'none' }); }
 function go(url) {
   const match = /^\/pages\/([a-z][a-z-]*)\/index(?:\?[^\r\n]*)?$/.exec(url || '');

@@ -113,7 +113,7 @@ const RegisterPage: React.FC = () => {
 
   return <View className={styles.page + ' xa-provider-public'}>
     <View className={styles.top}>
-      <View className={styles.brand}><XaLogo size={64} color='#002fa7' /><Text>兴安电竞</Text></View>
+      <View className={styles.brand}><XaLogo size={64} color='#136398' /><Text>兴安电竞</Text></View>
       <Button className={styles.back} onClick={() => Taro.reLaunch({ url: '/pages/login/index' })}>返回登录</Button>
     </View>
     <View className={styles.heading}><Text className={styles.title}>{mode === 'status' ? '申请审核进度' : resubmit ? '补充注册资料' : '申请成为陪玩'}</Text>

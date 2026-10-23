@@ -60,20 +60,22 @@ textarea {
 
 /* ===== 将设计 token 映射到 Element Plus 语义变量 ===== */
 :root, html.dark {
-  /* 主色（蓝色系，替换旧紫色） */
+  /* 与三端共享的中国传统蓝色色阶保持一致。 */
   --el-color-primary: var(--primary);
   --el-color-primary-light-3: color-mix(in srgb, var(--primary) 70%, var(--card));
   --el-color-primary-light-5: color-mix(in srgb, var(--primary) 50%, var(--card));
   --el-color-primary-light-7: color-mix(in srgb, var(--primary) 30%, var(--card));
   --el-color-primary-light-8: color-mix(in srgb, var(--primary) 20%, var(--card));
   --el-color-primary-light-9: color-mix(in srgb, var(--primary) 10%, var(--card));
-  --el-color-primary-dark-2: var(--brand-600);
+  --el-color-primary-dark-2: var(--xa-color-primary-hover);
 
   --el-color-success: var(--success);
+  --el-color-warning: var(--warning);
   --el-color-danger: var(--destructive);
   --el-color-error: var(--destructive);
+  --el-color-info: var(--xa-color-info);
 
-  /* 圆角 —— Apple 大圆角 */
+  /* 控件与内容卡片保持各自的圆角层级。 */
   --el-border-radius-base: var(--radius-sm);
   --el-border-radius-small: 8px;
   --el-border-radius-round: 999px;
@@ -119,6 +121,26 @@ textarea {
   transform: scale(0.97);
 }
 
+/* 实心按钮使用填充色对应的文字色；plain、link、text 保留原有语义。 */
+.el-button--primary:not(.is-link):not(.is-text):not(.is-plain) {
+  --el-button-text-color: var(--xa-color-on-primary);
+  --el-button-hover-text-color: var(--xa-color-on-primary);
+  --el-button-disabled-text-color: var(--xa-color-on-primary);
+  --el-button-hover-bg-color: var(--xa-color-primary-hover);
+  --el-button-hover-border-color: var(--xa-color-primary-hover);
+  --el-button-active-bg-color: var(--xa-color-primary-hover);
+  --el-button-active-border-color: var(--xa-color-primary-hover);
+}
+.el-button:is(.el-button--success, .el-button--warning, .el-button--danger, .el-button--info):not(.is-link):not(.is-text):not(.is-plain) {
+  --el-button-text-color: var(--xa-color-on-primary);
+  --el-button-hover-text-color: var(--xa-color-on-primary);
+  --el-button-disabled-text-color: var(--xa-color-on-primary);
+  --el-button-hover-bg-color: color-mix(in srgb, var(--el-button-bg-color) 88%, var(--foreground));
+  --el-button-hover-border-color: var(--el-button-hover-bg-color);
+  --el-button-active-bg-color: var(--el-button-hover-bg-color);
+  --el-button-active-border-color: var(--el-button-hover-bg-color);
+}
+
 .el-input__wrapper,
 .el-select__wrapper,
 .el-textarea__inner {
@@ -136,11 +158,43 @@ textarea {
     0 0 0 1px var(--primary) inset !important;
 }
 
+.el-form-item.is-error :is(.el-input__wrapper, .el-select__wrapper, .el-textarea__inner) {
+  box-shadow: 0 0 0 1px var(--destructive) inset !important;
+}
+.el-form-item.is-error :is(.el-input__wrapper.is-focus, .el-select__wrapper.is-focused, .el-textarea__inner:focus) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 14%, transparent),
+    0 0 0 1px var(--destructive) inset !important;
+}
+
 .el-table {
   --el-table-header-bg-color: color-mix(in srgb, var(--secondary) 70%, var(--card));
   --el-table-row-hover-bg-color: color-mix(in srgb, var(--primary) 5%, var(--card));
+  --el-table-current-row-bg-color: var(--xa-color-primary-soft);
   border-radius: 12px;
   overflow: hidden;
+}
+
+/* 懒加载的组件样式不能把暗色表格状态恢复成浅色填充。 */
+html.dark .el-table {
+  --el-table-bg-color: var(--xa-color-surface-card);
+  --el-table-tr-bg-color: var(--xa-color-surface-card);
+  --el-table-expanded-cell-bg-color: var(--xa-color-surface-card);
+  --el-table-header-bg-color: var(--xa-color-surface-subtle);
+  --el-table-header-text-color: var(--xa-color-text-secondary);
+  --el-table-text-color: var(--xa-color-text-primary);
+  --el-table-row-hover-bg-color: color-mix(in srgb, var(--xa-color-primary) 12%, var(--xa-color-surface-card));
+  --el-table-current-row-bg-color: var(--xa-color-surface-hover);
+}
+html.dark .el-table .el-table__body tr.el-table__row--striped > td.el-table__cell {
+  background-color: var(--xa-color-surface-subtle);
+}
+html.dark .el-table .el-table__body tr.hover-row > td.el-table__cell,
+html.dark .el-table.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell,
+html.dark .el-table .el-table__body tr > td.hover-cell {
+  background-color: var(--el-table-row-hover-bg-color);
+}
+html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
+  background-color: var(--el-table-current-row-bg-color);
 }
 
 .el-table th.el-table__cell {
@@ -152,6 +206,18 @@ textarea {
 }
 
 .el-table td.el-table__cell { height: 50px; }
+.el-table .cell { line-height: 1.6; }
+.el-table td.el-table__cell .cell:has(> .el-button) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  overflow: visible;
+}
+.el-table td.el-table__cell .cell > .el-button { margin-left: 0; }
+.el-table__empty-block { min-height: 180px; }
+.el-table__empty-text { max-width: 100%; line-height: 1.6; }
+.el-empty { padding: var(--space-6) var(--space-4); }
 
 .el-tag {
   border-radius: 6px;
@@ -188,10 +254,10 @@ textarea {
   gap: var(--space-3);
   align-items: center;
   margin-bottom: var(--space-4);
-  padding: 16px;
+  padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--card);
+  background: var(--xa-color-surface-subtle);
 }
 
 .page-toolbar .spacer {
@@ -223,11 +289,19 @@ textarea {
   line-height: 1.5;
   color: var(--muted-foreground);
 }
+/* 使用列间 gap 的业务页无需再叠加头部 margin。 */
+:is(.db-page, .chat-page, .ac-page, .el-page, .mg-page, .an-page, .dp-page, .ev-page,
+  .wd-page, .es-page, .cp-page, .su-page, .au-page, .bt-page, .bn-page, .rp-page,
+  .wl-page, .pm-page, .ad-page, .rc-page, .rl-page, .us-page, .pd-page, .od-page,
+  .tx-page, .sp-page, .sv-page) > .ap-page-head { margin-bottom: 0; }
 .ap-page-head-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  flex: 0 0 auto;
+  gap: var(--space-3);
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* ===== KPI 卡片网格（多页复用） ===== */

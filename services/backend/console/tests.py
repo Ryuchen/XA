@@ -812,6 +812,9 @@ class OrderDispatchTest(APITestCase):
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 90000)
 
     def test_double_dispatch_preserves_funds(self):
+        self.service.price = 5000
+        self.service.billing_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count'])
         second = make_provider()
         self.client.force_authenticate(self.admin)
         res = self.client.post(self.URL, {

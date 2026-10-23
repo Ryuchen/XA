@@ -34,7 +34,7 @@ class CatalogImageTests(TestCase):
                 response = client.post(f'/api/admin/{endpoint}/', {'image': self.image()}, format='multipart')
                 self.assertEqual(response.status_code, 200, response.data)
                 data = response.data['data']
-                self.assertIn('/thumbnails/v3/', data['url'])
+                self.assertIn('/thumbnails/v4/', data['url'])
                 self.assertTrue(data['url'].endswith('.jpg'))
                 self.assertLessEqual(data['width'], 1080)
                 self.assertLessEqual(data['bytes'], DISPLAY_MAX_BYTES)
@@ -48,10 +48,23 @@ class CatalogImageTests(TestCase):
         image = Image.frombytes('RGB', (640, 4000), Random(1).randbytes(640 * 4000 * 3))
         image.save(source, 'PNG'); source.seek(0)
         output, (width, height) = compress_catalog_image(source)
-        self.assertLessEqual(len(output), DISPLAY_MAX_BYTES)
+        self.assertLessEqual(len(output), 200_000)
         self.assertLess(width, 640)
         self.assertAlmostEqual(height / width, 4000 / 640, delta=.01)
         self.assertEqual(Image.open(BytesIO(output)).size, (width, height))
+
+    def test_old_400kb_cache_cannot_bypass_the_200kb_display_limit(self):
+        with TemporaryDirectory() as folder, override_settings(MEDIA_ROOT=folder):
+            source = BytesIO()
+            Image.frombytes('RGB', (800, 800), Random(2).randbytes(800 * 800 * 3)).save(source, 'JPEG', quality=95)
+            self.assertGreater(len(source.getvalue()), 200_000)
+            old = 'club-catalog/thumbnails/v3/old.jpg'
+            default_storage.save(old, ContentFile(source.getvalue()))
+            url = catalog_display_url('/media/' + old)
+            self.assertIn('/thumbnails/v4/', url)
+            self.assertLessEqual(default_storage.size(url.removeprefix('/media/')), 200_000)
+            with default_storage.open(old, 'rb') as original:
+                self.assertEqual(original.read(), source.getvalue())
 
     def test_legacy_images_are_shared_cached_and_replacement_invalidates(self):
         with TemporaryDirectory() as folder, override_settings(MEDIA_ROOT=folder):

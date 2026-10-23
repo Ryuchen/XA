@@ -12,6 +12,7 @@ function environment(respond = () => ({ code: 0, data: {} })) {
     getStorageSync: key => storage.get(key), setStorageSync: (key, value) => storage.set(key, value), removeStorageSync: key => storage.delete(key),
     getAccountInfoSync: () => ({ miniProgram: { envVersion: 'develop' } }),
     getSystemInfoSync: () => ({ windowWidth: 375 }),
+    getFileSystemManager: () => ({ getFileInfo: options => options.success({ size: 1000 }) }),
     showToast() {}, stopPullDownRefresh() {}, setTabBarBadge() {}, removeTabBarBadge() {},
     navigateTo(options) { navigation.push(options.url); if (options.complete) options.complete(); },
     navigateBack() { navigation.push('back'); }, switchTab(options) { navigation.push(options.url); },
@@ -223,7 +224,7 @@ test('service picker requests current service ranking and preserves it through s
   assert.deepEqual(page.data.visible.map(item => item.id), [31,12,23]);
   page.search({detail:{value:'小'}}); assert.deepEqual(page.data.visible.map(item => item.id), [31,12]);
   page.openDetail({currentTarget:{dataset:{id:12}}});
-  assert.equal(env.navigation.at(-1), '/pages/companion-detail/index?id=12&service_id=91&provider_gender=ANY');
+  assert.equal(env.navigation.at(-1), '/pages/companion-detail/index?id=12&service_id=91&provider_gender=ANY&picker_draft=1&selected_provider_ids=');
   page.onUnload();
 });
 
@@ -241,29 +242,94 @@ test('service picker refresh replaces stale people and rejects selection during 
   page.onUnload();
 });
 
-test('checkout selection passes through a live detail page and relays its provider back across both pages', async () => {
+test('checkout selection confirms a detail-page draft before filling the checkout provider and quote', async () => {
   const rows = [{id:12,nickname:'小禾',gender:'FEMALE',can_order:true}];
   const env = environment(options => ({code:0,data:options.url.includes('/users/escorts/12/') ? {...rows[0],nickname:'详情最新昵称',monthly_order_amount:205}
-    : options.url.includes('/users/escorts/') ? rows : []}));
-  env.login(); const page = env.page('companion-picker', {service_id:'91',from_checkout:'1',provider_gender:'FEMALE'});
-  let detailNavigation, back;
-  wx.navigateTo = options => { detailNavigation = options; };
+    : options.url.includes('/users/escorts/') ? rows
+    : options.url.includes('/orders/services/') ? {id:91,name:'单陪套餐',service_type:'COMPANION',billing_provider_count:1}
+    : options.url.includes('/orders/quote/') ? {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true} : []}));
+  env.login();
+  const checkout = env.page('checkout', {service_id:'91',provider_gender:'FEMALE'});
+  checkout.setData({service:{id:91,service_type:'COMPANION'}});
+  let navigation, back;
+  wx.navigateTo = options => { navigation = options; };
   wx.navigateBack = options => { back = options; };
-  const selected = []; page.getOpenerEventChannel = () => ({emit:(event,provider)=>selected.push({event,provider})});
+  checkout.chooseProvider();
+  const pickerNavigation = navigation;
+  assert.equal(pickerNavigation.url, '/pages/companion-picker/index?service_id=91&from_checkout=1&provider_gender=FEMALE');
+  const page = env.page('companion-picker', {service_id:'91',from_checkout:'1',provider_gender:'FEMALE'});
+  const selected = [];
+  page.getOpenerEventChannel = () => ({emit:(event,provider)=>{
+    selected.push({event,provider}); pickerNavigation.events[event](provider);
+  }});
   await page.load();
   assert.ok(env.calls.some(call => call.url.endsWith('/users/escorts/?service_item=91&picker=1&gender=FEMALE')));
   page.chooseGender({detail:{value:1}}); assert.equal(page.data.genderIndex, 2);
   page.openDetail({currentTarget:{dataset:{id:12}}});
-  assert.equal(detailNavigation.url, '/pages/companion-detail/index?id=12&service_id=91&provider_gender=FEMALE&from_checkout=1');
+  const detailNavigation = navigation;
+  assert.equal(detailNavigation.url, '/pages/companion-detail/index?id=12&service_id=91&provider_gender=FEMALE&from_checkout=1&picker_draft=1&selected_provider_ids=');
   assert.equal(selected.length, 0, 'opening details must not select yet');
-  const detail = env.page('companion-detail', {id:'12',service_id:'91',provider_gender:'FEMALE',from_checkout:'1'});
+  const detail = env.page('companion-detail', {id:'12',service_id:'91',provider_gender:'FEMALE',from_checkout:'1',picker_draft:'1'});
   detail.getOpenerEventChannel = () => ({emit:(event,provider)=>detailNavigation.events[event](provider)});
   await detail.load(); detail.select(); detail.select();
-  assert.equal(selected.length, 1); assert.equal(selected[0].event, 'providerSelected'); assert.equal(selected[0].provider.id, 12);
-  assert.equal(selected[0].provider.nickname, '详情最新昵称'); assert.equal(selected[0].provider.monthlyAmountText, '20.5');
-  assert.equal(back.delta, 2);
+  assert.equal(selected.length, 0, 'detail selection updates only the picker draft');
+  assert.deepEqual(page.data.selectedProviderIds, [12]); assert.equal(checkout.data.provider, null);
+  assert.equal(back.delta || 1, 1);
+  await page.confirmSelection();
+  assert.equal(selected.length, 1); assert.equal(selected[0].event, 'providersSelected'); assert.equal(selected[0].provider[0].id, 12);
+  assert.equal(selected[0].provider[0].nickname, '详情最新昵称'); assert.equal(selected[0].provider[0].monthlyAmountText, '20.5');
+  assert.equal(back.delta || 1, 1);
+  assert.equal(checkout.data.provider.nickname, '详情最新昵称');
+  assert.equal(checkout._providerId, 12); assert.equal(checkout.payload().provider_id, 12);
+  checkout.onShow(); await tick();
+  assert.equal(checkout.data.provider.nickname, '详情最新昵称', 'returning to checkout must preserve the selected name');
+  assert.equal(env.calls.filter(call => call.url.includes('/orders/quote/')).at(-1).data.provider_id, 12);
+  checkout.onHide();
   env.login('other'); detailNavigation.events.providerSelected(rows[0]); assert.equal(selected.length, 1, 'old session events must be ignored');
-  detail.onUnload(); page.onUnload();
+  assert.equal(checkout.data.provider, null); assert.equal(checkout._providerId, 0);
+  detail.onUnload(); page.onUnload(); checkout.onUnload();
+});
+
+test('checkout keeps selection on cancel, replaces it on selection, and clears it for platform or account change', async () => {
+  const env = environment(options => ({code:0,data:options.url.includes('/orders/quote/')
+    ? {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true} : []}));
+  env.login();
+  const checkout = env.page('checkout', {service_id:'91'});
+  checkout.setData({service:{id:91,service_type:'COMPANION'}});
+  let selectionNavigation;
+  wx.navigateTo = options => { selectionNavigation = options; };
+  const first = {id:12,nickname:'第一位陪玩',gender:'FEMALE',can_order:true,avatar:'/media/first.png'};
+  const second = {id:13,nickname:'重新选择的陪玩',gender:'MALE',can_order:true};
+  checkout.chooseProvider(); selectionNavigation.events.providersSelected([first]); await tick();
+  assert.equal(checkout.data.provider.nickname, first.nickname); assert.equal(checkout.payload().provider_id, 12);
+  assert.match(checkout.data.provider.avatarUrl, /\/media\/first\.png$/);
+
+  checkout.chooseProvider();
+  wx.navigateBack(); checkout.onShow(); await tick(); checkout.onHide();
+  assert.equal(checkout.data.provider.nickname, first.nickname, 'returning without confirming a different person must preserve the selection');
+  assert.equal(checkout.payload().provider_id, 12);
+
+  checkout.chooseProvider(); selectionNavigation.events.providersSelected([second]); await tick();
+  assert.equal(checkout.data.provider.nickname, second.nickname); assert.equal(checkout._providerId, 13);
+  assert.equal(checkout.payload().provider_id, 13);
+  assert.equal(env.calls.filter(call => call.url.includes('/orders/quote/')).at(-1).data.provider_id, 13);
+
+  checkout.chooseProvider();
+  const picker = env.page('companion-picker', {service_id:'91',from_checkout:'1'});
+  picker.getOpenerEventChannel = () => ({emit:(event,provider)=>selectionNavigation.events[event](provider)});
+  await picker.load(); await picker.platform(); await tick();
+  assert.equal(checkout.data.provider, null); assert.equal(checkout._providerId, 0);
+  assert.equal(checkout.payload().provider_id, undefined);
+  assert.equal(env.calls.filter(call => call.url.includes('/orders/quote/')).at(-1).data.provider_id, undefined);
+
+  checkout.chooseProvider(); selectionNavigation.events.providersSelected([first]); await tick();
+  checkout.chooseProvider(); const staleNavigation = selectionNavigation;
+  env.login('other');
+  assert.equal(checkout.data.provider, null); assert.equal(checkout._providerId, 0);
+  staleNavigation.events.providersSelected([second]); await tick();
+  assert.equal(checkout.data.provider, null, 'a previous account selection event must not fill the new account checkout');
+  assert.equal(checkout._providerId, 0); assert.equal(checkout.payload().provider_id, undefined);
+  picker.onUnload(); checkout.onUnload();
 });
 
 test('directory cards can open unavailable profiles; details block selection but permit gifts', async () => {
@@ -442,6 +508,76 @@ test('failed tier switch retains the page and blocks stale checkout until the sa
   page.onUnload();
 });
 
+test('favorite feedback follows confirmed add/remove results and never replays on load or account change', async () => {
+  const service = { id: 1, name: '常规套餐', price: 1880, is_favorited: false };
+  let finishToggle;
+  const env = environment(options => {
+    if (options.url.endsWith('/favorites/toggle/')) return new Promise(resolve => {
+      finishToggle = favorited => { service.is_favorited = favorited; resolve({ code: 0, data: { favorited } }); };
+    });
+    return { code: 0, data: options.url.endsWith('/evaluations/') ? { list: [], total: 0 } : { ...service } };
+  }); env.login();
+  const page = env.page('service', { id: 1 }); await page.load();
+  assert.equal(page.data.favoriteMotion, '');
+  const adding = page.favorite(); await tick(); await page.favorite();
+  assert.equal(env.calls.filter(call => call.url.endsWith('/favorites/toggle/')).length, 1, 'a pending toggle cannot be submitted twice');
+  assert.equal(page.data.favoriteBusy, true); assert.equal(page.data.service.is_favorited, false);
+  assert.equal(page.data.favoriteMotion, '', 'an unconfirmed request must not animate success');
+  finishToggle(true); await adding;
+  assert.equal(page.data.service.is_favorited, true); assert.equal(page.data.favoriteMotion, 'added');
+  assert.equal(page.data.favoriteBusy, false);
+  const reload = page.load(); assert.equal(page.data.favoriteMotion, ''); await reload;
+  assert.equal(page.data.service.is_favorited, true, 'the confirmed favorite survives a detail reload');
+  assert.equal(page.data.favoriteMotion, '', 'loading a saved favorite must not animate it again');
+  const removing = page.favorite(); await tick();
+  assert.equal(page.data.service.is_favorited, true); assert.equal(page.data.favoriteMotion, '');
+  finishToggle(false); await removing;
+  assert.equal(page.data.service.is_favorited, false); assert.equal(page.data.favoriteMotion, 'removed');
+  assert.equal(page.data.favoriteBusy, false);
+  env.login('other'); assert.equal(page.data.service, null); assert.equal(page.data.favoriteMotion, '');
+  page.onUnload();
+});
+
+test('failed or unchanged favorite responses do not show a false state transition', async () => {
+  let failToggle = true;
+  const service = { id: 1, name: '已收藏套餐', price: 1880, is_favorited: true };
+  const env = environment(options => options.url.endsWith('/favorites/toggle/')
+    ? failToggle ? new Error('offline') : { code: 0, data: { favorited: true } }
+    : { code: 0, data: options.url.endsWith('/evaluations/') ? { list: [], total: 0 } : service });
+  env.login(); const page = env.page('service', { id: 1 }); await page.load();
+  page.setData({ favoriteMotion: 'added' }); await page.favorite();
+  assert.equal(page.data.service.is_favorited, true); assert.equal(page.data.favoriteMotion, '');
+  assert.equal(page.data.favoriteBusy, false, 'failed toggles release the interaction lock');
+  failToggle = false; await page.favorite();
+  assert.equal(page.data.service.is_favorited, true); assert.equal(page.data.favoriteMotion, '');
+  assert.equal(page.data.favoriteBusy, false);
+  page.onUnload();
+});
+
+test('a late favorite response cannot animate the previous tier while its replacement is loading', async () => {
+  const rows = [{ id: 1, name: '套餐1', price: 1880, is_favorited: false }, { id: 2, name: '套餐2', price: 2680, is_favorited: false }];
+  let finishToggle, finishTier;
+  const env = environment(options => {
+    if (options.url.endsWith('/favorites/toggle/')) return new Promise(resolve => { finishToggle = () => resolve({ code: 0, data: { favorited: true } }); });
+    if (options.url.endsWith('/evaluations/')) return { code: 0, data: { list: [], total: 0 } };
+    const id = Number(options.url.match(/\/services\/(\d+)\//)?.[1]);
+    const response = { code: 0, data: { ...rows.find(row => row.id === id), variants: rows } };
+    return id === 2 ? new Promise(resolve => { finishTier = () => resolve(response); }) : response;
+  }); env.login();
+  const page = env.page('service', { id: 1 }); await page.load();
+  const toggle = page.favorite(); await tick();
+  const switching = page.selectVariant(2); await tick();
+  assert.equal(page.data.service.id, 1, 'the old tier remains visible until its replacement arrives');
+  assert.equal(page.data.refreshing, true);
+  finishToggle(); await toggle;
+  assert.equal(page.data.service.is_favorited, false, 'a toggle for the previous tier cannot update the retained view');
+  assert.equal(page.data.favoriteMotion, ''); assert.equal(page.data.favoriteBusy, false);
+  finishTier(); await switching;
+  assert.equal(page.data.service.id, 2); assert.equal(page.data.service.is_favorited, false);
+  assert.equal(page.data.favoriteMotion, '');
+  page.onUnload();
+});
+
 test('a selected companion only exposes its supported price tiers', async () => {
   const rows=[{ id: 1, platform:'PC', security_level:'ANY', price:600, name:'娱乐' },{ id:2, platform:'PC', security_level:'ANY', price:1000, name:'技术' }];
   const env=environment(options=>({code:0,data:options.url.endsWith('/users/escorts/')?[{id:7,service_item_ids:[1]}]:options.url.endsWith('/evaluations/')?{list:[],total:0}:{...rows[0],variants:rows}})); env.login();
@@ -491,8 +627,21 @@ test('upload clears a definitively rejected session after refresh, but ignores s
   env.login('1'); let pending;
   wx.uploadFile = options => { pending = options; };
   const upload = env.api.upload('/users/me/avatar/', 'wxfile://avatar', 'avatar');
+  await tick();
   env.login('2'); pending.success({ statusCode: 200, data: JSON.stringify({ code: 0, data: { avatar: 'old' } }) });
   await assert.rejects(upload, /账号已切换/); assert.equal(env.auth.getSession().user.id, '2');
+});
+
+test('account switch during image compression prevents uploading under the new account', async () => {
+  const env = environment(); env.login();
+  let inspect; let uploads = 0;
+  wx.getFileSystemManager = () => ({ getFileInfo: options => { inspect = options; } });
+  wx.uploadFile = () => { uploads++; };
+  const pending = env.api.upload('/users/me/avatar/', 'wxfile://avatar', 'avatar');
+  env.login('2');
+  inspect.success({ size: 1000 });
+  await assert.rejects(pending, /账号已切换/);
+  assert.equal(uploads, 0);
 });
 
 test('fresh wx.login code is used for discovery and phone binding; discovery does not create a session', async () => {
@@ -840,7 +989,8 @@ test('service details never expose original preview and deduplicate the same pos
   assert.deepEqual(page.data.service.rulesImages,[]);
   assert.doesNotMatch(page.data.service.detailsHtml,/data-original/);
   assert.equal(page.previewDetails,undefined); assert.equal(page.previewRule,undefined);
-  page.checkout(); assert.equal(env.navigation.at(-1),'/pages/support/index');
+  page.checkout(); assert.equal(env.navigation.at(-1),'/pages/checkout/index?service_id=43');
+  page.companions(); assert.equal(env.navigation.at(-1),'/pages/companion-picker/index?service_id=43');
   page.onUnload();
 });
 
@@ -867,6 +1017,148 @@ test('shortcut failure preserves a valid quote and unavailable companions cannot
   assert.equal(page.data.quote.amount,9000);assert.ok(page.data.shortcutsError);
   page.setData({recent:[{id:11,can_order:false}]});page.selectShortcut({currentTarget:{dataset:{id:11}}});
   assert.equal(page.data.provider,null);page.onUnload();
+});
+
+test('double companion checkout restores both people and quotes and creates the original package with the same selection', async () => {
+  const providers = [
+    { id: 12, nickname: '小禾', gender: 'FEMALE', can_order: true },
+    { id: 13, nickname: '听风', gender: 'MALE', can_order: true },
+    { id: 14, nickname: '小满', gender: 'FEMALE', can_order: true },
+  ];
+  const packagePrice = 16000;
+  const quote = { original_amount: packagePrice, amount: packagePrice, wallet_balance: 100000, balance_sufficient: true };
+  const env = environment(options => ({ code: 0, data:
+    options.url.includes('/orders/services/') ? { id: 43, name: '双陪套餐', service_type: 'COMPANION', billing_provider_count: 2, price: packagePrice, purchase_mode: 'CONSULT', game_category: 7 }
+      : options.url.includes('/users/me/') ? { game_profiles: [{ game_category: 7, nickname: '测试玩家', region: '微信区' }] }
+      : options.url.includes('shortcuts=1') ? { recent: [], recommended: providers }
+      : options.url.includes('/users/escorts/') ? providers
+      : options.url.includes('/orders/traffic-status/') ? { self_order_enabled: true, mode: 'normal' }
+      : options.url.includes('/orders/quote/') ? quote
+      : options.url.includes('/orders/create/') ? { id: 991 }
+      : [] }));
+  env.login();
+  const page = env.page('checkout', { service_id: '43', provider_ids: '12,13' }); await page.load();
+  assert.equal(page.data.error, ''); assert.equal(page.data.selectionLimit, 2);
+  assert.deepEqual(page.data.providers.map(item => item.nickname), ['小禾', '听风']);
+  assert.deepEqual(page.data.selectedProviderIds, [12, 13]); assert.equal(page.data.provider.id, 12);
+  assert.equal(page.data.quote.amount, packagePrice, 'choosing two people must retain the package price');
+  assert.deepEqual(page.payload().provider_ids, [12, 13]); assert.equal(page.payload().provider_id, undefined);
+  const initialQuote = env.calls.filter(call => call.url.includes('/orders/quote/')).at(-1);
+  assert.deepEqual(initialQuote.data.provider_ids, [12, 13]);
+
+  let pickerNavigation; wx.navigateTo = options => { pickerNavigation = options; };
+  page.chooseProvider();
+  const query = new URL(pickerNavigation.url, 'http://native.test').searchParams;
+  assert.equal(query.get('selected_provider_ids'), '12,13'); assert.equal(query.get('from_checkout'), '1');
+  page.onShow(); await tick(); page.onHide();
+  assert.deepEqual(page.data.selectedProviderIds, [12, 13], 'canceling the picker preserves the confirmed selection');
+  pickerNavigation.events.providersSelected([providers[0], providers[2]]); await tick();
+  assert.deepEqual(page.data.providers.map(item => item.nickname), ['小禾', '小满']);
+  assert.deepEqual(page.payload().provider_ids, [12, 14]); assert.equal(page.data.quote.amount, packagePrice);
+  page.chooseProvider();
+  assert.equal(new URL(pickerNavigation.url, 'http://native.test').searchParams.get('selected_provider_ids'), '12,14');
+
+  await page.submit();
+  const submittedQuote = env.calls.filter(call => call.url.includes('/orders/quote/')).at(-1);
+  const created = env.calls.find(call => call.url.includes('/orders/create/'));
+  assert.ok(created, 'a complete pair with the confirmed quote can submit');
+  assert.deepEqual(submittedQuote.data.provider_ids, [12, 14]);
+  assert.deepEqual(created.data.provider_ids, submittedQuote.data.provider_ids);
+  assert.equal(created.data.provider_id, undefined); assert.equal(created.data.expected_amount, packagePrice);
+  assert.equal(env.navigation.at(-1), '/pages/order-detail/index?id=991'); page.onUnload();
+});
+
+test('double companion checkout blocks a partial selection and permits a fully cleared platform order', async () => {
+  const female = { id: 12, nickname: '小禾', gender: 'FEMALE', can_order: true };
+  const quote = { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true };
+  const env = environment(options => ({ code: 0, data: options.url.includes('/orders/create/') ? { id: 992 } : quote }));
+  env.login(); const page = env.page('checkout', { service_id: '43' });
+  page.setData({ service: { id: 43, service_type: 'COMPANION', billing_provider_count: 2 }, nickname: '测试玩家', region: '微信区' });
+  let pickerNavigation; wx.navigateTo = options => { pickerNavigation = options; };
+  page.chooseProvider(); pickerNavigation.events.providersSelected([female]); await tick();
+  assert.deepEqual(page.data.selectedProviderIds, [12]); assert.equal(page.data.quote, null);
+  assert.match(page.data.quoteError, /2|两/);
+  assert.equal(env.calls.length, 0, 'a partial pair is not sent to the quote endpoint');
+  page.setData({ quote }); await page.submit();
+  assert.equal(env.calls.length, 0, 'a stale displayed quote cannot bypass the incomplete pair guard');
+
+  page.chooseProvider(); pickerNavigation.events.providersSelected([]); await tick();
+  assert.deepEqual(page.data.selectedProviderIds, []); assert.equal(page.data.provider, null);
+  assert.equal(page.payload().provider_id, undefined); assert.equal(page.payload().provider_ids, undefined);
+  assert.equal(page.payload().dispatch_mode, 'BOSS_SELECT'); assert.equal(page.data.quote.amount, quote.amount);
+  await page.submit();
+  const create = env.calls.find(call => call.url.includes('/orders/create/'));
+  assert.ok(create); assert.equal(create.data.dispatch_mode, 'BOSS_SELECT');
+  assert.equal(create.data.provider_id, undefined); assert.equal(create.data.provider_ids, undefined);
+  assert.equal(create.data.expected_amount, 16000); page.onUnload();
+});
+
+test('double companion shortcuts cap and toggle people, and gender changes retain compatible selections', async () => {
+  const providers = [
+    { id: 12, nickname: '女陪甲', gender: 'FEMALE', can_order: true },
+    { id: 13, nickname: '男陪', gender: 'MALE', can_order: true },
+    { id: 14, nickname: '女陪乙', gender: 'FEMALE', can_order: true },
+  ];
+  const env = environment(options => ({ code: 0, data: options.url.includes('shortcuts=1') ? { recent: [], recommended: providers.filter(item => !options.url.endsWith('FEMALE') || item.gender === 'FEMALE') }
+    : { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true } }));
+  env.login(); const page = env.page('checkout', { service_id: '43' });
+  page.setData({ service: { id: 43, service_type: 'COMPANION', billing_provider_count: 2 }, recommended: providers });
+  const choose = id => page.selectShortcut({ currentTarget: { dataset: { id } } });
+  choose(12); await tick(); assert.deepEqual(page.data.selectedProviderIds, [12]);
+  assert.equal(env.calls.filter(call => call.url.includes('/orders/quote/')).length, 0);
+  choose(13); await tick(); assert.deepEqual(page.data.selectedProviderIds, [12, 13]);
+  const quoteCount = env.calls.filter(call => call.url.includes('/orders/quote/')).length;
+  choose(14); await tick(); assert.deepEqual(page.data.selectedProviderIds, [12, 13]);
+  assert.equal(env.calls.filter(call => call.url.includes('/orders/quote/')).length, quoteCount, 'a third person must not alter the pair or quote');
+  choose(13); await tick(); assert.deepEqual(page.data.selectedProviderIds, [12]); assert.equal(page.data.quote, null);
+  choose(13); await tick(); assert.deepEqual(page.data.selectedProviderIds, [12, 13]);
+  await page.gender({ detail: { value: 2 } });
+  assert.deepEqual(page.data.selectedProviderIds, [12]); assert.equal(page.data.providers[0].nickname, '女陪甲');
+  assert.equal(page.payload().provider_gender, 'FEMALE'); assert.equal(page.data.quote, null);
+  choose(14); await tick(); assert.deepEqual(page.data.selectedProviderIds, [12, 14]);
+  assert.equal(page.data.quote.amount, 16000); page.onUnload();
+});
+
+test('multi-selection callbacks from a previous session cannot repopulate checkout', async () => {
+  const env = environment(() => ({ code: 0, data: { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true } }));
+  env.login(); const page = env.page('checkout', { service_id: '43' });
+  page.setData({ service: { id: 43, service_type: 'COMPANION', billing_provider_count: 2 } });
+  let pickerNavigation; wx.navigateTo = options => { pickerNavigation = options; };
+  const pair = [{ id: 12, nickname: '小禾', can_order: true }, { id: 13, nickname: '听风', can_order: true }];
+  page.chooseProvider(); pickerNavigation.events.providersSelected(pair); await tick();
+  assert.deepEqual(page.data.selectedProviderIds, [12, 13]);
+  page.chooseProvider(); const staleNavigation = pickerNavigation; env.login('other');
+  assert.deepEqual(page.data.selectedProviderIds, []); assert.deepEqual(page.data.providers, []);
+  staleNavigation.events.providersSelected(pair); await tick();
+  assert.deepEqual(page.data.selectedProviderIds, []); assert.equal(page.data.provider, null);
+  assert.equal(page.payload().provider_id, undefined); assert.equal(page.payload().provider_ids, undefined);
+  page.onUnload();
+});
+
+test('single companion links and legacy selection callbacks retain the provider_id contract', async () => {
+  const provider = { id: 12, nickname: '小禾', can_order: true, gender: 'FEMALE' };
+  const env = environment(options => ({ code: 0, data:
+    options.url.includes('/orders/services/') ? { id: 91, name: '单陪', billing_provider_count: 1, service_type: 'COMPANION' }
+      : options.url.includes('/users/escorts/') ? options.url.includes('shortcuts=1') ? { recent: [], recommended: [] } : [provider]
+      : options.url.includes('/orders/quote/') ? { original_amount: 9000, amount: 9000, wallet_balance: 100000, balance_sufficient: true }
+      : options.url.includes('/orders/traffic-status/') ? { self_order_enabled: true } : [] }));
+  env.login(); const page = env.page('checkout', { service_id: '91', provider_id: '12' }); await page.load();
+  assert.deepEqual(page.data.selectedProviderIds, [12]); assert.equal(page.payload().provider_id, 12);
+  assert.equal(page.payload().provider_ids, undefined);
+  let pickerNavigation; wx.navigateTo = options => { pickerNavigation = options; }; page.chooseProvider();
+  pickerNavigation.events.providerSelected({ ...provider, id: 13, nickname: '新陪玩' }); await tick();
+  assert.equal(page.data.provider.nickname, '新陪玩'); assert.equal(page.payload().provider_id, 13);
+  assert.equal(page.payload().provider_ids, undefined); page.onUnload();
+});
+
+test('non-double consulting services and addons keep their customer-service entry', async () => {
+  for (const service of [{ id: 43, purchase_mode: 'CONSULT', service_type: 'COMPANION', billing_provider_count: 1 },
+    { id: 44, purchase_mode: 'DIRECT', is_addon: true, billing_provider_count: 2 }]) {
+    const env = environment(options => ({ code: 0, data: options.url.endsWith('/evaluations/') ? { list: [], total: 0 } : service }));
+    env.login(); const page = env.page('service', { id: String(service.id) }); await page.load();
+    page.checkout(); assert.equal(env.navigation.at(-1), '/pages/support/index');
+    page.companions(); assert.equal(env.navigation.at(-1), '/pages/support/index'); page.onUnload();
+  }
 });
 
 test('qualification filters reset dependent grades and keep minimum tier scoped for both picker pages', async()=>{

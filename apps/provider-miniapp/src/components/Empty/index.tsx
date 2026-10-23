@@ -22,7 +22,7 @@ const Empty: React.FC<EmptyProps> = ({
   return (
     <View className={`${styles.empty} ${className}`}>
       <View className={styles.iconWrap}>
-        <TabIcon name={icon === '🎮' ? 'gamepad' : icon === '💰' || icon === '🎁' || icon === '⚖️' ? 'wallet' : 'receipt'} color='#7e91ac' size={64} />
+        <TabIcon name={icon === '🎮' ? 'gamepad' : icon === '💰' || icon === '🎁' || icon === '⚖️' ? 'wallet' : 'receipt'} color='#336b9a' size={64} />
       </View>
       <Text className={styles.title}>{title}</Text>
       {desc && <Text className={styles.desc}>{desc}</Text>}

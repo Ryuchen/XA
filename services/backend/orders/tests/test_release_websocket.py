@@ -3,15 +3,45 @@ from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
 from channels.testing import WebsocketCommunicator
 from django.test import TransactionTestCase, override_settings
+from django.utils import timezone
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from config.asgi import application
 from orders.tests.factories import make_provider, make_console_user
+from orders.tests.factories import make_order, make_user
 
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ReleaseWebSocketTest(TransactionTestCase):
+    def test_real_completed_order_notification_renders_deadline_before_delivery(self):
+        user = make_provider()
+        account = get_or_create_account_for_legacy_user(user)
+        boss = make_user()
+        boss_account = get_or_create_account_for_legacy_user(boss)
+        order = make_order(boss, provider=user, customer_account=boss_account,
+                           provider_account=account, status='COMPLETED',
+                           completed_at=timezone.now())
+        token, _ = issue_account_tokens(account)
+
+        async def verify():
+            from orders.notifier import _notify_order_update
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            self.assertTrue((await socket.connect())[0])
+            try:
+                await database_sync_to_async(_notify_order_update)(order)
+                event = await socket.receive_json_from()
+                self.assertEqual(event['type'], 'order_status_update')
+                self.assertEqual(event['data']['id'], order.pk)
+                self.assertIsInstance(event['data']['aftersale_deadline'], str)
+                self.assertEqual(event['data']['status'], 'COMPLETED')
+                await socket.send_json_to({'type': 'ping'})
+                self.assertEqual(await socket.receive_json_from(), {'type': 'pong'})
+            finally:
+                await socket.disconnect()
+
+        async_to_sync(verify)()
+
     def test_real_account_can_connect_receive_updates_and_ping_on_both_routes(self):
         account = get_or_create_account_for_legacy_user(make_provider())
         token, _ = issue_account_tokens(account)

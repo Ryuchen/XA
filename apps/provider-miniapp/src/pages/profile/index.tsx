@@ -253,7 +253,7 @@ const ProfilePage: React.FC = () => {
       <View className={styles.card}>
         <Text className={styles.title}>护航派单通知</Text>
         <Text className={styles.tip}>关闭仅停止此类新单提醒，仍可在接单池查看并主动接单。陪玩等其他服务保持原通知设置。</Text>
-        {(profile?.dispatch_notification_options || []).map(option=><View key={option.key} className={styles.notificationRow}><View><Text>{option.label}</Text>{!option.eligible && <Text className={styles.tip}>尚未认证此类型</Text>}</View><Switch color="#002fa7" checked={option.eligible && option.enabled} disabled={!option.eligible || savingNotifications} onChange={e=>changeNotification(option.key,e.detail.value)} /></View>)}
+        {(profile?.dispatch_notification_options || []).map(option=><View key={option.key} className={styles.notificationRow}><View><Text>{option.label}</Text>{!option.eligible && <Text className={styles.tip}>尚未认证此类型</Text>}</View><Switch color="#136398" checked={option.eligible && option.enabled} disabled={!option.eligible || savingNotifications} onChange={e=>changeNotification(option.key,e.detail.value)} /></View>)}
       </View>
       <View className={styles.cards}>
       <View className={`${styles.card} ${styles.formCard}`}>

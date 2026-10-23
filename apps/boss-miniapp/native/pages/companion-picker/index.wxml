@@ -1,4 +1,4 @@
-<view class="page companion-picker">
+<view class="page companion-picker {{serviceId ? 'picker-with-actions' : ''}}">
   <view wx:if="{{!logged}}" class="panel login-panel">
     <view class="title">挑选陪玩</view><view class="subtitle">登录后查看当前服务的可选陪玩。</view>
     <button class="xa-button button" bindtap="login" hover-class="xa-button-hover">微信快捷登录</button>
@@ -8,29 +8,40 @@
       <view class="title">挑选陪玩</view>
       <view wx:if="{{serviceName}}" class="subtitle">{{serviceName}}</view>
       <view wx:if="{{serviceRequirement}}" class="small muted">{{serviceRequirement}}</view>
-      <button wx:if="{{serviceId || fromCheckout}}" class="xa-button button-secondary" bindtap="platform" disabled="{{loading || !!error}}" hover-class="xa-button-hover">由平台安排</button>
+      <block wx:if="{{serviceId}}">
+        <view class="picker-selection-heading"><text>已选 {{selectedProviders.length}} / {{selectionLimit}} 位</text><text class="small muted">{{selectionLimit === 2 ? '双陪套餐' : '单陪套餐'}} · 原价不变</text></view>
+        <view wx:if="{{selectedProviders.length}}" class="picker-selected-list"><button wx:for="{{selectedProviders}}" wx:key="id" class="xa-button picker-selected-person {{!item.can_order ? 'picker-selected-unavailable' : ''}}" bindtap="removeSelected" data-id="{{item.id}}" disabled="{{loading || validating}}" aria-label="{{'取消选择 ' + item.nickname}}" hover-class="xa-button-hover"><text>{{item.nickname}}{{!item.can_order ? ' · 暂不可约' : ''}}</text><text class="picker-remove" aria-hidden="true">×</text></button></view>
+        <view class="small muted picker-selection-hint" aria-live="polite">{{selectionHint}}</view>
+      </block>
+      <button wx:if="{{serviceId || fromCheckout}}" class="xa-button button-secondary platform-button" bindtap="platform" disabled="{{loading || !!error || validating}}" hover-class="xa-button-hover">由平台安排</button>
     </view>
     <view class="panel picker-filters">
-      <input class="input" value="{{keyword}}" bindinput="search" placeholder="搜索陪玩昵称" confirm-type="search" maxlength="50"/>
+      <view class="picker-search"><image src="/assets/icons/search.png" aria-hidden="true"/><input class="input" value="{{keyword}}" bindinput="search" aria-label="搜索陪玩昵称" placeholder="搜索陪玩昵称" confirm-type="search" maxlength="50"/></view>
       <view class="between picker-summary">
         <text class="small muted">{{loading ? '正在更新陪玩…' : visible.length + ' 位可选陪玩'}}</text>
         <picker range="{{genderOptions}}" value="{{genderIndex}}" bindchange="chooseGender" disabled="{{fromCheckout}}">
-          <view class="picker-gender">{{genderOptions[genderIndex]}}{{fromCheckout ? '' : ' ▾'}}</view>
+          <view class="picker-gender"><text>{{genderOptions[genderIndex]}}</text><image wx:if="{{!fromCheckout}}" src="/assets/icons/chevron.png" aria-hidden="true"/></view>
         </picker>
       </view>
     </view>
     <state-view loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !visible.length}}" bind:retry="load"/>
     <view wx:if="{{!loading && !error}}" class="companion-grid">
-      <button wx:for="{{visible}}" wx:key="id" class="xa-button companion-card" data-id="{{item.id}}" bindtap="openDetail" hover-class="xa-button-hover" aria-label="{{'查看陪玩 ' + item.nickname + ' 的详情'}}">
+      <view wx:for="{{visible}}" wx:key="id" class="companion-card {{item.selected ? 'companion-card-selected' : ''}} {{serviceId && !item.can_order ? 'companion-card-unavailable' : ''}}">
+        <button class="xa-button companion-select" data-id="{{item.id}}" bindtap="chooseProvider" disabled="{{validating}}" hover-class="xa-button-hover" aria-pressed="{{item.selected}}" aria-label="{{serviceId ? (item.selected ? '已选，点击取消 ' : '选择 ') + item.nickname : '查看陪玩 ' + item.nickname + ' 的详情'}}">
         <view class="companion-portrait">
           <image wx:if="{{item.avatarUrl}}" class="companion-avatar" src="{{item.avatarUrl}}" mode="aspectFill" lazy-load/>
           <view wx:else class="companion-avatar companion-initial">{{item.initial}}</view>
           <text wx:if="{{item.picker_group}}" class="companion-badge">{{item.picker_group === 'recommended' ? '推荐' : '人气'}}</text>
+          <text wx:if="{{serviceId}}" class="companion-selection-mark {{item.selected ? 'companion-selection-mark-active' : ''}}">{{item.selected ? '已选' : !item.can_order ? '暂不可约' : '选择'}}</text>
         </view>
         <text class="companion-name">{{item.nickname}}</text>
         <text class="companion-level">{{item.level_name || '等级暂未设置'}}{{item.gender === 'MALE' ? ' · 男陪' : item.gender === 'FEMALE' ? ' · 女陪' : ''}}</text>
         <view class="companion-monthly"><text class="companion-monthly-label">本月接单额</text><text class="companion-monthly-value">{{item.monthlyAmountText}}<text class="companion-monthly-unit"> 兴安币</text></text></view>
-      </button>
+        </button>
+        <button wx:if="{{serviceId}}" class="xa-button companion-detail-entry" data-id="{{item.id}}" bindtap="openDetail" disabled="{{validating}}" hover-class="xa-button-hover" aria-label="{{'查看陪玩 ' + item.nickname + ' 的详情'}}">查看详情<image src="/assets/icons/chevron.png" aria-hidden="true"/></button>
+      </view>
     </view>
+    <view wx:if="{{serviceId}}" class="bottom-bar picker-actions"><view class="picker-action-summary"><view>已选 <text>{{selectedProviders.length}}</text> / {{selectionLimit}} 位</view><text class="small muted">{{selectionHint}}</text></view><button class="xa-button button picker-confirm" bindtap="confirmSelection" disabled="{{loading || !!error || validating || !selectionReady}}" loading="{{validating}}" hover-class="xa-button-hover">{{selectedProviders.length ? '确认选择（' + selectedProviders.length + ' / ' + selectionLimit + '）' : '由平台安排'}}</button></view>
   </block>
 </view>
+<bottom-navigation/>

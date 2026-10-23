@@ -4,7 +4,7 @@ from orders.models import Order, OrderProvider
 
 
 def recent_provider_ids(account):
-    orders = Order.objects.filter(customer_account=account, business_cycle=account.business_cycle, payment_status=Order.PaymentStatus.PAID,
+    orders = Order.objects.filter(customer_account=account, business_cycle=account.business_cycle, payment_status__in=[Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED],
         source_order__isnull=True).exclude(status=Order.Status.CANCELLED).exclude(service__service_category__is_gift=True)
     single = orders.exclude(provider_account__isnull=True).values('provider_account_id').annotate(
         last_order=Max('id')).order_by('-last_order')[:4]

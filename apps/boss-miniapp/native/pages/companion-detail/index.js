@@ -3,16 +3,22 @@ const auth = require('../../core/auth');
 const { go, toast } = require('../../core/ui');
 const { on } = require('../../core/events');
 const { prepareCompanion } = require('../../core/companion');
+const { normalizeProviderIds, providerLimit } = require('../../core/provider-selection');
 
 Page({
-  data: { logged: false, loading: false, error: '', provider: null, serviceId: 0, serviceName: '', fromCheckout: false, gender: 'ANY', playing: false },
+  data: { logged: false, loading: false, error: '', provider: null, serviceId: 0, serviceName: '', fromCheckout: false, gender: 'ANY', playing: false,
+    pickerDraft: false, draftSelected: false, draftFull: false, selectionLimit: 1 },
   onLoad(options) {
     this._alive = true;
     this._id = Number(options.id) || 0;
-    this.setData({ serviceId: Number(options.service_id) || 0, fromCheckout: options.from_checkout === '1', gender: ['ANY', 'MALE', 'FEMALE'].includes(options.provider_gender) ? options.provider_gender : 'ANY' });
+    this._openerRevision = auth.revision();
+    this._draftIds = normalizeProviderIds(options.selected_provider_ids);
+    this.setData({ serviceId: Number(options.service_id) || 0, fromCheckout: options.from_checkout === '1', gender: ['ANY', 'MALE', 'FEMALE'].includes(options.provider_gender) ? options.provider_gender : 'ANY',
+      pickerDraft: options.picker_draft === '1' && Number(options.service_id) > 0, draftSelected: this._draftIds.includes(this._id) });
     this._off = on('session.changed', () => {
       this.stopVoice(); this._seq = (this._seq || 0) + 1;
-      this.setData({ provider: null, serviceName: '' });
+      this._draftIds = [];
+      this.setData({ provider: null, serviceName: '', draftSelected: false, draftFull: false });
       if (this._visible) this.load();
     });
   },
@@ -32,7 +38,8 @@ Page({
       const [provider, service] = await Promise.all([request('/users/escorts/' + this._id + '/' + query), serviceId ? request('/orders/services/' + serviceId + '/') : Promise.resolve(null)]);
       if (!this._alive || seq !== this._seq || revision !== auth.revision()) return;
       this._loadedRevision = revision;
-      this.setData({ loading: false, provider: prepareCompanion(provider), serviceName: service?.name || '' });
+      const selectionLimit = providerLimit(service);
+      this.setData({ loading: false, provider: prepareCompanion(provider), serviceName: service?.name || '', selectionLimit, draftFull: selectionLimit > 1 && this._draftIds.length >= selectionLimit });
     } catch (error) {
       if (this._alive && seq === this._seq) this.setData({ loading: false, error: error.message, provider: null, serviceName: '' });
     }
@@ -52,14 +59,22 @@ Page({
   gift() { if (!this.ready()) return; this.stopVoice(); go('/pages/gifts/index?provider_id=' + this.data.provider.id); },
   select() {
     if (!this.ready() || this._selecting) return;
+    if ((this.data.fromCheckout || this.data.pickerDraft) && this._openerRevision !== auth.revision()) { toast('账号已变更，请返回列表重新选择'); return; }
     const provider = this.data.provider;
+    if (this.data.pickerDraft && this.data.draftSelected) { this.stopVoice(); wx.navigateBack(); return; }
     if (!provider.can_order) { toast(provider.order_unavailable_reason || '该陪玩暂不可接单，请稍后再约'); return; }
+    if (this.data.pickerDraft && this.data.draftFull) { toast('已选齐' + this.data.selectionLimit + '位，请返回列表取消一位后更换'); return; }
     this.stopVoice(); this._selecting = true;
-    if (this.data.fromCheckout) {
+    if (this.data.pickerDraft) {
+      this.getOpenerEventChannel().emit('providerSelected', provider);
+      wx.navigateBack({ delta: 1, fail: () => { this._selecting = false; toast('返回列表失败，请返回后重新选择'); } });
+    } else if (this.data.fromCheckout) {
       this.getOpenerEventChannel().emit('providerSelected', provider);
       wx.navigateBack({ delta: 2, fail: () => { this._selecting = false; toast('返回订单失败，请返回后重新选择'); } });
     } else if (this.data.serviceId) {
-      this.navigateSelection('/pages/checkout/index?service_id=' + this.data.serviceId + '&provider_id=' + provider.id + '&provider_gender=' + this.data.gender);
+      this.navigateSelection(this.data.selectionLimit > 1
+        ? '/pages/companion-picker/index?service_id=' + this.data.serviceId + '&provider_gender=' + this.data.gender + '&selected_provider_ids=' + provider.id
+        : '/pages/checkout/index?service_id=' + this.data.serviceId + '&provider_id=' + provider.id + '&provider_gender=' + this.data.gender);
     } else {
       wx.setStorageSync('xa:native:catalog-intent', { provider_id: provider.id, provider_name: provider.nickname }); this.navigateSelection('/pages/catalog/index');
     }

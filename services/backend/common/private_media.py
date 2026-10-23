@@ -5,6 +5,7 @@ read access for 15 minutes; every read rechecks the issuing account and record.
 It is not a login token and is never valid for a different file or API action.
 """
 import hashlib
+from io import BytesIO
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
@@ -162,6 +163,12 @@ def private_media(request, ticket):
             if content_type not in ('image/jpeg', 'image/png', 'image/gif', 'image/webp'):
                 raise Http404
             handle.seek(0)
+            from .catalog_images import DISPLAY_MAX_BYTES, compress_catalog_image
+            if field.size > DISPLAY_MAX_BYTES:
+                display, _ = compress_catalog_image(handle)
+                handle.close()
+                handle = BytesIO(display)
+                content_type = 'image/jpeg'
             response = FileResponse(handle, content_type=content_type)
         except Exception:
             handle.close()

@@ -7,7 +7,7 @@
 .title { display: block; margin-top: $spacing-md; font-size: 22PX; font-weight: $font-weight-bold; }
 .remark { display: block; margin-top: $spacing-sm; font-size: $font-size-sm; line-height: $line-height-normal; color: rgba(255,255,255,.9); }
 .expire { display: block; margin-top: $spacing-md; font-size: $font-size-xs; color: rgba(255,255,255,.75); }
-.card { margin: 9PX 0 0; padding: 14PX; border-radius:14PX; background:#fffdf5; box-shadow:$shadow-card; }
+.card { margin: 9PX 0 0; padding: 14PX; border-radius:14PX; background:$color-bg-card; box-shadow:$shadow-card; }
 .sectionTitle { display: block; margin-bottom: $spacing-md; font-size: $font-size-lg; font-weight: $font-weight-bold; color: $color-text-primary; }
 .notice { display: block; font-size: $font-size-sm; line-height: $line-height-normal; color: $color-text-secondary; }
 .label { display: block; margin: $spacing-md 0 $spacing-xs; font-size: $font-size-sm; color: $color-text-secondary; }

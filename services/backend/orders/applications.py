@@ -11,6 +11,7 @@ from .models import Order, OrderApplication, OrderProvider
 from .services import count_active_orders, lock_provider_dispatch, mark_escort_busy, sync_single_provider_share
 from .state_machine import transition, IllegalTransitionError
 from .notifier import notify_order_update
+from .team_rules import required_team_size, team_size_error
 
 class ApplicationError(ValueError):
     pass
@@ -94,6 +95,9 @@ class ApplyOrderView(APIView):
             with transaction.atomic():
                 order = Order.objects.select_for_update().get(pk=order_id)
                 public_order(order)
+                error = team_size_error(order, size)
+                if error:
+                    raise ApplicationError(error)
                 eligible(order, request.account)
                 partner = None
                 if size == 2:
@@ -132,6 +136,9 @@ class ApplicationActionView(APIView):
                 if action == 'CONFIRM_TEAM':
                     if row.partner_id != request.account.pk:
                         raise ApplicationError('请由队友本人确认')
+                    error = team_size_error(order, 2)
+                    if error:
+                        raise ApplicationError(error)
                     eligible(order, row.applicant)
                     eligible(order, row.partner)
                     row.partner_confirmed = True
@@ -161,6 +168,9 @@ class SelectApplicationView(APIView):
                 if row.status != 'PENDING' or (row.partner_id and not row.partner_confirmed):
                     raise ApplicationError('报名已撤回或队友尚未确认')
                 accounts = [row.applicant] + ([row.partner] if row.partner_id else [])
+                error = team_size_error(order, len(accounts))
+                if error:
+                    raise ApplicationError(error)
                 lock_provider_dispatch([a.pk for a in accounts])
                 profiles = [eligible(order,a) for a in accounts]
                 def assign(current):
@@ -182,7 +192,7 @@ class SelectApplicationView(APIView):
                         current.provider_income = split.provider_income
                         current.inviter_commission = split.inviter_commission
                         current.shop_income = split.shop_income
-                        current.providers.filter(settled_at__isnull=True).update(released_at=timezone.now(), settlement_base=0, provider_income=0)
+                        current.providers.filter(settled_at__isnull=True).update(released_at=timezone.now(), settlement_base=0, provider_income=0, commission_fixed=0)
                         for profile, share in zip(profiles,shares):
                             OrderProvider.objects.update_or_create(order=current,provider=profile.user,defaults={
                                 'provider_account':profile.account,'provider_name_snapshot':profile.display_name,
@@ -209,6 +219,8 @@ class TeammateListView(APIView):
             return Response({'code':403,'msg':'仅陪玩可选择队友'})
         try:
             order=Order.objects.get(pk=order_id);public_order(order);eligible(order,request.account)
+            if required_team_size(order) != 2:
+                raise ApplicationError('单陪套餐不支持选择队友')
         except (Order.DoesNotExist, ApplicationError):
             return Response({'code':404,'msg':'订单不可报名'})
         profiles=EscortProfile.objects.select_related('account','user','level').prefetch_related('qualifications__game_category','service_items__game_category').filter(account__account_type='PROVIDER',account__is_active=True,account__can_login=True,is_verified=True).exclude(account=request.account)

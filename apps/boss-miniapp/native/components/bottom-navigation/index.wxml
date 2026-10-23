@@ -1,0 +1,7 @@
+<view class="navigation-space" aria-hidden="true"></view>
+<view class="navigation" role="navigation" aria-label="底部导航">
+  <button wx:for="{{tabs}}" wx:key="key" class="navigation-item {{selected === item.key ? 'navigation-selected' : ''}}" data-key="{{item.key}}" bindtap="openTab" hover-class="navigation-hover" aria-label="{{item.text}}{{selected === item.key ? '，当前栏目' : ''}}">
+    <image class="navigation-icon" src="/assets/tabbar/{{item.key}}{{selected === item.key ? '-active' : ''}}.png" mode="aspectFit" aria-hidden="true"/>
+    <text class="navigation-label">{{item.text}}</text>
+  </button>
+</view>

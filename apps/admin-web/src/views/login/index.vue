@@ -16,6 +16,7 @@
             v-model="form.username"
             :disabled="loading || !!otp"
             placeholder="请输入账号"
+            autocomplete="username"
             :prefix-icon="User"
           />
         </el-form-item>
@@ -25,6 +26,7 @@
             :disabled="loading || !!otp"
             type="password"
             placeholder="请输入密码"
+            autocomplete="current-password"
             show-password
             :prefix-icon="Lock"
             @keyup.enter="onSubmit"
@@ -123,13 +125,15 @@ async function onSubmit() {
   align-items: center;
   justify-content: center;
   padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
-  background: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 100%);
+  background: linear-gradient(145deg, var(--xa-color-surface-page), var(--xa-color-primary-soft));
 }
 .login-card {
-  --ap-control-height: 44px;
-  --ap-control-font-size: 14px;
-  width: min(380px, 100%);
-  padding: 40px 36px;
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
+  width: min(420px, 100%);
+  padding: 36px 32px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--primary);
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow-xl);
@@ -149,12 +153,11 @@ async function onSubmit() {
   color: var(--muted-foreground);
   font-size: 14px;
 }
-.login-card :deep(.el-input), .login-card :deep(.el-button) { --ap-control-height: 44px; --ap-control-font-size: 14px; }
+.login-card :deep(.el-input), .login-card :deep(.el-button) { --ap-control-height: var(--control-height-sm); --ap-control-font-size: 13px; }
 .login-form :deep(.el-form-item__label) { height: auto; min-height: 0; margin-bottom: 8px; padding: 0; line-height: 20px; }
 .login-actions { display: grid; gap: 12px; margin-top: 20px; }
 .login-submit, .login-actions .el-button { width: 100%; margin: 0; white-space: nowrap; }
-.login-back { color: var(--brand-600); border-color: var(--border); background: var(--card); }
-.login-submit { --el-button-bg-color: var(--brand-600); --el-button-border-color: var(--brand-600); --el-button-hover-bg-color: var(--brand-700); --el-button-hover-border-color: var(--brand-700); --el-button-active-bg-color: var(--brand-700); --el-button-active-border-color: var(--brand-700); }
+.login-back { color: var(--primary); border-color: var(--border); background: var(--card); }
 .otp-panel { margin: 0; }
 .account-summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
 .account-summary span { color: var(--muted-foreground); }

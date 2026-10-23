@@ -79,14 +79,18 @@ function canonical(value) {
   if (value && typeof value === 'object') return '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + canonical(value[k])).join(',') + '}';
   return JSON.stringify(value);
 }
-function fund(path, payload) {
+function fund(path, payload, options = {}) {
   const current = auth.getSession();
   if (!current) return Promise.reject(new Error('请先登录'));
-  const key = 'xa:native:fund:' + current.user.id + ':' + path + ':' + canonical(payload);
+  const explicitId = options.clientRequestId;
+  if (explicitId !== undefined && (typeof explicitId !== 'string' || !/^[a-zA-Z0-9_-]{8,64}$/.test(explicitId))) {
+    return Promise.reject(new Error('无效的交易凭证，请重新进入页面'));
+  }
+  const key = 'xa:native:fund:' + current.user.id + ':' + path + ':' + canonical(payload) + (explicitId ? ':request:' + explicitId : '');
   if (pendingFunds.has(key)) return pendingFunds.get(key);
   let id;
   try {
-    id = wx.getStorageSync(key) || 'native-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    id = explicitId || wx.getStorageSync(key) || 'native-' + Date.now() + '-' + Math.random().toString(36).slice(2);
     wx.setStorageSync(key, id);
   } catch (_) { return Promise.reject(new Error('无法保存交易凭证，请检查设备存储后重试')); }
   const operation = request(path, 'POST', { ...payload, client_request_id: id }).catch(error => {
@@ -109,6 +113,8 @@ function fund(path, payload) {
 }
 async function upload(path, filePath, name = 'image', formData = {}) {
   const version = auth.revision();
+  filePath = await require('./image-upload').prepareImage(filePath);
+  if (auth.revision() !== version) throw new Error('账号已切换，请重试');
   const send = () => new Promise((resolve, reject) => {
     const current = auth.getSession();
     wx.uploadFile({ url: config().apiBase + path, filePath, name, formData, timeout: 30000,

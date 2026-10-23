@@ -3,7 +3,7 @@
 .desktopShell { min-height:100dvh; background:$color-bg-page; }
 .sidebar { position:fixed; inset:0 auto 0 0; z-index:30; display:flex; flex-direction:column; width:224PX; padding:24PX 16PX; color:$color-text-primary; background:$color-bg-card; border-right:1PX solid $color-border; overflow-y:auto; }
 .brand { display:flex; align-items:center; gap:12PX; padding:0 8PX 24PX; border-bottom:1PX solid $color-divider; }
-.brandMark { @include flex-center; flex:none; width:40PX; height:40PX; border-radius:12PX; color:#3d3216; font-size:14PX; font-weight:700; background:linear-gradient(145deg,#fff0b5,#e8be55); }
+.brandMark { @include flex-center; flex:none; width:44PX; height:44PX; border-radius:12PX; color:var(--xa-color-on-primary); font-size:15PX; font-weight:700; background:var(--xa-gradient-primary); }
 .brandName,.brandSub,.navLabel,.navCaption { display:block; }
 .brandName { font-size:17PX; font-weight:700; }.brandSub { margin-top:2PX; font-size:12PX; color:$color-text-secondary; }
 .navList { display:flex; flex-direction:column; gap:8PX; margin-top:24PX; }
@@ -11,7 +11,7 @@
 .navList .navItem:hover { background:var(--xa-color-surface-subtle); }
 .navList .navActive, .navList .navActive:hover { background:var(--xa-color-primary-soft); }
 .navIcon { @include flex-center; flex:none; width:32PX; height:32PX; border-radius:8PX; background:var(--xa-color-surface-subtle); }
-.navActive .navIcon { background:#002fa7; }
+.navActive .navIcon { background:$color-primary; }
 .navCopy { min-width:0; }.navLabel { font-size:14PX; font-weight:600; }.navCaption { margin-top:3PX; font-size:12PX; color:$color-text-secondary; }
 .sidebarFoot { margin-top:auto; padding:28PX 8PX 0; font-size:12PX; color:$color-text-tertiary; }
 .desktopMain { min-height:100dvh; margin-left:224PX; padding:32PX 32PX 48PX; }
