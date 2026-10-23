@@ -6,25 +6,25 @@
 }
 
 .header {
-  margin: 30rpx $page-padding 0;
-  padding: 34rpx;
-  color: #fff;
-  background: linear-gradient(145deg,#17171c,#393440 62%,#51455b);
-  border-radius: 36rpx;
+  margin: 32rpx $page-padding 0;
+  padding: 32rpx;
+  color: var(--xa-color-surface-card);
+  background: linear-gradient(145deg,#17171c,#393440 62%,var(--xa-color-text-secondary));
+  border-radius: 32rpx;
   box-shadow: 0 18rpx 44rpx rgba(30,25,36,.16);
 }
 
-.eyebrow { display:block; margin-bottom:8rpx; font-size:20rpx; font-weight:650; letter-spacing:2rpx; color:rgba(255,255,255,.5); }
+.eyebrow { display:block; margin-bottom:8rpx; font-size:22rpx; font-weight:600; letter-spacing:2rpx; color:rgba(255,255,255,.5); }
 .titleRow { display:flex; align-items:center; justify-content:space-between; }
 .pageTitle {
   display: block;
-  font-size: 44rpx;
+  font-size: 48rpx;
   font-weight: $font-weight-bold;
-  color: #fff;
+  color: var(--xa-color-surface-card);
   letter-spacing: $letter-spacing-tight;
 }
-.pageSubtitle { display:block; margin-top:6rpx; font-size:22rpx; color:rgba(255,255,255,.62); }
-.countPill { padding:9rpx 16rpx; border-radius:$radius-round; font-size:22rpx; color:rgba(255,255,255,.8); background:rgba(255,255,255,.1); }
+.pageSubtitle { display:block; margin-top:8rpx; font-size:22rpx; color:rgba(255,255,255,.62); }
+.countPill { padding:8rpx 16rpx; border-radius:$radius-round; font-size:22rpx; color:rgba(255,255,255,.8); background:rgba(255,255,255,.1); }
 
 // 与首页 hero 搜索框保持统一：半透明玻璃质感，白字
 .searchBar {
@@ -45,10 +45,10 @@
   font-size: $font-size-md;
   color: $color-text-white;
 }
-.clearSearch { display:flex; align-items:center; justify-content:center; width:44rpx; height:44rpx; font-size:34rpx; line-height:1; color:rgba(255,255,255,0.7); }
+.clearSearch { display:flex; align-items:center; justify-content:center; width:48rpx; height:48rpx; font-size:32rpx; line-height:1; color:rgba(255,255,255,0.7); }
 
 .productList {
-  padding: $spacing-lg $page-padding 150rpx;
+  padding: $spacing-lg $page-padding 128rpx;
 }
 
 .listHeader {
@@ -93,11 +93,11 @@
 
 .productImage {
   width: 100%;
-  height: 220rpx;
+  height: 224rpx;
 }
 
 .productInfo {
-  padding: $spacing-sm;
+  padding: $spacing-md;
 }
 
 .productName {
@@ -158,4 +158,4 @@
   font-size: $font-size-sm;
   color: $color-text-tertiary;
 }
-.loginBtn { margin-top:22rpx; padding:15rpx 30rpx; border-radius:18rpx; color:#fff; font-size:24rpx; font-weight:650; background:$color-primary; }
+.loginBtn { margin-top:24rpx; padding:16rpx 32rpx; border-radius:999rpx; color:var(--xa-color-surface-card); font-size:24rpx; font-weight:600; background:$color-primary; }

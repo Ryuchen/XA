@@ -156,12 +156,12 @@ class MyCouponListTest(APITestCase):
     def test_usable_amount_threshold_filter(self):
         low = make_coupon(threshold=5000)
         high = make_coupon(threshold=20000)
-        make_user_coupon(self.user, coupon=low)
-        make_user_coupon(self.user, coupon=high)
+        low_claim = make_user_coupon(self.user, coupon=low)
+        high_claim = make_user_coupon(self.user, coupon=high)
         res = self.client.get('/api/coupons/mine/?usable=1&amount=10000')
         ids = [c['id'] for c in res.data['data']]
-        self.assertIn(low.id, ids)
-        self.assertNotIn(high.id, ids)
+        self.assertIn(low_claim.id, ids)
+        self.assertNotIn(high_claim.id, ids)
 
 
 class OrderCouponIntegrationTest(APITestCase):

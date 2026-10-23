@@ -149,7 +149,7 @@ const kpis = computed(() => [
   {
     label: '订单总成交额',
     value: amountToXaCoin(stats.value.order_amount_total) + '币',
-    note: `实付合计 ${amountToXaCoin(stats.value.paid_amount_total)}兴安币`,
+    note: `已支付 ${stats.value.paid_order_total ?? 0} 单，已排除未付和退款`,
     icon: 'Money',
   },
   {
@@ -233,7 +233,7 @@ const userDonutOption = computed<EChartsOption>(() => {
         labelLine: { show: false },
         data: [
           { value: customer, name: '老板', itemStyle: { color: 'var(--primary)' } },
-          { value: provider, name: '陪玩', itemStyle: { color: 'var(--success)' } },
+          { value: provider, name: '陪玩', itemStyle: { color: 'var(--chart-2)' } },
           { value: other, name: '其他', itemStyle: { color: 'var(--muted-foreground)' } },
         ].filter((d) => d.value > 0),
       },

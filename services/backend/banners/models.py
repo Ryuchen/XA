@@ -11,6 +11,9 @@ class Banner(models.Model):
         NONE = 'NONE', '无跳转'
         PRODUCT = 'PRODUCT', '商品详情'
         ANNOUNCEMENT = 'ANNOUNCEMENT', '公告详情'
+        GAMEPLAY = 'GAMEPLAY', '玩法服务'
+        CONTENT = 'CONTENT', '活动与权益'
+        PAGE = 'PAGE', '业务入口'
         URL = 'URL', '外部链接'
 
     image = models.ImageField(

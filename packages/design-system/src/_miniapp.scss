@@ -170,7 +170,7 @@ $color-price-rgb: var(--xa-price-rgb);
 }
 
 @mixin primary-control-state {
-  color: $color-text-white !important;
+  color: var(--xa-color-on-primary) !important;
   background: $color-primary !important;
   box-shadow: $shadow-glow;
   cursor: pointer;

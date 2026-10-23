@@ -7,7 +7,9 @@ daphne>=4.0,<5
 djangorestframework>=3.15,<4
 djangorestframework-simplejwt>=5.3,<6
 django-cors-headers>=4.3,<5
-pymysql>=1.1,<2
+pymysql[rsa]>=1.1,<2
 celery>=5.3,<6
 redis>=5.0,<6
 Pillow>=10.0,<12
+cryptography>=46,<51
+qrcode==8.2

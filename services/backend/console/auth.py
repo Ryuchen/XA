@@ -14,7 +14,7 @@ from .permissions import get_account_permissions, is_console_account
 
 def _profile_payload(account):
     membership = getattr(account, 'admin_membership', None)
-    roles = list(membership.roles.all()) if membership else []
+    roles = [r for r in membership.roles.all() if r.is_active] if membership else []
     role_list = [{'id': r.id, 'name': r.name, 'code': r.code} for r in roles]
     is_super_admin = any(role['code'] == 'super_admin' for role in role_list)
     return {
@@ -32,6 +32,7 @@ def _profile_payload(account):
 
 class ConsoleLoginView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
     # 口令爆破的第一现场，必须限流（仅作用于 POST）。
     throttle_scope = 'login'
 
@@ -51,10 +52,14 @@ class ConsoleLoginView(APIView):
         if not is_console_account(account):
             return Response({'code': 403, 'msg': '该账号无后台访问权限'})
 
-        access_token, refresh_token = issue_account_tokens(account)
+        from club_accounts.otp import otp_login_gate
+        otp=otp_login_gate(account,request.data,'admin')
+        if isinstance(otp,Response):return otp
+        access_token, refresh_token = issue_account_tokens(account,otp_verified=bool(otp and otp['otp_verified']))
         return Response({
             'code': 0,
             'data': {
+                'recoveryCodes': otp.get('recoveryCodes',[]) if otp else [],
                 'token': access_token,
                 'refresh': refresh_token,
                 'profile': _profile_payload(account),
@@ -70,7 +75,7 @@ class ConsoleRefreshView(APIView):
         if not token:
             return Response({'code': 400, 'msg': '缺少 refresh token'})
         try:
-            access_token = refresh_account_access_token(token)
+            access_token = refresh_account_access_token(token, require_console=True)
         except TokenError:
             # HTTP 状态码必须真的是 401：信封里的 code=401 只有业务代码看得懂，
             # 而浏览器 fetch 封装、网关、监控告警看的都是 HTTP 状态码。
@@ -88,5 +93,5 @@ class ConsoleProfileView(APIView):
 
     def get(self, request):
         if not is_console_account(request.account):
-            return Response({'code': 403, 'msg': '无后台访问权限'})
+            return Response({'code': 401, 'msg': '后台访问权限已停用，请重新登录'}, status=401)
         return Response({'code': 0, 'data': _profile_payload(request.account)})

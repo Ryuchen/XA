@@ -208,6 +208,7 @@
 ### 2.1 服务列表
 `GET /api/orders/services/` · 权限：登录 — 查询参数 `category`（可选）。
 响应 `data[]`：`id, name, description, price, category, cover_url`。
+服务价格还返回 `unit_price`（每人报价）与 `billing_provider_count`（计价人数），公开 `price` 是两者相乘的套餐价。用户已确认双陪套餐统一每人价 × 2，后续新成交快照保存计价人数；既有已成交订单的总金额和分账不追溯重算。
 
 ### 2.2 服务详情
 `GET /api/orders/services/<service_id>/` · 权限：登录
@@ -239,7 +240,9 @@
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | service_id / product_id | int | 是 | 服务 ID（二者其一） |
-| provider_id | int | 否 | 指定陪玩下单 |
+| provider_ids | int[] | 否 | 指定陪玩的业务账号 ID；单陪恰好 1 位、双陪恰好 2 位，不可重复；空数组表示平台安排 |
+| provider_id | int | 否 | 兼容旧版的单陪指定字段；新客户端使用 `provider_ids`，混传时必须为同一位单陪 |
+| dispatch_mode | string | 否 | `BOSS_SELECT`（默认）为平台报名后老板选择；`AUTO_GRAB` 仅限单陪 |
 | user_coupon_id | int | 否 | 使用的优惠券 |
 | game_rounds | int | 否 | 局数，默认 1 |
 | game_region | string | 否 | 大区 |
@@ -247,7 +250,13 @@
 | game_uid | string | 否 | 游戏 UID |
 | remark | string | 否 | 备注（≤255） |
 
-下单即扣款，计价：`amount = 原价×局数 − 老板折扣 − 活动折扣 − 券抵扣`，并按抽成率拆账。响应 `data` 为订单对象（见 2.9）。余额不足返回 `code=400`。
+下单即扣款，计价：`amount = 原价×局数 − 老板折扣 − 活动折扣 − 券抵扣`，并按订单的百分比或整单固定抽成快照拆账（见 10.2）。响应 `data` 为订单对象（见 2.9）。余额不足返回 `code=400`。
+
+`POST /api/orders/quote/` 复用相同的选人、资格与计价校验，返回报价及余额是否足够，不扣款。公开商品 `price` 已是整套价格；选中两位陪玩不会再次乘人数，也不会增加套餐价格。
+
+指定双陪时，服务端在同一扣款事务中锁住两位陪玩的派单名额，逐人复核可接状态、性别、游戏/平台/难度/档位资格与容量，写入 `escort_mode=DOUBLE`、两份 `OrderProvider` 分账快照并进入 `GRABBED`，两位均能读取本单。各人等级抽成沿用既有规则；固定金额抽成整单只扣一次再分摊。任一人不满足要求会拦截整单，不能提交一位陪玩的双陪订单。
+
+不指定时，双陪以 `BOSS_SELECT` 进入 `PENDING`，冻结 `required_provider_count=2` 并等待两人组队报名、队友确认和老板选择，不允许单人直接抢单。仅真正配置 `billing_provider_count=2` 的双陪套餐可自助进入该流程；其他咨询服务、附加费用和双陪小时套餐数量限制仍生效。人数和报价在扣款前复核，目录变更后须重新确认。
 
 ### 2.8 订单列表
 `GET /api/orders/orders/` · 权限：登录
@@ -266,15 +275,19 @@
 
 | 接口 | 方法/路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| 抢单 | `POST /api/orders/orders/<id>/grab/` | PROVIDER | 陪玩须 AVAILABLE，抢后置 BUSY |
-| 开始服务 | `POST /api/orders/orders/<id>/start/`（别名 `/start-service/`） | 订单关联陪玩 | GRABBED→IN_SERVICE |
-| 完成 | `POST /api/orders/orders/<id>/complete/` | 订单关联陪玩 | 三方入账 + 陪玩恢复 AVAILABLE |
+| 抢单/报名 | `POST /api/orders/orders/<id>/grab/` | PROVIDER | `requires_boss_selection=true` 时提交报名，body `team_size`、双人时的 `partner_id`；其它可直抢单通过后接单。状态/资格/名额由服务端复核 |
+| 可组队陪玩 | `GET /api/orders/orders/<id>/teammates/` | PROVIDER | 仅双陪待选单返回符合本单资格、通行证与名额条件的队友；单陪不能查询/借此发起组队 |
+| 队友确认/撤回 | `POST /api/orders/orders/<id>/applications/<application_id>/action/` | 报名本人/队友 | body `action=CONFIRM_TEAM/WITHDRAW`；确认组队时再次校验人数和资格 |
+| 老板选择报名 | `POST /api/orders/orders/<id>/applications/<application_id>/select/` | 订单所属老板 | 报名 ID 在路径中；双人须队友已确认，服务端复核资格并固化各成员分账 |
+| 开始服务 | `POST /api/orders/orders/<id>/start/`（别名 `/start-service/`） | 订单关联陪玩 | multipart `entry_image`；GRABBED→IN_SERVICE，双陪需相关成员入队凭证齐全 |
+| 完成 | `POST /api/orders/orders/<id>/complete/` | 订单关联陪玩 | multipart `completion_image`；完成履约并释放名额；新订单还须报单审核/售后条件满足后结算，见 3.2 |
 | 取消 | `POST /api/orders/orders/<id>/cancel/` | 订单所属老板 | 仅 PENDING 可取消，全额退款；body 可带 `reason` |
 | 拒单 | `POST /api/orders/orders/<id>/reject/` | 订单关联陪玩 | 回 PENDING，`reject_count+1`；body 可带 `reason` |
 | 强制退款 | `POST /api/orders/orders/<id>/refund/` | OPERATOR | GRABBED/IN_SERVICE，`reason` 必填 |
 | 客服派单 | `POST /api/orders/orders/<id>/assign/` | OPERATOR | body 必填 `provider_id` |
 
 以上成功均返回 `data` 为最新订单对象；状态非法返回 `code=400`。
+订单列表与详情返回权威 `required_team_size=1/2` 与 `can_team_apply`，取已成交 `required_provider_count` 等人数快照，不能根据当前参与人数、后续修改的商品目录或价格自行猜测。单陪仅 `team_size=1` 且不能携带 `partner_id`；明确双陪仅 `team_size=2` 且须另一名队友，队友确认后等待老板选择。陪玩端仅在 `required_team_size=2 && can_team_apply=true` 时开放队友选择，字段缺失按单人展示并由服务端最终校验。双陪仍由当前客服确认/后台派单流程成交，未新增客户端自助双陪付款入口。
 
 ### 2.11 评价
 
@@ -304,19 +317,24 @@
 | 接口 | 方法/路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | 钱包信息 | `GET /api/wallet/info/` | 登录 | `data.balance` |
-| 充值 | `POST /api/wallet/topup/` | 登录 | body `amount`（内部账务单位，>0），返回 `balance` |
+| 充值旧入口 | `POST /api/wallet/topup/` | 登录 | 当前固定返回 `code=403`；须联系企业微信客服确认收款，再由后台凭证充值，客户端不能直接改余额 |
 | 收益记录 | `GET /api/wallet/income/` | 登录 | 返回 INCOME/WITHDRAW 流水（最多 50）+ `total_income` |
-| 提现配置+记录 | `GET /api/wallet/withdraw/` | 登录 | `balance, frozen_amount, min_amount, tax_rate, requests[]`；可选 `?amount=` 触发试算，见 3.1 |
+| 提现配置+记录 | `GET /api/wallet/withdraw/` | PROVIDER | `balance, frozen_amount, min_amount, tax_rate, requests[]`；启用俱乐部规则时追加 `balance_threshold, can_withdraw`；可选 `?amount=` 试算，见 3.1 |
 | 提现申请 | `POST /api/wallet/withdraw/` | PROVIDER | 见下 |
 | 全部流水 | `GET /api/wallet/transactions/` | 登录 | `tx_type` 筛选 + 分页 |
-| 报单 | `GET/POST /api/wallet/reports/` | GET 登录 / POST PROVIDER | 见下 |
+| 奖惩/礼物收益 | `GET /api/wallet/provider-benefits/` | PROVIDER | 全量汇总与分别分页的奖惩、礼物记录；礼物区分预计分成、实际到账与结算状态 |
+| 提现账户 | `GET /api/wallet/withdraw-accounts/`；`PUT/DELETE /api/wallet/withdraw-accounts/<payee_method>/` | PROVIDER | 微信、支付宝、银行卡各保存一个，按 ID 与版本校验，见 3.1.2 |
+| 报单列表/草稿 | `GET/POST /api/wallet/reports/` | GET 登录 / POST PROVIDER | 查询本人记录；POST 仅以 `order_id` 创建/恢复服务报单草稿，见 3.2 |
+| 报单凭证 | `POST /api/wallet/reports/<id>/images/`；`DELETE /api/wallet/reports/<id>/images/<image_id>/` | 本人可编辑报单 | 上传三类截图、移除战绩图片，见 3.2 |
+| 报单提交 | `POST /api/wallet/reports/<id>/submit/` | 本人可提交报单 | 完成服务、仍已支付且三类截图齐全后提交审核 |
 | 押金 | `GET/POST /api/wallet/deposit/` | PROVIDER | 见下 |
 
 ### 3.1 提现配置 / 试算（GET）
 
-`GET /api/wallet/withdraw/` · 权限：登录
+`GET /api/wallet/withdraw/` · 权限：PROVIDER
 
 响应 `data`：`balance, frozen_amount, min_amount, tax_rate, requests[]`。
+启用俱乐部资金规则时追加 `balance_threshold=5000`（¥50）与 `can_withdraw`，且 `min_amount=0`：申请前可用余额须严格大于该门槛，单次提现金额仍须为正整数且不超过余额。未启用时使用服务端返回的最低单次金额 `min_amount`，客户端不能硬编码两种口径。
 
 | 查询参数 | 类型 | 说明 |
 | --- | --- | --- |
@@ -329,37 +347,71 @@
   的银行家舍入。例：`amount=125`、`tax_rate=2` → `tax_amount=3`、`actual_amount=122`。
 - `amount` 非整数 / ≤0 / 含非法字符 → `code=400`「金额非法」；`?amount=`（空串）视为未传，按原响应返回。
 - 试算**不校验最低提现额、不校验余额**，也**不产生任何副作用**（不建提现单、不写流水、不占幂等键）。
-  准入判断请用同一响应里的 `min_amount` 与 `balance` 在前端做，避免用户逐字输入时每敲一下就闪一次错误。
+  准入判断使用同一响应的 `min_amount`、`balance`，以及存在时的 `balance_threshold`，避免逐字输入时反复弹错。POST 会再次校验规则与余额。
 - 并发输入时响应可能乱序到达，用回显的 `amount` 丢弃过期响应。
 
 ### 3.1.1 提现申请（POST）
 
 | 参数 | 类型 | 说明 |
 | --- | --- | --- |
-| amount | int | 提现额（内部账务单位），须 ≥ 最低门槛且 ≤ 余额。允许非整币（如 `125` = 12.5 兴安币） |
-| payee_method | string | 收款方式（WithdrawRequest.PayeeMethod） |
-| payee_account | string | 收款账号（≤100） |
-| payee_name | string | 收款人（≤50） |
+| amount | int | 正整数账务值，须 ≥ 返回的 `min_amount` 且 ≤ 余额；存在 `balance_threshold` 时申请前余额还须大于该值。允许非整币（如 `125` = 12.5 兴安币） |
+| withdrawal_account_id | int | 当前陪玩绑定的收款账户 ID；现行陪玩端采用此方式 |
+| expected_payee_version | int | 本次核对的绑定版本，与账户 ID 一起提交 |
+| expected_tax_rate / expected_tax_amount / expected_actual_amount | int | 服务端最近试算的税率与金额，传其中一个时必须三项齐全；不一致返回 `WITHDRAW_QUOTE_CHANGED`，不冻结、不占请求编号 |
+| payee_method / payee_account / payee_name | string | 旧客户端手填兼容：方式为 `WECHAT/ALIPAY/BANK`、账号 ≤100 字、姓名 ≤50 字；不能与绑定账户参数混用 |
 | remark | string | 备注（≤255） |
 | client_request_id | string | 可选但强烈建议，见 0.5 幂等约定 |
 
 申请时冻结资金（`balance-=amount`、`frozen+=amount`），生成 `WITHDRAW/PENDING` 流水与提现单。
 税额在申请时按当时税率快照落库：`tax_amount = ROUND_HALF_UP(amount × tax_rate / 100)`、`actual_amount = amount - tax_amount`；冻结与扣款仍是全额 `amount`，税只影响实际打款金额。
 响应 `data`：`balance, frozen_amount, request{…}`。提现单字段：`id, amount, tax_rate, tax_amount, actual_amount, payee_method, payee_method_display, payee_account, payee_name, status, status_display, remark, audit_remark, payout_reference, paid_at, created_at, audited_at`。
+绑定失效或版本变化返回 `errorCode=PAYEE_CHANGED`，要求重新核对；申请会保存独立收款快照，之后修改/解绑账户不改写历史申请。相同请求编号的已成功回执可恢复，不能以超时或余额变化推断上次未申请。
 
-### 3.2 报单（GET/POST）
+### 3.1.2 保存的提现账户
 
-POST body（multipart 支持图片）：`game_name, description, amount(>0), proof_image(可选)`。
-报单对象：`id, game_name, description, amount, proof_image_url, status, status_display, commission_rate, payout_amount, remark, audit_remark, created_at, audited_at`（抽成 / 入账 / 审核结果由后台审核时回写）。
+- GET 列表返回本人账户数组，字段：`id, payee_method, payee_account, payee_name, version, updated_at`；服务端返回完整资料，列表掩码由客户端展示，编辑和提现确认时供本人核对。
+- PUT `/withdraw-accounts/<payee_method>/` body：`payee_account, payee_name, expected_id, expected_version`。首次绑定传两个 `0`；修改传最近读取的 ID/版本。每名陪玩每种方式最多一条。
+- DELETE 同路径 body：`expected_id, expected_version`，解绑不影响已提交申请。旧页 ID/版本不匹配时返回 `code=409, errorCode=PAYEE_CHANGED`，不能覆盖重新绑定的账户。
+
+### 3.2 订单关联报单、凭证与审核
+
+| 方法/路径（均在 `/api/wallet/` 下） | 请求 | 返回/约束 |
+| --- | --- | --- |
+| `GET reports/` | — | 当前账号自己的报单数组，包含草稿、待审核、已通过与已驳回记录 |
+| `POST reports/` | JSON `order_id` | 本人已接单/服务中/已完成的服务订单，返回创建或恢复的 `DRAFT` 草稿；同一订单/陪玩不重复建报单。礼物、订单打赏及转单后无结算份额者不能新建服务报单 |
+| `POST reports/<id>/images/` | multipart `image` 文件、`kind=ENTRY/COMPLETION/RESULT` | 入队/结单各一张（再次上传替换）；战绩图片追加，最多九张；须为有效图片且报单可编辑，返回最新报单对象 |
+| `DELETE reports/<id>/images/<image_id>/` | — | 仅移除本人可编辑报单的战绩图片引用，图片不存在返回 `code=404`；原文件由媒体保留策略处理 |
+| `POST reports/<id>/submit/` | 无须提交金额或抽成 | 服务订单须 `COMPLETED + PAID`，且有入队、结单和至少一张战绩截图；成功变为 `PENDING`、更新 `submitted_at` 并清空旧驳回备注 |
+
+创建草稿时，服务名称/备注、本人结算基数与抽成从关联订单和本人分账快照生成，客户端不以 `game_name/amount/proof_image` 新建手工报单。开始/完成服务上传的入队/结单截图会同步到该成员报单。三类凭证均通过权限签发的私有 URL 展示，查看过期图片应续签，不能把文件路径当公开素材。
+
+报单对象字段：
+
+| 字段组 | 字段与含义 |
+| --- | --- |
+| 标识/服务 | `id, order_id, order_no, service_name, fulfillment, game_name, description` |
+| 金额/抽成 | `amount` 为本人结算基数；`expected_income` 为当前服务端收益快照；`commission_type=PERCENT/FIXED`、`commission_rate`、`commission_fixed`、`payout_amount`。金额均为内部账务单位；`FIXED` 的 `commission_rate=0` 不能解释为零抽成，须用固定抽成和收益快照展示 |
+| 凭证 | `proof_image_url`（历史兼容）、`entry_image_url, completion_image_url, result_image_urls[]`、`result_images[{id,url}]`（用于准确删除对应图片） |
+| 审核 | `status=DRAFT/PENDING/APPROVED/REJECTED, status_display, remark, audit_remark, created_at, audited_at, submitted_at` |
+| 履约/结算 | `order_status, settled_at`；`APPROVED` 仅表示凭证通过，`settled_at` 才表明订单分账已执行，不能仅凭审核状态当作可提现余额 |
+| 操作能力 | `can_edit, can_submit, edit_block_reason`；仅草稿/驳回且关联订单仍已付、未停止流程、本人仍有必要报单份额时可编辑。`can_submit` 另要求订单完成；该字段不代表截图已齐全，提交仍校验三类凭证 |
+
+驳回后可补图并重提；取消、退款、回待接单池以及本人已退出且无结算份额时停止编辑与提交。后台列表排除 `DRAFT`；审核权限为 `report:audit`，只允许待审核报单通过/驳回，驳回必须有 `audit_remark`。后台对象另返回 `suggested_commission_rate, commission_source_label, commission_type, commission_fixed, expected_income, settlement_mode, settled_at`；关联订单采用本人已经保存的分账快照，不能在审核时将固定抽成重新套成百分比。
+
+当前结算条件与实销确认使用两个时点：新 `REPORT_APPROVAL` 服务订单在必要成员全部报单通过、订单仍已付且已完成、完成时间起 72 小时售后窗口结束、无 `OPEN` 客诉时一次性结算；必要成员包含仍参与的成员和已退出但保留正数份额的成员。实销/会员确认另从最后一份有效报单提交起等待 72 小时；驳回会清除有效报单时点，重提重新计算。结算后的收益还可能依现有俱乐部规则抵扣押金/冻结，在钱包流水和可用/冻结余额中核对。历史 `COMPLETION` 订单保留原结算模式，报单审核不能重复入账。
+
+历史无关联订单的手工报单只保留查询与兼容审核：后台按历史报单/有效等级/全局规则解析百分比抽成，审核后保存收益快照及流水。该兼容路径不是当前客户端的新建报单入口。
 
 ### 3.3 押金（GET/POST）
 
-- GET → `deposit_required, deposit_paid, deposit_remaining, balance`。
-- POST body `amount`：用钱包余额缴纳，不超过应缴差额，扣款并累加 `deposit_paid`，记 DEPOSIT 流水。
+- GET → `deposit_required, deposit_paid, deposit_remaining, balance, deposit_mode, deposit_percent, hold_hours`。
+- 现金模式 POST body `amount, client_request_id`：用钱包余额缴纳，不超过应缴差额，扣款并累加 `deposit_paid`，记陪玩 `DEPOSIT` 与平台 `DEPOSIT_INCOME` 流水。`EARNINGS` 模式拒绝手动缴纳，由订单净收益依服务端配置抵扣押金。
 
 ### 3.4 流水对象字段（income / transactions）
 
-`id, tx_no, amount, tx_type, balance_before, balance_after, status, remark, created_at`。`transactions` 额外返回 `total, page, page_size, balance, frozen_amount`。
+`id, tx_no, amount, tx_type, balance_before, balance_after, status, remark, created_at`。`transactions` 额外返回 `total_income, total, page, page_size, balance, frozen_amount`；`total_income` 来自成功的正数订单收益流水，不能把待结算礼物预估收入计入实得。
+
+`provider-benefits/` 查询 `dispose_page, gift_page, page_size`（默认各第 1 页、每页 20，最多 100）。响应 `summary{total_reward,total_penalty,total_gift_amount,total_gift_income,gift_count}` 为全量汇总，`dispose_records[]`、`gift_records[]` 各自分页，并返回 `pagination{page_size,dispose{page,total},gift{page,total}}`。礼物记录的 `provider_income` 是本人预期分成，`received_income` 是成功收益流水实际到账，`settlement_status=SETTLED/PENDING/CHECK_REQUIRED` 用于区分已结算、待结算与待核对；礼物及订单打赏不走客户端服务报单入口。
 
 ---
 
@@ -441,7 +493,7 @@ POST body（multipart 支持图片）：`game_name, description, amount(>0), pro
 | 仪表盘 | `GET /api/admin/dashboard/stats` | 后台用户 | 用户/订单/收入统计 + `recent_orders` |
 | 陪玩看板 | `GET /api/admin/dashboard/player` | `player_dashboard:view` | `?start_date=&end_date=`；返回 `kpi, secondary, rank` |
 | 权限树 | `GET /api/admin/permissions` | 后台用户 | 权限点分组树 |
-| 抽成率配置 | `GET/PUT /api/admin/config/commission` | GET 后台/PUT `report:audit` | PUT body `rate`(0-100) |
+| 订单默认抽成配置 | `GET/PUT /api/admin/config/commission` | GET 后台/PUT `report:audit` | `commission_type=PERCENT/FIXED`；百分比用 `rate`(0-100)，固定用 `commission_fixed`（内部金额整数）；见 10.2 |
 | 提现门槛配置 | `GET/PUT /api/admin/config/withdraw` | GET 后台/PUT `withdraw:audit` | PUT body `min_amount`(分) |
 
 ---
@@ -493,7 +545,7 @@ POST body（multipart 支持图片）：`game_name, description, amount(>0), pro
 | 评价 | 删除 | `DELETE evaluations/<id>/` | `evaluation:delete` | 回退陪玩评分聚合 |
 | 钱包 | 调账 | `POST wallets/<id>/adjust/` | `wallet:adjust` | `amount`(分,≠0), `remark` |
 | 钱包 | 充值 | `POST wallets/recharge/` | `wallet:recharge` | `user_id, amount(>0), gift_amount(≥0), remark` |
-| 报单 | 通过 | `POST reports/<id>/approve/` | `report:audit` | 按抽成率入账，落 INCOME 流水 |
+| 报单 | 通过 | `POST reports/<id>/approve/` | `report:audit` | 关联订单按本人分账快照通过凭证；必要成员全通过且售后窗结束/无未结客诉后一次结算，见 3.2；历史无订单报单保留兼容入账 |
 | 报单 | 驳回 | `POST reports/<id>/reject/` | `report:audit` | `audit_remark`(必填) |
 | 提现 | 通过 | `POST withdrawals/<id>/approve/` | `withdraw:audit` | `frozen-=amount`，流水→SUCCESS |
 | 提现 | 驳回 | `POST withdrawals/<id>/reject/` | `withdraw:audit` | `audit_remark`(必填)；`frozen-=amount, balance+=amount`，流水→FAILED |
@@ -506,10 +558,22 @@ POST body（multipart 支持图片）：`game_name, description, amount(>0), pro
 
 ---
 
+### 10.2 订单百分比与整单固定抽成
+
+金额接口使用内部账务整数，`10` 内部单位 = `1` 兴安币。后台填写固定金额时显示兴安币，支持 1 位小数；例如填 `20` 币，接口提交 `commission_fixed: 200`。百分比为 `0–100` 整数；固定金额 `0` 明确表示不抽成。
+
+服务项新增 `commission_override` 开关及 `commission_type=PERCENT/FIXED`、`commission_fixed`。开关关闭时沿用原档位、体验及等级规则；开启后用该商品的比例或固定金额覆盖抽成，不改变服务价格或接单资格。活动同样支持两种模式，仍须满足原活动适用范围。全局切换固定金额保留旧 `rate`，历史无订单手工报单继续使用该比例；礼物沿用独立规则。
+
+`GET /api/admin/orders/dispatch-quote/` 与 `POST /api/admin/orders/dispatch/` 支持顶层 `commission_type=AUTO/PERCENT/FIXED`。`AUTO` 沿用配置；`FIXED` 仅提交一次顶层 `commission_fixed`（也支持同值别名 `commission_fixed_total`），不要在两位陪玩中重复填写。指定陪玩采用百分比时保留各 `providers[].commission_rate`，单陪未指定人时可用顶层 `commission_rate`。资格、人数、余额及预期成交金额仍由服务端校验。
+
+试算返回 `commission_type, commission_rate, commission_fixed_total, commission_source_label, commission_locked`；固定模式另返回 `commission_fixed_shares` 和 `provider_shares`（每人结算基数、抽成、预计收益）。实际固定抽成以折后实付封顶，双陪按结算份额分摊并处理整数尾差，局数增加不重复收费。例如双陪两局实付 `200` 币、整单固定 `20` 币，两人各分摊 `10` 币、各得 `90` 币。
+
+显式派单覆盖优先；适用的固定抽成活动可覆盖商品配置。其余按商品自定义及原自动规则解析，最终以服务端试算为准。创建订单时保存抽成模式、固定总额、来源及各人分账快照，后续配置修改不追溯旧单。转单只拆分已有收益；退款按实际入账比例冲正，任一方可追回资金不足时整笔拦截。旧版 LEGACY/AUTO 的逐人固定抽成请求保留原合同，与新整单固定模式分开处理。
+
 ## 11. 关键业务规则速记
 
 - **计价拆账**：`amount = original_amount − boss_discount − promo_discount − coupon_discount`；`provider_income + inviter_commission + shop_income = amount`。
-- **抽成率优先级**：促销活动 > 陪玩等级 > 商品/全局（默认 20%）。
+- **抽成方式**：百分比或整单固定金额，配置作用范围、试算和快照见 10.2；未开启新覆盖时保留原规则。
 - **订单状态机**：`PENDING→GRABBED→IN_SERVICE→COMPLETED`；`PENDING/GRABBED/IN_SERVICE→CANCELLED`；`COMPLETED/CANCELLED` 为终态。PENDING 超时 30 分钟自动取消。
 - **资金安全**：所有资金动作均在 `transaction.atomic()` + `select_for_update()` 内执行。
 - **平台收入**：`shop_income` 归集到平台系统账户 `__platform__`（禁登录）。

@@ -26,4 +26,11 @@ def console_exception_handler(exc, context):
         'msg': msg,
         'errors': detail,
     }
+    if response.status_code == 429:
+        import math
+        wait = max(1, math.ceil(getattr(exc, 'wait', None) or 1))
+        response.data.update(errorCode='ORDER_RATE_LIMITED' if hasattr(exc, 'traffic_action') else 'RATE_LIMITED', retry_after=wait)
+        if hasattr(exc, 'traffic_mode'):
+            response.data.update(traffic_mode=exc.traffic_mode, traffic_action=exc.traffic_action)
+        response['Retry-After'] = str(wait)
     return response

@@ -1,4 +1,6 @@
 <template>
+  <el-alert title="接单档位现在按游戏、方向、平台和难度分别管理。请在陪玩管理中配置个人资格，在服务项目中选择订单档位；下方旧等级仅用于历史服务。" type="info" :closable="false" style="margin-bottom:16px" />
+  <el-card shadow="never" style="margin-bottom:16px"><template #header>当前档位与抽成规则</template><el-table :data="scopedRows" size="small"><el-table-column prop="scope" label="接单范围" min-width="180"/><el-table-column prop="grades" label="档位从低到高" min-width="240"/><el-table-column prop="rates" label="订单档位抽成" min-width="280"/></el-table><p style="font-size:12px;color:var(--el-text-color-secondary)">同一范围高档可接低档，抽成按订单档位；通行证仅影响接单时间。代肝、上分保留服务项目原抽成规则。</p></el-card>
   <div class="el-page">
     <div class="ap-page-head">
       <p class="ap-page-intro">管理陪玩等级及其对应的平台抽成率（优先级高于店铺设置）</p>
@@ -36,14 +38,14 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑陪玩等级' : '新增陪玩等级'" width="460px">
-    <el-form :model="form" label-width="110px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑陪玩等级' : '新增陪玩等级'" width="560px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="等级名称"><el-input v-model="form.name" placeholder="如：金牌打手" /></el-form-item>
       <el-form-item label="抽成率(%)">
         <el-input-number v-model="form.commission_rate" :min="0" :max="100" />
         <div class="tip">该等级陪玩接单时的平台抽成率，优先级高于店铺设置</div>
       </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
+      <el-form-item label="备注" class="ap-field--full"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sort_order" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
     </el-form>
@@ -55,12 +57,15 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CrudTable from '@/components/CrudTable.vue'
+import { qualificationOptions } from '@/utils/qualifications'
 import { escortLevelApi } from '@/api/modules'
 import { useAuthStore } from '@/stores/auth'
 
+const scopedMeta=ref<any>({scopes:[],kinds:[],platforms:[]});onMounted(async()=>{scopedMeta.value=await qualificationOptions()})
+const scopedRows=computed(()=>scopedMeta.value.scopes.map((s:any)=>({scope:[scopedMeta.value.platforms.find((p:any)=>p.value===s.platform)?.label,({CONFIDENTIAL:'机密',TOP_SECRET:'绝密',ANY:''} as Record<string,string>)[s.security_level],scopedMeta.value.kinds.find((k:any)=>k.value===s.provider_kind)?.label].filter(Boolean).join(' · '),grades:s.grades.map((g:any)=>g.label).join(' → '),rates:s.grades.map((g:any)=>g.label+' '+(g.commission_rate==null?'按项目':g.commission_rate+'%')).join(' / ')})))
 const auth = useAuthStore()
 const tableRef = ref()
 const query = reactive<Record<string, any>>({ is_active: '' })

@@ -1,0 +1,14 @@
+@use '@/styles/variables.scss' as *;
+.page { min-height:100dvh; padding:24PX 16PX 100PX; background:$color-bg-page; }
+.heading,.cardHeading,.actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12PX; }.heading { margin-bottom:24PX; }
+.title { display:block; color:$color-text-primary; font-size:26PX; font-weight:700; line-height:1.3; }.hint { display:block; margin:8PX 0 16PX; font-size:13PX; color:$color-text-secondary; line-height:1.7; }
+.accounts { display:grid; grid-template-columns:minmax(0,1fr); gap:16PX; }
+.card { min-width:0; padding:24PX; border:1PX solid $color-border; border-radius:16PX; background:$color-bg-card; }
+.method { font-size:18PX; font-weight:650; color:$color-text-primary; }.badge { padding:3PX 8PX; border-radius:6PX; background:var(--xa-color-surface-subtle); font-size:12PX; color:$color-text-secondary; }
+.name,.number { display:block; overflow-wrap:anywhere; }.name { margin-top:24PX; font-size:15PX; font-weight:600; color:$color-text-primary; }.number { margin:8PX 0 20PX; font-size:13PX; color:$color-text-secondary; }.actions { justify-content:flex-start; }
+.label { display:block; margin:20PX 0 8PX; font-size:14PX; font-weight:500; color:$color-text-primary; }.label:first-child { margin-top:0; }
+.input { width:100%; height:44PX; padding:0 12PX; border:1PX solid $color-border; border-radius:8PX; font-size:15PX; background:var(--xa-color-surface-subtle); color:$color-text-primary; }
+.save { @include button-reset; @include primary-control-state; min-height:44PX; margin:0; padding:10PX 24PX; border:0; border-radius:8PX; font-size:14PX; }
+.error,.errorText { display:block; margin:12PX 0; font-size:13PX; color:$color-error; line-height:1.6; }
+@media(min-width:960px) { .page { padding:0; }.accounts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(min-width:1200px) { .accounts { grid-template-columns:repeat(3,minmax(0,1fr)); } }

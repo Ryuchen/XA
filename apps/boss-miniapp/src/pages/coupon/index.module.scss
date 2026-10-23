@@ -4,6 +4,7 @@
   min-height: 100vh;
   padding: $spacing-lg $page-padding;
   background: $color-bg-page;
+  @include safe-area-bottom($spacing-lg);
 }
 
 // ===== 优惠券票券卡片 =====
@@ -15,6 +16,7 @@
   border-radius: $radius-lg;
   background: $color-bg-card;
   box-shadow: $shadow-card;
+  border: 1rpx solid $color-border;
   overflow: hidden;
   @include slide-up;
 }
@@ -23,7 +25,7 @@
 .notchTop,
 .notchBottom {
   position: absolute;
-  left: 208rpx;
+  left: 200rpx;
   width: 24rpx;
   height: 24rpx;
   border-radius: $radius-round;
@@ -46,7 +48,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 208rpx;
+  width: 200rpx;
   padding: $spacing-lg $spacing-sm;
   background: rgba(var(--xa-price-rgb), 0.09);
 }
@@ -63,8 +65,9 @@
 
 .currency {
   margin-right: 2rpx;
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: $font-weight-semibold;
+  vertical-align: top;
 }
 
 .threshold {
@@ -116,8 +119,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
-  min-width: 132rpx;
+  gap: 8rpx;
+  min-width: 128rpx;
   height: 64rpx;
   padding: 0 $spacing-md;
   border-radius: $radius-round;
@@ -167,7 +170,7 @@
 
 .emptyTitle {
   color: $color-text-primary;
-  font-size: $font-size-lg;
+  font-size: $font-size-md;
   font-weight: $font-weight-semibold;
 }
 

@@ -1,0 +1,163 @@
+{
+  "sdk": "3.15.2",
+  "environment": "Browser rendering of actual WXML/WXSS with official native control CSS; not the WeChat runtime",
+  "widths": [
+    320,
+    375,
+    430
+  ],
+  "layoutCombinations": 144,
+  "findings": [],
+  "representativeStates": [
+    {
+      "name": "login",
+      "state": "alternate",
+      "buttons": [
+        {
+          "color": "rgb(255, 255, 255)",
+          "text": "授权手机号并绑定",
+          "width": 312
+        },
+        {
+          "color": "rgb(184, 61, 104)",
+          "text": "我是新用户，创建账号",
+          "width": 312
+        },
+        {
+          "color": "rgb(121, 107, 116)",
+          "text": "账号有问题？联系客服",
+          "width": 312
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "login",
+      "state": "guest",
+      "buttons": [
+        {
+          "color": "rgb(255, 255, 255)",
+          "text": "微信快捷登录",
+          "width": 312
+        },
+        {
+          "color": "rgb(121, 107, 116)",
+          "text": "账号有问题？联系客服",
+          "width": 312
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "catalog",
+      "state": "alternate",
+      "buttons": [
+        {
+          "color": "rgb(184, 61, 104)",
+          "text": "默认",
+          "width": 42
+        },
+        {
+          "color": "rgb(121, 107, 116)",
+          "text": "价格 ↑",
+          "width": 52
+        },
+        {
+          "color": "rgb(48, 38, 44)",
+          "text": "双人默契 · 游戏陪伴↗一起认真打好每一局，找到属于你的游戏默契。微信区进阶局王者荣耀128.00 兴安币 / 份",
+          "width": 343
+        },
+        {
+          "color": "rgb(48, 38, 44)",
+          "text": "晚间开黑 · 轻松娱乐↗一起认真打好每一局，找到属于你的游戏默契。微信区进阶局王者荣耀68.00 兴安币 / 份",
+          "width": 343
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "orders",
+      "state": "loading",
+      "buttons": [],
+      "overflow": false
+    },
+    {
+      "name": "orders",
+      "state": "error",
+      "buttons": [
+        {
+          "color": "rgb(184, 61, 104)",
+          "text": "重新加载",
+          "width": 86
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "orders",
+      "state": "empty",
+      "buttons": [
+        {
+          "color": "rgb(184, 61, 104)",
+          "text": "去选择服务",
+          "width": 343
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "coupons",
+      "state": "normal",
+      "buttons": [
+        {
+          "color": "rgb(184, 61, 104)",
+          "text": "领券中心",
+          "width": 166
+        },
+        {
+          "color": "rgb(121, 107, 116)",
+          "text": "我的券",
+          "width": 166
+        },
+        {
+          "color": "rgb(184, 61, 104)",
+          "text": "立即领取",
+          "width": 220
+        },
+        {
+          "color": "rgb(133, 116, 125)",
+          "text": "已领取",
+          "width": 220
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "checkin",
+      "state": "normal",
+      "buttons": [
+        {
+          "color": "rgb(150, 133, 143)",
+          "text": "28",
+          "width": 44
+        },
+        {
+          "color": "rgb(150, 133, 143)",
+          "text": "29",
+          "width": 44
+        },
+        {
+          "color": "rgb(150, 133, 143)",
+          "text": "30",
+          "width": 44
+        },
+        {
+          "color": "rgb(255, 255, 255)",
+          "text": "立即签到",
+          "width": 343
+        }
+      ],
+      "overflow": false
+    }
+  ]
+}

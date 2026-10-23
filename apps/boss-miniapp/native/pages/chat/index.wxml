@@ -1,0 +1,21 @@
+<view class="chat-page">
+  <view class="chat-heading"><view class="chat-heading-row"><text class="chat-title" role="heading" aria-level="1">平台客服</text><view class="chat-heading-icon" aria-hidden="true"><image src="/assets/icons/chat.png"/></view></view><text class="chat-subtitle">客服回复会自动更新，支持文字与图片</text><button wx:if="{{!logged}}" class="xa-button button chat-login" bindtap="login" hover-class="xa-button-hover">登录后咨询客服</button></view>
+
+  <view class="chat-thread">
+    <text class="history-heading" role="heading" aria-level="2">聊天记录</text>
+    <scroll-view scroll-y class="history" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+      <state-view loading="{{loading}}" error="{{error}}" empty="{{logged && !loading && !error && !items.length}}" empty-text="写下你想咨询的问题" bind:retry="load"/>
+      <text wx:if="{{!logged}}" class="chat-guest">登录后查看会话记录并咨询客服</text>
+      <block wx:if="{{logged}}">
+        <view class="message {{item.is_from_support ? 'support' : 'self'}}" wx:for="{{items}}" wx:key="id" id="message-{{item.id}}">
+          <view class="message-meta"><text class="message-sender">{{item.is_from_support ? '平台客服' : '我'}}</text><text class="message-time">{{item.time}}</text></view>
+          <view class="bubble"><image wx:if="{{item.image}}" class="chat-image" src="{{item.image}}" mode="widthFix" data-url="{{item.image}}" data-id="{{item.id}}" binderror="imageError" bindtap="preview"/><text wx:else selectable>{{item.content}}</text></view>
+        </view>
+      </block>
+      <view class="end-space"></view>
+    </scroll-view>
+  </view>
+
+  <view wx:if="{{logged}}" class="composer"><text class="composer-label">发送消息</text><view class="composer-main"><textarea class="input chat-input" aria-label="消息内容" auto-height maxlength="2000" value="{{content}}" bindinput="input" placeholder="输入你想咨询的问题" placeholder-class="input-placeholder" cursor-spacing="120"/><view class="composer-actions"><button class="xa-button button-secondary image-button" aria-label="发送图片" bindtap="chooseImage" disabled="{{sending}}" hover-class="xa-button-hover">图片</button><button class="xa-button button send-button" aria-label="{{sending ? '正在发送消息' : '发送消息'}}" bindtap="send" disabled="{{sending || !content}}" loading="{{sending}}" hover-class="xa-button-hover">发送</button></view></view></view>
+</view>
+<bottom-navigation/>

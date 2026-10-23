@@ -1,0 +1,62 @@
+# 与 docker-compose.remote.yml 合并使用，域名和凭证见 deploy/release.env.example。
+x-release-env: &release-env
+  DJANGO_DEBUG: "false"
+  DJANGO_TRUST_PROXY: "true"
+  DJANGO_ALLOWED_HOSTS: ${XA_API_DOMAIN:?API domain required},${XA_ADMIN_DOMAIN:?admin domain required},${XA_PROVIDER_DOMAIN:?provider domain required}
+  DJANGO_MEDIA_BASE_URL: https://${XA_API_DOMAIN}
+  CORS_ALLOW_ALL_ORIGINS: "false"
+  CORS_ALLOWED_ORIGINS: https://${XA_ADMIN_DOMAIN},https://${XA_PROVIDER_DOMAIN}
+  CSRF_TRUSTED_ORIGINS: https://${XA_API_DOMAIN},https://${XA_ADMIN_DOMAIN},https://${XA_PROVIDER_DOMAIN}
+  MYSQL_USER: ${MYSQL_USER:?non-root database user required}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD:?database password required}
+  WECHAT_APPID: ${WECHAT_APPID:?miniapp AppID required}
+  WECHAT_SECRET: ${WECHAT_SECRET:?miniapp secret required}
+  WECHAT_MOCK_LOGIN: "false"
+  REQUIRE_ORDER_EVIDENCE_IMAGES: "true"
+  REQUIRE_RECHARGE_PROOF: "true"
+
+services:
+  db:
+    environment:
+      MYSQL_USER: ${MYSQL_USER:?non-root database user required}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?database password required}
+  migrate:
+    environment: *release-env
+    command: >-
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py check_mysql_readiness &&
+      python manage.py collectstatic --noinput"
+  web:
+    environment: *release-env
+    # Caddy resolves both internal addresses; a fixed host port cannot be shared.
+    ports: !reset []
+    deploy:
+      replicas: 2
+  celery-worker:
+    environment: *release-env
+  celery-beat:
+    environment: *release-env
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      XA_API_DOMAIN: ${XA_API_DOMAIN}
+      XA_ADMIN_DOMAIN: ${XA_ADMIN_DOMAIN}
+      XA_PROVIDER_DOMAIN: ${XA_PROVIDER_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - backend_media:/srv/media:ro
+      - backend_static:/srv/static:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - admin-web
+      - provider-h5
+
+volumes:
+  caddy_data:
+  caddy_config:

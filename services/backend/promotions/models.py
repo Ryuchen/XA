@@ -19,6 +19,8 @@ class Promotion(models.Model):
         ITEMS = 'ITEMS', '指定商品'
 
     title = models.CharField(max_length=100, verbose_name='活动名称')
+    commission_type = models.CharField(max_length=10, choices=[('PERCENT','百分比'),('FIXED','整单固定金额')], default='PERCENT')
+    commission_fixed = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(2147483647)])
     remark = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
     discount_rate = models.PositiveSmallIntegerField(
         null=True, blank=True,
@@ -51,6 +53,7 @@ class Promotion(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(commission_type__in=['PERCENT','FIXED']), name='promotion_commission_type_valid')]
         ordering = ['-priority', '-start_at', 'id']
         verbose_name = '促销活动'
         verbose_name_plural = '促销活动'

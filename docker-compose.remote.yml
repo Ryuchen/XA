@@ -19,6 +19,7 @@ x-backend: &backend
     MYSQL_HOST: db
     MYSQL_PORT: 3306
     REDIS_HOST: redis
+    DJANGO_CACHE_URL: ${DJANGO_CACHE_URL:-redis://redis:6379/3}
     REDIS_PORT: 6379
     WECHAT_APPID: ${WECHAT_APPID:-}
     WECHAT_SECRET: ${WECHAT_SECRET:-}
@@ -31,6 +32,11 @@ x-backend: &backend
     KOOK_DISPATCH_MENTION_ROLE_IDS: ${KOOK_DISPATCH_MENTION_ROLE_IDS:-}
     KOOK_ADMIN_ORDER_URL: ${KOOK_ADMIN_ORDER_URL:-}
     KOOK_REQUEST_TIMEOUT: ${KOOK_REQUEST_TIMEOUT:-8}
+    WECOM_DISPATCH_ENABLED: ${WECOM_DISPATCH_ENABLED:-false}
+    WECOM_DISPATCH_WEBHOOK: ${WECOM_DISPATCH_WEBHOOK:-}
+    WECOM_DISPATCH_NEW_ORDERS: ${WECOM_DISPATCH_NEW_ORDERS:-true}
+    WECOM_DISPATCH_REJECTED_ORDERS: ${WECOM_DISPATCH_REJECTED_ORDERS:-true}
+    WECOM_REQUEST_TIMEOUT: ${WECOM_REQUEST_TIMEOUT:-8}
   volumes:
     - backend_media:/app/media
     - backend_static:/app/staticfiles
@@ -85,7 +91,7 @@ services:
 
   web:
     <<: *backend
-    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    command: python -m config.serve -b 0.0.0.0 -p 8000 config.asgi:application
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -117,7 +123,7 @@ services:
     environment:
       BACKEND_ORIGIN: http://web:8000
     ports:
-      - "8081:80"
+      - "127.0.0.1:8081:80"
     depends_on:
       web:
         condition: service_started
@@ -131,7 +137,7 @@ services:
     environment:
       BACKEND_ORIGIN: http://web:8000
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       web:
         condition: service_started

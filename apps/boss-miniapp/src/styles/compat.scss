@@ -34,10 +34,19 @@ navigator {
   line-height: 1.4 !important;
 }
 
+// Keep explicit miniapp selectors: Taro removes universal selectors from WXSS.
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  page,
+  view,
+  text,
+  image,
+  button,
+  input,
+  textarea,
+  scroll-view,
+  swiper,
+  swiper-item,
+  navigator {
     scroll-behavior: auto !important;
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;

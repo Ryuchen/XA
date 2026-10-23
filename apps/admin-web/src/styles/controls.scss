@@ -1,0 +1,209 @@
+/* 管理端全局小号控件：页面、弹窗和手机端统一 32px。
+ * 容器传递尺寸变量，让日期、数字、下拉框与同行按钮保持一致。
+ * 多选框和文本域允许随内容增高，不裁切已选项或正文。
+ */
+:root, html.dark {
+  --el-component-size: var(--control-height-sm);
+  --el-component-size-small: var(--control-height-sm);
+  --el-component-size-large: var(--control-height-lg);
+}
+
+.el-table, .el-pagination {
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
+}
+
+.el-input--small, .el-select--small, .el-input-number--small,
+.el-button--small, .el-range-editor--small, .el-cascader--small {
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
+}
+.el-input--large, .el-select--large, .el-input-number--large,
+.el-button--large, .el-range-editor--large, .el-cascader--large {
+  --ap-control-height: var(--control-height-lg);
+  --ap-control-font-size: 16px;
+}
+
+/* 覆盖各 Element Plus 控件自身的默认尺寸，保留原有交互和状态。 */
+.el-input.el-input, .el-date-editor.el-date-editor, .el-cascader.el-cascader {
+  --el-input-height: var(--ap-control-height);
+  font-size: var(--ap-control-font-size);
+}
+.el-input .el-input__wrapper, .el-select .el-select__wrapper,
+.el-date-editor.el-range-editor {
+  padding-inline: var(--control-padding-x);
+  border-radius: var(--control-radius);
+}
+.el-select.el-select .el-select__wrapper {
+  min-height: var(--ap-control-height);
+  font-size: var(--ap-control-font-size);
+}
+.el-date-editor.el-range-editor {
+  height: var(--ap-control-height);
+  flex-grow: 0;
+}
+.el-date-editor .el-range-input, .el-date-editor .el-range-separator {
+  font-size: var(--ap-control-font-size);
+}
+.el-input-number.el-input-number {
+  width: var(--control-number-width);
+  max-width: 100%;
+  height: var(--ap-control-height);
+  line-height: calc(var(--ap-control-height) - 2px);
+}
+.el-input-number.el-input-number .el-input-number__increase,
+.el-input-number.el-input-number .el-input-number__decrease {
+  width: calc(var(--ap-control-height) - 2px);
+}
+.el-input-number.el-input-number .el-input .el-input__wrapper {
+  padding-inline: calc(var(--ap-control-height) + 6px);
+}
+.el-input-number.el-input-number.is-controls-right .el-input .el-input__wrapper {
+  padding-left: var(--control-padding-x);
+  padding-right: calc(var(--ap-control-height) + 6px);
+}
+.el-input-number.el-input-number.is-controls-right .el-input-number__increase,
+.el-input-number.el-input-number.is-controls-right .el-input-number__decrease {
+  height: calc((var(--ap-control-height) - 2px) / 2);
+  line-height: calc((var(--ap-control-height) - 2px) / 2);
+}
+.el-input-number.el-input-number.is-without-controls .el-input .el-input__wrapper {
+  padding-inline: var(--control-padding-x);
+}
+.el-textarea .el-textarea__inner {
+  padding: 8px var(--control-padding-x);
+  font-size: var(--ap-control-font-size);
+  line-height: 1.6;
+}
+input[type='file'] {
+  max-width: 100%;
+  min-height: var(--ap-control-height);
+  font: inherit;
+  font-size: var(--ap-control-font-size);
+  color: var(--muted-foreground);
+}
+input[type='file']::file-selector-button {
+  height: var(--ap-control-height);
+  min-width: var(--control-button-min-width);
+  margin-right: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  cursor: pointer;
+}
+input[type='file']::file-selector-button:hover { border-color: var(--primary); }
+
+.el-button.el-button {
+  height: var(--ap-control-height);
+  min-height: var(--ap-control-height);
+  padding: 0 12px;
+  border-radius: var(--control-radius);
+  font-size: var(--ap-control-font-size);
+  line-height: 1;
+}
+.el-button:not(.is-link):not(.is-text):not(.is-circle) {
+  min-width: var(--control-button-min-width);
+}
+.el-button.el-button--small:not(.is-link):not(.is-text):not(.is-circle) {
+  min-width: var(--control-button-min-width);
+  padding-inline: 12px;
+}
+.el-button.is-link, .el-button.is-text {
+  min-width: 0;
+  padding-inline: 6px;
+}
+.el-button.is-circle, .el-button.el-button:has(> .el-icon:only-child) {
+  width: var(--ap-control-height);
+  min-width: var(--ap-control-height);
+  padding: 0;
+}
+.el-button.is-circle { border-radius: 50%; }
+.el-button + .el-button { margin-left: 8px; }
+:is(.page-toolbar, .ap-page-head-actions) > .el-button + .el-button { margin-left: 0; }
+
+.el-form-item .el-form-item__label,
+.el-form-item .el-form-item__content {
+  min-height: var(--ap-control-height);
+  line-height: var(--ap-control-height);
+}
+.el-form-item .el-form-item__label { height: var(--ap-control-height); }
+.el-form-item { margin-bottom: var(--space-5); }
+.el-form--label-top .el-form-item__label {
+  height: auto;
+  min-height: 0;
+  line-height: 22px;
+  margin-bottom: var(--space-2);
+}
+.el-form-item__content > :is(.el-select, .el-autocomplete, .el-cascader, .el-date-editor) {
+  width: 100%;
+  min-width: 0;
+}
+.el-checkbox.el-checkbox, .el-radio.el-radio, .el-switch.el-switch {
+  height: var(--ap-control-height);
+}
+.el-radio-button .el-radio-button__inner, .el-checkbox-button .el-checkbox-button__inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--ap-control-height);
+  min-width: var(--control-button-min-width);
+  padding: 0 12px;
+  font-size: var(--ap-control-font-size);
+}
+
+/* 统一筛选宽度，覆盖业务页面遗留的内联 110/130/150/200px 宽度。
+ * 只约束筛选区的直接子组件，避免影响 autocomplete 的内部输入框。
+ */
+.page-toolbar > :is(.el-input, .el-select, .el-autocomplete, .el-cascader, .el-input-number, .el-date-editor) {
+  width: var(--control-filter-width) !important;
+  flex: 0 0 var(--control-filter-width);
+  max-width: 100%;
+  min-width: 0;
+}
+.page-toolbar > .el-autocomplete > .el-input {
+  width: 100% !important;
+}
+:is(.page-toolbar, .ap-page-head-actions) > .el-date-editor.el-range-editor {
+  width: var(--control-range-width) !important;
+  flex: 0 0 var(--control-range-width);
+  max-width: 100%;
+}
+:is(.page-toolbar, .ap-page-head-actions) > .el-date-editor.el-range-editor.el-date-editor--datetimerange {
+  width: var(--control-datetime-range-width) !important;
+  flex-basis: var(--control-datetime-range-width);
+}
+
+/* 分页按钮、页码、每页条数和跳页输入框同为紧凑尺寸。 */
+.el-pagination.el-pagination {
+  --el-pagination-button-height: var(--control-height-sm);
+  --el-pagination-button-width: var(--control-height-sm);
+  --el-pagination-button-height-small: var(--control-height-sm);
+  --el-pagination-button-width-small: var(--control-height-sm);
+  --el-pagination-font-size: 13px;
+  --el-pagination-font-size-small: 13px;
+  gap: 8px;
+  align-items: center;
+}
+.el-pagination .el-select__wrapper { min-height: var(--control-height-sm); }
+.el-pagination .el-input { --el-input-height: var(--control-height-sm); }
+.el-pagination .el-pagination__sizes { margin-right: 0; }
+.el-pagination .el-pagination__jump { margin-left: 8px; }
+
+@media (max-width: 720px) {
+  .page-toolbar > :is(.el-input, .el-select, .el-autocomplete, .el-cascader, .el-input-number, .el-date-editor),
+  :is(.page-toolbar, .ap-page-head-actions) > .el-date-editor.el-range-editor,
+  :is(.page-toolbar, .ap-page-head-actions) > .el-date-editor.el-range-editor.el-date-editor--datetimerange {
+    width: 100% !important;
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .el-dialog .el-form-item__label {
+    height: auto;
+    min-height: 0;
+    line-height: 1.4;
+  }
+}

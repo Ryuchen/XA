@@ -17,9 +17,11 @@ from .views import (
     FavoriteListView,
     FavoriteToggleView,
     GameCategoryListView,
+    GiftContextView,
     GrabOrderView,
     MyEvaluationListView,
     OrderListView,
+    OrderDetailView,
     OrderQuoteView,
     OrderStatsView,
     RankingView,
@@ -33,7 +35,22 @@ from .views import (
     TipOrderView,
 )
 
+from .gameplay_views import GameplayListView
+
+from .applications import ApplicationActionView, SelectApplicationView, TeammateListView
+
+from .traffic_views import TrafficStatusView, NetworkReportView
+
+from .aftersale import AfterSaleView
+
 urlpatterns = [
+    path('orders/<int:order_id>/aftersale/', AfterSaleView.as_view()),
+    path('traffic-status/', TrafficStatusView.as_view()),
+    path('network-report/', NetworkReportView.as_view()),
+    path('orders/<int:order_id>/applications/<int:application_id>/action/', ApplicationActionView.as_view()),
+    path('orders/<int:order_id>/applications/<int:application_id>/select/', SelectApplicationView.as_view()),
+    path('orders/<int:order_id>/teammates/', TeammateListView.as_view()),
+    path('gameplays/', GameplayListView.as_view()),
     path('game-categories/', GameCategoryListView.as_view()),
     path('services/', ServiceListView.as_view()),
     path('services/<int:service_id>/', ServiceDetailView.as_view()),
@@ -43,7 +60,10 @@ urlpatterns = [
     path('rankings/', RankingView.as_view()),
     path('create/', CreateOrderView.as_view()),
     path('quote/', OrderQuoteView.as_view()),
+    path('gifts/context/', GiftContextView.as_view()),
+    path('gifts/send/', TipOrderView.as_view()),
     path('orders/', OrderListView.as_view(), name='order-list'),
+    path('orders/<int:order_id>/', OrderDetailView.as_view(), name='order-detail'),
     path('orders/<int:order_id>/grab/', GrabOrderView.as_view()),
     path('orders/<int:order_id>/start/', StartOrderServiceView.as_view()),
     path('orders/<int:order_id>/start-service/', StartOrderServiceView.as_view()),

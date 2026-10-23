@@ -50,7 +50,8 @@ class KookOrderDispatchTest(TestCase):
         self.service = make_service(name='王者陪玩', price=1000)
         self.order = make_order(
             self.customer, service=self.service, status=Order.Status.PENDING,
-            amount=2000, game_rounds=2, game_region='微信区',
+            amount=2000, provider_income=1600, payment_status=Order.PaymentStatus.PAID,
+            game_rounds=2, game_region='微信区',
             game_nickname='测试老板', remark='优先打野',
         )
 
@@ -59,7 +60,8 @@ class KookOrderDispatchTest(TestCase):
         serialized = json.dumps(cards, ensure_ascii=False)
         self.assertIn(self.order.order_no, serialized)
         self.assertIn('王者陪玩', serialized)
-        self.assertIn('200 兴安币', serialized)
+        self.assertIn('160 兴安币', serialized)
+        self.assertNotIn('订单金额', serialized)
         self.assertIn('(rol)12345(rol)', serialized)
         self.assertIn('order_no=', serialized)
 

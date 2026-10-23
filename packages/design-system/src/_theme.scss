@@ -1,72 +1,72 @@
 // XA Design System
 // 只在这里维护品牌、状态和语义颜色。业务端只消费 --xa-* 语义变量。
 
+// Compatibility entry for historical storefronts; all clients share this palette.
+@mixin klein-milk {
+  @include light;
+}
+
 @mixin light {
-  // Primitive palette
-  --xa-brand-50: #e8f2ff;
-  --xa-brand-100: #cfe5ff;
-  --xa-brand-200: #9fcbff;
-  --xa-brand-300: #66abff;
-  --xa-brand-400: #2e8dff;
-  --xa-brand-500: #007aff;
-  --xa-brand-600: #0064d6;
-  --xa-brand-700: #004fad;
-  --xa-brand-800: #003b82;
-  --xa-brand-900: #00275a;
-
+  // Reference: user-provided Chinese traditional blue swatches (2026-10-13).
+  // Light surfaces are white tints of Yuan Tian blue; red/amber/green remain semantic.
+  color-scheme: light;
+  --xa-brand-50: #edf3f6;
+  --xa-brand-100: #cfdde4;
+  --xa-brand-200: #acd0e1;
+  --xa-brand-300: #88bccf;
+  --xa-brand-400: #2684b6;
+  --xa-brand-500: #136398;
+  --xa-brand-600: #003b72;
+  --xa-brand-700: #1f3d7c;
+  --xa-brand-800: #1d296e;
+  --xa-brand-900: #050d3f;
   --xa-neutral-0: #ffffff;
-  --xa-neutral-50: #f7f7fa;
-  --xa-neutral-100: #f2f2f7;
-  --xa-neutral-200: #e5e5ea;
-  --xa-neutral-300: #d1d1d6;
-  --xa-neutral-400: #aeaeb2;
-  --xa-neutral-500: #8e8e93;
-  --xa-neutral-600: #6e6e73;
-  --xa-neutral-700: #48484a;
-  --xa-neutral-800: #1d1d1f;
-  --xa-neutral-900: #000000;
-
-  // Semantic colors
+  --xa-neutral-50: #f5f8fa;
+  --xa-neutral-100: #edf3f6;
+  --xa-neutral-200: #cfdde4;
+  --xa-neutral-300: #b9c9d6;
+  --xa-neutral-400: #92b5d0;
+  --xa-neutral-500: #4f7da2;
+  --xa-neutral-600: #336b9a;
+  --xa-neutral-700: #1f3d7c;
+  --xa-neutral-800: #050d3f;
+  --xa-neutral-900: #030820;
   --xa-color-primary: var(--xa-brand-500);
   --xa-color-primary-hover: var(--xa-brand-600);
   --xa-color-primary-soft: var(--xa-brand-50);
   --xa-color-on-primary: var(--xa-neutral-0);
-  --xa-color-success: #34c759;
-  --xa-color-warning: #ff9500;
-  --xa-color-danger: #ff3b30;
-  --xa-color-info: var(--xa-brand-500);
-  --xa-color-price: #ff9500;
-  --xa-color-price-soft: #ffb340;
-
-  --xa-color-surface-page: var(--xa-neutral-100);
+  --xa-color-success: #22745d;
+  --xa-color-warning: #98631d;
+  --xa-color-danger: #b42335;
+  --xa-color-favorite: #c62846;
+  --xa-color-favorite-soft: #ffe5ed;
+  --xa-color-info: var(--xa-color-primary);
+  --xa-color-price: var(--xa-color-primary);
+  --xa-color-price-soft: var(--xa-brand-600);
+  --xa-color-surface-page: #f1f6f9;
   --xa-color-surface-card: var(--xa-neutral-0);
   --xa-color-surface-subtle: var(--xa-neutral-50);
-  --xa-color-surface-hover: var(--xa-neutral-100);
+  --xa-color-surface-hover: var(--xa-brand-50);
   --xa-color-surface-elevated: var(--xa-neutral-0);
   --xa-color-text-primary: var(--xa-neutral-800);
   --xa-color-text-secondary: var(--xa-neutral-600);
-  --xa-color-text-tertiary: var(--xa-neutral-500);
+  --xa-color-text-tertiary: var(--xa-neutral-600);
   --xa-color-text-disabled: var(--xa-neutral-300);
   --xa-color-text-inverse: var(--xa-neutral-0);
   --xa-color-border: var(--xa-neutral-200);
-  --xa-color-divider: var(--xa-neutral-100);
-  --xa-color-overlay: rgba(0, 0, 0, 0.38);
-  --xa-color-focus-ring: rgba(0, 122, 255, 0.22);
-
-  --xa-gradient-primary: linear-gradient(135deg, #0a84ff 0%, #007aff 100%);
-  --xa-gradient-dark: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+  --xa-color-divider: var(--xa-brand-50);
+  --xa-color-overlay: rgba(5, 13, 63, .38);
+  --xa-color-focus-ring: rgba(19, 99, 152, .24);
+  --xa-gradient-primary: linear-gradient(135deg, #136398, #003b72);
+  --xa-gradient-dark: linear-gradient(135deg, #1f3d7c, #050d3f);
   --xa-gradient-header: var(--xa-gradient-primary);
-
-  --xa-primary-rgb: 0, 122, 255;
+  --xa-primary-rgb: 19, 99, 152;
   --xa-surface-card-rgb: 255, 255, 255;
-  --xa-success-rgb: 52, 199, 89;
-  --xa-warning-rgb: 255, 149, 0;
-  --xa-danger-rgb: 255, 59, 48;
-  --xa-price-rgb: 255, 149, 0;
-
-  // Motion and typography are unit-independent.
-  --xa-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --xa-success-rgb: 34, 116, 93;
+  --xa-warning-rgb: 152, 99, 29;
+  --xa-danger-rgb: 180, 35, 53;
+  --xa-price-rgb: 19, 99, 152;
+  --xa-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   --xa-font-mono: 'SFMono-Regular', 'JetBrains Mono', Consolas, monospace;
   --xa-motion-fast: 150ms ease;
   --xa-motion-base: 250ms ease;
@@ -74,42 +74,44 @@
 }
 
 @mixin dark {
-  --xa-color-primary: #0a84ff;
-  --xa-color-primary-hover: #409cff;
-  --xa-color-primary-soft: rgba(10, 132, 255, 0.16);
-  --xa-color-on-primary: var(--xa-neutral-0);
-  --xa-color-success: #30d158;
-  --xa-color-warning: #ff9f0a;
-  --xa-color-danger: #ff453a;
-  --xa-color-info: #0a84ff;
-  --xa-color-price: #ff9f0a;
-  --xa-color-price-soft: #ffb340;
+  --xa-color-primary: #88bccf;
+  --xa-color-primary-hover: #acd0e1;
+  --xa-color-primary-soft: rgba(136, 188, 207, .16);
+  --xa-color-on-primary: #050d3f;
+  --xa-color-success: #88c9b0;
+  --xa-color-warning: #e4bc80;
+  --xa-color-danger: #f29caa;
+  --xa-color-favorite: #ff8faa;
+  --xa-color-favorite-soft: rgba(255, 143, 170, .18);
+  --xa-color-info: #88bccf;
+  --xa-color-price: #acd0e1;
+  --xa-color-price-soft: #acd0e1;
 
   --xa-color-surface-page: var(--xa-neutral-900);
-  --xa-color-surface-card: #1c1c1e;
-  --xa-color-surface-subtle: #202025;
-  --xa-color-surface-hover: #2c2c2e;
-  --xa-color-surface-elevated: #2c2c2e;
-  --xa-color-text-primary: #f5f5f7;
-  --xa-color-text-secondary: #98989d;
-  --xa-color-text-tertiary: #8e8e93;
-  --xa-color-text-disabled: #48484a;
+  --xa-color-surface-card: #101a3f;
+  --xa-color-surface-subtle: #16224b;
+  --xa-color-surface-hover: #1f3d7c;
+  --xa-color-surface-elevated: #1f3d7c;
+  --xa-color-text-primary: #edf3f6;
+  --xa-color-text-secondary: #cfdde4;
+  --xa-color-text-tertiary: #b9c9d6;
+  --xa-color-text-disabled: #4f7da2;
   --xa-color-text-inverse: var(--xa-neutral-0);
-  --xa-color-border: #38383a;
-  --xa-color-divider: #2c2c2e;
+  --xa-color-border: #336b9a;
+  --xa-color-divider: #1f3d7c;
   --xa-color-overlay: rgba(0, 0, 0, 0.58);
-  --xa-color-focus-ring: rgba(10, 132, 255, 0.3);
+  --xa-color-focus-ring: rgba(136, 188, 207, .3);
 
-  --xa-gradient-primary: linear-gradient(135deg, #0a84ff 0%, #0060df 100%);
-  --xa-gradient-dark: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);
+  --xa-gradient-primary: linear-gradient(135deg, #acd0e1, #88bccf);
+  --xa-gradient-dark: linear-gradient(135deg, #1f3d7c 0%, #101a3f 100%);
   --xa-gradient-header: var(--xa-gradient-primary);
 
-  --xa-primary-rgb: 10, 132, 255;
-  --xa-surface-card-rgb: 28, 28, 30;
-  --xa-success-rgb: 48, 209, 88;
-  --xa-warning-rgb: 255, 159, 10;
-  --xa-danger-rgb: 255, 69, 58;
-  --xa-price-rgb: 255, 159, 10;
+  --xa-primary-rgb: 136, 188, 207;
+  --xa-surface-card-rgb: 16, 26, 63;
+  --xa-success-rgb: 136, 201, 176;
+  --xa-warning-rgb: 228, 188, 128;
+  --xa-danger-rgb: 242, 156, 170;
+  --xa-price-rgb: 172, 208, 225;
 }
 
 // 旧变量作为迁移适配层保留，禁止业务代码新增 --c-*。

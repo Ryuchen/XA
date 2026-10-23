@@ -45,7 +45,7 @@ function encodeBase64(input: string): string {
 /** 兴安电竞 XA logo（矢量复刻，双 X/A 交叠电竞标志） */
 const XaLogo: React.FC<XaLogoProps> = ({
   size = 80,
-  color = '#2E7BD6',
+  color = '#136398',
   className = '',
   style,
 }) => {
@@ -64,7 +64,7 @@ const XaLogo: React.FC<XaLogoProps> = ({
   return (
     <Image
       className={className}
-      style={{ width: `${size}rpx`, height: `${size}rpx`, ...style }}
+      style={{ width: `${size / 2}px`, height: `${size / 2}px`, ...style }}
       src={src}
       mode="aspectFit"
     />

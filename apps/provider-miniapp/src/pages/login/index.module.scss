@@ -1,112 +1,30 @@
 @use '@/styles/variables.scss' as *;
+.container { display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100dvh; padding:40PX 20PX; color:$color-text-primary; background:$color-bg-page; }
+.header { width:100%; max-width:420PX; display:flex; flex-direction:column; align-items:center; margin-bottom:28PX; }
+.title { font-size:26PX; font-weight:700; line-height:1.4; color:$color-text-primary; }
+.subtitle { display:block; margin-top:8PX; font-size:14PX; color:$color-text-secondary; }
+.formCard { width:100%; max-width:420PX; padding:28PX; border:1PX solid $color-border; border-radius:16PX; background:$color-bg-card; box-shadow:0 4PX 16PX rgba(28,39,56,.04); }
+.formTitle { display:block; font-size:22PX; font-weight:650; color:$color-text-primary; }
+.formTip { display:block; margin:8PX 0 24PX; color:$color-text-secondary; font-size:13PX; line-height:1.7; }
+.formItem { margin-bottom:20PX; }.formLabel { display:block; margin-bottom:8PX; color:$color-text-primary; font-size:14PX; font-weight:500; }
+.formInput { width:100%; height:48PX; padding:0 14PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:16PX; color:$color-text-primary; }
+.loginBtn { @include button-reset; @include primary-control-state; width:100%; min-height:44PX; margin:0; border:0; border-radius:8PX; font-size:15PX; }
+@media(min-width:960px) { .container { display:grid; grid-template-columns:minmax(0,380PX) minmax(0,420PX); gap:64PX; justify-content:center; align-content:center; }.header { align-items:flex-start; margin:0; }.title { font-size:30PX; }.formCard { padding:32PX; } }
+@media(max-width:360px) { .formCard { padding:24PX 20PX; }.title { font-size:23PX; } }
 
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  box-sizing:border-box;
-  padding: 72rpx $page-padding 60rpx;
-  background: linear-gradient(155deg,#17171c,#393440 58%,#51455b);
-}
+.loginActions { display:flex; flex-direction:column; gap:12PX; margin-top:20PX; }
+.backBtn { @include button-reset; @include secondary-control-state; width:100%; min-height:44PX; padding:10PX 16PX; border:1PX solid $color-border; border-radius:8PX; color:$color-primary; background:$color-bg-card; font-size:15PX; }
+.otpPanel { margin:20PX 0 0; }
+.accountSummary { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8PX 12PX; margin-bottom:20PX; padding-bottom:12PX; border-bottom:1PX solid var(--xa-color-divider); color:$color-text-secondary; font-size:13PX; }
+.accountName { min-width:0; color:$color-text-primary; font-weight:600; overflow-wrap:anywhere; }
+.otpTitle { display:block; font-size:18PX; font-weight:600; line-height:1.5; }
+.otpTip { display:block; margin:8PX 0 16PX; color:$color-text-secondary; font-size:13PX; line-height:1.6; }
+.otpField { margin-top:20PX; }
+.otpQr { display:block; width:176PX; height:176PX; max-width:100%; margin:16PX auto; background:white; }
+.otpSecret,.recoveryCodes { display:block; margin:16PX 0; padding:12PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-family:monospace; font-size:14PX; line-height:1.8; overflow-wrap:anywhere; word-break:break-all; user-select:text; }
+.recoveryCodes { white-space:pre-wrap; }
 
-.header {
-  width: 100%;
-  max-width: 640px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 48rpx;
-}
+.registerEntry { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4PX 8PX; margin-top:24PX; padding-top:20PX; border-top:1PX solid $color-divider; color:$color-text-secondary; font-size:13PX; }
+.registerLink { @include button-reset; width:auto; min-height:44PX; padding:8PX; margin:0; border:0; color:$color-primary; background:transparent; font-size:13PX; }
 
-.title {
-  font-size: 48rpx;
-  font-weight: $font-weight-bold;
-  color: $color-text-white;
-}
-
-.subtitle {
-  margin-top: $spacing-sm;
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.formCard {
-  width: 100%;
-  max-width: 640px;
-  @include card-base;
-  box-sizing: border-box;
-  padding: 40rpx;
-  border-radius: 30rpx;
-}
-
-.formTitle {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-}
-
-.formTip {
-  display: block;
-  margin-top: $spacing-xs;
-  margin-bottom: $spacing-lg;
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  line-height: $line-height-normal;
-}
-
-.formItem {
-  margin-bottom: $spacing-md;
-}
-
-.formLabel {
-  display: block;
-  margin-bottom: $spacing-xs;
-  font-size: $font-size-sm;
-  color: rgba(255, 255, 255, 0.92);
-  font-weight: $font-weight-medium;
-}
-
-.formInput {
-  box-sizing: border-box;
-  width: 100%;
-  height: $button-height-md;
-  padding: 0 $spacing-md;
-  line-height: $button-height-md;
-  border: 1rpx solid rgba(255, 255, 255, 0.28);
-  border-radius: 18rpx;
-  font-size: $font-size-md;
-  color: #ffffff !important;
-  caret-color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
-  background: rgba(255, 255, 255, 0.12);
-  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.68);
-    opacity: 1;
-    -webkit-text-fill-color: rgba(255, 255, 255, 0.68);
-  }
-
-  &:focus {
-    border-color: rgba(255, 255, 255, 0.78);
-    background: rgba(255, 255, 255, 0.18);
-    box-shadow: 0 0 0 4rpx rgba(255, 255, 255, 0.12);
-    outline: none;
-  }
-}
-
-.loginBtn {
-  @include button-reset;
-  @include primary-control-state;
-  margin-top: $spacing-lg;
-  height: $button-height-lg;
-  border:none;
-  border-radius: 22rpx;
-  background: $color-primary !important;
-  color: $color-text-white;
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  &::after{border:none}
-}
+@media(max-width:959px) { .otpHeader { flex-direction:row; justify-content:center; gap:12PX; margin-bottom:20PX; }.otpHeader .title { font-size:22PX; }.otpHeader .subtitle { display:none; } }

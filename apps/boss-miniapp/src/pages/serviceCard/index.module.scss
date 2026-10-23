@@ -1,6 +1,8 @@
 @use '@/styles/variables.scss' as *;
+@use '@/styles/commerce.scss' as commerce;
 
 .container {
+  @include commerce.page;
   min-height: 100vh;
   background: $color-bg-page;
   padding: $page-padding;
@@ -85,7 +87,7 @@
   display: inline-flex;
   align-items: center;
   gap: $spacing-xs;
-  padding: 6rpx 16rpx;
+  padding: 8rpx 16rpx;
   border-radius: $radius-round;
   background: rgba(var(--xa-primary-rgb), 0.1);
 }
@@ -158,6 +160,26 @@
   font-size: $font-size-sm;
   color: $color-text-secondary;
   line-height: $line-height-normal;
+}
+
+.referenceText {
+  display: block;
+  font-size: 24rpx;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.referenceCopyBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 64rpx;
+  padding: 0 32rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid $color-primary;
+  color: $color-primary;
+  font-size: 24rpx;
+  @include press-feedback(0.96);
 }
 
 .actions {

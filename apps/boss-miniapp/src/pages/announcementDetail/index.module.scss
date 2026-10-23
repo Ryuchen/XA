@@ -15,7 +15,7 @@
   display: inline-flex;
   align-items: center;
   gap: $spacing-xs;
-  height: 52rpx;
+  height: 48rpx;
   padding: 0 $spacing-md;
   border-radius: $radius-round;
   background: rgba(var(--xa-primary-rgb), 0.1);
@@ -86,7 +86,7 @@
   padding: $spacing-sm $spacing-lg;
   border-radius: $radius-round;
   background: $color-primary;
-  color: #fff;
+  color: var(--xa-color-surface-card);
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
 }

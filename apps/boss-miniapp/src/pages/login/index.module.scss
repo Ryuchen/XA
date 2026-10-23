@@ -23,7 +23,7 @@
   @include flex-center;
   width: 152rpx;
   height: 152rpx;
-  border-radius: 44rpx;
+  border-radius: 32rpx;
   background: $color-bg-card;
   box-shadow: $shadow-float;
 }
@@ -32,7 +32,7 @@
   display: block;
   margin-top: $spacing-lg;
   color: $color-text-white;
-  font-size: 60rpx;
+  font-size: 48rpx;
   font-weight: $font-weight-bold;
   letter-spacing: $letter-spacing-tight;
   line-height: $line-height-tight;
@@ -78,7 +78,7 @@
 .avatarBtn {
   @include button-reset;
   flex-direction: column;
-  width: 140rpx;
+  width: 144rpx;
   background: transparent;
   @include press-feedback(0.98);
 }
@@ -95,6 +95,10 @@
   margin-top: $spacing-xs;
   color: $color-text-secondary;
   font-size: $font-size-xs;
+}
+
+.avatarPlaceholder {
+  @include flex-center;
 }
 
 .nicknameInput {
@@ -153,32 +157,4 @@
   border: 2rpx dashed $color-text-tertiary;
   font-size: $font-size-sm;
   @include press-feedback(0.98);
-}
-
-// ===== 用户协议区（纯展示） =====
-.agreement {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-sm;
-  margin: $spacing-lg $page-padding 0;
-}
-
-.agreementCheck {
-  @include flex-center;
-  flex-shrink: 0;
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: $radius-round;
-  background: $color-primary;
-}
-
-.agreementText {
-  color: $color-text-secondary;
-  font-size: $font-size-sm;
-  line-height: $line-height-normal;
-}
-
-.agreementLink {
-  color: $color-primary;
-  font-weight: $font-weight-medium;
 }

@@ -1,0 +1,14 @@
+.achievements-page .page-heading, .achievements-page .panel { margin-bottom:20rpx; padding:24rpx; border-color:var(--xa-color-border); border-radius:20rpx; }
+.achievements-page .title { font-size:20px; letter-spacing:0; }
+.achievements-page .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.achievements-page .page-heading .xa-button { min-height:36px; margin-top:12rpx; padding:6px 12px; border-radius:12rpx; font-size:var(--xa-control-small-font); }
+.achievement-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16rpx; }
+.achievement-card .section-title { flex:1; min-width:0; margin:0; font-size:var(--xa-control-font); line-height:1.5; overflow-wrap:anywhere; }
+.achievement-state { flex-shrink:0; padding:2rpx 10rpx; border-radius:6rpx; color:var(--xa-color-primary); background:var(--xa-color-primary-soft); font-size:var(--xa-control-small-font); font-weight:500; line-height:1.5; }
+.achievement-state.is-unlocked { color:var(--xa-color-success); background:rgba(var(--xa-success-rgb),.1); }
+.achievement-desc { display:block; margin-top:12rpx; color:var(--xa-color-muted); font-size:var(--xa-control-font); line-height:1.6; overflow-wrap:anywhere; }
+.achievement-progress { display:flex; align-items:baseline; justify-content:space-between; gap:12rpx; margin-top:16rpx; padding-top:12rpx; border-top:1rpx solid var(--xa-color-border); }
+.progress-label { flex-shrink:0; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.progress-values { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:flex-end; gap:4rpx 8rpx; min-width:0; font-variant-numeric:tabular-nums; text-align:right; overflow-wrap:anywhere; }
+.current-value { max-width:100%; color:var(--xa-color-primary); font-size:var(--xa-control-font); font-weight:600; line-height:1.5; }
+.target-value { max-width:100%; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }

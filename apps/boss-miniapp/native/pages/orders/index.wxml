@@ -1,0 +1,25 @@
+<view class="page orders-page">
+  <view class="orders-header">
+    <text class="title">我的订单</text>
+    <text class="subtitle">服务进度与每一笔消费，随时可查</text>
+    <scroll-view wx:if="{{logged}}" scroll-x class="filter-scroll"><view class="filters"><button wx:for="{{tabs}}" wx:key="value" class="xa-button chip {{filter === item.value ? 'chip-active' : ''}}" data-value="{{item.value}}" bindtap="filter" aria-pressed="{{filter === item.value}}" hover-class="xa-button-hover">{{item.name}}</button></view></scroll-view>
+  </view>
+  <view wx:if="{{!logged}}" class="panel"><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看订单</button></view>
+  <block wx:else>
+    <state-view loading="{{loading}}" error="{{error}}" empty="{{!items.length}}" empty-text="还没有这类订单" bind:retry="load"/>
+    <view class="panel order-card" wx:for="{{items}}" wx:key="id" data-id="{{item.id}}" bindtap="open" role="button" aria-label="{{'订单' + item.order_no + '，' + item.statusText + '，' + item.service.name + '，实付' + item.amountText + '兴安币'}}" hover-class="order-card-hover">
+      <view class="order-card-header"><text class="order-number">{{item.order_no}}</text><text class="status-tag status-{{item.status}}">{{item.statusText}}</text></view>
+      <view class="order-card-body">
+        <view class="order-main-row">
+          <view class="order-service"><text class="order-title">{{item.service.name}}</text><view class="order-meta"><text class="order-provider">{{item.provider_name_snapshot || (item.provider ? item.provider.nickname : (item.requires_boss_selection ? '等待选择陪玩' : '平台安排陪玩'))}}</text><text class="order-quantity">{{item.game_rounds || 1}} {{item.service.price_unit || '份'}}</text></view></view>
+          <view class="order-amount"><text class="amount-label">{{item.partialRefund || item.payment_status === 'REFUNDED' ? '原实付' : '实付'}}</text><view class="amount-price"><text class="order-price">{{item.amountText}}</text><text class="amount-unit">兴安币</text></view></view>
+        </view>
+        <text class="order-created">{{item.createdText}}</text>
+        <text wx:if="{{item.partialRefund || item.payment_status === 'REFUNDED'}}" class="order-created">累计已退 {{item.refundAmountText}} 兴安币<text wx:if="{{item.refundRemainingText !== ''}}"> · 剩余 {{item.refundRemainingText}} 兴安币</text></text>
+        <view wx:if="{{item.roulette_result}}" class="lottery-result"><text class="lottery-label">抽签结果</text><text class="lottery-name">{{item.roulette_result.name}}</text></view>
+      </view>
+      <view class="order-card-actions"><text class="order-progress {{item.canEvaluate ? 'needs-review' : ''}}">{{item.canEvaluate ? '本次服务待评价' : (item.fulfillment || '查看订单服务进度')}}</text><view class="detail-link"><text>查看详情</text><image src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
+    </view>
+    <view wx:if="{{!loading && !error && !items.length}}" class="section-surface order-empty-actions"><button class="xa-button button-secondary browse" bindtap="catalog" hover-class="xa-button-hover">去选择服务</button></view>
+  </block>
+</view>

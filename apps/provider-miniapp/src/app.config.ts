@@ -1,15 +1,20 @@
 export default defineAppConfig({
   pages: [
     'pages/login/index',
+    'pages/register/index',
     'pages/orders/index',
+    'pages/report/index',
     'pages/messages/index',
     'pages/message-detail/index',
     'pages/wallet/index',
+    'pages/withdrawAccounts/index',
     'pages/mine/index',
     'pages/evaluations/index',
     'pages/profile/index',
     'pages/skills/index',
-    'pages/audition/index'
+    'pages/support/index',
+    'pages/audition/index',
+    'pages/points/index'
   ],
   window: {
     backgroundTextStyle: '@bgTxtStyle',
@@ -23,13 +28,17 @@ export default defineAppConfig({
   tabBar: {
     custom: true,
     color: '#999999',
-    selectedColor: '#6C5CE7',
-    backgroundColor: '#FFFFFF',
+    selectedColor: '#136398',
+    backgroundColor: '#ffffff',
     borderStyle: 'black',
     list: [
       {
         pagePath: 'pages/orders/index',
         text: '接单'
+      },
+      {
+        pagePath: 'pages/report/index',
+        text: '报单'
       },
       {
         pagePath: 'pages/messages/index',

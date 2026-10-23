@@ -6,6 +6,7 @@ import { useCatalogStore, useServices } from '@/store';
 import { Skeleton } from '@/components';
 import Icon from '@/components/Icon';
 import { resolveImageUrl } from '@/utils/media';
+import GameplayLobby from '@/components/GameplayLobby';
 import styles from './index.module.scss';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
 import { getStoredToken } from '@/utils/auth';
@@ -35,6 +36,7 @@ const CategoryPage: React.FC = () => {
   };
 
   const visibleServices = services.filter(service => {
+    if (service.gameplay) return false;
     const query = keyword.trim().toLowerCase();
     if (!query) return true;
     return [service.name, service.description, service.category]
@@ -44,21 +46,22 @@ const CategoryPage: React.FC = () => {
 
   return (
     <View className={styles.container}>
+      <GameplayLobby />
       <View className={styles.header}>
         <Text className={styles.eyebrow}>SERVICE CENTER</Text>
         <View className={styles.titleRow}>
           <View>
-            <Text className={styles.pageTitle}>挑选服务</Text>
-            <Text className={styles.pageSubtitle}>按项目快速找到适合你的陪玩服务</Text>
+            <Text className={styles.pageTitle}>其他服务与礼物</Text>
+            <Text className={styles.pageSubtitle}>玩法套餐请从上方封面进入选择规格</Text>
           </View>
-          <View className={styles.countPill}>{services.length} 项</View>
+          <View className={styles.countPill}>{services.filter(item => !item.gameplay).length} 项</View>
         </View>
         <View className={styles.searchBar}>
           <Icon name="search" size={32} color="rgba(255,255,255,0.7)" />
           <Input
             className={styles.searchInput}
             value={keyword}
-            placeholder="搜索游戏、服务或玩法"
+            placeholder="搜索其他服务或礼物"
             placeholderStyle="color: rgba(255,255,255,0.55)"
             onInput={event => setKeyword(event.detail.value)}
             confirmType="search"
@@ -75,7 +78,7 @@ const CategoryPage: React.FC = () => {
           <View>
             <Text className={styles.sectionTitle}>全部服务</Text>
             <Text className={styles.sectionSub}>
-              {keyword ? `找到 ${visibleServices.length} 个匹配服务` : `${services.length} 个在线服务`}
+              {keyword ? `找到 ${visibleServices.length} 个匹配服务` : `${visibleServices.length} 个在线服务`}
             </Text>
           </View>
         </View>
@@ -105,7 +108,7 @@ const CategoryPage: React.FC = () => {
         {!loading && visibleServices.length === 0 && (
           <View className={styles.empty}>
             <View className={styles.emptyIcon}>
-              <Icon name="gamepad-2" size={72} color="#AEAEB2" />
+              <Icon name="gamepad-2" size={64} color="#AEAEB2" />
             </View>
             <Text className={styles.emptyTitle}>{keyword ? '没有匹配的服务' : '暂无可用服务'}</Text>
             <Text className={styles.emptyDesc}>

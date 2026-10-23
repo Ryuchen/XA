@@ -67,6 +67,21 @@ def resolve_commission_rate_with_source(service, escort_profile, promotion):
     Returns:
         (rate:int, source:str) —— source ∈ {'promotion','level','service','global'}
     """
+    if getattr(service, 'experience_kind', ''):
+        return (0 if service.experience_kind.startswith('NEW') else 10), 'club_experience'
+    policy = getattr(service, 'commission_policy', 'LEGACY')
+    if policy == 'EXPERIENCE':
+        return 10, 'club_experience'
+    from users.qualifications import service_requirement, commission_for
+    scoped=service_requirement(service)
+    if scoped and not scoped.get('invalid'):
+        scoped_rate=scoped.get('commission_rate') if hasattr(service,'provider_requirement_snapshot') else commission_for(scoped)
+        if scoped_rate is not None:return _clamp_rate(scoped_rate),'order_grade'
+    if policy == 'COMPANION':
+        return 20, 'club_companion'
+    if policy in ('REGULAR', 'FUN'):
+        level = getattr(escort_profile, 'level', None)
+        return (_clamp_rate(level.commission_rate), 'level') if level and level.is_active else (_clamp_rate(get_commission_rate()), 'global')
     if promotion is not None and promotion.commission_rate is not None:
         return _clamp_rate(promotion.commission_rate), 'promotion'
     level = getattr(escort_profile, 'level', None)
@@ -78,12 +93,35 @@ def resolve_commission_rate_with_source(service, escort_profile, promotion):
     return _clamp_rate(rate), 'service'
 
 
+def club_provider_specs(service_or_order, profiles, amount):
+    """固定3元为整单抽成，多陪份额只分配一次，不重复收取。"""
+    from .commission import provider_specs
+    custom = provider_specs(service_or_order,profiles,amount)
+    if custom is not None:
+        return custom
+    policy = getattr(service_or_order, 'commission_policy', 'LEGACY')
+    kind = getattr(service_or_order, 'experience_kind', '')
+    if kind:
+        return [{'commission_type': 'PERCENT', 'commission_rate': 0 if kind.startswith('NEW') else 10} for profile in profiles]
+    from users.qualifications import service_requirement,commission_for
+    requirement=service_requirement(service_or_order)
+    if policy == 'LEGACY' and (not requirement or commission_for(requirement) is None):
+        return None
+    if policy == 'EXPERIENCE' and amount < 10000:
+        from .settlement import split_settlement_bases
+        fixed = split_settlement_bases(min(300, amount), len(profiles))
+        return [{'commission_type': 'FIXED', 'commission_fixed': cut, 'commission_rate': 0} for cut in fixed]
+    return [{'commission_type': 'PERCENT', 'commission_rate': resolve_commission_rate(service_or_order, profile, None)} for profile in profiles]
+
+
 def compute_order_amount(
     original_amount,
     boss_rate,
     promotion=None,
     coupon_amount=None,
     coupon_threshold=0,
+    coupon_rate=None,
+    coupon_max_discount=None,
 ) -> DiscountResult:
     """计算折扣链并返回各项明细。
 
@@ -104,7 +142,7 @@ def compute_order_amount(
     boss_discount = original_amount - amount_after_boss
 
     promo_rate = promotion.discount_rate if promotion is not None else None
-    use_coupon = bool(coupon_amount)
+    use_coupon = bool(coupon_amount) or coupon_rate is not None
 
     if promo_rate is not None and use_coupon:
         raise PricingError('该商品正在参加限时活动，暂不可叠加优惠券')
@@ -120,8 +158,19 @@ def compute_order_amount(
     elif use_coupon:
         if amount_after_boss < int(coupon_threshold or 0):
             raise PricingError('订单金额未达到优惠券使用门槛')
-        coupon_discount = min(int(coupon_amount), amount_after_boss)
-        amount = amount_after_boss - coupon_discount
+        if coupon_rate is not None:
+            candidate = original_amount - original_amount * _clamp_rate(coupon_rate) // 100
+            if coupon_max_discount is not None:
+                candidate = min(candidate, coupon_max_discount)
+            if candidate > boss_discount:
+                coupon_discount = candidate
+                boss_discount = 0
+                amount = original_amount - coupon_discount
+            else:
+                amount = amount_after_boss
+        else:
+            coupon_discount = min(int(coupon_amount), amount_after_boss)
+            amount = amount_after_boss - coupon_discount
     else:
         amount = amount_after_boss
 

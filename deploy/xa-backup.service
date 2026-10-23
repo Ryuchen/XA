@@ -1,0 +1,14 @@
+[Unit]
+Description=XA database and media backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/bin/bash /opt/xa-current/deploy/tencent-daily-backup.sh
+TimeoutStartSec=1800
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

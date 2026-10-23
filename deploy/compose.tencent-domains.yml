@@ -1,0 +1,18 @@
+# Overlay the IP configuration after DNS has propagated; no public debug ports.
+services:
+  gateway:
+    ports: !override
+      - "80:80"
+      - "443:443"
+    environment:
+      XA_ROOT_DOMAIN: ${XA_ROOT_DOMAIN:?root domain required}
+      XA_API_DOMAIN: ${XA_API_DOMAIN:?API domain required}
+      XA_ADMIN_DOMAIN: ${XA_ADMIN_DOMAIN:?admin domain required}
+      XA_PROVIDER_DOMAIN: ${XA_PROVIDER_DOMAIN:?provider domain required}
+    volumes: !override
+      - ./deploy/Caddyfile.tencent-domains:/etc/caddy/Caddyfile:ro
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile.core:ro
+      - backend_media:/srv/media:ro
+      - backend_static:/srv/static:ro
+      - caddy_data:/data
+      - caddy_config:/config

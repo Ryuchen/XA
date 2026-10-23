@@ -1,3 +1,4 @@
+import uuid
 import random
 
 from django.contrib.auth.base_user import AbstractBaseUser
@@ -29,6 +30,7 @@ class ClubAccount(AbstractBaseUser):
         db_index=True,
     )
     openid = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    wechat_appid = models.CharField(max_length=32, blank=True, default='')
     phone = models.CharField(max_length=20, blank=True, null=True, db_index=True)
     avatar = models.ImageField(upload_to='accounts/avatars/', blank=True, null=True)
     avatar_url = models.URLField(blank=True, null=True)
@@ -57,6 +59,7 @@ class ClubAccount(AbstractBaseUser):
         blank=True,
         related_name='club_accounts',
     )
+    business_cycle = models.PositiveIntegerField(default=1, editable=False)
     account_no = models.CharField(max_length=32, unique=True, db_index=True)
     can_login = models.BooleanField(default=True, db_index=True)
     can_view = models.BooleanField(default=True)
@@ -122,3 +125,32 @@ class LegacyAccountMap(models.Model):
 
     def __str__(self):
         return f'{self.legacy_user_id} -> {self.account_id}'
+
+class WechatBindingChange(models.Model):
+    account = models.ForeignKey(ClubAccount, on_delete=models.PROTECT, related_name='wechat_binding_changes')
+    from_appid = models.CharField(max_length=32)
+    to_appid = models.CharField(max_length=32)
+    old_openid_hash = models.CharField(max_length=64)
+    new_openid_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class OtpCredential(models.Model):
+    account = models.OneToOneField(ClubAccount, on_delete=models.CASCADE, related_name='otp_credential')
+    secret_ciphertext = models.TextField()
+    version = models.UUIDField(default=uuid.uuid4, editable=False)
+    last_counter = models.BigIntegerField(default=-1)
+    recovery_hashes = models.JSONField(default=list)
+    enabled_at = models.DateTimeField(auto_now_add=True)
+
+class OtpLoginChallenge(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.ForeignKey(ClubAccount, on_delete=models.CASCADE, related_name='otp_login_challenges')
+    scope = models.CharField(max_length=12)
+    password_fingerprint = models.CharField(max_length=64)
+    secret_ciphertext = models.TextField(blank=True, default='')
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    consumed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        indexes=[models.Index(fields=['account','created_at'],name='otp_account_created_idx')]

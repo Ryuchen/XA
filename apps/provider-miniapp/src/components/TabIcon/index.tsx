@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Image } from '@tarojs/components';
 
 type Name = 'gamepad' | 'receipt' | 'bell' | 'wallet' | 'user';
@@ -29,5 +29,5 @@ export default function TabIcon({ name, color, size = 46 }: { name: Name; color:
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PATHS[name]}</svg>`;
     return `data:image/svg+xml;base64,${encode(svg)}`;
   }, [name, color]);
-  return <Image src={src} mode="aspectFit" style={{ width: `${size}rpx`, height: `${size}rpx` }} />;
+  return <Image src={src} mode="aspectFit" style={{ width: `${size / 2}px`, height: `${size / 2}px` }} />;
 }

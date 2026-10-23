@@ -1,0 +1,37 @@
+.support-page .section-surface { margin-bottom:20rpx; padding:24rpx; border-color:var(--xa-color-border); border-radius:20rpx; }
+.support-heading-row { display:flex; align-items:center; justify-content:space-between; gap:16rpx; }
+.support-heading .title { min-width:0; font-size:20px; letter-spacing:0; }
+.support-heading .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.support-heading-icon { display:flex; align-items:center; justify-content:center; width:32px; height:32px; flex-shrink:0; border-radius:12rpx; background:var(--xa-color-primary-soft); }
+.support-heading-icon image { width:18px; height:18px; }
+.support-profile { display:flex; align-items:center; gap:16rpx; }
+.support-avatar { display:block; width:44px; height:44px; flex-shrink:0; border-radius:14rpx; background:var(--xa-color-primary-soft); }
+.support-avatar-placeholder { display:flex; align-items:center; justify-content:center; }
+.support-avatar-placeholder image { width:22px; height:22px; }
+.support-profile-copy { flex:1; min-width:0; }
+.support-name { display:block; font-size:16px; font-weight:600; line-height:1.4; overflow-wrap:anywhere; }
+.support-company { display:block; margin-top:4rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; overflow-wrap:anywhere; }
+.support-page .xa-button.support-contact { min-height:40px; margin:20rpx 0 0; padding:8px 12px; border-radius:12rpx; font-size:var(--xa-control-font); }
+.support-contact-error { display:block; margin-top:12rpx; color:var(--xa-color-danger); font-size:var(--xa-control-small-font); line-height:1.5; overflow-wrap:anywhere; }
+.support-diagnostic { display:block; margin-top:8rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; overflow-wrap:anywhere; }
+.support-section-title { display:block; margin-bottom:16rpx; padding-bottom:12rpx; border-bottom:1rpx solid var(--xa-color-border); font-size:var(--xa-control-font); font-weight:600; line-height:1.5; }
+.support-reference, .wechat-row { display:flex; align-items:center; justify-content:space-between; gap:16rpx; }
+.support-field { flex:1; min-width:0; }
+.support-label { display:block; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.support-value { display:block; margin-top:4rpx; font-size:var(--xa-control-font); font-weight:500; line-height:1.5; overflow-wrap:anywhere; }
+.reference-value { color:var(--xa-color-primary); font-weight:600; }
+.support-order { margin-top:16rpx; }
+.support-page .xa-button.support-copy { flex:0 0 76px; width:76px; min-height:30px; margin:0; padding:4px 6px; border-radius:10rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.support-qr { padding-top:12rpx; text-align:center; }
+.wechat-row + .support-qr { margin-top:16rpx; padding-top:20rpx; border-top:1rpx solid var(--xa-color-border); }
+.support-page .xa-button.qrcode-preview { width:160px; height:160px; margin:0 auto; padding:8px; border:1rpx solid var(--xa-color-border); border-radius:12rpx; background:var(--xa-color-surface); }
+.qrcode { display:block; width:100%; height:100%; }
+.support-qr-note { display:block; margin-top:8rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.support-tips { display:block; font-size:var(--xa-control-font); line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+.support-empty { color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.support-empty-title { display:block; margin-bottom:8rpx; color:var(--xa-color-text); font-size:var(--xa-control-font); font-weight:600; }
+.support-page .support-actions { display:flex; align-items:center; justify-content:space-between; gap:16rpx; margin-bottom:0; padding:16rpx 24rpx; }
+.support-chat-copy { flex:1; min-width:0; }
+.support-chat-title { display:block; font-size:var(--xa-control-font); font-weight:600; line-height:1.5; }
+.support-chat-note { display:block; margin-top:4rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.support-page .xa-button.support-chat { flex:0 0 96px; width:96px; min-height:36px; margin:0; padding:6px 12px; border-radius:12rpx; font-size:var(--xa-control-small-font); }

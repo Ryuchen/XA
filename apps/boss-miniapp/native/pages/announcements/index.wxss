@@ -1,0 +1,17 @@
+.announcement-heading { padding:24rpx; margin-bottom:20rpx; border-color:var(--xa-color-border); border-radius:20rpx; }
+.announcement-heading-row { display:flex; align-items:center; justify-content:space-between; gap:16rpx; }
+.announcement-heading .title { min-width:0; font-size:20px; letter-spacing:0; }
+.announcement-heading .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.announcement-heading-icon { display:flex; align-items:center; justify-content:center; width:32px; height:32px; flex-shrink:0; border-radius:12rpx; background:var(--xa-color-primary-soft); }
+.announcement-heading-icon image { width:18px; height:18px; }
+.announcements-page .xa-button.announcement-card { display:flex; align-items:center; gap:16rpx; width:100%; min-height:60px; padding:16rpx; margin:0 0 16rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; background:var(--xa-color-surface); text-align:left; font-weight:400; }
+.announcements-page .xa-button.announcement-pinned { border-color:var(--xa-color-primary-soft); }
+.announcement-copy { flex:1; min-width:0; }
+.announcement-title-row { display:flex; align-items:flex-start; gap:8rpx; }
+.announcement-pin { flex-shrink:0; padding:1rpx 8rpx; border-radius:6rpx; background:var(--xa-color-primary-soft); color:var(--xa-color-primary); font-size:var(--xa-control-small-font); font-weight:600; line-height:1.5; }
+.announcement-title { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; flex:1; min-width:0; overflow:hidden; color:var(--xa-color-text); font-size:var(--xa-control-font); font-weight:600; line-height:1.4; overflow-wrap:anywhere; }
+.announcement-time { display:flex; flex-wrap:wrap; gap:4rpx 12rpx; margin-top:6rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; }
+.announcement-arrow { width:12px; height:12px; flex-shrink:0; }
+.announcement-limit { display:block; margin-bottom:0; padding:12rpx; border-radius:12rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.5; text-align:center; }
+.announcement-card-hover { opacity:.82; }
+@media (prefers-reduced-motion:reduce) { .announcement-card-hover { opacity:1; } }

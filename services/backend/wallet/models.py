@@ -108,10 +108,13 @@ class Transaction(models.Model):
         SHOP_INCOME = 'SHOP_INCOME', '平台收入'
         REFUND = 'REFUND', '订单退款'
         PASS_PURCHASE = 'PASS_PURCHASE', '通行证购买'
+        PASS_INCOME = 'PASS_INCOME', '通行证收入'
         # 提现代扣税费：记在平台钱包侧，与陪玩侧的 WITHDRAW 流水配对，保证税额不脱账。
         WITHDRAW_TAX = 'WITHDRAW_TAX', '提现税费'
         # 后台人工调账：金额正负即调增/调减，原因见 remark；不再借用 REWARD/WITHDRAW 语义。
         ADJUST = 'ADJUST', '后台调账'
+        EARNINGS_FREEZE = 'EARNINGS_FREEZE', '订单收益冻结'
+        EARNINGS_RELEASE = 'EARNINGS_RELEASE', '订单收益解冻'
 
     class Status(models.TextChoices):
         PENDING = 'PENDING', '处理中'
@@ -140,6 +143,7 @@ class Transaction(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUCCESS, db_index=True)
     remark = models.CharField(max_length=255, blank=True, default='')
     external_tx_id = models.CharField(max_length=64, blank=True, default='')
+    reversal_of = models.ForeignKey('self', on_delete=models.PROTECT, null=True, blank=True, related_name='reversals')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -169,7 +173,8 @@ class Transaction(models.Model):
                     tx_type__in=[
                         'TOPUP', 'PAY', 'INCOME', 'WITHDRAW', 'REWARD', 'GIFT',
                         'PENALTY', 'DEPOSIT', 'DEPOSIT_INCOME', 'SHOP_INCOME',
-                        'REFUND', 'PASS_PURCHASE', 'WITHDRAW_TAX', 'ADJUST',
+                        'REFUND', 'PASS_PURCHASE', 'PASS_INCOME', 'WITHDRAW_TAX', 'ADJUST',
+                        'EARNINGS_FREEZE', 'EARNINGS_RELEASE',
                     ]
                 ),
                 name='transaction_type_valid',
@@ -186,6 +191,22 @@ class Transaction(models.Model):
         if self.balance_after == 0 and self.balance_before:
             self.balance_after = self.balance_before + self.amount
         super().save(*args, **kwargs)
+
+
+class IncomeHold(models.Model):
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='income_holds')
+    income_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, related_name='income_hold')
+    amount = models.PositiveIntegerField()
+    deposit_amount = models.PositiveIntegerField(default=0)
+    release_at = models.DateTimeField(db_index=True)
+    released_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    cancelled_by_refund = models.ForeignKey('orders.OrderRefund', on_delete=models.PROTECT, null=True, blank=True, related_name='cancelled_holds')
+    recovered_amount = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(amount__gt=0), name='income_hold_amount_positive')]
 
 
 class IdempotencyKey(models.Model):
@@ -205,7 +226,7 @@ class IdempotencyKey(models.Model):
     3. 抢占动作必须与业务写入处于**同一个** ``transaction.atomic`` 块内，
        业务回滚时幂等键一并回滚，避免「键占了但钱没动」导致用户永久无法重试。
 
-    ``scope`` 仅作排障标注（如 ``withdraw`` / ``order.create``），
+    ``scope`` 标注业务（如 ``withdraw`` / ``order.create``）并约束成功回执的恢复，
     **不参与**唯一约束 —— 同一个 request_id 在任何业务上都只允许用一次，
     这样客户端只要保证 UUID 不复用即可，无需理解后端的业务分区。
     """
@@ -224,6 +245,10 @@ class IdempotencyKey(models.Model):
         help_text='业务标注，仅用于排障，不参与唯一约束',
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # 与资金事务同时写入；旧记录保持空值，不能从金额/时间猜测回执。
+    request_fingerprint = models.CharField(max_length=64, blank=True, default='')
+    response = models.JSONField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'IdempotencyKey'
@@ -284,6 +309,9 @@ def get_min_withdraw_amount():
 
     优先读取 SystemConfig，未配置或非法时回落 settings.MIN_WITHDRAW_AMOUNT。
     """
+    from .club_rules import club_income_rules_enabled
+    if club_income_rules_enabled():
+        return 0
     default = getattr(settings, 'MIN_WITHDRAW_AMOUNT', 10000)
     config = SystemConfig.objects.filter(key=MIN_WITHDRAW_AMOUNT_KEY).first()
     if not config:
@@ -483,6 +511,7 @@ class ProviderReport(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     audited_at = models.DateTimeField(null=True, blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ['-created_at']
@@ -497,8 +526,9 @@ class ProviderReport(models.Model):
                 name='uniq_provider_account_report',
             ),
             models.CheckConstraint(
-                condition=models.Q(amount__gt=0),
-                name='provider_report_amount_positive',
+                # 双陪均分可能产生 0 基数；只允许关联订单的履约报单为 0。
+                condition=models.Q(amount__gt=0) | models.Q(amount=0, order__isnull=False),
+                name='provider_report_amount_valid',
             ),
             models.CheckConstraint(
                 condition=models.Q(commission_rate__range=(0, 100)),
@@ -664,6 +694,27 @@ class WithdrawRequest(models.Model):
         return f"提现#{self.pk} {self.user.username} {self.amount / 10:g}兴安币 [{self.status}]"
 
 
+class WithdrawalAccount(models.Model):
+    """陪玩保存的收款资料；提现申请另存快照，不引用可变字段。"""
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.CASCADE,
+                                related_name='withdrawal_accounts')
+    payee_method = models.CharField(max_length=20, choices=WithdrawRequest.PayeeMethod.choices)
+    payee_account = models.CharField(max_length=100)
+    payee_name = models.CharField(max_length=50)
+    version = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['payee_method']
+        constraints = [
+            models.UniqueConstraint(fields=['account', 'payee_method'], name='unique_withdraw_account_method'),
+            models.CheckConstraint(condition=models.Q(payee_method__in=['WECHAT', 'ALIPAY', 'BANK']),
+                                   name='saved_payee_method_valid'),
+            models.CheckConstraint(condition=models.Q(version__gte=1), name='saved_payee_version_positive'),
+        ]
+
+
 class RechargeRecord(models.Model):
     """企微充值记录：按 1:10 兑换规则录入兴安币，可附带赠送兴安币。
 
@@ -686,6 +737,7 @@ class RechargeRecord(models.Model):
         max_length=64, blank=True, default='',
         help_text='第三方交易/转账流水号，用于对账溯源',
     )
+    receipt_key = models.CharField(max_length=64, null=True, blank=True, unique=True, editable=False)
     proof_image = models.ImageField(
         upload_to='recharges/', blank=True, null=True,
         help_text='充值凭证截图（转账/收款截图）',

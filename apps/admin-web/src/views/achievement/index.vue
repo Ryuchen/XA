@@ -17,7 +17,9 @@
           <el-tag :type="ACHIEVEMENT_METRIC[row.metric]?.type" effect="light" round>{{ row.metric_display }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="target" label="目标值" width="100" />
+      <el-table-column label="目标值" width="140">
+        <template #default="{ row }">{{ row.metric === 'amount' ? `${amountToXaCoin(row.target)} 兴安币` : `${row.target} 单` }}</template>
+      </el-table-column>
       <el-table-column prop="sort_order" label="排序" width="80" />
       <el-table-column label="状态" width="80">
         <template #default="{ row }">
@@ -33,8 +35,8 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑成就' : '新增成就'" width="480px">
-    <el-form :model="form" label-width="100px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑成就' : '新增成就'" width="680px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="标识"><el-input v-model="form.code" :disabled="!!form.id" placeholder="如 first_order" /></el-form-item>
       <el-form-item label="名称"><el-input v-model="form.title" /></el-form-item>
       <el-form-item label="描述"><el-input v-model="form.desc" /></el-form-item>
@@ -44,7 +46,9 @@
           <el-option v-for="(v, k) in ACHIEVEMENT_METRIC" :key="k" :label="v.label" :value="k" />
         </el-select>
       </el-form-item>
-      <el-form-item label="目标值"><el-input-number v-model="form.target" :min="0" /></el-form-item>
+      <el-form-item :label="form.metric === 'amount' ? '消费兴安币' : '完成订单数'">
+        <el-input-number v-model="targetInput" :min="0" :precision="form.metric === 'amount' ? 1 : 0" />
+      </el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sort_order" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
     </el-form>
@@ -56,12 +60,13 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CrudTable from '@/components/CrudTable.vue'
 import { achievementApi } from '@/api/modules'
 import { ACHIEVEMENT_METRIC } from '@/utils/dict'
 import { useAuthStore } from '@/stores/auth'
+import { amountToXaCoin, xaCoinToAmount } from '@/utils/format'
 
 const auth = useAuthStore()
 const tableRef = ref()
@@ -70,6 +75,10 @@ const query = reactive<Record<string, any>>({})
 const dialogVisible = ref(false)
 const saving = ref(false)
 const form = reactive<any>({})
+const targetInput = computed({
+  get: () => form.metric === 'amount' ? Number(amountToXaCoin(form.target)) : form.target,
+  set: (value: number) => { form.target = form.metric === 'amount' ? xaCoinToAmount(value) : value },
+})
 
 function blank() {
   return { id: 0, code: '', title: '', desc: '', icon: '', metric: 'orders', target: 1, sort_order: 0, is_active: true }

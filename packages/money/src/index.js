@@ -26,6 +26,18 @@
  * @type {number}
  */
 export const COIN_UNIT = 10;
+export const RMB_TO_COIN_RATE = 10;
+
+/** 人民币元 → 内部账务单位；仅用于人工收款确认的输入边界。 */
+export function rmbToRawAmount(yuan) {
+  const value = Number(yuan);
+  return Number.isFinite(value) ? Math.round(value * RMB_TO_COIN_RATE * COIN_UNIT) : 0;
+}
+
+/** 内部账务单位 → 人民币元展示，供人工收款、打款核对。 */
+export function formatRmb(amount) {
+  return (toCoin(amount) / RMB_TO_COIN_RATE).toFixed(2);
+}
 
 /**
  * 内部账务单位 → 兴安币（浮点）。

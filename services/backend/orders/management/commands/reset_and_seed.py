@@ -67,6 +67,8 @@ ROLE_SEEDS = [
          'dashboard:view', 'user:view',
          'order:view', 'order:refund', 'order:cancel',
          'wallet:view', 'wallet:adjust', 'transaction:view',
+         'wallet:recharge', 'recharge:view', 'withdraw:view', 'withdraw:audit',
+         'report:view', 'report:audit', 'order:settle', 'audit:view', 'deposit_rule:view',
          'coupon:view',
      ]},
     {'code': 'support', 'name': '客服', 'description': '用户支持与消息', 'sort_order': 3,
@@ -75,6 +77,9 @@ ROLE_SEEDS = [
          'message:view', 'message:push',
          'support:view', 'support:edit', 'support:delete',
          'announcement:view',
+         'wallet:view', 'wallet:recharge', 'recharge:view', 'transaction:view',
+         'order:dispatch', 'escort:view', 'service:view', 'chat:view', 'chat:reply',
+         'registration:view', 'registration:audit',
      ]},
 ]
 

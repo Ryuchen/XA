@@ -54,7 +54,7 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="detailVisible" title="审计详情" width="560px">
+  <el-dialog v-model="detailVisible" title="审计详情" width="560px" class="ap-modal">
     <el-descriptions v-if="current" :column="1" border>
       <el-descriptions-item label="操作人">{{ current.operator_name }}</el-descriptions-item>
       <el-descriptions-item label="方法">{{ current.method }}</el-descriptions-item>

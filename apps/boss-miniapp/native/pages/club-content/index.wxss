@@ -1,0 +1,18 @@
+.content-page .page-heading,.content-page .section-surface { margin-bottom:16rpx; padding:24rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; background:var(--xa-color-surface); }
+.content-page .title { font-size:20px; letter-spacing:0; }
+.content-page .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
+.poster-surface { margin-bottom:16rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; overflow:hidden; background:var(--xa-color-surface); }
+.content-page .poster-panel.panel { padding:0; margin-bottom:16rpx; border-radius:20rpx; }
+.poster { display:block; width:100%; }
+.content-page .rich { display:block; font-size:var(--xa-control-font); line-height:1.8; color:var(--xa-color-text); overflow-wrap:anywhere; }
+.content-list { margin-bottom:16rpx; padding:0 24rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; overflow:hidden; background:var(--xa-color-surface); }
+.page .xa-button.content-row { display:flex; align-items:center; gap:16rpx; width:100%; min-height:44px; padding:16rpx 0; border:0; border-bottom:1rpx solid var(--xa-color-border); border-radius:0; background:var(--xa-color-surface); text-align:left; font-weight:400; }
+.page .xa-button.content-row:last-child { border-bottom:0; }
+.content-mark { display:flex; align-items:center; justify-content:center; width:30px; height:30px; flex-shrink:0; border-radius:10rpx; background:var(--xa-color-primary-soft); }
+.content-mark image { width:16px; height:16px; }
+.content-copy { flex:1; min-width:0; }
+.content-name { margin-bottom:4rpx; font-size:var(--xa-control-font); font-weight:600; line-height:1.45; overflow-wrap:anywhere; }
+.content-copy .small { font-size:var(--xa-control-small-font); line-height:1.5; overflow-wrap:anywhere; }
+.content-arrow { flex-shrink:0; color:var(--xa-color-muted); font-size:18px; line-height:1; }
+.content-page .more-surface { padding:12rpx 24rpx; }
+.content-page .more-surface .xa-button.load-more { min-height:30px; margin:0; padding:4px 12px; border-radius:10rpx; font-size:var(--xa-control-small-font); }

@@ -6,4 +6,4 @@ export const MEDIA_BASE = process.env.TARO_APP_MEDIA || BASE_URL.replace(/\/api\
 
 // WebSocket 基址（不含 /ws/orders/ 路径）：优先独立配置，否则由 API 基址
 // 将 http(s) 替换为 ws(s) 推导。需加进微信后台「socket 合法域名」。
-export const WS_URL = process.env.TARO_APP_WS || BASE_URL.replace(/^http/, 'ws');
+export const WS_URL = process.env.TARO_APP_WS || BASE_URL.replace(/\/api\/?$/, '').replace(/^http/, 'ws');

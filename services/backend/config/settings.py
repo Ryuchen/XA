@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     'audition',
     'promotions',
     'console',
+    'engagement',
 ]
 
 MIDDLEWARE = [
@@ -132,16 +133,9 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_DATABASE', 'xa_db'),
-        'USER': os.environ.get('MYSQL_USER', 'root'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'xa_dev_password'),
-        'HOST': os.environ.get('MYSQL_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('MYSQL_PORT', '3306'),
-    }
-}
+from config.database import mysql_database
+
+DATABASES = {'default': mysql_database(os.environ)}
 
 
 # Password validation
@@ -209,6 +203,8 @@ REQUIRE_ORDER_EVIDENCE_IMAGES = env_bool(
 # wallet.services.claim_fund_write），挡得住弱网重试与连点。
 # 各端发版带上 client_request_id 后，把本项置 True，即可升级为永久强幂等。
 REQUIRE_CLIENT_REQUEST_ID = env_bool('REQUIRE_CLIENT_REQUEST_ID', False)
+REQUIRE_RECHARGE_PROOF = env_bool('REQUIRE_RECHARGE_PROOF', True)
+ORDER_SETTLEMENT_MODE = 'REPORT_APPROVAL'
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
@@ -248,6 +244,7 @@ REST_FRAMEWORK = {
         'order_write': THROTTLE_RATE_ORDER_WRITE,
         'checkin': THROTTLE_RATE_CHECKIN,
         'wallet_write': THROTTLE_RATE_WALLET_WRITE,
+        'network_report': '6/min',
     },
     'EXCEPTION_HANDLER': 'console.exceptions.console_exception_handler',
 }
@@ -255,11 +252,15 @@ REST_FRAMEWORK = {
 # 限流计数依赖缓存。本地零配置走进程内存；多进程部署请通过 DJANGO_CACHE_URL
 # 指向 Redis，否则每个 worker 各算各的，限流会被 worker 数量放大。
 _CACHE_URL = os.environ.get('DJANGO_CACHE_URL', '').strip()
+# 生产多实例必须共享计数；通道、队列和结果使用 0/1/2，流量缓存使用 3。
+if not _CACHE_URL and not DEBUG:
+    _CACHE_URL = f"redis://{os.environ.get('REDIS_HOST', '127.0.0.1')}:{os.environ.get('REDIS_PORT', '6379')}/3"
 if _CACHE_URL:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': _CACHE_URL,
+            'OPTIONS': {'socket_connect_timeout': 2, 'socket_timeout': 2},
         },
     }
 else:
@@ -288,6 +289,7 @@ LOGGING = {
             '()': 'common.logging_utils.JsonLogFormatter',
         },
         'plain': {
+            '()': 'common.logging_utils.PlainLogFormatter',
             'format': '[%(asctime)s] %(levelname)s %(name)s %(module)s:%(lineno)d %(message)s',
         },
     },
@@ -342,6 +344,12 @@ CORS_ALLOW_ALL_ORIGINS = env_bool('CORS_ALLOW_ALL_ORIGINS', DEBUG)
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()
 ]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+# 仅在入口反向代理覆盖此请求头、后端端口不直接暴露公网时启用。
+if env_bool('DJANGO_TRUST_PROXY', False):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Celery 配置（broker 复用 Redis）
 REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
@@ -356,6 +364,11 @@ CELERY_TASK_ALWAYS_EAGER = False  # 测试时设为 True 即可同步执行
 
 # Celery beat 定时计划
 CELERY_BEAT_SCHEDULE = {
+    'confirm-member-consumption': {'task': 'engagement.tasks.confirm_due_consumption', 'schedule': 60.0},
+    'release-provider-income': {'task': 'wallet.tasks.release_due_provider_income', 'schedule': 30.0},
+    'publish-club-birthdays': {'task': 'engagement.tasks.publish_birthdays', 'schedule': 3600.0},
+    'drain-club-broadcasts': {'task': 'engagement.tasks.drain_broadcast_outbox', 'schedule': 30.0},
+    'grant-club-member-coupons': {'task': 'engagement.tasks.grant_member_coupons', 'schedule': 60.0},
     # 每分钟兜底扫描超时未接单订单
     'check-pending-timeouts': {
         'task': 'orders.tasks.check_pending_timeouts',
@@ -414,6 +427,13 @@ KOOK_DISPATCH_MENTION_ROLE_IDS = tuple(
 KOOK_ADMIN_ORDER_URL = os.environ.get('KOOK_ADMIN_ORDER_URL', '').rstrip('/')
 KOOK_REQUEST_TIMEOUT = float(os.environ.get('KOOK_REQUEST_TIMEOUT', '8'))
 
+# 群机器人发单独立于面向老板的微信客服入口；Webhook 仅在服务端使用。
+WECOM_DISPATCH_ENABLED = env_bool('WECOM_DISPATCH_ENABLED', False)
+WECOM_DISPATCH_WEBHOOK = os.environ.get('WECOM_DISPATCH_WEBHOOK', '').strip()
+WECOM_DISPATCH_NEW_ORDERS = env_bool('WECOM_DISPATCH_NEW_ORDERS', True)
+WECOM_DISPATCH_REJECTED_ORDERS = env_bool('WECOM_DISPATCH_REJECTED_ORDERS', True)
+WECOM_REQUEST_TIMEOUT = float(os.environ.get('WECOM_REQUEST_TIMEOUT', '8'))
+
 # 默认最低提现兴安币对应的内部账务值。C 端未配置时回落此值。
 MIN_WITHDRAW_AMOUNT = 10000
 
@@ -451,3 +471,6 @@ run_startup_checks(
     databases=DATABASES,
     wechat_mock_login=WECHAT_MOCK_LOGIN,
 )
+
+# Production password logins require authenticator app enrollment and TOTP.
+LOGIN_OTP_REQUIRED = not DEBUG

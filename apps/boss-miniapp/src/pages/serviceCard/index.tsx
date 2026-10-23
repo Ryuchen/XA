@@ -6,30 +6,33 @@ import { fetchContactCard, openWecomCustomerService, SupportContactCard } from '
 import { resolveImageUrl } from '@/utils/media';
 import styles from './index.module.scss';
 
-const PRIMARY_COLOR = '#007AFF';
+const PRIMARY_COLOR = '#002fa7';
 
 const FALLBACK_CARD: SupportContactCard = {
   id: 0,
-  name: '游戏陪玩客服-小Q',
+  name: '客服暂未配置',
   company: '兴安电竞官方陪玩平台',
-  wechat_id: 'xingandianjing',
+  wechat_id: '',
   wecom_corp_id: '',
   wecom_service_url: '',
-  avatar_url: 'https://picsum.photos/id/177/200/200',
-  qrcode_url: 'https://picsum.photos/id/338/400/400',
-  tips: '1. 请长按识别上方二维码，添加客服微信\n2. 发送您要点的陪玩游戏和时段给客服\n3. 客服会为您匹配合适的陪玩大神\n4. 转账后客服会第一时间安排陪玩服务',
+  avatar_url: '',
+  qrcode_url: '',
+  tips: '客服入口暂不可用，请稍后重试。',
 };
 
 const ServiceCardPage: React.FC = () => {
   const [card, setCard] = useState<SupportContactCard>(FALLBACK_CARD);
   const [opening, setOpening] = useState(false);
+  const params = Taro.getCurrentInstance().router?.params || {};
+  const isRecharge = params.scene === 'recharge';
+  const context = { orderId: Number(params.orderId) || undefined, cardId: Number(params.cardId) || undefined };
 
   useEffect(() => {
-    fetchContactCard().then(res => {
+    fetchContactCard(context).then(res => {
       if (res.code === 0 && res.data) {
         setCard(res.data);
       }
-    });
+    }).catch(() => Taro.showToast({ title: '客服信息加载失败，请稍后重试', icon: 'none' }));
   }, []);
 
   const handleCopyWechatId = () => {
@@ -48,8 +51,9 @@ const ServiceCardPage: React.FC = () => {
     if (opening) return;
     setOpening(true);
     const result = await openWecomCustomerService({
-      title: '我要咨询客服下单',
-      path: '/pages/serviceCard/index',
+      ...context,
+      title: isRecharge ? '我要充值兴安币' : '我要咨询玩法服务',
+      path: `/pages/serviceCard/index${isRecharge ? '?scene=recharge' : ''}`,
     });
     setOpening(false);
     if (!result.opened) {
@@ -62,6 +66,10 @@ const ServiceCardPage: React.FC = () => {
   };
 
   const handleClose = () => {
+    if (isRecharge && Taro.getCurrentPages().length > 1) {
+      Taro.navigateBack();
+      return;
+    }
     Taro.switchTab({
       url: '/pages/home/index'
     });
@@ -73,30 +81,30 @@ const ServiceCardPage: React.FC = () => {
     <View className={styles.container}>
       <View className={styles.header}>
         <View className={styles.headerIcon}>
-          <Icon name="headphones" size={44} color={PRIMARY_COLOR} />
+          <Icon name="headphones" size={48} color={PRIMARY_COLOR} />
         </View>
-        <Text className={styles.title}>联系客服下单</Text>
-        <Text className={styles.subtitle}>一键进入企业微信客服，专属客服为你代下单</Text>
+        <Text className={styles.title}>{isRecharge ? '联系客服充值' : '咨询玩法服务'}</Text>
+        <Text className={styles.subtitle}>{isRecharge ? '人工客服收款、后台充值，余额到账后返回确认订单' : '进入企业微信客服，咨询方案、下单与售后'}</Text>
       </View>
 
       <View className={styles.card}>
         <View className={styles.serviceInfo}>
-          <Image
+          {card.avatar_url && <Image
             className={styles.avatar}
             src={resolveImageUrl(card.avatar_url)}
             mode="aspectFill"
-          />
+          />}
           <View className={styles.info}>
             <Text className={styles.name}>{card.name}</Text>
             <Text className={styles.company}>{card.company}</Text>
-            <View className={styles.wechatId}>
-              <Icon name="message-circle" size={26} color={PRIMARY_COLOR} />
+            {card.wechat_id && <View className={styles.wechatId}>
+              <Icon name="message-circle" size={24} color={PRIMARY_COLOR} />
               <Text className={styles.wechatIdText}>微信号: {card.wechat_id}</Text>
-            </View>
+            </View>}
           </View>
         </View>
 
-        <View className={styles.qrcode}>
+        {card.qrcode_url && <View className={styles.qrcode}>
           <Text className={styles.qrcodeTitle}>长按识别二维码添加客服</Text>
           <Image
             className={styles.qrcodeImage}
@@ -104,13 +112,18 @@ const ServiceCardPage: React.FC = () => {
             mode="aspectFill"
             showMenuByLongpress
           />
-        </View>
+        </View>}
+
+        {card.customer_reference && <View className={styles.tips}>
+          <Text className={styles.referenceText}>我的客服识别编号：{card.customer_reference}</Text>
+          <View className={styles.referenceCopyBtn} onClick={() => Taro.setClipboardData({ data: `老板编号 ${card.customer_reference}${card.order_no ? `，订单 ${card.order_no}` : ''}` })}>复制给客服</View>
+        </View>}
 
         {tipsLines.length > 0 && (
           <View className={styles.tips}>
             <View className={styles.tipsHeader}>
               <Icon name="info" size={28} color={PRIMARY_COLOR} />
-              <Text className={styles.tipsTitle}>下单温馨提示</Text>
+              <Text className={styles.tipsTitle}>{isRecharge ? '充值温馨提示' : '客服温馨提示'}</Text>
             </View>
             {tipsLines.map((line, idx) => (
               <View key={idx} className={styles.tipsItem}>
@@ -128,16 +141,16 @@ const ServiceCardPage: React.FC = () => {
       </View>
 
       <View className={styles.actions}>
-        <Button className={styles.copyBtn} loading={opening} onClick={handleOpenWecom}>
-          <Icon name="message-circle" size={32} color="#FFFFFF" />
+        <Button className={styles.copyBtn} disabled={!card.wecom_service_url} loading={opening} onClick={handleOpenWecom}>
+          <Icon name="message-circle" size={32} color="#fffdf5" />
           <Text className={styles.btnText}>{opening ? '正在连接' : '打开企业微信客服'}</Text>
         </Button>
-        <Button className={styles.addWechatBtn} onClick={handleCopyWechatId}>
+        {card.wechat_id && <Button className={styles.addWechatBtn} onClick={handleCopyWechatId}>
           <Text className={styles.btnText}>复制客服微信号</Text>
           <Icon name="credit-card" size={32} color={PRIMARY_COLOR} />
-        </Button>
+        </Button>}
         <Button className={styles.closeBtn} onClick={handleClose}>
-          返回首页
+          {isRecharge && Taro.getCurrentPages().length > 1 ? '返回上一页' : '返回首页'}
         </Button>
       </View>
     </View>

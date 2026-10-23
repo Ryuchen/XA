@@ -4,13 +4,14 @@ import {
   type RouteRecordRaw,
 } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { applyNavigationMeta, buildNavigation, flattenNavigation, type MenuPermission } from './navigation'
 
 /**
  * meta:
  *  - title: 菜单/页签标题
  *  - icon:  Element Plus 图标组件名
  *  - perm:  访问所需权限点（超管自动放行）
- *  - group: 侧栏分组名（对齐设计稿：概览/老板管理/陪玩管理/运营/权限系统）
+ *  - group / center / title: 由 navigation.ts 按业务中心统一生成
  *  - hidden: 不在菜单中展示
  */
 const routes: RouteRecordRaw[] = [
@@ -25,190 +26,221 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/layout/index.vue'),
     redirect: '/dashboard',
     children: [
-      // ===== 概览 =====
+      // 页面地址保持兼容，菜单分类由 navigation.ts 统一维护。
       {
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/views/dashboard/index.vue'),
-        meta: { title: '平台概览', icon: 'Odometer', perm: 'dashboard:view', group: '概览' },
+        meta: { perm: 'dashboard:view' },
       },
       {
         path: 'player-dashboard',
         name: 'player-dashboard',
         component: () => import('@/views/player-dashboard/index.vue'),
-        meta: { title: '陪玩概览', icon: 'DataAnalysis', perm: 'player_dashboard:view', group: '概览' },
+        meta: { perm: 'player_dashboard:view' },
       },
 
-      // ===== 订单管理 =====
       {
         path: 'orders',
         name: 'orders',
         component: () => import('@/views/order/index.vue'),
-        meta: { title: '派单管理', icon: 'Tickets', perm: 'order:view', group: '订单管理' },
+        meta: { perm: 'order:view' },
+      },
+      {
+        path: 'kook-dispatch',
+        name: 'kook-dispatch',
+        component: () => import('@/views/kook-dispatch/index.vue'),
+        meta: { perm: ['dispatch_config:view', 'dispatch_config:edit'] },
       },
       {
         path: 'reports',
         name: 'reports',
         component: () => import('@/views/report/index.vue'),
-        meta: { title: '订单审核', icon: 'Document', perm: 'report:view', group: '订单管理' },
+        meta: { perm: 'report:view' },
       },
       {
         path: 'withdrawals',
         name: 'withdrawals',
         component: () => import('@/views/withdraw/index.vue'),
-        meta: { title: '提现审核', icon: 'Money', perm: 'withdraw:view', group: '订单管理' },
+        meta: { perm: 'withdraw:view' },
       },
       {
         path: 'evaluations',
         name: 'evaluations',
         component: () => import('@/views/evaluation/index.vue'),
-        meta: { title: '订单评价', icon: 'Star', perm: 'evaluation:view', group: '订单管理' },
+        meta: { perm: 'evaluation:view' },
       },
 
-      // ===== 老板管理 =====
       {
         path: 'users',
         name: 'users',
         component: () => import('@/views/user/index.vue'),
-        meta: { title: '信息管理', icon: 'User', perm: 'user:view', group: '老板管理' },
+        meta: { perm: 'user:view' },
       },
       {
         path: 'boss-types',
         name: 'boss-types',
         component: () => import('@/views/boss-type/index.vue'),
-        meta: { title: '类型管理', icon: 'Medal', perm: 'boss_type:view', group: '老板管理' },
+        meta: { perm: 'boss_type:view' },
       },
       {
         path: 'wallets',
         name: 'wallets',
         component: () => import('@/views/wallet/index.vue'),
-        meta: { title: '钱包管理', icon: 'Wallet', perm: 'wallet:view', group: '老板管理' },
+        meta: { perm: 'wallet:view' },
       },
       {
         path: 'recharge-records',
         name: 'recharge-records',
         component: () => import('@/views/recharge/index.vue'),
-        meta: { title: '账目记录', icon: 'CreditCard', perm: 'recharge:view', group: '老板管理' },
+        meta: { perm: 'recharge:view' },
       },
 
-      // ===== 陪玩管理 =====
       {
         path: 'escorts',
         name: 'escorts',
         component: () => import('@/views/escort/index.vue'),
-        meta: { title: '陪玩管理', icon: 'Avatar', perm: 'escort:view', group: '陪玩管理' },
+        meta: { perm: 'escort:view' },
+      },
+      {
+        path: 'provider-registrations',
+        name: 'provider-registrations',
+        component: () => import('@/views/provider-registration/index.vue'),
+        meta: { perm: 'registration:view' },
+      },
+      {
+        path: 'deposit-rules',
+        name: 'deposit-rules',
+        component: () => import('@/views/deposit-rules/index.vue'),
+        meta: { perm: 'deposit_rule:view' },
       },
       {
         path: 'escort-levels',
         name: 'escort-levels',
         component: () => import('@/views/escort-level/index.vue'),
-        meta: { title: '陪玩等级', icon: 'Rank', perm: 'escort_level:view', group: '陪玩管理' },
+        meta: { perm: 'escort_level:view' },
       },
       {
         path: 'dispose-records',
         name: 'dispose-records',
         component: () => import('@/views/dispose/index.vue'),
-        meta: { title: '奖惩记录', icon: 'Stamp', perm: 'dispose:view', group: '陪玩管理' },
+        meta: { perm: 'dispose:view' },
       },
       {
         path: 'audition-links',
         name: 'audition-links',
         component: () => import('@/views/audition/index.vue'),
-        meta: { title: '声卡管理', icon: 'Headset', perm: 'audition:view', group: '陪玩管理' },
+        meta: { perm: 'audition:view' },
       },
       {
         path: 'audition-signups',
         name: 'audition-signups',
         component: () => import('@/views/audition/signups.vue'),
-        meta: { title: '试音审核', icon: 'Tickets', perm: 'audition:signup_view', group: '陪玩管理' },
+        meta: { perm: 'audition:signup_view' },
       },
 
-      // ===== 运营 =====
+      {
+        path: 'provider-passes',
+        name: 'provider-passes',
+        component: () => import('@/views/provider-pass/index.vue'),
+        meta: { perm: 'escort:view' },
+      },
+      {
+        path: 'gameplays',
+        name: 'gameplays',
+        component: () => import('@/views/gameplay/index.vue'),
+        meta: { perm: 'service:view' },
+      },
       {
         path: 'service-items',
         name: 'service-items',
         component: () => import('@/views/service/index.vue'),
-        meta: { title: '游玩项目', icon: 'Goods', perm: 'service:view', group: '运营管理' },
+        meta: { perm: 'service:view' },
       },
       {
         path: 'transactions',
         name: 'transactions',
         component: () => import('@/views/transaction/index.vue'),
-        meta: { title: '流水记录', icon: 'List', perm: 'transaction:view', group: '运营管理' },
+        meta: { perm: 'transaction:view' },
       },
       {
         path: 'promotions',
         name: 'promotions',
         component: () => import('@/views/promotion/index.vue'),
-        meta: { title: '营销管理', icon: 'Sell', perm: 'promotion:view', group: '运营管理' },
+        meta: { perm: 'promotion:view' },
       },
       {
         path: 'coupons',
         name: 'coupons',
         component: () => import('@/views/coupon/index.vue'),
-        meta: { title: '优惠券', icon: 'Discount', perm: 'coupon:view', group: '运营管理' },
+        meta: { perm: 'coupon:view' },
+      },
+      {
+        path: 'club-operations',
+        name: 'club-operations',
+        component: () => import('@/views/engagement/index.vue'),
+        meta: { perm: 'engagement:view' },
       },
       {
         path: 'achievements',
         name: 'achievements',
         component: () => import('@/views/achievement/index.vue'),
-        meta: { title: '成就配置', icon: 'Trophy', perm: 'achievement:view', group: '运营管理' },
+        meta: { perm: 'achievement:view' },
       },
       {
         path: 'checkin',
         name: 'checkin',
         component: () => import('@/views/checkin/index.vue'),
-        meta: { title: '签到打卡', icon: 'Calendar', perm: 'checkin:view', group: '运营管理' },
+        meta: { perm: 'checkin:view' },
       },
       {
         path: 'banners',
         name: 'banners',
         component: () => import('@/views/banner/index.vue'),
-        meta: { title: '首页轮播', icon: 'Picture', perm: 'banner:view', group: '运营管理' },
+        meta: { perm: 'banner:view' },
       },
       {
         path: 'announcements',
         name: 'announcements',
         component: () => import('@/views/announcement/index.vue'),
-        meta: { title: '公告管理', icon: 'Bell', perm: 'announcement:view', group: '运营管理' },
+        meta: { perm: 'announcement:view' },
       },
       {
         path: 'support-cards',
         name: 'support-cards',
         component: () => import('@/views/support/index.vue'),
-        meta: { title: '客服名片', icon: 'Service', perm: 'support:view', group: '运营管理' },
+        meta: { perm: 'support:view' },
       },
       {
         path: 'chat',
         name: 'chat',
         component: () => import('@/views/chat/index.vue'),
-        meta: { title: '消息与客服', icon: 'ChatLineRound', perm: 'chat:view', group: '运营管理' },
+        meta: { perm: 'chat:view' },
       },
       {
         path: 'messages',
         name: 'messages',
         component: () => import('@/views/message/index.vue'),
-        meta: { title: '站内消息', icon: 'ChatDotRound', perm: 'message:view', group: '运营管理' },
+        meta: { perm: 'message:view' },
       },
 
-      // ===== 权限系统 =====
       {
         path: 'admins',
         name: 'admins',
         component: () => import('@/views/system/admin.vue'),
-        meta: { title: '客服信息管理', icon: 'UserFilled', perm: 'admin:view', group: '权限系统' },
+        meta: { perm: 'admin:view' },
       },
       {
         path: 'roles',
         name: 'roles',
         component: () => import('@/views/system/role.vue'),
-        meta: { title: '职位权限管理', icon: 'Lock', perm: 'role:view', group: '权限系统' },
+        meta: { perm: 'role:view' },
       },
       {
         path: 'audit-logs',
         name: 'audit-logs',
         component: () => import('@/views/system/audit.vue'),
-        meta: { title: '操作审计日志', icon: 'Document', perm: 'audit:view', group: '权限系统' },
+        meta: { perm: 'audit:view' },
       },
       {
         path: '403',
@@ -224,6 +256,9 @@ const routes: RouteRecordRaw[] = [
   },
 ]
 
+const featureRoutes = routes.find(route => route.path === '/')!.children!
+applyNavigationMeta(featureRoutes)
+
 const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -238,15 +273,22 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (!auth.profile) {
+    const revision = auth.sessionRevision
     try {
       await auth.fetchProfile()
     } catch {
-      auth.clear()
-      return { path: '/login' }
+      // The HTTP layer clears only definitively expired credentials. A stale
+      // profile request or temporary outage must not sign out a newer login.
+      return auth.token ? false : { path: '/login' }
     }
+    if (auth.sessionRevision !== revision) return false
   }
-  const perm = to.meta.perm as string | undefined
+  const perm = to.meta.perm as MenuPermission
   if (perm && !auth.hasPerm(perm)) {
+    if (to.path === '/dashboard') {
+      const firstAllowed = flattenNavigation(buildNavigation(featureRoutes, code => auth.hasPerm(code)))[0]
+      if (firstAllowed) return { path: `/${firstAllowed.path}` }
+    }
     return { path: '/403' }
   }
   return true

@@ -17,6 +17,9 @@ class TipOrderTest(APITestCase):
     def setUp(self):
         self.customer = make_user(role='CUSTOMER', nickname='测试老板')
         self.provider = make_provider(display_name='测试陪玩', is_verified=True)
+        from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
+        provider_account = get_or_create_account_for_legacy_user(self.provider)
+        link_legacy_relations(self.provider, provider_account)
         make_wallet(self.customer, balance=10000)
         make_wallet(self.provider, balance=1000)
         normal_category = ServiceCategory.objects.create(name='测试陪玩分类', is_gift=False)

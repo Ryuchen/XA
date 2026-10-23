@@ -6,20 +6,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 96rpx $spacing-lg;
+  padding: 48PX 24PX;
+  grid-column: 1 / -1;
 }
 
 .iconWrap {
   @include flex-center;
-  width: 160rpx;
-  height: 160rpx;
-  margin-bottom: $spacing-md;
-  border-radius: $radius-round;
+  width: 64PX;
+  height: 64PX;
+  margin-bottom: 20PX;
+  border-radius: 20PX;
   background: $color-bg-hover;
 }
 
 .icon {
-  font-size: 80rpx;
+  font-size: 40PX;
   line-height: 1;
 }
 
@@ -30,6 +31,7 @@
 }
 
 .desc {
+  max-width: 340PX;
   margin-top: $spacing-xs;
   color: $color-text-tertiary;
   font-size: $font-size-sm;
@@ -40,3 +42,8 @@
 .action {
   margin-top: $spacing-lg;
 }
+
+.empty { padding:32PX 16PX; }.iconWrap { width:52PX; height:52PX; border-radius:16PX; margin-bottom:16PX; }.icon { font-size:30PX; }.title { color:$color-text-primary; text-align:center; line-height:1.5; }.desc { color:$color-text-secondary; overflow-wrap:anywhere; }.action { margin-top:20PX; max-width:100%; }
+@media(max-width:600px) { .empty { padding:24PX 8PX; } }
+
+@media(max-width:600px) { .empty { padding:16PX 8PX; }.iconWrap { width:44PX; height:44PX; margin-bottom:12PX; }.icon { font-size:26PX; }.action { margin-top:16PX; } }

@@ -1,6 +1,6 @@
 import { ApiResponse, request } from '@/utils/request';
 
-export type CouponDiscountType = 'THRESHOLD' | 'DIRECT';
+export type CouponDiscountType = 'THRESHOLD' | 'DIRECT' | 'RATE' | 'QUALIFICATION';
 export type UserCouponStatus = 'UNUSED' | 'USED' | 'EXPIRED';
 
 export interface Coupon {
@@ -9,7 +9,11 @@ export interface Coupon {
   discount_type: CouponDiscountType;
   threshold: number;
   amount: number;
-  valid_to: string;
+  valid_to: string | null;
+  discount_rate: number;
+  max_discount: number;
+  experience_kind: string;
+  platform: string;
   is_claimed: boolean;
   claimable: boolean;
 }
@@ -20,7 +24,11 @@ export interface UserCoupon {
   discount_type: CouponDiscountType;
   threshold: number;
   amount: number;
-  valid_to: string;
+  valid_to: string | null;
+  discount_rate: number;
+  max_discount: number;
+  experience_kind: string;
+  platform: string;
   status: UserCouponStatus;
   claimed_at: string;
   used_at: string | null;

@@ -118,7 +118,7 @@
     </crud-table>
   </div>
 
-  <el-drawer v-model="detailVisible" title="评价详情" size="480px">
+  <el-drawer v-model="detailVisible" title="评价详情" size="480px" class="ap-panel">
     <template v-if="current">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="订单号">{{ current.order_no }}</el-descriptions-item>
@@ -141,7 +141,7 @@
     </template>
   </el-drawer>
 
-  <el-dialog v-model="replyVisible" title="回复评价" width="480px">
+  <el-dialog v-model="replyVisible" title="回复评价" width="560px" class="ap-modal">
     <el-input
       v-model="replyText"
       type="textarea"

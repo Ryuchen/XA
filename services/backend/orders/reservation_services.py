@@ -235,6 +235,8 @@ def create_reservation(
         ReservationConflictError: 该时间段已被占用。
         ReservationError: 陪玩不可预约。
     """
+    if service.billing_provider_count == 2:
+        raise ReservationError('该双陪套餐需联系客服安排两名打手')
     duration_minutes = int((end_time - start_time).total_seconds() // 60)
     rounds = max(int(game_rounds or 1), 1)
 
@@ -260,7 +262,7 @@ def create_reservation(
             end_time=end_time,
             duration_minutes=duration_minutes,
             game_rounds=rounds,
-            estimated_amount=service.price * rounds,
+            estimated_amount=service.price * rounds * service.billing_provider_count,
             game_region=game_region,
             game_nickname=game_nickname,
             game_uid=game_uid,
@@ -384,9 +386,7 @@ def convert_reservation_to_order(
         data = serializer.validated_data
         amount = data['amount']
         provider = data['provider']
-        split = compute_split(
-            amount, data['commission_rate'], data['inviter_commission_rate'],
-        )
+        split = compute_split(amount, inviter_commission_rate=data['inviter_commission_rate'], **data['commission_spec'])
         inviter = data.get('inviter')
         inviter_account = _account_for_legacy_user(inviter)
 
@@ -397,6 +397,10 @@ def convert_reservation_to_order(
             return 403, '钱包不可用', None
         if wallet.balance < amount:
             return 400, '兴安币不足，请联系企业微信客服充值', None
+
+        from .purchase_benefits import lock_purchase, record_paid_benefits
+        locked_coupon = lock_purchase(buyer_account, reservation.service,
+            reservation.game_rounds, data['user_coupon'], data['pricing'])
 
         # 校验全过、即将扣款，此刻才占幂等键：校验失败不占键，用户补足余额后
         # 可以拿同一个键重试。
@@ -442,6 +446,7 @@ def convert_reservation_to_order(
             promo_discount=data['promo_discount'],
             coupon_discount=data['coupon_discount'],
             promotion=data.get('promotion'),
+            **data['commission_snapshot'],
             commission_rate=split.commission_rate,
             provider_income=split.provider_income,
             inviter=inviter,
@@ -449,6 +454,9 @@ def convert_reservation_to_order(
             inviter_commission=split.inviter_commission,
             shop_income=split.shop_income,
         )
+        record_paid_benefits(order, locked_coupon)
+        from engagement.services import allocate_order_points
+        allocate_order_points(order, wallet, balance_before)
         Transaction.objects.create(
             wallet=wallet,
             order=order,
@@ -493,6 +501,9 @@ def convert_reservation_to_order(
                 or provider.nickname
                 or provider.username
             )
+            if o.commission_type == 'FIXED' or o.commission_override:
+                from .services import sync_single_provider_share
+                sync_single_provider_share(o)
             mark_escort_busy(
                 provider_ids=[provider.id],
                 account_ids=[getattr(provider_account, 'pk', None)],

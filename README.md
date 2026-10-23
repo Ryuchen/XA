@@ -9,14 +9,24 @@ XA 是一套单仓多端的游戏陪玩业务系统，覆盖老板下单、陪�
 - **管理端**：Web 运营后台，管理老板、陪玩、订单、派单、审核、充值、钱包、通行证、签到奖励、消息和基础配置。
 - **服务端**：Django REST Framework + Channels + Celery，统一承载业务接口、WebSocket、异步任务、MySQL 和 Redis。
 
-> 业务金额统一以“兴安币”展示和存储，换算比例为 **1 元人民币 = 10 兴安币**。例如签到门槛 188 元和 388 元分别对应 1,880 和 3,880 兴安币。
+> 当前发布范围与验收结果见 [发布与联调说明](docs/RELEASE_READINESS.md)。老板端发布微信小程序，打手端发布 H5，运营使用 Web 后台。采用“联系客服付款 → 后台凭证充值 → 余额下单 → 履约报单 → 审核结算”流程，微信客服由企业微信原生工作台接待。
+>
+> **1 元人民币 = 10 兴安币 = 100 内部账务单位**。界面展示兴安币，后端存储整数账务单位。例如实收 100 元对应 1,000 币，API 金额为 10,000。
+
+2026-10-06 已完成腾讯云全量重新部署及应用数据清空，微信体验版为 `2026.10.6`。旧业务账号和运营数据已移除，新超级管理员与陪玩账号的交付及验收见 [重新部署与清空记录](docs/REDEPLOY_RESET_20261006.md)。
+
+同日后续更新已将陪玩 H5 部署为 `2026.10.6.1`，管理后台修复 API 前缀导致的 404 后更新为 `2026.10.6.2`。小程序 `2026.10.6.1` 已完成官方开发包上传，待在公众平台设为体验版。更新范围、备份与验收见 [最新版更新部署记录](docs/UPDATE_DEPLOYMENT_20261006.md)。
+
+派单管理支持复制发单文案和推送到 KOOK / 企业微信群，只展示打手实得；活动订单按折后成交价重新抽成。使用与配置见 [一键发单说明](docs/GROUP_DISPATCH.md)。
+
+本机 WSL 的完整容器运行、真实微信登录绑定及复验命令见 [本地部署验收记录](docs/LOCAL_DEPLOYMENT_VALIDATION.md)。管理端入口为 `http://127.0.0.1:18081`，陪玩端为 `http://127.0.0.1:18082`；这些地址仅供本机验证。
 
 ## 目录结构
 
 ```text
 XA/
 ├── apps/
-│   ├── boss-miniapp/         # 老板微信小程序（Taro + React）
+│   ├── boss-miniapp/         # 老板原生微信小程序（native/）；src/ 为历史 Taro 实现
 │   ├── provider-miniapp/     # 陪玩 H5 / Web（Taro + React，目录名为历史命名）
 │   └── admin-web/            # 运营管理后台（Vue 3 + Vite + Element Plus）
 ├── services/
@@ -43,9 +53,9 @@ XA/
 ### 陪玩端
 
 - 抢单池展示订单金额、预计到手金额和老板备注要求。
-- 订单状态按“待抢单 → 已接单 → 服务中 → 待报单/审核 → 已完成”流转。
+- 订单状态按“待抢单 → 已接单 → 服务中 → 服务完成”流转；新订单在全体打手报单审核通过后结算。
 - 通行证分级抢单：黑卡立即可见，金卡延迟 30 秒，银卡延迟 60 秒，铜卡延迟 120 秒，无卡最后可见。
-- 通行证按日购买：黑卡 500、金卡 300、银卡 100、铜卡 20 兴安币/天；购买 30 天按总价 95 折。
+- 通行证每次购买 1 天，同档续费顺延；默认黑卡 500、金卡 300、银卡 100、铜卡 20 兴安币/天，后台“通行证管理”可调整价格和可见延迟。
 - 完成服务后从订单生成报单，上传入队截图、结单截图及多张战绩截图。
 - 查看老板评价并回复；管理个人信息、语音卡和服务资料。
 - 钱包统一展示余额、收入、礼物、奖惩、通行证消费和提现记录，并支持申请提现。
@@ -64,7 +74,7 @@ XA/
 
 | 组件 | 技术 | 本地端口 |
 | --- | --- | --- |
-| 老板端 | Taro 4、React 18、TypeScript、Sass | H5 调试建议 `3000` |
+| 老板端 | 微信原生 JavaScript、WXML、WXSS | 微信开发者工具；历史 H5 调试 `3000` |
 | 陪玩端 | Taro 4、React 18、TypeScript、Sass | H5 调试建议 `3001` |
 | 管理端 | Vue 3、Vite 5、Element Plus、Pinia | `5180` |
 | 服务端 | Django、DRF、Channels、Daphne、Celery | `8000` |
@@ -130,12 +140,11 @@ docker compose down
 
 ### 3. 启动三个前端
 
-分别打开三个终端，在仓库根目录运行：
+老板端直接在微信开发者工具中导入 `apps/boss-miniapp`，读取 `native/`。在 `native/config.js` 配置开发服务地址；原生代码修改后由开发者工具重新编译。
+
+陪玩端和管理端分别在终端运行：
 
 ```bash
-# 老板端 H5，仅用于浏览器联调；正式交付形态是微信小程序
-pnpm --filter xa-boss-miniapp exec taro build --type h5 --watch --port 3000
-
 # 陪玩 H5 / Web
 pnpm --filter xa-provider-miniapp exec taro build --type h5 --watch --port 3001
 
@@ -145,10 +154,11 @@ pnpm run admin:dev
 
 对应访问地址：
 
-- 老板端 H5：`http://127.0.0.1:3000`
 - 陪玩端：`http://127.0.0.1:3001`
 - 管理端：`http://127.0.0.1:5180`
 - 后端接口：`http://127.0.0.1:8000/api`
+
+历史老板 H5 可用 `pnpm --filter xa-boss-miniapp exec taro build --type h5 --watch --port 3000` 启动，仅供旧版对照，不代表 `native/` 的界面和功能验收。
 
 ## 微信小程序构建与登录
 
@@ -158,7 +168,9 @@ pnpm run admin:dev
 pnpm run boss:build
 ```
 
-在微信开发者工具中导入 `apps/boss-miniapp`。项目配置的 `miniprogramRoot` 为 `dist/`，因此必须先完成构建，确保 `apps/boss-miniapp/dist/app.json` 已生成。不要直接把 `dist` 目录当作项目根目录导入。
+在微信开发者工具中导入 `apps/boss-miniapp`，项目配置的 `miniprogramRoot` 为 `native/`，直接读取 `native/app.json`。`boss:build` 执行原生结构、语法和本机可用的官方编译器检查，不生成 Taro `dist/`。
+
+发布前配置 `native/config.js` 的 `trial` / `release` 地址，开启开发者工具域名校验（注意 `project.private.config.json` 的覆盖设置），并执行 `node scripts/check-native.mjs --require-compiler`。正式三端构建用 `pnpm build:release`，会在配置缺失或官方编译器不可用时停止；完整步骤见 [发布与联调说明](docs/RELEASE_READINESS.md)。
 
 ### 登录配置
 
@@ -218,8 +230,9 @@ docker compose exec web python manage.py seed_stage_test_data \
 # 正式老板微信小程序
 pnpm run boss:build
 
-# 浏览器交付构建
+# 历史老板 H5 对照构建
 pnpm run boss:build:h5
+# 陪玩与管理端正式交付构建
 pnpm run provider:build:h5
 pnpm run admin:build
 
@@ -231,7 +244,7 @@ docker compose config --quiet
 docker compose -f docker-compose.web.yml config --quiet
 ```
 
-根脚本 `provider:build` 和 `build:all` 中仍保留陪玩微信小程序构建，用于历史兼容；当前产品交付应使用 `provider:build:h5`。
+`build:all` 检查老板原生代码并构建打手 H5 和管理后台。`build:release` 先检查正式原生地址、有效域名校验开关及 AppID，再强制通过官方原生编译器；需要先配置 `native/config.js` 并把公开构建变量导入终端。`provider:build` 和 `build:mini` 保留陪玩小程序兼容构建。
 
 ## Docker 部署说明
 
@@ -257,16 +270,16 @@ docker compose -f docker-compose.web.yml up -d --build
 ### 自动构建镜像
 
 `.github/workflows/docker-publish.yml` 在 Pull Request 中执行多架构构建校验，在合并到
-`main`、推送 `v*` 标签或手动触发时，将以下 AMD64/ARM64 镜像发布到 GHCR：
+`main`、推送 `v*` 标签或手动触发时，将以下 AMD64/ARM64 镜像发布到 Docker Hub：
 
-- `ghcr.io/ryuchen/xa-backend`：Django / Daphne / Celery 共用后端镜像。
-- `ghcr.io/ryuchen/xa-dispatch`：运营派单后台。
-- `ghcr.io/ryuchen/xa-provider`：陪玩端 H5。
+- `ryuchen/xa-backend`：Django / Daphne / Celery 共用后端镜像。
+- `ryuchen/xa-dispatch`：运营派单后台。
+- `ryuchen/xa-provider`：陪玩端 H5。命名空间可由工作流配置覆盖。
 
 分支、版本、Git SHA 和 `latest` 标签由工作流自动生成；发布镜像同时附带 SBOM、OCI
-元数据和构建来源证明。工作流使用仓库自带的 `GITHUB_TOKEN`，无需额外配置镜像仓库密码。
+元数据和构建来源证明。推送镜像需要 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`；自动 SSH 部署的额外凭证见 [对接凭证清单](docs/INTEGRATION_CREDENTIALS.md)。
 
-目前整合编排仍属于**开发/验收配置**，不能直接视为生产部署方案。生产上线前至少还应使用非
+基础整合编排属于**开发/验收配置**；正式部署采用 [发布说明](docs/RELEASE_READINESS.md) 中的 release 叠加编排。生产上线前至少还应使用非
 root 数据库账号、关闭 Django Debug、限制 Allowed Hosts/CORS、配置 HTTPS 与微信合法域名、
 托管静态与媒体文件、备份数据库并接入日志和监控。
 
@@ -299,7 +312,7 @@ docker compose logs --tail=200 web
 
 ### 微信开发者工具提示找不到 `dist/app.json`
 
-在仓库根执行 `pnpm run boss:build`，确认构建成功后重新导入 `apps/boss-miniapp`。
+当前老板端应读取 `native/app.json`。核对 `apps/boss-miniapp/project.config.json` 的 `miniprogramRoot` 为 `native/`，在仓库根执行 `pnpm run boss:build` 后重新导入 `apps/boss-miniapp`，不要继续导入旧 `dist/` 项目。
 
 ### MySQL 报 `Access denied` / `1045`
 
@@ -318,7 +331,10 @@ lsof -nP -iTCP:5180 -sTCP:LISTEN
 
 ## 项目文档
 
-- [产品需求文档](docs/PRD.md)
+- [业务闭环与本轮验收](docs/BUSINESS_CLOSURE.md)
+- [上线对接密钥、Token 与配置清单](docs/INTEGRATION_CREDENTIALS.md)
+- [当前产品需求与验收基线](docs/PRD_CURRENT.md)
+- [历史产品需求文档](docs/PRD.md)
 - [代码现状版产品文档](docs/PRODUCT_DOCUMENTATION.md)
 - [系统架构与业务边界](docs/ARCHITECTURE.md)
 - [接口文档](docs/API.md)

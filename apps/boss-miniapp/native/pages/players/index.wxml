@@ -1,0 +1,2 @@
+<view class="page"><view class="section-surface"><text class="subtitle">正在打开新版页面</text><button class="xa-button button-secondary" bindtap="home" hover-class="xa-button-hover">返回首页</button></view></view>
+<bottom-navigation/>

@@ -7,6 +7,9 @@
 
 /** 1 兴安币对应的内部账务单位数量。 */
 export declare const COIN_UNIT: number;
+export declare const RMB_TO_COIN_RATE: number;
+export declare function rmbToRawAmount(yuan: number | string | null | undefined): number;
+export declare function formatRmb(amount: number | null | undefined): string;
 
 /**
  * 内部账务单位 → 兴安币（浮点）。

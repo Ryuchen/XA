@@ -1,0 +1,144 @@
+# 独立的生产编排：使用外部 MySQL，不叠加 remote/release 文件。
+x-backend: &backend
+  build:
+    context: ./services/backend
+  image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-backend:${XA_IMAGE_TAG:-latest}
+  init: true
+  restart: unless-stopped
+  environment:
+    XA_DATABASE_MODE: managed
+    DJANGO_DEBUG: "false"
+    DJANGO_TRUST_PROXY: "true"
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+    DJANGO_ALLOWED_HOSTS: ${XA_API_DOMAIN:?API domain required},${XA_ADMIN_DOMAIN:?admin domain required},${XA_PROVIDER_DOMAIN:?provider domain required}
+    DJANGO_MEDIA_BASE_URL: https://${XA_API_DOMAIN}
+    CORS_ALLOW_ALL_ORIGINS: "false"
+    CORS_ALLOWED_ORIGINS: https://${XA_ADMIN_DOMAIN},https://${XA_PROVIDER_DOMAIN}
+    CSRF_TRUSTED_ORIGINS: https://${XA_API_DOMAIN},https://${XA_ADMIN_DOMAIN},https://${XA_PROVIDER_DOMAIN}
+    MYSQL_DATABASE: ${MYSQL_DATABASE:?database name required}
+    MYSQL_USER: ${MYSQL_USER:?non-root database user required}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD:?database password required}
+    MYSQL_HOST: ${MYSQL_HOST:?managed database host required}
+    MYSQL_PORT: ${MYSQL_PORT:-3306}
+    MYSQL_CONNECT_TIMEOUT: ${MYSQL_CONNECT_TIMEOUT:-10}
+    MYSQL_SSL_CA: /run/secrets/mysql_ca
+    REDIS_HOST: redis
+    DJANGO_CACHE_URL: ${DJANGO_CACHE_URL:-redis://redis:6379/3}
+    REDIS_PORT: 6379
+    WECHAT_APPID: ${WECHAT_APPID:?miniapp AppID required}
+    WECHAT_SECRET: ${WECHAT_SECRET:?miniapp secret required}
+    WECHAT_MOCK_LOGIN: "false"
+    REQUIRE_ORDER_EVIDENCE_IMAGES: "true"
+    REQUIRE_RECHARGE_PROOF: "true"
+    KOOK_ENABLED: ${KOOK_ENABLED:-false}
+    KOOK_BOT_TOKEN: ${KOOK_BOT_TOKEN:-}
+    KOOK_DISPATCH_CHANNEL_ID: ${KOOK_DISPATCH_CHANNEL_ID:-}
+    KOOK_DISPATCH_NEW_ORDERS: ${KOOK_DISPATCH_NEW_ORDERS:-true}
+    KOOK_DISPATCH_REJECTED_ORDERS: ${KOOK_DISPATCH_REJECTED_ORDERS:-true}
+    KOOK_DISPATCH_MENTION_ROLE_IDS: ${KOOK_DISPATCH_MENTION_ROLE_IDS:-}
+    KOOK_ADMIN_ORDER_URL: ${KOOK_ADMIN_ORDER_URL:-}
+    KOOK_REQUEST_TIMEOUT: ${KOOK_REQUEST_TIMEOUT:-8}
+    WECOM_DISPATCH_ENABLED: ${WECOM_DISPATCH_ENABLED:-false}
+    WECOM_DISPATCH_WEBHOOK: ${WECOM_DISPATCH_WEBHOOK:-}
+    WECOM_DISPATCH_NEW_ORDERS: ${WECOM_DISPATCH_NEW_ORDERS:-true}
+    WECOM_DISPATCH_REJECTED_ORDERS: ${WECOM_DISPATCH_REJECTED_ORDERS:-true}
+    WECOM_REQUEST_TIMEOUT: ${WECOM_REQUEST_TIMEOUT:-8}
+  secrets:
+    - mysql_ca
+  volumes:
+    - backend_media:/app/media
+    - backend_static:/app/staticfiles
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+
+services:
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  migrate:
+    <<: *backend
+    restart: "no"
+    # Validate the real connection before applying any schema changes.
+    command: >-
+      sh -c "python manage.py check_mysql_readiness &&
+      python manage.py migrate --noinput &&
+      python manage.py check_mysql_readiness &&
+      python manage.py collectstatic --noinput"
+    depends_on:
+      redis:
+        condition: service_healthy
+  web:
+    <<: *backend
+    command: python -m config.serve -b 0.0.0.0 -p 8000 config.asgi:application
+    deploy:
+      replicas: 2
+  celery-worker:
+    <<: *backend
+    command: celery -A config worker -l warning --concurrency=1
+  celery-beat:
+    <<: *backend
+    command: celery -A config beat -l warning
+  admin-web:
+    build:
+      context: .
+      dockerfile: apps/admin-web/Dockerfile
+    image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-admin-web:${XA_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    depends_on:
+      web:
+        condition: service_started
+  provider-h5:
+    build:
+      context: .
+      dockerfile: apps/provider-miniapp/Dockerfile
+      args:
+        TARO_APP_API: /api
+    image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-provider-h5:${XA_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    depends_on:
+      web:
+        condition: service_started
+  gateway:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      XA_API_DOMAIN: ${XA_API_DOMAIN}
+      XA_ADMIN_DOMAIN: ${XA_ADMIN_DOMAIN}
+      XA_PROVIDER_DOMAIN: ${XA_PROVIDER_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - backend_media:/srv/media:ro
+      - backend_static:/srv/static:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - admin-web
+      - provider-h5
+
+secrets:
+  mysql_ca:
+    file: ${MYSQL_SSL_CA_FILE:?path to managed database CA certificate required}
+
+volumes:
+  redis_data:
+  backend_media:
+  backend_static:
+  caddy_data:
+  caddy_config:

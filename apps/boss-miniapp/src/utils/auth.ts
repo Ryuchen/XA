@@ -40,6 +40,8 @@ const TOKEN_KEY = 'token';
 const REFRESH_TOKEN_KEY = 'xa_boss_refresh_token';
 const HOME_URL = '/pages/home/index';
 const DEFAULT_AVATAR = 'https://picsum.photos/id/64/200/200';
+let sessionRevision = 0;
+export const getSessionRevision = () => sessionRevision;
 
 export const getStoredToken = (): string => {
   try {
@@ -78,9 +80,11 @@ export const setStoredUser = (user: LoginUser) => {
 };
 
 export const clearStoredUser = () => {
+  sessionRevision += 1;
   Taro.removeStorageSync(USER_KEY);
   Taro.removeStorageSync(TOKEN_KEY);
   Taro.removeStorageSync(REFRESH_TOKEN_KEY);
+  Taro.eventCenter.trigger('xa:auth.changed');
 };
 
 export const goRoleHome = () => {
@@ -118,6 +122,8 @@ export const persistLoginData = (data: NonNullable<LoginResponse['data']>): Logi
     setStoredRefreshToken(data.refreshToken);
   }
   setStoredUser(user);
+  sessionRevision += 1;
+  Taro.eventCenter.trigger('xa:auth.changed');
   return user;
 };
 

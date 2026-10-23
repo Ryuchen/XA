@@ -1,7 +1,7 @@
 <template>
   <div class="rl-page">
     <div class="ap-page-head">
-      <p class="ap-page-intro">管理平台内的职位角色及其功能权限范围（PRD 7.15）</p>
+      <p class="ap-page-intro">管理职位角色及功能权限；内置超级管理员角色保持启用，其权限受保护。</p>
       <div class="ap-page-head-actions">
         <el-button v-if="auth.hasPerm('role:edit')" type="primary" @click="onCreate">新增角色</el-button>
       </div>
@@ -24,30 +24,31 @@
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <el-button v-if="auth.hasPerm('role:edit')" link type="primary" @click="onEdit(row)">编辑</el-button>
-          <el-button v-if="auth.hasPerm('role:delete')" link type="danger" @click="onDelete(row)">删除</el-button>
+          <el-button v-if="auth.hasPerm('role:delete')" link type="danger" :disabled="row.code === 'super_admin' || row.member_count > 0" @click="onDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑角色' : '新增角色'" width="640px">
-    <el-form :model="form" label-width="90px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑角色' : '新增角色'" width="800px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="角色名称"><el-input v-model="form.name" /></el-form-item>
       <el-form-item label="标识"><el-input v-model="form.code" :disabled="!!form.id" placeholder="如 operator" /></el-form-item>
       <el-form-item label="描述"><el-input v-model="form.description" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sort_order" :min="0" /></el-form-item>
-      <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
-      <el-form-item label="权限">
+      <el-form-item label="启用"><el-switch v-model="form.is_active" :disabled="form.code === 'super_admin' && !!form.id" /></el-form-item>
+      <el-form-item label="权限" class="ap-field--full">
         <div class="perm-tree">
           <div v-for="grp in groups" :key="grp.group" class="perm-group">
             <div class="perm-group-head">
               <el-checkbox
                 :model-value="isGroupAll(grp)"
                 :indeterminate="isGroupSome(grp)"
+                :disabled="form.code === 'super_admin' && !!form.id"
                 @change="(v: any) => toggleGroup(grp, v)"
               >{{ grp.label }}</el-checkbox>
             </div>
-            <el-checkbox-group v-model="form.permissions" class="perm-items">
+            <el-checkbox-group v-model="form.permissions" class="perm-items" :disabled="form.code === 'super_admin' && !!form.id">
               <el-checkbox
                 v-for="p in grp.permissions"
                 :key="p[0]"

@@ -3,10 +3,11 @@ import { View, Text, Button, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { LoginUser, wechatQuickLogin } from '@/utils/auth';
 import { useUserStore } from '@/store';
+import Icon from '@/components/Icon';
+import PrivacyNotice from '@/components/PrivacyNotice';
 import styles from './index.module.scss';
 
-const IS_DEV = process.env.NODE_ENV === 'development';
-const DEFAULT_AVATAR = 'https://picsum.photos/id/64/200/200';
+const IS_DEV = process.env.NODE_ENV === 'development' || process.env.TARO_ENV === 'h5';
 
 interface LoginSheetProps {
   visible: boolean;
@@ -25,6 +26,7 @@ const LoginSheet: React.FC<LoginSheetProps> = ({ visible, onClose, onSuccess }) 
   const [nickname, setNickname] = useState('');
 
   const runLogin = async (phoneCode?: string) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     Taro.showLoading({ title: '微信登录中' });
 
@@ -93,11 +95,13 @@ const LoginSheet: React.FC<LoginSheetProps> = ({ visible, onClose, onSuccess }) 
             openType="chooseAvatar"
             onChooseAvatar={handleChooseAvatar}
           >
-            <Image
-              className={styles.avatarImg}
-              src={avatarPath || DEFAULT_AVATAR}
-              mode="aspectFill"
-            />
+            {avatarPath ? (
+              <Image className={styles.avatarImg} src={avatarPath} mode="aspectFill" />
+            ) : (
+              <View className={`${styles.avatarImg} ${styles.avatarPlaceholder}`}>
+                <Icon name="user" size={64} color="#8E8E93" />
+              </View>
+            )}
             <Text className={styles.avatarTip}>选择头像</Text>
           </Button>
           <Input
@@ -109,6 +113,7 @@ const LoginSheet: React.FC<LoginSheetProps> = ({ visible, onClose, onSuccess }) 
           />
         </View>
 
+        <PrivacyNotice />
         <Button
           className={styles.loginBtn}
           loading={isSubmitting}

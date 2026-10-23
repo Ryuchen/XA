@@ -31,12 +31,15 @@
       <el-table-column label="时间" width="160">
         <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
       </el-table-column>
+      <el-table-column label="操作" width="90" fixed="right"><template #default="{ row }">
+        <el-button link type="primary" @click="detailMessage = row; detailVisible = true">详情</el-button>
+      </template></el-table-column>
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" title="推送站内消息" width="520px">
-    <el-form :model="form" label-width="100px">
-      <el-form-item label="推送范围">
+  <el-dialog v-model="dialogVisible" title="推送站内消息" width="720px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
+      <el-form-item label="推送范围" class="ap-field--full">
         <el-radio-group v-model="form.audience">
           <el-radio-button value="ALL">全部用户</el-radio-button>
           <el-radio-button value="CUSTOMER">老板端</el-radio-button>
@@ -44,30 +47,45 @@
           <el-radio-button value="CUSTOM">指定用户</el-radio-button>
         </el-radio-group>
       </el-form-item>
-      <el-form-item v-if="form.audience === 'CUSTOM'" label="接收人ID">
-        <el-input v-model="recipientText" placeholder="多个用户ID用英文逗号分隔，如 1,2,3" />
+      <el-form-item v-if="form.audience === 'CUSTOM'" label="接收人">
+        <el-select v-model="recipientIds" multiple filterable remote :remote-method="searchRecipients" :loading="recipientsLoading"
+          placeholder="搜索编号、账号或昵称" style="width: 100%">
+          <el-option v-for="account in recipientOptions" :key="account.id" :value="account.id"
+            :label="`${account.nickname || account.username} · ${account.account_no}（${account.role_display}）`" />
+        </el-select>
       </el-form-item>
       <el-form-item label="消息类型">
         <el-select v-model="form.type" style="width: 100%">
           <el-option v-for="(v, k) in MESSAGE_TYPE" :key="k" :label="v.label" :value="k" />
         </el-select>
       </el-form-item>
-      <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
-      <el-form-item label="摘要"><el-input v-model="form.preview" /></el-form-item>
-      <el-form-item label="详情"><el-input v-model="form.detail" type="textarea" :rows="4" /></el-form-item>
+      <el-form-item label="标题"><el-input v-model="form.title" maxlength="100" show-word-limit /></el-form-item>
+      <el-form-item label="摘要"><el-input v-model="form.preview" maxlength="255" show-word-limit /></el-form-item>
+      <el-form-item label="详情" class="ap-field--full"><el-input v-model="form.detail" type="textarea" :rows="4" /></el-form-item>
     </el-form>
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
       <el-button type="primary" :loading="saving" @click="onSend">推送</el-button>
     </template>
   </el-dialog>
+  <el-drawer v-model="detailVisible" title="消息详情" size="480px" class="ap-panel">
+    <el-descriptions v-if="detailMessage" :column="1" border>
+      <el-descriptions-item label="接收人">{{ detailMessage.recipient_name }}</el-descriptions-item>
+      <el-descriptions-item label="标题">{{ detailMessage.title }}</el-descriptions-item>
+      <el-descriptions-item label="摘要">{{ detailMessage.preview || '—' }}</el-descriptions-item>
+      <el-descriptions-item label="内容"><div style="white-space: pre-wrap">{{ detailMessage.detail || '—' }}</div></el-descriptions-item>
+      <el-descriptions-item label="阅读状态">{{ detailMessage.is_read ? '已读' : '未读' }}</el-descriptions-item>
+      <el-descriptions-item label="发送时间">{{ formatDateTime(detailMessage.created_at) }}</el-descriptions-item>
+    </el-descriptions>
+  </el-drawer>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import CrudTable from '@/components/CrudTable.vue'
 import { messageApi } from '@/api/modules'
+import { request } from '@/api/request'
 import { MESSAGE_TYPE } from '@/utils/dict'
 import { formatDateTime } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
@@ -78,38 +96,38 @@ const query = reactive<Record<string, any>>({ type: '' })
 
 const dialogVisible = ref(false)
 const saving = ref(false)
-const recipientText = ref('')
+const recipientIds = ref<number[]>([])
+const recipientOptions = ref<any[]>([])
+const recipientsLoading = ref(false)
+const detailMessage = ref<any>(null)
+const detailVisible = ref(false)
+let searchSequence = 0
 const form = reactive<any>({})
 
 function blank() {
-  return { audience: 'ALL', type: 'SYSTEM', title: '', preview: '', detail: '' }
+  return { audience: 'CUSTOM', type: 'SYSTEM', title: '', preview: '', detail: '' }
 }
 
 function onPush() {
   Object.assign(form, blank())
-  recipientText.value = ''
+  recipientIds.value = []
+  recipientOptions.value = []
   dialogVisible.value = true
 }
 
 async function onSend() {
-  if (!form.title) { ElMessage.warning('请填写标题'); return }
-  let recipientIds: number[] = []
-  if (form.audience === 'CUSTOM') {
-    recipientIds = recipientText.value
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => Number.isInteger(n) && n > 0)
-    if (recipientIds.length === 0) {
-      ElMessage.warning('请填写接收人ID或开启全员广播')
-      return
-    }
-  }
+  if (saving.value) return
+  if (!form.title.trim()) { ElMessage.warning('请填写标题'); return }
+  if (form.audience === 'CUSTOM' && !recipientIds.value.length) { ElMessage.warning('请选择接收人'); return }
+  const audienceLabel = form.audience === 'ALL' ? '全部用户' : form.audience === 'CUSTOMER' ? '全部老板' : form.audience === 'PROVIDER' ? '全部陪玩' : `${recipientIds.value.length} 个所选账号`
+  try { await ElMessageBox.confirm(`将向${audienceLabel}推送「${form.title.trim()}」，确认发送？`, '确认推送') }
+  catch { return }
   saving.value = true
   try {
     const res = await messageApi.collectionAction('push', {
       broadcast: form.audience === 'ALL',
       audience: form.audience,
-      recipient_ids: recipientIds,
+      recipient_account_ids: form.audience === 'CUSTOM' ? recipientIds.value : [],
       type: form.type,
       title: form.title,
       preview: form.preview,
@@ -121,6 +139,19 @@ async function onSend() {
   } finally {
     saving.value = false
   }
+}
+
+async function searchRecipients(keyword: string) {
+  const sequence = ++searchSequence
+  const selected = recipientOptions.value.filter(account => recipientIds.value.includes(account.id))
+  if (!keyword.trim()) { recipientOptions.value = selected; recipientsLoading.value = false; return }
+  recipientsLoading.value = true
+  try {
+    const result = await request({ url: '/options/message-recipients/', params: { keyword, page_size: 30 } })
+    if (sequence === searchSequence) {
+      recipientOptions.value = [...new Map([...selected, ...result.data.list].map(account => [account.id, account])).values()]
+    }
+  } finally { if (sequence === searchSequence) recipientsLoading.value = false }
 }
 </script>
 

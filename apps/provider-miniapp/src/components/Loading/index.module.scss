@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   gap: $spacing-sm;
-  padding: 64rpx 0;
+  padding: 32PX 0;
 }
 
 .fullscreen {
@@ -20,9 +20,9 @@
 }
 
 .spinner {
-  width: 56rpx;
-  height: 56rpx;
-  border: 6rpx solid $color-divider;
+  width: 28PX;
+  height: 28PX;
+  border: 3PX solid $color-divider;
   border-top-color: $color-primary;
   border-radius: $radius-round;
   animation: spin 0.7s linear infinite;

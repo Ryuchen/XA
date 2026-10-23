@@ -1,0 +1,104 @@
+<view class="page order-detail-page">
+  <view wx:if="{{!logged}}" class="panel"><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看订单</button></view>
+  <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
+  <block wx:if="{{order}}">
+    <view class="panel order-summary {{order.status === 'CANCELLED' ? 'summary-cancelled' : ''}}">
+      <text class="eyebrow">订单状态</text>
+      <text class="title status-title">{{order.statusText}}</text>
+      <text class="status-description">{{order.fulfillment || '订单进度以平台最新处理结果为准'}}</text>
+      <view wx:if="{{order.cancel_reason}}" class="status-note"><text class="note-label">取消原因</text><text>{{order.cancel_reason}}</text></view>
+      <view class="order-number-row">
+        <view class="order-number"><text class="meta-label">订单编号</text><text class="order-number-value" user-select>{{order.order_no}}</text></view>
+        <button class="xa-button copy-order" bindtap="copy" disabled="{{busy}}" hover-class="xa-button-hover" aria-label="复制订单编号">复制</button>
+      </view>
+      <view wx:if="{{order.createdText}}" class="created-row"><text>下单时间</text><text>{{order.createdText}}</text></view>
+    </view>
+
+    <view wx:if="{{order.canSelectProvider}}" class="panel applications-panel">
+      <text class="section-title">挑选接单陪玩</text>
+      <text class="section-description">等级从高到低排序；两人组按较低等级比较。选择后按本单实付总价服务。</text>
+      <text wx:if="{{!order.applications.length}}" class="empty-hint">正在等待陪玩报名，你也可以下拉刷新。</text>
+      <view class="application" wx:for="{{order.applications}}" wx:key="id">
+        <view class="application-heading"><text class="application-title">{{item.team_size === 2 ? '两人组队' : '一人服务'}}</text><text class="status-tag">{{item.ready ? '可选择' : '等待队友确认'}}</text></view>
+        <view wx:for="{{item.members}}" wx:for-item="member" wx:key="id" class="detail-row application-member"><text>{{member.nickname}}</text><text class="muted">{{member.level}}</text></view>
+        <button class="xa-button button-secondary select-application" data-id="{{item.id}}" bindtap="selectProvider" disabled="{{busy || !item.ready}}" hover-class="xa-button-hover">选择这 {{item.team_size}} 名陪玩</button>
+      </view>
+    </view>
+
+    <view class="panel service-panel">
+      <text class="section-title">服务信息</text>
+      <text class="service-name">{{order.service.name}}</text>
+      <view class="amount-row"><text class="muted">{{order.partialRefund || order.payment_status === 'REFUNDED' ? '原实付金额' : '实付金额'}}</text><view class="amount-value"><text class="price">{{order.amountText}}</text><text class="amount-unit">兴安币</text></view></view>
+      <view wx:if="{{order.game_rounds}}" class="detail-row"><text class="muted">购买数量</text><text>{{order.game_rounds}} {{order.service.price_unit || '份'}}</text></view>
+      <view wx:if="{{order.isGift && order.remark}}" class="text-note"><text class="note-label">赠礼备注</text><text>{{order.remark}}</text></view>
+      <view wx:if="{{order.roulette_result}}" class="result"><text class="note-label">本次抽签结果</text><text class="result-name">{{order.roulette_result.name}}</text><text wx:if="{{order.roulette_result.description}}" class="section-description">{{order.roulette_result.description}}</text></view>
+    </view>
+
+    <view class="panel provider-panel">
+      <text class="section-title">{{order.isGift ? '赠礼对象' : '陪玩安排'}}</text>
+      <view class="detail-row"><text class="muted">陪玩</text><text>{{order.provider_name_snapshot || (order.requires_boss_selection ? '等待你选择陪玩' : '等待平台安排')}}</text></view>
+      <block wx:if="{{order.participants.length > 1}}"><view class="detail-row" wx:for="{{order.participants}}" wx:key="id"><text class="muted">组队陪玩</text><text>{{item.nickname}}</text></view></block>
+      <view wx:if="{{order.provider_gender && order.provider_gender !== 'ANY'}}" class="detail-row"><text class="muted">陪玩选择</text><text>{{order.provider_gender === 'MALE' ? '男陪' : '女陪'}}</text></view>
+    </view>
+
+    <view wx:if="{{!order.isGift}}" class="panel game-info-panel">
+      <text class="section-title">游戏信息</text>
+      <view class="detail-row"><text class="muted">游戏大区</text><text>{{order.game_region || '未填写'}}</text></view>
+      <view class="detail-row"><text class="muted">游戏昵称</text><text>{{order.game_nickname || '未填写'}}</text></view>
+      <view wx:if="{{order.game_uid}}" class="detail-row"><text class="muted">游戏 UID</text><text user-select>{{order.game_uid}}</text></view>
+      <view wx:if="{{order.remark}}" class="text-note"><text class="note-label">服务备注</text><text>{{order.remark}}</text></view>
+    </view>
+
+    <view class="panel progress-panel">
+      <text class="section-title">{{order.isGift ? '赠礼记录' : '服务进度'}}</text>
+      <view class="timeline-list"><view class="timeline" wx:for="{{order.timeline}}" wx:key="title"><text class="timeline-title">{{item.title}}</text><text class="timeline-time">{{item.time}}</text></view></view>
+    </view>
+
+    <view wx:if="{{order.canEvaluate}}" class="panel evaluation-panel">
+      <view class="section-heading"><text class="section-title">评价本次服务</text><text class="status-tag">{{score}} 分</text></view>
+      <text class="field-label">满意度</text>
+      <slider class="score-slider" min="1" max="5" step="1" value="{{score}}" activeColor="#136398" bindchange="score" disabled="{{busy}}" aria-label="服务满意度"/>
+      <label class="field-label" for="order-evaluation">服务评价</label>
+      <textarea id="order-evaluation" class="input" value="{{content}}" maxlength="500" bindinput="content" placeholder="分享你的真实体验（选填）" disabled="{{busy}}" cursor-spacing="200" aria-label="服务评价"/>
+      <view class="anonymous-control"><label for="order-anonymous">匿名评价</label><switch id="order-anonymous" checked="{{anonymous}}" bindchange="anonymous" color="#136398" disabled="{{busy}}"/></view>
+      <button class="xa-button button evaluate-order" bindtap="evaluate" loading="{{busy}}" disabled="{{busy}}" hover-class="xa-button-hover">提交评价</button>
+    </view>
+
+    <view wx:if="{{order.evaluation}}" class="panel evaluation-record">
+      <view class="section-heading"><text class="section-title">我的评价</text><text class="status-tag">{{order.evaluation.score}} 分</text></view>
+      <text class="review-content">{{order.evaluation.content || '用户未填写文字评价'}}</text>
+      <view wx:if="{{order.evaluation.reply_content}}" class="text-note"><text class="note-label">陪玩回复</text><text>{{order.evaluation.reply_content}}</text></view>
+    </view>
+
+    <view wx:if="{{order.canTip}}" class="panel gift-panel">
+      <text class="section-title">把欣赏送给 TA</text>
+      <text class="section-description">感谢这一局的陪伴，挑选一份心意。</text>
+      <button class="xa-button button-secondary" bindtap="tip" disabled="{{busy}}" hover-class="xa-button-hover">挑选礼物</button>
+    </view>
+
+    <view wx:if="{{order.partialRefund || order.payment_status === 'REFUNDED'}}" class="panel refund-panel">
+      <text class="section-title">{{order.partialRefund ? '部分退款已入账' : '退款已入账'}}</text><text wx:if="{{order.refundAmountText !== ''}}" class="section-description">累计已退 {{order.refundAmountText}} 兴安币已退回钱包，实际到账以退款流水为准。</text><text wx:else class="section-description">退款金额以钱包流水为准。</text><text wx:if="{{order.refundRemainingText !== ''}}" class="section-description">订单剩余金额：{{order.refundRemainingText}} 兴安币</text>
+      <block wx:if="{{order.refundRecords.length}}"><view class="text-note" wx:for="{{order.refundRecords}}" wx:key="id"><text class="note-label">退款 #{{item.id}} · {{item.amountText}} 兴安币</text><text>{{item.createdText}}</text><text wx:if="{{item.reason}}" user-select>{{item.reason}}</text></view></block>
+      <block wx:else><text wx:if="{{order.refundCreatedText}}" class="section-description">退款时间：{{order.refundCreatedText}}</text><text wx:if="{{order.refund_summary.reason}}" class="section-description">退款说明：{{order.refund_summary.reason}}</text></block>
+    </view>
+    <view wx:if="{{order.canAfterSale || order.aftersale_status || (order.aftersale_deadline && !order.isGift)}}" class="panel aftersale-panel">
+      <view class="section-heading"><text class="section-title">售后服务</text><text wx:if="{{order.aftersale_status}}" class="status-tag">{{order.aftersaleStatusText}}</text></view>
+      <view wx:if="{{order.consumption_confirmed_at || order.consumption_ready_at}}" class="detail-row"><text class="muted">{{order.consumption_confirmed_at ? '实销确认时间' : '实销预计确认'}}</text><text>{{order.consumptionReadyText}}</text></view>
+      <text wx:if="{{order.aftersale_status === 'OPEN'}}" class="aftersale-note">售后处理中，等待平台处理结果。</text>
+      <view wx:if="{{aftersale.reason}}" class="text-note"><text class="note-label">申请说明</text><text user-select>{{aftersale.reason}}</text></view>
+      <view wx:if="{{aftersale.resolution}}" class="text-note"><text class="note-label">处理结果</text><text user-select>{{aftersale.resolution}}</text></view>
+      <view wx:if="{{aftersale.history.length}}" class="aftersale-history"><text class="note-label">历史处理记录</text><view class="text-note" wx:for="{{aftersale.history}}" wx:key="historyKey"><text class="note-label">{{item.statusText}} · {{item.resolvedText || item.createdText}}</text><text user-select>申请说明：{{item.reason}}</text><text wx:if="{{item.resolution}}" user-select>处理结果：{{item.resolution}}</text></view></view>
+      <view wx:if="{{aftersaleError}}" class="text-note"><text>{{aftersaleError}}</text><button class="xa-button button-secondary" bindtap="load" disabled="{{loading || busy}}">重新加载售后详情</button></view>
+      <button wx:if="{{order.canAfterSale}}" class="xa-button button-secondary aftersale-order" bindtap="aftersale" disabled="{{busy}}" hover-class="xa-button-hover">{{order.aftersale_status === 'RESOLVED' || order.aftersale_status === 'PARTIALLY_REFUNDED' ? '重新申请售后' : '提交售后问题'}}</button>
+    </view>
+
+    <view class="bottom-bar order-actions">
+      <view class="order-action-grid">
+        <button wx:if="{{order.canCancel}}" class="xa-button button-secondary cancel-order" bindtap="cancel" disabled="{{busy}}" loading="{{busy}}" hover-class="xa-button-hover">取消订单</button>
+        <button wx:if="{{order.partialRefund || order.payment_status === 'REFUNDED'}}" class="xa-button button-secondary refund-order" bindtap="wallet" disabled="{{busy}}" hover-class="xa-button-hover">退款流水</button>
+        <button class="xa-button button contact-support" bindtap="support" disabled="{{busy}}" hover-class="xa-button-hover">联系订单客服</button>
+      </view>
+    </view>
+  </block>
+</view>
+<bottom-navigation/>

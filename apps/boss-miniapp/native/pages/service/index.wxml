@@ -1,0 +1,55 @@
+<view class="page detail-page">
+  <view wx:if="{{!logged}}" class="panel login-panel"><view class="title">了解这项服务</view><view class="muted">请先登录，查看服务价格与完整说明。</view><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">微信快捷登录</button></view>
+  <block wx:else>
+    <state-view wx:if="{{!service}}" loading="{{loading}}" error="{{error}}" bind:retry="load" />
+    <block wx:if="{{service && !error}}">
+      <view class="panel intro">
+        <image wx:if="{{service.cover && !coverError}}" class="service-cover" src="{{service.cover}}" mode="aspectFill" binderror="coverFailed"/>
+        <view class="cover-shade"></view>
+        <view class="service-overview">
+          <view class="overview-copy"><view class="overview-category"><text class="eyebrow">{{service.game_category_name || '兴安精选服务'}}</text><text wx:if="{{service.gameplay_name}}" class="service-kind">{{service.gameplay_name}}</text></view><view class="title">{{service.familyName || service.name}}</view><view class="price-line"><text class="price">{{service.displayPrice}}</text><text class="price-unit"> 兴安币 / {{service.price_unit || '份'}}</text></view><text wx:if="{{service.isDoubleHour}}" class="package-note">双陪套餐 · 每单1小时</text></view>
+        </view>
+        <view class="intro-details"><view class="overview-meta"><text wx:if="{{service.provider_requirement.label || service.required_level_name}}">{{service.provider_requirement.label || service.required_level_name + '起接单'}}</text><text>已完成 {{service.sales_count || 0}} 单</text></view><view wx:if="{{service.description}}" class="description">{{service.description}}</view></view>
+      </view>
+      <view wx:if="{{variantTotal > 1 || variantPlatforms.length > 1 || variantLevels.length > 1}}" class="panel variant-panel">
+        <view class="between section-heading"><view class="section-title">选择套餐</view><text wx:if="{{refreshing}}" class="small muted">更新中…</text></view>
+      <view wx:if="{{variantPlatforms.length > 1 || variantLevels.length > 1}}" class="project-filters">
+        <view wx:if="{{variantPlatforms.length > 1}}" class="filter-line"><text class="filter-label">平台</text><view class="spec-chips"><button wx:for="{{variantPlatforms}}" wx:key="id" class="xa-button spec-chip {{service.platform === item.id ? 'active' : ''}}" data-field="platform" data-id="{{item.id}}" bindtap="chooseSpec" aria-pressed="{{service.platform === item.id}}"><text class="spec-chip-label">{{item.name}}</text></button></view></view>
+        <view wx:if="{{variantLevels.length > 1}}" class="filter-line"><text class="filter-label">难度</text><view class="spec-chips"><button wx:for="{{variantLevels}}" wx:key="id" class="xa-button spec-chip {{service.security_level === item.id ? 'active' : ''}}" data-field="security_level" data-id="{{item.id}}" bindtap="chooseSpec" aria-pressed="{{service.security_level === item.id}}"><text class="spec-chip-label">{{item.name}}</text></button></view></view>
+
+      </view>
+        <view wx:if="{{variantChoices.length > 1}}" class="spec-section"><view class="spec-label">价格档位</view>
+          <view wx:if="{{variantChoices.length <= 8}}" class="tier-grid"><button wx:for="{{variantChoices}}" wx:key="id" class="xa-button tier-option {{(pendingVariantId || service.id) === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="chooseVariant" aria-label="{{item.name + '，' + item.displayPrice + '兴安币每' + item.price_unit}}" aria-pressed="{{(pendingVariantId || service.id) === item.id}}" hover-class="xa-button-hover"><text class="tier-name">{{item.displayName}}</text><text wx:if="{{item.guarantee}}" class="tier-guarantee">{{item.guarantee}}</text><view class="tier-price">{{item.displayPrice}}<text class="tier-unit"> 币 / {{item.price_unit}}</text></view></button></view>
+          <picker wx:else mode="selector" range="{{variantLabels}}" value="{{variantIndex}}" bindchange="pickVariant"><view class="tier-picker"><view><view class="tier-name">{{service.catalog_variant || service.name}}</view></view><text class="link">更换 ›</text></view></picker>
+        </view>
+      </view>
+      <view wx:if="{{variantError}}" class="panel error" bindtap="load">{{variantError}} · 点击重试，或重新选择套餐</view>
+      <view wx:if="{{service.introductionImages.length}}" class="panel advert-landing"><image wx:for="{{service.introductionImages}}" wx:key="*this" class="advert-poster" src="{{item}}" mode="widthFix" lazy-load/></view>
+      <view wx:if="{{service.gallery.length}}" class="panel service-gallery"><swiper class="gallery" indicator-dots="{{service.gallery.length > 1}}" indicator-active-color="#136398"><swiper-item wx:for="{{service.gallery}}" wx:key="*this"><image class="gallery-image" src="{{item}}" mode="aspectFit" lazy-load/></swiper-item></swiper></view>
+      <view wx:if="{{service.detailsHtml}}" class="panel gameplay-document"><view class="section-heading"><view class="section-title">玩法详情与价目</view></view><rich-text class="rich-document" nodes="{{service.detailsHtml}}"/></view>
+      <view wx:if="{{addons.length}}" class="panel"><view class="section-title">附加项目</view><text class="small muted">需关联主套餐，由客服确认办理</text><button wx:for="{{addons}}" wx:key="id" class="xa-button addon-row" data-id="{{item.id}}" bindtap="chooseVariant" hover-class="xa-button-hover"><text>{{item.name}}</text><text class="link">{{item.displayPrice}} 币 / {{item.price_unit}} ›</text></button></view>
+      <view wx:if="{{service.requiresConsultation}}" class="panel"><view class="section-title">下单前确认</view><text class="rules">{{service.purchase_note}}</text></view>
+      <view wx:if="{{service.highlights.length}}" class="panel"><view class="section-title">服务亮点</view><view wx:for="{{service.highlights}}" wx:key="*this" class="highlight"><text class="check">✓</text>{{item}}</view></view>
+      <view wx:if="{{service.rulesImages.length}}" class="panel"><view class="section-title">规则图示</view><image wx:for="{{service.rulesImages}}" wx:key="*this" class="rule-poster" src="{{item}}" mode="widthFix" lazy-load/></view>
+      <view wx:if="{{!service.detailsHtml}}" class="panel"><view class="section-title">服务规则</view><text class="rules">{{service.rules || '下单前请与客服确认服务内容、时间安排及游戏要求。'}}</text></view>
+      <view wx:if="{{service.pool.length}}" class="panel"><view class="section-title">转盘服务目标</view><view class="muted small pool-note">每单生成一个服务目标，支付成功后在订单中查看结果。</view><view wx:for="{{service.pool}}" wx:key="name" class="pool-row"><view class="row between"><text>{{item.name}}</text><text class="tag">{{item.probability}}%</text></view><view class="muted small">{{item.description}}</view></view></view>
+      <view wx:if="{{!service.requiresConsultation && !service.is_gift}}" class="panel steps"><view class="section-title">服务如何开始</view><view class="step"><text>01</text><view>填写游戏资料，选择平台派单或指定{{service.billing_provider_count === 2 ? '两位' : ''}}陪玩</view></view><view class="step"><text>02</text><view>核对优惠与余额，确认支付</view></view><view class="step"><text>03</text><view>等待接单，完成服务后评价体验</view></view></view>
+      <view class="panel"><view class="row between section-heading"><view class="section-title">服务评价 · {{reviewTotal}}</view><text wx:if="{{reviewAverage}}" class="price">{{reviewAverage}} / 5</text></view><view wx:if="{{reviewError}}" class="error" bindtap="load">{{reviewError}}</view><view wx:elif="{{!reviews.length}}" class="muted review-empty">暂无评价，期待你的真实体验。</view><view wx:for="{{reviews}}" wx:key="id" class="review"><view class="row between"><view class="row"><image wx:if="{{item.avatar}}" class="review-avatar" src="{{item.avatar}}" mode="aspectFill"/><text>{{item.customer_name}}</text></view><text class="tag">{{item.score}} 分</text></view><view class="review-content">{{item.content || '用户未填写文字评价'}}</view><view wx:if="{{item.reply_content}}" class="reply">陪玩回复：{{item.reply_content}}</view><view class="muted small">{{item.created}}</view></view></view>
+      <view wx:if="{{service.is_gift}}" class="panel"><view class="section-title">向已完成订单的陪玩赠礼</view><view class="muted">在订单详情选择「赠送礼物」，礼物会直接赠送给该订单的陪玩。</view><button class="xa-button button" bindtap="orders" hover-class="xa-button-hover">前往我的订单</button></view>
+    </block>
+  </block>
+</view>
+<view wx:if="{{logged && service && !error && !service.is_gift}}" class="bottom-bar service-actions">
+  <view class="action-summary">
+    <view class="action-info">
+      <view class="action-price-group"><text class="action-price">{{service.displayPrice}}</text><text class="action-unit">兴安币 / {{service.price_unit || '份'}}</text></view>
+      <view class="action-context"><text class="action-platform">{{service.platform_name || '平台待确认'}}</text><text wx:if="{{service.security_level && service.security_level !== 'ANY'}}" class="action-context-note">{{service.security_level_name}}</text></view>
+    </view>
+  </view>
+  <view class="action-buttons {{service.requiresConsultation ? 'consult-actions' : ''}}">
+    <button class="xa-button button-quiet favorite action-favorite {{service.is_favorited ? 'is-favorited' : ''}}" loading="{{favoriteBusy}}" disabled="{{favoriteBusy || refreshing || variantError}}" bindtap="favorite" hover-class="xa-button-hover" aria-label="{{service.is_favorited ? '取消收藏' : '收藏服务'}}" aria-pressed="{{service.is_favorited}}"><image wx:if="{{!favoriteBusy}}" class="favorite-heart {{favoriteMotion ? 'heart-' + favoriteMotion : ''}}" src="{{service.is_favorited ? '/assets/icons/heart-active.png' : '/assets/icons/heart.png'}}" aria-hidden="true"/><text>{{service.is_favorited ? '已收藏' : '收藏'}}</text></button>
+    <button wx:if="{{!service.requiresConsultation}}" class="xa-button button-secondary action-secondary" disabled="{{refreshing || variantError}}" bindtap="companions" hover-class="xa-button-hover">挑选陪玩</button>
+    <button class="xa-button button action-primary" loading="{{refreshing}}" disabled="{{refreshing || variantError}}" bindtap="checkout" hover-class="xa-button-hover">{{service.requiresConsultation ? '确认方案' : '确认服务'}}</button>
+  </view>
+</view>
+<bottom-navigation/>

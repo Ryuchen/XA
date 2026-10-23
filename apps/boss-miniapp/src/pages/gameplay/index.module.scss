@@ -1,0 +1,21 @@
+@use '@/styles/commerce.scss' as commerce;
+.page { @include commerce.page; padding: 24rpx 24rpx 64rpx; }
+.subtitle { display: block; margin: 24rpx 0 32rpx; color: #797680; font-size: 24rpx; line-height: 1.7; }
+.section { @include commerce.card; margin: 0 0 20rpx; }
+.step { display: block; font-size: 28rpx; font-weight: 600; margin-bottom: 24rpx; }
+.options { display: flex; gap: 24rpx; }
+.option, .level { flex: 1; min-width: 0; padding: 24rpx; background: var(--xa-color-surface-subtle); border: 2rpx solid var(--xa-color-surface-subtle); border-radius: 16rpx; color: #25242a; }
+.optionName { display: block; font-size: 28rpx; font-weight: 600; line-height: 1.5; }
+.hint { display: block; font-size: 24rpx; color: #797680; line-height: 1.7; margin-top: 8rpx; }
+.active { border-color: var(--xa-color-primary); background: var(--xa-color-surface-subtle); color: var(--xa-color-primary); }
+.level { margin: 0; height: 80rpx; display: flex; align-items: center; justify-content: center; padding: 0 24rpx; font-size: 28rpx; line-height: normal; }
+.level::after { border: 0; }
+.product { padding: 24rpx 0; border-bottom: 1rpx solid var(--xa-color-surface-subtle); &:last-child { border-bottom: 0; padding-bottom: 0; } }
+.productTop { display: flex; justify-content: space-between; gap: 24rpx; align-items: flex-start; }
+.price { color: var(--xa-color-primary); font-size: 28rpx; white-space: nowrap; }
+.link { display: block; font-size: 24rpx; margin-top: 24rpx; color: var(--xa-color-primary); }
+.rules { font-size: 24rpx; color: #797680; line-height: 1.9; white-space: pre-wrap; }
+.empty { padding: 32rpx 0; text-align: center; font-size: 28rpx; }
+.actionBtn { height: 80rpx; border-radius: 999rpx; font-size: 28rpx; font-weight: 600; display: flex; align-items: center; justify-content: center; padding: 0 48rpx; margin: 16rpx auto 0; &::after { border: 0; } }
+.actionBtnPrimary { color: var(--xa-color-surface-card); background: var(--xa-color-primary); }
+.actionBtnOutline { color: var(--xa-color-primary); background: var(--xa-color-surface-card); border: 1rpx solid var(--xa-color-primary); }

@@ -1,0 +1,11 @@
+@use '@/styles/variables.scss' as *;
+.container { padding: $page-padding; box-sizing: border-box; }
+.card { padding: 14PX; border-radius: $radius-lg; background: $color-bg-card; }
+.title { display: block; font-size: $font-size-lg; font-weight: $font-weight-bold; }
+.description { display: block; margin: 12PX 0; color: $color-text-secondary; line-height: $line-height-normal; }
+.label { display: block; margin: 12PX 0; overflow-wrap: anywhere; }
+.qrcode { display: block; width: 180PX; height: 180PX; max-width: 100%; margin: 12PX auto; }
+.card button { @include button-reset; @include secondary-control-state; padding: 11PX; margin: 10PX 0; border-radius: $radius-md; background: $color-bg-page; color: $color-primary; }
+
+.container { min-height:100dvh; padding:0 16PX 100PX; background:$color-bg-page; }.card { max-width:920PX; padding:24PX; border:1PX solid $color-border; border-radius:16PX; }.title { font-size:22PX; }.description { font-size:14PX; line-height:1.8; }.label { font-size:14PX; line-height:1.7; }.card button,.card :global(taro-button-core) { width:100%; min-height:44PX; margin:12PX 0; padding:10PX 16PX; border:1PX solid $color-border; border-radius:8PX; font-size:14PX; }.qrcode { width:200PX; height:200PX; }
+@media(min-width:960px) { .container { padding:0; }.card { padding:32PX; }.card button,.card :global(taro-button-core) { width:auto; } }

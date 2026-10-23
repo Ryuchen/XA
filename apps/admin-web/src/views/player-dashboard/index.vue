@@ -2,7 +2,7 @@
   <div class="pd-page" v-loading="loading">
     <!-- 头部操作行 -->
     <div class="ap-page-head">
-      <p class="ap-page-intro">接单额/接单量按「已支付」订单统计；押金/钱包等为实时快照</p>
+      <p class="ap-page-intro">按已支付订单统计；双陪和转单按每人分账份额归属，收入为预计实得，报单审核后入账。押金/钱包为实时快照。</p>
       <div class="ap-page-head-actions">
         <el-date-picker
           v-model="dateRange"
@@ -125,14 +125,13 @@ const kpi = ref<any>({})
 const secondary = ref<any>({})
 const rank = ref<any>({ amount: [], income: [], count: [] })
 
-// 统一图表色板（与 dashboard 的 STATUS_COLORS 一致）
+// 分类图表使用传统蓝色色阶；奖罚和订单状态保留语义色。
 const PIE_COLORS = [
-  'var(--primary)',
-  'var(--success)',
-  'var(--warning)',
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
   'var(--chart-4)',
   'var(--chart-5)',
-  'var(--destructive)',
   'var(--muted-foreground)',
 ]
 
@@ -169,7 +168,7 @@ function pie(title: string, data: { name: string; value: number }[]): EChartsOpt
         radius: ['52%', '76%'],
         center: ['50%', '45%'],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 6, borderColor: '#ffffff', borderWidth: 2 },
+        itemStyle: { borderRadius: 6, borderColor: 'var(--card)', borderWidth: 2 },
         label: { formatter: '{b}\n{d}%' },
         labelLine: { show: true },
         data: data.map((d, i) => ({ ...d, itemStyle: { color: PIE_COLORS[i % PIE_COLORS.length] } })),

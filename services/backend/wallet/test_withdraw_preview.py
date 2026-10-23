@@ -62,7 +62,59 @@ class WithdrawPreviewApiTest(APITestCase):
             'payee_name': '张三',
         }
         payload.update(overrides)
-        return self.client.post(URL, payload)
+        return self.client.post(URL, payload, format='json')
+
+    def _quote(self, amount):
+        data = self.client.get(URL, {'amount': amount}).data['data']
+        return {f'expected_{field}': data[field] for field in ('tax_rate', 'tax_amount', 'actual_amount')}
+
+    def test_changed_quote_does_not_freeze_or_claim_key_and_fresh_quote_succeeds(self):
+        SystemConfig.objects.update_or_create(key=WITHDRAW_TAX_RATE_KEY, defaults={'value': '2'})
+        quote = self._quote(125)
+        SystemConfig.objects.filter(key=WITHDRAW_TAX_RATE_KEY).update(value='10')
+        res = self._post(125, **quote, client_request_id='changing-tax')
+        self.assertEqual(res.data['errorCode'], 'WITHDRAW_QUOTE_CHANGED', res.data)
+        self.assertEqual(WithdrawRequest.objects.count(), 0)
+        self.assertEqual(IdempotencyKey.objects.count(), 0)
+        self.assertEqual(Transaction.objects.count(), 0)
+        wallet = Wallet.objects.get(user=self.provider)
+        self.assertEqual((wallet.balance, wallet.frozen_amount), (50000, 0))
+        res = self._post(125, **self._quote(125), client_request_id='changing-tax')
+        self.assertEqual(res.data['code'], 0, res.data)
+        self.assertEqual(res.data['data']['request']['tax_amount'], 13)
+        self.assertEqual(res.data['data']['request']['actual_amount'], 112)
+
+    def test_replay_is_recognized_even_after_minimum_and_tax_change(self):
+        quote = self._quote(125)
+        self.assertEqual(self._post(125, **quote, client_request_id='successful-withdraw').data['code'], 0)
+        SystemConfig.objects.filter(key=MIN_WITHDRAW_AMOUNT_KEY).update(value='5000')
+        SystemConfig.objects.update_or_create(key=WITHDRAW_TAX_RATE_KEY, defaults={'value': '10'})
+        self.assertEqual(self._post(125, **quote, client_request_id='successful-withdraw').data['code'], 409)
+        self.assertEqual(WithdrawRequest.objects.count(), 1)
+        wallet = Wallet.objects.get(user=self.provider)
+        self.assertEqual((wallet.balance, wallet.frozen_amount), (49875, 125))
+
+    def test_rejects_fractional_boolean_huge_and_malformed_raw_amount(self):
+        for amount in (125.9, True, False, 2147483648, '125abc', '1e4', [], {}, None):
+            with self.subTest(amount=amount):
+                self.assertEqual(self._post(amount).data['code'], 400)
+        self.assertEqual(self.client.get(URL, {'amount': 2 ** 80}).data['code'], 400)
+        self.assertEqual(WithdrawRequest.objects.count(), 0)
+        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 50000)
+
+    def test_rejects_invalid_payee_and_quote_without_truncating_or_freezing(self):
+        for data in ({'payee_method': []}, {'payee_account': 123}, {'payee_account': 'a' * 101},
+                     {'payee_name': []}, {'payee_name': '甲' * 51}, {'remark': {}}, {'remark': '字' * 256},
+                     {'expected_tax_rate': 2}, {'expected_tax_rate': False, 'expected_tax_amount': 0, 'expected_actual_amount': 125}):
+            with self.subTest(data=data):
+                self.assertEqual(self._post(125, **data).data['code'], 400)
+        self.assertEqual(WithdrawRequest.objects.count(), 0)
+        self.assertEqual(IdempotencyKey.objects.count(), 0)
+
+    def test_customer_cannot_read_provider_withdrawal_overview(self):
+        from orders.tests.factories import make_user
+        self.client.force_authenticate(make_user())
+        self.assertEqual(self.client.get(URL).data['code'], 403)
 
     # ------------------------------------------------------------------
     # 核心断言：试算 == 落库

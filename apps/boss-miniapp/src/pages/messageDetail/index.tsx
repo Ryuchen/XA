@@ -20,7 +20,7 @@ interface TypeMeta {
 }
 
 const TYPE_META: Record<MessageType, TypeMeta> = {
-  SYSTEM: { icon: 'bell', color: '#007AFF', surface: 'rgba(0, 122, 255, 0.14)' },
+  SYSTEM: { icon: 'bell', color: '#002fa7', surface: 'rgba(0, 47, 167, 0.14)' },
   ORDER: { icon: 'receipt', color: '#FF9500', surface: 'rgba(255, 149, 0, 0.14)' },
   SUPPORT: { icon: 'headphones', color: '#34C759', surface: 'rgba(52, 199, 89, 0.14)' },
   PROMOTION: { icon: 'gift', color: '#FF3B30', surface: 'rgba(255, 59, 48, 0.14)' },
@@ -112,7 +112,7 @@ const MessageDetailPage: React.FC = () => {
       {(message.action_url || message.related_order_id) && (
         <View className={styles.actionBtn} onClick={handleAction}>
           <Text className={styles.actionText}>查看详情</Text>
-          <Icon name="arrow-right" size={32} color="#FFFFFF" strokeWidth={2} />
+          <Icon name="arrow-right" size={32} color="#fffdf5" strokeWidth={2} />
         </View>
       )}
     </View>

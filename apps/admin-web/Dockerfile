@@ -11,10 +11,12 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/admin-web/package.json apps/admin-web/package.json
 COPY packages/design-system/package.json packages/design-system/package.json
+COPY packages/money/package.json packages/money/package.json
 RUN pnpm install --filter xa-admin-web... --frozen-lockfile
 
 COPY apps/admin-web apps/admin-web
 COPY packages/design-system packages/design-system
+COPY packages/money packages/money
 RUN pnpm --filter xa-admin-web run build
 
 # ---- 运行阶段 ----

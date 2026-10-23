@@ -19,8 +19,14 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - name: Client regression tests
+        run: node --test scripts/test-*.cjs scripts/test-*.mjs apps/admin-web/tests/*.test.cjs apps/provider-miniapp/tests/*.cjs
+      - run: python3 scripts/test-managed-compose.py
       - run: pnpm run admin:build
       - run: pnpm run build:mini
+      - run: pnpm run provider:build:h5
+      - run: pnpm run style:check
 
   backend:
     name: Backend check (services/backend)
@@ -35,3 +41,37 @@ jobs:
           python-version: '3.13'
       - run: pip install -r requirements.txt
       - run: python manage.py check
+      - run: python manage.py test --settings=config.test_settings --noinput
+      - run: python manage.py test support orders.tests.test_release_flow orders.tests.test_release_websocket console.test_bootstrap --settings=config.migration_test_settings --noinput
+      - run: python manage.py makemigrations --check --dry-run --settings=config.migration_test_settings
+
+  backend-mysql:
+    name: MySQL migrations and concurrent business flows
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: xa-ci-ephemeral-only
+          MYSQL_DATABASE: xa_test_release
+        ports:
+          - 13306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      XA_TEST_MYSQL_USER: root
+      XA_TEST_MYSQL_PASSWORD: xa-ci-ephemeral-only
+    defaults:
+      run:
+        working-directory: services/backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: pip install -r requirements.txt
+      - run: python manage.py check_mysql_readiness --settings=config.mysql_test_settings
+      - run: python manage.py test --settings=config.mysql_test_settings --noinput

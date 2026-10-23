@@ -11,10 +11,13 @@ export interface SupportContactCard {
   avatar_url: string;
   qrcode_url: string;
   tips: string;
+  customer_reference?: string;
+  order_no?: string;
 }
 
-export const fetchContactCard = () => {
-  return request<ApiResponse<SupportContactCard | null>>('/support/contact-card/', 'GET');
+export const fetchContactCard = (context: CustomerServiceContext = {}) => {
+  const query = context.orderId ? `?order_id=${context.orderId}` : context.cardId ? `?card_id=${context.cardId}` : '';
+  return request<ApiResponse<SupportContactCard | null>>(`/support/contact-card/${query}`, 'GET');
 };
 
 export const fetchContactCards = () => {
@@ -24,6 +27,8 @@ export const fetchContactCards = () => {
 export interface CustomerServiceContext {
   title?: string;
   path?: string;
+  cardId?: number;
+  orderId?: number;
 }
 
 export interface CustomerServiceOpenResult {
@@ -36,7 +41,9 @@ export interface CustomerServiceOpenResult {
 export const openWecomCustomerService = async (
   context: CustomerServiceContext = {},
 ): Promise<CustomerServiceOpenResult> => {
-  const response = await fetchContactCard();
+  let response: ApiResponse<SupportContactCard | null>;
+  try { response = await fetchContactCard(context); }
+  catch { return { opened: false, reason: 'failed' }; }
   const card = response.code === 0 ? response.data || null : null;
   if (process.env.TARO_ENV !== 'weapp') {
     return { opened: false, reason: 'unsupported', card };
@@ -51,7 +58,7 @@ export const openWecomCustomerService = async (
       corpId: card.wecom_corp_id,
       extInfo: { url: card.wecom_service_url },
       showMessageCard: true,
-      sendMessageTitle: context.title || '兴安电竞客服咨询',
+      sendMessageTitle: [card.customer_reference, context.title || '兴安电竞客服咨询'].filter(Boolean).join(' · ').slice(0, 100),
       sendMessagePath: path,
     });
     return { opened: true, card };

@@ -1,0 +1,18 @@
+@use '@/styles/variables.scss' as *;
+// Layers: tab bar 30, sticky page header 40, dialogs 100.
+.mask { position:fixed; inset:0; z-index:5000; display:flex; justify-content:center; align-items:flex-end; padding-top:24PX; background:var(--xa-color-overlay); }
+.panel { display:flex; flex-direction:column; width:100%; max-width:600PX; max-height:calc(100dvh - 24PX); min-height:0; border:1PX solid $color-border; border-bottom:0; border-radius:20PX 20PX 0 0; background:$color-bg-card; box-shadow:0 20PX 60PX rgba(15,23,42,.18); overflow:hidden; }
+.handle { flex:none; width:36PX; height:4PX; margin:10PX auto 0; border-radius:4PX; background:$color-border; }
+.header { display:flex; flex:none; justify-content:space-between; align-items:center; gap:16PX; padding:18PX 20PX; border-bottom:1PX solid $color-divider; }
+.title { min-width:0; font-size:20PX; font-weight:650; line-height:1.4; color:$color-text-primary; overflow-wrap:anywhere; }
+.header .close { width:auto; margin:0; min-height:44PX; }
+.body { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:20PX; }
+.footer { flex:none; display:flex; justify-content:flex-end; gap:12PX; padding:16PX 20PX calc(16PX + env(safe-area-inset-bottom)); border-top:1PX solid $color-divider; background:$color-bg-card; }
+.footer > button, .footer > :global(taro-button-core) { width:100%; margin:0 !important; min-height:44PX; }
+@media(min-width:960px) {
+ .mask { align-items:center; padding:32PX; }
+ .panel { max-height:calc(100dvh - 64PX); border-bottom:1PX solid $color-border; border-radius:16PX; }
+ .handle { display:none; }
+ .header { padding:20PX 24PX; }.body { padding:24PX; }.footer { padding:16PX 24PX; }
+ .footer > button, .footer > :global(taro-button-core) { width:auto; min-width:128PX; }
+}

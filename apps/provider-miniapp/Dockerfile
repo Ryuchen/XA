@@ -18,11 +18,13 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/provider-miniapp/package.json apps/provider-miniapp/package.json
 COPY packages/design-system/package.json packages/design-system/package.json
+COPY packages/money/package.json packages/money/package.json
 RUN pnpm install --filter xa-provider-miniapp... --frozen-lockfile
 
 COPY apps/provider-miniapp apps/provider-miniapp
 COPY packages/design-system packages/design-system
-# 陪玩端 H5 产物输出到 dist（见 config/index.ts）。
+COPY packages/money packages/money
+# H5 与微信构建使用独立输出目录。
 RUN pnpm --filter xa-provider-miniapp run build:h5
 
 # ---- 运行阶段 ----
@@ -32,5 +34,5 @@ FROM nginx:alpine
 ENV BACKEND_ORIGIN=http://backend:8000 \
     NGINX_ENVSUBST_FILTER=BACKEND_ORIGIN
 COPY apps/provider-miniapp/nginx.conf /etc/nginx/templates/default.conf.template
-COPY --from=builder /workspace/apps/provider-miniapp/dist /usr/share/nginx/html
+COPY --from=builder /workspace/apps/provider-miniapp/dist-h5 /usr/share/nginx/html
 EXPOSE 80

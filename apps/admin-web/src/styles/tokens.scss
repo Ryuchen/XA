@@ -35,8 +35,8 @@
   --text-200: #c7c7cc;
   --text-300: var(--xa-neutral-400);
   --text-400: var(--xa-neutral-500);
-  --text-500: var(--xa-neutral-600);
-  --text-600: var(--xa-neutral-700);
+  --text-500: var(--xa-color-text-secondary);
+  --text-600: var(--xa-color-text-primary);
   --text-700: #3c3c43;
   --text-800: var(--xa-neutral-800);
   --text-900: var(--xa-neutral-900);
@@ -70,17 +70,25 @@
   --icon: var(--xa-color-text-primary);
   --icon-muted: var(--xa-color-text-tertiary);
 
-  --chart-1: var(--xa-color-success);
-  --chart-2: var(--xa-color-primary);
-  --chart-3: var(--xa-color-warning);
-  --chart-4: #5856d6;
-  --chart-5: #af52de;
+  --chart-1: var(--xa-color-primary);
+  --chart-2: var(--xa-brand-700);
+  --chart-3: var(--xa-brand-400);
+  --chart-4: var(--xa-brand-800);
+  --chart-5: var(--xa-neutral-500);
+  --ap-cover-roulette: var(--xa-brand-600);
+  --ap-cover-experience: var(--xa-brand-500);
+  --ap-cover-companion: var(--xa-brand-800);
+  --ap-cover-fun: var(--xa-brand-700);
+  --ap-cover-mission: var(--xa-brand-600);
+  --ap-cover-extraction: var(--xa-brand-700);
+  --ap-cover-prison: var(--xa-brand-800);
+  --ap-cover-custom: var(--xa-brand-900);
 
-  --sidebar: var(--xa-color-surface-hover);
+  --sidebar: var(--xa-color-surface-card);
   --sidebar-foreground: var(--xa-color-text-primary);
   --sidebar-primary: var(--xa-color-primary);
   --sidebar-primary-foreground: var(--xa-color-on-primary);
-  --sidebar-accent: var(--xa-color-border);
+  --sidebar-accent: var(--xa-color-primary-soft);
   --sidebar-accent-foreground: var(--xa-color-text-primary);
   --sidebar-border: var(--xa-color-border);
 
@@ -92,6 +100,15 @@
   --control-height-sm: 32px;
   --control-height-md: 40px;
   --control-height-lg: 48px;
+  --control-radius: 8px;
+  --control-padding-x: 10px;
+  --control-button-min-width: 72px;
+  --control-filter-width: 180px;
+  --control-range-width: 280px;
+  --control-datetime-range-width: 360px;
+  --control-number-width: 140px;
+  --ap-control-height: var(--control-height-sm);
+  --ap-control-font-size: 13px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -132,11 +149,11 @@
   --ring: var(--xa-color-primary);
   --icon: var(--xa-color-text-primary);
   --icon-muted: var(--xa-color-text-tertiary);
-  --chart-1: var(--xa-color-success);
-  --chart-2: var(--xa-color-primary);
-  --chart-3: var(--xa-color-warning);
-  --chart-4: #5e5ce6;
-  --chart-5: #bf5af2;
+  --chart-1: var(--xa-color-primary);
+  --chart-2: var(--xa-brand-200);
+  --chart-3: var(--xa-neutral-400);
+  --chart-4: var(--xa-neutral-300);
+  --chart-5: var(--xa-brand-100);
   --sidebar: var(--xa-color-surface-card);
   --sidebar-foreground: var(--xa-color-text-primary);
   --sidebar-primary: var(--xa-color-primary);

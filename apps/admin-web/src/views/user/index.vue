@@ -2,30 +2,30 @@
   <div class="us-page">
     <!-- 头部操作行 -->
     <div class="ap-page-head">
-      <p class="ap-page-intro">管理老板账户余额、分级与消费信息（PRD 7.3）</p>
+      <p class="ap-page-intro">管理老板资料、消费分级、推荐关系与账户状态</p>
     </div>
 
-    <!-- 老板余额三态说明卡 -->
+    <!-- 充值、下单与结算说明 -->
     <section class="us-balance ap-card">
       <div class="us-balance-head">
         <span class="us-balance-ic"><el-icon><CreditCard /></el-icon></span>
         <div>
-          <p class="ap-card-title">老板余额三态</p>
-          <p class="ap-card-sub">派单并报单通过后自动从账户余额扣除；未报单金额为锁定态，报单前不计入可用余额</p>
+          <p class="ap-card-title">充值、下单与结算</p>
+          <p class="ap-card-sub">客服确认收款后充值，创建订单时扣除老板余额；打手收益在报单审核通过后入账。</p>
         </div>
       </div>
       <div class="us-balance-grid">
         <article class="us-state us-state-avail">
-          <span class="us-state-label">账户余额 <code class="us-code">wallet_balance</code></span>
+          <span class="us-state-label">可用余额</span>
           <span class="us-state-note">可用于派单扣款的余额</span>
         </article>
         <article class="us-state us-state-lock">
-          <span class="us-state-label">未报单金额 <span class="us-lock-tag">锁定态</span></span>
-          <span class="us-state-note">已派单未报单的锁定金额</span>
+          <span class="us-state-label">订单扣款</span>
+          <span class="us-state-note">创建订单即扣款，不等待报单</span>
         </article>
         <article class="us-state us-state-spent">
-          <span class="us-state-label">累计消费</span>
-          <span class="us-state-note">历史累计已消费总额</span>
+          <span class="us-state-label">退款处理</span>
+          <span class="us-state-note">订单退款退回老板钱包，可在流水中核对</span>
         </article>
       </div>
     </section>
@@ -106,16 +106,18 @@
     <el-table-column label="注册时间" width="160">
       <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
     </el-table-column>
-    <el-table-column v-if="auth.hasPerm('user:edit')" label="操作" width="100" fixed="right">
+    <el-table-column label="操作" width="260" fixed="right">
       <template #default="{ row }">
-        <el-button link type="primary" @click="onEdit(row)">编辑</el-button>
+        <el-button v-if="auth.hasPerm('user:edit')" link type="primary" @click="onEdit(row)">编辑</el-button>
+        <el-button v-if="auth.hasPerm('user:edit')" link type="danger" @click="onRetire(row)">退店清空</el-button>
+        <el-button link type="warning" @click="banTarget = row; banVisible = true">封禁记录</el-button>
       </template>
     </el-table-column>
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" title="编辑用户" width="640px" class="us-dialog">
-    <el-form :model="editForm" label-width="82px" label-position="right">
+  <el-dialog v-model="dialogVisible" title="编辑用户" width="760px" class="us-dialog ap-modal">
+    <el-form :model="editForm"   class="ap-modal-form ap-form-grid" label-position="top">
       <div class="us-form-section">
         <p class="us-section-title">基础信息</p>
         <el-row :gutter="16">
@@ -175,18 +177,9 @@
       </div>
 
       <div class="us-form-section">
-        <p class="us-section-title">权限与状态</p>
-        <el-row :gutter="16">
-          <el-col :span="8">
-            <el-form-item label="允许登录"><el-switch v-model="editForm.can_login" /></el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="允许查看"><el-switch v-model="editForm.can_view" /></el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="启用状态"><el-switch v-model="editForm.is_active" /></el-form-item>
-          </el-col>
-        </el-row>
+        <p class="us-section-title">账户状态</p>
+        <el-alert :title="editForm.is_active && editForm.can_login ? '账户可登录；停用请通过封禁记录操作并填写原因' : '账户已停用；可在封禁记录中查看原因及解封'"
+          type="info" :closable="false" />
       </div>
     </el-form>
     <template #footer>
@@ -194,19 +187,23 @@
       <el-button type="primary" :loading="saving" @click="onSave">保存</el-button>
     </template>
   </el-dialog>
+  <account-ban-dialog v-model="banVisible" resource="users" :target-id="banTarget?.id" :target-name="banTarget?.nickname || banTarget?.username" @changed="tableRef?.load()" />
 </template>
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import CrudTable from '@/components/CrudTable.vue'
+import AccountBanDialog from '@/components/AccountBanDialog.vue'
 import { bossTypeApi, userApi } from '@/api/modules'
 import { formatDateTime, amountToXaCoin } from '@/utils/format'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const tableRef = ref()
+const banVisible = ref(false)
+const banTarget = ref<any>(null)
 const query = reactive<Record<string, any>>({ boss_no: '', nickname: '', phone: '', is_active: '' })
 
 /**
@@ -247,7 +244,7 @@ const inviterLoading = ref(false)
 
 async function loadBossTypes() {
   if (bossTypes.value.length) return
-  const res = await bossTypeApi.list({ page: 1, page_size: 100 }) as any
+  const res = await bossTypeApi.allOptions() as any
   bossTypes.value = res.data.list || []
 }
 
@@ -282,12 +279,9 @@ async function onSave() {
       nickname: editForm.nickname,
       real_name: editForm.real_name,
       phone: editForm.phone,
-      is_active: editForm.is_active,
       boss_type: editForm.boss_type || null,
       inviter: editForm.inviter || null,
       inviter_commission_rate: editForm.inviter_commission_rate || 0,
-      can_login: editForm.can_login,
-      can_view: editForm.can_view,
     })
     ElMessage.success('保存成功')
     dialogVisible.value = false
@@ -295,6 +289,14 @@ async function onSave() {
   } finally {
     saving.value = false
   }
+}
+async function onRetire(row: any) {
+  try {
+    const { value } = await ElMessageBox.prompt('清空全部业务资格、VIP、券、积分及未交付权益，保留历史订单和财务。进行中订单、客诉及资金必须先结清。请填写退店原因。', '退店清空', { inputValidator: (value: string) => !!value && value.trim().length >= 2, confirmButtonText: '确认清空' })
+    await userApi.action(row.id, 'retire', { reason: value })
+    ElMessage.success('业务权益已重置')
+    tableRef.value?.load()
+  } catch (error) { if (error !== 'cancel' && error !== 'close') ElMessage.error('退店未完成，请查看系统提示') }
 }
 </script>
 
@@ -306,29 +308,6 @@ async function onSave() {
 }
 
 /* 编辑弹窗：分区分组 + token 视觉 */
-.us-dialog :deep(.el-dialog__body) {
-  padding-top: 8px;
-}
-.us-form-section {
-  padding: 4px 0 2px;
-}
-.us-form-section + .us-form-section {
-  margin-top: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-.us-section-title {
-  margin: 0 0 14px;
-  padding-left: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--foreground);
-  line-height: 1.2;
-  border-left: 3px solid var(--primary);
-}
-.us-form-section :deep(.el-form-item) {
-  margin-bottom: 16px;
-}
 
 .us-page {
   display: flex;

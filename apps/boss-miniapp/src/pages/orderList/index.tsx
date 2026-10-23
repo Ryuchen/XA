@@ -1,11 +1,12 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, Image, ScrollView, Textarea } from '@tarojs/components';
-import Taro, { useDidShow, usePullDownRefresh, useRouter } from '@tarojs/taro';
+import { Button, View, Text, Image, ScrollView, Textarea } from '@tarojs/components';
+import Taro, { useDidHide, useDidShow, usePullDownRefresh, useRouter } from '@tarojs/taro';
 import {
   fetchOrders,
   evaluateOrder,
   cancelOrder,
   tipOrder,
+  fetchAfterSale, submitAfterSale, newAfterSaleRequestId, AfterSaleRecord,
 } from '@/services/order';
 import { wsService } from '@/services/websocket';
 import { useCatalogStore, useOrderStore, useServices, useWalletStore } from '@/store';
@@ -21,9 +22,11 @@ import {
 import { Skeleton } from '@/components';
 import Icon, { IconName } from '@/components/Icon';
 import { resolveImageUrl } from '@/utils/media';
+import RouletteWheel from '@/components/RouletteWheel';
 import styles from './index.module.scss';
 import { useLoginGuard } from '@/hooks/useLoginGuard';
-import { getStoredToken } from '@/utils/auth';
+import { getSessionRevision, getStoredToken } from '@/utils/auth';
+import { createCoalescedRefresh } from '@/utils/coalescedRefresh';
 import { openWecomCustomerService } from '@/services/support';
 
 const statusTabs: Array<{ label: string; value: 'all' | EscortOrderStatus }> = [
@@ -53,8 +56,8 @@ const statusIconMap: Record<EscortOrderStatus, IconName> = {
 
 const statusColorMap: Record<EscortOrderStatus, string> = {
   pending: '#FF9500',
-  grabbed: '#007AFF',
-  in_progress: '#007AFF',
+  grabbed: '#002fa7',
+  in_progress: '#002fa7',
   completed: '#34C759',
   cancelled: '#AEAEB2',
 };
@@ -73,6 +76,34 @@ const OrderListPage: React.FC = () => {
   const [evalContent, setEvalContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(focusedOrderId);
+  const [wheelOrderId, setWheelOrderId] = useState<number | null>(null);
+  const [afterSale, setAfterSale] = useState<AfterSaleRecord | null>(null);
+  const [afterSaleError, setAfterSaleError] = useState('');
+  const [afterSaleLoading, setAfterSaleLoading] = useState(false);
+  const [afterSaleOrder, setAfterSaleOrder] = useState<EscortOrder | null>(null);
+  const [afterSaleReason, setAfterSaleReason] = useState('');
+  const alive = useRef(true), visible = useRef(true), requestSequence = useRef(0), detailSequence = useRef(0);
+  const expandedRef = useRef(expandedOrderId), ordersRef = useRef<EscortOrder[]>([]);
+  const session = useRef(getSessionRevision()), afterSaleBusy = useRef(false);
+  const afterSaleRequestId = useRef('');
+  expandedRef.current = expandedOrderId;
+  const loadAfterSale = useCallback(async (orderId: number) => {
+    const sequence = ++detailSequence.current, revision = getSessionRevision();
+    const current = () => alive.current && sequence === detailSequence.current && revision === getSessionRevision() && expandedRef.current === orderId;
+    setAfterSaleLoading(true); setAfterSaleError('');
+    try {
+      const response = await fetchAfterSale(orderId);
+      if (!current()) return;
+      if (response.code !== 0) throw Error(response.msg || '售后详情加载失败');
+      setAfterSale(response.data || null);
+    } catch (error) { if (current()) { setAfterSale(null); setAfterSaleError(error instanceof Error ? error.message : '售后详情加载失败'); } }
+    finally { if (current()) setAfterSaleLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    ++detailSequence.current; setAfterSale(null); setAfterSaleError(''); setAfterSaleLoading(false);
+    if (expandedOrderId && ordersRef.current.find(order => order.id === expandedOrderId)?.aftersale_status) void loadAfterSale(expandedOrderId);
+  }, [expandedOrderId, loadAfterSale]);
   // 打赏礼物列表来自全局目录缓存，与「陪玩」页共用
   const giftOptions = useServices('GIFT');
   const { ensureLogin, loginSheet } = useLoginGuard();
@@ -81,8 +112,14 @@ const OrderListPage: React.FC = () => {
   const previousStatusesRef = useRef<Map<number, EscortOrderStatus>>(new Map());
 
   const loadOrders = useCallback(async () => {
+    if (!alive.current || !getStoredToken()) return;
+    const sequence = ++requestSequence.current, revision = getSessionRevision();
+    const current = () => alive.current && sequence === requestSequence.current && revision === getSessionRevision();
+    setLoading(true);
     try {
       const res = await fetchOrders({ role: 'customer' });
+      if (!current()) return;
+      if (res.code !== 0) throw Error(res.msg || '订单加载失败');
       const normalized = (res.data || []).map(order => ({
         ...order,
         status: normalizeStatus(order.status),
@@ -94,17 +131,21 @@ const OrderListPage: React.FC = () => {
         return prev && prev !== 'completed' && order.status === 'completed';
       });
       if (newlyCompleted) {
-        setTimeout(() => startEvaluate(newlyCompleted), 600);
+        setTimeout(() => { if (current() && visible.current) startEvaluate(newlyCompleted); }, 600);
       }
 
       previousStatusesRef.current = new Map(normalized.map(o => [o.id, o.status]));
       setOrders(normalized);
+      ordersRef.current = normalized;
+      const expanded = normalized.find(order => order.id === expandedRef.current);
+      if (expanded?.aftersale_status) void loadAfterSale(expanded.id);
+      else { ++detailSequence.current; setAfterSale(null); setAfterSaleError(''); setAfterSaleLoading(false); }
     } catch {
       // silently fail
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, []);
+  }, [loadAfterSale]);
 
   // 打赏礼物目录只需挂载时取一次（命中缓存则不发请求）
   useEffect(() => {
@@ -113,9 +154,11 @@ const OrderListPage: React.FC = () => {
 
   // 订单列表统一由 useDidShow 驱动，首次进入也会触发，避免首屏双份请求
   useDidShow(() => {
+    visible.current = true;
     if (getStoredToken()) void loadOrders();
     else setLoading(false);
   });
+  useDidHide(() => { visible.current = false; });
 
   usePullDownRefresh(async () => {
     if (getStoredToken()) await loadOrders();
@@ -123,7 +166,10 @@ const OrderListPage: React.FC = () => {
   });
 
   useEffect(() => {
+    alive.current = true;
+    const refresh = createCoalescedRefresh(async () => { if (visible.current) await loadOrders(); });
     const unsubscribe = wsService.on('order_status_update', (payload: { status: string; order_no?: string }) => {
+      if (!visible.current || !getStoredToken()) return;
       const status = normalizeStatus(payload?.status || '');
       const tipMap: Partial<Record<EscortOrderStatus, string>> = {
         grabbed: '大神已接单',
@@ -138,15 +184,28 @@ const OrderListPage: React.FC = () => {
       // 订单状态变了，「我的」页的统计与余额缓存同步失效
       useOrderStore.getState().invalidate();
       useWalletStore.getState().invalidate();
-      void loadOrders();
+      ++requestSequence.current; setLoading(true); refresh.request();
     });
-    return unsubscribe;
+    const offConnected = wsService.on('connected', () => { if (visible.current && getStoredToken()) refresh.request(); });
+    const onSession = () => {
+      if (session.current === getSessionRevision()) return;
+      session.current = getSessionRevision(); ++requestSequence.current; ++detailSequence.current;
+      ordersRef.current = []; previousStatusesRef.current.clear();
+      setOrders([]); setAfterSale(null); setAfterSaleError(''); setAfterSaleLoading(false); setExpandedOrderId(null); expandedRef.current = null;
+      setEvaluatingOrder(null); setLoadingOrderId(null); afterSaleBusy.current = false;
+      setAfterSaleOrder(null); setAfterSaleReason('');
+      afterSaleRequestId.current = '';
+      if (visible.current && getStoredToken()) void loadOrders(); else setLoading(false);
+    };
+    Taro.eventCenter.on('xa:auth.changed', onSession);
+    return () => { alive.current = false; ++requestSequence.current; ++detailSequence.current; unsubscribe(); offConnected(); refresh.dispose(); Taro.eventCenter.off('xa:auth.changed', onSession); };
   }, [loadOrders]);
 
   const visibleOrders = useMemo(() => {
     if (activeStatus === 'all') return orders;
     return orders.filter(order => order.status === activeStatus);
   }, [activeStatus, orders]);
+  const afterSaleHistory = (Array.isArray(afterSale?.history) ? afterSale.history : []).filter(item => item.status !== 'OPEN' && (afterSale?.client_request_id ? item.client_request_id !== afterSale.client_request_id : !afterSale?.created_at || Date.parse(item.created_at) !== Date.parse(afterSale.created_at)));
 
   const statusCounts = useMemo(() => orders.reduce<Record<string, number>>((acc, order) => {
     acc[order.status] = (acc[order.status] || 0) + 1;
@@ -156,7 +215,7 @@ const OrderListPage: React.FC = () => {
   const activeCount = (statusCounts.pending || 0) + (statusCounts.grabbed || 0) + (statusCounts.in_progress || 0);
   const totalAmount = orders
     .filter(order => order.status !== 'cancelled')
-    .reduce((sum, order) => sum + Number(order.amount || 0), 0);
+    .reduce((sum, order) => sum + Number(order.refund_summary?.remaining_amount ?? order.amount ?? 0), 0);
 
   const formatDateTime = (value: string) => {
     if (!value) return '';
@@ -166,6 +225,7 @@ const OrderListPage: React.FC = () => {
   };
 
   const handleCancelOrder = async (order: EscortOrder) => {
+    const revision = getSessionRevision();
     // 1. 选取消原因（ActionSheet）
     let chosenReason = '';
     try {
@@ -196,12 +256,13 @@ const OrderListPage: React.FC = () => {
       confirmColor: '#FF4D4F',
       cancelText: '再想想',
     });
-    if (!confirm.confirm) return;
+    if (!confirm.confirm || !alive.current || !visible.current || revision !== getSessionRevision()) return;
 
     // 4. 调用 API
     try {
       setLoadingOrderId(order.id);
       const res = (await cancelOrder(order.id, chosenReason)) as { code?: number; msg?: string };
+      if (!alive.current || revision !== getSessionRevision()) return;
       if (res?.code === 0) {
         Taro.showToast({ title: '已取消，款项原路退回', icon: 'success' });
         useOrderStore.getState().invalidate();
@@ -213,20 +274,47 @@ const OrderListPage: React.FC = () => {
     } catch {
       Taro.showToast({ title: '取消失败', icon: 'none' });
     } finally {
-      setLoadingOrderId(null);
+      if (alive.current && revision === getSessionRevision()) setLoadingOrderId(null);
     }
+  };
+
+  const canAfterSale = (order: EscortOrder) => order.can_aftersale === true && order.status === 'completed'
+    && ['PAID', 'PARTIALLY_REFUNDED'].includes(order.payment_status) && order.aftersale_status !== 'REFUNDED';
+  const handleAfterSale = (order: EscortOrder) => {
+    if (afterSaleBusy.current || loading || !canAfterSale(order)) return;
+    afterSaleRequestId.current = newAfterSaleRequestId();
+    setAfterSaleOrder(order); setAfterSaleReason('');
+  };
+  const handleSubmitAfterSale = async () => {
+    const order = afterSaleOrder;
+    if (!order || afterSaleBusy.current || loading || !alive.current || !visible.current) return;
+    const reason = afterSaleReason.trim();
+    if (reason.length < 2 || reason.length > 1000) { Taro.showToast({ title: '请填写2至1000字问题说明', icon: 'none' }); return; }
+    if (!ordersRef.current.some(row => row.id === order.id && canAfterSale(row))) { setAfterSaleOrder(null); return; }
+    const revision = getSessionRevision(); afterSaleBusy.current = true;
+    try {
+      setLoadingOrderId(order.id);
+      const response = await submitAfterSale(order.id, reason, afterSaleRequestId.current);
+      if (!alive.current || revision !== getSessionRevision()) return;
+      if (response.code !== 0) throw Error(response.msg || '售后提交失败');
+      setAfterSaleOrder(null); setAfterSaleReason('');
+      afterSaleRequestId.current = '';
+      Taro.showToast({ title: '售后已提交', icon: 'success' }); await loadOrders();
+    } catch (error) { if (alive.current && revision === getSessionRevision()) Taro.showToast({ title: error instanceof Error ? error.message : '售后提交失败', icon: 'none' }); }
+    finally { if (alive.current && revision === getSessionRevision()) { afterSaleBusy.current = false; setLoadingOrderId(null); } }
   };
 
   const handleContactSupport = async (order?: EscortOrder) => {
     Taro.showLoading({ title: '正在连接客服' });
     const result = await openWecomCustomerService({
+      orderId: order?.id,
       title: order ? `订单 ${order.order_no} 咨询` : '订单售后咨询',
       path: order
         ? `/pages/orderList/index?orderId=${order.id}`
         : '/pages/orderList/index',
     });
     Taro.hideLoading();
-    if (!result.opened) Taro.navigateTo({ url: '/pages/serviceCard/index' });
+    if (!result.opened) Taro.navigateTo({ url: `/pages/serviceCard/index${order ? `?orderId=${order.id}` : ''}` });
   };
 
   const startEvaluate = (order: EscortOrder) => {
@@ -302,7 +390,7 @@ const OrderListPage: React.FC = () => {
       return (
         <View className={styles.actionGroup}>
           <View className={styles.secondaryBtn} onClick={() => void handleContactSupport(order)}>
-            <Icon name="headphones" size={26} color="#6E6E73" className={styles.btnIcon} />
+            <Icon name="headphones" size={24} color="#6E6E73" className={styles.btnIcon} />
             <Text>联系客服</Text>
           </View>
           {can('CANCEL', true) && (
@@ -325,7 +413,7 @@ const OrderListPage: React.FC = () => {
       return (
         <View className={styles.actionGroup}>
           <View className={styles.secondaryBtn} onClick={() => void handleContactSupport(order)}>
-            <Icon name="headphones" size={26} color="#6E6E73" className={styles.btnIcon} />
+            <Icon name="headphones" size={24} color="#6E6E73" className={styles.btnIcon} />
             <Text>联系客服</Text>
           </View>
           {can('TIP', !!order.provider && !order.service.is_gift) && (
@@ -333,13 +421,13 @@ const OrderListPage: React.FC = () => {
               className={`${styles.giftBtn} ${loadingOrderId === order.id ? styles.disabledBtn : ''}`}
               onClick={() => void handleTip(order)}
             >
-              <Icon name="gift" size={26} color="#FFFFFF" className={styles.btnIcon} />
+              <Icon name="gift" size={24} color="#fffdf5" className={styles.btnIcon} />
               <Text>{loadingOrderId === order.id ? '赠送中' : '送礼物'}</Text>
             </View>
           )}
           {can('EVALUATE', !evaluated) && (
             <View className={styles.primaryBtn} onClick={() => startEvaluate(order)}>
-              <Icon name="star" size={26} color="#FFFFFF" className={styles.btnIcon} />
+              <Icon name="star" size={24} color="#fffdf5" className={styles.btnIcon} />
               <Text>评价</Text>
             </View>
           )}
@@ -351,7 +439,7 @@ const OrderListPage: React.FC = () => {
     return (
       <View className={styles.actionGroup}>
         <View className={styles.secondaryBtn} onClick={() => void handleContactSupport(order)}>
-          <Icon name="headphones" size={26} color="#6E6E73" className={styles.btnIcon} />
+          <Icon name="headphones" size={24} color="#6E6E73" className={styles.btnIcon} />
           <Text>联系客服</Text>
         </View>
       </View>
@@ -414,6 +502,9 @@ const OrderListPage: React.FC = () => {
         {visibleOrders.map(order => {
           const counterpart = order.provider;
           const displayStatus = order.status;
+          const partialRefund = order.payment_status === 'PARTIALLY_REFUNDED';
+          const refunded = order.payment_status === 'REFUNDED';
+          const displayLabel = partialRefund ? '已部分退款' : statusTextMap[displayStatus];
 
           return (
             <View
@@ -432,7 +523,7 @@ const OrderListPage: React.FC = () => {
                     color={statusColorMap[displayStatus]}
                     className={styles.statusIcon}
                   />
-                  <Text className={styles.statusLabel}>{statusTextMap[displayStatus]}</Text>
+                  <Text className={styles.statusLabel}>{displayLabel}</Text>
                 </View>
               </View>
 
@@ -444,15 +535,21 @@ const OrderListPage: React.FC = () => {
                   <Text className={styles.metaText}>
                     大神：{counterpart?.nickname || '待匹配'}
                   </Text>
-                  {!order.service.is_gift && <Text className={styles.metaText}>局数：{order.game_rounds}局</Text>}
+                  {!order.service.is_gift && <Text className={styles.metaText}>{order.roulette_result?.name ? '转盘服务目标：1 个' : `局数：${order.game_rounds}局`}</Text>}
                   <Text className={styles.createTime}>下单时间：{formatDateTime(order.created_at)}</Text>
                 </View>
                 <View className={styles.priceBlock}>
                   <Text className={styles.price}>{formatXaCoin(order.amount ?? 0)}币</Text>
-                  <Text className={styles.quantity}>{statusTextMap[displayStatus]}</Text>
+                  <Text className={styles.quantity}>{displayLabel}</Text>
                 </View>
               </View>
 
+              {order.fulfillment && <View className={styles.remarkBlock}><Text className={styles.remarkLabel}>玩法要求</Text><Text className={styles.remarkText}>{order.fulfillment}</Text></View>}
+              {order.gameplay_snapshot?.rules && <View className={styles.remarkBlock}><Text className={styles.remarkLabel}>约定规则</Text><Text className={styles.remarkText}>{order.gameplay_snapshot.rules}</Text></View>}
+              {order.gameplay_snapshot?.pool && order.roulette_result?.name && <>
+                <View className={styles.remarkBlock} onClick={() => setWheelOrderId(wheelOrderId === order.id ? null : order.id)}><Text className={styles.remarkText}>{wheelOrderId === order.id ? '收起本单转盘 ↑' : '查看本单转盘与概率 →'}</Text></View>
+                {wheelOrderId === order.id && <RouletteWheel pool={order.gameplay_snapshot.pool} result={order.roulette_result} />}
+              </>}
               {order.remark && (
                 <View className={styles.remarkBlock}>
                   <Text className={styles.remarkLabel}>备注</Text>
@@ -472,7 +569,7 @@ const OrderListPage: React.FC = () => {
                 onClick={() => setExpandedOrderId(expandedOrderId === order.id ? null : order.id)}
               >
                 <Text>{expandedOrderId === order.id ? '收起订单详情' : '查看订单详情'}</Text>
-                <Icon name={expandedOrderId === order.id ? 'chevron-up' : 'chevron-down'} size={28} color="#007AFF" />
+                <Icon name={expandedOrderId === order.id ? 'chevron-up' : 'chevron-down'} size={24} color="#002fa7" />
               </View>
 
               {expandedOrderId === order.id && (
@@ -501,9 +598,35 @@ const OrderListPage: React.FC = () => {
                     </View>
                   )}
                   <View className={styles.detailRow}>
-                    <Text className={styles.detailLabel}>实付金额</Text>
+                    <Text className={styles.detailLabel}>{partialRefund || refunded ? '原实付金额' : '实付金额'}</Text>
                     <Text className={styles.amountValue}>{formatXaCoin(order.amount)}币</Text>
                   </View>
+                  {(partialRefund || refunded) && <View className={styles.aftersalePanel}>
+                    <Text className={styles.aftersaleTitle}>{partialRefund ? '部分退款已入账' : '退款已入账'}</Text>{order.refund_summary?.amount != null || refunded ? <Text>累计已退 {formatXaCoin(order.refund_summary?.amount ?? order.amount)} 兴安币已退回钱包，实际到账以退款流水为准。</Text> : <Text>退款金额以钱包流水为准。</Text>}
+                    {(order.refund_summary?.remaining_amount != null || refunded) && <Text>订单剩余金额：{formatXaCoin(order.refund_summary?.remaining_amount ?? 0)} 兴安币</Text>}
+                    {order.refund_summary?.records?.length ? <View className={styles.aftersaleHistory}>{order.refund_summary.records.map(record => <View className={styles.aftersaleHistoryItem} key={record.id}>
+                      <Text>退款 #{record.id} · {formatXaCoin(record.amount)} 兴安币</Text><Text>{formatDateTime(record.created_at)}</Text>{record.reason && <Text>退款说明：{record.reason}</Text>}
+                    </View>)}</View> : <>
+                      {(order.refund_summary?.created_at || order.refunded_at) && <Text>退款时间：{formatDateTime(order.refund_summary?.created_at || order.refunded_at || '')}</Text>}
+                      {order.refund_summary?.reason && <Text>退款说明：{order.refund_summary.reason}</Text>}
+                    </>}
+                    <Button className={styles.aftersaleButton} onClick={() => Taro.navigateTo({ url: '/pages/customer/wallet/index' })}>查看退款流水</Button>
+                  </View>}
+                  {(order.can_aftersale || order.aftersale_status || (!order.service.is_gift && order.aftersale_deadline)) && <View className={styles.aftersalePanel}>
+                    <Text className={styles.aftersaleTitle}>售后服务 · {({ OPEN: '处理中', RESOLVED: '已解决', PARTIALLY_REFUNDED: '已部分退款', REFUNDED: '已退款' })[order.aftersale_status || ''] || '可联系订单客服'}</Text>
+                    {order.aftersale_status === 'OPEN' && <Text>售后处理中，等待平台处理结果。</Text>}
+                    {afterSaleLoading && <Text>正在读取售后详情…</Text>}
+                    {afterSale?.reason && <Text>申请说明：{afterSale.reason}</Text>}
+                    {afterSale?.resolution && <Text>处理结果：{afterSale.resolution}</Text>}
+                    {!!afterSaleHistory.length && <View className={styles.aftersaleHistory}>
+                      <Text className={styles.aftersaleTitle}>历史处理记录</Text>
+                      {afterSaleHistory.map((item, index) => <View className={styles.aftersaleHistoryItem} key={item.client_request_id || index}>
+                        <Text>{({ OPEN: '处理中', RESOLVED: '已解决', PARTIALLY_REFUNDED: '已部分退款', REFUNDED: '已退款' })[item.status]} · {formatDateTime(item.resolved_at || item.created_at)}</Text><Text>申请说明：{item.reason}</Text>{item.resolution && <Text>处理结果：{item.resolution}</Text>}
+                      </View>)}
+                    </View>}
+                    {afterSaleError && <><Text>{afterSaleError}</Text><Button className={styles.aftersaleButton} disabled={afterSaleLoading} onClick={() => loadAfterSale(order.id)}>重新加载售后详情</Button></>}
+                    {canAfterSale(order) && <Button className={styles.aftersaleButton} disabled={loading || loadingOrderId !== null} onClick={() => handleAfterSale(order)}>{['RESOLVED', 'PARTIALLY_REFUNDED'].includes(order.aftersale_status || '') ? '重新申请售后' : '提交售后问题'}</Button>}
+                  </View>}
                   {order.evaluation && (
                     <View className={styles.evaluationSummary}>
                       <View className={styles.evaluationHead}>
@@ -524,7 +647,7 @@ const OrderListPage: React.FC = () => {
 
               <View className={styles.orderFooter}>
                 <Text className={styles.hint}>
-                  {statusHintMap[displayStatus] || '如有问题可联系平台客服处理。'}
+                  {partialRefund ? '订单已部分退款，剩余金额及后续售后以订单详情为准。' : statusHintMap[displayStatus] || '如有问题可联系平台客服处理。'}
                 </Text>
                 {renderActions(order)}
               </View>
@@ -535,7 +658,7 @@ const OrderListPage: React.FC = () => {
         {visibleOrders.length === 0 && (
           <View className={styles.empty}>
             <View className={styles.emptyIconWrap}>
-              <Icon name="package" size={80} color="#AEAEB2" />
+              <Icon name="package" size={64} color="#AEAEB2" />
             </View>
             <Text className={styles.emptyTitle}>{getStoredToken() ? '暂无相关订单' : '登录后查看订单'}</Text>
             <Text className={styles.emptyDesc}>
@@ -562,7 +685,7 @@ const OrderListPage: React.FC = () => {
                 <Icon
                   key={n}
                   name="star"
-                  size={56}
+                  size={48}
                   color="#FF9500"
                   fill={n <= evalScore ? '#FF9500' : 'none'}
                   className={styles.starIcon}
@@ -592,6 +715,14 @@ const OrderListPage: React.FC = () => {
           </View>
         </View>
       )}
+      {afterSaleOrder && <View className={styles.evalOverlay}>
+        <View className={styles.evalPanel}>
+          <Text className={styles.evalTitle}>提交订单售后</Text><Text className={styles.evalOrderNo}>订单号：{afterSaleOrder.order_no}</Text>
+          <Text className={styles.evalLabel}>请说明问题，客服处理完成前暂停确认实销。</Text>
+          <Textarea className={styles.evalInput} value={afterSaleReason} maxlength={1000} disabled={loadingOrderId !== null} placeholder='至少2字问题说明' onInput={event => setAfterSaleReason(event.detail.value)} />
+          <View className={styles.evalActions}><Button className={styles.evalCancelBtn} disabled={loadingOrderId !== null} onClick={() => setAfterSaleOrder(null)}>取消</Button><Button className={styles.evalSubmitBtn} disabled={loading || loadingOrderId !== null} onClick={handleSubmitAfterSale}>提交售后</Button></View>
+        </View>
+      </View>}
       {loginSheet}
     </View>
   );

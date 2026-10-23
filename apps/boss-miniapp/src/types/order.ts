@@ -1,4 +1,23 @@
 export type EscortOrderStatus = 'pending' | 'grabbed' | 'in_progress' | 'completed' | 'cancelled';
+export interface OrderRefundRecord {
+  id: number;
+  amount: number;
+  created_at: string;
+  reason: string;
+  client_request_id?: string;
+  recovered_amount?: number;
+}
+export interface OrderRefundSummary {
+  id?: number;
+  amount: number;
+  original_amount?: number;
+  remaining_amount?: number;
+  refund_count?: number;
+  recovered_amount?: number;
+  created_at?: string;
+  reason?: string;
+  records?: OrderRefundRecord[];
+}
 
 export interface OrderUser {
   id: number;
@@ -7,6 +26,11 @@ export interface OrderUser {
 }
 
 export interface ServiceInfo {
+  service_type?: string;
+  gameplay?: number; gameplay_name?: string; gameplay_kind?: string;
+  gameplay_theme?: string; gameplay_cover_url?: string;
+  platform?: string; platform_name?: string; security_level?: string; security_level_name?: string; rules?: string;
+  roulette_pool?: import('@/services/gameplay').RouletteTarget[];
   id: number;
   name: string;
   description: string;
@@ -14,6 +38,14 @@ export interface ServiceInfo {
   category?: string;
   cover_url?: string;
   images?: string[];
+  introduction_images?: string[];
+  details_html?: string;
+  details_images?: string[];
+  variants?: ServiceInfo[];
+  catalog_family?: string;
+  catalog_variant?: string;
+  is_addon?: boolean;
+  purchase_mode?: string;
   highlights?: string[];
   sales_count?: number;
   is_favorited?: boolean;
@@ -25,6 +57,9 @@ export interface ServiceInfo {
 }
 
 export interface EscortOrder {
+  fulfillment?: string;
+  gameplay_snapshot?: { name: string; platform_name: string; security_level_name: string; rules: string; pool?: import('@/services/gameplay').RouletteTarget[] };
+  roulette_result?: { index: number; name: string; description: string };
   id: number;
   order_no: string;
   status: EscortOrderStatus;
@@ -34,6 +69,7 @@ export interface EscortOrder {
   boss_discount: number;
   promo_discount: number;
   coupon_discount: number;
+  provider_gender?: 'ANY' | 'MALE' | 'FEMALE';
   game_rounds: number;
   game_region: string;
   game_nickname: string;
@@ -62,6 +98,11 @@ export interface EscortOrder {
   completed_at: string | null;
   cancelled_at: string | null;
   refunded_at: string | null;
+  aftersale_deadline?: string | null;
+  aftersale_status?: 'OPEN' | 'RESOLVED' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | '';
+  can_aftersale?: boolean;
+  refund_summary?: OrderRefundSummary | null;
+  consumption_confirmed_at?: string | null;
   cancel_reason: string;
   auto_cancel_at: string | null;
   reject_count: number;

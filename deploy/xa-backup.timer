@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily XA backup at 03:30 China time
+
+[Timer]
+OnCalendar=*-*-* 19:30:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+Unit=xa-backup.service
+
+[Install]
+WantedBy=timers.target

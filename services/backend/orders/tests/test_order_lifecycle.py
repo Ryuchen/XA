@@ -35,7 +35,7 @@ class CrossEndOrderLifecycleTest(APITestCase):
 
         # 老板只能取消自己的已支付待接单订单。
         boss_list = self.client.get('/api/orders/orders/?status=pending')
-        self.assertEqual(boss_list.data['data'][0]['allowed_actions'], ['CANCEL'])
+        self.assertEqual(boss_list.data['data'][0]['allowed_actions'], ['CANCEL', 'SELECT_PROVIDER'])
 
         # 陪玩看到后端授权的抢单动作。
         self.client.force_authenticate(self.provider)
@@ -44,6 +44,10 @@ class CrossEndOrderLifecycleTest(APITestCase):
 
         grabbed = self.client.post(f'/api/orders/orders/{order.id}/grab/')
         self.assertEqual(grabbed.data['code'], 0)
+        self.client.force_authenticate(self.customer)
+        application_id = grabbed.data['data']['my_applications'][0]['id']
+        self.assertEqual(self.client.post(f'/api/orders/orders/{order.id}/applications/{application_id}/select/').data['code'],0)
+        self.client.force_authenticate(self.provider)
         order.refresh_from_db()
         self.assertEqual(order.status, Order.Status.GRABBED)
         self.assertIsNone(order.auto_cancel_at)
@@ -63,7 +67,11 @@ class CrossEndOrderLifecycleTest(APITestCase):
 
         # force_authenticate 会复用同一 User 实例，刷新其反向一对一缓存以模拟真实请求重新鉴权。
         self.provider.refresh_from_db()
-        self.assertEqual(self.client.post(f'/api/orders/orders/{order.id}/grab/').data['code'], 0)
+        reapplied = self.client.post(f'/api/orders/orders/{order.id}/grab/')
+        self.assertEqual(reapplied.data['code'], 0)
+        self.client.force_authenticate(self.customer)
+        self.assertEqual(self.client.post(f"/api/orders/orders/{order.id}/applications/{reapplied.data['data']['my_applications'][0]['id']}/select/").data['code'],0)
+        self.client.force_authenticate(self.provider)
         self.assertEqual(self.client.post(f'/api/orders/orders/{order.id}/start/').data['code'], 0)
         in_service = self.client.get('/api/orders/orders/?status=in_progress')
         self.assertEqual(in_service.data['data'][0]['allowed_actions'], ['COMPLETE'])

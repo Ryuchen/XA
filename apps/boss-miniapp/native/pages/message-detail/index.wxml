@@ -1,0 +1,19 @@
+<view class="page message-detail-page">
+  <view wx:if="{{!logged}}" class="section-surface message-login"><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看</button></view>
+
+  <state-view wx:if="{{logged}}" loading="{{loading}}" error="{{error}}" bind:retry="load" />
+  <block wx:if="{{logged && item && !error}}">
+    <view class="section-surface message-heading">
+      <view class="message-meta"><text class="message-type">{{item.type === 'ORDER' ? '订单通知' : item.type === 'SYSTEM' ? '系统通知' : item.type === 'SUPPORT' ? '客服通知' : item.type === 'PROMOTION' ? '活动通知' : '平台通知'}}</text><text class="message-read">已读</text></view>
+      <text class="message-title" role="heading" aria-level="1" selectable>{{item.title}}</text>
+      <view class="message-time"><text class="time-label">发送时间</text><text>{{item.dateText}}</text></view>
+    </view>
+    <view class="section-surface message-body">
+      <text class="message-section-title" role="heading" aria-level="2">通知内容</text>
+      <text wx:if="{{item.detail || item.preview}}" class="message-content" selectable>{{item.detail || item.preview}}</text>
+      <text wx:else class="message-content message-content-empty">暂无通知正文</text>
+    </view>
+    <view wx:if="{{target}}" class="section-surface message-action"><text class="related-title">相关内容</text><button class="xa-button button-secondary related-button" bindtap="action" hover-class="xa-button-hover">{{item.related_order_id ? '查看关联订单' : '查看相关内容'}}</button></view>
+  </block>
+</view>
+<bottom-navigation/>

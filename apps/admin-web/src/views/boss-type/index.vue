@@ -40,12 +40,12 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑老板分级' : '新增老板分级'" width="560px" class="bt-dialog">
-    <el-form :model="form" label-width="82px" label-position="right">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑老板分级' : '新增老板分级'" width="720px" class="bt-dialog ap-modal">
+    <el-form :model="form"   class="ap-modal-form ap-form-grid" label-position="top">
       <div class="bt-form-section">
         <p class="bt-section-title">基础信息</p>
         <el-form-item label="分级名称"><el-input v-model="form.name" placeholder="如：黄金老板" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填" /></el-form-item>
+        <el-form-item label="备注" class="ap-field--full"><el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填" /></el-form-item>
       </div>
 
       <div class="bt-form-section">
@@ -170,29 +170,6 @@ async function onDelete(row: any) {
 .bt-color-text {
   font-size: 12px;
   color: var(--muted-foreground);
-}
-.bt-dialog :deep(.el-dialog__body) {
-  padding-top: 8px;
-}
-.bt-form-section {
-  padding: 4px 0 2px;
-}
-.bt-form-section + .bt-form-section {
-  margin-top: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-.bt-section-title {
-  margin: 0 0 14px;
-  padding-left: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--foreground);
-  line-height: 1.2;
-  border-left: 3px solid var(--primary);
-}
-.bt-form-section :deep(.el-form-item) {
-  margin-bottom: 16px;
 }
 
 </style>

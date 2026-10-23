@@ -1,0 +1,50 @@
+<view class="page lottery-page {{simpleMotion ? 'simple-motion' : ''}}">
+  <view class="page-heading lottery-heading">
+    <text class="eyebrow">兴安俱乐部 · 积分好礼</text>
+    <text class="title">{{campaign.name || '幸运转盘'}}</text>
+    <view class="between"><text class="muted">我的积分 <text class="points-value">{{points}}</text></text><button class="xa-button button-quiet" bindtap="records" hover-class="xa-button-hover">中奖记录 ›</button></view>
+  </view>
+  <state-view wx:if="{{loading || error}}" loading="{{loading}}" error="{{error}}" bind:retry="load"/>
+  <block wx:if="{{campaign && !loading && !error}}">
+    <view wx:if="{{campaign.pity.enabled}}" class="section-surface pity-section">
+      <view class="between"><text class="pity-label">{{campaign.pity.target_name || '68 体验单'}}保底</text><text class="pity-counter">{{campaign.pity.count}} / {{campaign.pity.limit}}</text></view>
+      <view class="pity-track"><view class="pity-fill" style="width:{{campaign.pity.percent}}%"></view></view>
+      <view class="between pity-caption"><text>最多再 <text class="pity-remaining">{{campaign.pity.remaining}}</text> 抽获得</text><text>本活动单抽、十连共享进度</text></view>
+      <text class="small muted pity-note">连续 {{campaign.pity.limit}} 抽必得；提前获得后重新累计。</text>
+    </view>
+    <view class="section-surface wheel-section {{phase === 'summon' ? 'is-summoning' : ''}} rarity-{{focusRarity}}">
+      <view class="between section-top"><text class="section-title">每一抽，都有好礼</text><text class="small muted">十连至少 1 份非积分奖</text></view>
+      <view class="wheel-wrap" style="width:{{size}}px;height:{{size}}px">
+        <view class="summon-ring"></view><view class="pointer"></view>
+        <view class="wheel-rotation" style="transform:rotate({{rotation}}deg)"><canvas canvas-id="wheel" class="wheel" style="width:{{size}}px;height:{{size}}px"/></view>
+        <view class="wheel-center"><text class="wheel-mark">XA</text><text class="wheel-center-label">{{phase === 'request' ? '结果确认中' : phase === 'summon' ? '好运将至' : '兴安好礼'}}</text></view>
+      </view>
+      <view class="draw-actions">
+        <button class="xa-button draw-button draw-single" bindtap="spin" disabled="{{busy || retryPending || !campaign.enabled || campaign.daily_remaining === 0}}" hover-class="xa-button-hover"><text>抽 1 次</text><text class="draw-cost">{{campaign.point_cost}} 积分</text></button>
+        <button class="xa-button draw-button draw-ten" bindtap="ten" disabled="{{busy || retryPending || !campaign.enabled || !campaign.ten_guarantee.available || (campaign.daily_remaining !== null && campaign.daily_remaining < 10)}}" hover-class="xa-button-hover"><text>抽 10 次</text><text class="draw-cost">{{campaign.ten_draw_cost}} 积分</text></button>
+      </view>
+      <text wx:if="{{!campaign.enabled}}" class="muted centered">{{campaign.ten_guarantee.unavailable_reason || '奖池准备中，开放后即可参与'}}</text>
+      <text wx:elif="{{!campaign.ten_guarantee.available}}" class="muted centered">{{campaign.ten_guarantee.unavailable_reason}}</text>
+      <text wx:if="{{campaign.daily_remaining !== null}}" class="muted centered">今日剩余 {{campaign.daily_remaining}} 次 · 十连消耗 10 次机会</text>
+      <text wx:if="{{phase === 'request'}}" class="centered request-status">正在确认{{drawCount === 10 ? '十连' : '单抽'}}结果，请勿重复操作…</text>
+      <view class="motion-options"><label class="motion-toggle"><switch checked="{{simpleMotion}}" bindchange="toggleMotion" color="#136398"/><text>简化动画</text></label><button wx:if="{{phase === 'summon' || phase === 'reveal'}}" class="xa-button skip-button" bindtap="skipAnimation" hover-class="xa-button-hover">跳过动画 ›</button></view>
+    </view>
+    <view wx:if="{{drawError}}" class="section-surface draw-error"><text>{{drawError}}</text><view class="error-actions"><button wx:if="{{credentialError}}" class="xa-button button-secondary" bindtap="reloadCredential" hover-class="xa-button-hover">重新读取凭证</button><button wx:elif="{{retryPending}}" class="xa-button button-secondary" bindtap="retryDraw" disabled="{{busy}}" hover-class="xa-button-hover">重试同一{{retryCount === 10 ? '十连' : '单抽'}}</button><button class="xa-button button-quiet" bindtap="records" hover-class="xa-button-hover">查看中奖记录 ›</button></view></view>
+    <view wx:if="{{resultCount && phase !== 'summon'}}" id="lottery-results" class="section-surface result-section {{resultRare ? 'has-ssr' : ''}}">
+      <view class="between result-heading"><text class="section-title">{{resultCount === 10 ? '本次十连奖品' : '本次获得'}}</text><text class="small muted">{{revealed}} / {{resultCount}} 已揭晓</text></view>
+      <text wx:if="{{resultCount === 10}}" class="ten-result-note">已获 {{resultNonPoints}} 份非积分奖</text>
+      <text wx:if="{{resultPity}}" class="pity-result-note">本次触发 {{campaign.pity.limit}} 抽保底</text>
+      <text wx:if="{{resultTenGuarantee}}" class="ten-result-note">第 10 抽触发十连保底 · 非积分奖励</text>
+      <view class="result-grid {{resultCount === 1 ? 'result-single' : ''}}">
+        <view wx:for="{{results}}" wx:key="id" class="reward-card rarity-{{item.rarity}} {{index < revealed ? 'is-revealed' : 'is-concealed'}}">
+          <block wx:if="{{index < revealed}}"><view class="between reward-top"><text class="reward-rarity">{{item.rarityLabel}}</text><text class="reward-number">{{item.number}}</text></view><text class="reward-name">{{item.name}}</text><view class="between reward-meta"><text>{{item.statusLabel}}</text><text wx:if="{{item.is_pity}}" class="reward-pity">240 抽保底</text><text wx:if="{{item.is_ten_guarantee}}" class="reward-ten-guarantee">十连保底</text></view><button class="xa-button claim-button" data-id="{{item.claim_id}}" bindtap="claim" hover-class="xa-button-hover">{{item.claimLabel}} ›</button></block>
+          <block wx:else><text class="concealed-mark">XA</text><text class="concealed-label">等待揭晓 · {{item.number}}</text></block>
+        </view>
+      </view>
+      <text class="small muted result-note">积分奖励自动到账；其他奖励请点击领取。所有结果已保存至中奖记录。</text>
+    </view>
+    <view class="panel"><text class="section-title">本期奖池 · 基础概率</text><view class="prize-row" wx:for="{{campaign.prizes}}" wx:key="id"><view class="prize-name"><text class="prize-rarity rarity-{{item.rarity}}">{{item.rarity}}</text><text>{{item.name}}</text></view><text class="muted small">{{item.probabilityText}}%</text></view><text class="subtitle small">转盘分区仅用于展示，基础概率以公示为准。单抽、十连共享 240 抽体验单保底，获得体验单后重新累计；十连中余下抽数继续累计。</text><text class="subtitle small">十连至少获得 1 份非积分奖。若前 9 抽均为积分奖，第 10 抽按正基础权重从非积分奖中抽取；基础概率为 0 的奖品不参与十连兜底。若同时触发 240 抽保底，优先获得 68 体验单；自然抽中体验单也计入本次十连保底。</text></view>
+    <view class="panel" wx:if="{{campaign.rules}}"><text class="section-title">参与说明</text><text class="rules">{{campaign.rules}}</text></view>
+  </block>
+</view>
+<bottom-navigation/>

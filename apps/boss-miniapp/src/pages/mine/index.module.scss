@@ -3,16 +3,16 @@
 .container {
   min-height: 100vh;
   background: $color-bg-page;
-  padding: 30rpx $page-padding 150rpx;
+  padding: 32rpx $page-padding 150rpx;
 }
 
 .header {
-  background: linear-gradient(145deg,#17171c,#393440 62%,#51455b);
-  padding: 34rpx;
-  border-radius: 36rpx;
+  background: linear-gradient(145deg,#17171c,#393440 62%,var(--xa-color-text-secondary));
+  padding: 32rpx;
+  border-radius: 32rpx;
   box-shadow: 0 18rpx 44rpx rgba(30,25,36,.19);
 }
-.eyebrow { display:block; margin-bottom:18rpx; font-size:20rpx; font-weight:650; letter-spacing:2rpx; color:rgba(255,255,255,.5); }
+.eyebrow { display:block; margin-bottom:16rpx; font-size:22rpx; font-weight:650; letter-spacing:2rpx; color:rgba(255,255,255,.5); }
 
 .headerTop {
   display: flex;
@@ -77,9 +77,9 @@
 .memberBadge {
   display: inline-flex;
   align-items: center;
-  gap: 6rpx;
+  gap: 8rpx;
   margin-top: $spacing-sm;
-  padding: 4rpx $spacing-sm;
+  padding: 8rpx $spacing-sm;
   border-radius: $radius-sm;
   background: rgba(255,255,255,.13);
 }
@@ -87,7 +87,7 @@
 .memberBadgeText {
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: #fff;
+  color: var(--xa-color-surface-card);
   line-height: 1;
 }
 
@@ -135,9 +135,9 @@
 }
 
 .orderCard {
-  margin: 22rpx 0 0;
+  margin: 24rpx 0 0;
   background: $color-bg-card;
-  border-radius: 28rpx;
+  border-radius: 24rpx;
   padding: $spacing-lg;
   box-shadow: $shadow-card;
   border: 1rpx solid rgba(0, 0, 0, 0.04);
@@ -161,7 +161,7 @@
 .viewAll {
   display: flex;
   align-items: center;
-  gap: 2rpx;
+  gap: 4rpx;
   flex-shrink: 0;
 }
 
@@ -194,9 +194,9 @@
 .orderBadge {
   position: absolute;
   top: -8rpx;
-  right: -14rpx;
-  min-width: 30rpx;
-  height: 30rpx;
+  right: -16rpx;
+  min-width: 32rpx;
+  height: 32rpx;
   padding: 0 8rpx;
   display: flex;
   align-items: center;
@@ -215,9 +215,9 @@
 }
 
 .profileCard {
-  margin: 18rpx 0 0;
+  margin: 24rpx 0 0;
   background: $color-bg-card;
-  border-radius: 28rpx;
+  border-radius: 24rpx;
   padding: $spacing-lg;
   box-shadow: $shadow-card;
   border: 1rpx solid rgba(0, 0, 0, 0.04);
@@ -266,7 +266,7 @@
 }
 
 .serviceCard {
-  margin: 18rpx 0 0;
+  margin: 24rpx 0 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: $spacing-md;
@@ -274,7 +274,7 @@
 
 .serviceItem {
   background: $color-bg-card;
-  border-radius: 28rpx;
+  border-radius: 24rpx;
   padding: $spacing-lg;
   box-shadow: $shadow-card;
   border: 1rpx solid rgba(0, 0, 0, 0.04);
@@ -297,9 +297,9 @@
 }
 
 .menuCard {
-  margin: 18rpx 0 0;
+  margin: 24rpx 0 0;
   background: $color-bg-card;
-  border-radius: 28rpx;
+  border-radius: 24rpx;
   overflow: hidden;
   box-shadow: $shadow-card;
   border: 1rpx solid rgba(0, 0, 0, 0.04);
@@ -328,7 +328,7 @@
   align-items: center;
   justify-content: center;
   margin-right: $spacing-md;
-  background: rgba(0, 122, 255, 0.08);
+  background: rgba(0, 47, 167, 0.08);
   border-radius: $radius-md;
   flex-shrink: 0;
 }

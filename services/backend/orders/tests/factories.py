@@ -66,6 +66,7 @@ def make_escort_profile(user, **kwargs):
     """为陪玩用户创建陪玩档案。"""
     fields = {
         'display_name': kwargs.pop('display_name', user.nickname or user.username),
+        'is_verified': True,
     }
     fields.update(kwargs)
     return EscortProfile.objects.create(user=user, **fields)
@@ -81,6 +82,7 @@ def make_provider(with_profile=True, **profile_kwargs):
 
 def make_service(name='上分陪玩', price=10000, **kwargs):
     """创建服务项（price 单位：分）。"""
+    kwargs.setdefault('allows_discount_coupons', True)
     return ServiceItem.objects.create(name=name, price=price, **kwargs)
 
 

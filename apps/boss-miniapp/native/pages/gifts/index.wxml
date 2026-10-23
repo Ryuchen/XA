@@ -1,0 +1,81 @@
+<view class="page gifts-page">
+  <view class="gift-store-heading page-heading">
+    <view class="gift-intro"><text class="eyebrow">兴安礼物单</text><text class="title" role="heading" aria-level="1">把心意，送给 TA</text><text class="subtitle">常规好礼 · 节日限定 · 专属冠名</text></view>
+    <image src="{{giftMomentArt}}" mode="aspectFit" aria-hidden="true"/>
+  </view>
+  <view wx:if="{{!logged}}" class="panel"><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后赠送礼物</button></view>
+  <block wx:elif="{{receipt}}">
+    <view class="panel receipt-panel">
+      <view class="receipt-mark">已送达</view>
+      <view class="section-title">{{receipt.recipient}} 收到了你的礼物</view>
+      <text class="receipt-name">{{receipt.name}}</text>
+      <view class="price">{{receipt.amount}}<text class="small"> 兴安币</text></view>
+      <text class="small muted receipt-no">{{receipt.orderNo}}</text>
+      <view wx:if="{{receipt.namingDays}}" class="naming-success">冠名时长已累计增加 {{receipt.namingDays}} 天</view>
+      <view class="receipt-actions"><button class="xa-button button-secondary" bindtap="again" hover-class="xa-button-hover">再送一份</button><button class="xa-button button" bindtap="viewReceipt" hover-class="xa-button-hover">查看礼物单</button></view>
+    </view>
+  </block>
+  <block wx:else>
+    <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
+    <block wx:if="{{logged && !error}}">
+      <view class="panel recipient-panel">
+        <view class="gift-section-heading"><text class="section-title">收礼陪玩</text><text class="section-hint">这份心意，送给谁</text></view>
+        <view wx:if="{{browse}}" class="recipient-search">
+          <image src="/assets/icons/search.png" mode="aspectFit" aria-hidden="true"/>
+          <input class="input" value="{{recipientSearch}}" bindconfirm="searchRecipient" confirm-type="search" aria-label="搜索收礼陪玩昵称" placeholder="搜索陪玩昵称" disabled="{{busy}}"/>
+        </view>
+        <picker range="{{recipients}}" range-key="nickname" value="{{recipientIndex < 0 ? 0 : recipientIndex}}" bindchange="recipient" disabled="{{busy || !recipients.length || loading}}">
+          <view class="recipient-choice">
+            <image class="recipient-icon" src="/assets/icons/headphones.png" mode="aspectFit" aria-hidden="true"/>
+            <text class="recipient-name {{!recipientName ? 'recipient-placeholder' : ''}}">{{recipientName || (recipients.length ? '请选择收礼陪玩' : '暂无符合条件的陪玩')}}</text>
+            <view class="recipient-change"><text>{{recipientName ? '更换' : '选择'}}</text><image src="/assets/icons/chevron.png" mode="aspectFit" aria-hidden="true"/></view>
+          </view>
+        </picker>
+        <view wx:if="{{sourceOrder}}" class="small muted source-order">来自已完成服务 {{sourceOrder.order_no}}</view>
+      </view>
+
+      <view class="panel gift-catalog">
+        <view class="gift-section-heading"><text class="section-title">挑选心意</text><text class="section-hint">可多选 · 可重复赠送</text></view>
+        <scroll-view scroll-x class="gift-category-scroll" show-scrollbar="{{false}}">
+          <view class="chips"><button wx:for="{{categories}}" wx:key="*this" class="xa-button chip {{category === item ? 'chip-active' : ''}}" data-name="{{item}}" bindtap="category" disabled="{{busy}}" aria-pressed="{{category === item}}" hover-class="xa-button-hover">{{item}}</button></view>
+        </scroll-view>
+        <view wx:if="{{!loading && !gifts.length}}" class="empty">礼物正在准备中，上架后即可赠送</view>
+        <view class="gift-grid">
+          <view wx:for="{{visibleGifts}}" wx:key="id" class="gift-tile {{item.qty ? 'gift-selected' : ''}}">
+            <button class="xa-button gift-pick" data-id="{{item.id}}" bindtap="select" disabled="{{busy || loading}}" aria-label="添加{{item.name}}" hover-class="xa-button-hover">
+              <view class="gift-art"><image wx:if="{{item.cover}}" src="{{item.cover}}" mode="aspectFit" aria-hidden="true"/><image wx:else src="{{giftMomentArt}}" mode="aspectFit" aria-hidden="true"/></view>
+              <text wx:if="{{item.festival}}" class="gift-festival">{{item.festival}}</text>
+              <text class="gift-name">{{item.displayName}}</text>
+              <text class="gift-price">{{item.priceText}}<text class="small"> 币</text></text>
+              <text class="gift-days">{{item.namingDays ? '冠名 ' + item.namingDays + ' 天 / 件' : '送一份欣赏与心意'}}</text>
+            </button>
+            <view class="gift-quantity">
+              <button class="xa-button quantity-button" data-id="{{item.id}}" data-delta="-1" bindtap="changeQuantity" disabled="{{busy || !item.qty}}" aria-label="减少{{item.name}}" hover-class="xa-button-hover"><text>−</text></button>
+              <text class="quantity-value">{{item.qty || 0}}</text>
+              <button class="xa-button quantity-button" data-id="{{item.id}}" data-delta="1" bindtap="changeQuantity" disabled="{{busy || item.qty >= maxQuantity}}" aria-label="增加{{item.name}}" hover-class="xa-button-hover"><text>＋</text></button>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{selectedCount}}" class="panel gift-summary">
+        <view class="gift-section-heading"><text class="section-title">心意清单</text><text class="summary-count">已选 {{selectedCount}} 件</text></view>
+        <view class="basket-lines"><view wx:for="{{selectedLines}}" wx:key="id" class="basket-line"><text>{{item.displayName}}<text class="basket-quantity"> × {{item.qty}}</text></text><text>{{item.lineTotal}} 币</text></view></view>
+        <view wx:if="{{namingDays}}" class="naming-editor">
+          <view class="naming-heading"><image src="/assets/icons/award.png" mode="aspectFit" aria-hidden="true"/><text class="label">专属冠名</text><text class="naming-summary">累计 {{namingDays}} 天</text></view>
+          <input class="input" value="{{namingTitle}}" bindinput="naming" maxlength="30" aria-label="专属冠名，1至30字" placeholder="填写 1～30 字，在陪玩列表展示" disabled="{{busy}}"/>
+          <text class="small muted naming-help">每件礼物的时长按数量累加。已有冠名从到期日续延，已到期则从赠送时开始。</text>
+        </view>
+        <view class="balance-row"><text class="muted">可用余额</text><text>{{balanceText}} 兴安币</text></view>
+        <view wx:if="{{!recipientName}}" class="error small">请先选择收礼陪玩</view>
+        <view wx:elif="{{!walletActive}}" class="error small">钱包当前不可用，请联系客服。</view>
+        <view wx:elif="{{total > balance}}" class="balance-help"><text class="error small">余额不足，请联系客服充值。</text><button class="xa-button button-quiet" bindtap="support" hover-class="xa-button-hover">联系客服<image src="/assets/icons/chevron.png" mode="aspectFit" aria-hidden="true"/></button></view>
+      </view>
+    </block>
+  </block>
+</view>
+<view wx:if="{{logged && !receipt && !error && gifts.length}}" class="gift-footer">
+  <view class="gift-total"><text class="small muted">已选 {{selectedCount}} 件 · 合计</text><view class="price">{{totalText}}<text class="small"> 兴安币</text></view></view>
+  <button class="xa-button button" bindtap="send" loading="{{busy}}" disabled="{{busy || loading || !enough || (namingDays && !namingTitle)}}" hover-class="xa-button-hover">送给 TA</button>
+</view>
+<bottom-navigation/>

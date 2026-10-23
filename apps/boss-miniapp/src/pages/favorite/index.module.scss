@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  padding: $spacing-md $page-padding $spacing-2xl;
+  padding: $spacing-lg $page-padding $spacing-2xl;
   background: $color-bg-page;
 }
 
@@ -14,7 +14,7 @@
 
 .card {
   position: relative;
-  width: 332rpx;
+  width: 331rpx;
   margin-bottom: $spacing-md;
   border-radius: $radius-lg;
   overflow: hidden;

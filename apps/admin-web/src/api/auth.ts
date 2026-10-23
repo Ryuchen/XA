@@ -3,6 +3,8 @@ import { request } from './request'
 export interface LoginPayload {
   username: string
   password: string
+  otpChallenge?: string
+  otpCode?: string
 }
 
 export interface Profile {
@@ -18,9 +20,15 @@ export interface Profile {
 }
 
 export interface LoginResult {
-  token: string
-  refresh: string
-  profile: Profile
+  requiresOTP?: boolean
+  requiresOTPSetup?: boolean
+  otpChallenge?: string
+  otpSecret?: string
+  otpQr?: string
+  recoveryCodes?: string[]
+  token?: string
+  refresh?: string
+  profile?: Profile
 }
 
 export interface RefreshResult {
@@ -37,4 +45,8 @@ export const authApi = {
       method: 'post',
       data: { refresh },
     }),
+}
+
+export class OtpLoginStep extends Error {
+  constructor(public data: LoginResult, public revision: number) { super('请完成动态验证码验证') }
 }

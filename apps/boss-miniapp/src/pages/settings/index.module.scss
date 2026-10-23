@@ -41,7 +41,7 @@
 .gameTabTrack {
   display: inline-flex;
   gap: $spacing-sm;
-  padding: 2rpx $spacing-xs;
+  padding: 4rpx $spacing-xs;
 }
 
 .gameTab {
@@ -49,7 +49,7 @@
   align-items: center;
   justify-content: center;
   min-width: 128rpx;
-  height: 60rpx;
+  height: 64rpx;
   padding: 0 $spacing-md;
   border: 1rpx solid $color-border;
   border-radius: $radius-round;
@@ -95,7 +95,7 @@
   align-items: center;
   gap: $spacing-md;
   padding: $spacing-md $card-padding;
-  min-height: 100rpx;
+  min-height: 96rpx;
   box-sizing: border-box;
 
   & + & {
@@ -105,7 +105,7 @@
 
 .formLabel {
   flex-shrink: 0;
-  width: 140rpx;
+  width: 144rpx;
   color: $color-text-primary;
   font-size: $font-size-md;
 }
@@ -113,7 +113,7 @@
 .formInput {
   flex: 1;
   min-width: 0;
-  height: 60rpx;
+  height: 64rpx;
   color: $color-text-primary;
   font-size: $font-size-md;
   text-align: right;

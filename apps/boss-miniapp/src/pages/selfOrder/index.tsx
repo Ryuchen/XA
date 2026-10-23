@@ -167,12 +167,12 @@ const SelfOrderPage: React.FC = () => {
                   {category.icon_url ? (
                     <Image className={styles.gameIconImage} src={resolveImageUrl(category.icon_url)} mode="aspectFit" />
                   ) : (
-                    <Icon name="gamepad-2" size={44} color={gameCategoryId === category.id ? '#007AFF' : '#6E6E73'} />
+                    <Icon name="gamepad-2" size={48} color={gameCategoryId === category.id ? '#002fa7' : '#6E6E73'} />
                   )}
                 </View>
                 <Text className={styles.gameName}>{category.name}</Text>
                 <Text className={styles.optionHint}>{serviceCountByCategory.get(category.id) || 0} 个项目</Text>
-                {gameCategoryId === category.id && <Icon name="check-circle" size={36} color="#007AFF" />}
+                {gameCategoryId === category.id && <Icon name="check-circle" size={40} color="#002fa7" />}
               </View>
             ))}
             {gameCategories.length === 0 && <Empty icon="🎮" title="暂无游戏类目" desc="请先在管理后台配置游戏类目和服务项目" />}
@@ -193,7 +193,7 @@ const SelfOrderPage: React.FC = () => {
                   <Text className={styles.optionDesc}>{service.description || '专业陪玩服务'}</Text>
                   <Text className={styles.price}>{formatXaCoin(service.price)}兴安币/次</Text>
                 </View>
-                {serviceId === service.id && <Icon name="check-circle" size={38} color="#007AFF" />}
+                {serviceId === service.id && <Icon name="check-circle" size={40} color="#002fa7" />}
               </View>
             ))}
           </View>
@@ -205,12 +205,12 @@ const SelfOrderPage: React.FC = () => {
               className={`${styles.platformCard} ${dispatchMode === 'platform' ? styles.selected : ''}`}
               onClick={() => { setDispatchMode('platform'); setProviderId(null); }}
             >
-              <View className={styles.platformIcon}><Icon name="sparkles" size={40} color="#007AFF" /></View>
+              <View className={styles.platformIcon}><Icon name="sparkles" size={40} color="#002fa7" /></View>
               <View className={styles.optionMain}>
                 <Text className={styles.optionName}>不指定陪玩</Text>
                 <Text className={styles.optionDesc}>进入抢单池，由符合条件的陪玩接单或客服安排</Text>
               </View>
-              {dispatchMode === 'platform' && <Icon name="check-circle" size={38} color="#007AFF" />}
+              {dispatchMode === 'platform' && <Icon name="check-circle" size={40} color="#002fa7" />}
             </View>
             {escorts.map(escort => (
               <View
@@ -224,7 +224,7 @@ const SelfOrderPage: React.FC = () => {
                   <Text className={styles.optionDesc}>{escort.rank} · 评分 {escort.rating} · 已接 {escort.orderCount}</Text>
                   <Text className={styles.price}>{formatXaCoin(escort.pricePerHour)}兴安币/小时</Text>
                 </View>
-                {providerId === escort.id && <Icon name="check-circle" size={38} color="#007AFF" />}
+                {providerId === escort.id && <Icon name="check-circle" size={40} color="#002fa7" />}
               </View>
             ))}
             {escorts.length === 0 && (
@@ -246,7 +246,7 @@ const SelfOrderPage: React.FC = () => {
                   <Text className={styles.optionName}>{contact.name}</Text>
                   <Text className={styles.optionDesc}>{contact.tips || contact.company || '负责订单进度与售后跟进'}</Text>
                 </View>
-                {supportContactId === contact.id && <Icon name="check-circle" size={38} color="#007AFF" />}
+                {supportContactId === contact.id && <Icon name="check-circle" size={40} color="#002fa7" />}
               </View>
             ))}
             {contacts.length === 0 && <Empty icon="💬" title="暂无可选客服" desc="请先在管理后台配置启用的客服名片" />}

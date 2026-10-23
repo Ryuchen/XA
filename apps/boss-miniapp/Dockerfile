@@ -18,10 +18,12 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/boss-miniapp/package.json apps/boss-miniapp/package.json
 COPY packages/design-system/package.json packages/design-system/package.json
+COPY packages/money/package.json packages/money/package.json
 RUN pnpm install --filter xa-boss-miniapp... --frozen-lockfile
 
 COPY apps/boss-miniapp apps/boss-miniapp
 COPY packages/design-system packages/design-system
+COPY packages/money packages/money
 # 老板端 H5 产物输出到 dist-h5（见 config/index.ts）。
 RUN pnpm --filter xa-boss-miniapp run build:h5
 

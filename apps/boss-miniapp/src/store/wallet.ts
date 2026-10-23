@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { fetchWalletInfo } from '@/services/wallet';
-import { getStoredToken } from '@/utils/auth';
+import { getSessionRevision, getStoredToken } from '@/utils/auth';
 import { TTL, dedupe, isFresh } from './shared';
 
 /**
@@ -30,12 +30,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   load: async (force = false) => {
     if (!getStoredToken()) return 0;
+    const revision = getSessionRevision();
     const { balance, fetchedAt } = get();
     if (!force && isFresh(fetchedAt, TTL.ACCOUNT)) return balance;
 
     set({ loading: true });
     try {
-      const res = await dedupe('wallet:info', fetchWalletInfo);
+      const res = await dedupe('wallet:info:' + revision, fetchWalletInfo);
+      if (revision !== getSessionRevision()) return 0;
       if (res.code === 0 && res.data) {
         set({ balance: res.data.balance, fetchedAt: Date.now() });
         return res.data.balance;
@@ -44,7 +46,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     } catch {
       return get().balance;
     } finally {
-      set({ loading: false });
+      if (revision === getSessionRevision()) set({ loading: false });
     }
   },
 

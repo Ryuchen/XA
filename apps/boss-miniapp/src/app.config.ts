@@ -1,6 +1,7 @@
 export default defineAppConfig({
   pages: [
     'pages/home/index',
+    'pages/gameplay/index',
     'pages/companions/index',
     'pages/selfOrder/index',
     'pages/login/index',
@@ -36,7 +37,7 @@ export default defineAppConfig({
     custom: false,
     color: '#999999',
     selectedColor: '#6C5CE7',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fffdf5',
     borderStyle: 'black',
     list: [
       {

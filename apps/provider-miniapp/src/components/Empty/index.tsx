@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text } from '@tarojs/components';
 import styles from './index.module.scss';
+import TabIcon from '@/components/TabIcon';
 
 interface EmptyProps {
-  /** 插画 emoji（默认空盒子） */
+  /** 兼容现有调用的类型标识，使用统一线性图标展示。 */
   icon?: string;
   title?: string;
   desc?: string;
@@ -21,7 +22,7 @@ const Empty: React.FC<EmptyProps> = ({
   return (
     <View className={`${styles.empty} ${className}`}>
       <View className={styles.iconWrap}>
-        <Text className={styles.icon}>{icon}</Text>
+        <TabIcon name={icon === '🎮' ? 'gamepad' : icon === '💰' || icon === '🎁' || icon === '⚖️' ? 'wallet' : 'receipt'} color='#336b9a' size={64} />
       </View>
       <Text className={styles.title}>{title}</Text>
       {desc && <Text className={styles.desc}>{desc}</Text>}

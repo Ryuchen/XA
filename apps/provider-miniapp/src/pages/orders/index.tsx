@@ -1,9 +1,13 @@
+import { fetchEscortMe,ProviderQualification } from '@/services/user';
+import { getSessionRevision } from '@/utils/auth';
+import { networkSnapshot, cooldownRemaining, pendingNetworkReport, acknowledgeNetworkReport } from '@/utils/orderNetwork';
+import { request, ApiResponse } from '@/utils/request';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Button } from '@tarojs/components';
-import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
+import { View, Text, Button, Picker } from '@tarojs/components';
+import Taro, { useDidShow, useDidHide, usePullDownRefresh } from '@tarojs/taro';
 import {
   fetchOrders,
-  grabOrder,
+  grabOrder, fetchTeammates, applicationAction, Teammate,
   startOrder,
   completeOrder,
   rejectOrder,
@@ -13,14 +17,19 @@ import {
 } from '@/services/order';
 import { Evaluation, ProviderOrder, ProviderStats, statusTextMap, REJECT_REASONS } from '@/types/order';
 import { wsService } from '@/services/websocket';
+import { orderAlerts } from '@/services/orderAlerts';
+import { createCoalescedRefresh, isPersonalOrderUpdate } from '@/utils/coalescedRefresh';
 import { formatXaCoin } from '@/utils/format';
+import { createReport } from '@/services/report';
 import {
   fetchProviderPass, PassProduct, ProviderPassData, purchaseProviderPass,
 } from '@/services/user';
 import { Empty, Skeleton } from '@/components';
 import styles from './index.module.scss';
 import PlatformLayout from '@/components/PlatformLayout';
+import PageHeading from '@/components/PageHeading';
 import ReplyDialog from '@/components/ReplyDialog';
+import SurfaceDialog from '@/components/SurfaceDialog';
 
 type TabKey = 'pending' | 'grabbed' | 'in_progress' | 'completed';
 
@@ -43,14 +52,33 @@ const hexToRgba = (hex: string, alpha: number): string => {
 };
 
 const OrdersPage: React.FC = () => {
+  const [network, setNetwork] = useState(() => networkSnapshot(getSessionRevision()));
+  const [trafficMode, setTrafficMode] = useState('');
+  const visible = useRef(true);
   const [activeTab, setActiveTab] = useState<TabKey>('pending');
+  const [qualifications,setQualifications]=useState<ProviderQualification[]>([]);
+  const [scopeIndex,setScopeIndex]=useState(0);
+  const scopeRef=useRef<ProviderQualification|null>(null);
+  useEffect(()=>{fetchEscortMe().then(r=>{if(r.code===0 && r.data)setQualifications((r.data.qualifications||[]).filter(q=>q.is_active))}).catch(()=>{})},[]);
+  const filterOrders=(rows:ProviderOrder[])=>rows.filter(o=>{const q=scopeRef.current,r=o.provider_requirement;return !q || (r && r.game_category_id===q.game_category && r.provider_kind===q.provider_kind && r.platform===q.platform && r.security_level===q.security_level)});
   const [orders, setOrders] = useState<ProviderOrder[]>([]);
   const [stats, setStats] = useState<ProviderStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [acting, setActing] = useState(false);
+  const [applying, setApplying] = useState<ProviderOrder | null>(null);
+  const [teamSize, setTeamSize] = useState(1);
+  const [teammates, setTeammates] = useState<Teammate[]>([]);
+  const [partnerIndex, setPartnerIndex] = useState(-1);
+  const [teammateLoading, setTeammateLoading] = useState(false);
+  const applicationSequence = useRef(0);
+  const actionLock = useRef(false);
+  const loadSequence = useRef(0);
   const [passData, setPassData] = useState<ProviderPassData | null>(null);
+  const buyingPass = useRef(false);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [replying, setReplying] = useState<Evaluation | null>(null);
+  const [rejecting, setRejecting] = useState<ProviderOrder | null>(null);
   const activeTabRef = useRef<TabKey>(activeTab);
   activeTabRef.current = activeTab;
 
@@ -77,17 +105,24 @@ const OrdersPage: React.FC = () => {
     } catch { /* 评价失败不阻塞订单操作 */ }
   }, []);
 
-  const loadOrders = useCallback(async (tab: TabKey) => {
-    setLoading(true);
+  const loadOrders = useCallback(async (tab: TabKey, quiet = false) => {
+    if (tab === 'pending' && cooldownRemaining('pool', getSessionRevision())) return;
+    const sequence = ++loadSequence.current;
+    if (!quiet) setLoading(true);
     try {
       const res = await fetchOrders({ status: tab, role: 'provider' });
+      if (res.traffic_mode) setTrafficMode(res.traffic_mode);
+      if (sequence !== loadSequence.current || tab !== activeTabRef.current) return;
       if (res.code === 0 && res.data) {
-        setOrders(res.data);
+        setOrders(filterOrders(res.data));
+        setLoadError('');
       } else {
-        setOrders([]);
+        setLoadError(res.msg || '订单暂时无法加载，请重试');
       }
+    } catch (error) {
+      if (sequence === loadSequence.current) setLoadError(error instanceof Error ? error.message : '订单加载失败');
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current) setLoading(false);
     }
   }, []);
 
@@ -96,19 +131,37 @@ const OrdersPage: React.FC = () => {
     loadStats();
     loadPass();
     loadEvaluations();
-    // 实时订单推送：任意订单状态变化时刷新当前列表与看板
-    const off = wsService.on('order_status_update', () => {
-      loadOrders(activeTabRef.current);
-      loadStats();
+    // 合并密集推送；请求期间收到新变化时，完成后再读取一次最新状态。
+    const refresh = createCoalescedRefresh(() => loadOrders(activeTabRef.current, true));
+    const refreshStats = createCoalescedRefresh(loadStats);
+    const off = wsService.on('order_status_update', data => {
+      if (!visible.current) return;
+      if (activeTabRef.current !== 'pending') refresh.request();
+      // 公共池变化不改变本人的服务中数量和收入；本人订单完整通知才刷新看板。
+      if (isPersonalOrderUpdate(data)) refreshStats.request();
     });
-    // 金/银/铜卡和无卡用户的可见时间会自然到点，定时刷新让新订单无需
-    // 等待下一条 WebSocket 事件即可出现；抢单接口仍由服务端二次校验。
-    const timer = setInterval(() => {
-      if (activeTabRef.current === 'pending') loadOrders('pending');
-    }, 10000);
+    const offConnected = wsService.on('connected', () => {
+      if (!visible.current) return;
+      // Pub/sub cannot replay events missed while offline. Re-read every tab.
+      if (activeTabRef.current !== 'pending') refresh.request();
+      refreshStats.request();
+      loadPass();
+      loadEvaluations();
+    });
+    // App-wide monitoring also updates the pool while the workbench is open.
+    const offPool = orderAlerts.onPoolUpdate(response => {
+      if (!visible.current || activeTabRef.current !== 'pending') return;
+      setOrders(filterOrders(response.data || []));
+      setLoadError('');
+      if (response.traffic_mode) setTrafficMode(response.traffic_mode);
+    });
     return () => {
+      loadSequence.current++;
       off();
-      clearInterval(timer);
+      offConnected();
+      refresh.dispose();
+      refreshStats.dispose();
+      offPool();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -117,7 +170,26 @@ const OrdersPage: React.FC = () => {
     loadOrders(activeTab);
   }, [activeTab, loadOrders]);
 
+  useEffect(() => {
+    request<ApiResponse<{ mode: string }>>('/orders/traffic-status/').then(res => { if (res.data) setTrafficMode(res.data.mode); }).catch(() => {});
+    let reporting = false;
+    const viewTimer = setInterval(() => { if (visible.current) setNetwork(networkSnapshot(getSessionRevision())); }, 1000);
+    const reportTimer = setInterval(async () => {
+      if (!visible.current || reporting) return;
+      const revision = getSessionRevision(), report = pendingNetworkReport(revision);
+      if (!report.samples) return;
+      reporting = true;
+      try {
+        const res = await request<ApiResponse>('/orders/network-report/', 'POST', report);
+        if (res.code === 0) acknowledgeNetworkReport(report.cursor, revision);
+      } catch { /* 监控上报失败不干扰订单操作 */ }
+      finally { reporting = false; }
+    }, 60000);
+    return () => { clearInterval(viewTimer); clearInterval(reportTimer); };
+  }, []);
+  useDidHide(() => { visible.current = false; });
   useDidShow(() => {
+    visible.current = true;
     loadOrders(activeTabRef.current);
     loadStats();
     loadPass();
@@ -129,27 +201,54 @@ const OrdersPage: React.FC = () => {
     Taro.stopPullDownRefresh();
   });
 
-  const runAction = async (fn: () => Promise<{ code: number; msg?: string }>, successText: string) => {
-    if (acting) return;
+  const runAction = async <T extends { code: number; msg?: string },>(fn: () => Promise<T>, successText: string | ((response: T) => string)) => {
+    if (actionLock.current) return false;
+    actionLock.current = true;
     setActing(true);
     Taro.showLoading({ title: '处理中' });
     try {
       const res = await fn();
       if (res.code === 0) {
-        Taro.showToast({ title: successText, icon: 'success' });
+        Taro.showToast({ title: typeof successText === 'function' ? successText(res) : successText, icon: 'success' });
         await Promise.all([loadOrders(activeTabRef.current), loadStats()]);
+        return true;
       } else {
         Taro.showToast({ title: res.msg || '操作失败', icon: 'none' });
+        return false;
       }
     } catch (error) {
       Taro.showToast({ title: error instanceof Error ? error.message : '操作失败', icon: 'none' });
+      return false;
     } finally {
       Taro.hideLoading();
+      actionLock.current = false;
       setActing(false);
     }
   };
 
-  const handleGrab = (order: ProviderOrder) => runAction(() => grabOrder(order.id), '接单成功');
+  const handleGrab = async (order: ProviderOrder) => {
+    const wait = cooldownRemaining('grab', getSessionRevision());
+    if (wait) { Taro.showToast({ title: `请在 ${wait} 秒后重试`, icon: 'none' }); return; }
+    const size = order.required_team_size === 2 ? 2 : 1;
+    if (!order.requires_boss_selection) {
+      if (size === 2) { Taro.showToast({ title: '本单需要组队，请刷新订单或联系客服', icon: 'none' }); return; }
+      return runAction(() => grabOrder(order.id), '接单成功');
+    }
+    if (size === 2 && order.can_team_apply !== true) {
+      Taro.showToast({ title: '当前订单暂不可组队，请刷新后重试', icon: 'none' });
+      return;
+    }
+    const sequence = ++applicationSequence.current;
+    setTeamSize(size); setPartnerIndex(-1); setTeammates([]); setApplying(order); setTeammateLoading(size === 2);
+    if (size === 1) return;
+    try {
+      const res = await fetchTeammates(order.id);
+      if (sequence !== applicationSequence.current) return;
+      if (res.code === 0) setTeammates(res.data || []);
+      else Taro.showToast({ title: res.msg || '队友加载失败', icon: 'none' });
+    } catch (error) { Taro.showToast({ title: (error as Error).message || '队友加载失败', icon: 'none' }); }
+    finally { if (sequence === applicationSequence.current) setTeammateLoading(false); }
+  };
 
   // 开始服务/完成订单必须上传对应截图：先选图，用户取消则中止，不推进状态。
   const chooseImage = async (): Promise<string | null> => {
@@ -160,13 +259,13 @@ const OrdersPage: React.FC = () => {
     if (acting) return;
     const path = await chooseImage();
     if (!path) return;
-    runAction(() => startOrder(order.id, path), '已开始服务');
+    runAction(() => startOrder(order.id, path), res => res.data?.status === 'IN_SERVICE' ? '已开始服务' : res.msg || '截图已提交，请刷新订单核对状态');
   };
   const handleComplete = async (order: ProviderOrder) => {
     if (acting) return;
     const path = await chooseImage();
     if (!path) return;
-    runAction(() => completeOrder(order.id, path), '订单已完成');
+    runAction(() => completeOrder(order.id, path), res => res.data?.status === 'COMPLETED' ? '订单已完成' : res.msg || '截图已提交，请刷新订单核对状态');
   };
 
   // 同时进行中订单（已接单 + 服务中）是否已达上限
@@ -179,14 +278,7 @@ const OrdersPage: React.FC = () => {
       success: ({ tapIndex }) => {
         const reason = REJECT_REASONS[tapIndex];
         if (reason === '其他') {
-          Taro.showModal({
-            title: '拒单原因',
-            editable: true,
-            placeholderText: '请输入拒单原因',
-            success: ({ confirm, content }) => {
-              if (confirm) runAction(() => rejectOrder(order.id, content?.trim() || '其他'), '已拒单');
-            },
-          });
+          setRejecting(order);
         } else {
           runAction(() => rejectOrder(order.id, reason), '已拒单');
         }
@@ -203,7 +295,9 @@ const OrdersPage: React.FC = () => {
   };
 
   const handleBuyPass = async () => {
-    if (!passData) return;
+    if (!passData || buyingPass.current) return;
+    buyingPass.current = true;
+    try {
     const products = passData.products;
     const { tapIndex } = await Taro.showActionSheet({
       itemList: products.map(item => `${item.name} · ${formatXaCoin(item.daily_price)}兴安币/天`),
@@ -218,7 +312,7 @@ const OrdersPage: React.FC = () => {
     if (!confirm.confirm) return;
     Taro.showLoading({ title: '采购中' });
     try {
-      const res = await purchaseProviderPass(product.tier);
+      const res = await purchaseProviderPass(product.tier, product.daily_price);
       if (res.code === 0 && res.data) {
         setPassData(res.data);
         await loadOrders(activeTabRef.current);
@@ -226,24 +320,31 @@ const OrdersPage: React.FC = () => {
       } else Taro.showToast({ title: res.msg || '采购失败', icon: 'none' });
     } catch (error) {
       Taro.showToast({ title: error instanceof Error ? error.message : '采购失败', icon: 'none' });
-    } finally { Taro.hideLoading(); }
+    } finally { Taro.hideLoading(); await loadPass(); }
+    } finally { buyingPass.current = false; }
   };
 
   const renderActions = (order: ProviderOrder) => {
     const can = (action: 'GRAB' | 'START' | 'COMPLETE' | 'REJECT', fallback: boolean) =>
       Array.isArray(order.allowed_actions) ? order.allowed_actions.includes(action) : fallback;
     if (order.status === 'PENDING') {
+      const mine = (order.my_applications || []).filter(item => item.status === 'PENDING');
+      if (mine.length) return <View className={styles.actions}>{mine.map(item => <View key={item.id}>
+        <Text>{item.members.map(member => member.nickname + ' · ' + member.level).join(' + ')} · {item.team_size}人 · {item.ready ? '等待老板选择' : '等待队友确认'}</Text>
+        {item.is_partner && !item.partner_confirmed && <Button size='mini' disabled={acting} onClick={() => runAction(() => applicationAction(order.id, item.id, 'CONFIRM_TEAM'), '队伍已确认')}>确认组队</Button>}
+        <Button size='mini' disabled={acting} onClick={() => runAction(() => applicationAction(order.id, item.id, 'WITHDRAW'), '已撤回报名')}>撤回报名</Button>
+      </View>)}</View>;
       if (!can('GRAB', true)) return null;
       return (
         <View className={styles.actions}>
           <Button
-            className={`${styles.actionBtn} ${styles.primaryBtn}`}
+            className={`xa-button-primary ${styles.actionBtn} ${styles.primaryBtn}`}
             disabled={acting || reachedLimit}
             onClick={() => reachedLimit
               ? Taro.showToast({ title: `最多同时进行 ${maxConcurrent} 单`, icon: 'none' })
               : handleGrab(order)}
           >
-            {reachedLimit ? '已达接单上限' : '抢单'}
+            {reachedLimit ? '已达接单上限' : order.requires_boss_selection ? '报名抢单' : '抢单'}
           </Button>
         </View>
       );
@@ -253,7 +354,7 @@ const OrdersPage: React.FC = () => {
       return (
         <View className={styles.actions}>
           {can('REJECT', Boolean(order.can_reject)) && <Button className={`${styles.actionBtn} ${styles.rejectBtn}`} disabled={acting} onClick={() => handleReject(order)}>拒单</Button>}
-          <Button className={`${styles.actionBtn} ${styles.primaryBtn}`} disabled={acting} onClick={() => handleStart(order)}>
+          <Button className={`xa-button-primary ${styles.actionBtn} ${styles.primaryBtn}`} disabled={acting} onClick={() => handleStart(order)}>
             开始服务
           </Button>
         </View>
@@ -263,7 +364,7 @@ const OrdersPage: React.FC = () => {
       if (!can('COMPLETE', Boolean(order.can_operate))) return null;
       return (
         <View className={styles.actions}>
-          <Button className={`${styles.actionBtn} ${styles.primaryBtn}`} disabled={acting} onClick={() => handleComplete(order)}>
+          <Button className={`xa-button-primary ${styles.actionBtn} ${styles.primaryBtn}`} disabled={acting} onClick={() => handleComplete(order)}>
             完成订单
           </Button>
         </View>
@@ -273,7 +374,8 @@ const OrdersPage: React.FC = () => {
   };
 
   return (
-    <PlatformLayout active='orders'><View className={styles.container}>
+    <PlatformLayout active='orders'><View className={`xa-provider-page ${styles.container}`}>
+      <PageHeading title='接单工作台' hint='查看订单，安排今天的服务' action={<Button className={styles.skillButton} onClick={() => Taro.navigateTo({ url: '/pages/skills/index' })}>我的技能 ›</Button>} />
       <View className={styles.dashboard}>
         <View className={styles.dashboardTop}>
           <View><Text className={styles.eyebrow}>今日接单</Text><Text className={styles.todayValue}>{stats?.today_orders || 0}<Text className={styles.todayUnit}> 单</Text></Text></View>
@@ -281,43 +383,57 @@ const OrdersPage: React.FC = () => {
         </View>
         <View className={styles.dashboardBottom}>
           <View><Text className={styles.metricLabel}>完成率</Text><Text className={styles.metricValue}>{stats?.completion_rate || 0}%</Text></View>
-          <View><Text className={styles.metricLabel}>累计收益</Text><Text className={styles.metricValue}>{formatXaCoin(stats?.total_income || 0)}币</Text></View>
+          <View><Text className={styles.metricLabel}>订单净收益</Text><Text className={styles.metricValue}>{formatXaCoin(stats?.total_income || 0)}币</Text></View>
         </View>
       </View>
 
-      {passData && <View className={`${styles.passCard} ${passData.active_tier ? styles.passActive : ''}`} onClick={handleBuyPass}>
+      {passData && <Button className={`${styles.passCard} ${passData.active_tier ? styles.passActive : ''}`} onClick={handleBuyPass}>
         <View className={styles.passEmblem}>{passData.active_tier ? passData.active_tier_display.slice(0, 1) : '卡'}</View>
         <View className={styles.passInfo}>
           <View className={styles.passTitleRow}><Text className={styles.passName}>{passData.active_tier_display}</Text><Text className={styles.passPill}>{passData.active_tier ? '生效中' : '未开通'}</Text></View>
           <Text className={styles.passMeta}>{passData.active_tier ? `有效至 ${new Date(passData.expires_at || '').toLocaleString()}` : '升级通行证，更早看到优质订单'}</Text>
         </View>
         <View className={styles.passAction}>{passData.active_tier ? '续费' : '采购'} <Text>›</Text></View>
-      </View>}
+      </Button>}
 
       <View className={styles.tabs}>
         {TABS.map(tab => (
-          <View
+          <Button
             key={tab.key}
             className={`${styles.tabItem} ${activeTab === tab.key ? styles.tabItemActive : ''}`}
+            aria-pressed={activeTab === tab.key}
             onClick={() => setActiveTab(tab.key)}
           >
             <Text className={styles.tabText}>{tab.label}</Text>
-          </View>
+          </Button>
         ))}
       </View>
 
-      <ScrollView className={styles.list} scrollY>
+      <View className={styles.scopeBar}><Picker range={['全部接单资格',...qualifications.map(q=>q.label)]} value={scopeIndex} onChange={e=>{const n=Number(e.detail.value);setScopeIndex(n);scopeRef.current=n ? qualifications[n-1] : null;void loadOrders(activeTabRef.current)}}><View>接单范围：{scopeIndex ? qualifications[scopeIndex-1]?.label : '全部接单资格'} ▾</View></Picker></View>
+      {activeTab === 'pending' && <View className={styles.networkPanel}>
+        <Text className={styles.networkTitle}>抢单网络 · {network.stale ? '等待采样' : network.failures || network.jitter_ms > 300 ? '连接波动' : network.server_errors ? '服务异常' : network.grab_wait || network.pool_wait ? '限流等待' : '连接稳定'}{trafficMode ? ` · ${({ peak: '波峰', valley: '波谷', normal: '常规' } as Record<string, string>)[trafficMode] || trafficMode}` : ''}</Text>
+        <Text>近一分钟 {network.samples} 次 · 平均 {network.average_ms}ms · P95 {network.p95_ms}ms · 抖动 {network.jitter_ms}ms</Text>
+        <Text>网络失败 {network.failure_percent}% · 服务异常 {network.server_errors} 次 · 限流 {network.limited} 次{network.grab_wait ? ` · 抢单等待 ${network.grab_wait}s` : ''}{network.pool_wait ? ` · 刷新等待 ${network.pool_wait}s` : ''}</Text>
+        {network.failures > 0 && <Button className={styles.skillButton} onClick={() => setActiveTab('grabbed')}>查看已接单，核对抢单结果</Button>}
+        <Text className={styles.networkHint}>数据来自订单请求的往返耗时，包含服务端处理时间。抢单超时后请先查看已接单，确认结果后重试。</Text>
+      </View>}
+      {!!loadError && <View className={styles.loadError}><Text>{loadError}</Text><Button className={styles.skillButton} onClick={() => loadOrders(activeTab)}>重新加载</Button></View>}
+      <View className={styles.listSummary}><Text>{TABS.find(tab => tab.key === activeTab)?.label}</Text><Text>{loading ? '正在加载' : loadError ? '连接异常' : `${orders.length} 笔订单`}</Text></View>
+      <View className={styles.list}>
         {loading ? (
           <Skeleton variant="card-list" rows={3} />
-        ) : orders.length === 0 ? (
-          <Empty icon="🎮" title="暂无订单" desc={activeTab === 'pending' ? (reachedLimit ? `已达同时进行 ${maxConcurrent} 单上限，完成订单后可继续抢单` : '待接单池暂时空空如也') : '还没有此类订单'} />
+        ) : loadError ? null : orders.length === 0 ? (
+          <View className={styles.emptyPanel}><Empty icon="🎮" title={activeTab === 'pending' ? '暂时没有可接订单' : '暂无此类订单'} desc={activeTab === 'pending' ? (reachedLimit ? `已达同时进行 ${maxConcurrent} 单上限，完成订单后可继续抢单` : '订单会自动更新。可在「我的技能」中检查服务范围。') : '订单状态更新后，会出现在对应列表中。'}>
+            <Button className={styles.skillButton} onClick={() => loadOrders(activeTab)}>刷新订单</Button>
+          </Empty></View>
         ) : (
           orders.map(order => {
+            const partialRefund = order.payment_status === 'PARTIALLY_REFUNDED';
+            const refund = order.refund_summary;
             const bossType = order.customer?.boss_type;
             const vipColor = bossType?.color || '';
-            const cardBg = vipColor ? hexToRgba(vipColor, 0.06) : '';
             const cardStyle = vipColor
-              ? { background: cardBg || undefined, borderLeft: `6rpx solid ${vipColor}` }
+              ? { borderLeft: `3px solid ${vipColor}` }
               : undefined;
             const showDiscount = !!bossType && bossType.discount_rate < 100;
             return (
@@ -332,20 +448,24 @@ const OrdersPage: React.FC = () => {
                 </View>
               )}
               <View className={styles.cardHeader}>
-                <View className={styles.serviceBlock}><Text className={styles.serviceName}>{order.service?.name || '陪玩服务'}</Text><Text className={styles.orderNo}>{order.order_no}</Text></View>
-                <View className={styles.priceBlock}><Text className={styles.pricePrefix}>订单金额</Text><Text className={styles.amountValue}>{formatXaCoin(order.amount)}币</Text></View>
+                <View className={styles.serviceBlock}><Text className={styles.serviceName}>{order.service?.name || '陪玩服务'}</Text>{order.provider_requirement?.label && <Text className={styles.orderScope}>{order.provider_requirement.label}</Text>}
+                  <Text className={styles.orderNo}>{order.order_no}</Text>{order.fulfillment && <Text className={styles.orderNo}>{order.fulfillment}</Text>}</View>
+                <View className={styles.priceBlock}><Text className={styles.pricePrefix}>{partialRefund ? order.settled_at ? '原核定单钱' : '原预计单钱' : order.status === 'CANCELLED' ? '原预计单钱' : '打手单钱'}</Text><Text className={styles.amountValue}>{formatXaCoin(order.expected_income)}币</Text></View>
               </View>
               <View className={styles.chips}>
-                <Text className={`${styles.statusTag} ${styles[`status_${order.status}`]}`}>{statusTextMap[order.status]}</Text>
-                <Text className={styles.chip}>{order.game_rounds} 局</Text>
+                <Text className={`${styles.statusTag} ${styles[`status_${order.status}`]}`}>{partialRefund ? '已完成 · 部分退款' : statusTextMap[order.status]}</Text>
+                <Text className={styles.chip}>{order.game_rounds} {order.quantity_unit || '份'}</Text>
+                {!!order.participants?.length && <Text className={styles.chip}>{order.participants.length === 2 ? '两人服务' : '一人服务'}</Text>}
+                {order.provider_gender && order.provider_gender !== 'ANY' && <Text className={styles.chip}>{order.provider_gender === 'MALE' ? '男陪' : '女陪'}</Text>}
                 {!!order.game_region && <Text className={styles.chip}>{order.game_region}</Text>}
                 {showDiscount && (
                   <Text
                     className={styles.discountChip}
                     style={vipColor ? { color: vipColor, background: hexToRgba(vipColor, 0.12) || undefined } : undefined}
-                  >{bossType!.discount_rate}折 VIP价</Text>
+                  >{bossType!.discount_rate / 10}折 VIP价</Text>
                 )}
               </View>
+              {!!order.participants?.length && <View className={styles.infoRow}><Text className={styles.infoLabel}>本单陪玩</Text><Text className={styles.infoValue}>{order.participants.map(member => member.nickname).join(' + ')}</Text></View>}
               {!!order.game_nickname && (
                 <View className={styles.infoRow}>
                   <Text className={styles.infoLabel}>老板游戏昵称</Text>
@@ -353,14 +473,21 @@ const OrdersPage: React.FC = () => {
                 </View>
               )}
               <View className={styles.incomePanel}>
-                <View><Text className={styles.incomeLabel}>预计到手</Text><Text className={styles.incomeHint}>已扣平台服务费</Text></View>
-                <Text className={styles.incomeValue}>{formatXaCoin(order.expected_income)}币</Text>
+                <View><Text className={styles.incomeLabel}>{partialRefund ? '部分退款，保留剩余净收益' : order.status === 'CANCELLED' ? '原预计金额仅供核对' : '按本单实际收益结算'}</Text><Text className={styles.incomeHint}>{partialRefund ? '实际净收益及剩余冻结以钱包流水为准' : order.status === 'CANCELLED' ? '订单已取消/退款，实际净收益以钱包流水为准' : order.service?.is_gift || order.source_order ? '礼物结算进度请在钱包查看' : '单钱已扣平台服务费，报单全部通过且售后窗口结束后入账'}</Text>
+                  {refund && <><Text className={styles.incomeHint}>累计已退 {formatXaCoin(refund.amount)}币{refund.remaining_amount != null ? ` · 订单剩余 ${formatXaCoin(refund.remaining_amount)}币` : ''}</Text>
+                    {refund.recovered_amount != null && <Text className={styles.incomeHint}>本人累计追回收益 {formatXaCoin(refund.recovered_amount)}币</Text>}
+                    {refund.net_income != null && <Text className={styles.incomeHint}>本单实际净收益 {formatXaCoin(refund.net_income)}币</Text>}
+                    {refund.remaining_frozen_amount != null && <Text className={styles.incomeHint}>本单剩余冻结 {formatXaCoin(refund.remaining_frozen_amount)}币</Text>}
+                    {refund.records?.map(record => <Text className={styles.incomeHint} key={record.id}>退款 #{record.id} · {formatXaCoin(record.amount)}币{record.recovered_amount != null ? ` · 本人追回 ${formatXaCoin(record.recovered_amount)}币` : ''} · {new Date(record.created_at).toLocaleString()}</Text>)}
+                  </>}
+                </View>
+                {(order.service?.is_gift || order.source_order) && <Button className={styles.reportButton} size='mini' onClick={() => Taro.switchTab({ url: '/pages/wallet/index' })}>前往钱包</Button>}
               </View>
               <View className={styles.requirement}>
                 <Text className={styles.requirementLabel}>老板备注要求</Text>
                 <Text className={`${styles.requirementText} ${!order.remark ? styles.requirementEmpty : ''}`}>{order.remark || '老板暂无额外要求'}</Text>
               </View>
-              {order.status === 'COMPLETED' && (() => {
+              {order.status === 'COMPLETED' && !order.service?.is_gift && !order.source_order && (() => {
                 const evaluation = evaluations.find(item => item.order === order.id);
                 return evaluation ? <View className={styles.evaluation}>
                   <View className={styles.evaluationHead}><Text className={styles.evaluationTitle}>老板评价</Text><Text className={styles.evaluationScore}>{'★'.repeat(Math.round(evaluation.score))} {evaluation.score.toFixed(1)}</Text></View>
@@ -369,6 +496,16 @@ const OrdersPage: React.FC = () => {
                     : <Button className={styles.replyButton} disabled={acting} onClick={() => setReplying(evaluation)}>回复老板</Button>}
                 </View> : <View className={styles.awaitingReview}><Text>等待老板评价</Text><Text>评价后可在此直接回复</Text></View>;
               })()}
+              {['GRABBED', 'IN_SERVICE', 'COMPLETED'].includes(order.status) && !order.service?.is_gift && !order.source_order && <Button className={styles.reportButton} size='mini' disabled={acting} onClick={async () => {
+                if (acting) return;
+                setActing(true);
+                try {
+                  const res = await createReport(order.id);
+                  if (res.code !== 0) throw new Error(res.msg);
+                  await Taro.switchTab({ url: '/pages/report/index' });
+                } catch (error) { Taro.showToast({ title: (error as Error).message || '报单打开失败', icon: 'none' }); }
+                finally { setActing(false); }
+              }}>查看 / 补充报单</Button>}
               <View className={styles.cardFooter}>
                 <Text className={styles.time}>{new Date(order.created_at).toLocaleString()}</Text>
                 {renderActions(order)}
@@ -377,7 +514,35 @@ const OrdersPage: React.FC = () => {
             );
           })
         )}
-      </ScrollView>
+      </View>
+      <SurfaceDialog open={!!applying} title='报名抢单' busy={acting} onClose={() => { applicationSequence.current++; setApplying(null); }} footer={<Button className={'xa-button-primary ' + styles.actionBtn + ' ' + styles.primaryBtn} disabled={acting || (teamSize === 2 && partnerIndex < 0)} onClick={async () => {
+        if (!applying) return;
+        const requiredSize = applying.required_team_size === 2 ? 2 : 1;
+        if (teamSize !== requiredSize || (requiredSize === 2 && (applying.can_team_apply !== true || !teammates[partnerIndex]))) return;
+        const order = applying;
+        const success = await runAction(() => grabOrder(order.id, teamSize, teamSize === 2 ? teammates[partnerIndex].id : undefined), '报名已提交');
+        if (success) setApplying(null);
+      }}>提交报名</Button>}>
+        <Text>{applying?.required_team_size === 2 ? '本单为双陪套餐，需要两名陪玩组队报名。队友本人确认、老板选定后正式接单，按本单已付总金额均分结算。' : '本单为单陪套餐，仅支持本人报名。老板选定后正式接单。'}</Text>
+        <View className={styles.attendance}><Text>本单报名人数</Text><Text className={styles.statusTag}>{applying?.required_team_size === 2 ? '双人组队' : '单人报名'}</Text></View>
+        {teamSize === 2 && <View><Text>{teammateLoading ? '正在加载可组队陪玩…' : teammates.length ? '选择另一名陪玩（等级从高到低）' : '暂无符合本单等级、技能和通行证时间的队友'}</Text><Picker mode='selector' disabled={acting || teammateLoading || !teammates.length} range={teammates.map(item => item.nickname + ' · ' + item.level)} value={Math.max(0, partnerIndex)} onChange={event => setPartnerIndex(Number(event.detail.value))}><Button disabled={acting || teammateLoading || !teammates.length}>{teammates[partnerIndex]?.nickname || '请选择队友'}</Button></Picker></View>}
+      </SurfaceDialog>
+      <ReplyDialog
+        open={!!rejecting}
+        title='拒单原因'
+        placeholder='请输入拒单原因'
+        hint='拒单后订单将重新进入待接单池'
+        submitText='确认拒单'
+        maxLength={200}
+        submitting={acting}
+        onClose={() => setRejecting(null)}
+        onSubmit={async content => {
+          if (!rejecting) return;
+          const order = rejecting;
+          setRejecting(null);
+          await runAction(() => rejectOrder(order.id, content), '已拒单');
+        }}
+      />
       <ReplyDialog
         open={!!replying}
         title={`回复 ${replying?.customer_name || '老板'} 的评价`}

@@ -61,7 +61,7 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  width: 140rpx;
+  width: 144rpx;
   background: transparent;
   @include press-feedback(0.98);
 
@@ -82,6 +82,10 @@
   margin-top: $spacing-xs;
   color: $color-text-secondary;
   font-size: $font-size-xs;
+}
+
+.avatarPlaceholder {
+  @include flex-center;
 }
 
 .nicknameInput {

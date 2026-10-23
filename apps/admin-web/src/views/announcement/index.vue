@@ -32,10 +32,10 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑公告' : '新增公告'" width="560px">
-    <el-form :model="form" label-width="80px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑公告' : '新增公告'" width="680px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
-      <el-form-item label="内容"><el-input v-model="form.content" type="textarea" :rows="6" /></el-form-item>
+      <el-form-item label="内容" class="ap-field--full"><el-input v-model="form.content" type="textarea" :rows="6" /></el-form-item>
       <el-form-item label="置顶"><el-switch v-model="form.is_pinned" /></el-form-item>
       <el-form-item label="排序"><el-input-number v-model="form.sort_order" :min="0" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>

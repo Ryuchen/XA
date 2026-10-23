@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Button, ScrollView, Text, View } from '@tarojs/components';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button, Text, View } from '@tarojs/components';
 import Taro, { usePullDownRefresh } from '@tarojs/taro';
 import { fetchMyEvaluations, replyEvaluation } from '@/services/order';
 import { Evaluation } from '@/types/order';
@@ -13,20 +13,26 @@ const EvaluationPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [replying, setReplying] = useState<Evaluation | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const requestVersion = useRef(0);
+  const submitLock = useRef(false);
 
   const loadData = async () => {
+    const version = ++requestVersion.current;
+    setLoadError('');
     try {
       const res = await fetchMyEvaluations();
+      if (version !== requestVersion.current) return;
       if (res.code === 0 && res.data) setItems(res.data.list || []);
-      else Taro.showToast({ title: res.msg || '评价加载失败', icon: 'none' });
+      else throw new Error(res.msg || '评价加载失败');
     } catch (error) {
-      Taro.showToast({ title: error instanceof Error ? error.message : '评价加载失败', icon: 'none' });
+      if (version === requestVersion.current) setLoadError(error instanceof Error ? error.message : '评价加载失败');
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); return () => { requestVersion.current++; }; }, []);
   usePullDownRefresh(async () => { await loadData(); Taro.stopPullDownRefresh(); });
 
   const pending = useMemo(() => items.filter(item => !item.reply_content).length, [items]);
@@ -35,32 +41,34 @@ const EvaluationPage: React.FC = () => {
   };
 
   const submitReply = async (content: string) => {
-    if (!replying) return;
+    if (!replying || submitLock.current) return;
+    submitLock.current = true;
+    const evaluationId = replying.id;
     setSubmitting(true);
     try {
-      const res = await replyEvaluation(replying.id, content);
-      if (res.code !== 0) throw new Error(res.msg || '回复失败');
-      setItems(prev => prev.map(item => item.id === replying.id
-        ? { ...item, reply_content: content, replied_at: new Date().toISOString() }
-        : item));
+      const res = await replyEvaluation(evaluationId, content);
+      if (res.code !== 0 || !res.data) throw new Error(res.msg || '回复失败');
+      requestVersion.current++;
+      setItems(prev => prev.map(item => item.id === evaluationId ? res.data! : item));
       setReplying(null);
       Taro.showToast({ title: '回复已发布', icon: 'success' });
     } catch (error) {
       Taro.showToast({ title: error instanceof Error ? error.message : '回复失败', icon: 'none' });
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   };
 
   return (
-    <PlatformLayout active='mine'><ScrollView className={styles.page} scrollY>
+    <PlatformLayout active='mine'><View className={`xa-provider-page ${styles.page}`}>
       <PageNav title="评价管理" />
       <View className={styles.summary}>
         <View><Text className={styles.summaryValue}>{items.length}</Text><Text className={styles.summaryLabel}>全部评价</Text></View>
         <View><Text className={styles.summaryValue}>{pending}</Text><Text className={styles.summaryLabel}>待回复</Text></View>
       </View>
 
-      {loading ? <Text className={styles.empty}>加载中…</Text> : items.length === 0 ? (
+      {loading ? <Text className={styles.empty}>加载中…</Text> : loadError ? <View className={styles.emptyCard}><Text className={styles.emptyText}>{loadError}</Text><Button onClick={loadData}>重新加载</Button></View> : items.length === 0 ? (
         <View className={styles.emptyCard}><Text className={styles.emptyTitle}>暂无评价</Text><Text className={styles.emptyText}>老板完成评价后会显示在这里</Text></View>
       ) : items.map(item => (
         <View className={styles.card} key={item.id}>
@@ -87,7 +95,7 @@ const EvaluationPage: React.FC = () => {
         onClose={() => setReplying(null)}
         onSubmit={submitReply}
       />
-    </ScrollView></PlatformLayout>
+    </View></PlatformLayout>
   );
 };
 

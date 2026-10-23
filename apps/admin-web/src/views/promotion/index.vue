@@ -42,9 +42,9 @@
           <span v-else class="muted">—</span>
         </template>
       </el-table-column>
-      <el-table-column label="覆盖抽成" width="100">
+      <el-table-column label="覆盖抽成" min-width="150">
         <template #default="{ row }">
-          <span v-if="row.commission_rate != null">{{ row.commission_rate }}%</span>
+          <span v-if="commissionConfigured(row)">{{ commissionLabel(row) }}</span>
           <span v-else class="muted">—</span>
         </template>
       </el-table-column>
@@ -68,10 +68,10 @@
     </crud-table>
   </div>
 
-  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑促销活动' : '新增促销活动'" width="560px">
-    <el-form :model="form" label-width="110px">
+  <el-dialog v-model="dialogVisible" :title="form.id ? '编辑促销活动' : '新增促销活动'" width="760px" class="ap-modal">
+    <el-form :model="form"  class="ap-modal-form ap-form-grid" label-position="top">
       <el-form-item label="活动名称"><el-input v-model="form.title" placeholder="如：双十一限时折扣" /></el-form-item>
-      <el-form-item label="适用范围">
+      <el-form-item label="适用范围" class="ap-field--full">
         <el-radio-group v-model="form.scope">
           <el-radio v-for="(v, k) in PROMOTION_SCOPE" :key="k" :label="k">{{ v.label }}</el-radio>
         </el-radio-group>
@@ -105,21 +105,14 @@
           v-model="form.discount_rate"
           :min="1"
           :max="100"
-          style="margin-left: 12px"
         />
         <span class="tip">{{ discountEnabled ? '100=原价，90=九折；与优惠券互斥' : '关闭=不影响老板实付' }}</span>
       </el-form-item>
       <el-form-item label="覆盖抽成">
         <el-switch v-model="commissionEnabled" />
-        <el-input-number
-          v-if="commissionEnabled"
-          v-model="form.commission_rate"
-          :min="0"
-          :max="100"
-          style="margin-left: 12px"
-        />
-        <span class="tip">{{ commissionEnabled ? '强制使用该抽成率，优先级最高' : '关闭=不覆盖抽成（按等级/店铺）' }}</span>
+        <span class="tip">{{ commissionEnabled ? '固定金额可覆盖适用服务的抽成；体验资格与活动适用范围不变，以派单试算为准。' : '关闭时沿用原有抽成规则' }}</span>
       </el-form-item>
+      <CommissionEditor v-if="commissionEnabled" v-model:type="commissionType" v-model:rate="form.commission_rate" v-model:fixed="commissionFixed" />
 
       <el-form-item label="开始时间">
         <el-date-picker v-model="form.start_at" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" style="width: 100%" />
@@ -131,7 +124,7 @@
         <el-input-number v-model="form.priority" :min="0" />
         <span class="tip">并发多活动时取优先级最高的一条</span>
       </el-form-item>
-      <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
+      <el-form-item label="备注" class="ap-field--full"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
       <el-form-item label="启用"><el-switch v-model="form.is_active" /></el-form-item>
     </el-form>
     <template #footer>
@@ -145,6 +138,8 @@
 import { reactive, ref, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CrudTable from '@/components/CrudTable.vue'
+import CommissionEditor from '@/components/CommissionEditor.vue'
+import { commissionConfigured, commissionError, commissionLabel, commissionPayload, inheritedCommission, readCommission, type CommissionType } from '@/utils/commission'
 import { promotionApi, serviceItemApi, serviceCategoryApi } from '@/api/modules'
 import { PROMOTION_SCOPE } from '@/utils/dict'
 import { amountToXaCoin, formatDateTime } from '@/utils/format'
@@ -159,17 +154,19 @@ const saving = ref(false)
 const form = reactive<any>({})
 const discountEnabled = ref(true)
 const commissionEnabled = ref(false)
+const commissionType = ref<CommissionType>('PERCENT')
+const commissionFixed = ref<number | undefined>(0)
 const serviceOptions = ref<any[]>([])
 const serviceCats = ref<any[]>([])
 
 onMounted(async () => {
-  const res = await serviceCategoryApi.list({ page_size: 200 }) as any
+  const res = await serviceCategoryApi.allOptions() as any
   serviceCats.value = res.data?.list || []
 })
 
 // 关闭开关时清空对应字段，避免提交残留值
 watch(discountEnabled, (on) => { if (!on) form.discount_rate = null })
-watch(commissionEnabled, (on) => { if (!on) form.commission_rate = null })
+watch(commissionEnabled, (on) => { if (!on) form.commission_rate = null; else if (form.commission_rate == null) form.commission_rate = 0 })
 
 function blank() {
   return {
@@ -181,7 +178,7 @@ function blank() {
 
 async function ensureServices() {
   if (serviceOptions.value.length) return
-  const res = await serviceItemApi.list({ page_size: 200 }) as any
+  const res = await serviceItemApi.allOptions() as any
   serviceOptions.value = res.data?.list || []
 }
 
@@ -189,6 +186,8 @@ async function onCreate() {
   Object.assign(form, blank())
   discountEnabled.value = true
   commissionEnabled.value = false
+  commissionType.value = 'PERCENT'
+  commissionFixed.value = 0
   await ensureServices()
   dialogVisible.value = true
 }
@@ -199,7 +198,11 @@ async function onEdit(row: any) {
     items: (row.item_names || []).map((i: any) => i.id),
   })
   discountEnabled.value = row.discount_rate != null
-  commissionEnabled.value = row.commission_rate != null
+  const commission = readCommission(row)
+  commissionType.value = commission.type
+  commissionFixed.value = commission.fixed
+  form.commission_rate = commission.rate
+  commissionEnabled.value = commissionConfigured(row)
   await ensureServices()
   dialogVisible.value = true
 }
@@ -210,6 +213,10 @@ async function onSave() {
   if (form.scope === 'ITEMS' && !form.items.length) { ElMessage.warning('请选择指定商品'); return }
   if (!form.start_at || !form.end_at) { ElMessage.warning('请选择起止时间'); return }
   if (form.end_at <= form.start_at) { ElMessage.warning('结束时间必须晚于开始时间'); return }
+  if (commissionEnabled.value) {
+    const error = commissionError(commissionType.value, form.commission_rate, commissionFixed.value)
+    if (error) { ElMessage.warning(error); return }
+  }
   saving.value = true
   try {
     const payload = {
@@ -218,7 +225,7 @@ async function onSave() {
       category: form.scope === 'CATEGORY' ? form.category : null,
       items: form.scope === 'ITEMS' ? form.items : [],
       discount_rate: discountEnabled.value ? form.discount_rate : null,
-      commission_rate: commissionEnabled.value ? form.commission_rate : null,
+      ...(commissionEnabled.value ? commissionPayload(commissionType.value, form.commission_rate, commissionFixed.value) : inheritedCommission()),
       start_at: form.start_at,
       end_at: form.end_at,
       priority: form.priority,

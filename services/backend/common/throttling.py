@@ -19,6 +19,12 @@ SAFE_METHODS = frozenset({'GET', 'HEAD', 'OPTIONS'})
 class WriteScopedRateThrottle(ScopedRateThrottle):
     """按 ``throttle_scope`` 限流，但只统计非安全方法。"""
 
+    def get_cache_key(self, request, view):
+        account = getattr(request, 'account', None)
+        if account is not None:
+            return self.cache_format % {'scope': self.scope, 'ident': 'account:' + str(account.pk)}
+        return super().get_cache_key(request, view)
+
     def allow_request(self, request, view):
         """安全方法直接放行；其余交给父类按 scope 计数。"""
         if request.method in SAFE_METHODS:

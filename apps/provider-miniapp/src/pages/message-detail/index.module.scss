@@ -1,10 +1,13 @@
 @use '@/styles/variables.scss' as *;
 .page { min-height: 100vh; box-sizing: border-box; padding: $spacing-lg $page-padding; background: $color-bg-page; }
-.card { padding: 34rpx 28rpx; border-radius: 28rpx; background:#fff; box-shadow:$shadow-card; }
+.card { padding: 17PX 14PX; border-radius: 14PX; background:$color-bg-card; box-shadow:$shadow-card; }
 .title, .time, .preview, .paragraph, .empty { display: block; }
-.title { color: $color-text-primary; font-size: 40rpx; font-weight: $font-weight-bold; line-height: 1.35; }
+.title { color: $color-text-primary; font-size: 20PX; font-weight: $font-weight-bold; line-height: 1.35; }
 .time { margin-top: $spacing-sm; color: $color-text-tertiary; font-size: $font-size-xs; }
-.divider { height: 2rpx; margin: $spacing-lg 0; background: $color-divider; }
+.divider { height: 1PX; margin: $spacing-lg 0; background: $color-divider; }
 .preview { color: $color-text-primary; font-size: $font-size-md; font-weight: $font-weight-semibold; line-height: $line-height-normal; }
 .paragraph { margin-top: $spacing-md; color: $color-text-secondary; font-size: $font-size-md; line-height: 1.8; }
-.empty { padding: 160rpx 0; text-align: center; color: $color-text-tertiary; }
+.empty { padding: 80PX 0; text-align: center; color: $color-text-tertiary; }
+
+.page { padding-top:0; padding-bottom:100PX; }.card { max-width:920PX; padding:24PX; border:1PX solid $color-border; border-radius:16PX; background:$color-bg-card; box-shadow:none; }.title { font-size:24PX; overflow-wrap:anywhere; }.paragraph,.preview { overflow-wrap:anywhere; }
+@media(min-width:960px) { .page { padding:0; }.card { padding:32PX; } }

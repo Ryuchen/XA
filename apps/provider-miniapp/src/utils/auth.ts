@@ -17,6 +17,12 @@ interface LoginResponse {
   code: number;
   msg?: string;
   data?: {
+    requiresOTP?: boolean;
+    requiresOTPSetup?: boolean;
+    otpChallenge?: string;
+    otpSecret?: string;
+    otpQr?: string;
+    recoveryCodes?: string[];
     token?: string;
     refreshToken?: string;
     userInfo?: {
@@ -35,6 +41,11 @@ const TOKEN_KEY = 'token';
 const REFRESH_TOKEN_KEY = 'xa_provider_refresh_token';
 const HOME_URL = '/pages/orders/index';
 const DEFAULT_AVATAR = 'https://picsum.photos/id/1005/200/200';
+let sessionRevision = 0;
+let loginAttempt = 0;
+
+export const getSessionRevision = () => sessionRevision;
+export const sessionChangedError = () => Object.assign(new Error('登录状态已变化，请重新操作'), { code: 'SESSION_CHANGED' });
 
 export const getStoredToken = (): string => {
   try {
@@ -46,6 +57,7 @@ export const getStoredToken = (): string => {
 
 export const setStoredToken = (token: string) => {
   Taro.setStorageSync(TOKEN_KEY, token);
+  Taro.eventCenter.trigger('xa:auth.changed');
 };
 
 export const getStoredRefreshToken = (): string => {
@@ -73,9 +85,11 @@ export const setStoredUser = (user: LoginUser) => {
 };
 
 export const clearStoredUser = () => {
+  sessionRevision += 1;
   Taro.removeStorageSync(USER_KEY);
   Taro.removeStorageSync(TOKEN_KEY);
   Taro.removeStorageSync(REFRESH_TOKEN_KEY);
+  Taro.eventCenter.trigger('xa:auth.changed');
 };
 
 export const goHome = () => {
@@ -83,20 +97,23 @@ export const goHome = () => {
 };
 
 export interface AccountLoginParams {
+  otpChallenge?: string;
+  otpCode?: string;
   username: string;
   password: string;
 }
 
-const buildAndStoreUser = (response: { statusCode: number; data?: LoginResponse }): LoginUser => {
+const buildAndStoreUser = (response: { statusCode: number; data?: LoginResponse }, revision: number): LoginUser => {
   const result = response.data;
   if (response.statusCode >= 400 || !result || result.code !== 0 || !result.data?.token || !result.data.userInfo) {
     throw new Error(result?.msg || '登录失败');
   }
-  return persistLoginData(result.data);
+  return persistLoginData(result.data, revision);
 };
 
 /** Persist an account-login or audition-token login response in one place. */
-export const persistLoginData = (data: NonNullable<LoginResponse['data']>): LoginUser => {
+export const persistLoginData = (data: NonNullable<LoginResponse['data']>, expectedRevision = sessionRevision): LoginUser => {
+  if (expectedRevision !== sessionRevision) throw sessionChangedError();
   if (!data.token || !data.userInfo) {
     throw new Error('登录态数据不完整');
   }
@@ -110,11 +127,14 @@ export const persistLoginData = (data: NonNullable<LoginResponse['data']>): Logi
     phone: userInfo.phone || ''
   };
 
-  setStoredToken(data.token);
-  if (data.refreshToken) {
-    setStoredRefreshToken(data.refreshToken);
-  }
+  // Publish once, after all fields belong to the same account. A login without
+  // a refresh token must never inherit the preceding account's credential.
+  Taro.setStorageSync(TOKEN_KEY, data.token);
+  if (data.refreshToken) setStoredRefreshToken(data.refreshToken);
+  else Taro.removeStorageSync(REFRESH_TOKEN_KEY);
   setStoredUser(user);
+  sessionRevision += 1;
+  Taro.eventCenter.trigger('xa:auth.changed');
   return user;
 };
 
@@ -126,17 +146,32 @@ export const accountLogin = async (params: AccountLoginParams): Promise<LoginUse
     throw new Error('请输入密码');
   }
 
+  const revision = sessionRevision;
+  const attempt = ++loginAttempt;
   const response = await Taro.request<LoginResponse>({
     url: `${BASE_URL}/users/account-login/`,
     method: 'POST',
     data: {
       username: params.username.trim(),
-      password: params.password
+      password: params.password,
+      otpChallenge: params.otpChallenge,
+      otpCode: params.otpCode
     },
     header: {
       'Content-Type': 'application/json'
     }
   });
 
-  return buildAndStoreUser(response);
+  if (revision !== sessionRevision || attempt !== loginAttempt) throw sessionChangedError();
+  const data = response.data.data;
+  if (response.data.code === 0 && data && (data.requiresOTP || data.recoveryCodes?.length)) {
+    throw new OtpLoginStep(data, revision);
+  }
+  return buildAndStoreUser(response, revision);
 };
+
+export type OtpLoginData = NonNullable<LoginResponse['data']>;
+export class OtpLoginStep extends Error {
+  constructor(public data: OtpLoginData, public revision: number) { super('请完成动态验证码验证'); }
+}
+export const completeOtpLogin = (step: OtpLoginStep) => persistLoginData(step.data, step.revision);

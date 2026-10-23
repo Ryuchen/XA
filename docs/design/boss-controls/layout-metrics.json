@@ -1,0 +1,96 @@
+{
+  "login": {
+    ".login-panel .button": {
+      "size": {
+        "width": 361,
+        "height": 40
+      },
+      "fontSize": "14px"
+    },
+    ".agreement": {
+      "size": {
+        "width": 361,
+        "height": 46
+      },
+      "fontSize": "12px"
+    }
+  },
+  "profile": {
+    "input.input": {
+      "size": {
+        "width": 361,
+        "height": 38
+      },
+      "fontSize": "14px"
+    },
+    ".avatar-button": {
+      "size": {
+        "width": 361,
+        "height": 64
+      },
+      "fontSize": "14px"
+    },
+    ".button": {
+      "size": {
+        "width": 394,
+        "height": 40
+      },
+      "fontSize": "14px"
+    }
+  },
+  "chat": {
+    ".composer .input": {
+      "size": {
+        "width": 312,
+        "height": 38
+      },
+      "fontSize": "14px"
+    },
+    ".composer .button": {
+      "size": {
+        "width": 50,
+        "height": 38
+      },
+      "fontSize": "14px"
+    }
+  },
+  "reward-claim": {
+    "input.input": {
+      "size": {
+        "width": 361,
+        "height": 38
+      },
+      "fontSize": "14px"
+    },
+    "textarea.input": {
+      "size": {
+        "width": 361,
+        "height": 91
+      },
+      "fontSize": "14px"
+    },
+    ".button": {
+      "size": {
+        "width": 361,
+        "height": 40
+      },
+      "fontSize": "14px"
+    }
+  },
+  "membership": {
+    ".picker-control": {
+      "size": {
+        "width": 61,
+        "height": 38
+      },
+      "fontSize": "16px"
+    },
+    ".button-secondary": {
+      "size": {
+        "width": 361,
+        "height": 36
+      },
+      "fontSize": "14px"
+    }
+  }
+}

@@ -68,11 +68,11 @@ const MyCouponPage: React.FC = () => {
             <View className={styles.notchBottom} />
             <View className={styles.left}>
               <Text className={styles.amount}>
-                <Text className={styles.amountSymbol}>币</Text>
-                {formatXaCoin(coupon.amount)}
+                <Text className={styles.amountSymbol}>{coupon.discount_type === 'QUALIFICATION' ? '券' : '币'}</Text>
+                {coupon.discount_type === 'QUALIFICATION' ? '资格' : formatXaCoin(coupon.amount)}
               </Text>
               <Text className={styles.threshold}>
-                {coupon.discount_type === 'DIRECT'
+                {coupon.discount_type === 'QUALIFICATION' ? '指定套餐 · 核销后不返券' : coupon.discount_type === 'DIRECT'
                   ? '无门槛'
                   : `满${formatXaCoin(coupon.threshold)}兴安币可用`}
               </Text>
@@ -80,13 +80,13 @@ const MyCouponPage: React.FC = () => {
             <View className={styles.divider} />
             <View className={styles.right}>
               <Text className={styles.name}>{coupon.name}</Text>
-              <Text className={styles.valid}>有效期至 {coupon.valid_to?.slice(0, 10)}</Text>
+              <Text className={styles.valid}>{coupon.valid_to ? '有效期至 ' + coupon.valid_to.slice(0, 10) : '永久有效'} {coupon.max_discount ? ' · 最高优惠¥' + coupon.max_discount/100 : ''}</Text>
             </View>
             <View className={styles.statusTag}>
               <Icon
                 name={STATUS_ICON[coupon.status]}
-                size={28}
-                color={coupon.status === 'UNUSED' ? '#007AFF' : '#AEAEB2'}
+                size={24}
+                color={coupon.status === 'UNUSED' ? '#002fa7' : '#AEAEB2'}
               />
               <Text className={styles.statusText}>{STATUS_LABEL[coupon.status]}</Text>
             </View>
@@ -96,7 +96,7 @@ const MyCouponPage: React.FC = () => {
         {visible.length === 0 && (
           <View className={styles.empty}>
             <View className={styles.emptyIcon}>
-              <Icon name="ticket" size={120} color="#AEAEB2" />
+              <Icon name="ticket" size={64} color="#AEAEB2" />
             </View>
             <Text className={styles.emptyTitle}>暂无{STATUS_LABEL[activeStatus]}的优惠券</Text>
             <Text className={styles.emptyDesc}>去领券中心领取更多优惠</Text>

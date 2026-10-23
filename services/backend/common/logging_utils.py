@@ -15,6 +15,7 @@
 
 import json
 import logging
+import re
 import uuid
 from typing import Any, Dict, Optional
 
@@ -41,6 +42,17 @@ BUSINESS_FIELDS = (
 )
 
 
+def redact_sensitive_urls(value):
+    """Keep route/status diagnostics without bearer capabilities or WS JWTs."""
+    value = re.sub(r'(/api/media/private/)[^/\s?"\']+', r'\1[redacted]', str(value))
+    return re.sub(r'([?&]token=)[^&\s"\']+', r'\1[redacted]', value)
+
+
+class PlainLogFormatter(logging.Formatter):
+    def format(self, record):
+        return redact_sensitive_urls(super().format(record))
+
+
 class JsonLogFormatter(logging.Formatter):
     """把 ``LogRecord`` 序列化成单行 JSON，便于 ELK / Loki 直接结构化检索。"""
 
@@ -65,7 +77,7 @@ class JsonLogFormatter(logging.Formatter):
             payload['exc_info'] = self.formatException(record.exc_info)
         if record.stack_info:
             payload['stack_info'] = self.formatStack(record.stack_info)
-        return json.dumps(payload, ensure_ascii=False, default=str)
+        return redact_sensitive_urls(json.dumps(payload, ensure_ascii=False, default=str))
 
 
 def new_trace_id() -> str:

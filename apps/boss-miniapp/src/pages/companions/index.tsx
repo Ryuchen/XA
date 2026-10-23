@@ -1,3 +1,4 @@
+import QualificationFilter from '@/components/QualificationFilter';
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, Input, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
@@ -26,6 +27,7 @@ const statusMeta = (status: string) => {
 };
 
 const CompanionsPage: React.FC = () => {
+  const [qualificationScope,setQualificationScope]=useState<Record<string,string>>({});
   const [searchValue, setSearchValue] = useState('');
   const [rankPeriod, setRankPeriod] = useState<RankingPeriod>('month');
   const [ranking, setRanking] = useState<RankingData>({ consume_rank: [], order_rank: [] });
@@ -42,8 +44,8 @@ const CompanionsPage: React.FC = () => {
   const { ensureLogin, loginSheet } = useLoginGuard();
   const { playingId, toggle: toggleVoice } = useVoicePreview();
 
-  const loadEscorts = async (categoryId: number | null = selectedCategoryId) => {
-    const res = await fetchEscorts(undefined, categoryId ?? undefined);
+  const loadEscorts = async (categoryId: number | null = selectedCategoryId, scope=qualificationScope) => {
+    const res = await fetchEscorts(undefined, categoryId ?? undefined,undefined,'ANY',scope);
     if (res.code === 0 && res.data) setEscorts(res.data);
   };
 
@@ -261,6 +263,7 @@ const CompanionsPage: React.FC = () => {
               <Text className={styles.playerCount}>{filteredEscorts.length} 位</Text>
             </View>
 
+            <QualificationFilter onChange={scope=>{setQualificationScope(scope);void loadEscorts(selectedCategoryId,scope)}} />
             <View className={styles.gameFilterWrap}>
               <View className={styles.gameFilterRow}>
                 <View
@@ -301,6 +304,7 @@ const CompanionsPage: React.FC = () => {
                         <Text className={styles.playerName}>{escort.nickname}</Text>
                       </View>
                       <Text className={styles.playerRank}>{escort.rank || '暂无段位'}</Text>
+                      {(escort.qualifications||[]).filter(q=>q.is_active).map(q=><Text key={q.id} style={{display:'block',fontSize:'11px',color:'#6e6e73',margin:'3px 0'}}>{q.label}</Text>)}
                       {escort.voice_card_url && (
                         <View
                           className={`${styles.voicePreview} ${playingId === escort.id ? styles.voicePreviewPlaying : ''}`}

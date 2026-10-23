@@ -1,6 +1,7 @@
 @use 'sass:math';
 @use '@/styles/variables.scss' as *;
 @use '@/styles/voice-preview.scss' as voice;
+@use '@/styles/commerce.scss' as commerce;
 
 .voicePreview {
   @include voice.voice-preview-button;
@@ -9,8 +10,7 @@
 
 
 .container {
-  min-height: 100vh;
-  background: $color-bg-page;
+  @include commerce.page;
   padding-bottom: 128rpx;
 }
 
@@ -45,7 +45,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: math.div($spacing-xs, 2);
+  gap: 8rpx;
   height: 64rpx;
   min-width: 112rpx;
   padding: 0 $spacing-md;
@@ -66,7 +66,6 @@
 }
 
 .sortIcon {
-  margin-right: 2rpx;
 }
 
 .playerList {
@@ -131,8 +130,8 @@
   position: absolute;
   top: $spacing-md;
   right: $spacing-md;
-  width: 44rpx;
-  height: 44rpx;
+  width: 48rpx;
+  height: 48rpx;
   border-radius: $radius-round;
   background: $color-primary;
   box-shadow: $shadow-card;
@@ -156,8 +155,8 @@
   position: absolute;
   right: -4rpx;
   bottom: -4rpx;
-  width: 28rpx;
-  height: 28rpx;
+  width: 24rpx;
+  height: 24rpx;
   border-radius: $radius-round;
   border: 4rpx solid $color-bg-card;
   box-sizing: border-box;
@@ -199,9 +198,9 @@
   display: inline-flex;
   align-items: center;
   gap: math.div($spacing-xs, 2);
-  padding: 4rpx $spacing-sm;
+  padding: 8rpx $spacing-sm;
   border-radius: $radius-round;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: $font-weight-medium;
 }
 
@@ -269,8 +268,8 @@
   color: $color-primary;
   background: rgba(var(--xa-primary-rgb), 0.08);
   border-radius: $radius-xs;
-  padding: 2rpx $spacing-xs;
-  font-size: 20rpx;
+  padding: 4rpx $spacing-xs;
+  font-size: 22rpx;
 }
 
 .bottomRow {
@@ -293,7 +292,7 @@
 }
 
 .priceUnit {
-  margin-left: 2rpx;
+  margin-left: 4rpx;
   color: $color-text-tertiary;
   font-size: $font-size-xs;
 }
@@ -327,7 +326,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 128rpx;
+  height: 144rpx;
   padding: $spacing-md $page-padding;
   box-sizing: border-box;
   background: $color-bg-card;

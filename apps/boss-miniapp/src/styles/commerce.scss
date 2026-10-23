@@ -1,0 +1,40 @@
+// Shared storefront treatment for every gameplay's selection and order flow.
+@mixin page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: var(--xa-color-surface-page);
+  color: var(--xa-color-text-primary);
+  font-size: 28rpx;
+}
+@mixin card {
+  background: var(--xa-color-surface-card);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin: 0 24rpx 24rpx;
+}
+@mixin footer {
+  position: fixed;
+  z-index: 20;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24rpx 32rpx;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  background: var(--xa-color-surface-card);
+  border-top: 1rpx solid var(--xa-color-surface-subtle);
+  box-sizing: border-box;
+}
+@mixin primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 96rpx;
+  border-radius: 999rpx;
+  color: var(--xa-color-surface-card);
+  background: var(--xa-color-primary);
+  font-size: 28rpx;
+  font-weight: 600;
+  border: 0;
+  &::after { border: 0; }
+  &:active { opacity: .85; }
+}

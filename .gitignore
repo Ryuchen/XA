@@ -5,11 +5,15 @@
 services/backend/.env
 services/backend/.env.*
 !services/backend/.env.example
+# WeChat code-upload private keys
+private.wx*.key
 
 # JavaScript / Taro build output
 **/node_modules/
+.pnpm-store/
 **/dist/
 **/dist-h5/
+**/dist-*/
 **/.swc/
 *.tsbuildinfo
 # Vite 构建时生成的临时配置文件，如 vite.config.ts.timestamp-1700000000000-abc.mjs
@@ -21,6 +25,8 @@ dist-verify*/
 *.log
 
 # Python build/runtime output
+.venv/
+.tools/
 services/backend/venv/
 **/__pycache__/
 *.py[cod]
@@ -32,6 +38,22 @@ services/backend/celerybeat-schedule*
 .pai/
 .trae/
 **/.vite/
+.workbuddy/
+
+# Local poster exports and delivery bundles; retain their source scripts.
+/outputs/
+/skills/*.zip
+/design/**/*.zip
+/design/**/*.png
+/design/**/*.jpg
+/design/**/*.jpeg
+/design/**/*.webp
+/design/**/*.svg
+/design/**/output/
+/design/**/07-final/
+/design/**/08-final-review/
+/design/**/*-outlines.json
+/design/**/outline-cache.json
 
 # Editor and OS files
 .DS_Store

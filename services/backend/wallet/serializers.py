@@ -11,27 +11,45 @@ class ReportSerializer(serializers.ModelSerializer):
     proof_image_url = serializers.SerializerMethodField()
     order_id = serializers.IntegerField(read_only=True)
     order_no = serializers.CharField(source='order.order_no', read_only=True, default='')
+    fulfillment = serializers.CharField(source='order.fulfillment', read_only=True, default='')
     service_name = serializers.CharField(source='order.service_name_snapshot', read_only=True, default='')
     entry_image_url = serializers.SerializerMethodField()
     completion_image_url = serializers.SerializerMethodField()
     result_image_urls = serializers.SerializerMethodField()
+    result_images = serializers.SerializerMethodField()
+    order_status = serializers.CharField(source='order.status', read_only=True, default='')
+    payment_status = serializers.CharField(source='order.payment_status', read_only=True, default='')
+    refund_summary = serializers.SerializerMethodField()
+    settled_at = serializers.DateTimeField(source='order.settled_at', read_only=True, default=None)
+    expected_income = serializers.SerializerMethodField()
+    commission_type = serializers.SerializerMethodField()
+    commission_fixed = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    can_submit = serializers.SerializerMethodField()
+    edit_block_reason = serializers.SerializerMethodField()
 
     class Meta:
         model = ProviderReport
         fields = [
-            'id', 'order_id', 'order_no', 'service_name', 'game_name', 'description',
+            'id', 'order_id', 'order_no', 'service_name', 'fulfillment', 'game_name', 'description',
             'amount', 'proof_image', 'proof_image_url', 'entry_image_url',
-            'completion_image_url', 'result_image_urls',
+            'completion_image_url', 'result_image_urls', 'result_images',
             'status', 'status_display', 'commission_rate', 'payout_amount',
-            'remark', 'audit_remark', 'created_at', 'audited_at',
+            'remark', 'audit_remark', 'created_at', 'audited_at', 'submitted_at',
+            'order_status', 'payment_status', 'refund_summary', 'settled_at', 'expected_income', 'commission_type', 'commission_fixed', 'can_edit', 'can_submit', 'edit_block_reason',
         ]
         read_only_fields = [
-            'status', 'commission_rate', 'payout_amount', 'audit_remark', 'audited_at',
+            'status', 'commission_rate', 'payout_amount', 'audit_remark', 'audited_at', 'submitted_at',
         ]
         extra_kwargs = {'proof_image': {'write_only': True, 'required': False}}
 
     def get_proof_image_url(self, obj):
         return build_media_url(self.context.get('request'), obj.proof_image)
+
+    def get_refund_summary(self,obj):
+        from orders.refunds import refund_summary,authorized_refund
+        account = getattr(self.context.get('request'),'account',None)
+        return refund_summary(obj.order,account=account,detailed=authorized_refund(account)) if obj.order_id else None
 
     def _file_url(self, field):
         return build_media_url(self.context.get('request'), field)
@@ -44,6 +62,37 @@ class ReportSerializer(serializers.ModelSerializer):
 
     def get_result_image_urls(self, obj):
         return [self._file_url(item.image) for item in obj.result_images.all()]
+
+    def get_result_images(self, obj):
+        return [{'id': item.pk, 'url': self._file_url(item.image)} for item in obj.result_images.all()]
+
+    def get_expected_income(self, obj):
+        return self._financial_snapshot(obj)['expected_income']
+
+    def _financial_snapshot(self, obj):
+        from .reporting import report_financial_snapshot
+        cache = getattr(self, '_report_financial_snapshots', None)
+        if cache is None:
+            cache = self._report_financial_snapshots = {}
+        if obj.pk not in cache:
+            cache[obj.pk] = report_financial_snapshot(obj)
+        return cache[obj.pk]
+
+    def get_commission_type(self, obj):
+        return self._financial_snapshot(obj)['commission_type']
+
+    def get_commission_fixed(self, obj):
+        return self._financial_snapshot(obj)['commission_fixed']
+
+    def get_edit_block_reason(self, obj):
+        from orders.services import report_edit_error
+        return report_edit_error(obj)
+
+    def get_can_edit(self, obj):
+        return not self.get_edit_block_reason(obj)
+
+    def get_can_submit(self, obj):
+        return self.get_can_edit(obj) and (not obj.order_id or obj.order.status == 'COMPLETED')
 
     def validate_amount(self, value):
         if value <= 0:
