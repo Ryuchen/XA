@@ -364,6 +364,7 @@ CELERY_TASK_ALWAYS_EAGER = False  # 测试时设为 True 即可同步执行
 
 # Celery beat 定时计划
 CELERY_BEAT_SCHEDULE = {
+    'expire-reservations': {'task': 'orders.tasks.expire_reservations', 'schedule': 30.0},
     'confirm-member-consumption': {'task': 'engagement.tasks.confirm_due_consumption', 'schedule': 60.0},
     'release-provider-income': {'task': 'wallet.tasks.release_due_provider_income', 'schedule': 30.0},
     'publish-club-birthdays': {'task': 'engagement.tasks.publish_birthdays', 'schedule': 3600.0},

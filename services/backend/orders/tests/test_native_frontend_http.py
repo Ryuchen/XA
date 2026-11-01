@@ -11,7 +11,7 @@ from unittest.mock import patch
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
-from django.test import LiveServerTestCase, override_settings
+from django.test import LiveServerTestCase, override_settings, tag
 from django.utils import timezone
 from PIL import Image
 
@@ -38,6 +38,7 @@ class NativeFrontendHTTPTest(LiveServerTestCase):
     def test_native_page_controllers_use_real_backend_contracts(self):
         self.run_native_flow(False)
 
+    @tag('filedb')
     def test_native_self_order_direct_grab_uses_real_backend_contracts(self):
         self.run_native_flow(True)
 

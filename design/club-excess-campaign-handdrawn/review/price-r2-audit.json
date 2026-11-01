@@ -1,0 +1,554 @@
+{
+  "revision": "excess-mobile-price-r2-20261009",
+  "scope": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ],
+  "records": [
+    {
+      "pageId": "mobile-absolute",
+      "png": "output/png/mobile-absolute.png",
+      "width": 3200,
+      "height": 7200,
+      "rows": [
+        {
+          "role": "price-number",
+          "value": "188",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 20.14550711239997,
+          "bottomMargin": 18.725585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "188",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 18.710936800000013,
+          "bottomMargin": 18.710936800000013
+        },
+        {
+          "role": "price-number",
+          "value": "388",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 21.14550711239997,
+          "bottomMargin": 19.725585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "488",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 19.710936800000013,
+          "bottomMargin": 19.710936800000013
+        },
+        {
+          "role": "price-number",
+          "value": "588",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 20.14550711239997,
+          "bottomMargin": 18.725585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "888",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 18.710936800000013,
+          "bottomMargin": 18.710936800000013
+        },
+        {
+          "role": "price-number",
+          "value": "788",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 20.14550711239997,
+          "bottomMargin": 18.725585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1288",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 18.710936800000013,
+          "bottomMargin": 18.710936800000013
+        }
+      ]
+    },
+    {
+      "pageId": "mobile-secret",
+      "png": "output/png/mobile-secret.png",
+      "width": 3200,
+      "height": 7200,
+      "rows": [
+        {
+          "role": "price-number",
+          "value": "188",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 19.14550711239997,
+          "bottomMargin": 17.725585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "188",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 17.710936800000013,
+          "bottomMargin": 17.710936800000013
+        },
+        {
+          "role": "price-number",
+          "value": "388",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 19.64550711239997,
+          "bottomMargin": 18.225585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "488",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 18.210936800000013,
+          "bottomMargin": 18.210936800000013
+        },
+        {
+          "role": "price-number",
+          "value": "588",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 19.64550711239997,
+          "bottomMargin": 18.225585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "888",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 18.210936800000013,
+          "bottomMargin": 18.210936800000013
+        },
+        {
+          "role": "price-number",
+          "value": "788",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 23.14550711239997,
+          "bottomMargin": 21.725585287599984
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1288",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 8,
+          "centerDelta": 0,
+          "topMargin": 21.710936800000013,
+          "bottomMargin": 21.710936800000013
+        }
+      ]
+    },
+    {
+      "pageId": "social",
+      "png": "output/png/social.png",
+      "width": 2400,
+      "height": 3200,
+      "rows": [
+        {
+          "role": "price-number",
+          "value": "188",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 11.217772912399937,
+          "bottomMargin": 9.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "128",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 9.783202599999981,
+          "bottomMargin": 9.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "388",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 11.217772912399937,
+          "bottomMargin": 9.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "388",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 9.783202599999981,
+          "bottomMargin": 9.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "688",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.217772912399937,
+          "bottomMargin": 10.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "688",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 10.783202599999981,
+          "bottomMargin": 10.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "1288",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 11.717772912399937,
+          "bottomMargin": 10.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1288",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 10.283202599999981,
+          "bottomMargin": 10.283202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "1888",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.217772912399937,
+          "bottomMargin": 10.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1888",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 10.783202599999981,
+          "bottomMargin": 10.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "188",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 11.217772912399937,
+          "bottomMargin": 9.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "128",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 9.783202599999981,
+          "bottomMargin": 9.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "388",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 11.217772912399937,
+          "bottomMargin": 9.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "388",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 9.783202599999981,
+          "bottomMargin": 9.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "688",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.217772912399937,
+          "bottomMargin": 10.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "688",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 10.783202599999981,
+          "bottomMargin": 10.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "1288",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 11.717772912399937,
+          "bottomMargin": 10.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1288",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 10.283202599999981,
+          "bottomMargin": 10.283202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "1888",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.217772912399937,
+          "bottomMargin": 10.797851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1888",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 10.783202599999981,
+          "bottomMargin": 10.783202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "188",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 13.717772912399937,
+          "bottomMargin": 12.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "188",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.283202599999981,
+          "bottomMargin": 12.283202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "388",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 13.71777291240005,
+          "bottomMargin": 12.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "488",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.283202600000095,
+          "bottomMargin": 12.283202599999868
+        },
+        {
+          "role": "price-number",
+          "value": "588",
+          "unit": "r",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 14.71777291240005,
+          "bottomMargin": 13.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "888",
+          "unit": "w",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 13.283202600000095,
+          "bottomMargin": 13.283202599999868
+        },
+        {
+          "role": "price-number",
+          "value": "788",
+          "unit": "r",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 15.71777291240005,
+          "bottomMargin": 14.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1288",
+          "unit": "w",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 14.283202600000095,
+          "bottomMargin": 14.283202599999868
+        },
+        {
+          "role": "price-number",
+          "value": "188",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 13.717772912399937,
+          "bottomMargin": 12.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "188",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.283202599999981,
+          "bottomMargin": 12.283202599999981
+        },
+        {
+          "role": "price-number",
+          "value": "388",
+          "unit": "r",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 13.71777291240005,
+          "bottomMargin": 12.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "488",
+          "unit": "w",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 12.283202600000095,
+          "bottomMargin": 12.283202599999868
+        },
+        {
+          "role": "price-number",
+          "value": "588",
+          "unit": "r",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 14.71777291240005,
+          "bottomMargin": 13.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "888",
+          "unit": "w",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 13.283202600000095,
+          "bottomMargin": 13.283202599999868
+        },
+        {
+          "role": "price-number",
+          "value": "788",
+          "unit": "r",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 15.71777291240005,
+          "bottomMargin": 14.297851087600066
+        },
+        {
+          "role": "guarantee-number",
+          "value": "1288",
+          "unit": "w",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 6,
+          "centerDelta": 0,
+          "topMargin": 14.283202600000095,
+          "bottomMargin": 14.283202599999868
+        }
+      ]
+    }
+  ]
+}

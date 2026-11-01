@@ -1,0 +1,23 @@
+{
+  "provider": "built-in image_gen",
+  "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-05931e5e-251a-4231-901a-c9c74a41cf08.png",
+  "file": "01-illustrations/streak-medic-mouse-v1.png",
+  "width": 1536,
+  "height": 1024,
+  "channels": 4,
+  "hasAlpha": true,
+  "alpha": {
+    "min": 0,
+    "max": 254,
+    "transparentPixels": 520754,
+    "nearOpaquePixels": 915305,
+    "totalPixels": 1572864,
+    "corners": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "prompt": "01-illustrations/prompts.md"
+}

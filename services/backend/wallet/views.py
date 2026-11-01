@@ -15,6 +15,7 @@ from .models import (
     DisposeRecord,
     ProviderReport,
     ProviderReportImage,
+    RechargeRecord,
     Transaction,
     WithdrawRequest,
     WithdrawalAccount,
@@ -149,11 +150,14 @@ class ProviderBenefitRecordsView(APIView):
         credits = Transaction.objects.filter(credit_owner).filter(
             order_id=OuterRef('pk'), tx_type__in=[Transaction.TxType.INCOME,Transaction.TxType.GIFT],
             status=Transaction.Status.SUCCESS,
+        ).exclude(
+            Q(remark__startswith='推荐分佣：') | Q(remark__startswith='礼物推荐分佣：') |
+            Q(reversal_of__remark__startswith='推荐分佣：') | Q(reversal_of__remark__startswith='礼物推荐分佣：')
         ).order_by()
         # 有成员分账时以成员为准；旧订单才回退订单头。实得只来自成功入账流水。
         gift_orders = Order.objects.filter(
             status__in=[Order.Status.COMPLETED,Order.Status.CANCELLED], payment_status__in=[Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED,Order.PaymentStatus.REFUNDED],
-            service__service_category__is_gift=True,
+            is_gift_snapshot=True,
         ).annotate(
             has_assignments=Exists(assignments), has_own_assignment=Exists(own_assignments),
         ).filter(
@@ -437,7 +441,7 @@ class WithdrawView(APIView):
             if tax_amount:
                 submit_msg += (
                     f'；代扣税 {tax_rate}% 计 {tax_amount / 10:g} 兴安币，'
-                    f'实际到账 {actual_amount / 10:g} 兴安币'
+                    f'预计打款人民币 ¥{actual_amount / 100:g}'
                 )
             result = fund_success(request, 'withdraw', msg=submit_msg, data={
                 'balance': wallet.balance, 'frozen_amount': wallet.frozen_amount,
@@ -469,14 +473,34 @@ class TransactionsView(APIView):
 
         total = qs.count()
         start = (page - 1) * page_size
-        items = qs.order_by('-created_at', '-id')[start:start + page_size]
+        items = list(qs.select_related('reversal_of').order_by('-created_at', '-id')[start:start + page_size])
+        # A GIFT can be an order gift, a recharge bonus, or an activity award.
+        # Use persisted relations rather than the editable transaction remark.
+        original_gift_ids = [t.reversal_of_id or t.id for t in items if t.tx_type == Transaction.TxType.GIFT]
+        recharge_gift_ids = set(RechargeRecord.objects.filter(gift_tx_id__in=original_gift_ids)
+                                .values_list('gift_tx_id', flat=True))
+
+        def gift_source(t):
+            if t.tx_type != Transaction.TxType.GIFT:
+                return None
+            original = t.reversal_of if t.reversal_of_id else t
+            if original.order_id:
+                return 'ORDER_GIFT'
+            if original.id in recharge_gift_ids:
+                return 'RECHARGE_GIFT'
+            return None
 
         data = [{
             'id': t.id,
             'tx_no': t.tx_no,
             'amount': t.amount,
             'tx_type': t.tx_type,
+            'gift_source': gift_source(t),
             'reversal_of':t.reversal_of_id, 'is_reversal':bool(t.reversal_of_id),
+            # Refund entries carry their own reason; the original entry is the
+            # source of the referral classification used by settlement.
+            'is_referral_income': t.tx_type == Transaction.TxType.INCOME and
+                (t.reversal_of.remark if t.reversal_of_id else t.remark).startswith(('推荐分佣：', '礼物推荐分佣：')),
             'balance_before': t.balance_before,
             'balance_after': t.balance_after,
             'status': t.status,
@@ -500,6 +524,14 @@ class TransactionsView(APIView):
         })
 
 
+def _report_owner_q(request):
+    """Use the business account first; only unmapped historical rows fall back."""
+    owner = Q(provider_account=request.account)
+    if request.legacy_user is not None:
+        owner |= Q(provider_account__isnull=True, provider=request.legacy_user)
+    return owner
+
+
 class ReportListCreateView(APIView):
     """陪玩报单：GET 查询记录，POST 按已完成订单创建上传草稿。"""
 
@@ -507,9 +539,7 @@ class ReportListCreateView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request):
-        reports = ProviderReport.objects.filter(
-            provider_account=request.account,
-        ).select_related('order').prefetch_related('result_images')
+        reports = ProviderReport.objects.filter(_report_owner_q(request)).select_related('order').prefetch_related('result_images')
         serializer = ReportSerializer(reports, many=True, context={'request': request})
         return Response({'code': 0, 'data': serializer.data})
 
@@ -522,19 +552,25 @@ class ReportListCreateView(APIView):
             order_id = int(request.data.get('order_id', 0))
         except (TypeError, ValueError):
             return Response({'code': 400, 'msg': '请选择已完成订单'})
+        owner = Q(provider_account=request.account) | Q(providers__provider_account=request.account)
+        if request.legacy_user is not None:
+            owner |= Q(provider_account__isnull=True, provider=request.legacy_user) | Q(
+                providers__provider_account__isnull=True, providers__provider=request.legacy_user)
         order = Order.objects.filter(
-            Q(provider_account=request.account)
-            | Q(providers__provider_account=request.account),
+            owner,
             pk=order_id, status__in=[Order.Status.GRABBED, Order.Status.IN_SERVICE, Order.Status.COMPLETED],
         ).select_related('service').distinct().first()
         if not order:
             return Response({'code': 400, 'msg': '订单不存在、未完成或不属于当前陪玩'})
-        if order.source_order_id or (order.service.service_category_id and order.service.service_category.is_gift):
-            return Response({'code': 400, 'msg': '礼物打赏不需要服务报单'})
         # 与开始/完成服务入口统一用 provider + order 唯一键，兼容历史未回填账户的草稿。
-        share = order.providers.filter(provider_account=request.account).first()
-        if share and share.released_at and share.settlement_base <= 0:
-            return Response({'code': 400, 'msg': '转单后本人无结算份额，无需提交报单'})
+        share_owner = Q(provider_account=request.account)
+        if request.legacy_user is not None:
+            share_owner |= Q(provider_account__isnull=True, provider=request.legacy_user)
+        share = order.providers.filter(share_owner).first()
+        from orders.report_eligibility import report_entry_error
+        error = report_entry_error(order, request.account, share, legacy_user=request.legacy_user)
+        if error:
+            return Response({'code': 400, 'msg': error})
         report, created = ProviderReport.objects.get_or_create(
             provider=request.legacy_user,
             order=order,
@@ -546,6 +582,8 @@ class ReportListCreateView(APIView):
                 'status': ProviderReport.Status.DRAFT,
             },
         )
+        if report.provider_account_id and report.provider_account_id != request.account.pk:
+            return Response({'code': 409, 'msg': '报单归属需客服核对'}, status=409)
         if not report.provider_account_id:
             report.provider_account = request.account
             report.save(update_fields=['provider_account'])
@@ -560,12 +598,12 @@ class ReportListCreateView(APIView):
 def _locked_report(request, pk):
     """与结单、退款、审核保持订单→报单的锁顺序。调用方已开启事务。"""
     from orders.models import Order
-    initial = ProviderReport.objects.filter(pk=pk, provider_account=request.account).only('order_id').first()
+    initial = ProviderReport.objects.filter(_report_owner_q(request), pk=pk).only('order_id').first()
     if initial is None:
         return None
     if initial.order_id:
         Order.objects.select_for_update().get(pk=initial.order_id)
-    return ProviderReport.objects.select_for_update().get(pk=pk, provider_account=request.account)
+    return ProviderReport.objects.select_for_update().get(_report_owner_q(request), pk=pk)
 
 
 class ReportImageUploadView(APIView):
@@ -583,6 +621,12 @@ class ReportImageUploadView(APIView):
         kind = (request.data.get('kind') or '').upper()
         if not image or kind not in ('ENTRY', 'COMPLETION', 'RESULT'):
             return Response({'code': 400, 'msg': '截图类型或文件无效'})
+        # 双陪的首次入队/结单截图同时是履约动作，必须由订单入口提交，
+        # 否则报单草稿会显示已提交，但订单不会触发两人齐备后的状态流转。
+        from orders.team_fulfillment import team_report_evidence_error
+        evidence_error = team_report_evidence_error(report, kind)
+        if evidence_error:
+            return Response({'code': 400, 'msg': evidence_error})
         from rest_framework import serializers
         try:
             serializers.ImageField().run_validation(image)
@@ -662,8 +706,14 @@ class ReportSubmitView(APIView):
         report.commission_rate = commission_rate
         report.status = ProviderReport.Status.PENDING
         report.audit_remark = ''
+        # This is a new review round. Previous decisions remain in the
+        # recipient's notice and administrative audit log, not on the
+        # pending round as though it had already been reviewed.
+        report.auditor = None
+        report.auditor_account = None
+        report.audited_at = None
         report.submitted_at = timezone.now()
-        report.save(update_fields=['amount', 'commission_rate', 'status', 'audit_remark', 'submitted_at', 'updated_at'])
+        report.save(update_fields=['amount', 'commission_rate', 'status', 'audit_remark', 'auditor', 'auditor_account', 'audited_at', 'submitted_at', 'updated_at'])
         if report.order_id:
             from engagement.confirmation import refresh_report_clock
             refresh_report_clock(report.order)

@@ -8,11 +8,41 @@ def report_order_share(report):
     if not report.order_id:
         return None
     rows = list(report.order.providers.all())
+    for row in rows:
+        if row.provider_id != report.provider_id:
+            continue
+        if row.provider_account_id and report.provider_account_id and row.provider_account_id != report.provider_account_id:
+            continue
+        if report.order.required_provider_count == 2 and (not row.provider_account_id or not report.provider_account_id):
+            continue
+        return row
+    return None
+
+
+def report_has_valid_order_share(report):
     if report.provider_account_id:
-        own = next((row for row in rows if row.provider_account_id == report.provider_account_id), None)
-        if own is not None:
-            return own
-    return next((row for row in rows if row.provider_id == report.provider_id), None)
+        if hasattr(report, '_display_report_identity'):
+            valid_identity = report._display_report_identity
+        else:
+            from club_accounts.models import LegacyAccountMap
+            valid_identity = LegacyAccountMap.objects.filter(
+                legacy_user_id=report.provider_id, account_id=report.provider_account_id).exists()
+        if not valid_identity:
+            return False
+    if not report.order_id:
+        return True
+    rows = list(report.order.providers.all())
+    if rows:
+        share = report_order_share(report)
+        if share is None:
+            return False
+        if report.status == ProviderReport.Status.APPROVED:
+            return report.payout_amount == share.provider_income
+        return True
+    # Old single-provider orders may not have an assignment row.
+    return bool(report.order.required_provider_count == 1 and report.order.provider_id == report.provider_id
+                and not (report.order.provider_account_id and report.provider_account_id
+                         and report.order.provider_account_id != report.provider_account_id))
 
 
 def legacy_report_commission(report):
@@ -34,6 +64,10 @@ def legacy_report_commission(report):
 def report_financial_snapshot(report):
     approved = report.status == ProviderReport.Status.APPROVED
     if report.order_id:
+        if not report_has_valid_order_share(report):
+            return {'commission_type': None, 'commission_fixed': None,
+                    'suggested_commission_rate': None, 'commission_source_label': '收益待核对',
+                    'expected_income': None}
         share = report_order_share(report)
         source = share or report.order
         return {

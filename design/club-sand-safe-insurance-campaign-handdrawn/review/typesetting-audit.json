@@ -1,0 +1,866 @@
+{
+  "revision": "sand-safe-insurance-vectors-v1",
+  "note": "源数据与文字位置辅助检查；需配合实际PNG目检，不替代视觉验收。",
+  "records": [
+    {
+      "id": "desktop-absolute",
+      "pngSize": [
+        3200,
+        4800
+      ],
+      "native": [
+        1024,
+        1536
+      ],
+      "tiers": 3,
+      "values": {
+        "priceR": {
+          "expected": [
+            "168",
+            "388",
+            "628"
+          ],
+          "actual": [
+            "168",
+            "388",
+            "628"
+          ],
+          "match": true
+        },
+        "baseGuaranteeW": {
+          "expected": [
+            "688",
+            "1688",
+            "3288"
+          ],
+          "actual": [
+            "688",
+            "1688",
+            "3288"
+          ],
+          "match": true
+        },
+        "sandSafeCount": {
+          "expected": [
+            "2",
+            "6",
+            "10"
+          ],
+          "actual": [
+            "2",
+            "6",
+            "10"
+          ],
+          "match": true
+        },
+        "regularLargeSafeCount": {
+          "expected": [
+            "3",
+            "8",
+            "15"
+          ],
+          "actual": [
+            "3",
+            "8",
+            "15"
+          ],
+          "match": true
+        }
+      },
+      "pairs": [
+        {
+          "role": "price",
+          "number": "168",
+          "unit": "r",
+          "unitX": 193.64493589280048,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 193.64493589280048,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "price",
+          "number": "628",
+          "unit": "r",
+          "unitX": 193.64493589280048,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "loot",
+          "number": "688",
+          "unit": "w",
+          "unitX": 910.1588036567548,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 910.1588036567548,
+          "gap": 12.000000000000028,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002
+        },
+        {
+          "role": "loot",
+          "number": "3288",
+          "unit": "w",
+          "unitX": 910.1588036567548,
+          "gap": 12.000000000000028,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002
+        }
+      ],
+      "margins": [
+        {
+          "role": "table-row-0",
+          "top": 24.000975700000026,
+          "bottom": 24.000975700000026
+        },
+        {
+          "role": "table-row-1",
+          "top": 23.000975700000026,
+          "bottom": 23.000975700000026
+        },
+        {
+          "role": "table-row-2",
+          "top": 23.950440100000037,
+          "bottom": 24.950440099999923
+        },
+        {
+          "role": "reward-extra",
+          "top": 11.12866269999995,
+          "bottom": 11.12866269999995,
+          "left": 14.088632567477731,
+          "right": 14.088632567477703,
+          "centerDelta": 0
+        },
+        {
+          "role": "reward-gift",
+          "top": 11.636231650000013,
+          "bottom": 11.6362316499999,
+          "left": 62.10034126400001,
+          "right": 62.10034126400001,
+          "centerDelta": 0
+        },
+        {
+          "role": "reward-conditions",
+          "top": 4.961426000000074,
+          "bottom": 4.961425999999847,
+          "left": 128.789555075,
+          "right": 128.78955507499995,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-count",
+          "top": 2.324707250000074,
+          "bottom": 2.3247072499998467,
+          "left": 0,
+          "right": 288.86133670000004,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-proxy",
+          "top": 2.3076167500000793,
+          "bottom": 2.307616749999852,
+          "left": 0,
+          "right": 144.41796770000008,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-loot",
+          "top": 4.782227200000079,
+          "bottom": 4.782227199999852,
+          "left": 0,
+          "right": 106.17968852000001,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-count-actual-card",
+          "top": 13.324707250000074,
+          "bottom": 14.324707249999847,
+          "actualGlyphHeight": 34.35058550000008
+        },
+        {
+          "role": "rule-proxy-actual-card",
+          "top": 14.30761675000008,
+          "bottom": 13.307616749999852,
+          "actualGlyphHeight": 34.38476650000007
+        },
+        {
+          "role": "rule-loot-actual-card",
+          "top": 20.78222720000008,
+          "bottom": 19.782227199999852,
+          "actualGlyphHeight": 33.43554560000007
+        }
+      ],
+      "normalTextRuns": 23,
+      "boldTextRuns": 12,
+      "minimumRulePhoneFont": 12.94921875,
+      "artTitles": [
+        {
+          "text": "沙色保险单",
+          "role": "art-title",
+          "x": 103.99999880574003,
+          "y": 123.75311598028836,
+          "width": 424.00000238851993,
+          "height": 91.49376803942327,
+          "requestedCenter": [
+            316,
+            169.5
+          ],
+          "effectiveSize": 83.13492147356223,
+          "includesOutlineAndShadow": true
+        },
+        {
+          "text": "三幻神惊喜奖励",
+          "role": "reward-art-title",
+          "x": 419.417024161,
+          "y": 899.19650185,
+          "width": 257.165951678,
+          "height": 38.6069963,
+          "requestedCenter": [
+            548,
+            918.5
+          ],
+          "effectiveSize": 37,
+          "includesOutlineAndShadow": true
+        },
+        {
+          "text": "下单须知",
+          "role": "notes-art-title",
+          "x": 163.9030124,
+          "y": 1160.2095,
+          "width": 122.1939752,
+          "height": 31.581,
+          "requestedCenter": [
+            225,
+            1176
+          ],
+          "effectiveSize": 31,
+          "includesOutlineAndShadow": true
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "pngSize": [
+        3200,
+        4800
+      ],
+      "native": [
+        1024,
+        1536
+      ],
+      "tiers": 3,
+      "values": {
+        "priceR": {
+          "expected": [
+            "128",
+            "288",
+            "488"
+          ],
+          "actual": [
+            "128",
+            "288",
+            "488"
+          ],
+          "match": true
+        },
+        "baseGuaranteeW": {
+          "expected": [
+            "688",
+            "1688",
+            "3288"
+          ],
+          "actual": [
+            "688",
+            "1688",
+            "3288"
+          ],
+          "match": true
+        },
+        "sandSafeCount": {
+          "expected": [
+            "2",
+            "6",
+            "10"
+          ],
+          "actual": [
+            "2",
+            "6",
+            "10"
+          ],
+          "match": true
+        },
+        "regularLargeSafeCount": {
+          "expected": [
+            "3",
+            "8",
+            "15"
+          ],
+          "actual": [
+            "3",
+            "8",
+            "15"
+          ],
+          "match": true
+        }
+      },
+      "pairs": [
+        {
+          "role": "price",
+          "number": "128",
+          "unit": "r",
+          "unitX": 193.64493589280048,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 193.64493589280048,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 193.64493589280048,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "loot",
+          "number": "688",
+          "unit": "w",
+          "unitX": 910.1588036567548,
+          "gap": 12,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 910.1588036567548,
+          "gap": 12.000000000000028,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002
+        },
+        {
+          "role": "loot",
+          "number": "3288",
+          "unit": "w",
+          "unitX": 910.1588036567548,
+          "gap": 12.000000000000028,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002
+        }
+      ],
+      "margins": [
+        {
+          "role": "table-row-0",
+          "top": 24.000975700000026,
+          "bottom": 24.000975700000026
+        },
+        {
+          "role": "table-row-1",
+          "top": 23.000975700000026,
+          "bottom": 23.000975700000026
+        },
+        {
+          "role": "table-row-2",
+          "top": 23.950440100000037,
+          "bottom": 24.950440099999923
+        },
+        {
+          "role": "reward-extra",
+          "top": 11.12866269999995,
+          "bottom": 11.12866269999995,
+          "left": 14.088632567477731,
+          "right": 14.088632567477703,
+          "centerDelta": 0
+        },
+        {
+          "role": "reward-gift",
+          "top": 11.636231650000013,
+          "bottom": 11.6362316499999,
+          "left": 62.10034126400001,
+          "right": 62.10034126400001,
+          "centerDelta": 0
+        },
+        {
+          "role": "reward-conditions",
+          "top": 4.961426000000074,
+          "bottom": 4.961425999999847,
+          "left": 128.789555075,
+          "right": 128.78955507499995,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-count",
+          "top": 2.324707250000074,
+          "bottom": 2.3247072499998467,
+          "left": 0,
+          "right": 288.86133670000004,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-proxy",
+          "top": 2.3076167500000793,
+          "bottom": 2.307616749999852,
+          "left": 0,
+          "right": 144.41796770000008,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-loot",
+          "top": 4.782227200000079,
+          "bottom": 4.782227199999852,
+          "left": 0,
+          "right": 106.17968852000001,
+          "centerDelta": 0
+        },
+        {
+          "role": "rule-count-actual-card",
+          "top": 13.324707250000074,
+          "bottom": 14.324707249999847,
+          "actualGlyphHeight": 34.35058550000008
+        },
+        {
+          "role": "rule-proxy-actual-card",
+          "top": 14.30761675000008,
+          "bottom": 13.307616749999852,
+          "actualGlyphHeight": 34.38476650000007
+        },
+        {
+          "role": "rule-loot-actual-card",
+          "top": 20.78222720000008,
+          "bottom": 19.782227199999852,
+          "actualGlyphHeight": 33.43554560000007
+        }
+      ],
+      "normalTextRuns": 23,
+      "boldTextRuns": 12,
+      "minimumRulePhoneFont": 12.94921875,
+      "artTitles": [
+        {
+          "text": "沙色保险单",
+          "role": "art-title",
+          "x": 103.99999880574003,
+          "y": 123.75311598028836,
+          "width": 424.00000238851993,
+          "height": 91.49376803942327,
+          "requestedCenter": [
+            316,
+            169.5
+          ],
+          "effectiveSize": 83.13492147356223,
+          "includesOutlineAndShadow": true
+        },
+        {
+          "text": "三幻神惊喜奖励",
+          "role": "reward-art-title",
+          "x": 419.417024161,
+          "y": 899.19650185,
+          "width": 257.165951678,
+          "height": 38.6069963,
+          "requestedCenter": [
+            548,
+            918.5
+          ],
+          "effectiveSize": 37,
+          "includesOutlineAndShadow": true
+        },
+        {
+          "text": "下单须知",
+          "role": "notes-art-title",
+          "x": 163.9030124,
+          "y": 1160.2095,
+          "width": 122.1939752,
+          "height": 31.581,
+          "requestedCenter": [
+            225,
+            1176
+          ],
+          "effectiveSize": 31,
+          "includesOutlineAndShadow": true
+        }
+      ]
+    },
+    {
+      "id": "cover",
+      "pngSize": [
+        3200,
+        1800
+      ],
+      "native": [
+        1672,
+        941
+      ],
+      "tiers": 0,
+      "values": {},
+      "pairs": [],
+      "margins": [
+        {
+          "role": "cover-subtitle",
+          "top": 8.061524299999974,
+          "bottom": 8.061524299999974,
+          "left": 112.63818,
+          "right": 112.63818000000003,
+          "centerDelta": 0
+        },
+        {
+          "role": "cover-scope",
+          "top": 6.93359375,
+          "bottom": 6.93359375,
+          "left": 88.604244,
+          "right": 88.604244,
+          "centerDelta": 0
+        }
+      ],
+      "normalTextRuns": 2,
+      "boldTextRuns": 1,
+      "minimumRulePhoneFont": null,
+      "artTitles": [
+        {
+          "text": "沙色保险单",
+          "role": "art-title",
+          "x": 73.58928966466794,
+          "y": 284.99996849151216,
+          "width": 704.8214206706641,
+          "height": 152.00006301697567,
+          "requestedCenter": [
+            426,
+            361
+          ],
+          "effectiveSize": 138.21784960454633,
+          "includesOutlineAndShadow": true
+        }
+      ]
+    },
+    {
+      "id": "social",
+      "pngSize": [
+        2400,
+        3200
+      ],
+      "native": [
+        1086,
+        1448
+      ],
+      "tiers": 6,
+      "values": {
+        "priceR": {
+          "expected": [
+            "168",
+            "388",
+            "628",
+            "128",
+            "288",
+            "488"
+          ],
+          "actual": [
+            "168",
+            "388",
+            "628",
+            "128",
+            "288",
+            "488"
+          ],
+          "match": true
+        },
+        "baseGuaranteeW": {
+          "expected": [
+            "688",
+            "1688",
+            "3288",
+            "688",
+            "1688",
+            "3288"
+          ],
+          "actual": [
+            "688",
+            "1688",
+            "3288",
+            "688",
+            "1688",
+            "3288"
+          ],
+          "match": true
+        },
+        "sandSafeCount": {
+          "expected": [
+            "2",
+            "6",
+            "10",
+            "2",
+            "6",
+            "10"
+          ],
+          "actual": [
+            "2",
+            "6",
+            "10",
+            "2",
+            "6",
+            "10"
+          ],
+          "match": true
+        },
+        "regularLargeSafeCount": {
+          "expected": [
+            "3",
+            "8",
+            "15",
+            "3",
+            "8",
+            "15"
+          ],
+          "actual": [
+            "3",
+            "8",
+            "15",
+            "3",
+            "8",
+            "15"
+          ],
+          "match": true
+        }
+      },
+      "pairs": [
+        {
+          "role": "price",
+          "number": "168",
+          "unit": "r",
+          "unitX": 194.60646510707502,
+          "gap": 10,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998
+        },
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 194.60646510707502,
+          "gap": 10,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998
+        },
+        {
+          "role": "price",
+          "number": "628",
+          "unit": "r",
+          "unitX": 194.60646510707502,
+          "gap": 10,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998
+        },
+        {
+          "role": "price",
+          "number": "128",
+          "unit": "r",
+          "unitX": 194.60646510707502,
+          "gap": 10,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 194.60646510707502,
+          "gap": 10,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 194.60646510707502,
+          "gap": 10,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998
+        },
+        {
+          "role": "loot",
+          "number": "688",
+          "unit": "w",
+          "unitX": 949.3757694854853,
+          "gap": 9.999999999999972,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 949.3757694854853,
+          "gap": 9.999999999999972,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3288",
+          "unit": "w",
+          "unitX": 949.3757694854853,
+          "gap": 9.999999999999972,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "loot",
+          "number": "688",
+          "unit": "w",
+          "unitX": 949.3757694854853,
+          "gap": 9.999999999999972,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 949.3757694854853,
+          "gap": 9.999999999999972,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3288",
+          "unit": "w",
+          "unitX": 949.3757694854853,
+          "gap": 9.999999999999972,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001
+        }
+      ],
+      "margins": [
+        {
+          "role": "table-row-0",
+          "top": 12.45019450000001,
+          "bottom": 11.450194499999952
+        },
+        {
+          "role": "table-row-1",
+          "top": 12.450194499999952,
+          "bottom": 11.450194500000066
+        },
+        {
+          "role": "table-row-2",
+          "top": 11.450194499999952,
+          "bottom": 11.450194500000066
+        },
+        {
+          "role": "table-row-3",
+          "top": 11.450194499999952,
+          "bottom": 11.450194500000066
+        },
+        {
+          "role": "table-row-4",
+          "top": 11.450194499999952,
+          "bottom": 12.450194500000066
+        },
+        {
+          "role": "table-row-5",
+          "top": 11.450194499999952,
+          "bottom": 12.450194499999952
+        },
+        {
+          "role": "social-completion-targets",
+          "top": 0.7255863500000146,
+          "bottom": 0.7255863499999577,
+          "left": 210.77685485,
+          "right": 210.77685485000006,
+          "centerDelta": 0
+        },
+        {
+          "role": "social-completion-relation",
+          "top": 0.91015625,
+          "bottom": 0.91015625,
+          "left": 304.3203125,
+          "right": 304.3203125,
+          "centerDelta": 0
+        },
+        {
+          "role": "reward-extra",
+          "top": 5.265625600000021,
+          "bottom": 5.265625600000021,
+          "left": 27.216031497120213,
+          "right": 27.21603149712024,
+          "centerDelta": 0
+        },
+        {
+          "role": "reward-gift",
+          "top": 5.7812512000000424,
+          "bottom": 5.7812512000000424,
+          "left": 74.039061952,
+          "right": 74.03906195200011,
+          "centerDelta": 0
+        },
+        {
+          "role": "reward-conditions",
+          "top": 6.807616750000079,
+          "bottom": 6.807616749999852,
+          "left": 211.303227075,
+          "right": 211.303227075,
+          "centerDelta": 0
+        }
+      ],
+      "normalTextRuns": 27,
+      "boldTextRuns": 6,
+      "minimumRulePhoneFont": null,
+      "artTitles": [
+        {
+          "text": "沙色保险单",
+          "role": "art-title",
+          "x": 134.23497655457834,
+          "y": 127.99994067931445,
+          "width": 407.5300468908433,
+          "height": 88.00011864137112,
+          "requestedCenter": [
+            338,
+            172
+          ],
+          "effectiveSize": 79.89043123366926,
+          "includesOutlineAndShadow": true
+        },
+        {
+          "text": "三幻神奖励",
+          "role": "reward-art-title",
+          "x": 291.004890602,
+          "y": 1126.298,
+          "width": 167.833969196,
+          "height": 35.403999999999996,
+          "requestedCenter": [
+            374.9218752,
+            1144
+          ],
+          "effectiveSize": 34,
+          "includesOutlineAndShadow": true
+        }
+      ]
+    }
+  ]
+}

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from common.media import build_media_url
 from .models import ProviderReport, WithdrawRequest
+from .settlement_display import ReportSettlementListSerializer
 
 
 class ReportSerializer(serializers.ModelSerializer):
@@ -19,24 +20,29 @@ class ReportSerializer(serializers.ModelSerializer):
     result_images = serializers.SerializerMethodField()
     order_status = serializers.CharField(source='order.status', read_only=True, default='')
     payment_status = serializers.CharField(source='order.payment_status', read_only=True, default='')
+    aftersale_status = serializers.SerializerMethodField()
     refund_summary = serializers.SerializerMethodField()
     settled_at = serializers.DateTimeField(source='order.settled_at', read_only=True, default=None)
+    settlement_status = serializers.SerializerMethodField()
     expected_income = serializers.SerializerMethodField()
+    payout_amount = serializers.SerializerMethodField()
     commission_type = serializers.SerializerMethodField()
     commission_fixed = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
     can_submit = serializers.SerializerMethodField()
     edit_block_reason = serializers.SerializerMethodField()
+    evidence_upload_block_reasons = serializers.SerializerMethodField()
 
     class Meta:
         model = ProviderReport
+        list_serializer_class = ReportSettlementListSerializer
         fields = [
             'id', 'order_id', 'order_no', 'service_name', 'fulfillment', 'game_name', 'description',
             'amount', 'proof_image', 'proof_image_url', 'entry_image_url',
             'completion_image_url', 'result_image_urls', 'result_images',
             'status', 'status_display', 'commission_rate', 'payout_amount',
             'remark', 'audit_remark', 'created_at', 'audited_at', 'submitted_at',
-            'order_status', 'payment_status', 'refund_summary', 'settled_at', 'expected_income', 'commission_type', 'commission_fixed', 'can_edit', 'can_submit', 'edit_block_reason',
+            'order_status', 'payment_status', 'aftersale_status', 'refund_summary', 'settled_at', 'settlement_status', 'expected_income', 'commission_type', 'commission_fixed', 'can_edit', 'can_submit', 'edit_block_reason', 'evidence_upload_block_reasons',
         ]
         read_only_fields = [
             'status', 'commission_rate', 'payout_amount', 'audit_remark', 'audited_at', 'submitted_at',
@@ -45,6 +51,15 @@ class ReportSerializer(serializers.ModelSerializer):
 
     def get_proof_image_url(self, obj):
         return build_media_url(self.context.get('request'), obj.proof_image)
+
+    def get_settlement_status(self, obj):
+        from .settlement_display import report_settlement_status
+        return report_settlement_status(obj)
+
+    def get_aftersale_status(self, obj):
+        if not obj.order_id:
+            return ''
+        return next((row.status for row in obj.order.aftersales.all()), '')
 
     def get_refund_summary(self,obj):
         from orders.refunds import refund_summary,authorized_refund
@@ -68,6 +83,10 @@ class ReportSerializer(serializers.ModelSerializer):
 
     def get_expected_income(self, obj):
         return self._financial_snapshot(obj)['expected_income']
+
+    def get_payout_amount(self, obj):
+        from .reporting import report_has_valid_order_share
+        return obj.payout_amount if report_has_valid_order_share(obj) else None
 
     def _financial_snapshot(self, obj):
         from .reporting import report_financial_snapshot
@@ -93,6 +112,11 @@ class ReportSerializer(serializers.ModelSerializer):
 
     def get_can_submit(self, obj):
         return self.get_can_edit(obj) and (not obj.order_id or obj.order.status == 'COMPLETED')
+
+    def get_evidence_upload_block_reasons(self, obj):
+        from orders.team_fulfillment import team_report_evidence_error
+        return {kind: reason for kind in ('ENTRY', 'COMPLETION')
+                if (reason := team_report_evidence_error(obj, kind))}
 
     def validate_amount(self, value):
         if value <= 0:

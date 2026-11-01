@@ -6,15 +6,17 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../apps/boss-miniapp/native');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
 const storage = new Map();
+const toasts = [], modals = [];
 let navigated = '';
 const pages = [];
 let transportQueue = Promise.resolve();
-let loseNextCreate = false, lostOrderId = null;
+let loseNextCreate = false, lostOrderId = null, loseNextCancel = false, loseNextEvaluation = false;
 global.wx = {
   getStorageSync: key => storage.get(key), setStorageSync: (key, value) => storage.set(key, value), removeStorageSync: key => storage.delete(key),
+  getStorageInfoSync: () => ({ keys: [...storage.keys()] }),
   getAccountInfoSync: () => ({ miniProgram: { envVersion: 'develop' } }),
-  showToast() {}, stopPullDownRefresh() {}, setTabBarBadge() {}, removeTabBarBadge() {},
-  showModal: options => options.success({ confirm: true, content: '联动验收取消' }),
+  showToast: options => toasts.push(options.title), stopPullDownRefresh() {}, setTabBarBadge() {}, removeTabBarBadge() {},
+  showModal: options => { modals.push(options); options.success?.({ confirm: true, content: '联动验收取消' }); },
   login: options => options.success({ code: 'fresh-native-http-code' }),
   redirectTo: options => { navigated = options.url; }, navigateTo(options) { navigated = options.url; }, navigateBack() {}, switchTab() {},
   request(options) {
@@ -27,6 +29,12 @@ global.wx = {
         if (loseNextCreate && endpoint.endsWith('/orders/create/') && data.code === 0) {
           loseNextCreate = false; lostOrderId = data.data.id;
           options.fail(new Error('Simulated loss after committed order'));
+        } else if (loseNextCancel && endpoint.endsWith('/cancel/') && data.code === 0) {
+          loseNextCancel = false;
+          options.fail(new Error('Simulated loss after committed cancellation'));
+        } else if (loseNextEvaluation && endpoint.endsWith('/orders/evaluate/') && data.code === 0) {
+          loseNextEvaluation = false;
+          options.fail(new Error('Simulated loss after committed evaluation'));
         } else options.success({ statusCode: response.status, data });
       })
       .catch(options.fail);
@@ -76,9 +84,12 @@ async function main() {
   loseNextCreate = true;
   await checkout.submit();
   assert.equal(navigated, '', 'lost response must not invent a success redirect');
-  assert.ok(lostOrderId, 'the first request must actually commit at the backend');
-  assert.match(checkout.data.quoteError, /网络/);
+  assert.ok(lostOrderId, 'the first request must actually commit at the backend: ' + JSON.stringify({ toasts, modals, quoteError: checkout.data.quoteError, pending: checkout.data.pendingOrder }));
+  assert.equal(checkout.data.pendingOrder, true, 'uncertain result remains available for recovery');
+  assert.ok(modals.some(item => item.title === '请先核对上次订单'), 'customer is warned before retry');
   await checkout.submit();
+  assert.equal(navigated, '', 'new checkout is blocked while the first result is uncertain');
+  await checkout.recoverPending();
   assert.match(navigated, /^\/pages\/order-detail\/index\?id=\d+$/);
   const id = navigated.split('id=')[1];
   assert.equal(id, String(lostOrderId), 'retry must recover the original order');
@@ -87,7 +98,10 @@ async function main() {
   assert.equal(detail.data.order.amountText, '125');
   const api = require(path.join(root, 'core/api'));
   const paidWallet = await api.request('/wallet/info/'); assert.equal(paidWallet.balance, 8750);
+  detail._visible = true;
+  loseNextCancel = true;
   await detail.cancel();
+  assert.equal(toasts.at(-1), '取消结果未确认，请查看订单状态');
   assert.equal(detail.data.order.status, 'CANCELLED');
   const refundedWallet = await api.request('/wallet/info/'); assert.equal(refundedWallet.balance, 10000);
   // A second purchase proceeds through the actual provider/admin HTTP contracts.
@@ -114,7 +128,16 @@ async function main() {
   const fulfillmentId = Number(navigated.split('id=')[1]); assert.notEqual(fulfillmentId, Number(id));
   const pool = await actorRequest('/orders/orders/?status=pending', input.providerToken);
   assert.ok(pool.some(row => row.id === fulfillmentId && row.allowed_actions.includes('GRAB')));
+  const staleDetail = input.autoGrab ? await load('order-detail', { id: fulfillmentId }) : null;
+  if (staleDetail) { staleDetail._visible = true; assert.equal(staleDetail.data.order.canCancel, true); }
   await actorRequest(`/orders/orders/${fulfillmentId}/grab/`, input.providerToken, 'POST', {});
+  if (staleDetail) {
+    await staleDetail.cancel();
+    assert.equal(toasts.at(-1), '订单已被接单，无法取消', 'explicit server rejection must keep its actual reason');
+    assert.equal(staleDetail.data.order.status, 'GRABBED', 'a rejected cancellation must refresh the actual order status');
+    assert.equal(staleDetail.data.order.canCancel, false);
+    assert.equal((await api.request('/wallet/info/')).balance, 8750, 'failed cancellation must not refund the order');
+  }
   const fulfilled = await load('order-detail', { id: fulfillmentId });
   if (input.autoGrab) {
     assert.equal(fulfilled.data.order.requires_boss_selection, false);
@@ -142,8 +165,11 @@ async function main() {
   assert.equal((await actorRequest('/wallet/info/', input.providerToken)).balance, 0, 'approval waits for the aftersale window');
   assert.equal((await api.request('/wallet/info/')).balance, 8750, 'report approval must not debit boss a second time');
   await fulfilled.load(); assert.equal(fulfilled.data.order.status, 'COMPLETED'); assert.equal(fulfilled.data.order.canEvaluate, true);
-  fulfilled.setData({ content: '真实联动验收评价', score: 5 }); await fulfilled.evaluate();
+  fulfilled._visible = true;
+  fulfilled.setData({ content: '真实联动验收评价', score: 5 }); loseNextEvaluation = true; await fulfilled.evaluate();
+  assert.ok(toasts.includes('评价结果未确认，请查看订单评价'), 'lost evaluation response needs a clear next step');
   assert.equal(fulfilled.data.order.canEvaluate, false);
+  assert.equal(fulfilled.data.order.evaluation.content, '真实联动验收评价');
   const chat = await load('chat'); chat.setData({ content: '原生页面真实 HTTP 联动测试' }); await chat.send();
   assert.ok(chat.data.items.some(item => item.content === '原生页面真实 HTTP 联动测试'));
   assert.equal(chat.data.content, '');
@@ -164,4 +190,4 @@ async function main() {
   console.log('Native JS → real Django HTTP: page controllers, purchase, grab, start, complete, evidence, report approval, pending settlement, evaluation, refund, chat and invitation passed; '
     + (input.skipWechatExchange ? 'WeChat platform exchange excluded (real wx.login code unavailable)' : 'login exchange passed'));
 }
-main().catch(error => { console.error(error.message); process.exitCode = 1; });
+main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });

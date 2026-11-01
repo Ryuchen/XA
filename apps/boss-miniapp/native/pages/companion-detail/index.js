@@ -57,6 +57,11 @@ Page({
     this._audio.src = this.data.provider.voiceUrl; this._audio.play(); this.setData({ playing: true });
   },
   gift() { if (!this.ready()) return; this.stopVoice(); go('/pages/gifts/index?provider_id=' + this.data.provider.id); },
+  reserve() {
+    if (!this.ready() || !this.data.serviceId || this.data.selectionLimit !== 1) return;
+    this.stopVoice();
+    go('/pages/reservation-create/index?provider_id=' + this.data.provider.id + '&service_id=' + this.data.serviceId);
+  },
   select() {
     if (!this.ready() || this._selecting) return;
     if ((this.data.fromCheckout || this.data.pickerDraft) && this._openerRevision !== auth.revision()) { toast('账号已变更，请返回列表重新选择'); return; }

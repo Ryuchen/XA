@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "campaign": "兴安电竞·英雄联盟十套海报",
+  "stage": "delivered",
+  "revision": "final-r3",
+  "contentVerified": true,
+  "contentVerificationBasis": "飞书十栏目价目与条件逐项转录；全部实质疑点按2026-10-03用户答复确认。2026-10-03用户答复：是，黑铁价格为40/段，铂金4～翡翠4，588r/大段，其余都是你理解的对的。",
+  "deliveryScope": {
+    "pageIds": [
+      "01-solo-duo-price",
+      "01-solo-duo-advert",
+      "01-solo-duo-cover",
+      "02-flex-price",
+      "02-flex-advert",
+      "02-flex-cover",
+      "03-arena-price",
+      "03-arena-advert",
+      "03-arena-cover",
+      "04-boost-price",
+      "04-boost-advert",
+      "04-boost-cover",
+      "05-lp-price",
+      "05-lp-advert",
+      "05-lp-cover",
+      "06-overseas-price",
+      "06-overseas-advert",
+      "06-overseas-cover",
+      "07-day-price",
+      "07-day-advert",
+      "07-day-cover",
+      "08-haidou-price",
+      "08-haidou-advert",
+      "08-haidou-cover",
+      "09-placement-price",
+      "09-placement-advert",
+      "09-placement-cover",
+      "10-maintenance-price",
+      "10-maintenance-advert",
+      "10-maintenance-cover"
+    ],
+    "platforms": [
+      "desktop"
+    ],
+    "setCount": 10,
+    "pageCount": 30,
+    "basis": "2026-10-03 用户明确一共十套；异步答复确认每套完整价目页＋广告页＋封面，共30张。按飞书十栏目逐一对应。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "本轮飞书兴安电竞-英雄联盟价位表，2026-10-03逐栏目读取；疑点由用户2026-10-03答复修正并确认。"
+  },
+  "approvals": {
+    "scope": {
+      "status": "approved",
+      "date": "2026-10-03",
+      "basis": "用户明确确认10套、每套3页"
+    },
+    "characters": {
+      "status": "approved",
+      "basis": "用户明确蜂医→EZ，灰鼠→拉克丝"
+    },
+    "illustrations": {
+      "status": "approved",
+      "assets": [
+        "01-ez-lux-duo.png",
+        "02-ez-lux-victory.png"
+      ],
+      "preview": "review/illustration-overview-r1.png",
+      "date": "2026-10-03",
+      "basis": "用户在插画确认稿之后答复继续，确认进入结构稿与无字底图阶段。"
+    },
+    "backgrounds": {
+      "status": "approved",
+      "revision": "bg-r1",
+      "pageCount": 30,
+      "preview": "review/backgrounds-index.html",
+      "representatives": "review/background-representatives-r1.png",
+      "basis": "用户查看30页无字底图与结构稿之后答复继续，批准进入矢量填字阶段。",
+      "date": "2026-10-03"
+    },
+    "finalCopy": {
+      "status": "completed",
+      "date": "2026-10-03",
+      "basis": "业务疑点均经用户确认；最终等义精简与分组对照来源完成。"
+    },
+    "content": {
+      "status": "approved",
+      "date": "2026-10-03",
+      "basis": "2026-10-03用户答复：是，黑铁价格为40/段，铂金4～翡翠4，588r/大段，其余都是你理解的对的。"
+    }
+  },
+  "visualDirection": {
+    "style": "二次元Q版手绘；可变海军蓝线稿、简化色块、柔和赛璐璐阴影",
+    "palette": [
+      "奶白",
+      "雾蓝",
+      "海军蓝",
+      "克制暖金点缀"
+    ],
+    "characters": [
+      "EZ（伊泽瑞尔）",
+      "拉克丝"
+    ],
+    "reference": "../club-material-campaign-v3-handdrawn/01-illustrations/01-medic-mouse-loot.png"
+  },
+  "nextStep": "十套30张展示增强版已验收并打包。",
+  "openQuestions": [],
+  "visualQA": {
+    "stage": "final",
+    "status": "passed",
+    "revision": "final-r3",
+    "report": "review/visual-qa.md",
+    "checks": "review/final/export-checks.json",
+    "phonePreviewWidth": 390,
+    "pageCount": 30,
+    "actualPNGInspection": true,
+    "contentSHA256": "a5ef5469d9ab4c0b31dbfa114a7b000fc4d6d4894f68487e68afa34c9eec8928"
+  },
+  "delivery": {
+    "revision": "final-r3",
+    "sets": 10,
+    "pages": 30,
+    "PNG": 30,
+    "editableSVG": 30,
+    "outlinedSVG": 30,
+    "viewer": "review/index-r3.html",
+    "designPrototype": "review/presentation-design-r3.html",
+    "package": "delivery/兴安电竞-英雄联盟-10套30张-完整文件-final-r3.zip",
+    "pngPackage": "delivery/兴安电竞-英雄联盟-10套30张-PNG-final-r3.zip"
+  },
+  "presentationDesign": {
+    "skillOrder": [
+      "design-taste-frontend",
+      "xingan-gameplay-posters"
+    ],
+    "prototype": "review/presentation-design-r3.html",
+    "rationale": "review/presentation-design-r3.md",
+    "basis": "用户2026-10-03要求先设计页面展示，再丰富海报文案排版",
+    "dials": {
+      "DESIGN_VARIANCE": 6,
+      "MOTION_INTENSITY": 1,
+      "VISUAL_DENSITY": 4
+    }
+  }
+}

@@ -1,0 +1,248 @@
+[
+  {
+    "page": "mobile-absolute",
+    "png": "output/png/mobile-absolute.png",
+    "width": 3200,
+    "height": 7200,
+    "sha256": "1a8bcf8302014f8c0e59e9567f1645f6d5d6971b59b9183a4f12007a40c30849",
+    "rows": [
+      {
+        "tier": "mobile-absolute",
+        "row": 1,
+        "baseline": 521.3789055472,
+        "topPadding": 16.210936800000013,
+        "bottomPadding": 16.210936800000013,
+        "priceGap": 8,
+        "lootGap": 8
+      },
+      {
+        "tier": "mobile-absolute",
+        "row": 2,
+        "baseline": 594.3789055472,
+        "topPadding": 16.210936800000013,
+        "bottomPadding": 16.210936800000013,
+        "priceGap": 8,
+        "lootGap": 8
+      },
+      {
+        "tier": "mobile-absolute",
+        "row": 3,
+        "baseline": 667.8789055472,
+        "topPadding": 16.710936800000013,
+        "bottomPadding": 16.710936800000013,
+        "priceGap": 8,
+        "lootGap": 8
+      },
+      {
+        "tier": "mobile-absolute",
+        "row": 4,
+        "baseline": 741.9199224,
+        "topPadding": 16.66992240000002,
+        "bottomPadding": 16.66992240000002,
+        "priceGap": 8,
+        "lootGap": 8
+      }
+    ],
+    "overlaps": 0
+  },
+  {
+    "page": "mobile-secret",
+    "png": "output/png/mobile-secret.png",
+    "width": 3200,
+    "height": 7200,
+    "sha256": "c55437be5098bb88434d1c9cc81764b7f9e36f5183ce769374677a43e3911acb",
+    "rows": [
+      {
+        "tier": "mobile-secret",
+        "row": 1,
+        "baseline": 521.3789055472,
+        "topPadding": 16.210936800000013,
+        "bottomPadding": 16.210936800000013,
+        "priceGap": 8,
+        "lootGap": 8
+      },
+      {
+        "tier": "mobile-secret",
+        "row": 2,
+        "baseline": 594.3789055472,
+        "topPadding": 16.210936800000013,
+        "bottomPadding": 16.210936800000013,
+        "priceGap": 8,
+        "lootGap": 8
+      },
+      {
+        "tier": "mobile-secret",
+        "row": 3,
+        "baseline": 667.8789055472,
+        "topPadding": 16.710936800000013,
+        "bottomPadding": 16.710936800000013,
+        "priceGap": 8,
+        "lootGap": 8
+      },
+      {
+        "tier": "mobile-secret",
+        "row": 4,
+        "baseline": 741.9199224,
+        "topPadding": 16.66992240000002,
+        "bottomPadding": 16.66992240000002,
+        "priceGap": 8,
+        "lootGap": 8
+      }
+    ],
+    "overlaps": 0
+  },
+  {
+    "page": "social",
+    "png": "output/png/social.png",
+    "width": 2400,
+    "height": 3200,
+    "sha256": "53459a9721e8ba11bedced9d1e827c87bbe975448b5b892c1bf4ce1d73c78b1b",
+    "rows": [
+      {
+        "tier": "desktop-absolute",
+        "row": 1,
+        "baseline": 525.1191400728,
+        "topPadding": 13.558593199999962,
+        "bottomPadding": 13.558593200000018,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "desktop-absolute",
+        "row": 2,
+        "baseline": 585.6191400728,
+        "topPadding": 15.058593199999905,
+        "bottomPadding": 15.058593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "desktop-absolute",
+        "row": 3,
+        "baseline": 647.1191400728,
+        "topPadding": 14.558593199999905,
+        "bottomPadding": 14.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "desktop-absolute",
+        "row": 4,
+        "baseline": 709.1191400728,
+        "topPadding": 15.558593199999905,
+        "bottomPadding": 15.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "desktop-secret",
+        "row": 1,
+        "baseline": 525.1191400728,
+        "topPadding": 13.558593199999962,
+        "bottomPadding": 13.558593200000018,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "desktop-secret",
+        "row": 2,
+        "baseline": 585.6191400728,
+        "topPadding": 15.058593199999905,
+        "bottomPadding": 15.058593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "desktop-secret",
+        "row": 3,
+        "baseline": 647.1191400728,
+        "topPadding": 14.558593199999905,
+        "bottomPadding": 14.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "desktop-secret",
+        "row": 4,
+        "baseline": 709.1191400728,
+        "topPadding": 15.558593199999905,
+        "bottomPadding": 15.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-absolute",
+        "row": 1,
+        "baseline": 869.1191400728,
+        "topPadding": 14.558593199999905,
+        "bottomPadding": 14.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-absolute",
+        "row": 2,
+        "baseline": 930.1191400728,
+        "topPadding": 14.558593199999905,
+        "bottomPadding": 14.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-absolute",
+        "row": 3,
+        "baseline": 991.6191400728,
+        "topPadding": 15.058593199999905,
+        "bottomPadding": 15.058593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-absolute",
+        "row": 4,
+        "baseline": 1053.1513666364,
+        "topPadding": 14.526366636400098,
+        "bottomPadding": 14.526366636399871,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-secret",
+        "row": 1,
+        "baseline": 869.1191400728,
+        "topPadding": 14.558593199999905,
+        "bottomPadding": 14.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-secret",
+        "row": 2,
+        "baseline": 930.1191400728,
+        "topPadding": 14.558593199999905,
+        "bottomPadding": 14.558593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-secret",
+        "row": 3,
+        "baseline": 991.6191400728,
+        "topPadding": 15.058593199999905,
+        "bottomPadding": 15.058593200000132,
+        "priceGap": 6,
+        "lootGap": 6
+      },
+      {
+        "tier": "mobile-secret",
+        "row": 4,
+        "baseline": 1053.1513666364,
+        "topPadding": 14.526366636400098,
+        "bottomPadding": 14.526366636399871,
+        "priceGap": 6,
+        "lootGap": 6
+      }
+    ],
+    "overlaps": 0
+  }
+]

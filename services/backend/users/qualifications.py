@@ -132,10 +132,25 @@ def authorized_skill_q(profile):
     query=Q(service_id__in=[row.pk for row in skills])|Q(service__game_category__isnull=True)
     for skill in skills:
         requirement=service_requirement(skill)
-        if requirement and not requirement.get('invalid') and skill.catalog_family:
-            query |= Q(service__catalog_family=skill.catalog_family,service__game_category_id=skill.game_category_id,
-                service__platform=skill.platform,service__security_level=skill.security_level,service__provider_kind=skill.provider_kind,
-                service__provider_grade__in=grade_options(skill.provider_kind,skill.platform,skill.security_level)[:requirement['rank']+1])
+        if not requirement or requirement.get('invalid'):
+            continue
+        # Keep pool visibility consistent with service_skill(): a higher
+        # package grants a lower one in either configured family or gameplay.
+        # Scope and grade belong to the purchased order snapshot, not the
+        # mutable service, so catalog edits cannot silently hide a paid order.
+        siblings = Q(pk__in=[])
+        if skill.catalog_family:
+            siblings |= Q(service__catalog_family=skill.catalog_family)
+        if skill.gameplay_id:
+            siblings |= Q(service__gameplay_id=skill.gameplay_id)
+        query |= siblings & Q(
+            provider_requirement_snapshot__game_category_id=skill.game_category_id,
+            provider_requirement_snapshot__provider_kind=skill.provider_kind,
+            provider_requirement_snapshot__platform=skill.platform,
+            provider_requirement_snapshot__security_level=skill.security_level,
+            provider_requirement_snapshot__grade__in=grade_options(
+                skill.provider_kind,skill.platform,skill.security_level)[:requirement['rank']+1],
+        )
     return query
 
 

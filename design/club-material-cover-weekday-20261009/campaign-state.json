@@ -1,0 +1,46 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "project": "常规物资单封面 · 工作日专享",
+  "revision": "weekday-cover-r1",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "2026-10-09用户明确指定下方只展示工作日专享保底上浮20%；标题、平台及累计物资描述依本轮附件沿用。",
+  "deliveryScope": {
+    "pageIds": [
+      "cover"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户本轮仅点名修改常规物资单封面；附件标注两端与绝密、机密。"
+  },
+  "verifiedPricePlatforms": [],
+  "priceSourceByPlatform": {},
+  "approvals": {
+    "illustration": {
+      "status": "approved-reuse",
+      "basis": "用户提供附件并明确要求修改下方文字，沿用匹配的原项目插画。"
+    },
+    "background": {
+      "status": "approved-reuse",
+      "basis": "使用与附件一致的原项目03-backgrounds/cover.png，仅调整矢量文字。"
+    }
+  },
+  "priorProject": "G:/Github/XA/design/club-material-campaign-v3-handdrawn",
+  "typography": {
+    "body": "MiSans VF Regular / Semibold / Bold",
+    "artTitle": "Noto Sans SC Black · 原矢量艺术标题风格"
+  },
+  "lastRenderedPages": [
+    "cover"
+  ],
+  "visualQA": "review/visual-qa.md",
+  "delivery": {
+    "package": "campaign-weekday-cover-r1.zip",
+    "gallery": "review/index.html",
+    "pages": [
+      "cover"
+    ]
+  }
+}

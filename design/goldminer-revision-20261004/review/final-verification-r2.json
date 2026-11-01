@@ -1,0 +1,793 @@
+{
+  "revision": "r2",
+  "counts": {
+    "total": 119,
+    "passed": 119,
+    "failed": 0
+  },
+  "checks": [
+    {
+      "name": "附件端游单页范围",
+      "passed": true
+    },
+    {
+      "name": "六档原价保持",
+      "passed": true
+    },
+    {
+      "name": "豪华与终极均为208格",
+      "passed": true
+    },
+    {
+      "name": "原带出过程计入关系保持",
+      "passed": true
+    },
+    {
+      "name": "红80w金20w与示例保持",
+      "passed": true
+    },
+    {
+      "name": "新增规则适用三个版本且只改变累计格数口径",
+      "passed": true
+    },
+    {
+      "name": "成图两处208格，无218",
+      "passed": true
+    },
+    {
+      "name": "原五项须知全部保留",
+      "passed": true
+    },
+    {
+      "name": "成图新增累计金红格数不计炸单战损",
+      "passed": true
+    },
+    {
+      "name": "须知字号保持手机可读",
+      "passed": true
+    },
+    {
+      "name": "无文字轮廓重叠",
+      "passed": true
+    },
+    {
+      "name": "第1档name在安全区内",
+      "passed": true,
+      "detail": [
+        14.474609420000007,
+        11.6328125,
+        14.474609420000007,
+        11.6328125
+      ]
+    },
+    {
+      "name": "第1档name整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第1档name整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第1档price在安全区内",
+      "passed": true,
+      "detail": [
+        34.69921887999999,
+        10.160155599999996,
+        16.86500000000001,
+        10.160155599999996
+      ]
+    },
+    {
+      "name": "第1档price整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第1档price价格横向平衡",
+      "passed": true,
+      "detail": 8.91710943999999
+    },
+    {
+      "name": "第1档slots在安全区内",
+      "passed": true,
+      "detail": [
+        59.600331600000004,
+        10.212773847359983,
+        59.600331600000004,
+        10.21277384736004
+      ]
+    },
+    {
+      "name": "第1档slots整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第1档slots整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第1档process在安全区内",
+      "passed": true,
+      "detail": [
+        57.481445269999995,
+        12.73046875,
+        57.481445269999995,
+        12.73046875
+      ]
+    },
+    {
+      "name": "第1档process整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第1档process整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第2档name在安全区内",
+      "passed": true,
+      "detail": [
+        14.421875,
+        11.421875,
+        14.421875,
+        11.421875
+      ]
+    },
+    {
+      "name": "第2档name整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第2档name整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第2档price在安全区内",
+      "passed": true,
+      "detail": [
+        33.63281223999999,
+        10.160155600000053,
+        16.86500000000001,
+        10.16015559999994
+      ]
+    },
+    {
+      "name": "第2档price整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第2档price价格横向平衡",
+      "passed": true,
+      "detail": 8.383906120000006
+    },
+    {
+      "name": "第2档slots在安全区内",
+      "passed": true,
+      "detail": [
+        59.600331600000004,
+        10.21277384736004,
+        59.600331600000004,
+        10.212773847359927
+      ]
+    },
+    {
+      "name": "第2档slots整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第2档slots整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第2档process在安全区内",
+      "passed": true,
+      "detail": [
+        40.49804900000004,
+        12.564452699999947,
+        40.498048999999924,
+        12.56445270000006
+      ]
+    },
+    {
+      "name": "第2档process整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第2档process整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第3档name在安全区内",
+      "passed": true,
+      "detail": [
+        14.439452000000003,
+        11.527344200000016,
+        14.439452000000017,
+        11.527344200000016
+      ]
+    },
+    {
+      "name": "第3档name整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第3档name整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第3档price在安全区内",
+      "passed": true,
+      "detail": [
+        36.27343723999999,
+        10.160155600000053,
+        16.86500000000001,
+        10.16015559999994
+      ]
+    },
+    {
+      "name": "第3档price整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第3档price价格横向平衡",
+      "passed": true,
+      "detail": 9.704218620000006
+    },
+    {
+      "name": "第3档slots在安全区内",
+      "passed": true,
+      "detail": [
+        50.69457037000001,
+        10.21277384736004,
+        50.69457036999995,
+        10.212773847359927
+      ]
+    },
+    {
+      "name": "第3档slots整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第3档slots整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第3档process在安全区内",
+      "passed": true,
+      "detail": [
+        57.481445269999995,
+        12.73046875,
+        57.481445269999995,
+        12.73046875
+      ]
+    },
+    {
+      "name": "第3档process整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第3档process整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第4档name在安全区内",
+      "passed": true,
+      "detail": [
+        14.4921875,
+        11.667969200000016,
+        14.4921875,
+        11.667969200000016
+      ]
+    },
+    {
+      "name": "第4档name整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第4档name整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第4档price在安全区内",
+      "passed": true,
+      "detail": [
+        36.27343723999999,
+        10.160155600000053,
+        16.86500000000001,
+        10.16015559999994
+      ]
+    },
+    {
+      "name": "第4档price整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第4档price价格横向平衡",
+      "passed": true,
+      "detail": 9.704218620000006
+    },
+    {
+      "name": "第4档slots在安全区内",
+      "passed": true,
+      "detail": [
+        50.69457037000001,
+        10.21277384736004,
+        50.69457036999995,
+        10.212773847359927
+      ]
+    },
+    {
+      "name": "第4档slots整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第4档slots整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第4档process在安全区内",
+      "passed": true,
+      "detail": [
+        40.49804900000004,
+        12.564452699999947,
+        40.498048999999924,
+        12.56445270000006
+      ]
+    },
+    {
+      "name": "第4档process整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第4档process整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第5档name在安全区内",
+      "passed": true,
+      "detail": [
+        14.4921875,
+        11.439453800000024,
+        14.4921875,
+        11.439453800000024
+      ]
+    },
+    {
+      "name": "第5档name整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第5档name整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第5档price在安全区内",
+      "passed": true,
+      "detail": [
+        27.61523599999998,
+        10.160155600000053,
+        16.86500000000001,
+        10.16015559999994
+      ]
+    },
+    {
+      "name": "第5档price整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第5档price价格横向平衡",
+      "passed": true,
+      "detail": 5.375117999999986
+    },
+    {
+      "name": "第5档slots在安全区内",
+      "passed": true,
+      "detail": [
+        46.68529294000001,
+        10.21277384736004,
+        46.685292939999954,
+        10.212773847359927
+      ]
+    },
+    {
+      "name": "第5档slots整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第5档slots整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第5档process在安全区内",
+      "passed": true,
+      "detail": [
+        57.481445269999995,
+        12.73046875,
+        57.481445269999995,
+        12.73046875
+      ]
+    },
+    {
+      "name": "第5档process整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第5档process整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第6档name在安全区内",
+      "passed": true,
+      "detail": [
+        14.474609420000007,
+        11.4921875,
+        14.474609420000007,
+        11.4921875
+      ]
+    },
+    {
+      "name": "第6档name整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第6档name整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第6档price在安全区内",
+      "passed": true,
+      "detail": [
+        18.220703319999984,
+        10.160155600000053,
+        16.86500000000001,
+        10.16015559999994
+      ]
+    },
+    {
+      "name": "第6档price整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第6档price价格横向平衡",
+      "passed": true,
+      "detail": 0.6778516599999875
+    },
+    {
+      "name": "第6档slots在安全区内",
+      "passed": true,
+      "detail": [
+        46.68529294000001,
+        10.21277384736004,
+        46.685292939999954,
+        10.212773847359927
+      ]
+    },
+    {
+      "name": "第6档slots整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第6档slots整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第6档process在安全区内",
+      "passed": true,
+      "detail": [
+        40.49804900000004,
+        12.564452699999947,
+        40.498048999999924,
+        12.56445270000006
+      ]
+    },
+    {
+      "name": "第6档process整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "第6档process整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "benefit-red在安全区内",
+      "passed": true,
+      "detail": [
+        46.3194333675,
+        -0.12158145000000786,
+        46.31943336749998,
+        0.5505376495000291
+      ]
+    },
+    {
+      "name": "benefit-red整组垂直居中",
+      "passed": true,
+      "detail": -0.33605954974996166
+    },
+    {
+      "name": "benefit-red整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "benefit-gold在安全区内",
+      "passed": true,
+      "detail": [
+        46.73740196749998,
+        -0.10644569999999476,
+        46.73740196750009,
+        0.5505376495000291
+      ]
+    },
+    {
+      "name": "benefit-gold整组垂直居中",
+      "passed": true,
+      "detail": -0.32849167475001195
+    },
+    {
+      "name": "benefit-gold整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "标题组在安全区内",
+      "passed": true,
+      "detail": [
+        6.112008894163296,
+        23.40624960000001,
+        6.112008894163296,
+        22.707520000000017
+      ]
+    },
+    {
+      "name": "标题组整组垂直居中",
+      "passed": true,
+      "detail": 0.3493647999999894
+    },
+    {
+      "name": "标题组整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "平台条在安全区内",
+      "passed": true,
+      "detail": [
+        32.37304680999999,
+        2.6269528000000264,
+        32.373046810000005,
+        2.6269527999999696
+      ]
+    },
+    {
+      "name": "平台条整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "平台条整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "表头在安全区内",
+      "passed": true,
+      "detail": [
+        35.423828125,
+        4.893554300000005,
+        26.52978519499993,
+        4.893554300000005
+      ]
+    },
+    {
+      "name": "表头整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "玩法规则标题在安全区内",
+      "passed": true,
+      "detail": [
+        307.30517574,
+        -0.09716735000006338,
+        304.30517574,
+        -0.09716734999994969
+      ]
+    },
+    {
+      "name": "玩法规则标题整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "格满停止在安全区内",
+      "passed": true,
+      "detail": [
+        188.5546875,
+        1.836913500000037,
+        188.5546875,
+        1.836913500000037
+      ]
+    },
+    {
+      "name": "格满停止整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "格满停止整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "计入档示例在安全区内",
+      "passed": true,
+      "detail": [
+        109.10790747499999,
+        0.8500984000002063,
+        109.10790747499993,
+        0.850097999999889
+      ]
+    },
+    {
+      "name": "计入档示例整组垂直居中",
+      "passed": true,
+      "detail": 2.0000015865662135e-7
+    },
+    {
+      "name": "计入档示例整组横向居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "须知标题在安全区内",
+      "passed": true,
+      "detail": [
+        317.3356925,
+        0.072265625,
+        315.3356925,
+        0.072265625
+      ]
+    },
+    {
+      "name": "须知标题整组垂直居中",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "五项须知在安全区内",
+      "passed": true,
+      "detail": [
+        68.70485500000001,
+        7.10375917500005,
+        68.70485407000001,
+        7.011474711749997
+      ]
+    },
+    {
+      "name": "五项须知整组垂直居中",
+      "passed": true,
+      "detail": 0.0461422316250264
+    },
+    {
+      "name": "五项须知整组横向居中",
+      "passed": true,
+      "detail": 4.649999709727126e-7
+    },
+    {
+      "name": "tier-0-price数字单位基线与间隙",
+      "passed": true,
+      "detail": {
+        "ratio": 0.6811859599944468,
+        "gap": 7.000000000000014
+      }
+    },
+    {
+      "name": "tier-1-price数字单位基线与间隙",
+      "passed": true,
+      "detail": {
+        "ratio": 0.6811859599944468,
+        "gap": 7
+      }
+    },
+    {
+      "name": "tier-2-price数字单位基线与间隙",
+      "passed": true,
+      "detail": {
+        "ratio": 0.6811859599944468,
+        "gap": 7
+      }
+    },
+    {
+      "name": "tier-3-price数字单位基线与间隙",
+      "passed": true,
+      "detail": {
+        "ratio": 0.6811859599944468,
+        "gap": 7
+      }
+    },
+    {
+      "name": "tier-4-price数字单位基线与间隙",
+      "passed": true,
+      "detail": {
+        "ratio": 0.6811859599944468,
+        "gap": 7.000000000000014
+      }
+    },
+    {
+      "name": "tier-5-price数字单位基线与间隙",
+      "passed": true,
+      "detail": {
+        "ratio": 0.6811859599944468,
+        "gap": 7.000000000000014
+      }
+    },
+    {
+      "name": "PNG实际尺寸",
+      "passed": true,
+      "detail": {
+        "width": 3200,
+        "height": 7196,
+        "native": [
+          836,
+          1880
+        ]
+      }
+    },
+    {
+      "name": "原稿对比尺寸一致",
+      "passed": true
+    },
+    {
+      "name": "格数和须知区域之外像素保持原稿",
+      "passed": true,
+      "detail": {
+        "changedPixels": 670254,
+        "unexpectedPixels": 0
+      }
+    }
+  ],
+  "sha256": "b0082c9f577df5d36539fbcbdeaf5e2b0ac89712c5a305e4fb4ef7259414258b",
+  "limitation": "几何和数据检查配合最终PNG目视。"
+}

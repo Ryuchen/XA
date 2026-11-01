@@ -1,0 +1,77 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "container": "09-placement-cover-brand",
+    "x": 321.55371087,
+    "y": 88.6855462,
+    "w": 214.89257826000002,
+    "h": 52.6289076,
+    "baseline": 133.747069624,
+    "size": 54
+  },
+  {
+    "text": "单双新赛季",
+    "role": "art-title",
+    "container": "09-placement-cover-title",
+    "x": 194.13984128983262,
+    "y": 219.3163028735101,
+    "w": 469.7203174203347,
+    "h": 100.3673942529798,
+    "size": 92
+  },
+  {
+    "text": "定位赛",
+    "role": "art-title",
+    "container": "09-placement-cover-title",
+    "x": 286.9779722132057,
+    "y": 334.39856164342854,
+    "w": 284.0440555735886,
+    "h": 100.20287671314293,
+    "size": 92
+  },
+  {
+    "text": "同区可双排双号",
+    "role": "cover-core",
+    "container": "09-placement-cover-core",
+    "x": 242.003913,
+    "y": 480.18457065,
+    "w": 373.992174,
+    "h": 52.154296200000005,
+    "baseline": 525.03515625,
+    "size": 54
+  },
+  {
+    "text": "一起下单",
+    "role": "cover-core",
+    "container": "09-placement-cover-core",
+    "x": 337.80859375,
+    "y": 548.33886685,
+    "w": 182.3828125,
+    "h": 44.7421875,
+    "baseline": 586.90429625,
+    "size": 46
+  },
+  {
+    "text": "88折",
+    "role": "cover-core",
+    "container": "09-placement-cover-core",
+    "x": 346.28320322,
+    "y": 609.08105435,
+    "w": 165.43359356,
+    "h": 72.734375,
+    "baseline": 671.5361324940001,
+    "size": 76
+  },
+  {
+    "text": "英雄联盟 · 端游",
+    "role": "platform",
+    "container": "09-placement-cover-version",
+    "x": 275,
+    "y": 712.3222648,
+    "w": 308,
+    "h": 43.3554704,
+    "baseline": 749.296874164,
+    "size": 44
+  }
+]

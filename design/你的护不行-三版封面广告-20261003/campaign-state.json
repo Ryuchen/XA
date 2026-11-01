@@ -1,0 +1,545 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "revision": "r3",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "用户点名狗牌、枪械、左轮各封面和广告；本轮确认手游与端游同价，保底、计分/枪数等规则相同。现行数据来自各版最新本地已确认记录。；本轮核对21档价格与权益均沿用已确认内容，补存左轮机密r6来源例外；本轮仅做宣传页排版。",
+  "deliveryScope": {
+    "pageIds": [
+      "dogtag-cover",
+      "dogtag-social",
+      "firearms-cover",
+      "firearms-social",
+      "revolver-cover",
+      "revolver-social"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "2026-10-03用户要求重新生成三款你的护不行封面和广告，调整原封面艺术字大小；共六张，沿用已确认双平台同价内容。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "绝密：你的护不行-绝密计分四档-20260929/content.json；机密：Obsidian 01_玩法/你的护不行.md 的2026-09-19现行套餐；本轮确认手游同价同规则。\n2026-09-26两难度出红拆枪补充稿的玩法数据.json；本轮确认手游同价同规则。\n你的护不行-左轮版-20260929/content.json 与 campaign-state.json r5；本轮沿用双平台同价。",
+    "mobile": "本轮用户明确：手游也是和端游一样的价格；随后确认同价、保底计分/枪数规则相同。"
+  },
+  "approvals": {
+    "illustration": {
+      "status": "approved",
+      "date": "2026-10-01",
+      "basis": "用户明确回复：通过，继续，做封面。",
+      "items": [
+        "assets/illustrations/medic-mouse-dogtag-r2.png",
+        "assets/illustrations/medic-mouse-firearms-r2.png",
+        "assets/illustrations/medic-mouse-revolver-r2.png"
+      ]
+    },
+    "background": {
+      "status": "approved",
+      "scope": "three-covers",
+      "date": "2026-10-01",
+      "basis": "用户在三张新封面无字底图展示后明确回复“填入文字”，授权进入矢量排字。",
+      "items": [
+        "assets/backgrounds/dogtag-cover-medic-mouse-r2.png",
+        "assets/backgrounds/firearms-cover-medic-mouse-r2.png",
+        "assets/backgrounds/revolver-cover-medic-mouse-r2.png"
+      ]
+    },
+    "advertisingComposition": {
+      "status": "reuse-approved-assets",
+      "date": "2026-10-03",
+      "basis": "本轮明确重生成三版广告；复用前轮已确认透明插画和现有双难度矢量价目结构，未新绘人物或底图。"
+    }
+  },
+  "artwork": {
+    "dogtag": {
+      "id": "dogtag",
+      "name": "狗牌版",
+      "scene": "展示身份牌与装备价值扫描器",
+      "file": "assets/illustrations/medic-mouse-dogtag-r2.png",
+      "preview": "review/illustration-dogtag-r2.png",
+      "width": 1536,
+      "height": 1024,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "tool": "built-in image_gen",
+      "review": "角色与参考一致；人物、鼠的头部、耳朵、肢体、尾巴与道具完整；无正文、价格或品牌文字。",
+      "status": "approved"
+    },
+    "firearms": {
+      "id": "firearms",
+      "name": "枪械版",
+      "scene": "收集满改枪械与运输箱",
+      "file": "assets/illustrations/medic-mouse-firearms-r2.png",
+      "preview": "review/illustration-firearms-r2.png",
+      "width": 1536,
+      "height": 1024,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "tool": "built-in image_gen",
+      "review": "角色与参考一致；人物、鼠的头部、耳朵、肢体、尾巴与道具完整；无正文、价格或品牌文字。",
+      "status": "approved"
+    },
+    "revolver": {
+      "id": "revolver",
+      "name": "左轮版",
+      "scene": "整理高价值左轮与收纳箱",
+      "file": "assets/illustrations/medic-mouse-revolver-r2.png",
+      "preview": "review/illustration-revolver-r2.png",
+      "width": 1536,
+      "height": 1024,
+      "hasAlpha": true,
+      "alphaRange": [
+        0,
+        254
+      ],
+      "tool": "built-in image_gen",
+      "review": "角色与参考一致；人物、鼠的头部、耳朵、肢体、尾巴与道具完整；无正文、价格或品牌文字。",
+      "anatomyRepair": "初稿灰鼠有第三只手；已用ImageGen局部移除中央多余手和袖管，复查最终恰好两手。",
+      "status": "approved"
+    }
+  },
+  "lastRenderedPages": [
+    "dogtag-cover",
+    "dogtag-social",
+    "firearms-cover",
+    "firearms-social",
+    "revolver-cover",
+    "revolver-social"
+  ],
+  "visualQA": {
+    "status": "passed",
+    "date": "2026-10-03",
+    "record": "review/visual-qa.md",
+    "evidence": [
+      "review/contact-sheet.png",
+      "review/phone-sheet.png",
+      "review/title-details.png",
+      "review/title-audit-r3.json",
+      "review/verification.json"
+    ]
+  },
+  "memorySync": {
+    "status": "completed",
+    "date": "2026-10-03",
+    "scope": "对应玩法卡、当前共识、变更日志和素材索引"
+  },
+  "previousDelivery": {
+    "revision": "r2-covers",
+    "path": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\你的护不行-三版封面广告-20261001",
+    "basis": "三张已确认蜂医灰鼠封面与独立插画"
+  },
+  "visualRevision": "用户明确要求三版封面和广告均使用技能内男性蜂医与灰鼠重新生成；价格、权益、规则及端手游同价不变。",
+  "overallDeliveryScope": {
+    "pageIds": [
+      "dogtag-cover",
+      "dogtag-social",
+      "firearms-cover",
+      "firearms-social",
+      "revolver-cover",
+      "revolver-social"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户点名三版封面与广告，共六张；三版均端手游通用。"
+  },
+  "queuedPageIds": [],
+  "completedPageIds": [
+    "dogtag-cover",
+    "dogtag-social",
+    "firearms-cover",
+    "firearms-social",
+    "revolver-cover",
+    "revolver-social"
+  ],
+  "approvedBackgrounds": [
+    {
+      "id": "dogtag-cover",
+      "name": "狗牌版",
+      "file": "assets/backgrounds/dogtag-cover-medic-mouse-r2.png",
+      "preview": "review/cover-background-dogtag-r2.png",
+      "nativeWidth": 1586,
+      "nativeHeight": 992,
+      "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0f320-018a-7441-9bd5-883d38691610\\exec-36197dc8-7334-460c-b1a2-41edec7bed6c.png",
+      "tool": "built-in image_gen",
+      "viewBox": [
+        1600,
+        1000
+      ],
+      "panelsInViewBox": {
+        "version": [
+          130,
+          407,
+          610,
+          92
+        ],
+        "platform": [
+          136,
+          640,
+          600,
+          74
+        ],
+        "mode": [
+          226,
+          745,
+          416,
+          73
+        ]
+      },
+      "safeTextZonesInViewBox": {
+        "brand": [
+          214,
+          122,
+          440,
+          60
+        ],
+        "title": [
+          108,
+          233,
+          650,
+          123
+        ],
+        "version": [
+          160,
+          422,
+          550,
+          60
+        ],
+        "tagline": [
+          235,
+          544,
+          390,
+          60
+        ],
+        "platform": [
+          164,
+          651,
+          544,
+          52
+        ],
+        "mode": [
+          245,
+          756,
+          378,
+          51
+        ]
+      },
+      "safeTextZonesNative": {
+        "brand": [
+          212,
+          121,
+          436,
+          60
+        ],
+        "title": [
+          107,
+          231,
+          644,
+          122
+        ],
+        "version": [
+          159,
+          419,
+          545,
+          60
+        ],
+        "tagline": [
+          233,
+          540,
+          387,
+          60
+        ],
+        "platform": [
+          163,
+          646,
+          539,
+          52
+        ],
+        "mode": [
+          243,
+          750,
+          375,
+          51
+        ]
+      },
+      "zoneBasis": "依据实际生成PNG重新量取；用于下一步文字排版，非最终字体边界。",
+      "status": "approved",
+      "review": {
+        "characters": "蜂医与灰鼠身份一致，各自两只手，头耳脚及尾巴完整。",
+        "style": "角色、仓库、塔楼、直升机和箱体统一手绘；奶白雾蓝、海军蓝、薄荷与暖金。",
+        "copy": "主阅读区无生成的正文或数字；版本、平台、模式底板为空；文字仅在审核叠层标注。",
+        "composition": "左文右图，约8:5；各版本按实图分别定位。"
+      },
+      "approvalBasis": "用户回复“填入文字”。"
+    },
+    {
+      "id": "firearms-cover",
+      "name": "枪械版",
+      "file": "assets/backgrounds/firearms-cover-medic-mouse-r2.png",
+      "preview": "review/cover-background-firearms-r2.png",
+      "nativeWidth": 1586,
+      "nativeHeight": 992,
+      "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0f320-018a-7441-9bd5-883d38691610\\exec-53e0d0a9-6c8f-46d7-b753-df3a248cdac1.png",
+      "tool": "built-in image_gen",
+      "viewBox": [
+        1600,
+        1000
+      ],
+      "panelsInViewBox": {
+        "version": [
+          128,
+          413,
+          603,
+          81
+        ],
+        "platform": [
+          141,
+          622,
+          585,
+          63
+        ],
+        "mode": [
+          237,
+          710,
+          395,
+          60
+        ]
+      },
+      "safeTextZonesInViewBox": {
+        "brand": [
+          214,
+          111,
+          432,
+          60
+        ],
+        "title": [
+          169,
+          204,
+          514,
+          100
+        ],
+        "version": [
+          160,
+          426,
+          539,
+          55
+        ],
+        "tagline": [
+          235,
+          523,
+          390,
+          48
+        ],
+        "platform": [
+          164,
+          633,
+          539,
+          41
+        ],
+        "mode": [
+          254,
+          718,
+          362,
+          44
+        ]
+      },
+      "safeTextZonesNative": {
+        "brand": [
+          212,
+          110,
+          428,
+          60
+        ],
+        "title": [
+          168,
+          202,
+          510,
+          99
+        ],
+        "version": [
+          159,
+          423,
+          534,
+          55
+        ],
+        "tagline": [
+          233,
+          519,
+          387,
+          48
+        ],
+        "platform": [
+          163,
+          628,
+          534,
+          41
+        ],
+        "mode": [
+          252,
+          712,
+          359,
+          44
+        ]
+      },
+      "zoneBasis": "依据实际生成PNG重新量取；用于下一步文字排版，非最终字体边界。",
+      "status": "approved",
+      "review": {
+        "characters": "蜂医与灰鼠身份一致，各自两只手，头耳脚及尾巴完整。",
+        "style": "角色、仓库、塔楼、直升机和箱体统一手绘；奶白雾蓝、海军蓝、薄荷与暖金。",
+        "copy": "主阅读区无生成的正文或数字；版本、平台、模式底板为空；文字仅在审核叠层标注。",
+        "composition": "左文右图，约8:5；各版本按实图分别定位。"
+      },
+      "repair": "首次生成2.5:1长横幅，已通过ImageGen重排为8:5；初稿保留但不入选。",
+      "approvalBasis": "用户回复“填入文字”。"
+    },
+    {
+      "id": "revolver-cover",
+      "name": "左轮版",
+      "file": "assets/backgrounds/revolver-cover-medic-mouse-r2.png",
+      "preview": "review/cover-background-revolver-r2.png",
+      "nativeWidth": 1586,
+      "nativeHeight": 992,
+      "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0f320-018a-7441-9bd5-883d38691610\\exec-06d82f54-4edc-4a39-bbf5-6bdb25895f9a.png",
+      "tool": "built-in image_gen",
+      "viewBox": [
+        1600,
+        1000
+      ],
+      "panelsInViewBox": {
+        "version": [
+          129,
+          408,
+          612,
+          94
+        ],
+        "platform": [
+          133,
+          674,
+          587,
+          74
+        ],
+        "mode": [
+          221,
+          776,
+          422,
+          69
+        ]
+      },
+      "safeTextZonesInViewBox": {
+        "brand": [
+          215,
+          126,
+          440,
+          60
+        ],
+        "title": [
+          117,
+          224,
+          630,
+          118
+        ],
+        "version": [
+          163,
+          424,
+          544,
+          62
+        ],
+        "tagline": [
+          235,
+          539,
+          390,
+          62
+        ],
+        "platform": [
+          157,
+          687,
+          539,
+          48
+        ],
+        "mode": [
+          243,
+          787,
+          378,
+          47
+        ]
+      },
+      "safeTextZonesNative": {
+        "brand": [
+          213,
+          125,
+          436,
+          60
+        ],
+        "title": [
+          116,
+          222,
+          624,
+          117
+        ],
+        "version": [
+          162,
+          421,
+          539,
+          62
+        ],
+        "tagline": [
+          233,
+          535,
+          387,
+          62
+        ],
+        "platform": [
+          156,
+          682,
+          534,
+          48
+        ],
+        "mode": [
+          241,
+          781,
+          375,
+          47
+        ]
+      },
+      "zoneBasis": "依据实际生成PNG重新量取；用于下一步文字排版，非最终字体边界。",
+      "status": "approved",
+      "review": {
+        "characters": "蜂医与灰鼠身份一致，各自两只手，头耳脚及尾巴完整。",
+        "style": "角色、仓库、塔楼、直升机和箱体统一手绘；奶白雾蓝、海军蓝、薄荷与暖金。",
+        "copy": "主阅读区无生成的正文或数字；版本、平台、模式底板为空；文字仅在审核叠层标注。",
+        "composition": "左文右图，约8:5；各版本按实图分别定位。"
+      },
+      "approvalBasis": "用户回复“填入文字”。"
+    }
+  ],
+  "designChanges": {
+    "cover": "三款主标题统一字号122、净宽600，在各自实际标题留白区内居中；扩大原480宽标题约25%，枪械版取消额外缩字。",
+    "social": "复用双难度广告矢量价目结构及已确认蜂医灰鼠插画；艺术标题字号130、净宽640，并按真实轮廓在所属区域居中。"
+  },
+  "delivery": {
+    "revision": "r3",
+    "pageIds": [
+      "dogtag-cover",
+      "dogtag-social",
+      "firearms-cover",
+      "firearms-social",
+      "revolver-cover",
+      "revolver-social"
+    ],
+    "viewer": "review/index.html",
+    "pngPackage": "你的护不行-三版封面广告-PNG-r3.zip",
+    "sourcePackage": "你的护不行-三版封面广告-源稿-r3.zip"
+  }
+}

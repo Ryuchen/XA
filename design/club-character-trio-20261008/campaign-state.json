@@ -1,0 +1,58 @@
+{
+  "project": "兴安电竞三角色组合插画",
+  "date": "2026-10-08",
+  "deliveryScope": {
+    "pageIds": [],
+    "platforms": [],
+    "basis": "用户仅请求粉发角色、蜂医和灰鼠的统一风格组合插画。",
+    "assetIds": [
+      "medic-pinkgirl-mouse-r1"
+    ]
+  },
+  "stage": "illustration",
+  "illustration": {
+    "version": "r1",
+    "file": "illustrations/medic-pinkgirl-mouse-r1.png",
+    "generationMode": "built-in imagegen",
+    "transparentBackground": true,
+    "userConfirmed": true,
+    "references": [
+      "references/pink-esports-girl.jpg",
+      "references/medic-mouse-style.png"
+    ],
+    "promptFile": "generation-prompt.txt",
+    "visualReview": "三角色身份细节保留；统一Q版手绘、深蓝变化线稿与柔和赛璐璐阴影；全身与道具完整；无文案、水印，透明PNG。",
+    "nativeDimensions": {
+      "width": 1448,
+      "height": 1086
+    },
+    "confirmationDate": "2026-10-08",
+    "confirmationBasis": "用户明确选择上一版 r1，并要求作为角色原型存入技能。"
+  },
+  "verifiedPricePlatforms": [],
+  "priceSourceByPlatform": {},
+  "illustrationHistory": [
+    {
+      "version": "r2",
+      "file": "illustrations/medic-pinkgirl-mouse-r2.png",
+      "generationMode": "built-in imagegen edit",
+      "transparentBackground": true,
+      "userConfirmed": false,
+      "references": [
+        "illustrations/medic-pinkgirl-mouse-r1.png",
+        "references/stinger-official.jpg"
+      ],
+      "promptFile": "generation-prompt-r2.txt",
+      "nativeDimensions": {
+        "height": 1086,
+        "width": 1448
+      },
+      "visualReview": "按三角洲官方默认蜂医参考修正：去除额头护目镜，调整侧分短发、黑色战术耳麦、简化胡茬、橄榄绿作战服与肩部通讯终端。粉发女孩、灰鼠、无人机及整体Q版手绘风格延续，透明PNG。",
+      "basis": "用户要求蜂医更贴近三角洲干员蜂医Q版形象。"
+    }
+  ],
+  "savedSkillReferences": [
+    "assets/approved-visuals-20261008/character-trio-prototype-r1.png",
+    "assets/approved-visuals-20261008/cover-layout-reference.png"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "brand":"兴安电竞",
+  "title":"常规物资单",
+  "subtitle":"累计带出物资",
+  "platforms":"端游 · 手游 / 绝密 · 机密",
+  "coverOffer":{"when":"工作日专享","benefit":"保底上浮","increase":"20%"},
+  "source":"2026-10-09用户明确要求：修改所附常规物资单封面，下方只体现工作日专享保底上浮20%，不用强调其他注意事项。",
+  "detailsSource":"完整价目与例外仍存于相邻项目club-material-price-update-20261009/content.json，本次仅制作封面，不修改或导入旧报价。"
+}

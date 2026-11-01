@@ -3,9 +3,9 @@ from django.test import TestCase,override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from club_accounts.services import get_or_create_account_for_legacy_user
-from users.models import ProviderQualification,EscortProfile
+from users.models import ProviderQualification,EscortProfile,EscortSchedule
 from users.qualifications import grade_options,service_requirement,matching_qualification,qualified_order_q,authorized_skill_q
-from orders.models import GameCategory,Order
+from orders.models import GameCategory,Gameplay,Order
 from orders.pricing import resolve_commission_rate,club_provider_specs
 from orders.tests.factories import make_user,make_provider,make_service
 from console.serializers import AdminEscortSerializer,AdminServiceItemSerializer
@@ -74,6 +74,94 @@ class ProviderQualificationRulesTest(APITestCase):
         self.profile.service_items.set([higher]);self.assertEqual(self.profile.order_acceptance_error(self.service),'')
         order=self.order();self.assertTrue(Order.objects.filter(pk=order.pk).filter(qualified_order_q(self.profile),authorized_skill_q(self.profile)).exists())
         self.service.catalog_family='别的玩法';self.assertIn('技能',self.profile.order_acceptance_error(self.service))
+
+    def test_same_gameplay_higher_skill_is_visible_and_can_grab_without_catalog_family(self):
+        self.qualification()
+        gameplay = Gameplay.objects.create(name='同玩法池测试', code='same-gameplay-pool')
+        self.service.catalog_family = ''
+        self.service.gameplay = gameplay
+        self.service.save()
+        higher = make_service(game_category=self.game, provider_kind='GUARD', provider_grade='LEGEND',
+            platform='PC', security_level='CONFIDENTIAL', commission_policy='REGULAR',
+            catalog_family='', gameplay=gameplay)
+        self.profile.service_items.set([higher])
+        order = self.order()
+        self.client.force_authenticate(self.user)
+        pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
+        self.assertIn(order.pk, [row['id'] for row in pool])
+        result = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
+        self.assertEqual(result.data['code'], 0, result.data)
+        order.refresh_from_db()
+        self.assertEqual(order.provider_account_id, self.account.pk)
+
+    def test_pool_uses_order_scope_snapshot_after_catalog_scope_changes(self):
+        self.qualification()
+        gameplay = Gameplay.objects.create(name='冻结范围池测试', code='snapshot-scope-pool')
+        self.service.gameplay = gameplay
+        self.service.catalog_family = ''
+        self.service.save()
+        higher = make_service(game_category=self.game, provider_kind='GUARD', provider_grade='LEGEND',
+            platform='PC', security_level='CONFIDENTIAL', catalog_family='', gameplay=gameplay)
+        self.profile.service_items.set([higher])
+        order = self.order()
+        # Editing the saleable service after payment must not change this
+        # order's frozen qualification scope or hide it from eligible people.
+        self.service.platform = 'MOBILE'
+        self.service.security_level = 'TOP_SECRET'
+        self.service.provider_grade = 'LEGEND'
+        self.service.save()
+        order.refresh_from_db()
+        self.assertEqual(self.profile.order_acceptance_error(order), '')
+        self.client.force_authenticate(self.user)
+        pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
+        self.assertIn(order.pk, [row['id'] for row in pool])
+        result = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
+        self.assertEqual(result.data['code'], 0, result.data)
+
+    def test_pool_does_not_grant_other_gameplay_or_game(self):
+        self.qualification()
+        other_game = GameCategory.objects.create(name='资格隔离另一游戏')
+        self.qualification(game=other_game)
+        gameplay = Gameplay.objects.create(name='已授权玩法', code='authorized-gameplay')
+        different = Gameplay.objects.create(name='未授权玩法', code='unauthorized-gameplay')
+        higher = make_service(game_category=self.game, provider_kind='GUARD', provider_grade='LEGEND',
+            platform='PC', security_level='CONFIDENTIAL', catalog_family='', gameplay=gameplay)
+        self.profile.service_items.set([higher])
+        self.service.catalog_family = ''
+        self.service.gameplay = different
+        self.service.save()
+        other_play_order = self.order()
+        other_game_service = make_service(game_category=other_game, provider_kind='GUARD',
+            provider_grade='MASTER', platform='PC', security_level='CONFIDENTIAL',
+            catalog_family='', gameplay=gameplay)
+        other_game_order = Order.objects.create(customer=self.boss, customer_account=self.boss_account,
+            service=other_game_service, amount=10000)
+        Order.objects.filter(pk=other_game_order.pk).update(created_at=timezone.now()-timedelta(hours=1))
+        self.client.force_authenticate(self.user)
+        pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
+        self.assertNotIn(other_play_order.pk, [row['id'] for row in pool])
+        self.assertNotIn(other_game_order.pk, [row['id'] for row in pool])
+        for order in (other_play_order, other_game_order):
+            result = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
+            self.assertNotEqual(result.data['code'], 0, result.data)
+
+    def test_same_gameplay_does_not_bypass_provider_schedule(self):
+        self.qualification()
+        gameplay = Gameplay.objects.create(name='档期池测试', code='schedule-gameplay-pool')
+        self.service.catalog_family = ''
+        self.service.gameplay = gameplay
+        self.service.save()
+        higher = make_service(game_category=self.game, provider_kind='GUARD', provider_grade='LEGEND',
+            platform='PC', security_level='CONFIDENTIAL', catalog_family='', gameplay=gameplay)
+        self.profile.service_items.set([higher])
+        order = self.order()
+        EscortSchedule.objects.create(provider=self.user,
+            weekday=(timezone.localtime().weekday() + 1) % 7, start_minute=0, end_minute=1440)
+        self.client.force_authenticate(self.user)
+        pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
+        self.assertNotIn(order.pk, [row['id'] for row in pool])
+        result = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
+        self.assertNotEqual(result.data['code'], 0, result.data)
     def test_directory_filters_same_qualification_row_and_deduplicates(self):
         self.qualification();self.qualification('MOBILE','TOP_SECRET','MASTER');self.profile.game_categories.add(self.game)
         self.client.force_authenticate(self.boss)
@@ -112,6 +200,11 @@ class ProviderQualificationRulesTest(APITestCase):
         low=make_service(game_category=self.game,provider_kind='GUARD',provider_grade='MASTER',platform='PC',security_level='CONFIDENTIAL',catalog_family=self.service.catalog_family)
         self.profile.service_items.set([low]);order=self.order()
         self.assertFalse(Order.objects.filter(pk=order.pk).filter(qualified_order_q(self.profile),authorized_skill_q(self.profile)).exists())
+        self.client.force_authenticate(self.user)
+        pool = self.client.get('/api/orders/orders/', {'status': 'pending'}).data['data']
+        self.assertNotIn(order.pk, [row['id'] for row in pool])
+        result = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
+        self.assertNotEqual(result.data['code'], 0, result.data)
 
     def test_typed_regular_service_uses_order_rate_even_with_legacy_policy(self):
         self.service.commission_policy='LEGACY';self.service.provider_grade='MASTER'

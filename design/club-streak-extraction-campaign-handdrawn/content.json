@@ -1,0 +1,569 @@
+{
+  "brand": "兴安电竞",
+  "title": "连续撤离单",
+  "titleLines": [
+    "连续",
+    "撤离单"
+  ],
+  "subtitle": "稳定连撤 · 物资保底",
+  "sources": {
+    "prices": "2026-09-29本轮用户文字，四类各三地图×三档，合计36档；不使用旧图价格",
+    "references": [
+      "references/original-cover.png",
+      "references/original-absolute.png",
+      "references/original-secret.png"
+    ],
+    "rules": "用户确认：其他规则沿用；速撤按上述调整。最新修正：默认允许航天飞升、巴克什飞鼠；禁止对应撤离点时对应单价上浮25%，端手游一致",
+    "rulesConfirmation": "references/rules-confirmation.md"
+  },
+  "tiers": [
+    {
+      "id": "desktop-absolute",
+      "platform": "端游",
+      "mode": "绝密",
+      "color": "gold",
+      "maps": [
+        {
+          "map": "巴克什",
+          "mapLabel": "绝密巴克什",
+          "rows": [
+            {
+              "priceR": 388,
+              "baseGuaranteeW": 1688,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 688,
+              "baseGuaranteeW": 3088,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 1288,
+              "baseGuaranteeW": 5888,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "航天",
+          "mapLabel": "绝密航天",
+          "rows": [
+            {
+              "priceR": 488,
+              "baseGuaranteeW": 2088,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 888,
+              "baseGuaranteeW": 3888,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 1688,
+              "baseGuaranteeW": 7488,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "监狱",
+          "mapLabel": "绝密监狱",
+          "rows": [
+            {
+              "priceR": 488,
+              "baseGuaranteeW": 2088,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 888,
+              "baseGuaranteeW": 3888,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 1688,
+              "baseGuaranteeW": 7488,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "platform": "端游",
+      "mode": "机密",
+      "color": "teal",
+      "maps": [
+        {
+          "map": "核电站",
+          "mapLabel": "机密核电站",
+          "rows": [
+            {
+              "priceR": 288,
+              "baseGuaranteeW": 1688,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 488,
+              "baseGuaranteeW": 2788,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 888,
+              "baseGuaranteeW": 4988,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "巴克什",
+          "mapLabel": "机密巴克什",
+          "rows": [
+            {
+              "priceR": 288,
+              "baseGuaranteeW": 1688,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 488,
+              "baseGuaranteeW": 2788,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 888,
+              "baseGuaranteeW": 4988,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "航天",
+          "mapLabel": "机密航天",
+          "rows": [
+            {
+              "priceR": 388,
+              "baseGuaranteeW": 2288,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 588,
+              "baseGuaranteeW": 3388,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 988,
+              "baseGuaranteeW": 5588,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "platform": "手游",
+      "mode": "绝密",
+      "color": "gold",
+      "maps": [
+        {
+          "map": "巴克什",
+          "mapLabel": "绝密巴克什",
+          "rows": [
+            {
+              "priceR": 288,
+              "baseGuaranteeW": 1688,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 588,
+              "baseGuaranteeW": 3088,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 988,
+              "baseGuaranteeW": 5888,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "航天",
+          "mapLabel": "绝密航天",
+          "rows": [
+            {
+              "priceR": 388,
+              "baseGuaranteeW": 2088,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 688,
+              "baseGuaranteeW": 3488,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 1288,
+              "baseGuaranteeW": 7488,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "监狱",
+          "mapLabel": "绝密监狱",
+          "rows": [
+            {
+              "priceR": 288,
+              "baseGuaranteeW": 1688,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 588,
+              "baseGuaranteeW": 3088,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 988,
+              "baseGuaranteeW": 5888,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "platform": "手游",
+      "mode": "机密",
+      "color": "teal",
+      "maps": [
+        {
+          "map": "核电站",
+          "mapLabel": "机密核电站",
+          "rows": [
+            {
+              "priceR": 188,
+              "baseGuaranteeW": 1088,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 488,
+              "baseGuaranteeW": 3088,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 888,
+              "baseGuaranteeW": 5488,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "巴克什",
+          "mapLabel": "机密巴克什",
+          "rows": [
+            {
+              "priceR": 288,
+              "baseGuaranteeW": 1288,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 488,
+              "baseGuaranteeW": 3088,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 888,
+              "baseGuaranteeW": 5488,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        },
+        {
+          "map": "航天",
+          "mapLabel": "机密航天",
+          "rows": [
+            {
+              "priceR": 288,
+              "baseGuaranteeW": 2288,
+              "consecutiveExtractions": 2,
+              "requirement": "连续成功撤离2把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 588,
+              "baseGuaranteeW": 3688,
+              "consecutiveExtractions": 3,
+              "requirement": "连续成功撤离3把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            },
+            {
+              "priceR": 988,
+              "baseGuaranteeW": 6488,
+              "consecutiveExtractions": 4,
+              "requirement": "连续成功撤离4把，且打满基础保底才可结单",
+              "completionOperator": "and"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "mechanism": {
+    "completion": {
+      "operator": "and",
+      "conditions": [
+        "达到对应连续成功撤离把数",
+        "打满基础保底"
+      ],
+      "copy": "连撤达标 + 打满基础保底，才可结单"
+    },
+    "validExtraction": {
+      "killsAtLeast": 4,
+      "lootWByMode": {
+        "绝密": 600,
+        "机密": 300
+      },
+      "operator": "and",
+      "lowThresholdRound": {
+        "countsTowardStreak": false,
+        "breaksStreak": false,
+        "lootOwnership": "板板",
+        "copy": "低于门槛局不计有效连撤，也不打断连撤；本局物资归板板。"
+      }
+    },
+    "failure": {
+      "resetStreak": true,
+      "retainAccumulatedExtractedLoot": true,
+      "guaranteeUpperLimit": null,
+      "copy": "撤离失败，连撤次数重新计算；已成功撤离物资继续累计，保底无上限。"
+    },
+    "lootBeforeCompletion": {
+      "copy": "成功达标前，成功撤离带出物资计入累计物资保底。"
+    },
+    "failedOrderSettlement": {
+      "copy": "对应炸单保底高于累计物资保底时，在打满结单条件后再补保底。"
+    },
+    "quickExtraction": {
+      "killsRequirementCopy": "满足击杀人头数",
+      "materialComparison": ">",
+      "lootWByMode": {
+        "绝密": 900,
+        "机密": 500
+      },
+      "withinDeadline": false,
+      "copyTemplate": "满足击杀要求，且物资>{lootW}w，允许速撤",
+      "basis": "用户明确同意去掉旧图未给出依据的规定时限"
+    },
+    "extractionPointPolicy": {
+      "priceUpliftPercent": 25,
+      "priceUpliftWhen": "禁止对应撤离点",
+      "copy": "默认允许航天飞升、巴克什飞鼠；若禁止对应撤离点，对应单价上浮25%",
+      "allowedByDefault": {
+        "航天": "飞升",
+        "巴克什": "飞鼠"
+      },
+      "scope": "端手游、绝密机密一致；地图按本轮价目，不包含大坝",
+      "basis": "用户最新修正：是默认允许走航天飞升和巴克什飞鼠，如果禁止该项撤离点价格上浮25%"
+    }
+  },
+  "rules": {
+    "绝密": {
+      "maps": [
+        "巴克什",
+        "航天",
+        "监狱"
+      ],
+      "mapAndCards": {
+        "confirmMapBeforeOrder": true,
+        "changingMapRequiresAgreement": true,
+        "byMap": {
+          "航天": "核心区金红卡",
+          "巴克什": "塔内和博物馆金红卡",
+          "监狱": "金红卡和一级监狱卡"
+        }
+      },
+      "equipment": {
+        "backpackSlotsAtLeast": 40,
+        "revolverRequired": true,
+        "verifyBeforeEntry": true,
+        "exceptOwnerVoluntarilyWaives": true
+      },
+      "missingItems": [
+        {
+          "cause": "应带未带",
+          "items": [
+            {
+              "item": "金卡",
+              "amountW": 200
+            },
+            {
+              "item": "红卡",
+              "amountW": 300
+            }
+          ]
+        },
+        {
+          "cause": "未经同意未带",
+          "items": [
+            {
+              "item": "背包",
+              "amountW": 300
+            },
+            {
+              "item": "左轮",
+              "amountW": 200
+            }
+          ]
+        }
+      ],
+      "failedOrderCompensation": {
+        "clubCriteriaRequired": true,
+        "byMap": {
+          "航天": 60,
+          "巴克什": 60,
+          "监狱": 80
+        }
+      },
+      "safeBoxSettlement": {
+        "clubFailedOrderCriteriaRequired": true,
+        "excludedFromExtractedLoot": true,
+        "noLossCompensationWhenSafeBoxLootGreaterThanW": 100,
+        "otherwise": "按炸单标准增加累计保底"
+      }
+    },
+    "机密": {
+      "maps": [
+        "核电站",
+        "巴克什",
+        "航天"
+      ],
+      "mapAndCards": {
+        "confirmMapBeforeOrder": true,
+        "changingMapRequiresAgreement": true,
+        "byMap": {
+          "航天": "核心区金红卡",
+          "巴克什": "塔内和博物馆金红卡",
+          "核电站": "金红卡"
+        }
+      },
+      "equipment": {
+        "backpackSlotsAtLeast": 30,
+        "revolverRequired": true,
+        "verifyBeforeEntry": true,
+        "exceptOwnerVoluntarilyWaives": true
+      },
+      "missingItems": [
+        {
+          "cause": "应带未带",
+          "items": [
+            {
+              "item": "金卡",
+              "amountW": 100
+            },
+            {
+              "item": "红卡",
+              "amountW": 150
+            }
+          ]
+        },
+        {
+          "cause": "未经同意未带",
+          "items": [
+            {
+              "item": "背包",
+              "amountW": 150
+            },
+            {
+              "item": "左轮",
+              "amountW": 100
+            }
+          ]
+        }
+      ],
+      "failedOrderCompensation": {
+        "clubCriteriaRequired": true,
+        "eachRoundW": 30
+      },
+      "safeBoxSettlement": {
+        "clubFailedOrderCriteriaRequired": true,
+        "excludedFromExtractedLoot": true,
+        "noLossCompensationWhenSafeBoxLootGreaterThanW": 50,
+        "otherwise": "按炸单标准增加累计保底"
+      }
+    }
+  },
+  "footerInstruction": "下单前请确认地图及订单规则",
+  "contentNotes": [
+    "本轮36档以用户新价目为准；手游绝密航天第三把保底3488w，手游机密航天第三把3688w，不按端游复制",
+    "结单必须同时满足有效连撤次数和基础累计物资保底",
+    "成功结单前物资累计，不混入物资对赌单的不跨局累计机制",
+    "排除大坝；默认允许航天飞升、巴克什飞鼠，禁止对应撤离点时单价上浮25%；基础价目表数值保持不变",
+    "规则端手游一致，所有补偿仅在俱乐部相应条件下适用"
+  ]
+}

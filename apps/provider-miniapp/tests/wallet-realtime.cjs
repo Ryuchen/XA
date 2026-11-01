@@ -14,7 +14,7 @@ const deferred = () => { let resolve; const promise = new Promise(done => { reso
 
 function environment() {
   const slots = [], timers = new Map(), handlers = new Map(), authHandlers = new Set(), reads = [], mutations = [], notices = [];
-  let cursor = 0, dirty = false, tree, effects = [], didShow, didHide, pull, timerId = 0, revision = 1, owner = '10', token = 'fixture', stopped = 0;
+  let cursor = 0, dirty = false, tree, effects = [], didShow, didHide, pull, timerId = 0, revision = 1, owner = '10', token = 'fixture', stopped = 0, submitResponse = { code: 0 };
   let data = { balance: 9000, frozen_amount: 1000, min_amount: 0, balance_threshold: 5000, can_withdraw: true, tax_rate: 2, requests: [],
     transactions: [], total_income: 2000, total: 0,
     accounts: [{ id: 7, payee_method: 'WECHAT', payee_account: 'fixture-payee', payee_name: '本地测试账户', version: 1 }],
@@ -60,7 +60,7 @@ function environment() {
       fetchTransactions: args => read('transactions', args, () => ({ transactions: data.transactions, total_income: data.total_income, total: data.total, page: args.page || 1, page_size: 50 })),
       fetchProviderBenefits: args => read('benefits', args, () => ({ summary: { total_reward: 0, total_penalty: 0, total_gift_amount: 0, total_gift_income: 0, gift_count: 0 }, dispose_records: [], gift_records: [], pagination: { page_size: 20, dispose: { page: 1, total: 0 }, gift: { page: 1, total: 0 } } })),
       fetchWithdrawalAccounts: () => read('accounts', undefined, () => data.accounts),
-      withdrawRequest: async payload => { mutations.push(payload); return { code: 0 }; },
+      withdrawRequest: async payload => { mutations.push(payload); return submitResponse; },
     },
     '@/utils/format': money, '@/utils/withdraw': withdrawModule.exports,
     '@/utils/auth': { getSessionRevision: () => revision, getStoredToken: () => token, getStoredUser: () => owner ? { id: owner } : null },
@@ -86,7 +86,7 @@ function environment() {
   const button = label => nodes().find(node => node.type === 'Button' && text(node) === label);
   render();
   return { reads, mutations, notices, timers, handlers, authHandlers, render, flush, nodes, button, text: () => text(tree),
-    data: next => { data = { ...data, ...next }; }, read: (kind, fn) => { readers[kind] = fn; },
+    data: next => { data = { ...data, ...next }; }, read: (kind, fn) => { readers[kind] = fn; }, submitResponse: value => { submitResponse = value; },
     emit: (type, value = { account_id: 10 }) => { for (const handler of handlers.get(type) || []) handler(value); },
     show: async () => { await didShow(); await flush(); }, hide: () => didHide(),
     fire: async () => { assert.equal(timers.size, 1); const [id, fn] = timers.entries().next().value; timers.delete(id); await fn(); await flush(); },
@@ -110,8 +110,42 @@ test('settled refund wallet updates show net income and explicitly labeled signe
     { ...row, id: 2, tx_type: 'INCOME', amount: -800 }, { ...row, id: 3, tx_type: 'EARNINGS_FREEZE', amount: 560 }, { ...row, id: 4, tx_type: 'DEPOSIT', amount: 240 },
   ] }); env.emit('wallet_update'); await env.fire();
   const texts = env.nodes().filter(node => node.type === 'Text').map(node => node.props.children.join(''));
-  assert.ok(texts.includes('订单净收益')); assert.ok(texts.includes('0币')); assert.ok(texts.includes('收益退回')); assert.ok(texts.includes('收益冻结退回')); assert.ok(texts.includes('押金抵扣退回'));
+  assert.ok(texts.includes('服务及推荐净收益')); assert.ok(texts.includes('0币')); assert.ok(texts.includes('收益退回')); assert.ok(texts.includes('收益冻结退回')); assert.ok(texts.includes('押金抵扣退回'));
   assert.ok(texts.includes('-80币')); assert.ok(texts.includes('+56币')); assert.ok(texts.includes('+24币')); assert.deepEqual(env.mutations, []); env.unmount();
+});
+
+test('referral income and its refund are distinguished from service income', async () => {
+  const env = environment(), row = { status: 'SUCCESS', created_at: '2026-10-20T00:00:00Z' };
+  env.data({ total_income: 6745, total: 4, transactions: [
+    { ...row, id: 1, tx_type: 'INCOME', amount: 8000, is_referral_income: false },
+    { ...row, id: 2, tx_type: 'INCOME', amount: 1000, is_referral_income: true },
+    { ...row, id: 3, tx_type: 'INCOME', amount: -2004, is_reversal: true, is_referral_income: false },
+    { ...row, id: 4, tx_type: 'INCOME', amount: -251, is_reversal: true, is_referral_income: true },
+  ] });
+  await env.show();
+  const text = env.text();
+  for (const value of ['服务及推荐净收益', '674.5币', '推荐分佣', '推荐收益退回', '收益退回']) assert.ok(text.includes(value), value);
+  assert.deepEqual(env.mutations, []); env.unmount();
+});
+
+test('renders actual isolated settlement and refund wallet response', { skip: !process.env.XA_REAL_WALLET_JSON }, async () => {
+  const data = JSON.parse(process.env.XA_REAL_WALLET_JSON);
+  const env = environment(); env.data(data); await env.show();
+  const text = env.text();
+  for (const value of ['服务及推荐净收益', '674.5币', '推荐分佣', '推荐收益退回', '收益退回']) assert.ok(text.includes(value), value);
+  assert.deepEqual(env.mutations, []); env.unmount();
+});
+
+test('renders actual gift source wallet response', { skip: !process.env.XA_REAL_GIFT_WALLET_JSON }, async () => {
+  const data = JSON.parse(process.env.XA_REAL_GIFT_WALLET_JSON);
+  const env = environment(); env.data(data); await env.show();
+  const titles = env.nodes().filter(node => node.type === 'Text' && node.props.className === 'itemTitle')
+    .map(node => node.props.children.join(''));
+  assert.ok(titles.includes('礼物收益'));
+  assert.ok(titles.includes('客服赠送'));
+  assert.ok(titles.includes('赠送'));
+  assert.ok(titles.includes('礼物收益冲回'));
+  assert.deepEqual(env.mutations, []); env.unmount();
 });
 
 test('refunded gift history displays server net receipts and never presents its former approval as still receivable', async () => {
@@ -136,6 +170,22 @@ test('partially refunded gift keeps its server net receipt and later full refund
   } })); await env.show(); env.nodes().find(node => node.type === 'Button' && node.props.className?.includes('tab') && node.props.children[0] === '礼物').props.onClick(); await env.flush();
   assert.ok(env.text().includes('部分退款 · 保留净实得')); assert.ok(env.text().includes('+500币')); assert.ok(!env.text().includes('应得 800币')); assert.ok(!env.text().includes('收益已冲回'));
   income = 0; status = 'REFUNDED'; env.emit('wallet_update'); await env.fire(); assert.ok(env.text().includes('已退款 · 收益已冲回')); assert.ok(!env.text().includes('+500币')); assert.deepEqual(env.mutations, []); env.unmount();
+});
+
+test('real gift benefit data separates referral income through refunds', { skip: !process.env.XA_REAL_GIFT_BENEFITS }, async () => {
+  const snapshots = JSON.parse(process.env.XA_REAL_GIFT_BENEFITS);
+  const env = environment(); let current = 0;
+  env.read('benefits', async () => ({ code: 0, data: snapshots[current] }));
+  await env.show();
+  env.nodes().find(node => node.type === 'Button' && node.props.className?.includes('tab') && node.props.children[0] === '礼物').props.onClick();
+  await env.flush();
+  assert.ok(env.text().includes('已入账')); assert.ok(env.text().includes('+800币'));
+  assert.ok(!env.text().includes('请联系客服核对')); assert.ok(!env.text().includes('+900币'));
+  current = 1; env.emit('wallet_update'); await env.fire();
+  assert.ok(env.text().includes('部分退款 · 保留净实得')); assert.ok(env.text().includes('+400币'));
+  current = 2; env.emit('wallet_update'); await env.fire();
+  assert.ok(env.text().includes('已退款 · 收益已冲回')); assert.ok(env.text().includes('0币'));
+  assert.ok(!env.text().includes('+400币')); assert.deepEqual(env.mutations, []); env.unmount();
 });
 
 test('multiple partial income/freeze reversals remain distinct and use signed net income without merging on reversal_of', async () => {
@@ -245,8 +295,44 @@ test('rejected withdrawal cards show the returned application without tax or pay
       assert.ok(text.includes('原申请 1000币')); assert.ok(text.includes('已退回余额'));
       for (const absent of ['-1000币', '税20', '到账980币', '¥98.00']) assert.ok(!text.includes(absent), absent);
     } else {
-      assert.ok(text.includes('-1000币')); assert.ok(text.includes('税20 · 到账980币')); assert.ok(text.includes('¥98.00'));
+      assert.ok(text.includes('-1000币')); assert.ok(text.includes(`税20 · ${status === 'PENDING' ? '预计打款' : '打款'}980币`)); assert.ok(text.includes('¥98.00'));
       assert.ok(!text.includes('已退回余额'));
     }
   }
+});
+
+test('unresolved withdrawal conflicts preserve the form and explain how to check instead of claiming success', async () => {
+  for (const [errorCode, expected] of [['REQUEST_ID_CONFLICT', '交易编号与其他操作冲突'], ['FUND_RESULT_UNAVAILABLE', '原申请结果无法确认']]) {
+    const env = environment(); await env.show(); await env.quote();
+    env.submitResponse({ code: 409, errorCode, msg: '请核对结果' });
+    await env.button('确认提现').props.onClick(); await env.flush();
+    assert.ok(env.text().includes(expected)); assert.ok(env.text().includes('请查看提现记录或联系客服核对'));
+    assert.equal(env.nodes().find(node => node.type === 'Input').props.value, '100');
+    assert.equal(env.button('确认提现').props.disabled, true);
+    assert.ok(!env.notices.some(item => /已提交/.test(item.title)));
+    env.button('查看提现记录').props.onClick(); await env.flush();
+    assert.equal(env.button('确认提现'), undefined);
+    env.button('提现').props.onClick(); await env.flush();
+    assert.equal(env.nodes().find(node => node.type === 'Input').props.value, '100');
+  }
+});
+
+test('a server error with an unknown outcome keeps the amount and directs the user to check records', async () => {
+  const env = environment(); await env.show(); await env.quote();
+  env.submitResponse({ code: 500, msg: '服务异常' });
+  await env.button('确认提现').props.onClick(); await env.flush();
+  assert.ok(env.text().includes('提现结果未确认')); assert.equal(env.nodes().find(node => node.type === 'Input').props.value, '100');
+  assert.equal(env.button('确认提现').props.disabled, true); assert.ok(env.button('查看提现记录'));
+});
+
+test('withdrawal history distinguishes pending payout from paid and uses the saved account tail', async () => {
+  const env = environment();
+  env.data({ requests: [
+    { id: 1, amount: 10000, tax_amount: 200, actual_amount: 9800, status: 'PENDING', payee_account: 'first-1234', payee_method_display: '微信', payee_name: '同一人', created_at: '2026-10-19T10:00:00Z' },
+    { id: 2, amount: 10000, tax_amount: 200, actual_amount: 9800, status: 'APPROVED', payee_account: 'second-5678', payee_method_display: '微信', payee_name: '同一人', created_at: '2026-10-19T10:00:00Z' },
+  ] }); await env.show();
+  env.nodes().find(node => node.type === 'Button' && node.props.className?.includes('tab') && node.props.children[0] === '提现').props.onClick(); await env.flush();
+  const text = env.text(); assert.ok(text.includes('收款账号 •••• 1234')); assert.ok(text.includes('收款账号 •••• 5678'));
+  assert.ok(!text.includes('first-1234')); assert.ok(!text.includes('second-5678'));
+  assert.ok(text.includes('税20 · 预计打款980币')); assert.ok(text.includes('税20 · 打款980币'));
 });

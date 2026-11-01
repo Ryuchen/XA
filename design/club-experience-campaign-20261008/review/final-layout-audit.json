@@ -1,0 +1,1697 @@
+{
+  "pages": [
+    {
+      "id": "cover",
+      "checks": [
+        {
+          "container": "game",
+          "safe": [
+            82,
+            588,
+            515,
+            34
+          ],
+          "ink": [
+            82,
+            590.96,
+            227.23,
+            619.04
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 0,
+            "right": 369.77,
+            "top": 2.96,
+            "bottom": 2.96
+          }
+        },
+        {
+          "container": "brand",
+          "safe": [
+            80,
+            125,
+            485,
+            70
+          ],
+          "ink": [
+            138.6,
+            133.85,
+            313.56,
+            176.15
+          ],
+          "overflow": false,
+          "verticalOffset": -5,
+          "margins": {
+            "left": 58.6,
+            "right": 251.44,
+            "top": 8.85,
+            "bottom": 18.85
+          }
+        },
+        {
+          "container": "headline",
+          "safe": [
+            80,
+            215,
+            515,
+            380
+          ],
+          "ink": [
+            82,
+            229.68,
+            586.51,
+            581
+          ],
+          "overflow": false,
+          "verticalOffset": 0.34,
+          "margins": {
+            "left": 2,
+            "right": 8.49,
+            "top": 14.68,
+            "bottom": 14
+          }
+        },
+        {
+          "container": "claim",
+          "safe": [
+            90,
+            707,
+            555,
+            63
+          ],
+          "ink": [
+            165.52,
+            717.15,
+            569.48,
+            759.85
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 75.52,
+            "right": 75.52,
+            "top": 10.15,
+            "bottom": 10.15
+          }
+        },
+        {
+          "container": "platform",
+          "safe": [
+            100,
+            802,
+            535,
+            35
+          ],
+          "ink": [
+            197.71,
+            804.57,
+            537.29,
+            834.43
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 97.71,
+            "right": 97.71,
+            "top": 2.57,
+            "bottom": 2.57
+          }
+        }
+      ],
+      "unitChecks": [],
+      "overlaps": 0,
+      "smallestBodyPhonePx": null
+    },
+    {
+      "id": "social",
+      "checks": [
+        {
+          "container": "brand",
+          "safe": [
+            75,
+            105,
+            385,
+            55
+          ],
+          "ink": [
+            118.38,
+            112.37,
+            231.13,
+            139.63
+          ],
+          "overflow": false,
+          "verticalOffset": -6.5,
+          "margins": {
+            "left": 43.38,
+            "right": 228.87,
+            "top": 7.37,
+            "bottom": 20.37
+          }
+        },
+        {
+          "container": "headline",
+          "safe": [
+            75,
+            165,
+            385,
+            170
+          ],
+          "ink": [
+            82,
+            166.01,
+            364.39,
+            334.05
+          ],
+          "overflow": false,
+          "verticalOffset": 0.03,
+          "margins": {
+            "left": 7,
+            "right": 95.61,
+            "top": 1.01,
+            "bottom": 0.95
+          }
+        },
+        {
+          "container": "condition",
+          "safe": [
+            80,
+            425,
+            925,
+            35
+          ],
+          "ink": [
+            283.04,
+            428.25,
+            802.96,
+            455.75
+          ],
+          "overflow": false,
+          "verticalOffset": -0.5,
+          "margins": {
+            "left": 203.04,
+            "right": 202.04,
+            "top": 3.25,
+            "bottom": 4.25
+          }
+        },
+        {
+          "container": "header-0",
+          "safe": [
+            72,
+            498,
+            434,
+            50
+          ],
+          "ink": [
+            179.89,
+            507.14,
+            398.11,
+            538.86
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 107.89,
+            "right": 107.89,
+            "top": 9.14,
+            "bottom": 9.14
+          }
+        },
+        {
+          "container": "offer-0-0",
+          "safe": [
+            80,
+            575,
+            417,
+            66
+          ],
+          "ink": [
+            86.7,
+            579.75,
+            490.31,
+            636.76
+          ],
+          "overflow": false,
+          "verticalOffset": 0.26,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 4.75,
+            "bottom": 4.24
+          }
+        },
+        {
+          "container": "offer-0-1",
+          "safe": [
+            80,
+            670,
+            417,
+            66
+          ],
+          "ink": [
+            86.7,
+            684.31,
+            490.31,
+            721.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        },
+        {
+          "container": "offer-0-2",
+          "safe": [
+            80,
+            764,
+            417,
+            66
+          ],
+          "ink": [
+            86.7,
+            778.31,
+            490.31,
+            815.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        },
+        {
+          "container": "header-1",
+          "safe": [
+            584,
+            498,
+            434,
+            50
+          ],
+          "ink": [
+            692.11,
+            507.26,
+            909.89,
+            538.74
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 108.11,
+            "right": 108.11,
+            "top": 9.26,
+            "bottom": 9.26
+          }
+        },
+        {
+          "container": "offer-1-0",
+          "safe": [
+            592,
+            575,
+            417,
+            66
+          ],
+          "ink": [
+            598.7,
+            579.75,
+            1002.31,
+            636.66
+          ],
+          "overflow": false,
+          "verticalOffset": 0.2,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 4.75,
+            "bottom": 4.34
+          }
+        },
+        {
+          "container": "offer-1-1",
+          "safe": [
+            592,
+            670,
+            417,
+            66
+          ],
+          "ink": [
+            598.7,
+            684.31,
+            1002.31,
+            721.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        },
+        {
+          "container": "offer-1-2",
+          "safe": [
+            592,
+            764,
+            417,
+            66
+          ],
+          "ink": [
+            598.7,
+            778.31,
+            1002.31,
+            815.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        },
+        {
+          "container": "header-2",
+          "safe": [
+            72,
+            895,
+            434,
+            50
+          ],
+          "ink": [
+            180.14,
+            904.14,
+            397.86,
+            935.86
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 108.14,
+            "right": 108.14,
+            "top": 9.14,
+            "bottom": 9.14
+          }
+        },
+        {
+          "container": "offer-2-0",
+          "safe": [
+            80,
+            972,
+            417,
+            66
+          ],
+          "ink": [
+            86.7,
+            976.75,
+            490.31,
+            1033.71
+          ],
+          "overflow": false,
+          "verticalOffset": 0.23,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 4.75,
+            "bottom": 4.29
+          }
+        },
+        {
+          "container": "offer-2-1",
+          "safe": [
+            80,
+            1066,
+            417,
+            66
+          ],
+          "ink": [
+            86.7,
+            1080.31,
+            490.31,
+            1117.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        },
+        {
+          "container": "offer-2-2",
+          "safe": [
+            80,
+            1157,
+            417,
+            66
+          ],
+          "ink": [
+            86.7,
+            1171.31,
+            490.31,
+            1208.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        },
+        {
+          "container": "header-3",
+          "safe": [
+            584,
+            895,
+            434,
+            50
+          ],
+          "ink": [
+            692.36,
+            904.26,
+            909.64,
+            935.74
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 108.36,
+            "right": 108.36,
+            "top": 9.26,
+            "bottom": 9.26
+          }
+        },
+        {
+          "container": "offer-3-0",
+          "safe": [
+            592,
+            972,
+            417,
+            66
+          ],
+          "ink": [
+            598.7,
+            976.75,
+            1002.31,
+            1033.71
+          ],
+          "overflow": false,
+          "verticalOffset": 0.23,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 4.75,
+            "bottom": 4.29
+          }
+        },
+        {
+          "container": "offer-3-1",
+          "safe": [
+            592,
+            1066,
+            417,
+            66
+          ],
+          "ink": [
+            598.7,
+            1080.31,
+            1002.31,
+            1117.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        },
+        {
+          "container": "offer-3-2",
+          "safe": [
+            592,
+            1157,
+            417,
+            66
+          ],
+          "ink": [
+            598.7,
+            1171.31,
+            1002.31,
+            1208.69
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 6.7,
+            "right": 6.69,
+            "top": 14.31,
+            "bottom": 14.31
+          }
+        }
+      ],
+      "unitChecks": [
+        {
+          "group": "offer-0-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-0-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-0-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-0-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-0-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-0-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-1-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-1-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.7
+        },
+        {
+          "group": "offer-1-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-1-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-1-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-1-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-2-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-2-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-2-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-2-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-2-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-2-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-3-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-3-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-3-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-3-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "offer-3-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "offer-3-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        }
+      ],
+      "overlaps": 0,
+      "smallestBodyPhonePx": null
+    },
+    {
+      "id": "desktop-experience",
+      "checks": [
+        {
+          "container": "brand",
+          "safe": [
+            62,
+            69,
+            305,
+            39
+          ],
+          "ink": [
+            97.94,
+            75.31,
+            202.92,
+            100.69
+          ],
+          "overflow": false,
+          "verticalOffset": -0.5,
+          "margins": {
+            "left": 35.94,
+            "right": 164.08,
+            "top": 6.31,
+            "bottom": 7.31
+          }
+        },
+        {
+          "container": "headline",
+          "safe": [
+            60,
+            120,
+            312,
+            96
+          ],
+          "ink": [
+            63,
+            123.44,
+            308.38,
+            210.56
+          ],
+          "overflow": false,
+          "verticalOffset": -1,
+          "margins": {
+            "left": 3,
+            "right": 63.62,
+            "top": 3.44,
+            "bottom": 5.44
+          }
+        },
+        {
+          "container": "subtitle",
+          "safe": [
+            65,
+            212,
+            305,
+            36
+          ],
+          "ink": [
+            110.12,
+            216.01,
+            324.88,
+            243.99
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 45.12,
+            "right": 45.12,
+            "top": 4.01,
+            "bottom": 4.01
+          }
+        },
+        {
+          "container": "header-0",
+          "safe": [
+            63,
+            392,
+            758,
+            44
+          ],
+          "ink": [
+            70.02,
+            398.36,
+            810,
+            429.64
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 7.02,
+            "right": 11,
+            "top": 6.36,
+            "bottom": 6.36
+          }
+        },
+        {
+          "container": "card-0-0",
+          "safe": [
+            67,
+            476,
+            297,
+            172
+          ],
+          "ink": [
+            122.6,
+            480.62,
+            328.49,
+            644.09
+          ],
+          "overflow": false,
+          "verticalOffset": 0.35,
+          "margins": {
+            "left": 55.6,
+            "right": 35.51,
+            "top": 4.62,
+            "bottom": 3.91
+          }
+        },
+        {
+          "container": "card-0-1",
+          "safe": [
+            423,
+            476,
+            162,
+            172
+          ],
+          "ink": [
+            449.25,
+            479.77,
+            570.66,
+            643.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.13,
+          "margins": {
+            "left": 26.25,
+            "right": 14.34,
+            "top": 3.77,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "card-0-2",
+          "safe": [
+            645,
+            476,
+            175,
+            172
+          ],
+          "ink": [
+            676.76,
+            479.33,
+            799.16,
+            643.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.35,
+          "margins": {
+            "left": 31.76,
+            "right": 20.84,
+            "top": 3.33,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "header-1",
+          "safe": [
+            63,
+            708,
+            758,
+            44
+          ],
+          "ink": [
+            67.7,
+            714.56,
+            810,
+            745.44
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 4.7,
+            "right": 11,
+            "top": 6.56,
+            "bottom": 6.56
+          }
+        },
+        {
+          "container": "card-1-0",
+          "safe": [
+            67,
+            792,
+            297,
+            172
+          ],
+          "ink": [
+            96.56,
+            796.2,
+            328.49,
+            960.09
+          ],
+          "overflow": false,
+          "verticalOffset": 0.14,
+          "margins": {
+            "left": 29.56,
+            "right": 35.51,
+            "top": 4.2,
+            "bottom": 3.91
+          }
+        },
+        {
+          "container": "card-1-1",
+          "safe": [
+            423,
+            792,
+            162,
+            172
+          ],
+          "ink": [
+            450.91,
+            795.77,
+            570.66,
+            959.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.13,
+          "margins": {
+            "left": 27.91,
+            "right": 14.34,
+            "top": 3.77,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "card-1-2",
+          "safe": [
+            645,
+            792,
+            175,
+            172
+          ],
+          "ink": [
+            679.41,
+            795.33,
+            799.16,
+            959.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.35,
+          "margins": {
+            "left": 34.41,
+            "right": 20.84,
+            "top": 3.33,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "rules-header",
+          "safe": [
+            65,
+            1030,
+            755,
+            40
+          ],
+          "ink": [
+            354.76,
+            1033.99,
+            532.24,
+            1066.01
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 289.76,
+            "right": 287.76,
+            "top": 3.99,
+            "bottom": 3.99
+          }
+        },
+        {
+          "container": "map",
+          "safe": [
+            64,
+            1110,
+            348,
+            289
+          ],
+          "ink": [
+            89.75,
+            1117.99,
+            386.57,
+            1390.07
+          ],
+          "overflow": false,
+          "verticalOffset": -0.47,
+          "margins": {
+            "left": 25.75,
+            "right": 25.43,
+            "top": 7.99,
+            "bottom": 8.93
+          }
+        },
+        {
+          "container": "equipment",
+          "safe": [
+            473,
+            1110,
+            348,
+            289
+          ],
+          "ink": [
+            488.17,
+            1117.75,
+            805.83,
+            1387.56
+          ],
+          "overflow": false,
+          "verticalOffset": -1.85,
+          "margins": {
+            "left": 15.17,
+            "right": 15.17,
+            "top": 7.75,
+            "bottom": 11.44
+          }
+        },
+        {
+          "container": "compensation",
+          "safe": [
+            65,
+            1450,
+            347,
+            126
+          ],
+          "ink": [
+            87.81,
+            1455.8,
+            389.79,
+            1566.18
+          ],
+          "overflow": false,
+          "verticalOffset": -2.01,
+          "margins": {
+            "left": 22.81,
+            "right": 22.21,
+            "top": 5.8,
+            "bottom": 9.82
+          }
+        },
+        {
+          "container": "restriction",
+          "safe": [
+            473,
+            1450,
+            348,
+            126
+          ],
+          "ink": [
+            514.03,
+            1456.28,
+            779.97,
+            1567.31
+          ],
+          "overflow": false,
+          "verticalOffset": -1.21,
+          "margins": {
+            "left": 41.03,
+            "right": 41.03,
+            "top": 6.28,
+            "bottom": 8.69
+          }
+        },
+        {
+          "container": "footer",
+          "safe": [
+            219,
+            1674,
+            430,
+            30
+          ],
+          "ink": [
+            303.33,
+            1678.57,
+            564.67,
+            1699.43
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 84.33,
+            "right": 84.33,
+            "top": 4.57,
+            "bottom": 4.57
+          }
+        }
+      ],
+      "unitChecks": [
+        {
+          "group": "card-0-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-0-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-0-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-0-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-0-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-0-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-1-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-1-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-1-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-1-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-1-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-1-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "compensation-secret",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "compensation-absolute",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        }
+      ],
+      "overlaps": 0,
+      "smallestBodyPhonePx": 12.311161217587372
+    },
+    {
+      "id": "mobile-experience",
+      "checks": [
+        {
+          "container": "brand",
+          "safe": [
+            62,
+            69,
+            305,
+            39
+          ],
+          "ink": [
+            97.94,
+            75.31,
+            202.92,
+            100.69
+          ],
+          "overflow": false,
+          "verticalOffset": -0.5,
+          "margins": {
+            "left": 35.94,
+            "right": 164.08,
+            "top": 6.31,
+            "bottom": 7.31
+          }
+        },
+        {
+          "container": "headline",
+          "safe": [
+            60,
+            120,
+            312,
+            96
+          ],
+          "ink": [
+            63,
+            123.44,
+            308.38,
+            210.56
+          ],
+          "overflow": false,
+          "verticalOffset": -1,
+          "margins": {
+            "left": 3,
+            "right": 63.62,
+            "top": 3.44,
+            "bottom": 5.44
+          }
+        },
+        {
+          "container": "subtitle",
+          "safe": [
+            65,
+            212,
+            305,
+            36
+          ],
+          "ink": [
+            110.31,
+            216.11,
+            324.69,
+            243.89
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 45.31,
+            "right": 45.31,
+            "top": 4.11,
+            "bottom": 4.11
+          }
+        },
+        {
+          "container": "header-0",
+          "safe": [
+            63,
+            392,
+            758,
+            44
+          ],
+          "ink": [
+            70.02,
+            398.36,
+            810,
+            429.64
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 7.02,
+            "right": 11,
+            "top": 6.36,
+            "bottom": 6.36
+          }
+        },
+        {
+          "container": "card-0-0",
+          "safe": [
+            67,
+            476,
+            297,
+            172
+          ],
+          "ink": [
+            100.04,
+            480.2,
+            328.49,
+            643.58
+          ],
+          "overflow": false,
+          "verticalOffset": -0.11,
+          "margins": {
+            "left": 33.04,
+            "right": 35.51,
+            "top": 4.2,
+            "bottom": 4.42
+          }
+        },
+        {
+          "container": "card-0-1",
+          "safe": [
+            423,
+            476,
+            162,
+            172
+          ],
+          "ink": [
+            450.91,
+            479.77,
+            570.66,
+            643.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.13,
+          "margins": {
+            "left": 27.91,
+            "right": 14.34,
+            "top": 3.77,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "card-0-2",
+          "safe": [
+            645,
+            476,
+            175,
+            172
+          ],
+          "ink": [
+            679.41,
+            479.33,
+            799.16,
+            643.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.35,
+          "margins": {
+            "left": 34.41,
+            "right": 20.84,
+            "top": 3.33,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "header-1",
+          "safe": [
+            63,
+            708,
+            758,
+            44
+          ],
+          "ink": [
+            67.7,
+            714.56,
+            810,
+            745.44
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 4.7,
+            "right": 11,
+            "top": 6.56,
+            "bottom": 6.56
+          }
+        },
+        {
+          "container": "card-1-0",
+          "safe": [
+            67,
+            792,
+            297,
+            172
+          ],
+          "ink": [
+            85.38,
+            796.2,
+            328.49,
+            960.09
+          ],
+          "overflow": false,
+          "verticalOffset": 0.14,
+          "margins": {
+            "left": 18.38,
+            "right": 35.51,
+            "top": 4.2,
+            "bottom": 3.91
+          }
+        },
+        {
+          "container": "card-1-1",
+          "safe": [
+            423,
+            792,
+            162,
+            172
+          ],
+          "ink": [
+            425.65,
+            795.77,
+            570.66,
+            959.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.13,
+          "margins": {
+            "left": 2.65,
+            "right": 14.34,
+            "top": 3.77,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "card-1-2",
+          "safe": [
+            645,
+            792,
+            175,
+            172
+          ],
+          "ink": [
+            654.15,
+            795.33,
+            799.16,
+            959.97
+          ],
+          "overflow": false,
+          "verticalOffset": -0.35,
+          "margins": {
+            "left": 9.15,
+            "right": 20.84,
+            "top": 3.33,
+            "bottom": 4.03
+          }
+        },
+        {
+          "container": "rules-header",
+          "safe": [
+            65,
+            1030,
+            755,
+            40
+          ],
+          "ink": [
+            354.76,
+            1033.99,
+            532.24,
+            1066.01
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 289.76,
+            "right": 287.76,
+            "top": 3.99,
+            "bottom": 3.99
+          }
+        },
+        {
+          "container": "map",
+          "safe": [
+            64,
+            1110,
+            348,
+            289
+          ],
+          "ink": [
+            89.75,
+            1117.99,
+            386.57,
+            1390.07
+          ],
+          "overflow": false,
+          "verticalOffset": -0.47,
+          "margins": {
+            "left": 25.75,
+            "right": 25.43,
+            "top": 7.99,
+            "bottom": 8.93
+          }
+        },
+        {
+          "container": "equipment",
+          "safe": [
+            473,
+            1110,
+            348,
+            289
+          ],
+          "ink": [
+            488.17,
+            1117.75,
+            805.83,
+            1387.56
+          ],
+          "overflow": false,
+          "verticalOffset": -1.85,
+          "margins": {
+            "left": 15.17,
+            "right": 15.17,
+            "top": 7.75,
+            "bottom": 11.44
+          }
+        },
+        {
+          "container": "compensation",
+          "safe": [
+            65,
+            1450,
+            347,
+            126
+          ],
+          "ink": [
+            87.81,
+            1455.8,
+            389.79,
+            1566.18
+          ],
+          "overflow": false,
+          "verticalOffset": -2.01,
+          "margins": {
+            "left": 22.81,
+            "right": 22.21,
+            "top": 5.8,
+            "bottom": 9.82
+          }
+        },
+        {
+          "container": "restriction",
+          "safe": [
+            473,
+            1450,
+            348,
+            126
+          ],
+          "ink": [
+            514.03,
+            1456.28,
+            779.97,
+            1567.31
+          ],
+          "overflow": false,
+          "verticalOffset": -1.21,
+          "margins": {
+            "left": 41.03,
+            "right": 41.03,
+            "top": 6.28,
+            "bottom": 8.69
+          }
+        },
+        {
+          "container": "footer",
+          "safe": [
+            219,
+            1674,
+            430,
+            30
+          ],
+          "ink": [
+            303.33,
+            1678.57,
+            564.67,
+            1699.43
+          ],
+          "overflow": false,
+          "verticalOffset": 0,
+          "margins": {
+            "left": 84.33,
+            "right": 84.33,
+            "top": 4.57,
+            "bottom": 4.57
+          }
+        }
+      ],
+      "unitChecks": [
+        {
+          "group": "card-0-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-0-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.7
+        },
+        {
+          "group": "card-0-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-0-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-0-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-0-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-1-0-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-1-0-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-1-1-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-1-1-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "card-1-2-price",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.704
+        },
+        {
+          "group": "card-1-2-loot",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "compensation-secret",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        },
+        {
+          "group": "compensation-absolute",
+          "baselineDelta": 0,
+          "gap": 6,
+          "heightRatio": 0.688
+        }
+      ],
+      "overlaps": 0,
+      "smallestBodyPhonePx": 12.311161217587372
+    }
+  ],
+  "sourceChecks": [
+    {
+      "id": "desktop-experience",
+      "offerCount": 6,
+      "sourceMatch": true
+    },
+    {
+      "id": "mobile-experience",
+      "offerCount": 6,
+      "sourceMatch": true
+    }
+  ]
+}

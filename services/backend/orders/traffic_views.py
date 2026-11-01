@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.conf import settings
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
@@ -59,7 +60,8 @@ class TrafficConfigView(APIView):
     def get(self, request):
         self.require(request, 'order:view')
         config = config_data()
-        return Response({'code': 0, 'data': {**config, 'mode': current_mode(config), 'metrics': metrics()}})
+        return Response({'code': 0, 'data': {**config, 'mode': current_mode(config), 'metrics': metrics(),
+                                             'runtime_enabled': bool(getattr(settings, 'ORDER_TRAFFIC_ENABLED', True))}})
 
     def put(self, request):
         self.require(request, 'order:traffic')

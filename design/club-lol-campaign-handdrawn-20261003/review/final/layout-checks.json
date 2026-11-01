@@ -1,0 +1,122 @@
+[
+  {
+    "id": "01-solo-duo-price",
+    "failures": []
+  },
+  {
+    "id": "01-solo-duo-advert",
+    "failures": []
+  },
+  {
+    "id": "01-solo-duo-cover",
+    "failures": []
+  },
+  {
+    "id": "02-flex-price",
+    "failures": []
+  },
+  {
+    "id": "02-flex-advert",
+    "failures": []
+  },
+  {
+    "id": "02-flex-cover",
+    "failures": []
+  },
+  {
+    "id": "03-arena-price",
+    "failures": []
+  },
+  {
+    "id": "03-arena-advert",
+    "failures": []
+  },
+  {
+    "id": "03-arena-cover",
+    "failures": []
+  },
+  {
+    "id": "04-boost-price",
+    "failures": []
+  },
+  {
+    "id": "04-boost-advert",
+    "failures": []
+  },
+  {
+    "id": "04-boost-cover",
+    "failures": []
+  },
+  {
+    "id": "05-lp-price",
+    "failures": []
+  },
+  {
+    "id": "05-lp-advert",
+    "failures": []
+  },
+  {
+    "id": "05-lp-cover",
+    "failures": []
+  },
+  {
+    "id": "06-overseas-price",
+    "failures": []
+  },
+  {
+    "id": "06-overseas-advert",
+    "failures": []
+  },
+  {
+    "id": "06-overseas-cover",
+    "failures": []
+  },
+  {
+    "id": "07-day-price",
+    "failures": []
+  },
+  {
+    "id": "07-day-advert",
+    "failures": []
+  },
+  {
+    "id": "07-day-cover",
+    "failures": []
+  },
+  {
+    "id": "08-haidou-price",
+    "failures": []
+  },
+  {
+    "id": "08-haidou-advert",
+    "failures": []
+  },
+  {
+    "id": "08-haidou-cover",
+    "failures": []
+  },
+  {
+    "id": "09-placement-price",
+    "failures": []
+  },
+  {
+    "id": "09-placement-advert",
+    "failures": []
+  },
+  {
+    "id": "09-placement-cover",
+    "failures": []
+  },
+  {
+    "id": "10-maintenance-price",
+    "failures": []
+  },
+  {
+    "id": "10-maintenance-advert",
+    "failures": []
+  },
+  {
+    "id": "10-maintenance-cover",
+    "failures": []
+  }
+]

@@ -1,0 +1,1091 @@
+[
+  {
+    "role": "art-title",
+    "box": {
+      "x": 55,
+      "y": 112,
+      "width": 344,
+      "height": 150
+    },
+    "visible": {
+      "x": 64.94937796414143,
+      "y": 155.53518475439557,
+      "width": 324.10124407171713,
+      "height": 68.92963049120885
+    },
+    "center": [
+      227,
+      190
+    ],
+    "size": 62.2065867274951,
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "platform-mode",
+    "box": {
+      "x": 80,
+      "y": 237,
+      "width": 294,
+      "height": 31
+    },
+    "visible": {
+      "x": 163.1130370775,
+      "y": 239.974120775,
+      "width": 127.77392584500001,
+      "height": 25.051758449999998
+    },
+    "center": [
+      227,
+      252.5
+    ],
+    "containerCenter": [
+      227,
+      252.5
+    ],
+    "size": 25.5,
+    "phoneSize": 11.895933014354068,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "wish-heading-and-when",
+    "box": {
+      "x": 60,
+      "y": 328,
+      "width": 528,
+      "height": 32
+    },
+    "visible": {
+      "x": 110.60229498000001,
+      "y": 328.341064395,
+      "width": 426.79541004,
+      "height": 31.31787121
+    },
+    "center": [
+      324,
+      344
+    ],
+    "containerCenter": [
+      324,
+      344
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "wish-choices",
+    "box": {
+      "x": 60,
+      "y": 365,
+      "width": 528,
+      "height": 39
+    },
+    "visible": {
+      "x": 186.833496045,
+      "y": 365.57128955,
+      "width": 274.33300791,
+      "height": 37.8574209
+    },
+    "center": [
+      324,
+      384.5
+    ],
+    "containerCenter": [
+      324,
+      384.5
+    ],
+    "size": 39,
+    "phoneSize": 18.19377990430622,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "wish-trigger-and-guarantee",
+    "box": {
+      "x": 60,
+      "y": 405,
+      "width": 528,
+      "height": 47
+    },
+    "visible": {
+      "x": 97.55554696132671,
+      "y": 407.4863274,
+      "width": 452.8889060773466,
+      "height": 42.0273452
+    },
+    "center": [
+      324,
+      428.5
+    ],
+    "containerCenter": [
+      324,
+      428.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "objective-relation",
+    "box": {
+      "x": 176,
+      "y": 938,
+      "width": 598,
+      "height": 32
+    },
+    "visible": {
+      "x": 259.3774416,
+      "y": 938.7573248,
+      "width": 431.2451168,
+      "height": 30.485350399999998
+    },
+    "center": [
+      475,
+      954
+    ],
+    "containerCenter": [
+      475,
+      954
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "safe-target-0",
+    "box": {
+      "x": 75,
+      "y": 995,
+      "width": 685,
+      "height": 47
+    },
+    "visible": {
+      "x": 272.445801274,
+      "y": 1002.719726568,
+      "width": 290.10839745199996,
+      "height": 31.560546864
+    },
+    "center": [
+      417.5,
+      1018.5
+    ],
+    "containerCenter": [
+      417.5,
+      1018.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "safe-target-1",
+    "box": {
+      "x": 75,
+      "y": 1073,
+      "width": 685,
+      "height": 48
+    },
+    "visible": {
+      "x": 256.32763670500003,
+      "y": 1081.3808602,
+      "width": 322.34472658999994,
+      "height": 31.238279599999995
+    },
+    "center": [
+      417.5,
+      1097
+    ],
+    "containerCenter": [
+      417.5,
+      1097
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "loot-target",
+    "box": {
+      "x": 76,
+      "y": 1151,
+      "width": 686,
+      "height": 67
+    },
+    "visible": {
+      "x": 249.2604303431961,
+      "y": 1168.2578125,
+      "width": 339.4791393136078,
+      "height": 32.484375
+    },
+    "center": [
+      419,
+      1184.5
+    ],
+    "containerCenter": [
+      419,
+      1184.5
+    ],
+    "size": 33,
+    "phoneSize": 15.394736842105264,
+    "align": "center",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "rule-completion",
+    "box": {
+      "x": 72,
+      "y": 1330,
+      "width": 694,
+      "height": 70
+    },
+    "visible": {
+      "x": 72,
+      "y": 1331.25683555,
+      "width": 437.04248539,
+      "height": 67.4863289
+    },
+    "center": [
+      290.521242695,
+      1365
+    ],
+    "containerCenter": [
+      419,
+      1365
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "lineCount": 2,
+    "align": "left",
+    "blockAlign": "left",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "rule-broken-order",
+    "box": {
+      "x": 72,
+      "y": 1423,
+      "width": 694,
+      "height": 75
+    },
+    "visible": {
+      "x": 72,
+      "y": 1426.6660164,
+      "width": 542.5328860045123,
+      "height": 67.66796719999999
+    },
+    "center": [
+      343.26644300225615,
+      1460.5
+    ],
+    "containerCenter": [
+      419,
+      1460.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "lineCount": 2,
+    "align": "left",
+    "blockAlign": "left",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "rule-safe-interaction",
+    "box": {
+      "x": 72,
+      "y": 1525,
+      "width": 694,
+      "height": 77
+    },
+    "visible": {
+      "x": 72,
+      "y": 1529.635742575,
+      "width": 505.3544918,
+      "height": 67.72851485
+    },
+    "center": [
+      324.6772459,
+      1563.5
+    ],
+    "containerCenter": [
+      419,
+      1563.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "lineCount": 2,
+    "align": "left",
+    "blockAlign": "left",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "rule-extra-guarantee",
+    "box": {
+      "x": 72,
+      "y": 1626,
+      "width": 694,
+      "height": 35
+    },
+    "visible": {
+      "x": 72,
+      "y": 1628.2573248,
+      "width": 533.2060574,
+      "height": 30.485350399999998
+    },
+    "center": [
+      338.6030287,
+      1643.5
+    ],
+    "containerCenter": [
+      419,
+      1643.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "left",
+    "page": "desktop-absolute"
+  },
+  {
+    "role": "art-title",
+    "box": {
+      "x": 55,
+      "y": 112,
+      "width": 344,
+      "height": 150
+    },
+    "visible": {
+      "x": 64.94937796414143,
+      "y": 155.53518475439557,
+      "width": 324.10124407171713,
+      "height": 68.92963049120885
+    },
+    "center": [
+      227,
+      190
+    ],
+    "size": 62.2065867274951,
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "platform-mode",
+    "box": {
+      "x": 80,
+      "y": 237,
+      "width": 294,
+      "height": 31
+    },
+    "visible": {
+      "x": 163.1130370775,
+      "y": 239.974120775,
+      "width": 127.77392584500001,
+      "height": 25.051758449999998
+    },
+    "center": [
+      227,
+      252.5
+    ],
+    "containerCenter": [
+      227,
+      252.5
+    ],
+    "size": 25.5,
+    "phoneSize": 11.895933014354068,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "wish-heading-and-when",
+    "box": {
+      "x": 60,
+      "y": 328,
+      "width": 528,
+      "height": 32
+    },
+    "visible": {
+      "x": 110.60229498000001,
+      "y": 328.341064395,
+      "width": 426.79541004,
+      "height": 31.31787121
+    },
+    "center": [
+      324,
+      344
+    ],
+    "containerCenter": [
+      324,
+      344
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "wish-choices",
+    "box": {
+      "x": 60,
+      "y": 365,
+      "width": 528,
+      "height": 39
+    },
+    "visible": {
+      "x": 186.833496045,
+      "y": 365.57128955,
+      "width": 274.33300791,
+      "height": 37.8574209
+    },
+    "center": [
+      324,
+      384.5
+    ],
+    "containerCenter": [
+      324,
+      384.5
+    ],
+    "size": 39,
+    "phoneSize": 18.19377990430622,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "wish-trigger-and-guarantee",
+    "box": {
+      "x": 60,
+      "y": 405,
+      "width": 528,
+      "height": 47
+    },
+    "visible": {
+      "x": 97.55554696132671,
+      "y": 407.4863274,
+      "width": 452.8889060773466,
+      "height": 42.0273452
+    },
+    "center": [
+      324,
+      428.5
+    ],
+    "containerCenter": [
+      324,
+      428.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "objective-relation",
+    "box": {
+      "x": 176,
+      "y": 938,
+      "width": 598,
+      "height": 32
+    },
+    "visible": {
+      "x": 259.3774416,
+      "y": 938.7573248,
+      "width": 431.2451168,
+      "height": 30.485350399999998
+    },
+    "center": [
+      475,
+      954
+    ],
+    "containerCenter": [
+      475,
+      954
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "safe-target-0",
+    "box": {
+      "x": 75,
+      "y": 995,
+      "width": 685,
+      "height": 47
+    },
+    "visible": {
+      "x": 272.445801274,
+      "y": 1002.719726568,
+      "width": 290.10839745199996,
+      "height": 31.560546864
+    },
+    "center": [
+      417.5,
+      1018.5
+    ],
+    "containerCenter": [
+      417.5,
+      1018.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "safe-target-1",
+    "box": {
+      "x": 75,
+      "y": 1073,
+      "width": 685,
+      "height": 48
+    },
+    "visible": {
+      "x": 256.32763670500003,
+      "y": 1081.3808602,
+      "width": 322.34472658999994,
+      "height": 31.238279599999995
+    },
+    "center": [
+      417.5,
+      1097
+    ],
+    "containerCenter": [
+      417.5,
+      1097
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "loot-target",
+    "box": {
+      "x": 76,
+      "y": 1151,
+      "width": 686,
+      "height": 67
+    },
+    "visible": {
+      "x": 250.18425830319612,
+      "y": 1168.2578125,
+      "width": 337.63148339360777,
+      "height": 32.484375
+    },
+    "center": [
+      419,
+      1184.5
+    ],
+    "containerCenter": [
+      419,
+      1184.5
+    ],
+    "size": 33,
+    "phoneSize": 15.394736842105264,
+    "align": "center",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "rule-completion",
+    "box": {
+      "x": 72,
+      "y": 1330,
+      "width": 694,
+      "height": 70
+    },
+    "visible": {
+      "x": 72,
+      "y": 1331.25683555,
+      "width": 437.04248539,
+      "height": 67.4863289
+    },
+    "center": [
+      290.521242695,
+      1365
+    ],
+    "containerCenter": [
+      419,
+      1365
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "lineCount": 2,
+    "align": "left",
+    "blockAlign": "left",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "rule-broken-order",
+    "box": {
+      "x": 72,
+      "y": 1423,
+      "width": 694,
+      "height": 75
+    },
+    "visible": {
+      "x": 72,
+      "y": 1426.6660164,
+      "width": 542.5328860045123,
+      "height": 67.66796719999999
+    },
+    "center": [
+      343.26644300225615,
+      1460.5
+    ],
+    "containerCenter": [
+      419,
+      1460.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "lineCount": 2,
+    "align": "left",
+    "blockAlign": "left",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "rule-safe-interaction",
+    "box": {
+      "x": 72,
+      "y": 1525,
+      "width": 694,
+      "height": 77
+    },
+    "visible": {
+      "x": 72,
+      "y": 1529.635742575,
+      "width": 505.3544918,
+      "height": 67.72851485
+    },
+    "center": [
+      324.6772459,
+      1563.5
+    ],
+    "containerCenter": [
+      419,
+      1563.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "lineCount": 2,
+    "align": "left",
+    "blockAlign": "left",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "rule-extra-guarantee",
+    "box": {
+      "x": 72,
+      "y": 1626,
+      "width": 694,
+      "height": 35
+    },
+    "visible": {
+      "x": 72,
+      "y": 1628.2573248,
+      "width": 533.2060574,
+      "height": 30.485350399999998
+    },
+    "center": [
+      338.6030287,
+      1643.5
+    ],
+    "containerCenter": [
+      419,
+      1643.5
+    ],
+    "size": 31,
+    "phoneSize": 14.461722488038278,
+    "align": "left",
+    "page": "mobile-absolute"
+  },
+  {
+    "role": "art-title",
+    "box": {
+      "x": 74,
+      "y": 124,
+      "width": 440,
+      "height": 230
+    },
+    "visible": {
+      "x": 85.68590085967205,
+      "y": 204.76581365351075,
+      "width": 416.6281982806559,
+      "height": 88.46837269297853
+    },
+    "center": [
+      294,
+      249
+    ],
+    "size": 80,
+    "page": "combined-advert"
+  },
+  {
+    "role": "platform-mode",
+    "box": {
+      "x": 116,
+      "y": 312,
+      "width": 356,
+      "height": 41
+    },
+    "visible": {
+      "x": 136.45751958,
+      "y": 313.34277295,
+      "width": 315.08496084,
+      "height": 38.3144541
+    },
+    "center": [
+      294,
+      332.5
+    ],
+    "containerCenter": [
+      294,
+      332.5
+    ],
+    "size": 39,
+    "phoneSize": 14.005524861878452,
+    "align": "center",
+    "page": "combined-advert"
+  },
+  {
+    "role": "advert-safe-targets",
+    "box": {
+      "x": 70,
+      "y": 866,
+      "width": 946,
+      "height": 54
+    },
+    "visible": {
+      "x": 274.93994439399995,
+      "y": 873.5859379999999,
+      "width": 536.1201112120001,
+      "height": 38.828124
+    },
+    "center": [
+      543,
+      893
+    ],
+    "containerCenter": [
+      543,
+      893
+    ],
+    "size": 40,
+    "phoneSize": 14.3646408839779,
+    "align": "center",
+    "page": "combined-advert"
+  },
+  {
+    "role": "advert-target-relation",
+    "box": {
+      "x": 70,
+      "y": 936,
+      "width": 946,
+      "height": 49
+    },
+    "visible": {
+      "x": 264.777344,
+      "y": 940.832032,
+      "width": 556.445312,
+      "height": 39.335936
+    },
+    "center": [
+      543,
+      960.5
+    ],
+    "containerCenter": [
+      543,
+      960.5
+    ],
+    "size": 40,
+    "phoneSize": 14.3646408839779,
+    "align": "center",
+    "page": "combined-advert"
+  },
+  {
+    "role": "loot-target",
+    "box": {
+      "x": 70,
+      "y": 996,
+      "width": 946,
+      "height": 56
+    },
+    "visible": {
+      "x": 219.98597267704463,
+      "y": 1003.7109368,
+      "width": 646.0280546459107,
+      "height": 40.578126399999995
+    },
+    "center": [
+      543,
+      1024
+    ],
+    "containerCenter": [
+      543,
+      1024
+    ],
+    "size": 40,
+    "phoneSize": 14.3646408839779,
+    "align": "center",
+    "page": "combined-advert"
+  },
+  {
+    "role": "wish-when",
+    "box": {
+      "x": 76,
+      "y": 1120,
+      "width": 518,
+      "height": 47
+    },
+    "visible": {
+      "x": 148.5644532,
+      "y": 1123.2949218,
+      "width": 372.8710936,
+      "height": 40.4101564
+    },
+    "center": [
+      335,
+      1143.5
+    ],
+    "containerCenter": [
+      335,
+      1143.5
+    ],
+    "size": 40,
+    "phoneSize": 14.3646408839779,
+    "align": "center",
+    "page": "combined-advert"
+  },
+  {
+    "role": "wish-choices",
+    "box": {
+      "x": 76,
+      "y": 1189,
+      "width": 518,
+      "height": 58
+    },
+    "visible": {
+      "x": 169.696777285,
+      "y": 1195.18847715,
+      "width": 330.60644543,
+      "height": 45.623045700000006
+    },
+    "center": [
+      335,
+      1218
+    ],
+    "containerCenter": [
+      335,
+      1218
+    ],
+    "size": 47,
+    "phoneSize": 16.87845303867403,
+    "align": "center",
+    "page": "combined-advert"
+  },
+  {
+    "role": "wish-trigger-and-guarantee",
+    "box": {
+      "x": 76,
+      "y": 1254,
+      "width": 518,
+      "height": 70
+    },
+    "visible": {
+      "x": 104.20651119656603,
+      "y": 1261.4648428,
+      "width": 461.58697760686795,
+      "height": 55.0703144
+    },
+    "center": [
+      335,
+      1289
+    ],
+    "containerCenter": [
+      335,
+      1289
+    ],
+    "size": 40,
+    "phoneSize": 14.3646408839779,
+    "align": "center",
+    "page": "combined-advert"
+  },
+  {
+    "role": "brand-group",
+    "box": {
+      "x": 90,
+      "y": 100,
+      "width": 634,
+      "height": 68
+    },
+    "visible": {
+      "x": 268.77371087,
+      "y": 107.6855462,
+      "width": 276.45257826,
+      "height": 52.62890759999999
+    },
+    "center": [
+      407,
+      134
+    ],
+    "size": 54,
+    "page": "combined-cover"
+  },
+  {
+    "role": "art-title",
+    "box": {
+      "x": 82,
+      "y": 180,
+      "width": 650,
+      "height": 144
+    },
+    "visible": {
+      "x": 93.66154656110922,
+      "y": 185.8055338037427,
+      "width": 626.6769068777816,
+      "height": 132.38893239251462
+    },
+    "center": [
+      407,
+      252
+    ],
+    "size": 120.50080950986472,
+    "page": "combined-cover"
+  },
+  {
+    "role": "cover-challenge-types",
+    "box": {
+      "x": 90,
+      "y": 330,
+      "width": 634,
+      "height": 66
+    },
+    "visible": {
+      "x": 134.03954399999998,
+      "y": 332.6660164,
+      "width": 545.920912,
+      "height": 60.6679672
+    },
+    "center": [
+      407,
+      363
+    ],
+    "containerCenter": [
+      407,
+      363
+    ],
+    "size": 62,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "combined-cover"
+  },
+  {
+    "role": "platform-mode",
+    "box": {
+      "x": 103,
+      "y": 466,
+      "width": 608,
+      "height": 62
+    },
+    "visible": {
+      "x": 156.54785164,
+      "y": 466.5449211,
+      "width": 500.90429672,
+      "height": 60.9101578
+    },
+    "center": [
+      407,
+      497
+    ],
+    "containerCenter": [
+      407,
+      497
+    ],
+    "size": 62,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "combined-cover"
+  },
+  {
+    "role": "wish-when",
+    "box": {
+      "x": 90,
+      "y": 545,
+      "width": 634,
+      "height": 65
+    },
+    "visible": {
+      "x": 118.02490246000002,
+      "y": 546.18212879,
+      "width": 577.95019508,
+      "height": 62.63574242
+    },
+    "center": [
+      407,
+      577.5
+    ],
+    "containerCenter": [
+      407,
+      577.5
+    ],
+    "size": 62,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "combined-cover"
+  },
+  {
+    "role": "wish-choices",
+    "box": {
+      "x": 90,
+      "y": 613,
+      "width": 634,
+      "height": 66
+    },
+    "visible": {
+      "x": 188.94042961,
+      "y": 615.9082039,
+      "width": 436.11914078,
+      "height": 60.1835922
+    },
+    "center": [
+      407,
+      646
+    ],
+    "containerCenter": [
+      407,
+      646
+    ],
+    "size": 62,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "combined-cover"
+  },
+  {
+    "role": "wish-trigger-and-guarantee",
+    "box": {
+      "x": 82,
+      "y": 687,
+      "width": 650,
+      "height": 91
+    },
+    "visible": {
+      "x": 121.76994332119659,
+      "y": 699.892577,
+      "width": 570.4601133576068,
+      "height": 65.214846
+    },
+    "center": [
+      407,
+      732.5
+    ],
+    "containerCenter": [
+      407,
+      732.5
+    ],
+    "size": 62,
+    "phoneSize": 14.461722488038278,
+    "align": "center",
+    "page": "combined-cover"
+  }
+]

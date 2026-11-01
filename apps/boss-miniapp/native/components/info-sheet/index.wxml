@@ -1,0 +1,9 @@
+<button class="xa-button help-trigger" bindtap="show" hover-class="help-pressed" aria-label="{{label}}">{{label}}<text aria-hidden="true"> ›</text></button>
+<view wx:if="{{visible}}" class="sheet-root {{open ? 'is-open' : ''}}">
+  <view class="sheet-mask" bindtap="hide" catchtouchmove="noop" aria-hidden="true"/>
+  <view class="sheet-panel" aria-role="dialog" aria-label="{{title}}">
+    <view class="sheet-heading"><text class="sheet-title">{{title}}</text><button class="xa-button sheet-close" bindtap="hide" hover-class="help-pressed" aria-label="关闭说明">关闭</button></view>
+    <scroll-view class="sheet-content" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}"><slot/></scroll-view>
+    <view class="sheet-footer"><button class="xa-button sheet-done" bindtap="hide" hover-class="help-pressed">我知道了</button></view>
+  </view>
+</view>

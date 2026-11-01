@@ -1,0 +1,65 @@
+[
+  {
+    "id": "desktop-absolute",
+    "label": "端游 · 绝密价目底图",
+    "file": "04-png-export/desktop-absolute-background.png",
+    "asset": "poster-gold",
+    "width": 3200,
+    "height": 9600,
+    "content": "无正式文字，等待底图确认"
+  },
+  {
+    "id": "desktop-secret",
+    "label": "端游 · 机密价目底图",
+    "file": "04-png-export/desktop-secret-background.png",
+    "asset": "poster-teal",
+    "width": 3200,
+    "height": 9600,
+    "content": "无正式文字，等待底图确认"
+  },
+  {
+    "id": "mobile-absolute",
+    "label": "手游 · 绝密价目底图",
+    "file": "04-png-export/mobile-absolute-background.png",
+    "asset": "poster-gold",
+    "width": 3200,
+    "height": 9600,
+    "content": "无正式文字，等待底图确认"
+  },
+  {
+    "id": "mobile-secret",
+    "label": "手游 · 机密价目底图",
+    "file": "04-png-export/mobile-secret-background.png",
+    "asset": "poster-teal",
+    "width": 3200,
+    "height": 9600,
+    "content": "无正式文字，等待底图确认"
+  },
+  {
+    "id": "cover",
+    "label": "横版封面底图",
+    "file": "04-png-export/cover-background.png",
+    "asset": "cover",
+    "width": 3200,
+    "height": 1800,
+    "content": "无正式文字，等待底图确认"
+  },
+  {
+    "id": "desktop-social",
+    "label": "端游 · 18档宣发底图",
+    "file": "04-png-export/desktop-social-background.png",
+    "asset": "social",
+    "width": 2400,
+    "height": 3200,
+    "content": "无正式文字，等待底图确认"
+  },
+  {
+    "id": "mobile-social",
+    "label": "手游 · 18档宣发底图",
+    "file": "04-png-export/mobile-social-background.png",
+    "asset": "social",
+    "width": 2400,
+    "height": 3200,
+    "content": "无正式文字，等待底图确认"
+  }
+]

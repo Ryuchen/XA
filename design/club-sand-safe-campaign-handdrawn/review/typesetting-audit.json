@@ -1,0 +1,116 @@
+{
+  "revision": "sand-safe-r9-standard-cover",
+  "pages": [
+    {
+      "page": "desktop-absolute",
+      "kind": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "prices": [
+        218,
+        428,
+        628,
+        588,
+        988
+      ],
+      "exportSize": [
+        3200,
+        7200
+      ],
+      "nativeBackgroundSize": [
+        836,
+        1881
+      ],
+      "phoneBodyPx": 14.461722488038278,
+      "noticeAlignment": "left",
+      "requiredConditionsPreserved": true,
+      "mergedPlatforms": false
+    },
+    {
+      "page": "mobile-absolute",
+      "kind": "price",
+      "platforms": [
+        "mobile"
+      ],
+      "prices": [
+        168,
+        328,
+        488,
+        488,
+        888
+      ],
+      "exportSize": [
+        3200,
+        7200
+      ],
+      "nativeBackgroundSize": [
+        836,
+        1881
+      ],
+      "phoneBodyPx": 14.461722488038278,
+      "noticeAlignment": "left",
+      "requiredConditionsPreserved": true,
+      "mergedPlatforms": false
+    },
+    {
+      "page": "combined-advert",
+      "kind": "advert",
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "prices": [
+        218,
+        428,
+        628,
+        588,
+        988,
+        168,
+        328,
+        488,
+        488,
+        888
+      ],
+      "exportSize": [
+        2400,
+        3200
+      ],
+      "nativeBackgroundSize": [
+        1086,
+        1448
+      ],
+      "phoneBodyPx": 14.3646408839779,
+      "noticeAlignment": null,
+      "requiredConditionsPreserved": true,
+      "mergedPlatforms": true
+    },
+    {
+      "page": "combined-cover",
+      "kind": "cover",
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "prices": [],
+      "exportSize": [
+        3200,
+        1800
+      ],
+      "nativeBackgroundSize": [
+        1672,
+        941
+      ],
+      "phoneBodyPx": 14.461722488038278,
+      "noticeAlignment": null,
+      "requiredConditionsPreserved": true,
+      "mergedPlatforms": true
+    }
+  ],
+  "pricesChecked": 20,
+  "coverEntryPricesChecked": 0,
+  "requiredPageCount": 4,
+  "visualReview": "Passed actual redrawn 3200×1800 cover, 390px preview, hero/reward crops after title safe-box and mouse-tail spacing correction; other 3 pages retain r8 actual-image QA.",
+  "visualReviewStatus": "passed",
+  "record": "review/visual-qa.md"
+}

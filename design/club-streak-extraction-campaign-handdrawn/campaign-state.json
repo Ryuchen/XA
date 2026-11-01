@@ -1,0 +1,105 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 连续撤离单",
+  "stage": "delivered",
+  "revision": "streak-r3-route",
+  "contentVerified": true,
+  "contentVerificationBasis": "36档逐项录入本轮价目，规则经用户确认；端手游沿用，速撤去掉未定义时限，保留撤离点加价25%；最新撤离点口径已按用户明确修正同步至四张完整价目",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "既有二次元手绘男性蜂医、灰鼠与奶白雾蓝海军蓝配色"
+    },
+    "mechanismAndRules": {
+      "status": "approved",
+      "basis": "用户回复：其他规则沿用；速撤按上述调整；保留撤离点加价25%"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在连续撤离主题插画交付后回复：继续",
+      "file": "01-illustrations/streak-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户在七张底图和文字位置稿交付后回复：继续",
+      "review": "review/backgrounds.html"
+    }
+  },
+  "plannedDeliverables": [
+    "端游绝密三地图×三档价目",
+    "端游机密三地图×三档价目",
+    "手游绝密三地图×三档价目",
+    "手游机密三地图×三档价目",
+    "横版封面",
+    "端游简洁宣发18档",
+    "手游简洁宣发18档"
+  ],
+  "layoutInvariants": [
+    "36档新价目，r/w固定单位列，按可见字形垂直居中",
+    "每张完整价目三地图×三档，连撤2/3/4把与基础保底同时满足",
+    "价目表头整条深蓝，绝密暖金，机密薄荷青",
+    "完整规则真实粗体，按用户反馈缩小字号并保留上下间距，按实际底图空白区整组居中",
+    "封面文案在所属文字区横向居中，不带须知及补偿结算例外",
+    "连续撤离失败仅重计连撤次数，已成功撤离物资继续累计",
+    "本玩法不新增限时分钟数，不混入清图8人、超额累计或单局对赌",
+    "默认允许航天飞升、巴克什飞鼠；禁止对应撤离点时单价上浮25%"
+  ],
+  "nextStep": "后续改价或改规则复用当前底图、字体轮廓和矢量布局，仅重渲染受影响页面并检查实际最终PNG。",
+  "illustration": {
+    "provider": "built-in image_gen",
+    "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-05931e5e-251a-4231-901a-c9c74a41cf08.png",
+    "file": "01-illustrations/streak-medic-mouse-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "alpha": {
+      "min": 0,
+      "max": 254,
+      "transparentPixels": 520754,
+      "nearOpaquePixels": 915305,
+      "totalPixels": 1572864,
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "prompt": "01-illustrations/prompts.md",
+    "review": "review/illustration-overview.png",
+    "reviewPage": "review/illustration.html"
+  },
+  "backgrounds": {
+    "metadata": "03-backgrounds/image-metadata.json",
+    "nativeMeasurement": "02-layouts/generated-background-measurements.json",
+    "manifest": "04-png-export/manifest.json",
+    "overview": "review/background-overview.png",
+    "layoutOverview": "review/layout-overview.png",
+    "package": "output/campaign-streak-backgrounds-v1.zip"
+  },
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "desktop-secret",
+    "mobile-absolute",
+    "mobile-secret"
+  ],
+  "typographyPreference": {
+    "basis": "用户反馈：文字太大了，要保留文字与所在区块的上下间距",
+    "bodyFont": "Microsoft YaHei UI Bold",
+    "layout": "缩小字号，重新测量可见字形并整组居中"
+  },
+  "finalDeliverables": {
+    "manifest": "output/manifest.json",
+    "pngPackage": "output/campaign-streak-r3-png.zip",
+    "sourcePackage": "output/campaign-streak-r3-source.zip",
+    "review": "review/index.html",
+    "overview": "review/final-overview.png"
+  },
+  "visualQA": {
+    "status": "complete",
+    "revision": "streak-r3-route",
+    "record": "review/visual-qa.md",
+    "dataAndGeometryAudit": "review/typesetting-audit.json",
+    "basis": "实际成图、390px手机预览与须知局部逐张目检；最新撤离点规则修订后重新检查四张完整价目。"
+  }
+}

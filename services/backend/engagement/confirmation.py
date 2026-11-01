@@ -8,7 +8,17 @@ from wallet.models import ProviderReport
 from .models import ConsumptionConfirmation
 
 
+def notify_committed_order(order_id):
+    """Send the latest order state after the surrounding transaction commits."""
+    def send():
+        order = Order.objects.filter(pk=order_id).first()
+        if order:
+            notify_order_update(order)
+    transaction.on_commit(send)
+
+
 def refresh_report_clock(order):
+    previous_clock = (order.report_ready_at, order.consumption_ready_at)
     from orders.services import required_report_providers
     required = required_report_providers(order)
     reports = list(order.provider_reports.filter(provider_id__in=required))
@@ -19,6 +29,11 @@ def refresh_report_clock(order):
     order.report_ready_at = ready
     order.consumption_ready_at = ready + timedelta(hours=72) if ready else None
     order.save(update_fields=['report_ready_at', 'consumption_ready_at'])
+    if previous_clock != (order.report_ready_at, order.consumption_ready_at):
+        # Order screens only consume order updates; report updates are private
+        # to the provider and reviewers. Read after commit so all recipients
+        # see the final committed state, including any settlement in this txn.
+        notify_committed_order(order.pk)
     return order.consumption_ready_at
 
 
@@ -43,6 +58,12 @@ def process_order(order_id):
     if (order.status != 'COMPLETED' or order.payment_status not in ('PAID','PARTIALLY_REFUNDED')
             or not order.customer_account_id):
         return False
+    # Direct payment has no trusted settlement/benefit accounting yet. Even
+    # a COMPLETION-mode order bypassing its usual transition cannot mature
+    # consumption or issue VIP benefits until that integration exists.
+    from orders.direct_payment_models import DirectPaymentIntent
+    if DirectPaymentIntent.objects.filter(order_id=order.pk).exists():
+        return False
     account = order.customer_account
     from orders.financial_lock import lock_order_money
     lock_order_money()
@@ -50,7 +71,9 @@ def process_order(order_id):
     account.refresh_from_db(fields=['business_cycle', 'boss_type'])
     if order.business_cycle != account.business_cycle:
         return False
+    previous_clock = (order.report_ready_at, order.consumption_ready_at)
     ready = refresh_report_clock(order)
+    clock_changed = previous_clock != (order.report_ready_at, order.consumption_ready_at)
     required = required_report_providers(order)
     approved = set(order.provider_reports.filter(status='APPROVED').values_list('provider_id', flat=True))
     if not required or None in required or not required.issubset(approved) or not settlement_ready(order):
@@ -58,7 +81,7 @@ def process_order(order_id):
     previous_state = (order.settled_at, order.consumption_confirmed_at)
 
     def notify_changed_order():
-        if (order.settled_at, order.consumption_confirmed_at) != previous_state:
+        if not clock_changed and (order.settled_at, order.consumption_confirmed_at) != previous_state:
             transaction.on_commit(lambda: notify_order_update(order))
 
     # Settle after the completion-based aftersale window; confirmation below

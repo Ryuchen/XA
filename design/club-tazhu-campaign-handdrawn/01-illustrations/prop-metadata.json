@@ -1,0 +1,120 @@
+{
+  "provider": "built-in image_gen",
+  "atlas": "01-illustrations/tazhu-prop-atlas-v1.png",
+  "atlasNative": {
+    "width": 1536,
+    "height": 1024
+  },
+  "items": [
+    {
+      "id": "tianyuan-difang",
+      "file": "assets/props/tianyuan-difang.png",
+      "label": "天圆地方",
+      "width": 367,
+      "height": 414,
+      "hasAlpha": true,
+      "atlasCell": {
+        "left": 0,
+        "top": 0,
+        "width": 512,
+        "height": 512
+      },
+      "method": "从原生透明贴图集按固定单元裁出；不改动插画内容"
+    },
+    {
+      "id": "wanjin-leiguan",
+      "file": "assets/props/wanjin-leiguan.png",
+      "label": "万金泪冠",
+      "width": 391,
+      "height": 422,
+      "hasAlpha": true,
+      "atlasCell": {
+        "left": 512,
+        "top": 0,
+        "width": 512,
+        "height": 512
+      },
+      "method": "从原生透明贴图集按固定单元裁出；不改动插画内容"
+    },
+    {
+      "id": "zongheng",
+      "file": "assets/props/zongheng.png",
+      "label": "纵横",
+      "width": 471,
+      "height": 415,
+      "hasAlpha": true,
+      "atlasCell": {
+        "left": 1024,
+        "top": 0,
+        "width": 512,
+        "height": 512
+      },
+      "method": "从原生透明贴图集按固定单元裁出；不改动插画内容"
+    },
+    {
+      "id": "sand-safe-closed",
+      "file": "assets/props/sand-safe-closed.png",
+      "label": "沙色保险 · 关闭",
+      "width": 252,
+      "height": 444,
+      "hasAlpha": true,
+      "atlasCell": {
+        "left": 0,
+        "top": 512,
+        "width": 512,
+        "height": 512
+      },
+      "method": "从原生透明贴图集按固定单元裁出；不改动插画内容"
+    },
+    {
+      "id": "sand-safe-open",
+      "file": "assets/props/sand-safe-open.png",
+      "label": "沙色保险 · 开启",
+      "width": 387,
+      "height": 445,
+      "hasAlpha": true,
+      "atlasCell": {
+        "left": 512,
+        "top": 512,
+        "width": 512,
+        "height": 512
+      },
+      "method": "从原生透明贴图集按固定单元裁出；不改动插画内容"
+    },
+    {
+      "id": "ordinary-safe",
+      "file": "assets/props/ordinary-safe.png",
+      "label": "普通大保险",
+      "width": 433,
+      "height": 442,
+      "hasAlpha": true,
+      "atlasCell": {
+        "left": 1024,
+        "top": 512,
+        "width": 512,
+        "height": 512
+      },
+      "method": "从原生透明贴图集按固定单元裁出；不改动插画内容"
+    },
+    {
+      "id": "keycards",
+      "file": "assets/props/keycards.png",
+      "label": "已确认系列钥匙卡",
+      "width": 337,
+      "height": 326,
+      "hasAlpha": true,
+      "source": "C:\\Users\\chenh\\.codex\\skills\\xingan-gameplay-posters\\assets\\material-v3\\illustrations\\03-tactical-sticker-atlas.png",
+      "method": "复用已确认系列独立贴纸；只裁取单个元素"
+    },
+    {
+      "id": "mouse-shield",
+      "file": "assets/props/mouse-shield.png",
+      "label": "已确认系列灰鼠与盾牌",
+      "width": 322,
+      "height": 370,
+      "hasAlpha": true,
+      "source": "C:\\Users\\chenh\\.codex\\skills\\xingan-gameplay-posters\\assets\\material-v3\\illustrations\\03-tactical-sticker-atlas.png",
+      "method": "复用已确认系列独立贴纸；只裁取单个元素"
+    }
+  ]
+}

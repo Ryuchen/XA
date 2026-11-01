@@ -1,0 +1,693 @@
+{
+  "phase": "structure-and-text-free-background",
+  "pages": [
+    {
+      "id": "cover",
+      "width": 1600,
+      "height": 900,
+      "regions": [
+        {
+          "containerId": "brand",
+          "bounds": [
+            80,
+            135,
+            560,
+            70
+          ],
+          "safe": [
+            100,
+            155,
+            520,
+            30
+          ]
+        },
+        {
+          "containerId": "title",
+          "bounds": [
+            80,
+            270,
+            560,
+            290
+          ],
+          "safe": [
+            100,
+            290,
+            520,
+            250
+          ]
+        },
+        {
+          "containerId": "claim",
+          "bounds": [
+            80,
+            670,
+            570,
+            95
+          ],
+          "safe": [
+            100,
+            690,
+            530,
+            55
+          ]
+        },
+        {
+          "containerId": "platform",
+          "bounds": [
+            80,
+            780,
+            570,
+            60
+          ],
+          "safe": [
+            100,
+            790,
+            530,
+            40
+          ]
+        }
+      ]
+    },
+    {
+      "id": "social",
+      "width": 1200,
+      "height": 1600,
+      "regions": [
+        {
+          "containerId": "brand",
+          "bounds": [
+            60,
+            60,
+            485,
+            65
+          ],
+          "safe": [
+            80,
+            80,
+            445,
+            25
+          ]
+        },
+        {
+          "containerId": "title",
+          "bounds": [
+            60,
+            165,
+            485,
+            210
+          ],
+          "safe": [
+            80,
+            185,
+            445,
+            170
+          ]
+        },
+        {
+          "containerId": "group-0-row-0",
+          "bounds": [
+            75,
+            615,
+            490,
+            100
+          ],
+          "safe": [
+            95,
+            635,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-0-row-1",
+          "bounds": [
+            75,
+            727,
+            490,
+            100
+          ],
+          "safe": [
+            95,
+            747,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-0-row-2",
+          "bounds": [
+            75,
+            839,
+            490,
+            100
+          ],
+          "safe": [
+            95,
+            859,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-1-row-0",
+          "bounds": [
+            635,
+            615,
+            490,
+            100
+          ],
+          "safe": [
+            655,
+            635,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-1-row-1",
+          "bounds": [
+            635,
+            727,
+            490,
+            100
+          ],
+          "safe": [
+            655,
+            747,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-1-row-2",
+          "bounds": [
+            635,
+            839,
+            490,
+            100
+          ],
+          "safe": [
+            655,
+            859,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-2-row-0",
+          "bounds": [
+            75,
+            1095,
+            490,
+            100
+          ],
+          "safe": [
+            95,
+            1115,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-2-row-1",
+          "bounds": [
+            75,
+            1207,
+            490,
+            100
+          ],
+          "safe": [
+            95,
+            1227,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-2-row-2",
+          "bounds": [
+            75,
+            1319,
+            490,
+            100
+          ],
+          "safe": [
+            95,
+            1339,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-3-row-0",
+          "bounds": [
+            635,
+            1095,
+            490,
+            100
+          ],
+          "safe": [
+            655,
+            1115,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-3-row-1",
+          "bounds": [
+            635,
+            1207,
+            490,
+            100
+          ],
+          "safe": [
+            655,
+            1227,
+            450,
+            60
+          ]
+        },
+        {
+          "containerId": "group-3-row-2",
+          "bounds": [
+            635,
+            1319,
+            490,
+            100
+          ],
+          "safe": [
+            655,
+            1339,
+            450,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desktop-experience",
+      "width": 1200,
+      "height": 2400,
+      "regions": [
+        {
+          "containerId": "brand",
+          "bounds": [
+            60,
+            65,
+            470,
+            65
+          ],
+          "safe": [
+            80,
+            85,
+            430,
+            25
+          ]
+        },
+        {
+          "containerId": "title",
+          "bounds": [
+            60,
+            190,
+            470,
+            170
+          ],
+          "safe": [
+            80,
+            210,
+            430,
+            130
+          ]
+        },
+        {
+          "containerId": "platform",
+          "bounds": [
+            60,
+            390,
+            410,
+            70
+          ],
+          "safe": [
+            80,
+            410,
+            370,
+            30
+          ]
+        },
+        {
+          "containerId": "section-0-super",
+          "bounds": [
+            60,
+            645,
+            460,
+            300
+          ],
+          "safe": [
+            80,
+            665,
+            420,
+            260
+          ]
+        },
+        {
+          "containerId": "section-0-secret",
+          "bounds": [
+            540,
+            645,
+            290,
+            300
+          ],
+          "safe": [
+            560,
+            665,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "section-0-absolute",
+          "bounds": [
+            850,
+            645,
+            290,
+            300
+          ],
+          "safe": [
+            870,
+            665,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "section-1-super",
+          "bounds": [
+            60,
+            1095,
+            460,
+            300
+          ],
+          "safe": [
+            80,
+            1115,
+            420,
+            260
+          ]
+        },
+        {
+          "containerId": "section-1-secret",
+          "bounds": [
+            540,
+            1095,
+            290,
+            300
+          ],
+          "safe": [
+            560,
+            1115,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "section-1-absolute",
+          "bounds": [
+            850,
+            1095,
+            290,
+            300
+          ],
+          "safe": [
+            870,
+            1115,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "map",
+          "bounds": [
+            60,
+            1560,
+            520,
+            410
+          ],
+          "safe": [
+            80,
+            1580,
+            480,
+            370
+          ]
+        },
+        {
+          "containerId": "equipment",
+          "bounds": [
+            610,
+            1560,
+            530,
+            410
+          ],
+          "safe": [
+            630,
+            1580,
+            490,
+            370
+          ]
+        },
+        {
+          "containerId": "compensation",
+          "bounds": [
+            60,
+            2010,
+            520,
+            250
+          ],
+          "safe": [
+            80,
+            2030,
+            480,
+            210
+          ]
+        },
+        {
+          "containerId": "restrictions",
+          "bounds": [
+            610,
+            2010,
+            530,
+            250
+          ],
+          "safe": [
+            630,
+            2030,
+            490,
+            210
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-experience",
+      "width": 1200,
+      "height": 2400,
+      "regions": [
+        {
+          "containerId": "brand",
+          "bounds": [
+            60,
+            65,
+            470,
+            65
+          ],
+          "safe": [
+            80,
+            85,
+            430,
+            25
+          ]
+        },
+        {
+          "containerId": "title",
+          "bounds": [
+            60,
+            190,
+            470,
+            170
+          ],
+          "safe": [
+            80,
+            210,
+            430,
+            130
+          ]
+        },
+        {
+          "containerId": "platform",
+          "bounds": [
+            60,
+            390,
+            410,
+            70
+          ],
+          "safe": [
+            80,
+            410,
+            370,
+            30
+          ]
+        },
+        {
+          "containerId": "section-0-super",
+          "bounds": [
+            60,
+            645,
+            460,
+            300
+          ],
+          "safe": [
+            80,
+            665,
+            420,
+            260
+          ]
+        },
+        {
+          "containerId": "section-0-secret",
+          "bounds": [
+            540,
+            645,
+            290,
+            300
+          ],
+          "safe": [
+            560,
+            665,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "section-0-absolute",
+          "bounds": [
+            850,
+            645,
+            290,
+            300
+          ],
+          "safe": [
+            870,
+            665,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "section-1-super",
+          "bounds": [
+            60,
+            1095,
+            460,
+            300
+          ],
+          "safe": [
+            80,
+            1115,
+            420,
+            260
+          ]
+        },
+        {
+          "containerId": "section-1-secret",
+          "bounds": [
+            540,
+            1095,
+            290,
+            300
+          ],
+          "safe": [
+            560,
+            1115,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "section-1-absolute",
+          "bounds": [
+            850,
+            1095,
+            290,
+            300
+          ],
+          "safe": [
+            870,
+            1115,
+            250,
+            260
+          ]
+        },
+        {
+          "containerId": "map",
+          "bounds": [
+            60,
+            1560,
+            520,
+            410
+          ],
+          "safe": [
+            80,
+            1580,
+            480,
+            370
+          ]
+        },
+        {
+          "containerId": "equipment",
+          "bounds": [
+            610,
+            1560,
+            530,
+            410
+          ],
+          "safe": [
+            630,
+            1580,
+            490,
+            370
+          ]
+        },
+        {
+          "containerId": "compensation",
+          "bounds": [
+            60,
+            2010,
+            520,
+            250
+          ],
+          "safe": [
+            80,
+            2030,
+            480,
+            210
+          ]
+        },
+        {
+          "containerId": "restrictions",
+          "bounds": [
+            610,
+            2010,
+            530,
+            250
+          ],
+          "safe": [
+            630,
+            2030,
+            490,
+            210
+          ]
+        }
+      ]
+    }
+  ]
+}

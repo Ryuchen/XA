@@ -60,17 +60,20 @@ function dispatchHarness() {
     provider_shares: [{ settlement_base: 501, commission_fixed: 151, provider_income: 350 }, { settlement_base: 500, commission_fixed: 150, provider_income: 350 }] };
   const context = {
     auth, pageDisposed: false, dispatchForm: form, dispatchCommissionMode: mode, dispatchCommissionFixed: fixed, dispatchPendingRate: pendingRate,
-    dispatchVisible: visible, dispatching, dispatchRequestId: ref('synthetic-intent'), dispatchQuote: quote, quoteLoading: ref(false),
+    dispatchVisible: visible, dispatching, dispatchConfirming: ref(false), dispatchResultUnknown: ref(false), dispatchReview: ref(null),
+    dispatchSubmitNotice: ref(''), dispatchRequestId: ref('synthetic-intent'), dispatchQuote: quote, quoteLoading: ref(false), quoteError: ref(''),
+    bossLoading: ref(false), providerLoading: ref(false), serviceLoading: ref(false), currentBoss: ref(null), providerOptions: ref([]),
+    ElMessageBox: { confirm: async () => {}, close() {} }, h: (...args) => args, beginDispatchReview() {}, clearDispatchReviewMarker() {},
     dispatchCommissionError: { get value() { return mode.value === 'FIXED' ? commission.commissionError('FIXED', 0, fixed.value) : ''; } },
     dispatchFixed: { get value() { return mode.value === 'FIXED' || quote.value?.commission_type === 'FIXED'; } },
     currentService: ref({ billing_provider_count: 2 }), insufficient: ref(false),
     estimateAmount: { get value() { return quote.value?.amount || 0; } },
     commissionError: commission.commissionError, amountToXaCoin: money.formatXaCoin, xaCoinToAmount: money.toRawAmount,
     ElMessage: { warning(message) { warnings.push(message); }, success() {} }, tableRef: ref({ load() {} }), onDispatchMessage() {},
-    async request(options) { requests.push(clone(options)); return quotePending.length ? quotePending.shift().promise : { data: clone(quoteResult) }; },
+    async request(options) { if (options.url === '/orders/dispatch/') { submissions.push({ action: 'dispatch', payload: clone(options.data) }); return { data: { status: 'GRABBED' } }; } requests.push(clone(options)); return quotePending.length ? quotePending.shift().promise : { data: clone(quoteResult) }; },
     orderApi: { async collectionAction(action, payload) { submissions.push({ action, payload: clone(payload) }); return { data: { status: 'GRABBED' } }; } },
   };
-  const page = pageFunctions('apps/admin-web/src/views/order/index.vue', ['dispatchPendingPercentage', 'dispatchQuoteKey', 'dispatchCommissionParams', 'refreshDispatchQuote', 'serviceProviderCount', 'onDispatchSave', 'providerBase', 'providerIncome', 'providerIncomeDesc', 'dispatchProviderShare', 'onProviderPicked', 'closeDispatchReview'], context, 'let quoteSequence=0,quotedInputs="",quotedSession=-1;');
+  const page = pageFunctions('apps/admin-web/src/views/order/index.vue', ['dispatchPendingPercentage', 'dispatchQuoteKey', 'dispatchCommissionParams', 'refreshDispatchQuote', 'serviceProviderCount', 'onDispatchSave', 'providerBase', 'providerIncome', 'providerIncomeDesc', 'dispatchProviderShare', 'onProviderPicked', 'closeDispatchReview'], context, 'let quoteSequence=0,quotedInputs="",quotedSession=-1,bossSearchSequence=0,providerSearchSequence=0,serviceLoadSequence=0;');
   return { ...page, mode, fixed, pendingRate, quote, form, visible, auth, warnings, submissions, requests, quotePending, quoteResult, currentService: context.currentService };
 }
 
@@ -125,9 +128,10 @@ test('global fixed settings preserve the legacy standalone-report percentage', a
   const values = { savingRate: { value: false }, commissionType: { value: 'FIXED' }, commissionInput: { value: 23 }, commissionFixed: { value: 40 }, commissionRate: { value: 23 }, commissionConfig: { value: {} }, commissionVisible: { value: true } };
   let sent;
   const page = pageFunctions('apps/admin-web/src/views/report/index.vue', ['saveCommission'], {
-    ...values, ...commission, ElMessage: { success() {}, warning() {} },
-    commissionApi: { async update(payload) { sent = clone(payload); return { data: { ...payload, rate: 23 } }; } },
-  });
+    ...values, ...commission, commissionReady: { value: true }, canReadReports: { value: true }, commissionErrorText: { value: '' },
+    auth: { sessionRevision: 1, hasPerm: () => true }, pageDisposed: false, ElMessage: { success() {}, warning() {} },
+    async request(options) { sent = clone(options.data); return { data: { ...sent, rate: 23 } }; },
+  }, 'let commissionSequence=0;');
   await page.saveCommission(); assert.deepEqual(sent, { commission_type: 'FIXED', commission_fixed: 400, rate: 23 });
 });
 
@@ -144,11 +148,15 @@ test('service opt-in alone activates custom commission, including fixed zero on 
   const form = { id: 99, name: 'Scoped experience', provider_kind: 'GUARD', provider_grade: 'N3', commission_rate: 23, experience_kind: 'DAILY' };
   const sent = [];
   const page = pageFunctions('apps/admin-web/src/views/service/index.vue', ['onSave', 'fromLines'], {
-    form, ...refs, ...commission, xaCoinToAmount: money.toRawAmount, ElMessage: { success() {}, warning() {} }, serviceItemApi: { async update(id, payload) { sent.push(clone(payload)); } },
+    form, ...refs, ...commission, metadataReady: {value:true}, contentUploading: {value:false}, saveReview: {value:null}, saveUnknown: {value:false},
+    saveError: {value:''}, saveAttempted: {value:false}, validServiceName: {value:true}, initialDraft: {value:null},
+    auth: {sessionRevision:1, hasPerm:()=>true}, pageDisposed:false, servicePriceRaw: money.toRawAmount,
+    beginSaveReview() {}, clearSaveReview() {}, xaCoinToAmount: money.toRawAmount, ElMessage: { success() {}, warning() {} },
+    async request(options) { sent.push(clone(options.data)); return {data:{}}; },
   });
   await page.onSave(); assert.equal(sent[0].commission_override, false);
   for (const key of ['commission_rate', 'commission_type', 'commission_fixed']) assert.equal(Object.hasOwn(sent[0], key), false, 'off preserves old field ' + key);
-  refs.commissionEnabled.value = true; await page.onSave();
+  refs.dialogVisible.value = true; refs.commissionEnabled.value = true; await page.onSave();
   assert.equal(sent[1].commission_override, true); assert.equal(sent[1].commission_type, 'FIXED'); assert.equal(sent[1].commission_fixed, 0);
   assert.equal(sent[1].provider_grade, 'N3'); assert.equal(sent[1].experience_kind, 'DAILY'); assert.equal(sent[1].price, 1000);
 });

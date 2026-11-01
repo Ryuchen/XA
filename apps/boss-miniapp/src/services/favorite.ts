@@ -10,3 +10,6 @@ export const toggleFavorite = (serviceId: number) => {
     service_id: serviceId,
   });
 };
+
+export const removeFavorite = (serviceId: number) =>
+  request<ApiResponse<{ favorited: boolean }>>(`/orders/favorites/${serviceId}/`, 'DELETE');

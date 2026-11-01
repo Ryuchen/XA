@@ -1,0 +1,2553 @@
+{
+  "revision": "cumulative-r2",
+  "audits": [
+    {
+      "id": "desktop-absolute",
+      "priceRows": 9,
+      "dataMatches": true,
+      "oldCopyAbsent": true,
+      "pairs": [
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "388",
+          "unit": "r",
+          "gap": 7.999999999999993,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "488",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "488",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "648",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "388",
+          "unit": "r",
+          "gap": 7.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "488",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "988",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1388",
+          "unit": "w",
+          "gap": 8.000000000000028,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1188",
+          "unit": "w",
+          "gap": 7.999999999999979,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "2488",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "988",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1388",
+          "unit": "w",
+          "gap": 8.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "compensation",
+          "value": "+200",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+300",
+          "unit": "w",
+          "gap": 5.00000000000005,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+300",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+200",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "groups": [
+        {
+          "role": "completion",
+          "safeArea": [
+            170,
+            280,
+            500,
+            57
+          ],
+          "padding": {
+            "left": 106.727905475,
+            "right": 106.72790547499994,
+            "top": 3.909423425,
+            "bottom": 3.909423425
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "valid-extraction",
+          "safeArea": [
+            180,
+            955,
+            486,
+            133
+          ],
+          "padding": {
+            "left": 63.19287080000001,
+            "right": 63.19287080000004,
+            "top": 23.053222362500037,
+            "bottom": 23.053222362500037
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "card-rules",
+          "safeArea": [
+            249,
+            1151,
+            419,
+            120
+          ],
+          "padding": {
+            "left": 64.250745,
+            "right": 64.25074500000005,
+            "top": 4.566894099999672,
+            "bottom": 4.566894100000127
+          },
+          "centerDeltaY": -2.2737367544323206e-13
+        },
+        {
+          "role": "equipment-rules",
+          "safeArea": [
+            249,
+            1292,
+            419,
+            56
+          ],
+          "padding": {
+            "left": 45.0859375,
+            "right": 45.0859375,
+            "top": 2.572754050000185,
+            "bottom": 2.572754050000185
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "safeArea": [
+            249,
+            1517,
+            419,
+            73
+          ],
+          "padding": {
+            "left": 45.035394999999994,
+            "right": 45.035394999999994,
+            "top": 9.937989000000016,
+            "bottom": 9.937989000000016
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "safeArea": [
+            249,
+            1609,
+            419,
+            69
+          ],
+          "padding": {
+            "left": 43.24975549999999,
+            "right": 43.24975549999999,
+            "top": 7.9155277750001005,
+            "bottom": 7.915527774999873
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "loot-settlement",
+          "safeArea": [
+            249,
+            1697,
+            419,
+            85
+          ],
+          "padding": {
+            "left": 59.98706012499997,
+            "right": 59.98706012499997,
+            "top": 3.299316687500095,
+            "bottom": 3.299316687499868
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "quick-extraction",
+          "safeArea": [
+            249,
+            1801,
+            419,
+            57
+          ],
+          "padding": {
+            "left": 53.56005830000004,
+            "right": 53.56005830000004,
+            "top": 1.981933887499963,
+            "bottom": 1.9819338874997356
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "safeArea": [
+            249,
+            1877,
+            419,
+            81
+          ],
+          "padding": {
+            "left": 37.37170375000005,
+            "right": 37.37170374999994,
+            "top": 2.920165875000066,
+            "bottom": 2.9201658749998387
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "padding": {
+            "left": 14,
+            "right": 6.83787460074484,
+            "top": 8.405956750000087,
+            "bottom": 8.276806356499947
+          },
+          "centerDeltaY": 0.06457519674995638
+        }
+      ],
+      "rowPadding": [
+        {
+          "map": 0,
+          "row": 0,
+          "top": 4.49194356649997,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 1,
+          "top": 3.9919435664999696,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 0,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 0,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "priceRows": 9,
+      "dataMatches": true,
+      "oldCopyAbsent": true,
+      "pairs": [
+        {
+          "role": "price",
+          "value": "188",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "388",
+          "unit": "r",
+          "gap": 7.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "248",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "348",
+          "unit": "r",
+          "gap": 7.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "448",
+          "unit": "r",
+          "gap": 8.000000000000007,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "268",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "368",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "468",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "888",
+          "unit": "w",
+          "gap": 8.000000000000021,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1288",
+          "unit": "w",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1688",
+          "unit": "w",
+          "gap": 8.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "2188",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1388",
+          "unit": "w",
+          "gap": 8.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1788",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "2288",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "compensation",
+          "value": "+100",
+          "unit": "w",
+          "gap": 5,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+150",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+150",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+100",
+          "unit": "w",
+          "gap": 4.999999999999943,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "groups": [
+        {
+          "role": "completion",
+          "safeArea": [
+            170,
+            280,
+            500,
+            57
+          ],
+          "padding": {
+            "left": 106.727905475,
+            "right": 106.72790547499994,
+            "top": 3.909423425,
+            "bottom": 3.909423425
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "valid-extraction",
+          "safeArea": [
+            180,
+            955,
+            486,
+            133
+          ],
+          "padding": {
+            "left": 63.19287080000001,
+            "right": 63.19287080000004,
+            "top": 23.053222362500037,
+            "bottom": 23.053222362500037
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "card-rules",
+          "safeArea": [
+            249,
+            1151,
+            419,
+            120
+          ],
+          "padding": {
+            "left": 64.250745,
+            "right": 64.25074500000005,
+            "top": 4.488281249999773,
+            "bottom": 4.488281249999773
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "equipment-rules",
+          "safeArea": [
+            249,
+            1292,
+            419,
+            56
+          ],
+          "padding": {
+            "left": 45.0859375,
+            "right": 45.0859375,
+            "top": 2.572754050000185,
+            "bottom": 2.572754050000185
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "safeArea": [
+            249,
+            1517,
+            419,
+            73
+          ],
+          "padding": {
+            "left": 102.53540040500002,
+            "right": 102.53540040500002,
+            "top": 9.94921875,
+            "bottom": 9.94921875
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "safeArea": [
+            249,
+            1609,
+            419,
+            69
+          ],
+          "padding": {
+            "left": 45.035394999999994,
+            "right": 45.035394999999994,
+            "top": 7.9155277750001005,
+            "bottom": 7.915527774999873
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "loot-settlement",
+          "safeArea": [
+            249,
+            1697,
+            419,
+            85
+          ],
+          "padding": {
+            "left": 59.98706012499997,
+            "right": 59.98706012499997,
+            "top": 3.299316687500095,
+            "bottom": 3.299316687499868
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "quick-extraction",
+          "safeArea": [
+            249,
+            1801,
+            419,
+            57
+          ],
+          "padding": {
+            "left": 53.56005830000004,
+            "right": 53.56005830000004,
+            "top": 1.981933887499963,
+            "bottom": 1.9819338874997356
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "safeArea": [
+            249,
+            1877,
+            419,
+            81
+          ],
+          "padding": {
+            "left": 37.37170375000005,
+            "right": 37.37170374999994,
+            "top": 2.920165875000066,
+            "bottom": 2.9201658749998387
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "padding": {
+            "left": 14,
+            "right": 6.83787460074484,
+            "top": 8.405956750000087,
+            "bottom": 8.276806356499947
+          },
+          "centerDeltaY": 0.06457519674995638
+        }
+      ],
+      "rowPadding": [
+        {
+          "map": 0,
+          "row": 0,
+          "top": 4.49194356649997,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 1,
+          "top": 3.9919435664999696,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 0,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 0,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "priceRows": 9,
+      "dataMatches": true,
+      "oldCopyAbsent": true,
+      "pairs": [
+        {
+          "role": "price",
+          "value": "228",
+          "unit": "r",
+          "gap": 7.999999999999993,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "428",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "248",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "348",
+          "unit": "r",
+          "gap": 7.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "448",
+          "unit": "r",
+          "gap": 8.000000000000007,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "228",
+          "unit": "r",
+          "gap": 7.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "428",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "2288",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "3088",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "value": "1688",
+          "unit": "w",
+          "gap": 8.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "2488",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "3288",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "2288",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "3088",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": -1.1368683772161603e-13,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "compensation",
+          "value": "+200",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+300",
+          "unit": "w",
+          "gap": 5.00000000000005,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+300",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+200",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "groups": [
+        {
+          "role": "completion",
+          "safeArea": [
+            170,
+            280,
+            500,
+            57
+          ],
+          "padding": {
+            "left": 106.727905475,
+            "right": 106.72790547499994,
+            "top": 3.909423425,
+            "bottom": 3.909423425
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "valid-extraction",
+          "safeArea": [
+            180,
+            955,
+            486,
+            133
+          ],
+          "padding": {
+            "left": 63.19287080000001,
+            "right": 63.19287080000004,
+            "top": 23.053222362500037,
+            "bottom": 23.053222362500037
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "card-rules",
+          "safeArea": [
+            249,
+            1151,
+            419,
+            120
+          ],
+          "padding": {
+            "left": 64.250745,
+            "right": 64.25074500000005,
+            "top": 4.566894099999672,
+            "bottom": 4.566894100000127
+          },
+          "centerDeltaY": -2.2737367544323206e-13
+        },
+        {
+          "role": "equipment-rules",
+          "safeArea": [
+            249,
+            1292,
+            419,
+            56
+          ],
+          "padding": {
+            "left": 45.0859375,
+            "right": 45.0859375,
+            "top": 2.572754050000185,
+            "bottom": 2.572754050000185
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "safeArea": [
+            249,
+            1517,
+            419,
+            73
+          ],
+          "padding": {
+            "left": 45.035394999999994,
+            "right": 45.035394999999994,
+            "top": 9.937989000000016,
+            "bottom": 9.937989000000016
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "safeArea": [
+            249,
+            1609,
+            419,
+            69
+          ],
+          "padding": {
+            "left": 43.24975549999999,
+            "right": 43.24975549999999,
+            "top": 7.9155277750001005,
+            "bottom": 7.915527774999873
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "loot-settlement",
+          "safeArea": [
+            249,
+            1697,
+            419,
+            85
+          ],
+          "padding": {
+            "left": 59.98706012499997,
+            "right": 59.98706012499997,
+            "top": 3.299316687500095,
+            "bottom": 3.299316687499868
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "quick-extraction",
+          "safeArea": [
+            249,
+            1801,
+            419,
+            57
+          ],
+          "padding": {
+            "left": 53.56005830000004,
+            "right": 53.56005830000004,
+            "top": 1.981933887499963,
+            "bottom": 1.9819338874997356
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "safeArea": [
+            249,
+            1877,
+            419,
+            81
+          ],
+          "padding": {
+            "left": 37.37170375000005,
+            "right": 37.37170374999994,
+            "top": 2.920165875000066,
+            "bottom": 2.9201658749998387
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "padding": {
+            "left": 14,
+            "right": 6.83787460074484,
+            "top": 8.405956750000087,
+            "bottom": 8.276806356499947
+          },
+          "centerDeltaY": 0.06457519674995638
+        }
+      ],
+      "rowPadding": [
+        {
+          "map": 0,
+          "row": 0,
+          "top": 4.49194356649997,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 1,
+          "top": 3.9919435664999696,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 2,
+          "top": 4.466308799999979,
+          "bottom": 4.466308800000093,
+          "centerDeltaY": -5.684341886080802e-14
+        },
+        {
+          "map": 1,
+          "row": 0,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 0,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 2,
+          "top": 4.466308799999979,
+          "bottom": 4.466308800000093,
+          "centerDeltaY": 0
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "priceRows": 9,
+      "dataMatches": true,
+      "oldCopyAbsent": true,
+      "pairs": [
+        {
+          "role": "price",
+          "value": "128",
+          "unit": "r",
+          "gap": 8.000000000000007,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "188",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "248",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "148",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "218",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "188",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "268",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "788",
+          "unit": "w",
+          "gap": 8.000000000000021,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1188",
+          "unit": "w",
+          "gap": 7.999999999999979,
+          "baselineDelta": -5.684341886080802e-14,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1688",
+          "unit": "w",
+          "gap": 8.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "988",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 7.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1988",
+          "unit": "w",
+          "gap": 8.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1288",
+          "unit": "w",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 8,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "value": "2488",
+          "unit": "w",
+          "gap": 7.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "compensation",
+          "value": "+100",
+          "unit": "w",
+          "gap": 5,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+150",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+150",
+          "unit": "w",
+          "gap": 4.999999999999993,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "value": "+100",
+          "unit": "w",
+          "gap": 4.999999999999943,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "groups": [
+        {
+          "role": "completion",
+          "safeArea": [
+            170,
+            280,
+            500,
+            57
+          ],
+          "padding": {
+            "left": 106.727905475,
+            "right": 106.72790547499994,
+            "top": 3.909423425,
+            "bottom": 3.909423425
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "valid-extraction",
+          "safeArea": [
+            180,
+            955,
+            486,
+            133
+          ],
+          "padding": {
+            "left": 63.19287080000001,
+            "right": 63.19287080000004,
+            "top": 23.053222362500037,
+            "bottom": 23.053222362500037
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "card-rules",
+          "safeArea": [
+            249,
+            1151,
+            419,
+            120
+          ],
+          "padding": {
+            "left": 64.250745,
+            "right": 64.25074500000005,
+            "top": 4.488281249999773,
+            "bottom": 4.488281249999773
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "equipment-rules",
+          "safeArea": [
+            249,
+            1292,
+            419,
+            56
+          ],
+          "padding": {
+            "left": 45.0859375,
+            "right": 45.0859375,
+            "top": 2.572754050000185,
+            "bottom": 2.572754050000185
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "safeArea": [
+            249,
+            1517,
+            419,
+            73
+          ],
+          "padding": {
+            "left": 102.53540040500002,
+            "right": 102.53540040500002,
+            "top": 9.94921875,
+            "bottom": 9.94921875
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "safeArea": [
+            249,
+            1609,
+            419,
+            69
+          ],
+          "padding": {
+            "left": 45.035394999999994,
+            "right": 45.035394999999994,
+            "top": 7.9155277750001005,
+            "bottom": 7.915527774999873
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "loot-settlement",
+          "safeArea": [
+            249,
+            1697,
+            419,
+            85
+          ],
+          "padding": {
+            "left": 59.98706012499997,
+            "right": 59.98706012499997,
+            "top": 3.299316687500095,
+            "bottom": 3.299316687499868
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "quick-extraction",
+          "safeArea": [
+            249,
+            1801,
+            419,
+            57
+          ],
+          "padding": {
+            "left": 53.56005830000004,
+            "right": 53.56005830000004,
+            "top": 1.981933887499963,
+            "bottom": 1.9819338874997356
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "safeArea": [
+            249,
+            1877,
+            419,
+            81
+          ],
+          "padding": {
+            "left": 37.37170375000005,
+            "right": 37.37170374999994,
+            "top": 2.920165875000066,
+            "bottom": 2.9201658749998387
+          },
+          "centerDeltaY": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "padding": {
+            "left": 14,
+            "right": 6.83787460074484,
+            "top": 8.405956750000087,
+            "bottom": 8.276806356499947
+          },
+          "centerDeltaY": 0.06457519674995638
+        }
+      ],
+      "rowPadding": [
+        {
+          "map": 0,
+          "row": 0,
+          "top": 4.49194356649997,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 1,
+          "top": 3.9919435664999696,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 0,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 0,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 1,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 0,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 1,
+          "top": 3.9919435665000265,
+          "bottom": 3.9919435665000265,
+          "centerDeltaY": 0
+        },
+        {
+          "map": 2,
+          "row": 2,
+          "top": 4.4919435665000265,
+          "bottom": 4.4919435665000265,
+          "centerDeltaY": 0
+        }
+      ]
+    },
+    {
+      "id": "cover",
+      "priceRows": 0,
+      "dataMatches": true,
+      "oldCopyAbsent": true,
+      "pairs": [],
+      "groups": [],
+      "rowPadding": []
+    },
+    {
+      "id": "social-desktop",
+      "priceRows": 18,
+      "dataMatches": true,
+      "oldCopyAbsent": true,
+      "pairs": [
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "388",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "488",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "488",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "648",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "388",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "488",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "188",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 5.999999999999957,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "388",
+          "unit": "r",
+          "gap": 6.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "248",
+          "unit": "r",
+          "gap": 5.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "348",
+          "unit": "r",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "448",
+          "unit": "r",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "268",
+          "unit": "r",
+          "gap": 5.999999999999943,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "368",
+          "unit": "r",
+          "gap": 5.999999999999957,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "468",
+          "unit": "r",
+          "gap": 6.000000000000014,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "988",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1388",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1188",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "2488",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "988",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1388",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": -2.2737367544323206e-13,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": -2.2737367544323206e-13,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "888",
+          "unit": "w",
+          "gap": 6.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 5.999999999999957,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1288",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1688",
+          "unit": "w",
+          "gap": 6.000000000000043,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "2188",
+          "unit": "w",
+          "gap": 5.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1388",
+          "unit": "w",
+          "gap": 6.000000000000043,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1788",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": -2.2737367544323206e-13,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "2288",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": -2.2737367544323206e-13,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 6.999999999999977,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 7.0000000000000036,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 6.999999999999977,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 7.0000000000000036,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 6.999999999999977,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 7.0000000000000036,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 7.000000000000034,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 6.999999999999947,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 7.000000000000034,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 6.999999999999947,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 7.000000000000034,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 6.999999999999947,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        }
+      ],
+      "groups": [
+        {
+          "role": "social-completion",
+          "safeArea": [
+            250,
+            1190,
+            748,
+            88
+          ],
+          "padding": {
+            "left": 169.71142617499999,
+            "right": 169.71142617500004,
+            "top": 7.253661125000008,
+            "bottom": 7.253661125000235
+          },
+          "centerDeltaY": 0
+        }
+      ],
+      "rowPadding": []
+    },
+    {
+      "id": "social-mobile",
+      "priceRows": 18,
+      "dataMatches": true,
+      "oldCopyAbsent": true,
+      "pairs": [
+        {
+          "role": "price",
+          "value": "228",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "428",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "248",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "348",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "448",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "228",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "428",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "128",
+          "unit": "r",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "188",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "248",
+          "unit": "r",
+          "gap": 5.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "148",
+          "unit": "r",
+          "gap": 5.999999999999957,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "218",
+          "unit": "r",
+          "gap": 5.999999999999972,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "288",
+          "unit": "r",
+          "gap": 5.999999999999957,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "188",
+          "unit": "r",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "268",
+          "unit": "r",
+          "gap": 5.999999999999943,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "value": "328",
+          "unit": "r",
+          "gap": 5.999999999999943,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 6.000000000000014,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "2288",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "3088",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1688",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "2488",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "3288",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 6.000000000000014,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "2288",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": -2.2737367544323206e-13,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "3088",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "788",
+          "unit": "w",
+          "gap": 6.000000000000028,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1188",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1688",
+          "unit": "w",
+          "gap": 6.000000000000043,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "988",
+          "unit": "w",
+          "gap": 5.999999999999943,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1488",
+          "unit": "w",
+          "gap": 5.999999999999957,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1988",
+          "unit": "w",
+          "gap": 6.000000000000043,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1288",
+          "unit": "w",
+          "gap": 5.999999999999986,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "1888",
+          "unit": "w",
+          "gap": 6,
+          "baselineDelta": -2.2737367544323206e-13,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "value": "2488",
+          "unit": "w",
+          "gap": 5.999999999999972,
+          "baselineDelta": -2.2737367544323206e-13,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 6.999999999999977,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 7.0000000000000036,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 6.999999999999977,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 7.0000000000000036,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 6.999999999999977,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 7.0000000000000036,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 7.000000000000034,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 6.999999999999947,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 7.000000000000034,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 6.999999999999947,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        },
+        {
+          "role": "cumulative",
+          "value": "2",
+          "unit": "把",
+          "gap": 7.000000000000034,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9356613008762198
+        },
+        {
+          "role": "cumulative",
+          "value": "3",
+          "unit": "把",
+          "gap": 6.999999999999982,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9262037756647405
+        },
+        {
+          "role": "cumulative",
+          "value": "4",
+          "unit": "把",
+          "gap": 6.999999999999947,
+          "baselineDelta": 0,
+          "visibleHeightRatio": 0.9453139773784195
+        }
+      ],
+      "groups": [
+        {
+          "role": "social-completion",
+          "safeArea": [
+            250,
+            1190,
+            748,
+            88
+          ],
+          "padding": {
+            "left": 169.71142617499999,
+            "right": 169.71142617500004,
+            "top": 7.253661125000008,
+            "bottom": 7.253661125000235
+          },
+          "centerDeltaY": 0
+        }
+      ],
+      "rowPadding": []
+    }
+  ],
+  "failures": []
+}

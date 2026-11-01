@@ -1,0 +1,14 @@
+{
+  "provider": "built-in image_gen",
+  "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-bd933435-6600-49fd-b16b-b3c1619a1491.png",
+  "file": "01-illustrations/jiahao-medic-mouse-v1.png",
+  "width": 1536,
+  "height": 1024,
+  "channels": 4,
+  "hasAlpha": true,
+  "alpha": {
+    "min": 0,
+    "max": 254
+  },
+  "prompt": "01-illustrations/prompts.md"
+}

@@ -1,0 +1,139 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "revision": "r4",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "2026-10-04用户提供端游现稿，明确格数218降为208，并为标准版、进阶版、终极版新增累计金红格数不计炸单战损；其余价格、规则与美术沿用本轮附件。 用户后续明确“手游也是一样”，按原手游价目同步两项修订。 2026-10-05用户附双端价格封面，要求其中218格对应调整为208格。",
+  "deliveryScope": {
+    "pageIds": [
+      "desktop",
+      "mobile",
+      "social"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户依次要求端游、手游以及本轮附图双端价格封面对应修订；只新增受影响的价格封面页，现有两端海报保留。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "本轮用户附件端游六档价目388/488/688/988/1188/1688r，保持原价。",
+    "mobile": "2026-09-30已确认黄金矿工双平台项目content.json：体验288、标准388、基础588、进阶788、豪华1088、终极1488r；本轮用户授权沿用手游版。"
+  },
+  "approvals": {
+    "illustration": {
+      "status": "approved",
+      "basis": "沿用系列蜂医/灰鼠人物身份和手绘画风，新挖矿情景需本轮确认。",
+      "file": "assets/illustrations/gold-miner-hero-r1.png",
+      "review": "review/illustration-r1-ivory.png",
+      "generator": "built-in image_gen",
+      "metadata": {
+        "width": 1536,
+        "height": 1024,
+        "hasAlpha": true,
+        "alphaMin": 0,
+        "alphaMax": 254
+      },
+      "userMessage": "通过，继续制作底图",
+      "date": "2026-09-30"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户明确通过插画并要求继续制作底图；三种底图已生成并完成留白与结构检查。",
+      "review": "review/stage2.html",
+      "assets": [
+        {
+          "id": "poster",
+          "file": "assets/backgrounds/poster-r1.png",
+          "width": 836,
+          "height": 1880
+        },
+        {
+          "id": "social",
+          "file": "assets/backgrounds/social-r2.png",
+          "width": 1086,
+          "height": 1448
+        },
+        {
+          "id": "cover",
+          "file": "assets/backgrounds/cover-r1.png",
+          "width": 1672,
+          "height": 941
+        }
+      ],
+      "qa": "review/visual-qa-stage2.md",
+      "regions": "source/background-regions-stage2.json",
+      "date": "2026-09-30",
+      "userMessage": "通过，继续填字"
+    }
+  },
+  "decisions": [
+    "没有机密，不生成机密价目或空白机密卡。",
+    "两端共享玩法说明和注意事项，只按各自新表录入价格。",
+    "红+80w/格；金按用户后续明确修订为+20w/格。",
+    "与黄金矿工钓鱼版独立。",
+    "本轮豪华版、终极版改为208格。",
+    "标准版、进阶版、终极版累计金红格数时，不计炸单战损；与带出过程金额不计入总保底共同展示于须知第一项。",
+    "用户后续明确手游同步同一格数和注意事项修订；手游价格沿用既有确认源稿288/388/588/788/1088/1488r。",
+    "2026-10-05：用户所附双端价格封面豪华版/终极版218格同步改208格；其余价格、文案、底图与排版沿用。"
+  ],
+  "layoutReviewRequirements": [
+    "真实底板边界先测量，文字不能越框或贴线。",
+    "同一行共用baseline，标题/说明/数值整组垂直居中。",
+    "价目不要偏右，数字与单位一组核对最长和最短金额。",
+    "按最终PNG、390px预览及局部复查，不以自动检查条数代替目视。"
+  ],
+  "lastRenderedPages": [
+    "desktop",
+    "mobile",
+    "social"
+  ],
+  "revisionHistory": [
+    {
+      "revision": "r1",
+      "date": "2026-09-30",
+      "sourceProject": "黄金矿工-双平台价目广告封面-20260930",
+      "description": "用户本轮所附旧稿。"
+    },
+    {
+      "revision": "r2",
+      "date": "2026-10-04",
+      "description": "豪华/终极208格；三档累计金红格数不计炸单战损。"
+    },
+    {
+      "revision": "r3",
+      "date": "2026-10-04",
+      "description": "按用户后续请求增加手游同步修订页，端游成图保留。"
+    },
+    {
+      "revision": "r4",
+      "date": "2026-10-05",
+      "description": "附图双端价格封面两处218格改208格；端游、手游已交付PNG保持。"
+    }
+  ],
+  "previousDesktopSHA256": "b0082c9f577df5d36539fbcbdeaf5e2b0ac89712c5a305e4fb4ef7259414258b",
+  "previousPNGHashes": {
+    "desktop": "b0082c9f577df5d36539fbcbdeaf5e2b0ac89712c5a305e4fb4ef7259414258b",
+    "mobile": "6af3174cf6012ce9424718729fd6eb840b8026b0ec38edb3db86b5c51299dcf6"
+  },
+  "finalVisualQA": {
+    "reusedReviewedPNGs": [
+      "output/png/desktop.png",
+      "output/png/mobile.png"
+    ],
+    "date": "2026-10-05",
+    "report": "review/visual-qa.md",
+    "phonePreviews": [
+      "review/social-final-390.png"
+    ],
+    "status": "passed",
+    "verification": "review/final-verification.json",
+    "actualPNGReviewed": [
+      "output/png/social.png"
+    ]
+  }
+}

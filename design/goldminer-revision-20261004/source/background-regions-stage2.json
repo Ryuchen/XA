@@ -1,0 +1,379 @@
+{
+  "revision": "stage2-r1",
+  "method": "Native generated images visually measured before text layout; safe regions are fixed independently of future text and exclude props. Coordinates are native pixels, [x,y,width,height].",
+  "poster": {
+    "nativeSize": [
+      836,
+      1880
+    ],
+    "title": [
+      44,
+      49,
+      318,
+      220
+    ],
+    "platform": [
+      56,
+      302,
+      299,
+      31
+    ],
+    "tableHeader": [
+      44,
+      365,
+      746,
+      40
+    ],
+    "tableColumnEdges": [
+      30,
+      190,
+      372,
+      599,
+      805
+    ],
+    "tableRows": [
+      {
+        "id": "tier-1",
+        "panel": [
+          30,
+          419,
+          775,
+          75
+        ],
+        "safe": [
+          48,
+          432,
+          738,
+          49
+        ],
+        "cy": 456.5
+      },
+      {
+        "id": "tier-2",
+        "panel": [
+          30,
+          501,
+          775,
+          77
+        ],
+        "safe": [
+          48,
+          514,
+          738,
+          51
+        ],
+        "cy": 539.5
+      },
+      {
+        "id": "tier-3",
+        "panel": [
+          30,
+          585,
+          775,
+          78
+        ],
+        "safe": [
+          48,
+          598,
+          738,
+          52
+        ],
+        "cy": 624
+      },
+      {
+        "id": "tier-4",
+        "panel": [
+          30,
+          669,
+          775,
+          78
+        ],
+        "safe": [
+          48,
+          682,
+          738,
+          52
+        ],
+        "cy": 708
+      },
+      {
+        "id": "tier-5",
+        "panel": [
+          30,
+          754,
+          775,
+          77
+        ],
+        "safe": [
+          48,
+          767,
+          738,
+          51
+        ],
+        "cy": 792.5
+      },
+      {
+        "id": "tier-6",
+        "panel": [
+          30,
+          838,
+          775,
+          78
+        ],
+        "safe": [
+          48,
+          851,
+          738,
+          52
+        ],
+        "cy": 877
+      }
+    ],
+    "rulesHeading": [
+      46,
+      939,
+      741,
+      32
+    ],
+    "redBenefit": {
+      "panel": [
+        30,
+        994,
+        380,
+        113
+      ],
+      "safe": [
+        76,
+        1014,
+        313,
+        74
+      ],
+      "note": "Exclude red gem at upper-left."
+    },
+    "goldBenefit": {
+      "panel": [
+        426,
+        994,
+        380,
+        113
+      ],
+      "safe": [
+        474,
+        1014,
+        312,
+        74
+      ],
+      "note": "Exclude gold ore at upper-left."
+    },
+    "capRibbon": [
+      66,
+      1121,
+      705,
+      33
+    ],
+    "example": {
+      "panel": [
+        30,
+        1171,
+        779,
+        137
+      ],
+      "safe": [
+        56,
+        1189,
+        727,
+        101
+      ]
+    },
+    "noticesHeading": [
+      46,
+      1326,
+      742,
+      27
+    ],
+    "notices": {
+      "panel": [
+        30,
+        1373,
+        779,
+        421
+      ],
+      "safe": [
+        59,
+        1403,
+        714,
+        313
+      ],
+      "note": "Keep all notice text above 1716, avoiding curved lower border, foliage and mine supports."
+    },
+    "capRibbonPanel": [
+      52,
+      1115,
+      735,
+      45
+    ],
+    "capRibbonNote": "Follows actual 45px-high panel with 6px inner padding; defined before final text layout."
+  },
+  "social": {
+    "nativeSize": [
+      1086,
+      1448
+    ],
+    "title": [
+      49,
+      47,
+      430,
+      233
+    ],
+    "platform": [
+      62,
+      324,
+      380,
+      31
+    ],
+    "tableHeader": [
+      68,
+      437,
+      950,
+      44
+    ],
+    "tableColumnEdges": [
+      49,
+      221,
+      371,
+      542,
+      790,
+      1038
+    ],
+    "tableRows": [
+      {
+        "id": "tier-1",
+        "panel": [
+          49,
+          512,
+          989,
+          104
+        ],
+        "safe": [
+          69,
+          528,
+          949,
+          72
+        ],
+        "cy": 564
+      },
+      {
+        "id": "tier-2",
+        "panel": [
+          49,
+          627,
+          989,
+          104
+        ],
+        "safe": [
+          69,
+          643,
+          949,
+          72
+        ],
+        "cy": 679
+      },
+      {
+        "id": "tier-3",
+        "panel": [
+          49,
+          742,
+          989,
+          103
+        ],
+        "safe": [
+          69,
+          758,
+          949,
+          71
+        ],
+        "cy": 793.5
+      },
+      {
+        "id": "tier-4",
+        "panel": [
+          49,
+          855,
+          989,
+          104
+        ],
+        "safe": [
+          69,
+          871,
+          949,
+          72
+        ],
+        "cy": 907
+      },
+      {
+        "id": "tier-5",
+        "panel": [
+          49,
+          970,
+          989,
+          104
+        ],
+        "safe": [
+          69,
+          986,
+          949,
+          72
+        ],
+        "cy": 1022
+      },
+      {
+        "id": "tier-6",
+        "panel": [
+          49,
+          1085,
+          989,
+          96
+        ],
+        "safe": [
+          69,
+          1101,
+          949,
+          64
+        ],
+        "cy": 1133
+      }
+    ],
+    "feature": [
+      186,
+      1242,
+      714,
+      41
+    ],
+    "note": "Social r1 rejected for dense upper-left scenery; r2 clears the title area while preserving the six-row table."
+  },
+  "cover": {
+    "nativeSize": [
+      1672,
+      941
+    ],
+    "title": [
+      85,
+      97,
+      630,
+      402
+    ],
+    "feature": [
+      115,
+      566,
+      571,
+      47
+    ],
+    "platform": [
+      156,
+      681,
+      489,
+      31
+    ],
+    "note": "Center each semantic group in the left safe area. Do not add notices to cover."
+  }
+}

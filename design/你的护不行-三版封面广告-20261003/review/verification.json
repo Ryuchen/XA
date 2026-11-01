@@ -1,0 +1,1762 @@
+{
+  "pageSet": [
+    "dogtag-cover",
+    "dogtag-social",
+    "firearms-cover",
+    "firearms-social",
+    "revolver-cover",
+    "revolver-social"
+  ],
+  "requested": [
+    "dogtag-cover",
+    "dogtag-social",
+    "firearms-cover",
+    "firearms-social",
+    "revolver-cover",
+    "revolver-social"
+  ],
+  "artwork": {
+    "dogtag": {
+      "file": "assets/illustrations/medic-mouse-dogtag-r2.png",
+      "nativeWidth": 1536,
+      "nativeHeight": 1024,
+      "hasAlpha": true,
+      "status": "approved",
+      "basis": "用户明确回复：通过，继续，做封面。"
+    },
+    "firearms": {
+      "file": "assets/illustrations/medic-mouse-firearms-r2.png",
+      "nativeWidth": 1536,
+      "nativeHeight": 1024,
+      "hasAlpha": true,
+      "status": "approved",
+      "basis": "用户明确回复：通过，继续，做封面。"
+    },
+    "revolver": {
+      "file": "assets/illustrations/medic-mouse-revolver-r2.png",
+      "nativeWidth": 1536,
+      "nativeHeight": 1024,
+      "hasAlpha": true,
+      "status": "approved",
+      "basis": "用户明确回复：通过，继续，做封面。"
+    }
+  },
+  "pages": [
+    {
+      "id": "dogtag-cover",
+      "pngDimensions": [
+        3200,
+        2000
+      ],
+      "overlaps": 0,
+      "outside": [],
+      "groups": [
+        {
+          "id": "brand",
+          "ink": [
+            342.47167963,
+            129.5839838,
+            183.0566407400001,
+            44.8320324
+          ],
+          "safe": [
+            214,
+            122,
+            440,
+            60
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "version",
+          "ink": [
+            345.67383,
+            422.732423,
+            178.65234000000004,
+            58.53515399999998
+          ],
+          "safe": [
+            160,
+            422,
+            550,
+            60
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "tagline",
+          "ink": [
+            289.573729,
+            520.8901376,
+            280.852542,
+            96.99023319999992
+          ],
+          "safe": [
+            235,
+            514,
+            390,
+            111
+          ],
+          "inside": true,
+          "verticalOffset": -0.11474580000003698,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "platform",
+          "ink": [
+            285.657466,
+            656.02490315,
+            300.685068,
+            41.9501937
+          ],
+          "safe": [
+            164,
+            651,
+            544,
+            52
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "mode",
+          "ink": [
+            329.29736336,
+            761.0332026,
+            209.40527328000002,
+            40.93359480000004
+          ],
+          "safe": [
+            245,
+            756,
+            378,
+            51
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        }
+      ],
+      "amountGroups": [],
+      "minimumPhoneSize": 10.2375,
+      "smallestText": {
+        "text": "绝密 / 机密",
+        "role": "cover-mode",
+        "group": "mode",
+        "lineGroup": "dogtag-cover-mode-single",
+        "x": 329.29736336,
+        "y": 761.0332026,
+        "width": 209.40527328,
+        "height": 40.933594799999995,
+        "cy": 781.5,
+        "baseline": 796.204101048,
+        "effectiveSize": 42,
+        "requestedSize": 42,
+        "font": "Microsoft YaHei UI",
+        "fontWeight": 400
+      }
+    },
+    {
+      "id": "dogtag-social",
+      "pngDimensions": [
+        3000,
+        4000
+      ],
+      "overlaps": 0,
+      "outside": [],
+      "groups": [
+        {
+          "id": "brand",
+          "ink": [
+            65,
+            46.38085900000001,
+            119.3847657,
+            29.238282000000005
+          ],
+          "safe": [
+            58,
+            30,
+            650,
+            55
+          ],
+          "inside": true,
+          "verticalOffset": 3.500000000000014,
+          "horizontalOffset": -258.30761715
+        },
+        {
+          "id": "version",
+          "ink": [
+            129.516603,
+            279.06152430000003,
+            136.96679399999996,
+            44.876951399999996
+          ],
+          "safe": [
+            64,
+            265,
+            268,
+            73
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "tagline",
+          "ink": [
+            357,
+            282.332032,
+            479.1406240000001,
+            39.335936000000004
+          ],
+          "safe": [
+            355,
+            269,
+            786,
+            64
+          ],
+          "inside": true,
+          "verticalOffset": 1,
+          "horizontalOffset": -151.42968799999994
+        },
+        {
+          "id": "platform",
+          "ink": [
+            459.16016,
+            373.851562,
+            281.6796800000001,
+            39.296876
+          ],
+          "safe": [
+            58,
+            361,
+            1084,
+            65
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "mode-secret",
+          "ink": [
+            226.139647,
+            471.71875,
+            180.72070600000004,
+            44.5625
+          ],
+          "safe": [
+            58,
+            456,
+            517,
+            76
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "price-secret-0",
+          "ink": [
+            85,
+            555.7255851,
+            437.40046940800005,
+            166.91695454
+          ],
+          "safe": [
+            82,
+            553,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "price-secret-1",
+          "ink": [
+            85,
+            763.7255851,
+            437.40046940800005,
+            166.91695454
+          ],
+          "safe": [
+            82,
+            761,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "price-secret-2",
+          "ink": [
+            85,
+            971.7255851,
+            437.40046940800005,
+            166.91695454
+          ],
+          "safe": [
+            82,
+            969,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "price-secret-3",
+          "ink": [
+            85,
+            1179.7255851,
+            437.40046940800005,
+            166.91695454
+          ],
+          "safe": [
+            82,
+            1177,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "mode-confidential",
+          "ink": [
+            793.16210926,
+            471.71875,
+            180.67578147999996,
+            44.5625
+          ],
+          "safe": [
+            625,
+            456,
+            517,
+            76
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "price-confidential-0",
+          "ink": [
+            652,
+            590.3922517666666,
+            437.40046940799994,
+            166.91695454
+          ],
+          "safe": [
+            649,
+            553,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765296000032
+        },
+        {
+          "id": "price-confidential-1",
+          "ink": [
+            652,
+            867.7255850999999,
+            437.40046940799994,
+            166.91695454000012
+          ],
+          "safe": [
+            649,
+            830.3333333333333,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": 1.184062370000106,
+          "horizontalOffset": -12.799765296000032
+        },
+        {
+          "id": "price-confidential-2",
+          "ink": [
+            652,
+            1145.0589184333332,
+            437.40046940799994,
+            166.91695454
+          ],
+          "safe": [
+            649,
+            1107.6666666666665,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765296000032
+        },
+        {
+          "id": "core",
+          "ink": [
+            294.54492120000003,
+            1419.04931725,
+            610.9101575999998,
+            98.68701154999985
+          ],
+          "safe": [
+            85,
+            1415,
+            1030,
+            110
+          ],
+          "inside": true,
+          "verticalOffset": -1.6071769750001295,
+          "horizontalOffset": 0
+        }
+      ],
+      "amountGroups": [
+        {
+          "number": "288",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "488",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "1888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "888",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "3288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 2.2737367544323206e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "1888",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "4288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 2.2737367544323206e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "188",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "1088",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.6561667963412002
+        },
+        {
+          "number": "288",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "1688",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "488",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "2888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 2.2737367544323206e-13,
+          "heightRatio": 0.657493239419748
+        }
+      ],
+      "minimumPhoneSize": 9.75,
+      "smallestText": {
+        "text": "兴安电竞",
+        "role": "copy",
+        "group": "brand",
+        "lineGroup": "dogtag-social-brand-61",
+        "x": 65,
+        "y": 46.38085900000001,
+        "width": 119.3847657,
+        "height": 29.238281999999998,
+        "cy": 61.00000000000001,
+        "baseline": 71.41503868000001,
+        "effectiveSize": 30,
+        "requestedSize": 30,
+        "font": "Microsoft YaHei UI",
+        "fontWeight": 700
+      }
+    },
+    {
+      "id": "firearms-cover",
+      "pngDimensions": [
+        3200,
+        2000
+      ],
+      "overlaps": 0,
+      "outside": [],
+      "groups": [
+        {
+          "id": "brand",
+          "ink": [
+            338.47167963,
+            118.5839838,
+            183.0566407400001,
+            44.8320324
+          ],
+          "safe": [
+            214,
+            111,
+            432,
+            60
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "version",
+          "ink": [
+            346.23828132,
+            426.4570316,
+            166.52343736000006,
+            54.08593680000001
+          ],
+          "safe": [
+            160,
+            426,
+            539,
+            55
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "tagline",
+          "ink": [
+            336.39013666,
+            509.68847715000004,
+            187.21972667999995,
+            96.37060399999996
+          ],
+          "safe": [
+            235,
+            509,
+            390,
+            98
+          ],
+          "inside": true,
+          "verticalOffset": -0.1262208499999815,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "platform",
+          "ink": [
+            290.150142,
+            633.50048905,
+            286.699716,
+            39.9990219
+          ],
+          "safe": [
+            164,
+            633,
+            539,
+            41
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "mode",
+          "ink": [
+            330.29736336,
+            719.5332026,
+            209.40527328000002,
+            40.93359480000004
+          ],
+          "safe": [
+            254,
+            718,
+            362,
+            44
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        }
+      ],
+      "amountGroups": [],
+      "minimumPhoneSize": 9.99375,
+      "smallestText": {
+        "text": "端游 / 手游同价",
+        "role": "cover-platform",
+        "group": "platform",
+        "lineGroup": "firearms-cover-platform-single",
+        "x": 290.150142,
+        "y": 633.50048905,
+        "width": 286.69971599999997,
+        "height": 39.999021899999995,
+        "cy": 653.5,
+        "baseline": 667.793946071,
+        "effectiveSize": 41,
+        "requestedSize": 41,
+        "font": "Microsoft YaHei UI",
+        "fontWeight": 400
+      }
+    },
+    {
+      "id": "firearms-social",
+      "pngDimensions": [
+        3000,
+        4000
+      ],
+      "overlaps": 0,
+      "outside": [],
+      "groups": [
+        {
+          "id": "brand",
+          "ink": [
+            65,
+            46.38085900000001,
+            119.3847657,
+            29.238282000000005
+          ],
+          "safe": [
+            58,
+            30,
+            650,
+            55
+          ],
+          "inside": true,
+          "verticalOffset": 3.500000000000014,
+          "horizontalOffset": -258.30761715
+        },
+        {
+          "id": "version",
+          "ink": [
+            129.60644537000002,
+            279.28613310000003,
+            136.78710926000002,
+            44.4277338
+          ],
+          "safe": [
+            64,
+            265,
+            268,
+            73
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 2.842170943040401e-14
+        },
+        {
+          "id": "tagline",
+          "ink": [
+            357,
+            281.10888645,
+            428.3203125,
+            41.7822271
+          ],
+          "safe": [
+            355,
+            269,
+            786,
+            64
+          ],
+          "inside": true,
+          "verticalOffset": 1,
+          "horizontalOffset": -176.83984375
+        },
+        {
+          "id": "platform",
+          "ink": [
+            459.16016,
+            373.851562,
+            281.6796800000001,
+            39.296876
+          ],
+          "safe": [
+            58,
+            361,
+            1084,
+            65
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "mode-secret",
+          "ink": [
+            226.139647,
+            471.71875,
+            180.72070600000004,
+            44.5625
+          ],
+          "safe": [
+            58,
+            456,
+            517,
+            76
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "price-secret-0",
+          "ink": [
+            85,
+            556.7255851,
+            461.77248004800003,
+            231.99121230000003
+          ],
+          "safe": [
+            82,
+            553,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": 0.05452458333331833,
+          "horizontalOffset": -0.613759975999983
+        },
+        {
+          "id": "price-secret-1",
+          "ink": [
+            85,
+            834.0589184333332,
+            461.77248004800003,
+            231.69384809999997
+          ],
+          "safe": [
+            82,
+            830.3333333333333,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": -0.09415751666665528,
+          "horizontalOffset": -0.613759975999983
+        },
+        {
+          "id": "price-secret-2",
+          "ink": [
+            85,
+            1111.3922517666665,
+            461.77248004800003,
+            231.69384809999997
+          ],
+          "safe": [
+            82,
+            1107.6666666666665,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": -0.09415751666688266,
+          "horizontalOffset": -0.613759975999983
+        },
+        {
+          "id": "mode-confidential",
+          "ink": [
+            793.16210926,
+            471.71875,
+            180.67578147999996,
+            44.5625
+          ],
+          "safe": [
+            625,
+            456,
+            517,
+            76
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "price-confidential-0",
+          "ink": [
+            652,
+            556.7255851,
+            461.77248004800003,
+            234.49121230000003
+          ],
+          "safe": [
+            649,
+            553,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": 1.3045245833333183,
+          "horizontalOffset": -0.613759975999983
+        },
+        {
+          "id": "price-confidential-1",
+          "ink": [
+            652,
+            834.0589184333332,
+            461.77248004800003,
+            234.49121230000014
+          ],
+          "safe": [
+            649,
+            830.3333333333333,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": 1.304524583333432,
+          "horizontalOffset": -0.613759975999983
+        },
+        {
+          "id": "price-confidential-2",
+          "ink": [
+            652,
+            1111.3922517666665,
+            461.77248004800003,
+            231.99121230000014
+          ],
+          "safe": [
+            649,
+            1107.6666666666665,
+            469,
+            239.33333333333331
+          ],
+          "inside": true,
+          "verticalOffset": 0.05452458333343202,
+          "horizontalOffset": -0.613759975999983
+        },
+        {
+          "id": "core",
+          "ink": [
+            330.49218659999997,
+            1419.093262,
+            539.0156268000001,
+            98.43212839999978
+          ],
+          "safe": [
+            85,
+            1415,
+            1030,
+            110
+          ],
+          "inside": true,
+          "verticalOffset": -1.6906738000000132,
+          "horizontalOffset": 0
+        }
+      ],
+      "amountGroups": [
+        {
+          "number": "488",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "1888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6574932394197479
+        },
+        {
+          "number": "888",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "3288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6574932394197479
+        },
+        {
+          "number": "1888",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "4288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6574932394197479
+        },
+        {
+          "number": "388",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "2088",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6561667963412002
+        },
+        {
+          "number": "688",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "3888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6574932394197479
+        },
+        {
+          "number": "988",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "5688",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6574932394197479
+        }
+      ],
+      "minimumPhoneSize": 9.75,
+      "smallestText": {
+        "text": "兴安电竞",
+        "role": "copy",
+        "group": "brand",
+        "lineGroup": "firearms-social-brand-61",
+        "x": 65,
+        "y": 46.38085900000001,
+        "width": 119.3847657,
+        "height": 29.238281999999998,
+        "cy": 61.00000000000001,
+        "baseline": 71.41503868000001,
+        "effectiveSize": 30,
+        "requestedSize": 30,
+        "font": "Microsoft YaHei UI",
+        "fontWeight": 700
+      }
+    },
+    {
+      "id": "revolver-cover",
+      "pngDimensions": [
+        3200,
+        2000
+      ],
+      "overlaps": 0,
+      "outside": [],
+      "groups": [
+        {
+          "id": "brand",
+          "ink": [
+            343.47167963,
+            133.5839838,
+            183.0566407400001,
+            44.8320324
+          ],
+          "safe": [
+            215,
+            126,
+            440,
+            60
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "version",
+          "ink": [
+            346.2597657,
+            425.966798,
+            177.4804686,
+            58.06640399999998
+          ],
+          "safe": [
+            163,
+            424,
+            544,
+            62
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "tagline",
+          "ink": [
+            313.004882695,
+            539.66552705,
+            233.99023461000002,
+            96.76074159999996
+          ],
+          "safe": [
+            235,
+            517,
+            390,
+            142
+          ],
+          "inside": true,
+          "verticalOffset": 0.04589785000007396,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "platform",
+          "ink": [
+            276.157466,
+            690.02490315,
+            300.685068,
+            41.9501937
+          ],
+          "safe": [
+            157,
+            687,
+            539,
+            48
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "mode",
+          "ink": [
+            327.29736336,
+            790.0332026,
+            209.40527328000002,
+            40.93359480000004
+          ],
+          "safe": [
+            243,
+            787,
+            378,
+            47
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        }
+      ],
+      "amountGroups": [],
+      "minimumPhoneSize": 10.2375,
+      "smallestText": {
+        "text": "绝密 / 机密",
+        "role": "cover-mode",
+        "group": "mode",
+        "lineGroup": "revolver-cover-mode-single",
+        "x": 327.29736336,
+        "y": 790.0332026,
+        "width": 209.40527328,
+        "height": 40.933594799999995,
+        "cy": 810.5,
+        "baseline": 825.204101048,
+        "effectiveSize": 42,
+        "requestedSize": 42,
+        "font": "Microsoft YaHei UI",
+        "fontWeight": 400
+      }
+    },
+    {
+      "id": "revolver-social",
+      "pngDimensions": [
+        3000,
+        4000
+      ],
+      "overlaps": 0,
+      "outside": [],
+      "groups": [
+        {
+          "id": "brand",
+          "ink": [
+            65,
+            46.38085900000001,
+            119.3847657,
+            29.238282000000005
+          ],
+          "safe": [
+            58,
+            30,
+            650,
+            55
+          ],
+          "inside": true,
+          "verticalOffset": 3.500000000000014,
+          "horizontalOffset": -258.30761715
+        },
+        {
+          "id": "version",
+          "ink": [
+            129.96582037000002,
+            279.2412118,
+            136.06835926000002,
+            44.517576399999996
+          ],
+          "safe": [
+            64,
+            265,
+            268,
+            73
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 2.842170943040401e-14
+        },
+        {
+          "id": "tagline",
+          "ink": [
+            357,
+            281.02490315,
+            378.916516,
+            41.9501937
+          ],
+          "safe": [
+            355,
+            269,
+            786,
+            64
+          ],
+          "inside": true,
+          "verticalOffset": 1,
+          "horizontalOffset": -201.541742
+        },
+        {
+          "id": "platform",
+          "ink": [
+            459.16016,
+            373.851562,
+            281.6796800000001,
+            39.296876
+          ],
+          "safe": [
+            58,
+            361,
+            1084,
+            65
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "mode-secret",
+          "ink": [
+            226.139647,
+            471.71875,
+            180.72070600000004,
+            44.5625
+          ],
+          "safe": [
+            58,
+            456,
+            517,
+            76
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "price-secret-0",
+          "ink": [
+            85,
+            555.7255851,
+            437.40046940800005,
+            166.67086079
+          ],
+          "safe": [
+            82,
+            553,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.0610154949999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "price-secret-1",
+          "ink": [
+            85,
+            763.7255851,
+            437.40046940800005,
+            166.91695454
+          ],
+          "safe": [
+            82,
+            761,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "price-secret-2",
+          "ink": [
+            85,
+            971.7255851,
+            437.40046940800005,
+            166.91695454
+          ],
+          "safe": [
+            82,
+            969,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "price-secret-3",
+          "ink": [
+            85,
+            1179.7255851,
+            437.40046940800005,
+            166.91695454
+          ],
+          "safe": [
+            82,
+            1177,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765295999975
+        },
+        {
+          "id": "mode-confidential",
+          "ink": [
+            793.16210926,
+            471.71875,
+            180.67578147999996,
+            44.5625
+          ],
+          "safe": [
+            625,
+            456,
+            517,
+            76
+          ],
+          "inside": true,
+          "verticalOffset": 0,
+          "horizontalOffset": 0
+        },
+        {
+          "id": "price-confidential-0",
+          "ink": [
+            652,
+            555.7255851,
+            437.40046940799994,
+            166.67086079
+          ],
+          "safe": [
+            649,
+            553,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.0610154949999924,
+          "horizontalOffset": -12.799765296000032
+        },
+        {
+          "id": "price-confidential-1",
+          "ink": [
+            652,
+            763.7255851,
+            437.40046940799994,
+            166.91695454
+          ],
+          "safe": [
+            649,
+            761,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765296000032
+        },
+        {
+          "id": "price-confidential-2",
+          "ink": [
+            652,
+            971.7255851,
+            437.40046940799994,
+            166.91695454
+          ],
+          "safe": [
+            649,
+            969,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765296000032
+        },
+        {
+          "id": "price-confidential-3",
+          "ink": [
+            652,
+            1179.7255851,
+            437.40046940799994,
+            166.91695454
+          ],
+          "safe": [
+            649,
+            1177,
+            469,
+            170
+          ],
+          "inside": true,
+          "verticalOffset": 1.1840623699999924,
+          "horizontalOffset": -12.799765296000032
+        },
+        {
+          "id": "core",
+          "ink": [
+            294.54492120000003,
+            1419.13720675,
+            610.9101575999998,
+            98.59912205
+          ],
+          "safe": [
+            85,
+            1415,
+            1030,
+            110
+          ],
+          "inside": true,
+          "verticalOffset": -1.5632322250000925,
+          "horizontalOffset": 0
+        }
+      ],
+      "amountGroups": [
+        {
+          "number": "288",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "488",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "1888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "888",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "3288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 2.2737367544323206e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "1688",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "4288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 2.2737367544323206e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "188",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "288",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "1888",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 1.1368683772161603e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "488",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "3288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 2.2737367544323206e-13,
+          "heightRatio": 0.657493239419748
+        },
+        {
+          "number": "888",
+          "unit": "r",
+          "gap": 9,
+          "baselineDifference": 0,
+          "heightRatio": 0.6669945858278957
+        },
+        {
+          "number": "4288",
+          "unit": "w",
+          "gap": 9,
+          "baselineDifference": 2.2737367544323206e-13,
+          "heightRatio": 0.657493239419748
+        }
+      ],
+      "minimumPhoneSize": 9.75,
+      "smallestText": {
+        "text": "兴安电竞",
+        "role": "copy",
+        "group": "brand",
+        "lineGroup": "revolver-social-brand-61",
+        "x": 65,
+        "y": 46.38085900000001,
+        "width": 119.3847657,
+        "height": 29.238281999999998,
+        "cy": 61.00000000000001,
+        "baseline": 71.41503868000001,
+        "effectiveSize": 30,
+        "requestedSize": 30,
+        "font": "Microsoft YaHei UI",
+        "fontWeight": 700
+      }
+    }
+  ],
+  "business": [
+    {
+      "product": "dogtag",
+      "mode": "secret",
+      "tier": "体验版",
+      "price": 288,
+      "guarantee": 888,
+      "baseScore": 10
+    },
+    {
+      "product": "dogtag",
+      "mode": "secret",
+      "tier": "基础版",
+      "price": 488,
+      "guarantee": 1888,
+      "baseScore": 20
+    },
+    {
+      "product": "dogtag",
+      "mode": "secret",
+      "tier": "高级版",
+      "price": 888,
+      "guarantee": 3288,
+      "baseScore": 40
+    },
+    {
+      "product": "dogtag",
+      "mode": "secret",
+      "tier": "豪华版",
+      "price": 1888,
+      "guarantee": 4288,
+      "baseScore": 60
+    },
+    {
+      "product": "dogtag",
+      "mode": "confidential",
+      "tier": "基础版",
+      "price": 188,
+      "guarantee": 1088,
+      "baseScore": 10
+    },
+    {
+      "product": "dogtag",
+      "mode": "confidential",
+      "tier": "高级版",
+      "price": 288,
+      "guarantee": 1688,
+      "baseScore": 20
+    },
+    {
+      "product": "dogtag",
+      "mode": "confidential",
+      "tier": "豪华版",
+      "price": 488,
+      "guarantee": 2888,
+      "baseScore": 30
+    },
+    {
+      "product": "firearms",
+      "mode": "secret",
+      "tier": "基础版",
+      "price": 488,
+      "guarantee": 1888,
+      "count": 10,
+      "guns": [
+        "M7",
+        "ASVAL",
+        "M14",
+        "MK47",
+        "AWM",
+        "K437"
+      ]
+    },
+    {
+      "product": "firearms",
+      "mode": "secret",
+      "tier": "高级版",
+      "price": 888,
+      "guarantee": 3288,
+      "count": 20,
+      "guns": [
+        "M7",
+        "ASVAL",
+        "M14",
+        "MK47",
+        "AWM"
+      ]
+    },
+    {
+      "product": "firearms",
+      "mode": "secret",
+      "tier": "豪华版",
+      "price": 1888,
+      "guarantee": 4288,
+      "count": 40,
+      "guns": [
+        "M7",
+        "ASVAL",
+        "M14",
+        "AWM"
+      ]
+    },
+    {
+      "product": "firearms",
+      "mode": "confidential",
+      "tier": "基础版",
+      "price": 388,
+      "guarantee": 2088,
+      "count": 10,
+      "guns": [
+        "M7",
+        "ASVAL",
+        "M14",
+        "MK47",
+        "K437",
+        "KC17",
+        "MDR",
+        "RM277",
+        "SR25"
+      ]
+    },
+    {
+      "product": "firearms",
+      "mode": "confidential",
+      "tier": "高级版",
+      "price": 688,
+      "guarantee": 3888,
+      "count": 20,
+      "guns": [
+        "M7",
+        "ASVAL",
+        "M14",
+        "MK47",
+        "K437",
+        "KC17",
+        "SR25"
+      ]
+    },
+    {
+      "product": "firearms",
+      "mode": "confidential",
+      "tier": "豪华版",
+      "price": 988,
+      "guarantee": 5688,
+      "count": 30,
+      "guns": [
+        "M7",
+        "ASVAL",
+        "M14",
+        "MK47",
+        "K437",
+        "KC17"
+      ]
+    },
+    {
+      "product": "revolver",
+      "mode": "secret",
+      "tier": "体验版",
+      "price": 288,
+      "guarantee": 888,
+      "baseScore": 5
+    },
+    {
+      "product": "revolver",
+      "mode": "secret",
+      "tier": "基础版",
+      "price": 488,
+      "guarantee": 1888,
+      "baseScore": 10
+    },
+    {
+      "product": "revolver",
+      "mode": "secret",
+      "tier": "高级版",
+      "price": 888,
+      "guarantee": 3288,
+      "baseScore": 20
+    },
+    {
+      "product": "revolver",
+      "mode": "secret",
+      "tier": "豪华版",
+      "price": 1688,
+      "guarantee": 4288,
+      "baseScore": 40
+    },
+    {
+      "product": "revolver",
+      "mode": "confidential",
+      "tier": "体验版",
+      "price": 188,
+      "guarantee": 888,
+      "baseScore": 5
+    },
+    {
+      "product": "revolver",
+      "mode": "confidential",
+      "tier": "基础版",
+      "price": 288,
+      "guarantee": 1888,
+      "baseScore": 10
+    },
+    {
+      "product": "revolver",
+      "mode": "confidential",
+      "tier": "高级版",
+      "price": 488,
+      "guarantee": 3288,
+      "baseScore": 20
+    },
+    {
+      "product": "revolver",
+      "mode": "confidential",
+      "tier": "豪华版",
+      "price": 888,
+      "guarantee": 4288,
+      "baseScore": 40
+    }
+  ]
+}

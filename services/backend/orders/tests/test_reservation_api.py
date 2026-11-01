@@ -13,6 +13,7 @@
 from datetime import timedelta
 
 from django.utils import timezone
+from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from club_accounts.models import ClubAccount
@@ -23,6 +24,7 @@ from club_accounts.services import (
 from orders.models import Order, Reservation, ReservationStatusLog
 from orders.tests.factories import (
     make_provider,
+    make_console_user,
     make_service,
     make_user,
     make_wallet,
@@ -65,9 +67,11 @@ class ReservationApiTestBase(APITestCase):
             account=self.provider_account,
         )
 
-        self.staff = make_user(role='OPERATOR')
+        self.staff = make_console_user(['order:view', 'order:dispatch', 'order:cancel'])
         self.staff_account = get_or_create_account_for_legacy_user(self.staff)
         link_legacy_relations(self.staff, self.staff_account)
+        self.staff.admin_membership.account = self.staff_account
+        self.staff.admin_membership.save(update_fields=['account'])
 
         self.service = make_service(price=1000)
         self.client.force_authenticate(self.boss)
@@ -88,6 +92,38 @@ class ReservationApiTestBase(APITestCase):
         res = self.client.post(LIST_URL, self.create_payload(**overrides))
         self.assertEqual(res.data['code'], 0, res.data.get('msg'))
         return Reservation.objects.get(id=res.data['data']['id'])
+
+
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
+class ReservationStaffBusinessAccountTest(ReservationApiTestBase):
+    def test_staff_books_and_converts_for_actual_boss(self):
+        from club_accounts.tokens import issue_account_tokens
+        self.client.force_authenticate(user=None)
+        def login(account):
+            token, _ = issue_account_tokens(account)
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        login(self.staff_account)
+        created = self.client.post(LIST_URL, self.create_payload(customer_account_id=self.boss_account.pk), format='json')
+        self.assertEqual(created.data['code'], 0, created.data)
+        reservation_id = created.data['data']['id']
+        login(self.provider_account)
+        self.assertEqual(self.client.post(f'{LIST_URL}{reservation_id}/confirm/', {}, format='json').data['code'], 0)
+        login(self.staff_account)
+        quote = self.client.get(f'{LIST_URL}{reservation_id}/quote/')
+        self.assertEqual(quote.data['code'], 0, quote.data)
+        data = quote.data['data']
+        result = self.client.post(f'{LIST_URL}{reservation_id}/convert/', {
+            'client_request_id': 'staff-business-reservation', 'expected_amount': data['amount'],
+            'expected_service': data['service'],
+        }, format='json')
+        self.assertEqual(result.data['code'], 0, result.data)
+        order = Order.objects.get(pk=result.data['data']['order']['id'])
+        self.assertEqual((order.customer_account_id, order.provider_account_id),
+                         (self.boss_account.pk, self.provider_account.pk))
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 98000)
+        login(self.boss_account)
+        detail = self.client.get(f'{LIST_URL}{reservation_id}/')
+        self.assertEqual(detail.data['data']['order'], order.pk)
 
 
 class ReservationCreateApiTest(ReservationApiTestBase):
@@ -118,8 +154,40 @@ class ReservationCreateApiTest(ReservationApiTestBase):
 
     def test_staff_can_create_on_behalf(self):
         self.client.force_authenticate(self.staff)
-        res = self.client.post(LIST_URL, self.create_payload())
+        res = self.client.post(LIST_URL, self.create_payload(customer_account_id=self.boss_account.pk))
         self.assertEqual(res.data['code'], 0)
+        reservation = Reservation.objects.get(pk=res.data['data']['id'])
+        self.assertEqual((reservation.customer_id, reservation.customer_account_id),
+                         (self.boss.pk, self.boss_account.pk))
+        self.assertEqual(reservation.status_logs.get(action='CREATE').operator_account_id, self.staff_account.pk)
+        self.client.force_authenticate(self.provider)
+        self.assertEqual(self.client.post(f'{LIST_URL}{reservation.pk}/confirm/', {}).data['code'], 0)
+        self.client.force_authenticate(self.staff)
+        result = self.client.post(f'{LIST_URL}{reservation.pk}/convert/', {'client_request_id': 'staff-reservation-flow'})
+        self.assertEqual(result.data['code'], 0, result.data)
+        order = Order.objects.get(pk=result.data['data']['order']['id'])
+        self.assertEqual((order.customer_id, order.customer_account_id, order.provider_account_id),
+                         (self.boss.pk, self.boss_account.pk, self.provider_account.pk))
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 98000)
+
+    def test_staff_must_choose_a_real_boss(self):
+        self.client.force_authenticate(self.staff)
+        missing = self.client.post(LIST_URL, self.create_payload())
+        self.assertEqual(missing.data['code'], 400)
+        self.assertIn('老板', missing.data['msg'])
+        wrong_role = self.client.post(LIST_URL, self.create_payload(customer_account_id=self.provider_account.pk))
+        self.assertEqual(wrong_role.data['code'], 400)
+        self.assertIn('老板', wrong_role.data['msg'])
+        self.assertFalse(Reservation.objects.exists())
+
+    def test_boss_cannot_create_reservation_for_another_boss(self):
+        other = make_user()
+        other_account = get_or_create_account_for_legacy_user(other)
+        link_legacy_relations(other, other_account)
+        self.client.force_authenticate(self.boss)
+        response = self.client.post(LIST_URL, self.create_payload(customer_account_id=other_account.pk))
+        self.assertEqual(response.data['code'], 400)
+        self.assertFalse(Reservation.objects.exists())
 
     def test_rejects_unknown_provider(self):
         res = self.client.post(
@@ -398,6 +466,39 @@ class ReservationConvertApiTest(ReservationApiTestBase):
                 action=ReservationStatusLog.Action.CONVERT,
             ).exists()
         )
+
+    def test_quote_and_confirmed_amount_follow_actual_service_price(self):
+        quote_url = f'{LIST_URL}{self.reservation.id}/quote/'
+        quote = self.client.get(quote_url)
+        self.assertEqual(quote.data['code'], 0, quote.data)
+        self.assertEqual((quote.data['data']['amount'], quote.data['data']['wallet_balance']), (2000, 100000))
+        self.service.price = 1500
+        self.service.save(update_fields=['price'])
+        stale = self.client.post(self.convert_url, {'client_request_id': 'quoted-reservation', 'expected_amount': 2000})
+        self.assertEqual(stale.data['code'], 409, stale.data)
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
+        self.assertFalse(Order.objects.exists())
+        updated = self.client.get(quote_url)
+        self.assertEqual(updated.data['data']['amount'], 3000)
+        result = self.client.post(self.convert_url, {'client_request_id': 'quoted-reservation', 'expected_amount': 3000})
+        self.assertEqual(result.data['code'], 0, result.data)
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 97000)
+
+    def test_same_price_service_change_requires_fresh_reservation_confirmation(self):
+        quote_url = f'{LIST_URL}{self.reservation.id}/quote/'
+        quote = self.client.get(quote_url).data['data']
+        self.service.name = '变更后的服务'
+        self.service.save(update_fields=['name'])
+        stale = self.client.post(self.convert_url, {'client_request_id': 'service-terms-reservation',
+                                 'expected_amount': quote['amount'], 'expected_service': quote['service']}, format='json')
+        self.assertEqual(stale.data['code'], 409, stale.data)
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
+        self.assertFalse(Order.objects.exists())
+        fresh = self.client.get(quote_url).data['data']
+        result = self.client.post(self.convert_url, {'client_request_id': 'service-terms-reservation',
+                                  'expected_amount': fresh['amount'], 'expected_service': fresh['service']}, format='json')
+        self.assertEqual(result.data['code'], 0, result.data)
+        self.assertEqual(Order.objects.get(pk=result.data['data']['order']['id']).service_name_snapshot, '变更后的服务')
 
     def test_convert_requires_confirmed(self):
         fresh = self.create_reservation_via_api(

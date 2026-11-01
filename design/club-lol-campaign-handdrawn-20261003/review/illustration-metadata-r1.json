@@ -1,0 +1,36 @@
+[
+  {
+    "id": "01-ez-lux-duo",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaPixelCounts": {
+      "transparent": 573748,
+      "semi": 167266,
+      "solid": 831850
+    },
+    "visibleBoundsAlpha128": {
+      "minX": 69,
+      "minY": 6,
+      "maxX": 1526,
+      "maxY": 1015
+    }
+  },
+  {
+    "id": "02-ez-lux-victory",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "alphaPixelCounts": {
+      "transparent": 598931,
+      "semi": 159476,
+      "solid": 814457
+    },
+    "visibleBoundsAlpha128": {
+      "minX": 91,
+      "minY": 15,
+      "maxX": 1499,
+      "maxY": 1007
+    }
+  }
+]

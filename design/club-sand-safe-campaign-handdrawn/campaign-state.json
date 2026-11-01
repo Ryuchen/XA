@@ -1,0 +1,238 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 沙保连连看",
+  "stage": "delivered",
+  "revision": "sand-safe-r9-standard-cover",
+  "contentVerified": true,
+  "contentVerificationBasis": "逐项核对2026-09-29本轮用户文字；十档价目和四项须知全部结构化保存。没有添加其他玩法规则。",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "技能内已确认的奶白、雾蓝、海军蓝与暖金配色，以及男性蜂医、灰鼠角色"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在主题插画交付后回复「继续」；2026-09-29",
+      "file": "01-illustrations/sand-safe-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "authorized-revision-and-typesetting",
+      "basis": "用户明确要求额外增加沙色保险和三幻神Q版点缀，丰富底图后再排版，然后继续；2026-09-29。按本轮授权直接完成，不再重复请求底图确认。"
+    },
+    "platformSplit": {
+      "status": "authorized",
+      "basis": "用户明确要求端游和手游分开生成两个图。"
+    },
+    "backgroundColor": {
+      "status": "authorized",
+      "basis": "用户要求底图背景颜色改成和巴克什的黄沙一致。直接完成调色与两平台成图。"
+    },
+    "coverAndLootWording": {
+      "status": "authorized",
+      "basis": "用户要求补封面，单局物资处简化为大于多少保底，不再次强调端游/手游。"
+    },
+    "coverAdvertRegeneration": {
+      "status": "authorized",
+      "basis": "用户再次调用兴安海报技能，明确要求重新生成封面和广告页；使用本轮刚重新制作的封面，补制端游/手游广告。"
+    },
+    "noticeTypography": {
+      "status": "authorized",
+      "basis": "用户调用兴安海报技能，要求下单须知左对齐并检查整体字体排版。"
+    },
+    "fourPieceSuite": {
+      "status": "authorized",
+      "basis": "用户明确要求重新生成端游和手游的价目海报、合并的广告页、封面。广告与封面各一张，套图四张。"
+    },
+    "standardCoverRedesign": {
+      "status": "authorized",
+      "basis": "用户要求封面完全重新生成，使用技能标准参考及其他历史记录；据此重绘横版封面并完成排版。"
+    }
+  },
+  "plannedDeliverables": [
+    "端游绝密价目海报",
+    "手游绝密价目海报",
+    "合并端游/手游的绝密广告页",
+    "共用16:9横版封面",
+    "四张PNG、四张可改文字SVG、四张转曲SVG",
+    "成品包与查看页"
+  ],
+  "nextStep": "本轮标准横版封面完成；后续按用户新要求修改。",
+  "layoutInvariants": [
+    "仅绝密模式",
+    "端游与手游两张独立海报，每张五档价格",
+    "整条海军蓝价格表头",
+    "数字右对齐与固定r/w列",
+    "单局成功撤离且三项同时达成",
+    "严格大于端游888w/手游688w",
+    "炸单门槛严格低于300w",
+    "普通说明常规字重，选择性强调条件与数值",
+    "不添加未提供的保底、失败计数口径、地图限制、优惠、联系方式或二维码"
+  ],
+  "illustration": {
+    "provider": "built-in image_gen",
+    "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0ebcb-df5a-79a3-8de8-18f6993ec3d9\\exec-0e4ae0d7-5edb-4b79-93d6-2c889d81f9ee.png",
+    "file": "01-illustrations/sand-safe-medic-mouse-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "alpha": {
+      "min": 0,
+      "max": 254,
+      "transparentPixels": 533768,
+      "nearOpaquePixels": 995485,
+      "totalPixels": 1572864,
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "prompt": "01-illustrations/prompts.md",
+    "review": "review/illustration-overview.png"
+  },
+  "dataAudit": {
+    "prices": "10/10 checked against original user text",
+    "reward": "1688w checked",
+    "successConditions": "single successful extraction AND all 3 objectives; >888w desktop, >688w mobile",
+    "brokenOrder": "successful extraction AND <300w; consecutive count interrupted, no added guarantee"
+  },
+  "layout": {
+    "zones": "02-layouts/layout-zones.json",
+    "guide": "02-layouts/text-free-layout-guide.png",
+    "canvas": {
+      "width": 1024,
+      "height": 2304,
+      "ratio": "4:9",
+      "reason": "每张独立平台海报含五档价目、奖励、三项目标和四组须知；390px手机宽正文可读。"
+    }
+  },
+  "background": {
+    "provider": "built-in image_gen",
+    "source": "C:/Users/chenh/.codex/generated_images/01a0ebcb-df5a-79a3-8de8-18f6993ec3d9/exec-29c98137-3963-41ac-96bb-5d7c10553443.png",
+    "file": "03-backgrounds/poster-bakhsh-sand-v3.png",
+    "native": {
+      "width": 836,
+      "height": 1881
+    },
+    "measurements": "02-layouts/final-background-measurements.json",
+    "prompt": "03-backgrounds/bakhsh-sand-edit-prompt-v3.md",
+    "palette": "暖黄沙、赭金远景、浅沙色纸面；海军蓝文字/表头"
+  },
+  "decoration": {
+    "objects": [
+      "沙色保险",
+      "万金泪冠",
+      "纵横",
+      "天圆地方"
+    ],
+    "purpose": "decorative-only",
+    "references": "references/decor-references.md",
+    "prompt": "03-backgrounds/decor-edit-prompt-v2.md"
+  },
+  "typography": {
+    "font": "Microsoft YaHei UI",
+    "regularBody": true,
+    "selectiveBold": true,
+    "bodySize": 31,
+    "plannedPhoneEquivalentPx": 14.461722488038278,
+    "numberFont": "Bahnschrift",
+    "titleFont": "Noto Sans SC Black",
+    "noticeAlignment": "left",
+    "noticeLeft": 72
+  },
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "mobile-absolute",
+    "combined-advert",
+    "combined-cover"
+  ],
+  "visualQA": {
+    "status": "passed",
+    "revision": "sand-safe-r9-standard-cover",
+    "basis": "打开完全重绘封面实际最终PNG、390px预览、标题/版本及奖励局部，修正标题安全区和鼠尾间距后复查通过；其余三页未变，沿用r8。",
+    "record": "review/visual-qa.md",
+    "audit": "review/typesetting-audit.json"
+  },
+  "finalSummary": "当前四张：端游价目、手游价目、合并广告、全新标准16:9横版封面。封面参考技能标准及历史封面完整重绘，所有文案在所属左侧文字区居中，突出许愿二选一及条件1688w奖励。",
+  "coverBackground": {
+    "provider": "built-in image_gen",
+    "source": "C:/Users/chenh/.codex/generated_images/01a0ebcb-df5a-79a3-8de8-18f6993ec3d9/exec-10b2b4bd-000c-42a3-af14-abdd1149e93f.png",
+    "file": "03-backgrounds/cover-standard-horizontal-v2.png",
+    "native": {
+      "width": 1672,
+      "height": 941
+    },
+    "prompt": "03-backgrounds/cover-standard-redraw-prompt-v2.md",
+    "reference": "references/standard-cover-references.json",
+    "format": "16:9",
+    "purpose": "完全重绘，技能标准横版构图及历史美术参考，非旧竖版封面改字"
+  },
+  "advertBackground": {
+    "provider": "built-in image_gen",
+    "source": "C:/Users/chenh/.codex/generated_images/01a0ebcb-df5a-79a3-8de8-18f6993ec3d9/exec-4a92d462-10a4-4603-873b-30ba43bf8b27.png",
+    "file": "03-backgrounds/advert-bakhsh-v2.png",
+    "native": {
+      "width": 1086,
+      "height": 1448
+    },
+    "prompt": "03-backgrounds/advert-bakhsh-refine-prompt-v2.md"
+  },
+  "finalDeliverables": {
+    "pageCount": 4,
+    "pages": [
+      {
+        "id": "desktop-absolute",
+        "label": "兴安电竞 · 沙保连连看 · 端游 · 绝密价格海报",
+        "png": "output/png/desktop-absolute.png",
+        "outlinedSVG": "output/svg-outlined/desktop-absolute.svg",
+        "editableSVG": "output/svg-editable/desktop-absolute.svg",
+        "preview": "review/desktop-absolute.png",
+        "width": 3200,
+        "height": 7200,
+        "nativeWidth": 836,
+        "nativeHeight": 1881
+      },
+      {
+        "id": "mobile-absolute",
+        "label": "兴安电竞 · 沙保连连看 · 手游 · 绝密价格海报",
+        "png": "output/png/mobile-absolute.png",
+        "outlinedSVG": "output/svg-outlined/mobile-absolute.svg",
+        "editableSVG": "output/svg-editable/mobile-absolute.svg",
+        "preview": "review/mobile-absolute.png",
+        "width": 3200,
+        "height": 7200,
+        "nativeWidth": 836,
+        "nativeHeight": 1881
+      },
+      {
+        "id": "combined-advert",
+        "label": "兴安电竞 · 沙保连连看 · 端游 / 手游 · 绝密广告页",
+        "png": "output/png/combined-advert.png",
+        "outlinedSVG": "output/svg-outlined/combined-advert.svg",
+        "editableSVG": "output/svg-editable/combined-advert.svg",
+        "preview": "review/combined-advert.png",
+        "width": 2400,
+        "height": 3200,
+        "nativeWidth": 1086,
+        "nativeHeight": 1448
+      },
+      {
+        "id": "combined-cover",
+        "label": "兴安电竞 · 沙保连连看 · 端游 / 手游 · 绝密封面",
+        "png": "output/png/combined-cover.png",
+        "outlinedSVG": "output/svg-outlined/combined-cover.svg",
+        "editableSVG": "output/svg-editable/combined-cover.svg",
+        "preview": "review/combined-cover.png",
+        "width": 3200,
+        "height": 1800,
+        "nativeWidth": 1672,
+        "nativeHeight": 941
+      }
+    ],
+    "package": "campaign-sand-safe-r9-standard-cover.zip",
+    "review": "review/index.html",
+    "suitePreview": "review/suite-preview.png",
+    "changedPage": "combined-cover"
+  }
+}

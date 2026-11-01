@@ -1,0 +1,162 @@
+{
+  "source": "本轮用户文字、9格仅加188w及三幻神整单一次确认",
+  "prices": [
+    {
+      "platform": "端游",
+      "rows": [
+        {
+          "priceR": 688,
+          "lootW": 2188,
+          "cardCount": 1,
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 8
+            },
+            {
+              "name": "普通大保险",
+              "count": 10
+            }
+          ]
+        },
+        {
+          "priceR": 988,
+          "lootW": 3288,
+          "cardCount": 2,
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 10
+            },
+            {
+              "name": "普通大保险",
+              "count": 20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "platform": "手游",
+      "rows": [
+        {
+          "priceR": 588,
+          "lootW": 2188,
+          "cardCount": 1,
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 8
+            },
+            {
+              "name": "普通大保险",
+              "count": 10
+            }
+          ]
+        },
+        {
+          "priceR": 888,
+          "lootW": 3288,
+          "cardCount": 2,
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 10
+            },
+            {
+              "name": "普通大保险",
+              "count": 20
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "minimumBodySize": 29,
+  "phoneEquivalentMinimumBodySize": 13.980222496909764,
+  "shrinking": [],
+  "overlaps": [],
+  "propCollisions": [],
+  "coverAudit": {
+    "shrinking": [],
+    "overlaps": [],
+    "textCenters": [
+      {
+        "role": "cover-platform",
+        "text": "端游 / 手游 · 绝密",
+        "centerX": 326,
+        "cy": 585
+      },
+      {
+        "role": "cover-service",
+        "text": "刷卡 · 开保",
+        "centerX": 326,
+        "cy": 675
+      },
+      {
+        "role": "cover-guarantee",
+        "text": "累计物资保底",
+        "centerX": 326,
+        "cy": 735
+      }
+    ],
+    "forbiddenCopy": []
+  },
+  "bodyMargins": [
+    {
+      "text": "仅成功撤离的对局计次；撤离失败时，",
+      "left": 28,
+      "right": 228.5039048,
+      "effectiveSize": 29
+    },
+    {
+      "text": "刷卡、沙保和普通大保险均不计次数。",
+      "left": 28,
+      "right": 228.41894639999998,
+      "effectiveSize": 29
+    },
+    {
+      "text": "达标才计入总保底；否则物资白吃，",
+      "left": 28,
+      "right": 257.6455089,
+      "effectiveSize": 29
+    },
+    {
+      "text": "但已开的卡、沙保及普通大保险仍计次数。",
+      "left": 28,
+      "right": 170.41894639999998,
+      "effectiveSize": 29
+    },
+    {
+      "text": "红只要成功带出就加保底，",
+      "left": 28,
+      "right": 373.7871101,
+      "effectiveSize": 29
+    },
+    {
+      "text": "无论撤离成功或失败。",
+      "left": 28,
+      "right": 431.56054673,
+      "effectiveSize": 29
+    }
+  ],
+  "frequencyScopeConfirmed": true,
+  "propsPerPage": [
+    {
+      "id": "cover",
+      "count": 4
+    },
+    {
+      "id": "desktop-absolute",
+      "count": 11
+    },
+    {
+      "id": "mobile-absolute",
+      "count": 11
+    },
+    {
+      "id": "social",
+      "count": 7
+    }
+  ]
+}

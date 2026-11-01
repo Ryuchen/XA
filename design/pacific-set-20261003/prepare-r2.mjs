@@ -1,0 +1,40 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+const project=String.raw`C:\Users\chenh\Documents\ChatGPT\兴安电竞玩法\环太平洋-四版价目广告封面-20261003`;
+const here=path.dirname(fileURLToPath(import.meta.url));
+const read=async rel=>JSON.parse(await fs.readFile(path.join(project,rel),'utf8'));
+const write=async(rel,v)=>fs.writeFile(path.join(project,rel),JSON.stringify(v,null,2));
+const c=await read('content.json'),s=await read('campaign-state.json');
+if(s.revision!=='r1')throw new Error('当前版本不再是r1，请先核对');
+const archive=path.join(project,'archive/r1');await fs.mkdir(archive,{recursive:true});
+const snapshot=['content.json','campaign-state.json','layout.json','output/manifest.json','review/visual-qa.md',...['mobile-secret','mobile-absolute'].flatMap(id=>['output/png/'+id+'.png','output/svg-outlined/'+id+'.svg','output/svg-editable/'+id+'.svg','review/'+id+'.png','review/'+id+'-mobile390.png','review/'+id+'-text-bounds.json','review/'+id+'-text-overlaps.json','review/'+id+'-price-detail.png','review/'+id+'-rules-detail.png'])];
+for(const rel of snapshot){const dest=path.join(archive,rel);await fs.mkdir(path.dirname(dest),{recursive:true});await fs.copyFile(path.join(project,rel),dest);}
+const changes=[{map:1,tier:3,from:1168,to:968},{map:2,tier:3,from:1368,to:868},{map:0,tier:4,from:2668,to:1668},{map:1,tier:4,from:3068,to:1868},{map:2,tier:4,from:3268,to:1568}];
+const t=c.tiers.find(t=>t.id==='mobile-secret');
+for(const x of changes){if(t.maps[x.map].prices[x.tier]!==x.from)throw new Error('旧价不符');t.maps[x.map].prices[x.tier]=x.to;}
+t.initialPriceReduction=t.priceReduction;t.priceReduction=null;
+t.pricingBasis='r1由端游绝密各档减220r；r2根据用户明确指定五处售价覆盖，未覆盖档位继续r1，不再全部套用统一减价公式';
+t.priceOverrides=changes.map(x=>({map:t.maps[x.map].name,mapIndex:x.map,tier:c.tierNames[x.tier],tierIndex:x.tier,previousPrice:x.from,price:x.to,revision:'r2'}));
+const abs=c.tiers.find(t=>t.id==='mobile-absolute');
+const absChanges=[{map:0,tier:4,from:2688,to:2488},{map:1,tier:4,from:3088,to:2688},{map:2,tier:4,from:3288,to:2888}];
+for(const x of absChanges){if(abs.maps[x.map].prices[x.tier]!==x.from)throw new Error('手游绝密旧价不符');abs.maps[x.map].prices[x.tier]=x.to;}
+abs.initialPriceReduction=abs.priceReduction;abs.priceReduction=null;
+abs.pricingBasis='r1由端游绝密各档减200r；r2根据用户明确指定三处全点售价覆盖，未覆盖档位继续r1，不再全部套用统一减价公式；保底仍按原绝密减400w';
+abs.priceOverrides=absChanges.map(x=>({map:abs.maps[x.map].name,mapIndex:x.map,tier:c.tierNames[x.tier],tierIndex:x.tier,previousPrice:x.from,price:x.to,revision:'r2'}));
+const basis='用户修订手游机密：航天基地/核电站5点豪华售价968r/868r；另明确回复1668r/1868r/1568r分别指巴克什/航天基地/核电站豪华版·全点。用户追加手游绝密全点巴克什/航天基地/潮汐监狱售价2488r/2688r/2888r。';
+c.sources.push({type:'user-price-correction',date:'2026-10-03',revision:'r2',basis,changes:[...t.priceOverrides.map(x=>({variant:t.id,...x})),...abs.priceOverrides.map(x=>({variant:abs.id,...x}))]});
+c.confirmations.mobileSecretR2Prices=true;c.confirmations.mobileAbsoluteR2Prices=true;
+s.revision='r2';s.stage='vector-revision';s.revisionScope={affectedPageIds:['mobile-secret','mobile-absolute'],basis,priceChanges:c.sources.at(-1).changes};
+s.contentVerificationBasis+=' '+basis;s.priceSourceByPlatform.mobile='手游两版在r1基础上按用户本轮八处指定售价更新，其余价格沿用；手游绝密保底仍减400w，机密仍原绝密保底。';
+s.finalVisualQA={version:'r2',passed:false,report:'review/visual-qa.md',geometry:'review/layout-and-data-checks-r2.json',business:'review/business-source-checks-r2.json',hashes:'review/final-file-hashes-r2.json',contactSheet:'review/final-contact-sheet-r2.png'};
+s.deliveryFiles.pngZip='环太平洋-六张海报-PNG-r2.zip';s.deliveryFiles.sourceZip='campaign-r2.zip';
+await write('content.json',c);await write('campaign-state.json',s);
+const {makeLayout}=await import(pathToFileURL(path.join(project,'layout-adapter.mjs')).href);const plan=makeLayout(c);await write('layout.json',plan);
+let checker=await fs.readFile(path.join(here,'check-layout.mjs'),'utf8');
+checker=checker.replace("const results=[],failures=[];let bindingCount=0,amountPairs=0;","const revision=process.argv[2]||'r2'; const results=[],failures=[];let bindingCount=0,amountPairs=0;");
+checker=checker.replace(" await sharp(path.join(project,'output/png',p.id+'.png')).resize", " if(['mobile-secret','mobile-absolute'].includes(p.id)){\n await sharp(path.join(project,'output/png',p.id+'.png')).resize");
+checker=checker.replace("const report={version:'r1'", "}\nconst report={version:revision");
+checker=checker.replace('review/layout-and-data-checks-r1.json',"review/layout-and-data-checks-'+revision+'.json");
+await fs.writeFile(path.join(here,'check-layout-r2.mjs'),checker);
+console.log(JSON.stringify({revision:'r2',changedPages:s.revisionScope.affectedPageIds,changes:s.revisionScope.priceChanges},null,2));

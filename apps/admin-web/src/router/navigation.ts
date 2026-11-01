@@ -43,6 +43,7 @@ export const navigationDomains: DomainDefinition[] = [
   { id: 'orders', title: '订单履约', centers: [
     { id: 'orders', title: '订单中心', icon: 'Tickets', features: [
       { path: 'orders', title: '订单与派单', keywords: ['派单管理', '抢单', '指派', '转单', '退款', '售后'] },
+      { path: 'reservations', title: '预约管理', keywords: ['预约', '档期', '预约转单'] },
       { path: 'reports', title: '报单审核', keywords: ['订单审核', '结单', '完成凭证'] },
       { path: 'evaluations', title: '订单评价', keywords: ['评分', '评价回复'] },
       { path: 'kook-dispatch', title: '群派单配置', keywords: ['KOOK', '机器人', '频道', '派单设置'] },
@@ -67,9 +68,10 @@ export const navigationDomains: DomainDefinition[] = [
   ] },
   { id: 'finance', title: '财务结算', centers: [
     { id: 'accounts', title: '资金账目', icon: 'Wallet', features: [
-      { path: 'wallets', title: '老板钱包', keywords: ['钱包管理', '余额', '充值', '调账'] },
+      { path: 'wallets', title: '钱包账户', keywords: ['老板钱包', '打手钱包', '钱包管理', '余额', '充值', '调账'] },
       { path: 'recharge-records', title: '充值记录', keywords: ['账目记录', '充值凭证'] },
       { path: 'transactions', title: '资金流水', keywords: ['流水记录', '收支', '账务'] },
+      { path: 'payment-fee', title: '微信支付费率', keywords: ['微信支付', '商户费率', '手续费'] },
     ] },
     { id: 'settlement', title: '结款与押金', icon: 'Money', features: [
       { path: 'withdrawals', title: '提现审核', keywords: ['打款', '结款', '收款账户'] },

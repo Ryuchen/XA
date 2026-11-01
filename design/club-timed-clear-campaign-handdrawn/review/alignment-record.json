@@ -1,0 +1,850 @@
+{
+  "fullPosters": [
+    {
+      "id": "desktop-absolute",
+      "rows": 6,
+      "priceUnitColumn": 305,
+      "deadlineUnitColumn": 621,
+      "visibleUnitRatios": {
+        "r": 0.6770468091958695,
+        "minutes": 0.6373315182616159,
+        "w": 0.6662269255717131
+      },
+      "verticalCenter": "每行数字与单位按可见字形居中于同一cy；正文按单行或多行组居中",
+      "tiers": [
+        {
+          "priceR": 168,
+          "deadlineMinutes": null,
+          "tierType": "regular"
+        },
+        {
+          "priceR": 388,
+          "deadlineMinutes": 16,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 488,
+          "deadlineMinutes": 14,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 688,
+          "deadlineMinutes": 12,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 988,
+          "deadlineMinutes": 10,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 1688,
+          "deadlineMinutes": 8,
+          "tierType": "timed"
+        }
+      ],
+      "renderedValues": [
+        {
+          "role": "price-number",
+          "text": "168",
+          "cy": 475
+        },
+        {
+          "role": "regular-tier",
+          "text": "常规清图",
+          "cy": 475
+        },
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 531
+        },
+        {
+          "role": "deadline-number",
+          "text": "16",
+          "cy": 531
+        },
+        {
+          "role": "price-number",
+          "text": "488",
+          "cy": 587
+        },
+        {
+          "role": "deadline-number",
+          "text": "14",
+          "cy": 587
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 642.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "12",
+          "cy": 642.5
+        },
+        {
+          "role": "price-number",
+          "text": "988",
+          "cy": 698.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "10",
+          "cy": 698.5
+        },
+        {
+          "role": "price-number",
+          "text": "1688",
+          "cy": 754.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "8",
+          "cy": 754.5
+        }
+      ],
+      "deadlineUnitToRightBorder": 77.47363269499999,
+      "layout": {
+        "rowEdges": [
+          447,
+          503,
+          559,
+          615,
+          670,
+          727,
+          782
+        ],
+        "rowCenters": [
+          475,
+          531,
+          587,
+          642.5,
+          698.5,
+          754.5
+        ],
+        "priceUnitColumn": 305,
+        "deadlineUnitColumn": 621,
+        "priceGap": 8,
+        "deadlineGap": 9,
+        "vertical": "visible glyph center",
+        "rightIcons": false
+      }
+    },
+    {
+      "id": "desktop-secret",
+      "rows": 6,
+      "priceUnitColumn": 305,
+      "deadlineUnitColumn": 621,
+      "visibleUnitRatios": {
+        "r": 0.6756809182633583,
+        "minutes": 0.6373315182616159,
+        "w": 0.6662269255717131
+      },
+      "verticalCenter": "每行数字与单位按可见字形居中于同一cy；正文按单行或多行组居中",
+      "tiers": [
+        {
+          "priceR": 108,
+          "deadlineMinutes": null,
+          "tierType": "regular"
+        },
+        {
+          "priceR": 288,
+          "deadlineMinutes": 16,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 388,
+          "deadlineMinutes": 14,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 588,
+          "deadlineMinutes": 12,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 888,
+          "deadlineMinutes": 10,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 1488,
+          "deadlineMinutes": 8,
+          "tierType": "timed"
+        }
+      ],
+      "renderedValues": [
+        {
+          "role": "price-number",
+          "text": "108",
+          "cy": 475
+        },
+        {
+          "role": "regular-tier",
+          "text": "常规清图",
+          "cy": 475
+        },
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 531
+        },
+        {
+          "role": "deadline-number",
+          "text": "16",
+          "cy": 531
+        },
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 587
+        },
+        {
+          "role": "deadline-number",
+          "text": "14",
+          "cy": 587
+        },
+        {
+          "role": "price-number",
+          "text": "588",
+          "cy": 642.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "12",
+          "cy": 642.5
+        },
+        {
+          "role": "price-number",
+          "text": "888",
+          "cy": 698.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "10",
+          "cy": 698.5
+        },
+        {
+          "role": "price-number",
+          "text": "1488",
+          "cy": 754.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "8",
+          "cy": 754.5
+        }
+      ],
+      "deadlineUnitToRightBorder": 77.47363269499999,
+      "layout": {
+        "rowEdges": [
+          447,
+          503,
+          559,
+          615,
+          670,
+          727,
+          782
+        ],
+        "rowCenters": [
+          475,
+          531,
+          587,
+          642.5,
+          698.5,
+          754.5
+        ],
+        "priceUnitColumn": 305,
+        "deadlineUnitColumn": 621,
+        "priceGap": 8,
+        "deadlineGap": 9,
+        "vertical": "visible glyph center",
+        "rightIcons": false
+      }
+    },
+    {
+      "id": "mobile-absolute",
+      "rows": 6,
+      "priceUnitColumn": 305,
+      "deadlineUnitColumn": 621,
+      "visibleUnitRatios": {
+        "r": 0.6756809182633583,
+        "minutes": 0.6373315182616159,
+        "w": 0.6662269255717131
+      },
+      "verticalCenter": "每行数字与单位按可见字形居中于同一cy；正文按单行或多行组居中",
+      "tiers": [
+        {
+          "priceR": 108,
+          "deadlineMinutes": null,
+          "tierType": "regular"
+        },
+        {
+          "priceR": 288,
+          "deadlineMinutes": 16,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 388,
+          "deadlineMinutes": 14,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 588,
+          "deadlineMinutes": 12,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 888,
+          "deadlineMinutes": 10,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 1488,
+          "deadlineMinutes": 8,
+          "tierType": "timed"
+        }
+      ],
+      "renderedValues": [
+        {
+          "role": "price-number",
+          "text": "108",
+          "cy": 475
+        },
+        {
+          "role": "regular-tier",
+          "text": "常规清图",
+          "cy": 475
+        },
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 531
+        },
+        {
+          "role": "deadline-number",
+          "text": "16",
+          "cy": 531
+        },
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 587
+        },
+        {
+          "role": "deadline-number",
+          "text": "14",
+          "cy": 587
+        },
+        {
+          "role": "price-number",
+          "text": "588",
+          "cy": 642.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "12",
+          "cy": 642.5
+        },
+        {
+          "role": "price-number",
+          "text": "888",
+          "cy": 698.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "10",
+          "cy": 698.5
+        },
+        {
+          "role": "price-number",
+          "text": "1488",
+          "cy": 754.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "8",
+          "cy": 754.5
+        }
+      ],
+      "deadlineUnitToRightBorder": 77.47363269499999,
+      "layout": {
+        "rowEdges": [
+          447,
+          503,
+          559,
+          615,
+          670,
+          727,
+          782
+        ],
+        "rowCenters": [
+          475,
+          531,
+          587,
+          642.5,
+          698.5,
+          754.5
+        ],
+        "priceUnitColumn": 305,
+        "deadlineUnitColumn": 621,
+        "priceGap": 8,
+        "deadlineGap": 9,
+        "vertical": "visible glyph center",
+        "rightIcons": false
+      }
+    },
+    {
+      "id": "mobile-secret",
+      "rows": 6,
+      "priceUnitColumn": 305,
+      "deadlineUnitColumn": 621,
+      "visibleUnitRatios": {
+        "r": 0.6770468091958695,
+        "minutes": 0.6373315182616159,
+        "w": 0.6662269255717131
+      },
+      "verticalCenter": "每行数字与单位按可见字形居中于同一cy；正文按单行或多行组居中",
+      "tiers": [
+        {
+          "priceR": 88,
+          "deadlineMinutes": null,
+          "tierType": "regular"
+        },
+        {
+          "priceR": 228,
+          "deadlineMinutes": 16,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 328,
+          "deadlineMinutes": 14,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 428,
+          "deadlineMinutes": 12,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 828,
+          "deadlineMinutes": 10,
+          "tierType": "timed"
+        },
+        {
+          "priceR": 1228,
+          "deadlineMinutes": 8,
+          "tierType": "timed"
+        }
+      ],
+      "renderedValues": [
+        {
+          "role": "price-number",
+          "text": "88",
+          "cy": 475
+        },
+        {
+          "role": "regular-tier",
+          "text": "常规清图",
+          "cy": 475
+        },
+        {
+          "role": "price-number",
+          "text": "228",
+          "cy": 531
+        },
+        {
+          "role": "deadline-number",
+          "text": "16",
+          "cy": 531
+        },
+        {
+          "role": "price-number",
+          "text": "328",
+          "cy": 587
+        },
+        {
+          "role": "deadline-number",
+          "text": "14",
+          "cy": 587
+        },
+        {
+          "role": "price-number",
+          "text": "428",
+          "cy": 642.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "12",
+          "cy": 642.5
+        },
+        {
+          "role": "price-number",
+          "text": "828",
+          "cy": 698.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "10",
+          "cy": 698.5
+        },
+        {
+          "role": "price-number",
+          "text": "1228",
+          "cy": 754.5
+        },
+        {
+          "role": "deadline-number",
+          "text": "8",
+          "cy": 754.5
+        }
+      ],
+      "deadlineUnitToRightBorder": 77.47363269499999,
+      "layout": {
+        "rowEdges": [
+          447,
+          503,
+          559,
+          615,
+          670,
+          727,
+          782
+        ],
+        "rowCenters": [
+          475,
+          531,
+          587,
+          642.5,
+          698.5,
+          754.5
+        ],
+        "priceUnitColumn": 305,
+        "deadlineUnitColumn": 621,
+        "priceGap": 8,
+        "deadlineGap": 9,
+        "vertical": "visible glyph center",
+        "rightIcons": false
+      }
+    }
+  ],
+  "social": [
+    {
+      "id": "desktop-absolute",
+      "rowEdges": [
+        510,
+        554,
+        600,
+        645,
+        690,
+        735,
+        780
+      ],
+      "rowCenters": [
+        532,
+        577,
+        622.5,
+        667.5,
+        712.5,
+        757.5
+      ],
+      "colEdges": [
+        56,
+        267,
+        527
+      ],
+      "priceUnitColumn": 207,
+      "deadlineUnitColumn": 394,
+      "priceGap": 6,
+      "deadlineGap": 7,
+      "rows": [
+        {
+          "cy": 532,
+          "priceR": 168,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999993,
+          "deadlineMinutes": null,
+          "minuteUnitToBorder": null
+        },
+        {
+          "cy": 577,
+          "priceR": 388,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999993,
+          "deadlineMinutes": 16,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 622.5,
+          "priceR": 488,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999993,
+          "deadlineMinutes": 14,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 667.5,
+          "priceR": 688,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999986,
+          "deadlineMinutes": 12,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 712.5,
+          "priceR": 988,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999986,
+          "deadlineMinutes": 10,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 757.5,
+          "priceR": 1688,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.000000000000014,
+          "deadlineMinutes": 8,
+          "minuteUnitToBorder": 71.76367177
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "rowEdges": [
+        510,
+        554,
+        600,
+        645,
+        690,
+        735,
+        780
+      ],
+      "rowCenters": [
+        532,
+        577,
+        622.5,
+        667.5,
+        712.5,
+        757.5
+      ],
+      "colEdges": [
+        559,
+        765,
+        1030
+      ],
+      "priceUnitColumn": 710,
+      "deadlineUnitColumn": 892,
+      "priceGap": 6,
+      "deadlineGap": 7,
+      "rows": [
+        {
+          "cy": 532,
+          "priceR": 108,
+          "rVisibleRatio": 0.6763864897557541,
+          "priceToUnitGap": 6.000000000000021,
+          "deadlineMinutes": null,
+          "minuteUnitToBorder": null
+        },
+        {
+          "cy": 577,
+          "priceR": 288,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999943,
+          "deadlineMinutes": 16,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 622.5,
+          "priceR": 388,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999993,
+          "deadlineMinutes": 14,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 667.5,
+          "priceR": 588,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.000000000000028,
+          "deadlineMinutes": 12,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 712.5,
+          "priceR": 888,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999972,
+          "deadlineMinutes": 10,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 757.5,
+          "priceR": 1488,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.000000000000014,
+          "deadlineMinutes": 8,
+          "minuteUnitToBorder": 76.76367177
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "rowEdges": [
+        870,
+        916,
+        961,
+        1006,
+        1051,
+        1096,
+        1142
+      ],
+      "rowCenters": [
+        893,
+        938.5,
+        983.5,
+        1028.5,
+        1073.5,
+        1119
+      ],
+      "colEdges": [
+        56,
+        267,
+        527
+      ],
+      "priceUnitColumn": 207,
+      "deadlineUnitColumn": 394,
+      "priceGap": 6,
+      "deadlineGap": 7,
+      "rows": [
+        {
+          "cy": 893,
+          "priceR": 108,
+          "rVisibleRatio": 0.6763864897557541,
+          "priceToUnitGap": 5.999999999999993,
+          "deadlineMinutes": null,
+          "minuteUnitToBorder": null
+        },
+        {
+          "cy": 938.5,
+          "priceR": 288,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6,
+          "deadlineMinutes": 16,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 983.5,
+          "priceR": 388,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999993,
+          "deadlineMinutes": 14,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 1028.5,
+          "priceR": 588,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6,
+          "deadlineMinutes": 12,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 1073.5,
+          "priceR": 888,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6,
+          "deadlineMinutes": 10,
+          "minuteUnitToBorder": 71.76367177
+        },
+        {
+          "cy": 1119,
+          "priceR": 1488,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.000000000000014,
+          "deadlineMinutes": 8,
+          "minuteUnitToBorder": 71.76367177
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "rowEdges": [
+        870,
+        916,
+        961,
+        1006,
+        1051,
+        1096,
+        1142
+      ],
+      "rowCenters": [
+        893,
+        938.5,
+        983.5,
+        1028.5,
+        1073.5,
+        1119
+      ],
+      "colEdges": [
+        559,
+        765,
+        1030
+      ],
+      "priceUnitColumn": 710,
+      "deadlineUnitColumn": 892,
+      "priceGap": 6,
+      "deadlineGap": 7,
+      "rows": [
+        {
+          "cy": 893,
+          "priceR": 88,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.000000000000043,
+          "deadlineMinutes": null,
+          "minuteUnitToBorder": null
+        },
+        {
+          "cy": 938.5,
+          "priceR": 228,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.0000000000000355,
+          "deadlineMinutes": 16,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 983.5,
+          "priceR": 328,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.000000000000057,
+          "deadlineMinutes": 14,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 1028.5,
+          "priceR": 428,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6,
+          "deadlineMinutes": 12,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 1073.5,
+          "priceR": 828,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 6.0000000000000355,
+          "deadlineMinutes": 10,
+          "minuteUnitToBorder": 76.76367177
+        },
+        {
+          "cy": 1119,
+          "priceR": 1228,
+          "rVisibleRatio": 0.6777538070030797,
+          "priceToUnitGap": 5.999999999999972,
+          "deadlineMinutes": 8,
+          "minuteUnitToBorder": 76.76367177
+        }
+      ]
+    }
+  ]
+}

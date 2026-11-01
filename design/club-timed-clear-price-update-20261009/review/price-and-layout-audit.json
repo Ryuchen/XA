@@ -1,0 +1,1798 @@
+{
+  "pageIds": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ],
+  "changedPrices": 10,
+  "mobileSourceRows": 12,
+  "mobileRenderedPriceRows": 24,
+  "desktopRowsRetained": 12,
+  "unchangedRules": true,
+  "unchangedDeadlines": true,
+  "fixedMaterialGuaranteeSpecified": false,
+  "checks": [
+    {
+      "id": "mobile-absolute:mobile-absolute:price:0",
+      "container": [
+        80,
+        447,
+        400,
+        503
+      ],
+      "ink": {
+        "left": 231.89062511999998,
+        "top": 457.5742192,
+        "right": 321.63828125,
+        "bottom": 492.42578080000004
+      },
+      "margins": {
+        "left": 151.89062511999998,
+        "right": 78.36171875000002,
+        "top": 10.574219200000016,
+        "bottom": 10.574219199999959
+      },
+      "verticalDeviation": 0,
+      "baseline": 492.0742192,
+      "unitGap": 8,
+      "unitRatio": 0.6756809182633583
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:regular",
+      "container": [
+        460,
+        447,
+        742,
+        503
+      ],
+      "ink": {
+        "left": 575.447265625,
+        "top": 461.18139595,
+        "right": 686.552734375,
+        "bottom": 488.81860405000003
+      },
+      "margins": {
+        "left": 115.447265625,
+        "right": 55.447265625,
+        "top": 14.181395950000024,
+        "bottom": 14.181395949999967
+      },
+      "verticalDeviation": 0
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:price:1",
+      "container": [
+        80,
+        503,
+        400,
+        559
+      ],
+      "ink": {
+        "left": 231.375,
+        "top": 513.6093744000001,
+        "right": 321.63828125,
+        "bottom": 548.3906256000001
+      },
+      "margins": {
+        "left": 151.375,
+        "right": 78.36171875000002,
+        "top": 10.609374400000092,
+        "bottom": 10.609374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 548.0390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:deadline:1",
+      "container": [
+        460,
+        503,
+        742,
+        559
+      ],
+      "ink": {
+        "left": 573.865235,
+        "top": 511.65026855175006,
+        "right": 689.526367305,
+        "bottom": 550.34973144825
+      },
+      "margins": {
+        "left": 113.86523499999998,
+        "right": 52.47363269499999,
+        "top": 8.65026855175006,
+        "bottom": 8.650268551749946
+      },
+      "verticalDeviation": 0,
+      "baseline": 547.1483154267501,
+      "unitGap": 9,
+      "unitRatio": 0.6373315182616159
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:price:2",
+      "container": [
+        80,
+        559,
+        400,
+        615
+      ],
+      "ink": {
+        "left": 224.15624976,
+        "top": 569.6093744000001,
+        "right": 321.63828125,
+        "bottom": 604.3906256000001
+      },
+      "margins": {
+        "left": 144.15624976,
+        "right": 78.36171875000002,
+        "top": 10.609374400000092,
+        "bottom": 10.609374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 604.0390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:deadline:2",
+      "container": [
+        460,
+        559,
+        742,
+        615
+      ],
+      "ink": {
+        "left": 570.59375,
+        "top": 567.6502685517501,
+        "right": 689.526367305,
+        "bottom": 606.34973144825
+      },
+      "margins": {
+        "left": 110.59375,
+        "right": 52.47363269499999,
+        "top": 8.65026855175006,
+        "bottom": 8.650268551749946
+      },
+      "verticalDeviation": 0,
+      "baseline": 603.1483154267501,
+      "unitGap": 9,
+      "unitRatio": 0.6434639345079141
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:price:3",
+      "container": [
+        80,
+        615,
+        400,
+        670
+      ],
+      "ink": {
+        "left": 223.335936,
+        "top": 625.1093744000001,
+        "right": 321.63828125,
+        "bottom": 659.8906256000001
+      },
+      "margins": {
+        "left": 143.335936,
+        "right": 78.36171875000002,
+        "top": 10.109374400000092,
+        "bottom": 10.109374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 659.5390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:deadline:3",
+      "container": [
+        460,
+        615,
+        742,
+        670
+      ],
+      "ink": {
+        "left": 573.450195,
+        "top": 622.9671630842499,
+        "right": 689.526367305,
+        "bottom": 662.03283691575
+      },
+      "margins": {
+        "left": 113.45019500000001,
+        "right": 52.47363269499999,
+        "top": 7.967163084249933,
+        "bottom": 7.967163084250046
+      },
+      "verticalDeviation": 0,
+      "baseline": 658.83142089425,
+      "unitGap": 9,
+      "unitRatio": 0.6373315182616159
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:price:4",
+      "container": [
+        80,
+        670,
+        400,
+        727
+      ],
+      "ink": {
+        "left": 225.77343744,
+        "top": 681.1093744000001,
+        "right": 321.63828125,
+        "bottom": 715.8906256000001
+      },
+      "margins": {
+        "left": 145.77343744,
+        "right": 78.36171875000002,
+        "top": 11.109374400000092,
+        "bottom": 11.109374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 715.5390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:deadline:4",
+      "container": [
+        460,
+        670,
+        742,
+        727
+      ],
+      "ink": {
+        "left": 572.668945,
+        "top": 678.9305419892501,
+        "right": 689.526367305,
+        "bottom": 718.06945801075
+      },
+      "margins": {
+        "left": 112.66894500000001,
+        "right": 52.47363269499999,
+        "top": 8.93054198925006,
+        "bottom": 8.930541989249946
+      },
+      "verticalDeviation": 0,
+      "baseline": 714.8680419892501,
+      "unitGap": 9,
+      "unitRatio": 0.6296166941340154
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:price:5",
+      "container": [
+        80,
+        727,
+        400,
+        782
+      ],
+      "ink": {
+        "left": 221.39062511999998,
+        "top": 737.1093744000001,
+        "right": 321.63828125,
+        "bottom": 771.8906256000001
+      },
+      "margins": {
+        "left": 141.39062511999998,
+        "right": 78.36171875000002,
+        "top": 10.109374400000092,
+        "bottom": 10.109374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 771.5390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-absolute:mobile-absolute:deadline:5",
+      "container": [
+        460,
+        727,
+        742,
+        782
+      ],
+      "ink": {
+        "left": 589.490235,
+        "top": 734.9671630842499,
+        "right": 689.526367305,
+        "bottom": 774.03283691575
+      },
+      "margins": {
+        "left": 129.49023499999998,
+        "right": 52.47363269499999,
+        "top": 7.967163084249933,
+        "bottom": 7.967163084250046
+      },
+      "verticalDeviation": 0,
+      "baseline": 770.83142089425,
+      "unitGap": 9,
+      "unitRatio": 0.6308894661040831
+    },
+    {
+      "id": "mobile-secret:mobile-secret:price:0",
+      "container": [
+        80,
+        447,
+        400,
+        503
+      ],
+      "ink": {
+        "left": 248.39062512,
+        "top": 457.6093744,
+        "right": 321.63828125,
+        "bottom": 492.39062559999996
+      },
+      "margins": {
+        "left": 168.39062512,
+        "right": 78.36171875000002,
+        "top": 10.609374399999979,
+        "bottom": 10.609374400000036
+      },
+      "verticalDeviation": 0,
+      "baseline": 492.0390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-secret:mobile-secret:regular",
+      "container": [
+        460,
+        447,
+        742,
+        503
+      ],
+      "ink": {
+        "left": 575.447265625,
+        "top": 461.18139595,
+        "right": 686.552734375,
+        "bottom": 488.81860405000003
+      },
+      "margins": {
+        "left": 115.447265625,
+        "right": 55.447265625,
+        "top": 14.181395950000024,
+        "bottom": 14.181395949999967
+      },
+      "verticalDeviation": 0
+    },
+    {
+      "id": "mobile-secret:mobile-secret:price:1",
+      "container": [
+        80,
+        503,
+        400,
+        559
+      ],
+      "ink": {
+        "left": 233.578128,
+        "top": 513.6093744000001,
+        "right": 321.63828125,
+        "bottom": 548.3906256000001
+      },
+      "margins": {
+        "left": 153.578128,
+        "right": 78.36171875000002,
+        "top": 10.609374400000092,
+        "bottom": 10.609374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 548.0390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-secret:mobile-secret:deadline:1",
+      "container": [
+        460,
+        503,
+        742,
+        559
+      ],
+      "ink": {
+        "left": 573.865235,
+        "top": 511.65026855175006,
+        "right": 689.526367305,
+        "bottom": 550.34973144825
+      },
+      "margins": {
+        "left": 113.86523499999998,
+        "right": 52.47363269499999,
+        "top": 8.65026855175006,
+        "bottom": 8.650268551749946
+      },
+      "verticalDeviation": 0,
+      "baseline": 547.1483154267501,
+      "unitGap": 9,
+      "unitRatio": 0.6373315182616159
+    },
+    {
+      "id": "mobile-secret:mobile-secret:price:2",
+      "container": [
+        80,
+        559,
+        400,
+        615
+      ],
+      "ink": {
+        "left": 231.375,
+        "top": 569.6093744000001,
+        "right": 321.63828125,
+        "bottom": 604.3906256000001
+      },
+      "margins": {
+        "left": 151.375,
+        "right": 78.36171875000002,
+        "top": 10.609374400000092,
+        "bottom": 10.609374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 604.0390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-secret:mobile-secret:deadline:2",
+      "container": [
+        460,
+        559,
+        742,
+        615
+      ],
+      "ink": {
+        "left": 570.59375,
+        "top": 567.6502685517501,
+        "right": 689.526367305,
+        "bottom": 606.34973144825
+      },
+      "margins": {
+        "left": 110.59375,
+        "right": 52.47363269499999,
+        "top": 8.65026855175006,
+        "bottom": 8.650268551749946
+      },
+      "verticalDeviation": 0,
+      "baseline": 603.1483154267501,
+      "unitGap": 9,
+      "unitRatio": 0.6434639345079141
+    },
+    {
+      "id": "mobile-secret:mobile-secret:price:3",
+      "container": [
+        80,
+        615,
+        400,
+        670
+      ],
+      "ink": {
+        "left": 223.00781232,
+        "top": 625.1093744000001,
+        "right": 321.63828125,
+        "bottom": 659.8906256000001
+      },
+      "margins": {
+        "left": 143.00781232,
+        "right": 78.36171875000002,
+        "top": 10.109374400000092,
+        "bottom": 10.109374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 659.5390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-secret:mobile-secret:deadline:3",
+      "container": [
+        460,
+        615,
+        742,
+        670
+      ],
+      "ink": {
+        "left": 573.450195,
+        "top": 622.9671630842499,
+        "right": 689.526367305,
+        "bottom": 662.03283691575
+      },
+      "margins": {
+        "left": 113.45019500000001,
+        "right": 52.47363269499999,
+        "top": 7.967163084249933,
+        "bottom": 7.967163084250046
+      },
+      "verticalDeviation": 0,
+      "baseline": 658.83142089425,
+      "unitGap": 9,
+      "unitRatio": 0.6373315182616159
+    },
+    {
+      "id": "mobile-secret:mobile-secret:price:4",
+      "container": [
+        80,
+        670,
+        400,
+        727
+      ],
+      "ink": {
+        "left": 223.335936,
+        "top": 681.1093744000001,
+        "right": 321.63828125,
+        "bottom": 715.8906256000001
+      },
+      "margins": {
+        "left": 143.335936,
+        "right": 78.36171875000002,
+        "top": 11.109374400000092,
+        "bottom": 11.109374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 715.5390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-secret:mobile-secret:deadline:4",
+      "container": [
+        460,
+        670,
+        742,
+        727
+      ],
+      "ink": {
+        "left": 572.668945,
+        "top": 678.9305419892501,
+        "right": 689.526367305,
+        "bottom": 718.06945801075
+      },
+      "margins": {
+        "left": 112.66894500000001,
+        "right": 52.47363269499999,
+        "top": 8.93054198925006,
+        "bottom": 8.930541989249946
+      },
+      "verticalDeviation": 0,
+      "baseline": 714.8680419892501,
+      "unitGap": 9,
+      "unitRatio": 0.6296166941340154
+    },
+    {
+      "id": "mobile-secret:mobile-secret:price:5",
+      "container": [
+        80,
+        727,
+        400,
+        782
+      ],
+      "ink": {
+        "left": 223.40624976,
+        "top": 737.1093744000001,
+        "right": 321.63828125,
+        "bottom": 771.8906256000001
+      },
+      "margins": {
+        "left": 143.40624976,
+        "right": 78.36171875000002,
+        "top": 10.109374400000092,
+        "bottom": 10.109374399999865
+      },
+      "verticalDeviation": 1.1368683772161603e-13,
+      "baseline": 771.5390618976,
+      "unitGap": 8,
+      "unitRatio": 0.6770468091958695
+    },
+    {
+      "id": "mobile-secret:mobile-secret:deadline:5",
+      "container": [
+        460,
+        727,
+        742,
+        782
+      ],
+      "ink": {
+        "left": 589.490235,
+        "top": 734.9671630842499,
+        "right": 689.526367305,
+        "bottom": 774.03283691575
+      },
+      "margins": {
+        "left": 129.49023499999998,
+        "right": 52.47363269499999,
+        "top": 7.967163084249933,
+        "bottom": 7.967163084250046
+      },
+      "verticalDeviation": 0,
+      "baseline": 770.83142089425,
+      "unitGap": 9,
+      "unitRatio": 0.6308894661040831
+    },
+    {
+      "id": "social:desktop-absolute:price:0",
+      "container": [
+        56,
+        510,
+        267,
+        554
+      ],
+      "ink": {
+        "left": 152.502343888,
+        "top": 518.66718704,
+        "right": 219.7693359375,
+        "bottom": 545.3328129600001
+      },
+      "margins": {
+        "left": 96.50234388800001,
+        "right": 47.23066406250001,
+        "top": 8.667187040000044,
+        "bottom": 8.66718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 545.0632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-absolute:regular",
+      "container": [
+        267,
+        510,
+        527,
+        554
+      ],
+      "ink": {
+        "left": 350.21875,
+        "top": 520.3632808,
+        "right": 443.78125,
+        "bottom": 543.6367192
+      },
+      "margins": {
+        "left": 83.21875,
+        "right": 83.21875,
+        "top": 10.363280799999984,
+        "bottom": 10.363280799999984
+      },
+      "verticalDeviation": 0
+    },
+    {
+      "id": "social:desktop-absolute:price:1",
+      "container": [
+        56,
+        554,
+        267,
+        600
+      ],
+      "ink": {
+        "left": 143.464062592,
+        "top": 563.66718704,
+        "right": 219.7693359375,
+        "bottom": 590.3328129600001
+      },
+      "margins": {
+        "left": 87.464062592,
+        "right": 47.23066406250001,
+        "top": 9.667187040000044,
+        "bottom": 9.66718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 590.0632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-absolute:deadline:1",
+      "container": [
+        267,
+        554,
+        527,
+        600
+      ],
+      "ink": {
+        "left": 357.2548833,
+        "top": 561.72534179425,
+        "right": 455.23632823,
+        "bottom": 592.2746582057499
+      },
+      "margins": {
+        "left": 90.25488330000002,
+        "right": 71.76367176999997,
+        "top": 7.725341794249971,
+        "bottom": 7.725341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 589.41381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:desktop-absolute:price:2",
+      "container": [
+        56,
+        600,
+        267,
+        645
+      ],
+      "ink": {
+        "left": 142.709374816,
+        "top": 609.16718704,
+        "right": 219.7693359375,
+        "bottom": 635.8328129600001
+      },
+      "margins": {
+        "left": 86.70937481600001,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 635.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-absolute:deadline:2",
+      "container": [
+        267,
+        600,
+        527,
+        645
+      ],
+      "ink": {
+        "left": 354.703125,
+        "top": 607.22534179425,
+        "right": 455.23632823,
+        "bottom": 637.7746582057499
+      },
+      "margins": {
+        "left": 87.703125,
+        "right": 71.76367176999997,
+        "top": 7.225341794249971,
+        "bottom": 7.225341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 634.91381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7371927236588214
+    },
+    {
+      "id": "social:desktop-absolute:price:3",
+      "container": [
+        56,
+        645,
+        267,
+        690
+      ],
+      "ink": {
+        "left": 144.578124816,
+        "top": 654.16718704,
+        "right": 219.7693359375,
+        "bottom": 680.8328129600001
+      },
+      "margins": {
+        "left": 88.57812481600001,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 680.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-absolute:deadline:3",
+      "container": [
+        267,
+        645,
+        527,
+        690
+      ],
+      "ink": {
+        "left": 356.9311521,
+        "top": 652.0825195296,
+        "right": 455.23632823,
+        "bottom": 682.9174804703999
+      },
+      "margins": {
+        "left": 89.93115210000002,
+        "right": 71.76367176999997,
+        "top": 7.082519529599949,
+        "bottom": 7.082519529600063
+      },
+      "verticalDeviation": 0,
+      "baseline": 680.0566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:desktop-absolute:price:4",
+      "container": [
+        56,
+        690,
+        267,
+        735
+      ],
+      "ink": {
+        "left": 144.578124816,
+        "top": 699.16718704,
+        "right": 219.7693359375,
+        "bottom": 725.8328129600001
+      },
+      "margins": {
+        "left": 88.57812481600001,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 725.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-absolute:deadline:4",
+      "container": [
+        267,
+        690,
+        527,
+        735
+      ],
+      "ink": {
+        "left": 356.3217771,
+        "top": 697.0539550755,
+        "right": 455.23632823,
+        "bottom": 727.9460449244999
+      },
+      "margins": {
+        "left": 89.32177710000002,
+        "right": 71.76367176999997,
+        "top": 7.053955075499971,
+        "bottom": 7.053955075500085
+      },
+      "verticalDeviation": 0,
+      "baseline": 725.0852050755,
+      "unitGap": 7,
+      "unitRatio": 0.721328454818021
+    },
+    {
+      "id": "social:desktop-absolute:price:5",
+      "container": [
+        56,
+        735,
+        267,
+        780
+      ],
+      "ink": {
+        "left": 131.802343888,
+        "top": 744.16718704,
+        "right": 219.7693359375,
+        "bottom": 770.8328129600001
+      },
+      "margins": {
+        "left": 75.802343888,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 770.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-absolute:deadline:5",
+      "container": [
+        267,
+        735,
+        527,
+        780
+      ],
+      "ink": {
+        "left": 369.4423833,
+        "top": 742.0825195296,
+        "right": 455.23632823,
+        "bottom": 772.9174804703999
+      },
+      "margins": {
+        "left": 102.44238330000002,
+        "right": 71.76367176999997,
+        "top": 7.082519529599949,
+        "bottom": 7.082519529600063
+      },
+      "verticalDeviation": 0,
+      "baseline": 770.0566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7227866223778366
+    },
+    {
+      "id": "social:desktop-secret:price:0",
+      "container": [
+        559,
+        510,
+        765,
+        554
+      ],
+      "ink": {
+        "left": 654.082812592,
+        "top": 518.64023472,
+        "right": 722.7693359375,
+        "bottom": 545.3597652799999
+      },
+      "margins": {
+        "left": 95.08281259199998,
+        "right": 42.230664062499955,
+        "top": 8.640234719999967,
+        "bottom": 8.64023472000008
+      },
+      "verticalDeviation": 0,
+      "baseline": 545.09023472,
+      "unitGap": 6,
+      "unitRatio": 0.6763864897557541
+    },
+    {
+      "id": "social:desktop-secret:regular",
+      "container": [
+        765,
+        510,
+        1030,
+        554
+      ],
+      "ink": {
+        "left": 850.71875,
+        "top": 520.3632808,
+        "right": 944.28125,
+        "bottom": 543.6367192
+      },
+      "margins": {
+        "left": 85.71875,
+        "right": 85.71875,
+        "top": 10.363280799999984,
+        "bottom": 10.363280799999984
+      },
+      "verticalDeviation": 0
+    },
+    {
+      "id": "social:desktop-secret:price:1",
+      "container": [
+        559,
+        554,
+        765,
+        600
+      ],
+      "ink": {
+        "left": 647.272656112,
+        "top": 563.66718704,
+        "right": 722.7693359375,
+        "bottom": 590.3328129600001
+      },
+      "margins": {
+        "left": 88.27265611200005,
+        "right": 42.230664062499955,
+        "top": 9.667187040000044,
+        "bottom": 9.66718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 590.0632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-secret:deadline:1",
+      "container": [
+        765,
+        554,
+        1030,
+        600
+      ],
+      "ink": {
+        "left": 855.2548833,
+        "top": 561.72534179425,
+        "right": 953.23632823,
+        "bottom": 592.2746582057499
+      },
+      "margins": {
+        "left": 90.25488329999996,
+        "right": 76.76367176999997,
+        "top": 7.725341794249971,
+        "bottom": 7.725341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 589.41381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:desktop-secret:price:2",
+      "container": [
+        559,
+        600,
+        765,
+        645
+      ],
+      "ink": {
+        "left": 646.464062592,
+        "top": 609.16718704,
+        "right": 722.7693359375,
+        "bottom": 635.8328129600001
+      },
+      "margins": {
+        "left": 87.464062592,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 635.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-secret:deadline:2",
+      "container": [
+        765,
+        600,
+        1030,
+        645
+      ],
+      "ink": {
+        "left": 852.703125,
+        "top": 607.22534179425,
+        "right": 953.23632823,
+        "bottom": 637.7746582057499
+      },
+      "margins": {
+        "left": 87.703125,
+        "right": 76.76367176999997,
+        "top": 7.225341794249971,
+        "bottom": 7.225341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 634.91381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7371927236588214
+    },
+    {
+      "id": "social:desktop-secret:price:3",
+      "container": [
+        559,
+        645,
+        765,
+        690
+      ],
+      "ink": {
+        "left": 646.967187408,
+        "top": 654.16718704,
+        "right": 722.7693359375,
+        "bottom": 680.8328129600001
+      },
+      "margins": {
+        "left": 87.96718740799997,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 680.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-secret:deadline:3",
+      "container": [
+        765,
+        645,
+        1030,
+        690
+      ],
+      "ink": {
+        "left": 854.9311521,
+        "top": 652.0825195296,
+        "right": 953.23632823,
+        "bottom": 682.9174804703999
+      },
+      "margins": {
+        "left": 89.93115209999996,
+        "right": 76.76367176999997,
+        "top": 7.082519529599949,
+        "bottom": 7.082519529600063
+      },
+      "verticalDeviation": 0,
+      "baseline": 680.0566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:desktop-secret:price:4",
+      "container": [
+        559,
+        690,
+        765,
+        735
+      ],
+      "ink": {
+        "left": 646.032812592,
+        "top": 699.16718704,
+        "right": 722.7693359375,
+        "bottom": 725.8328129600001
+      },
+      "margins": {
+        "left": 87.03281259200003,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 725.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-secret:deadline:4",
+      "container": [
+        765,
+        690,
+        1030,
+        735
+      ],
+      "ink": {
+        "left": 854.3217771,
+        "top": 697.0539550755,
+        "right": 953.23632823,
+        "bottom": 727.9460449244999
+      },
+      "margins": {
+        "left": 89.32177709999996,
+        "right": 76.76367176999997,
+        "top": 7.053955075499971,
+        "bottom": 7.053955075500085
+      },
+      "verticalDeviation": 0,
+      "baseline": 725.0852050755,
+      "unitGap": 7,
+      "unitRatio": 0.721328454818021
+    },
+    {
+      "id": "social:desktop-secret:price:5",
+      "container": [
+        559,
+        735,
+        765,
+        780
+      ],
+      "ink": {
+        "left": 632.753906112,
+        "top": 744.16718704,
+        "right": 722.7693359375,
+        "bottom": 770.8328129600001
+      },
+      "margins": {
+        "left": 73.75390611199998,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 770.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:desktop-secret:deadline:5",
+      "container": [
+        765,
+        735,
+        1030,
+        780
+      ],
+      "ink": {
+        "left": 867.4423833,
+        "top": 742.0825195296,
+        "right": 953.23632823,
+        "bottom": 772.9174804703999
+      },
+      "margins": {
+        "left": 102.44238329999996,
+        "right": 76.76367176999997,
+        "top": 7.082519529599949,
+        "bottom": 7.082519529600063
+      },
+      "verticalDeviation": 0,
+      "baseline": 770.0566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7227866223778366
+    },
+    {
+      "id": "social:mobile-absolute:price:0",
+      "container": [
+        56,
+        870,
+        267,
+        916
+      ],
+      "ink": {
+        "left": 151.082812592,
+        "top": 879.64023472,
+        "right": 219.7693359375,
+        "bottom": 906.3597652799999
+      },
+      "margins": {
+        "left": 95.08281259200001,
+        "right": 47.23066406250001,
+        "top": 9.640234719999967,
+        "bottom": 9.64023472000008
+      },
+      "verticalDeviation": 0,
+      "baseline": 906.09023472,
+      "unitGap": 6,
+      "unitRatio": 0.6763864897557541
+    },
+    {
+      "id": "social:mobile-absolute:regular",
+      "container": [
+        267,
+        870,
+        527,
+        916
+      ],
+      "ink": {
+        "left": 350.21875,
+        "top": 881.3632808,
+        "right": 443.78125,
+        "bottom": 904.6367192
+      },
+      "margins": {
+        "left": 83.21875,
+        "right": 83.21875,
+        "top": 11.363280799999984,
+        "bottom": 11.363280799999984
+      },
+      "verticalDeviation": 0
+    },
+    {
+      "id": "social:mobile-absolute:price:1",
+      "container": [
+        56,
+        916,
+        267,
+        961
+      ],
+      "ink": {
+        "left": 150.6875,
+        "top": 925.16718704,
+        "right": 219.7693359375,
+        "bottom": 951.8328129600001
+      },
+      "margins": {
+        "left": 94.6875,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 951.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-absolute:deadline:1",
+      "container": [
+        267,
+        916,
+        527,
+        961
+      ],
+      "ink": {
+        "left": 357.2548833,
+        "top": 923.22534179425,
+        "right": 455.23632823,
+        "bottom": 953.7746582057499
+      },
+      "margins": {
+        "left": 90.25488330000002,
+        "right": 71.76367176999997,
+        "top": 7.225341794249971,
+        "bottom": 7.225341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 950.91381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:mobile-absolute:price:2",
+      "container": [
+        56,
+        961,
+        267,
+        1006
+      ],
+      "ink": {
+        "left": 145.153124816,
+        "top": 970.16718704,
+        "right": 219.7693359375,
+        "bottom": 996.8328129600001
+      },
+      "margins": {
+        "left": 89.153124816,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 996.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-absolute:deadline:2",
+      "container": [
+        267,
+        961,
+        527,
+        1006
+      ],
+      "ink": {
+        "left": 354.703125,
+        "top": 968.22534179425,
+        "right": 455.23632823,
+        "bottom": 998.7746582057499
+      },
+      "margins": {
+        "left": 87.703125,
+        "right": 71.76367176999997,
+        "top": 7.225341794249971,
+        "bottom": 7.225341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 995.91381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7371927236588214
+    },
+    {
+      "id": "social:mobile-absolute:price:3",
+      "container": [
+        56,
+        1006,
+        267,
+        1051
+      ],
+      "ink": {
+        "left": 144.5242176,
+        "top": 1015.16718704,
+        "right": 219.7693359375,
+        "bottom": 1041.83281296
+      },
+      "margins": {
+        "left": 88.52421759999999,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.167187040000044
+      },
+      "verticalDeviation": 0,
+      "baseline": 1041.56328078816,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-absolute:deadline:3",
+      "container": [
+        267,
+        1006,
+        527,
+        1051
+      ],
+      "ink": {
+        "left": 356.9311521,
+        "top": 1013.0825195296,
+        "right": 455.23632823,
+        "bottom": 1043.9174804703998
+      },
+      "margins": {
+        "left": 89.93115210000002,
+        "right": 71.76367176999997,
+        "top": 7.082519529599949,
+        "bottom": 7.082519529600177
+      },
+      "verticalDeviation": 0,
+      "baseline": 1041.0566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:mobile-absolute:price:4",
+      "container": [
+        56,
+        1051,
+        267,
+        1096
+      ],
+      "ink": {
+        "left": 146.392968704,
+        "top": 1060.16718704,
+        "right": 219.7693359375,
+        "bottom": 1086.83281296
+      },
+      "margins": {
+        "left": 90.392968704,
+        "right": 47.23066406250001,
+        "top": 9.167187040000044,
+        "bottom": 9.167187040000044
+      },
+      "verticalDeviation": 0,
+      "baseline": 1086.56328078816,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-absolute:deadline:4",
+      "container": [
+        267,
+        1051,
+        527,
+        1096
+      ],
+      "ink": {
+        "left": 356.3217771,
+        "top": 1058.0539550755,
+        "right": 455.23632823,
+        "bottom": 1088.9460449245
+      },
+      "margins": {
+        "left": 89.32177710000002,
+        "right": 71.76367176999997,
+        "top": 7.053955075499971,
+        "bottom": 7.053955075499971
+      },
+      "verticalDeviation": 0,
+      "baseline": 1086.0852050755,
+      "unitGap": 7,
+      "unitRatio": 0.721328454818021
+    },
+    {
+      "id": "social:mobile-absolute:price:5",
+      "container": [
+        56,
+        1096,
+        267,
+        1142
+      ],
+      "ink": {
+        "left": 143.032812592,
+        "top": 1105.66718704,
+        "right": 219.7693359375,
+        "bottom": 1132.33281296
+      },
+      "margins": {
+        "left": 87.032812592,
+        "right": 47.23066406250001,
+        "top": 9.667187040000044,
+        "bottom": 9.667187040000044
+      },
+      "verticalDeviation": 0,
+      "baseline": 1132.06328078816,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-absolute:deadline:5",
+      "container": [
+        267,
+        1096,
+        527,
+        1142
+      ],
+      "ink": {
+        "left": 369.4423833,
+        "top": 1103.5825195296,
+        "right": 455.23632823,
+        "bottom": 1134.4174804704
+      },
+      "margins": {
+        "left": 102.44238330000002,
+        "right": 71.76367176999997,
+        "top": 7.582519529599949,
+        "bottom": 7.582519529599949
+      },
+      "verticalDeviation": 0,
+      "baseline": 1131.5566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7227866223778366
+    },
+    {
+      "id": "social:mobile-secret:price:0",
+      "container": [
+        559,
+        870,
+        765,
+        916
+      ],
+      "ink": {
+        "left": 666.732812592,
+        "top": 879.66718704,
+        "right": 722.7693359375,
+        "bottom": 906.3328129600001
+      },
+      "margins": {
+        "left": 107.73281259199996,
+        "right": 42.230664062499955,
+        "top": 9.667187040000044,
+        "bottom": 9.66718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 906.0632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-secret:regular",
+      "container": [
+        765,
+        870,
+        1030,
+        916
+      ],
+      "ink": {
+        "left": 850.71875,
+        "top": 881.3632808,
+        "right": 944.28125,
+        "bottom": 904.6367192
+      },
+      "margins": {
+        "left": 85.71875,
+        "right": 85.71875,
+        "top": 11.363280799999984,
+        "bottom": 11.363280799999984
+      },
+      "verticalDeviation": 0
+    },
+    {
+      "id": "social:mobile-secret:price:1",
+      "container": [
+        559,
+        916,
+        765,
+        961
+      ],
+      "ink": {
+        "left": 655.3765648,
+        "top": 925.16718704,
+        "right": 722.7693359375,
+        "bottom": 951.8328129600001
+      },
+      "margins": {
+        "left": 96.37656479999998,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 951.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-secret:deadline:1",
+      "container": [
+        765,
+        916,
+        1030,
+        961
+      ],
+      "ink": {
+        "left": 855.2548833,
+        "top": 923.22534179425,
+        "right": 953.23632823,
+        "bottom": 953.7746582057499
+      },
+      "margins": {
+        "left": 90.25488329999996,
+        "right": 76.76367176999997,
+        "top": 7.225341794249971,
+        "bottom": 7.225341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 950.91381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:mobile-secret:price:2",
+      "container": [
+        559,
+        961,
+        765,
+        1006
+      ],
+      "ink": {
+        "left": 653.6875,
+        "top": 970.16718704,
+        "right": 722.7693359375,
+        "bottom": 996.8328129600001
+      },
+      "margins": {
+        "left": 94.6875,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.16718703999993
+      },
+      "verticalDeviation": 0,
+      "baseline": 996.5632807881601,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-secret:deadline:2",
+      "container": [
+        765,
+        961,
+        1030,
+        1006
+      ],
+      "ink": {
+        "left": 852.703125,
+        "top": 968.22534179425,
+        "right": 953.23632823,
+        "bottom": 998.7746582057499
+      },
+      "margins": {
+        "left": 87.703125,
+        "right": 76.76367176999997,
+        "top": 7.225341794249971,
+        "bottom": 7.225341794250085
+      },
+      "verticalDeviation": 0,
+      "baseline": 995.91381835675,
+      "unitGap": 7,
+      "unitRatio": 0.7371927236588214
+    },
+    {
+      "id": "social:mobile-secret:price:3",
+      "container": [
+        559,
+        1006,
+        765,
+        1051
+      ],
+      "ink": {
+        "left": 647.272656112,
+        "top": 1015.16718704,
+        "right": 722.7693359375,
+        "bottom": 1041.83281296
+      },
+      "margins": {
+        "left": 88.27265611200005,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.167187040000044
+      },
+      "verticalDeviation": 0,
+      "baseline": 1041.56328078816,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-secret:deadline:3",
+      "container": [
+        765,
+        1006,
+        1030,
+        1051
+      ],
+      "ink": {
+        "left": 854.9311521,
+        "top": 1013.0825195296,
+        "right": 953.23632823,
+        "bottom": 1043.9174804703998
+      },
+      "margins": {
+        "left": 89.93115209999996,
+        "right": 76.76367176999997,
+        "top": 7.082519529599949,
+        "bottom": 7.082519529600177
+      },
+      "verticalDeviation": 0,
+      "baseline": 1041.0566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7301670421982506
+    },
+    {
+      "id": "social:mobile-secret:price:4",
+      "container": [
+        559,
+        1051,
+        765,
+        1096
+      ],
+      "ink": {
+        "left": 647.5242176,
+        "top": 1060.16718704,
+        "right": 722.7693359375,
+        "bottom": 1086.83281296
+      },
+      "margins": {
+        "left": 88.52421760000004,
+        "right": 42.230664062499955,
+        "top": 9.167187040000044,
+        "bottom": 9.167187040000044
+      },
+      "verticalDeviation": 0,
+      "baseline": 1086.56328078816,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-secret:deadline:4",
+      "container": [
+        765,
+        1051,
+        1030,
+        1096
+      ],
+      "ink": {
+        "left": 854.3217771,
+        "top": 1058.0539550755,
+        "right": 953.23632823,
+        "bottom": 1088.9460449245
+      },
+      "margins": {
+        "left": 89.32177709999996,
+        "right": 76.76367176999997,
+        "top": 7.053955075499971,
+        "bottom": 7.053955075499971
+      },
+      "verticalDeviation": 0,
+      "baseline": 1086.0852050755,
+      "unitGap": 7,
+      "unitRatio": 0.721328454818021
+    },
+    {
+      "id": "social:mobile-secret:price:5",
+      "container": [
+        559,
+        1096,
+        765,
+        1142
+      ],
+      "ink": {
+        "left": 647.578124816,
+        "top": 1105.66718704,
+        "right": 722.7693359375,
+        "bottom": 1132.33281296
+      },
+      "margins": {
+        "left": 88.57812481600001,
+        "right": 42.230664062499955,
+        "top": 9.667187040000044,
+        "bottom": 9.667187040000044
+      },
+      "verticalDeviation": 0,
+      "baseline": 1132.06328078816,
+      "unitGap": 6,
+      "unitRatio": 0.6777538070030797
+    },
+    {
+      "id": "social:mobile-secret:deadline:5",
+      "container": [
+        765,
+        1096,
+        1030,
+        1142
+      ],
+      "ink": {
+        "left": 867.4423833,
+        "top": 1103.5825195296,
+        "right": 953.23632823,
+        "bottom": 1134.4174804704
+      },
+      "margins": {
+        "left": 102.44238329999996,
+        "right": 76.76367176999997,
+        "top": 7.582519529599949,
+        "bottom": 7.582519529599949
+      },
+      "verticalDeviation": 0,
+      "baseline": 1131.5566406214,
+      "unitGap": 7,
+      "unitRatio": 0.7227866223778366
+    }
+  ]
+}

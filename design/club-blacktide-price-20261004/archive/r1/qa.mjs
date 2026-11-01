@@ -1,0 +1,25 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const root=path.dirname(fileURLToPath(import.meta.url));
+const sharp=createRequire(import.meta.url)('C:/Users/chenh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp');
+const read=async f=>JSON.parse(await fs.readFile(path.join(root,f),'utf8'));
+const c=await read('content.json'),plan=await read('layout.json'),bounds=await read('review/blacktide-text-bounds.json');
+const failures=[];
+for(const k of ['hourly','rounds'])c.prices[k].values.forEach((row,i)=>row.forEach((v,j)=>{const s=c.prices[k].sourceValues[i][j];if(v!==(s===null?null:s-10))failures.push('Price '+k+' '+i+' '+j);}));
+if(plan.pages.length!==1||plan.pages[0].id!=='blacktide')failures.push('Page set');
+for(const b of bounds){if(b.x<28||b.y<28||b.x+b.width>1052||b.y+b.height>6332)failures.push('Outside canvas '+b.text);}
+const numeric=bounds.filter(b=>b.role==='price-number');
+if(numeric.length!==61)failures.push('Expected 61 priced cells (34 hourly + 27 rounds), got '+numeric.length);
+const minimumBody=Math.min(...bounds.filter(b=>b.role==='rule-body').map(b=>b.effectiveSize));
+if(minimumBody*390/1080<14)failures.push('Body smaller than 14 phone px');
+await fs.writeFile(path.join(root,'review/automated-qa.json'),JSON.stringify({failures,pricedCellCount:numeric.length,allNonemptyPricesReducedBy10:!failures.some(x=>x.startsWith('Price')),minimumRulePhoneSize:minimumBody*390/1080,scope:plan.pages.map(p=>p.id)},null,2));
+const png=path.join(root,'output/png/blacktide.png');
+const native=await sharp(png).resize({width:1080}).png().toBuffer();
+for(let i=0;i<6;i++)await sharp(native).extract({left:0,top:i*1060,width:1080,height:1060}).png().toFile(path.join(root,'review/part-'+(i+1)+'.png'));
+const mobile=await sharp(png).resize({width:390}).png().toBuffer();
+const meta=await sharp(mobile).metadata();
+await fs.writeFile(path.join(root,'review/mobile-390.png'),mobile);
+for(let i=0;i<3;i++)await sharp(mobile).extract({left:0,top:i*780,width:390,height:Math.min(780,meta.height-i*780)}).png().toFile(path.join(root,'review/mobile-'+(i+1)+'.png'));
+console.log(JSON.stringify({failures,minimumRulePhoneSize:minimumBody*390/1080,pricedCells:numeric.length,mobileHeight:meta.height}));

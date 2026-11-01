@@ -20,13 +20,18 @@ import styles from './index.module.scss';
 type RecordTab = 'transactions' | 'dispose' | 'gift' | 'withdraw';
 
 const TX_TYPE_LABEL: Record<string, string> = {
-  TOPUP: '充值', PAY: '订单支付', INCOME: '订单收益', WITHDRAW: '提现',
+  TOPUP: '充值', PAY: '订单支付', INCOME: '收益', WITHDRAW: '提现',
   DEPOSIT: '押金', REWARD: '奖励', PENALTY: '罚款', PASS_PURCHASE: '通行证',
-  GIFT: '客服赠送', REFUND: '退款', ADJUST: '调账',
+  GIFT: '赠送', REFUND: '退款', ADJUST: '调账',
   EARNINGS_FREEZE: '收益冻结', EARNINGS_RELEASE: '收益解冻',
 };
 function transactionLabel(item: TransactionRecord): string {
+  if (item.is_referral_income) return item.amount < 0 ? '推荐收益退回' : '推荐分佣';
   if (item.tx_type === 'INCOME' && item.amount < 0) return '收益退回';
+  if (item.tx_type === 'GIFT') {
+    const label = item.gift_source === 'ORDER_GIFT' ? '礼物收益' : item.gift_source === 'RECHARGE_GIFT' ? '客服赠送' : '赠送';
+    return item.is_reversal ? `${label}冲回` : label;
+  }
   if (item.is_reversal) return ({ EARNINGS_FREEZE: '收益冻结退回', EARNINGS_RELEASE: '收益解冻冲回', DEPOSIT: '押金抵扣退回', SHOP_INCOME: '商品收益退回' } as Record<string, string>)[item.tx_type] || `${TX_TYPE_LABEL[item.tx_type] || item.tx_type}冲回`;
   return TX_TYPE_LABEL[item.tx_type] || item.tx_type;
 }
@@ -34,6 +39,10 @@ const PAYEE_METHODS: { label: string; value: PayeeMethod }[] = [
   { label: '微信', value: 'WECHAT' }, { label: '支付宝', value: 'ALIPAY' }, { label: '银行卡', value: 'BANK' },
 ];
 const STATUS_LABEL: Record<string, string> = { PENDING: '待审核', APPROVED: '已通过', REJECTED: '已驳回' };
+function maskedPayee(value?: string): string {
+  const account = (value || '').trim();
+  return account ? `•••• ${Array.from(account).slice(-4).join('')}` : '';
+}
 const EMPTY_BENEFITS: ProviderBenefits = {
   summary: { total_reward: 0, total_penalty: 0, total_gift_amount: 0, total_gift_income: 0, gift_count: 0 },
   dispose_records: [], gift_records: [],
@@ -69,6 +78,7 @@ const WalletPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [withdrawInput, setWithdrawInput] = useState('');
+  const [withdrawIssue, setWithdrawIssue] = useState('');
   const [payeeMethod, setPayeeMethod] = useState<PayeeMethod>('WECHAT');
   const initialPayeeSelected = useRef(false);
   const [withdrawalAccounts, setWithdrawalAccounts] = useState<SavedWithdrawalAccount[]>([]);
@@ -157,7 +167,7 @@ const WalletPage: React.FC = () => {
       setBalance(0); setFrozenAmount(0); setMinAmount(0); setTaxRate(0); setBalanceThreshold(null);
       setTransactions([]); setTotalIncome(0); setTransactionTotal(0); setTransactionPage(1);
       setWithdrawRecords([]); setBenefits(EMPTY_BENEFITS); setWithdrawalAccounts([]);
-      setShowWithdraw(false); setWithdrawInput(''); setPayeeMethod('WECHAT');
+      setShowWithdraw(false); setWithdrawInput(''); setWithdrawIssue(''); setPayeeMethod('WECHAT');
       initialPayeeSelected.current = false;
       loadingMoreRef.current = false; loadingBenefitsRef.current = { dispose: false, gift: false };
       submittingRef.current = false;
@@ -270,7 +280,7 @@ const WalletPage: React.FC = () => {
     if (!selectedAccount) return '请先绑定该方式的收款账户';
     return null;
   };
-  const canWithdraw = !submitting && !validateWithdraw();
+  const canWithdraw = !submitting && !withdrawIssue && !validateWithdraw();
   const activeQuote = validWithdrawQuote(withdrawAmount, withdrawPreview) ? withdrawPreview : null;
 
   const handleWithdraw = async () => {
@@ -283,15 +293,19 @@ const WalletPage: React.FC = () => {
     const quote = withdrawPreview!;
     submittingRef.current = true;
     setSubmitting(true);
+    setWithdrawIssue('');
     try {
       const res = await withdrawRequest({ amount, withdrawal_account_id: selectedAccount!.id, expected_payee_version: selectedAccount!.version,
         expected_tax_rate: quote.tax_rate, expected_tax_amount: quote.tax_amount, expected_actual_amount: quote.actual_amount });
       if (!isCurrent()) return;
+      if (!res || !Number.isInteger(res.code) || res.code >= 500) {
+        setWithdrawIssue('提现结果未确认，请查看提现记录或联系客服核对，暂勿重复提交。');
+        return;
+      }
       if (res.code === 409) {
-        setShowWithdraw(false); setWithdrawInput(''); setActiveTab('withdraw');
-        await loadAll();
-        if (!isCurrent()) return;
-        Taro.showToast({ title: '该申请已提交，请核对提现记录', icon: 'none' });
+        const reason = res.errorCode === 'REQUEST_ID_CONFLICT' ? '交易编号与其他操作冲突' :
+          res.errorCode === 'FUND_RESULT_UNAVAILABLE' ? '原申请结果无法确认' : (res.msg || '提现结果未确认');
+        setWithdrawIssue(`${reason}，请查看提现记录或联系客服核对，暂勿重复提交。`);
         return;
       }
       if (res.code !== 0) {
@@ -300,10 +314,17 @@ const WalletPage: React.FC = () => {
         invalidateQuote(); setQuoteRevision(value => value + 1);
         throw new Error(res.msg || '提现失败');
       }
+      setWithdrawIssue('');
       Taro.showToast({ title: '提现申请已提交', icon: 'success' });
       setShowWithdraw(false); setWithdrawInput(''); setActiveTab('withdraw');
       await loadAll();
-    } catch (error) { if (isCurrent()) Taro.showToast({ title: error instanceof Error ? error.message : '提现失败', icon: 'none' }); }
+    } catch (error) {
+      if (isCurrent()) {
+        const message = error instanceof Error ? error.message : '';
+        if (/request:fail|timeout|network|failed to fetch/i.test(message)) setWithdrawIssue('提现结果未确认，请查看提现记录或联系客服核对，暂勿重复提交。');
+        else Taro.showToast({ title: message || '提现失败', icon: 'none' });
+      }
+    }
     finally { if (isCurrent()) { submittingRef.current = false; setSubmitting(false); } }
   };
 
@@ -334,9 +355,9 @@ const WalletPage: React.FC = () => {
         <View className={styles.cardTop}><Text className={styles.cardLabel}>可提现兴安币</Text><Text className={styles.eye}>资产钱包</Text></View>
         <Text className={styles.balance}>{formatXaCoin(balance)}币</Text>
         <View className={styles.cardBottom}>
-          <View><Text className={styles.miniLabel}>订单净收益</Text><Text className={styles.miniValue}>{formatXaCoin(totalIncome)}币</Text></View>
+          <View><Text className={styles.miniLabel}>服务及推荐净收益</Text><Text className={styles.miniValue}>{formatXaCoin(totalIncome)}币</Text></View>
           <View><Text className={styles.miniLabel}>冻结金额</Text><Text className={styles.miniValue}>{formatXaCoin(frozenAmount)}币</Text></View>
-          <Button className={styles.withdrawButton} disabled={balance <= 0 || loading || !!loadError} onClick={() => setShowWithdraw(true)}>提现</Button>
+          <Button className={styles.withdrawButton} disabled={balance <= 0 || loading || !!loadError} onClick={() => { setWithdrawIssue(''); setShowWithdraw(true); }}>提现</Button>
         </View>
       </View>
 
@@ -368,8 +389,8 @@ const WalletPage: React.FC = () => {
           benefits.gift_records.length ? benefits.gift_records.map(renderGift) : <Empty icon='🎁' title='暂无礼物打赏' desc='已完成的礼物订单会显示在这里' />
         ) : withdrawRecords.length ? withdrawRecords.map(item => <View className={styles.listItem} key={item.id}>
           <View className={`${styles.itemIcon} ${styles.withdrawIcon}`}>提</View>
-          <View className={styles.itemInfo}><Text className={styles.itemTitle}>{item.payee_method_display} · {item.payee_name}</Text><Text className={styles.itemDesc}>{item.status === 'REJECTED' ? item.audit_remark ? `驳回：${item.audit_remark}` : '已退回余额' : `${item.status === 'APPROVED' ? '已打款' : '预计打款'} ¥${formatRmb(item.actual_amount)}`}</Text>{!!item.payout_reference && <Text className={styles.itemDesc}>打款凭证：{item.payout_reference}</Text>}<Text className={styles.itemTime}>{new Date(item.paid_at || item.created_at).toLocaleString()}</Text></View>
-          <View className={styles.amountColumn}><Text className={item.status === 'REJECTED' ? styles.itemTitle : styles.negative}>{item.status === 'REJECTED' ? '原申请 ' : '-'}{formatXaCoin(item.amount)}币</Text><Text className={styles.itemTime}>{item.status === 'REJECTED' ? '已退回余额' : item.tax_amount > 0 ? `税${formatXaCoin(item.tax_amount)} · 到账${formatXaCoin(item.actual_amount)}币` : ''}</Text><Text className={`${styles.status} ${styles[`status_${item.status}`]}`}>{STATUS_LABEL[item.status]}</Text></View>
+          <View className={styles.itemInfo}><Text className={styles.itemTitle}>{item.payee_method_display} · {item.payee_name}</Text>{!!maskedPayee(item.payee_account) && <Text className={styles.itemDesc}>收款账号 {maskedPayee(item.payee_account)}</Text>}<Text className={styles.itemDesc}>{item.status === 'REJECTED' ? item.audit_remark ? `驳回：${item.audit_remark}` : '已退回余额' : `${item.status === 'APPROVED' ? '已打款' : '预计打款'} ¥${formatRmb(item.actual_amount)}`}</Text>{!!item.payout_reference && <Text className={styles.itemDesc}>打款凭证：{item.payout_reference}</Text>}<Text className={styles.itemTime}>{new Date(item.paid_at || item.created_at).toLocaleString()}</Text></View>
+          <View className={styles.amountColumn}><Text className={item.status === 'REJECTED' ? styles.itemTitle : styles.negative}>{item.status === 'REJECTED' ? '原申请 ' : '-'}{formatXaCoin(item.amount)}币</Text><Text className={styles.itemTime}>{item.status === 'REJECTED' ? '已退回余额' : item.tax_amount > 0 ? `税${formatXaCoin(item.tax_amount)} · ${item.status === 'APPROVED' ? '打款' : '预计打款'}${formatXaCoin(item.actual_amount)}币` : ''}</Text><Text className={`${styles.status} ${styles[`status_${item.status}`]}`}>{STATUS_LABEL[item.status]}</Text></View>
         </View>) : <Empty icon='↗️' title='暂无提现记录' desc='提交提现后可在这里查看审核进度' />}
       </View>
 
@@ -383,6 +404,7 @@ const WalletPage: React.FC = () => {
       )}
 
       <SurfaceDialog open={showWithdraw} title='申请提现' busy={submitting} onClose={() => setShowWithdraw(false)} footer={<Button className={`xa-button-primary ${styles.confirm}`} disabled={!canWithdraw} loading={submitting} onClick={handleWithdraw}>{submitting ? '提交中…' : '确认提现'}</Button>}>
+          {!!withdrawIssue && <View className={styles.loadError}><Text>{withdrawIssue}</Text><Button size='mini' disabled={submitting} onClick={() => { setShowWithdraw(false); setActiveTab('withdraw'); void loadAll(); }}>查看提现记录</Button></View>}
           <Text className={styles.formLabel}>提现兴安币</Text><View className={styles.moneyInput}><Text>币</Text><Input aria-label='提现兴安币金额' type='digit' disabled={submitting} maxlength={12} value={withdrawInput} placeholder='0' onInput={e => setWithdrawInput(e.detail.value)} /></View>
           <Text className={styles.formHint}>可用 {formatXaCoin(balance)}币 · {balanceThreshold != null ? `余额大于${formatRmb(balanceThreshold)}元可申请，单次金额不限` : `最低${formatXaCoin(minAmount)}币`} · 本次提现 {formatXaCoin(withdrawAmount)}币</Text>
           {activeQuote ? <Text className={styles.formHint}>税率 {activeQuote.tax_rate}% · 应扣税 {formatXaCoin(activeQuote.tax_amount)}币 · 预计打款人民币 ¥{formatRmb(activeQuote.actual_amount)}</Text>

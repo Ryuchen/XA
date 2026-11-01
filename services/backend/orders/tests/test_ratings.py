@@ -1,83 +1,87 @@
-"""评分聚合函数 apply_escort_rating / rollback_escort_rating 的单元测试。"""
-
+"""Rating summaries follow real evaluation rows, including legacy identities."""
 from decimal import Decimal
+from io import StringIO
 
+from django.core.management import call_command
 from django.test import TestCase
 
-from orders.ratings import apply_escort_rating, rollback_escort_rating
-from orders.tests.factories import make_provider, make_user
+from club_accounts.services import get_or_create_account_for_legacy_user
+from orders.ratings import refresh_escort_rating
+from orders.tests.factories import make_completed_order, make_evaluation, make_provider, make_user
 
 
-class ApplyEscortRatingTest(TestCase):
+class RatingSummaryTest(TestCase):
     def setUp(self):
         self.provider = make_provider()
         self.profile = self.provider.escort_profile
 
-    def test_first_rating_sets_avg_and_count(self):
-        apply_escort_rating(self.provider.id, 4)
+    def add(self, score, **kwargs):
+        order = make_completed_order(make_user(), self.provider)
+        return make_evaluation(order, score=score, **kwargs)
+
+    def test_rebuild_uses_original_scores_after_multiple_changes(self):
+        reviews = [self.add(score) for score in (5, 4, 4, 1, 2, 3, 5)]
+        refresh_escort_rating(self.provider.pk)
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 1)
-        self.assertEqual(self.profile.rating_avg, Decimal('4.00'))
-
-    def test_multiple_ratings_average(self):
-        apply_escort_rating(self.provider.id, 4)
-        apply_escort_rating(self.provider.id, 2)
+        self.assertEqual((self.profile.rating_count, self.profile.rating_avg), (7, Decimal('3.43')))
+        refresh_escort_rating(self.provider.pk, exclude_evaluation_id=reviews[0].pk)
+        reviews[0].delete()
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 2)
-        self.assertEqual(self.profile.rating_avg, Decimal('3.00'))
+        self.assertEqual((self.profile.rating_count, self.profile.rating_avg), (6, Decimal('3.17')))
 
-    def test_average_rounds_to_two_decimals(self):
-        apply_escort_rating(self.provider.id, 5)
-        apply_escort_rating(self.provider.id, 4)
-        apply_escort_rating(self.provider.id, 4)
+    def test_explicit_account_and_mapped_legacy_reviews_are_both_counted(self):
+        account = get_or_create_account_for_legacy_user(self.provider)
+        self.profile.account = account
+        self.profile.save(update_fields=['account'])
+        self.add(5, provider_account=account)
+        self.add(3)
+        refresh_escort_rating(self.provider.pk, provider_account_id=account.pk)
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 3)
-        self.assertEqual(self.profile.rating_avg, Decimal('4.33'))
+        self.assertEqual((self.profile.rating_count, self.profile.rating_avg), (2, Decimal('4.00')))
 
-    def test_none_provider_is_noop(self):
-        apply_escort_rating(None, 5)  # 不抛异常即可
+    def test_other_explicit_account_is_not_counted_by_legacy_user_id(self):
+        account = get_or_create_account_for_legacy_user(self.provider)
+        other = get_or_create_account_for_legacy_user(make_provider())
+        self.profile.account = account
+        self.profile.save(update_fields=['account'])
+        self.add(5, provider_account=account)
+        self.add(1, provider_account=other)
+        refresh_escort_rating(self.provider.pk, provider_account_id=account.pk)
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 0)
+        self.assertEqual((self.profile.rating_count, self.profile.rating_avg), (1, Decimal('5.00')))
 
-    def test_provider_without_profile_is_noop(self):
-        customer = make_user()  # 普通用户无陪玩档案
-        apply_escort_rating(customer.id, 5)  # 不抛异常即可
+    def test_no_profile_is_a_noop(self):
+        refresh_escort_rating(None)
+        refresh_escort_rating(make_user().pk)
 
-
-class RollbackEscortRatingTest(TestCase):
-    def setUp(self):
-        self.provider = make_provider()
-        self.profile = self.provider.escort_profile
-
-    def test_rollback_to_zero_when_last_one(self):
-        apply_escort_rating(self.provider.id, 5)
-        rollback_escort_rating(self.provider.id, 5)
+    def test_audit_reports_existing_drift_without_changing_it(self):
+        self.add(5)
+        self.profile.rating_avg = Decimal('3.00')
+        self.profile.rating_count = 1
+        self.profile.save(update_fields=['rating_avg', 'rating_count'])
+        output = StringIO()
+        call_command('audit_escort_ratings', '--details', stdout=output)
+        self.assertIn(f'profile={self.profile.pk} stored=1/3.00 actual=1/5.00', output.getvalue())
+        self.assertIn('mismatched=1', output.getvalue())
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 0)
-        self.assertEqual(self.profile.rating_avg, Decimal('0.00'))
+        self.assertEqual((self.profile.rating_count, self.profile.rating_avg), (1, Decimal('3.00')))
 
-    def test_rollback_recomputes_average(self):
-        apply_escort_rating(self.provider.id, 4)
-        apply_escort_rating(self.provider.id, 2)
-        rollback_escort_rating(self.provider.id, 2)
+    def test_repair_corrects_average_but_leaves_unmatched_review_counts(self):
+        self.add(5)
+        self.profile.rating_avg = Decimal('3.00')
+        self.profile.rating_count = 1
+        self.profile.save(update_fields=['rating_avg', 'rating_count'])
+        other = make_provider().escort_profile
+        other.rating_avg = Decimal('4.00')
+        other.rating_count = 3
+        other.save(update_fields=['rating_avg', 'rating_count'])
+        output = StringIO()
+        call_command('audit_escort_ratings', '--repair-averages', '--details', stdout=output)
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 1)
-        self.assertEqual(self.profile.rating_avg, Decimal('4.00'))
-
-    def test_rollback_on_empty_is_noop(self):
-        rollback_escort_rating(self.provider.id, 5)
-        self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 0)
-        self.assertEqual(self.profile.rating_avg, Decimal('0.00'))
-
-    def test_none_provider_is_noop(self):
-        rollback_escort_rating(None, 5)  # 不抛异常即可
-
-    def test_apply_then_rollback_is_symmetric(self):
-        apply_escort_rating(self.provider.id, 5)
-        apply_escort_rating(self.provider.id, 3)
-        apply_escort_rating(self.provider.id, 1)
-        rollback_escort_rating(self.provider.id, 1)
-        self.profile.refresh_from_db()
-        self.assertEqual(self.profile.rating_count, 2)
-        self.assertEqual(self.profile.rating_avg, Decimal('4.00'))
+        other.refresh_from_db()
+        self.assertEqual((self.profile.rating_count, self.profile.rating_avg), (1, Decimal('5.00')))
+        self.assertEqual((other.rating_count, other.rating_avg), (3, Decimal('4.00')))
+        self.assertIn('average_repairable=1 repaired=1', output.getvalue())
+        output = StringIO()
+        call_command('audit_escort_ratings', '--repair-averages', stdout=output)
+        self.assertIn('average_repairable=0 repaired=0', output.getvalue())

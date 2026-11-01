@@ -1,3 +1,4 @@
+const { modal: themedModal } = require('../../core/ui');
 const { request, fund } = require('../../core/api');
 const auth = require('../../core/auth');
 const { on } = require('../../core/events');
@@ -31,7 +32,7 @@ Page({
     if (this.data.points < reward.point_cost) return toast('积分还不够，继续累积吧');
     const version = auth.revision(); this.setData({ busy: true });
     try {
-      const answer = await new Promise(resolve => wx.showModal({ title: '确认兑换', content: '使用 ' + reward.point_cost + ' 积分兑换「' + reward.name + '」。' + (reward.kind === 'BALANCE' ? '兑换成功后余额将自动到账。' : '兑换后可在记录中补充交付资料。'), success: resolve, fail: () => resolve({ confirm: false }) }));
+      const answer = await new Promise(resolve => themedModal({ title: '确认兑换', content: '使用 ' + reward.point_cost + ' 积分兑换「' + reward.name + '」。' + (reward.kind === 'BALANCE' ? '兑换成功后余额将自动到账。' : '兑换后可在记录中补充交付资料。'), success: resolve, fail: () => resolve({ confirm: false }) }));
       if (!answer.confirm || !this._alive || version !== auth.revision()) return;
       const claim = await fund('/club/redeem/', { reward_id: reward.id });
       if (!this._alive || version !== auth.revision()) return;

@@ -82,7 +82,8 @@ class SettledRefundConcurrencyTest(APITransactionTestCase):
         if withdraw_result['code']==0:
             self.assertEqual(refund_result['errorCode'],'REFUND_RECOVERY_INSUFFICIENT')
             row = WithdrawRequest.objects.get(account=self.provider_account)
-            self.ok(self.admin.post(f'/api/admin/withdrawals/{row.pk}/reject/',{'audit_remark':'隔离并发验证结束'},format='json'))
+            claim = self.ok(self.admin.post(f'/api/admin/withdrawals/{row.pk}/claim/'))
+            self.ok(self.admin.post(f'/api/admin/withdrawals/{row.pk}/reject/',{'audit_remark':'隔离并发验证结束','expected_claimed_at':claim['claimed_at']},format='json'))
         self.finish_refund(order)
         self.provider_wallet.refresh_from_db()
         self.assertEqual((self.provider_wallet.balance,self.provider_wallet.frozen_amount),(0,0))

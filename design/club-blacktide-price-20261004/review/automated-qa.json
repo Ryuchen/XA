@@ -1,0 +1,986 @@
+{
+  "failures": [],
+  "pricedCellCount": 61,
+  "businessContentIdentical": true,
+  "contentSha256": "cef0d4fc525634b79afc28d75bcad303f8c8da384031b08d9f270eb90f59966d",
+  "widthMultiplier": 2,
+  "minimumRuleColumnPhoneSize": 14.444444444444445,
+  "minimumRuleFullPagePhoneSize": 7.222222222222222,
+  "regionChecks": [
+    {
+      "id": "hero",
+      "ink": {
+        "left": 398.539062,
+        "right": 893.4609379999999,
+        "top": 81.507812,
+        "bottom": 525.6289059999999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hero",
+        "x": 68,
+        "y": 50,
+        "w": 1140,
+        "h": 490,
+        "safe": {
+          "x": 80,
+          "y": 62,
+          "w": 1116,
+          "h": 466
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 31.507812,
+      "bottomMargin": 14.371094000000085,
+      "centerOffset": 8.568358999999987
+    },
+    {
+      "id": "heading-hourly",
+      "ink": {
+        "left": 70.3745114,
+        "right": 1025,
+        "top": 586.73828125,
+        "bottom": 639.26171875
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "heading-hourly",
+        "x": 54,
+        "y": 572,
+        "w": 972,
+        "h": 84,
+        "safe": {
+          "x": 54,
+          "y": 572,
+          "w": 972,
+          "h": 84
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 14.73828125,
+      "bottomMargin": 16.73828125,
+      "centerOffset": -1
+    },
+    {
+      "id": "heading-rounds",
+      "ink": {
+        "left": 1146.6640625,
+        "right": 2105,
+        "top": 586.6328125,
+        "bottom": 639.3671875
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "heading-rounds",
+        "x": 1134,
+        "y": 572,
+        "w": 972,
+        "h": 84,
+        "safe": {
+          "x": 1134,
+          "y": 572,
+          "w": 972,
+          "h": 84
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 14.6328125,
+      "bottomMargin": 16.6328125,
+      "centerOffset": -1
+    },
+    {
+      "id": "hourly-header",
+      "ink": {
+        "left": 98.546875,
+        "right": 997.28125,
+        "top": 701.371094,
+        "bottom": 740.6289059999999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-header",
+        "x": 54,
+        "y": 677,
+        "w": 972,
+        "h": 88,
+        "safe": {
+          "x": 66,
+          "y": 689,
+          "w": 948,
+          "h": 64
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 24.37109399999997,
+      "bottomMargin": 24.371094000000085,
+      "centerOffset": 0
+    },
+    {
+      "id": "hourly-row-0",
+      "ink": {
+        "left": 97.27001999999999,
+        "right": 998.3125,
+        "top": 776.8740232,
+        "bottom": 850.5424800000001
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-row-0",
+        "x": 56,
+        "y": 765,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 68,
+          "y": 773,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 11.87402320000001,
+      "bottomMargin": 12.457519999999931,
+      "centerOffset": -0.2917483999999604
+    },
+    {
+      "id": "hourly-row-1",
+      "ink": {
+        "left": 100.35253911000001,
+        "right": 998.3125,
+        "top": 893.4638679,
+        "bottom": 930.5361320999999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-row-1",
+        "x": 56,
+        "y": 863,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 68,
+          "y": 871,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.46386789999997,
+      "bottomMargin": 30.463867900000082,
+      "centerOffset": 0
+    },
+    {
+      "id": "hourly-row-2",
+      "ink": {
+        "left": 100.890625,
+        "right": 998.3125,
+        "top": 991.5380857,
+        "bottom": 1028.4619143
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-row-2",
+        "x": 56,
+        "y": 961,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 68,
+          "y": 969,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.53808570000001,
+      "bottomMargin": 30.53808570000001,
+      "centerOffset": 0
+    },
+    {
+      "id": "hourly-row-3",
+      "ink": {
+        "left": 101.20605463999999,
+        "right": 998.3125,
+        "top": 1089.5009768,
+        "bottom": 1126.4990232
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-row-3",
+        "x": 56,
+        "y": 1059,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 68,
+          "y": 1067,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.50097679999999,
+      "bottomMargin": 30.50097679999999,
+      "centerOffset": 0
+    },
+    {
+      "id": "hourly-row-4",
+      "ink": {
+        "left": 100.51953125,
+        "right": 998.3125,
+        "top": 1187.4638679000002,
+        "bottom": 1224.5361321000003
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-row-4",
+        "x": 56,
+        "y": 1157,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 68,
+          "y": 1165,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.463867900000196,
+      "bottomMargin": 30.46386789999974,
+      "centerOffset": 2.2737367544323206e-13
+    },
+    {
+      "id": "hourly-row-5",
+      "ink": {
+        "left": 100.70507803000001,
+        "right": 998.3125,
+        "top": 1285.617676489,
+        "bottom": 1322.3823235109999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-row-5",
+        "x": 56,
+        "y": 1255,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 68,
+          "y": 1263,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.617676488999905,
+      "bottomMargin": 30.617676489000132,
+      "centerOffset": 0
+    },
+    {
+      "id": "rounds-header",
+      "ink": {
+        "left": 1178.546875,
+        "right": 2077.28125,
+        "top": 701.371094,
+        "bottom": 740.6289059999999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "rounds-header",
+        "x": 1134,
+        "y": 677,
+        "w": 972,
+        "h": 88,
+        "safe": {
+          "x": 1146,
+          "y": 689,
+          "w": 948,
+          "h": 64
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 24.37109399999997,
+      "bottomMargin": 24.371094000000085,
+      "centerOffset": 0
+    },
+    {
+      "id": "rounds-row-0",
+      "ink": {
+        "left": 1181.0390625,
+        "right": 2078.3125,
+        "top": 795.747558361,
+        "bottom": 832.2524416389999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "rounds-row-0",
+        "x": 1136,
+        "y": 765,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 1148,
+          "y": 773,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.74755836099996,
+      "bottomMargin": 30.747558361000074,
+      "centerOffset": 0
+    },
+    {
+      "id": "rounds-row-1",
+      "ink": {
+        "left": 1180.35253911,
+        "right": 2078.3125,
+        "top": 893.4638679,
+        "bottom": 930.5361320999999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "rounds-row-1",
+        "x": 1136,
+        "y": 863,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 1148,
+          "y": 871,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.46386789999997,
+      "bottomMargin": 30.463867900000082,
+      "centerOffset": 0
+    },
+    {
+      "id": "rounds-row-2",
+      "ink": {
+        "left": 1180.890625,
+        "right": 2078.3125,
+        "top": 991.5380857,
+        "bottom": 1028.4619143
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "rounds-row-2",
+        "x": 1136,
+        "y": 961,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 1148,
+          "y": 969,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.53808570000001,
+      "bottomMargin": 30.53808570000001,
+      "centerOffset": 0
+    },
+    {
+      "id": "rounds-row-3",
+      "ink": {
+        "left": 1181.20605464,
+        "right": 2078.3125,
+        "top": 1089.5009768,
+        "bottom": 1126.4990232
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "rounds-row-3",
+        "x": 1136,
+        "y": 1059,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 1148,
+          "y": 1067,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.50097679999999,
+      "bottomMargin": 30.50097679999999,
+      "centerOffset": 0
+    },
+    {
+      "id": "rounds-row-4",
+      "ink": {
+        "left": 1180.51953125,
+        "right": 2078.3125,
+        "top": 1187.4638679000002,
+        "bottom": 1224.5361321000003
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "rounds-row-4",
+        "x": 1136,
+        "y": 1157,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 1148,
+          "y": 1165,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.463867900000196,
+      "bottomMargin": 30.46386789999974,
+      "centerOffset": 2.2737367544323206e-13
+    },
+    {
+      "id": "rounds-row-5",
+      "ink": {
+        "left": 1180.70507803,
+        "right": 2078.3125,
+        "top": 1285.617676489,
+        "bottom": 1322.3823235109999
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "rounds-row-5",
+        "x": 1136,
+        "y": 1255,
+        "w": 968,
+        "h": 98,
+        "safe": {
+          "x": 1148,
+          "y": 1263,
+          "w": 944,
+          "h": 82
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.617676488999905,
+      "bottomMargin": 30.617676489000132,
+      "centerOffset": 0
+    },
+    {
+      "id": "price-note",
+      "ink": {
+        "left": 507.2143561099999,
+        "right": 1652.78564389,
+        "top": 1391.015625,
+        "bottom": 1433.984375
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "price-note",
+        "x": 54,
+        "y": 1375,
+        "w": 2052,
+        "h": 75,
+        "safe": {
+          "x": 78,
+          "y": 1389,
+          "w": 2004,
+          "h": 47
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 16.015625,
+      "bottomMargin": 16.015625,
+      "centerOffset": 0
+    },
+    {
+      "id": "heading-compensation",
+      "ink": {
+        "left": 66.7885739,
+        "right": 345.943356,
+        "top": 1488.3691407869999,
+        "bottom": 1541.2617195869998
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "heading-compensation",
+        "x": 54,
+        "y": 1474,
+        "w": 972,
+        "h": 84,
+        "safe": {
+          "x": 54,
+          "y": 1474,
+          "w": 972,
+          "h": 84
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 14.369140786999878,
+      "bottomMargin": 16.73828041300021,
+      "centerOffset": -1.1845698130000528
+    },
+    {
+      "id": "compensation-一陪",
+      "ink": {
+        "left": 93.98681646,
+        "right": 757.64883676,
+        "top": 1602.4726567999999,
+        "bottom": 1764.5078125
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "compensation-一陪",
+        "x": 54,
+        "y": 1573,
+        "w": 972,
+        "h": 222,
+        "safe": {
+          "x": 78,
+          "y": 1593,
+          "w": 924,
+          "h": 182
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 29.472656799999868,
+      "bottomMargin": 30.4921875,
+      "centerOffset": -0.5097653500001798
+    },
+    {
+      "id": "compensation-双陪",
+      "ink": {
+        "left": 93.608886665,
+        "right": 786.6074224,
+        "top": 1843.4726567999999,
+        "bottom": 2010.5078125
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "compensation-双陪",
+        "x": 54,
+        "y": 1815,
+        "w": 972,
+        "h": 232,
+        "safe": {
+          "x": 78,
+          "y": 1835,
+          "w": 924,
+          "h": 192
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 28.472656799999868,
+      "bottomMargin": 36.4921875,
+      "centerOffset": -4.00976535000018
+    },
+    {
+      "id": "compensation-三陪",
+      "ink": {
+        "left": 93.98681646,
+        "right": 605.359375,
+        "top": 2094.585936888,
+        "bottom": 2206.4873039
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "compensation-三陪",
+        "x": 54,
+        "y": 2067,
+        "w": 972,
+        "h": 174,
+        "safe": {
+          "x": 78,
+          "y": 2087,
+          "w": 924,
+          "h": 134
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 27.585936888000106,
+      "bottomMargin": 34.512696100000085,
+      "centerOffset": -3.463379605999762
+    },
+    {
+      "id": "compensation-四陪",
+      "ink": {
+        "left": 94.65869146,
+        "right": 597.84999472,
+        "top": 2297.5859373440003,
+        "bottom": 2416.414063112
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "compensation-四陪",
+        "x": 54,
+        "y": 2261,
+        "w": 972,
+        "h": 194,
+        "safe": {
+          "x": 78,
+          "y": 2281,
+          "w": 924,
+          "h": 154
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 36.585937344000286,
+      "bottomMargin": 38.585936888000106,
+      "centerOffset": -0.9999997719996827
+    },
+    {
+      "id": "compensation-五陪",
+      "ink": {
+        "left": 93.776855415,
+        "right": 683.6738295,
+        "top": 2510.774414222,
+        "bottom": 2555.225585778
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "compensation-五陪",
+        "x": 54,
+        "y": 2475,
+        "w": 972,
+        "h": 117,
+        "safe": {
+          "x": 78,
+          "y": 2495,
+          "w": 924,
+          "h": 77
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 35.774414221999905,
+      "bottomMargin": 36.774414221999905,
+      "centerOffset": -0.5
+    },
+    {
+      "id": "heading-additions",
+      "ink": {
+        "left": 1145.69287103,
+        "right": 1423.93945326,
+        "top": 1488.632813013,
+        "bottom": 1541.6308592130001
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "heading-additions",
+        "x": 1134,
+        "y": 1474,
+        "w": 972,
+        "h": 84,
+        "safe": {
+          "x": 1134,
+          "y": 1474,
+          "w": 972,
+          "h": 84
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 14.632813013000032,
+      "bottomMargin": 16.36914078699988,
+      "centerOffset": -0.8681638869998096
+    },
+    {
+      "id": "hourly-additions",
+      "ink": {
+        "left": 1172,
+        "right": 2066,
+        "top": 1602.4716793999999,
+        "bottom": 1933.4921880000002
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "hourly-additions",
+        "x": 1134,
+        "y": 1573,
+        "w": 972,
+        "h": 391,
+        "safe": {
+          "x": 1158,
+          "y": 1593,
+          "w": 924,
+          "h": 351
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 29.471679399999857,
+      "bottomMargin": 30.50781199999983,
+      "centerOffset": -0.5180663000001005
+    },
+    {
+      "id": "extra-0",
+      "ink": {
+        "left": 1267.840819,
+        "right": 1476.159181,
+        "top": 2006.2871099,
+        "bottom": 2110.4460449175003
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "extra-0",
+        "x": 1134,
+        "y": 1984,
+        "w": 476,
+        "h": 150,
+        "safe": {
+          "x": 1158,
+          "y": 2004,
+          "w": 428,
+          "h": 110
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 22.287109899999905,
+      "bottomMargin": 23.55395508249967,
+      "centerOffset": -0.6334225912496549
+    },
+    {
+      "id": "extra-1",
+      "ink": {
+        "left": 1784.73828125,
+        "right": 1951.26171875,
+        "top": 2006.9023442540001,
+        "bottom": 2110.4460449175003
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "extra-1",
+        "x": 1630,
+        "y": 1984,
+        "w": 476,
+        "h": 150,
+        "safe": {
+          "x": 1654,
+          "y": 2004,
+          "w": 428,
+          "h": 110
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 22.902344254000127,
+      "bottomMargin": 23.55395508249967,
+      "centerOffset": -0.3258054142497713
+    },
+    {
+      "id": "round-additions",
+      "ink": {
+        "left": 1170,
+        "right": 2062,
+        "top": 2177.4511724000004,
+        "bottom": 2423.4462888000003
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "round-additions",
+        "x": 1134,
+        "y": 2154,
+        "w": 972,
+        "h": 290,
+        "safe": {
+          "x": 1158,
+          "y": 2174,
+          "w": 924,
+          "h": 250
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 23.45117240000036,
+      "bottomMargin": 20.553711199999725,
+      "centerOffset": 1.44873060000009
+    },
+    {
+      "id": "mixed-party",
+      "ink": {
+        "left": 1172,
+        "right": 1646.1816422,
+        "top": 2483.4306638000003,
+        "bottom": 2572.6103513
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "mixed-party",
+        "x": 1134,
+        "y": 2464,
+        "w": 972,
+        "h": 128,
+        "safe": {
+          "x": 1158,
+          "y": 2484,
+          "w": 924,
+          "h": 88
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 19.430663800000275,
+      "bottomMargin": 19.38964870000018,
+      "centerOffset": 0.020507549999820185
+    },
+    {
+      "id": "heading-red",
+      "ink": {
+        "left": 66.5229489,
+        "right": 346.57617174,
+        "top": 2628.711914913,
+        "bottom": 2681.551757313
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "heading-red",
+        "x": 54,
+        "y": 2614,
+        "w": 972,
+        "h": 84,
+        "safe": {
+          "x": 54,
+          "y": 2614,
+          "w": 972,
+          "h": 84
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 14.711914912999873,
+      "bottomMargin": 16.448242686999947,
+      "centerOffset": -0.8681638870002644
+    },
+    {
+      "id": "red-screen",
+      "ink": {
+        "left": 93,
+        "right": 985,
+        "top": 2740.410156,
+        "bottom": 3063.453125
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "red-screen",
+        "x": 54,
+        "y": 2713,
+        "w": 972,
+        "h": 371,
+        "safe": {
+          "x": 78,
+          "y": 2733,
+          "w": 924,
+          "h": 331
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 27.410155999999915,
+      "bottomMargin": 20.546875,
+      "centerOffset": 3.4316404999999577
+    },
+    {
+      "id": "conversion",
+      "ink": {
+        "left": 144.8735380175,
+        "right": 958.4907243624999,
+        "top": 3134.8759757000003,
+        "bottom": 3251.4052736999997
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "conversion",
+        "x": 54,
+        "y": 3104,
+        "w": 972,
+        "h": 180,
+        "safe": {
+          "x": 78,
+          "y": 3124,
+          "w": 924,
+          "h": 140
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 30.875975700000254,
+      "bottomMargin": 32.594726300000275,
+      "centerOffset": -0.8593753000000106
+    },
+    {
+      "id": "heading-settlement",
+      "ink": {
+        "left": 1146.8051761,
+        "right": 1480.787106,
+        "top": 2628.448242687,
+        "bottom": 2681.551756287
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "heading-settlement",
+        "x": 1134,
+        "y": 2614,
+        "w": 972,
+        "h": 84,
+        "safe": {
+          "x": 1134,
+          "y": 2614,
+          "w": 972,
+          "h": 84
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 14.448242686999947,
+      "bottomMargin": 16.44824371300001,
+      "centerOffset": -1.0000005130000318
+    },
+    {
+      "id": "settlement",
+      "ink": {
+        "left": 1171,
+        "right": 1925.6875,
+        "top": 2787.4511724000004,
+        "bottom": 3210.5283211
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "settlement",
+        "x": 1134,
+        "y": 2713,
+        "w": 972,
+        "h": 571,
+        "safe": {
+          "x": 1158,
+          "y": 2733,
+          "w": 924,
+          "h": 531
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 74.45117240000036,
+      "bottomMargin": 73.47167889999992,
+      "centerOffset": 0.48974675000044954
+    },
+    {
+      "id": "footer",
+      "ink": {
+        "left": 727.453125,
+        "right": 1432.546875,
+        "top": 3356.3339846,
+        "bottom": 3391.6660154
+      },
+      "container": {
+        "page": "blacktide",
+        "containerId": "footer",
+        "x": 54,
+        "y": 3334,
+        "w": 2052,
+        "h": 69,
+        "safe": {
+          "x": 54,
+          "y": 3334,
+          "w": 2052,
+          "h": 69
+        }
+      },
+      "safeFailures": [],
+      "topMargin": 22.333984599999894,
+      "bottomMargin": 11.333984599999894,
+      "centerOffset": 5.5
+    }
+  ],
+  "scope": [
+    "blacktide"
+  ]
+}

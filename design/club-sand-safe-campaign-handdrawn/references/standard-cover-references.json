@@ -1,0 +1,9 @@
+{
+  "standardBlank": "C:/Users/chenh/.codex/skills/xingan-gameplay-posters/assets/material-v3/backgrounds/cover.png",
+  "materialHistory": "G:/Github/XA/design/club-material-campaign-v3-handdrawn/07-final/png/cover.png",
+  "timedClearHistory": "G:/Github/XA/design/club-timed-clear-campaign-handdrawn/output/png/cover.png",
+  "basis": "横版16:9、左文右图、主标题艺术字、品牌与模式条；封面所有文案按所属净文字区居中。历史价格、优惠、模式范围和例外不复制。",
+  "currentPaletteReference": "03-backgrounds/cover-bakhsh-v1.png",
+  "prompt": "03-backgrounds/cover-standard-redraw-prompt-v2.md",
+  "bundledStandardBlank": "references/standard-cover-background.png"
+}

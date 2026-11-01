@@ -1,0 +1,712 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 73.82,
+    "y": 66.7919919,
+    "width": 91.52832037000002,
+    "height": 22.416016199999998,
+    "cy": 78,
+    "effectiveSize": 23
+  },
+  {
+    "text": "手游 · 绝密",
+    "role": "platform-mode",
+    "x": 98.96484372,
+    "y": 271.2109372,
+    "width": 120.07031256,
+    "height": 23.578125599999996,
+    "cy": 283,
+    "effectiveSize": 24
+  },
+  {
+    "text": "588",
+    "role": "price-number",
+    "x": 172.81249984,
+    "y": 434.8124992,
+    "width": 99.18750016,
+    "height": 46.3750016,
+    "cy": 458,
+    "effectiveSize": 64
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 283,
+    "y": 442.189575203,
+    "width": 22.341796875,
+    "height": 31.620849594,
+    "cy": 458,
+    "effectiveSize": 61.5
+  },
+  {
+    "text": "保底",
+    "role": "loot-label",
+    "x": 459,
+    "y": 444.9350591,
+    "width": 53.20898451,
+    "height": 26.1298818,
+    "cy": 458,
+    "effectiveSize": 27
+  },
+  {
+    "text": "2188",
+    "role": "loot-number",
+    "x": 550.06249984,
+    "y": 434.8124992,
+    "width": 119.93750016,
+    "height": 46.3750016,
+    "cy": 458,
+    "effectiveSize": 64
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 681,
+    "y": 442.4147949065,
+    "width": 44.8637703,
+    "height": 31.170410186999998,
+    "cy": 458,
+    "effectiveSize": 61.5
+  },
+  {
+    "text": "刷爆",
+    "role": "entitlement-action",
+    "x": 82,
+    "y": 537.717774,
+    "width": 59.501953199999996,
+    "height": 28.564452,
+    "cy": 552,
+    "effectiveSize": 30
+  },
+  {
+    "text": "1",
+    "role": "entitlement-count",
+    "x": 190.072265616,
+    "y": 539.2207038,
+    "width": 7.927734383999999,
+    "height": 25.5585924,
+    "cy": 552,
+    "effectiveSize": 36
+  },
+  {
+    "text": "张",
+    "role": "entitlement-unit",
+    "x": 212,
+    "y": 538.1938482,
+    "width": 27.4707024,
+    "height": 27.612303599999997,
+    "cy": 552,
+    "effectiveSize": 29
+  },
+  {
+    "text": "巴克什总裁卡",
+    "role": "entitlement-item",
+    "x": 263,
+    "y": 536.95410195,
+    "width": 181.91306694999997,
+    "height": 30.091796100000003,
+    "cy": 552,
+    "effectiveSize": 31
+  },
+  {
+    "text": "开启",
+    "role": "entitlement-action",
+    "x": 82,
+    "y": 601.307617,
+    "width": 57.2460939,
+    "height": 29.384766,
+    "cy": 616,
+    "effectiveSize": 30
+  },
+  {
+    "text": "8",
+    "role": "entitlement-count",
+    "x": 181.7929692,
+    "y": 602.9570308,
+    "width": 16.207030800000002,
+    "height": 26.085938399999996,
+    "cy": 616,
+    "effectiveSize": 36
+  },
+  {
+    "text": "次",
+    "role": "entitlement-unit",
+    "x": 212,
+    "y": 602.009765625,
+    "width": 28.320312499999996,
+    "height": 27.980468749999996,
+    "cy": 616,
+    "effectiveSize": 29
+  },
+  {
+    "text": "沙色保险",
+    "role": "entitlement-item",
+    "x": 263,
+    "y": 600.86328125,
+    "width": 123.33398453,
+    "height": 30.2734375,
+    "cy": 616,
+    "effectiveSize": 31
+  },
+  {
+    "text": "开启",
+    "role": "entitlement-action",
+    "x": 82,
+    "y": 665.307617,
+    "width": 57.2460939,
+    "height": 29.384766,
+    "cy": 680,
+    "effectiveSize": 30
+  },
+  {
+    "text": "10",
+    "role": "entitlement-count",
+    "x": 169.6816404,
+    "y": 666.9306644,
+    "width": 28.318359599999997,
+    "height": 26.1386712,
+    "cy": 680,
+    "effectiveSize": 36
+  },
+  {
+    "text": "次",
+    "role": "entitlement-unit",
+    "x": 212,
+    "y": 666.009765625,
+    "width": 28.320312499999996,
+    "height": 27.980468749999996,
+    "cy": 680,
+    "effectiveSize": 29
+  },
+  {
+    "text": "普通大保险",
+    "role": "entitlement-item",
+    "x": 263,
+    "y": 664.93896465,
+    "width": 153.87988289,
+    "height": 30.1220707,
+    "cy": 680,
+    "effectiveSize": 31
+  },
+  {
+    "text": "888",
+    "role": "price-number",
+    "x": 171.18750016,
+    "y": 782.8124992,
+    "width": 100.81249984,
+    "height": 46.3750016,
+    "cy": 806,
+    "effectiveSize": 64
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 283,
+    "y": 790.189575203,
+    "width": 22.341796875,
+    "height": 31.620849594,
+    "cy": 806,
+    "effectiveSize": 61.5
+  },
+  {
+    "text": "保底",
+    "role": "loot-label",
+    "x": 459,
+    "y": 792.9350591,
+    "width": 53.20898451,
+    "height": 26.1298818,
+    "cy": 806,
+    "effectiveSize": 27
+  },
+  {
+    "text": "3288",
+    "role": "loot-number",
+    "x": 536.87499968,
+    "y": 782.8124992,
+    "width": 133.12500032,
+    "height": 46.3750016,
+    "cy": 806,
+    "effectiveSize": 64
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 681,
+    "y": 790.4147949065,
+    "width": 44.8637703,
+    "height": 31.170410186999998,
+    "cy": 806,
+    "effectiveSize": 61.5
+  },
+  {
+    "text": "刷爆",
+    "role": "entitlement-action",
+    "x": 82,
+    "y": 879.717774,
+    "width": 59.501953199999996,
+    "height": 28.564452,
+    "cy": 894,
+    "effectiveSize": 30
+  },
+  {
+    "text": "1",
+    "role": "entitlement-count",
+    "x": 190.072265616,
+    "y": 881.2207038,
+    "width": 7.927734383999999,
+    "height": 25.5585924,
+    "cy": 894,
+    "effectiveSize": 36
+  },
+  {
+    "text": "张",
+    "role": "entitlement-unit",
+    "x": 212,
+    "y": 880.1938482,
+    "width": 27.4707024,
+    "height": 27.612303599999997,
+    "cy": 894,
+    "effectiveSize": 29
+  },
+  {
+    "text": "巴克什总裁卡",
+    "role": "entitlement-item",
+    "x": 263,
+    "y": 878.95410195,
+    "width": 181.91306694999997,
+    "height": 30.091796100000003,
+    "cy": 894,
+    "effectiveSize": 31
+  },
+  {
+    "text": "刷爆",
+    "role": "entitlement-action",
+    "x": 82,
+    "y": 943.717774,
+    "width": 59.501953199999996,
+    "height": 28.564452,
+    "cy": 958,
+    "effectiveSize": 30
+  },
+  {
+    "text": "1",
+    "role": "entitlement-count",
+    "x": 190.072265616,
+    "y": 945.2207038,
+    "width": 7.927734383999999,
+    "height": 25.5585924,
+    "cy": 958,
+    "effectiveSize": 36
+  },
+  {
+    "text": "张",
+    "role": "entitlement-unit",
+    "x": 212,
+    "y": 944.1938482,
+    "width": 27.4707024,
+    "height": 27.612303599999997,
+    "cy": 958,
+    "effectiveSize": 29
+  },
+  {
+    "text": "博物馆地下金库卡",
+    "role": "entitlement-item",
+    "x": 263,
+    "y": 942.78759785,
+    "width": 246.72851578,
+    "height": 30.4248043,
+    "cy": 958,
+    "effectiveSize": 31
+  },
+  {
+    "text": "开启",
+    "role": "entitlement-action",
+    "x": 82,
+    "y": 1007.307617,
+    "width": 57.2460939,
+    "height": 29.384766,
+    "cy": 1022,
+    "effectiveSize": 30
+  },
+  {
+    "text": "10",
+    "role": "entitlement-count",
+    "x": 169.6816404,
+    "y": 1008.9306644,
+    "width": 28.318359599999997,
+    "height": 26.1386712,
+    "cy": 1022,
+    "effectiveSize": 36
+  },
+  {
+    "text": "次",
+    "role": "entitlement-unit",
+    "x": 212,
+    "y": 1008.009765625,
+    "width": 28.320312499999996,
+    "height": 27.980468749999996,
+    "cy": 1022,
+    "effectiveSize": 29
+  },
+  {
+    "text": "沙色保险",
+    "role": "entitlement-item",
+    "x": 263,
+    "y": 1006.86328125,
+    "width": 123.33398453,
+    "height": 30.2734375,
+    "cy": 1022,
+    "effectiveSize": 31
+  },
+  {
+    "text": "开启",
+    "role": "entitlement-action",
+    "x": 82,
+    "y": 1071.307617,
+    "width": 57.2460939,
+    "height": 29.384766,
+    "cy": 1086,
+    "effectiveSize": 30
+  },
+  {
+    "text": "20",
+    "role": "entitlement-count",
+    "x": 163.40625,
+    "y": 1072.9306644,
+    "width": 34.59375,
+    "height": 26.1386712,
+    "cy": 1086,
+    "effectiveSize": 36
+  },
+  {
+    "text": "次",
+    "role": "entitlement-unit",
+    "x": 212,
+    "y": 1072.009765625,
+    "width": 28.320312499999996,
+    "height": 27.980468749999996,
+    "cy": 1086,
+    "effectiveSize": 29
+  },
+  {
+    "text": "普通大保险",
+    "role": "entitlement-item",
+    "x": 263,
+    "y": 1070.93896465,
+    "width": 153.87988289,
+    "height": 30.1220707,
+    "cy": 1086,
+    "effectiveSize": 31
+  },
+  {
+    "text": "特别奖励 · 加保底",
+    "role": "section-title",
+    "x": 280.894042,
+    "y": 1198.2421875,
+    "width": 248.21191599999997,
+    "height": 30.515625,
+    "cy": 1213.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "摸到天圆地方",
+    "role": "phantom-trigger",
+    "x": 230,
+    "y": 1304.4531248,
+    "width": 190.65625599999998,
+    "height": 31.0937504,
+    "cy": 1320,
+    "effectiveSize": 32
+  },
+  {
+    "text": "+688",
+    "role": "phantom-bonus-number",
+    "x": 567.46386731,
+    "y": 1302.2470697,
+    "width": 100.53613269,
+    "height": 35.5058606,
+    "cy": 1320,
+    "effectiveSize": 49
+  },
+  {
+    "text": "w",
+    "role": "phantom-bonus-unit",
+    "x": 679,
+    "y": 1308.0640136601,
+    "width": 34.35908262,
+    "height": 23.8719726798,
+    "cy": 1320,
+    "effectiveSize": 47.1
+  },
+  {
+    "text": "摸到万金泪冠",
+    "role": "phantom-trigger",
+    "x": 230,
+    "y": 1424.5468752,
+    "width": 190.75,
+    "height": 30.906249600000002,
+    "cy": 1440,
+    "effectiveSize": 32
+  },
+  {
+    "text": "+888",
+    "role": "phantom-bonus-number",
+    "x": 565.04736322,
+    "y": 1422.2470697,
+    "width": 102.95263678,
+    "height": 35.5058606,
+    "cy": 1440,
+    "effectiveSize": 49
+  },
+  {
+    "text": "w",
+    "role": "phantom-bonus-unit",
+    "x": 679,
+    "y": 1428.0640136601,
+    "width": 34.35908262,
+    "height": 23.8719726798,
+    "cy": 1440,
+    "effectiveSize": 47.1
+  },
+  {
+    "text": "摸到纵横",
+    "role": "phantom-trigger",
+    "x": 230,
+    "y": 1544.4531248,
+    "width": 127.15624992,
+    "height": 31.0937504,
+    "cy": 1560,
+    "effectiveSize": 32
+  },
+  {
+    "text": "+1088",
+    "role": "phantom-bonus-number",
+    "x": 549.28027356,
+    "y": 1542.2111821,
+    "width": 118.71972644,
+    "height": 35.5776358,
+    "cy": 1560,
+    "effectiveSize": 49
+  },
+  {
+    "text": "w",
+    "role": "phantom-bonus-unit",
+    "x": 679,
+    "y": 1548.0640136601,
+    "width": 34.35908262,
+    "height": 23.8719726798,
+    "cy": 1560,
+    "effectiveSize": 47.1
+  },
+  {
+    "text": "三幻神特别奖励：整单合计只计算一次",
+    "role": "phantom-frequency",
+    "x": 159.10888690000002,
+    "y": 1633.83984375,
+    "width": 491.78222619999997,
+    "height": 28.320312499999996,
+    "cy": 1648,
+    "effectiveSize": 29
+  },
+  {
+    "text": "成功带出一个红物资",
+    "role": "red-reward-trigger",
+    "x": 265.938964805,
+    "y": 1685.86328125,
+    "width": 278.12207039,
+    "height": 30.2734375,
+    "cy": 1701,
+    "effectiveSize": 31
+  },
+  {
+    "text": "6格及以上",
+    "role": "red-slots",
+    "x": 88,
+    "y": 1752.95410195,
+    "width": 139.63623043,
+    "height": 30.091796100000003,
+    "cy": 1768,
+    "effectiveSize": 31
+  },
+  {
+    "text": "+88",
+    "role": "red-bonus-number",
+    "x": 595.68701166,
+    "y": 1750.9716791,
+    "width": 72.31298834,
+    "height": 34.056641799999994,
+    "cy": 1768,
+    "effectiveSize": 47
+  },
+  {
+    "text": "w",
+    "role": "red-bonus-unit",
+    "x": 679,
+    "y": 1756.5708495981,
+    "width": 32.90009822,
+    "height": 22.8583008038,
+    "cy": 1768,
+    "effectiveSize": 45.1
+  },
+  {
+    "text": "9格及以上",
+    "role": "red-slots",
+    "x": 88,
+    "y": 1819.95410195,
+    "width": 139.90869129,
+    "height": 30.091796100000003,
+    "cy": 1835,
+    "effectiveSize": 31
+  },
+  {
+    "text": "+188",
+    "role": "red-bonus-number",
+    "x": 580.05859375,
+    "y": 1817.9716791,
+    "width": 87.94140625,
+    "height": 34.056641799999994,
+    "cy": 1835,
+    "effectiveSize": 47
+  },
+  {
+    "text": "w",
+    "role": "red-bonus-unit",
+    "x": 679,
+    "y": 1823.5708495981,
+    "width": 32.90009822,
+    "height": 22.8583008038,
+    "cy": 1835,
+    "effectiveSize": 45.1
+  },
+  {
+    "text": "同一红物资按对应档位奖励，不叠加",
+    "role": "red-nonstacking",
+    "x": 175.02490180000004,
+    "y": 1892.783203125,
+    "width": 459.9501963999999,
+    "height": 28.433593749999996,
+    "cy": 1907,
+    "effectiveSize": 29
+  },
+  {
+    "text": "下单须知",
+    "role": "section-title",
+    "x": 344.271484375,
+    "y": 1996.3330082,
+    "width": 121.45703125,
+    "height": 30.333983600000003,
+    "cy": 2011.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "① 有效次数",
+    "role": "rule-title",
+    "x": 68,
+    "y": 2058.811279355,
+    "width": 163.12841699999998,
+    "height": 32.37744129,
+    "cy": 2075,
+    "effectiveSize": 31
+  },
+  {
+    "text": "仅成功撤离的对局计次；撤离失败时，",
+    "role": "rule-body",
+    "x": 68,
+    "y": 2105.8115238,
+    "width": 472.4960952,
+    "height": 28.3769524,
+    "cy": 2120,
+    "effectiveSize": 29
+  },
+  {
+    "text": "刷卡、沙保和普通大保险均不计次数。",
+    "role": "rule-body",
+    "x": 68,
+    "y": 2142.7265625,
+    "width": 472.5810536,
+    "height": 28.546874999999996,
+    "cy": 2157,
+    "effectiveSize": 29
+  },
+  {
+    "text": "② 累计保底｜成功撤离后",
+    "role": "rule-title",
+    "x": 68,
+    "y": 2197.06958002,
+    "width": 348.5229498,
+    "height": 33.86083996,
+    "cy": 2214,
+    "effectiveSize": 31
+  },
+  {
+    "text": "击杀≥4人  且  撤离收益＞588w",
+    "role": "guarantee-condition",
+    "x": 177.1406256,
+    "y": 2249.4062496,
+    "width": 455.7187488,
+    "height": 31.1875008,
+    "cy": 2265,
+    "effectiveSize": 32
+  },
+  {
+    "text": "达标才计入总保底；否则物资白吃，",
+    "role": "rule-body",
+    "x": 68,
+    "y": 2298.7265625,
+    "width": 443.3544911,
+    "height": 28.546874999999996,
+    "cy": 2313,
+    "effectiveSize": 29
+  },
+  {
+    "text": "但已开的卡、沙保及普通大保险仍计次数。",
+    "role": "rule-body",
+    "x": 68,
+    "y": 2342.7265625,
+    "width": 530.5810536,
+    "height": 28.546874999999996,
+    "cy": 2357,
+    "effectiveSize": 29
+  },
+  {
+    "text": "③ 红物资奖励",
+    "role": "rule-title",
+    "x": 68,
+    "y": 2414.79614252,
+    "width": 192.766122,
+    "height": 32.40771496,
+    "cy": 2431,
+    "effectiveSize": 31
+  },
+  {
+    "text": "红只要成功带出就加保底，",
+    "role": "rule-body",
+    "x": 68,
+    "y": 2459.7407232,
+    "width": 327.2128899,
+    "height": 28.518553599999997,
+    "cy": 2474,
+    "effectiveSize": 29
+  },
+  {
+    "text": "无论撤离成功或失败。",
+    "role": "rule-body",
+    "x": 68,
+    "y": 2500.82568305,
+    "width": 269.43945327,
+    "height": 28.3486339,
+    "cy": 2515,
+    "effectiveSize": 29
+  },
+  {
+    "text": "r = 元 / w = 万",
+    "role": "units",
+    "x": 327.459226,
+    "y": 2579.6455081,
+    "width": 155.081548,
+    "height": 20.708983800000002,
+    "cy": 2590,
+    "effectiveSize": 23
+  }
+]

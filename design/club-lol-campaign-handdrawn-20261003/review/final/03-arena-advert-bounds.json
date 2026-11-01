@@ -1,0 +1,232 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "container": "03-arena-advert-brandSafe",
+    "x": 64,
+    "y": 58.6093744,
+    "w": 191.01562512,
+    "h": 46.78125119999999,
+    "baseline": 98.664061888,
+    "size": 48
+  },
+  {
+    "text": "斗魂陪玩",
+    "role": "art-title",
+    "container": "03-arena-advert-titleSafe",
+    "x": 64,
+    "y": 160.52042086672898,
+    "w": 423.3580204270651,
+    "h": 110.95915826654203,
+    "size": 104
+  },
+  {
+    "text": "英雄联盟 · 端游｜3×6竞技场",
+    "role": "platform",
+    "container": "03-arena-advert-subtitleSafe",
+    "x": 64,
+    "y": 330.39794924,
+    "w": 431.1425794,
+    "h": 37.20410152,
+    "baseline": 358.969238294,
+    "size": 34
+  },
+  {
+    "text": "T3 · 娱乐",
+    "role": "card-heading",
+    "container": "03-arena-advert-tiers-0",
+    "x": 228.407228,
+    "y": 489.30761629999995,
+    "w": 195.185544,
+    "h": 44.6972662,
+    "baseline": 527.7382803739999,
+    "size": 46
+  },
+  {
+    "text": "35",
+    "role": "price-number",
+    "container": "03-arena-advert-tiers-0",
+    "x": 265.0911736,
+    "y": 562.0048825,
+    "w": 89.7539028,
+    "h": 66.66406479999999,
+    "baseline": 627.9951168704,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "03-arena-advert-tiers-0",
+    "x": 362.8450764,
+    "y": 593.9371481038401,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 627.9951168704,
+    "size": 66.24
+  },
+  {
+    "text": "每小时",
+    "role": "card-body",
+    "container": "03-arena-advert-tiers-0",
+    "x": 260.644534,
+    "y": 656.6689473,
+    "w": 130.71093199999999,
+    "h": 42.0234364,
+    "baseline": 693.514650436,
+    "size": 44
+  },
+  {
+    "text": "T2 · 技术",
+    "role": "card-heading",
+    "container": "03-arena-advert-tiers-1",
+    "x": 776.31738287,
+    "y": 489.30761859999996,
+    "w": 195.36523426,
+    "h": 44.5625,
+    "baseline": 527.693360776,
+    "size": 46
+  },
+  {
+    "text": "50",
+    "role": "price-number",
+    "container": "03-arena-advert-tiers-1",
+    "x": 813.3831632000001,
+    "y": 561.8701186000001,
+    "w": 89.1699236,
+    "h": 66.79882640000001,
+    "baseline": 627.9951186000001,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "03-arena-advert-tiers-1",
+    "x": 910.5530868000001,
+    "y": 593.9371498334401,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 627.9951186000001,
+    "size": 66.24
+  },
+  {
+    "text": "每小时",
+    "role": "card-body",
+    "container": "03-arena-advert-tiers-1",
+    "x": 808.644534,
+    "y": 656.6689450000001,
+    "w": 130.71093199999999,
+    "h": 42.0234364,
+    "baseline": 693.5146481360001,
+    "size": 44
+  },
+  {
+    "text": "T1 · 招牌",
+    "role": "card-heading",
+    "container": "03-arena-advert-tiers-2",
+    "x": 228.452147,
+    "y": 841.1503929,
+    "w": 195.095706,
+    "h": 44.8769514,
+    "baseline": 879.760744474,
+    "size": 46
+  },
+  {
+    "text": "60",
+    "role": "price-number",
+    "container": "03-arena-advert-tiers-2",
+    "x": 266.1468368,
+    "y": 914.0273443000001,
+    "w": 87.64257640000001,
+    "h": 66.79882640000001,
+    "baseline": 980.1523443000001,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "03-arena-advert-tiers-2",
+    "x": 361.7894132,
+    "y": 946.0943755334401,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 980.1523443000001,
+    "size": 66.24
+  },
+  {
+    "text": "每小时",
+    "role": "card-body",
+    "container": "03-arena-advert-tiers-2",
+    "x": 260.644534,
+    "y": 1008.8261707,
+    "w": 130.71093199999999,
+    "h": 42.0234364,
+    "baseline": 1045.671873836,
+    "size": 44
+  },
+  {
+    "text": "T0 · 顶尖",
+    "role": "card-heading",
+    "container": "03-arena-advert-tiers-3",
+    "x": 776.47460926,
+    "y": 841.2626973,
+    "w": 195.05078148,
+    "h": 44.652342600000004,
+    "baseline": 879.558595726,
+    "size": 46
+  },
+  {
+    "text": "90",
+    "role": "price-number",
+    "container": "03-arena-advert-tiers-3",
+    "x": 814.1468368,
+    "y": 913.9150399,
+    "w": 87.64257640000001,
+    "h": 66.79882640000001,
+    "baseline": 980.0400399,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "03-arena-advert-tiers-3",
+    "x": 909.7894132,
+    "y": 945.9820711334401,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 980.0400399,
+    "size": 66.24
+  },
+  {
+    "text": "每小时",
+    "role": "card-body",
+    "container": "03-arena-advert-tiers-3",
+    "x": 808.644534,
+    "y": 1008.7138663,
+    "w": 130.71093199999999,
+    "h": 42.0234364,
+    "baseline": 1045.559569436,
+    "size": 44
+  },
+  {
+    "text": "3×6斗魂竞技场",
+    "role": "core-condition",
+    "container": "03-arena-advert-mode",
+    "x": 100,
+    "y": 1158.9841411999998,
+    "w": 316.13769514,
+    "h": 45.011717600000004,
+    "baseline": 1197.5495706,
+    "size": 46
+  },
+  {
+    "text": "娱乐 / 技术 / 招牌 / 顶尖",
+    "role": "core-condition",
+    "container": "03-arena-advert-mode",
+    "x": 100,
+    "y": 1222.1164456000001,
+    "w": 507.4599618,
+    "h": 44.787108800000006,
+    "baseline": 1260.4572662,
+    "size": 46
+  }
+]

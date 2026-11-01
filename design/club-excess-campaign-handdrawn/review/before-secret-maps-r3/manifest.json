@@ -1,0 +1,38 @@
+[
+  {
+    "id": "mobile-absolute",
+    "label": "手游 · 绝密版 · 超额累计单",
+    "png": "output/png/mobile-absolute.png",
+    "outlinedSVG": "output/svg-outlined/mobile-absolute.svg",
+    "editableSVG": "output/svg-editable/mobile-absolute.svg",
+    "preview": "review/mobile-absolute.png",
+    "width": 3200,
+    "height": 7200,
+    "nativeWidth": 836,
+    "nativeHeight": 1882
+  },
+  {
+    "id": "mobile-secret",
+    "label": "手游 · 机密版 · 超额累计单",
+    "png": "output/png/mobile-secret.png",
+    "outlinedSVG": "output/svg-outlined/mobile-secret.svg",
+    "editableSVG": "output/svg-editable/mobile-secret.svg",
+    "preview": "review/mobile-secret.png",
+    "width": 3200,
+    "height": 7200,
+    "nativeWidth": 836,
+    "nativeHeight": 1882
+  },
+  {
+    "id": "social",
+    "label": "超额累计单 · 简洁宣发海报",
+    "png": "output/png/social.png",
+    "outlinedSVG": "output/svg-outlined/social.svg",
+    "editableSVG": "output/svg-editable/social.svg",
+    "preview": "review/social.png",
+    "width": 2400,
+    "height": 3200,
+    "nativeWidth": 1086,
+    "nativeHeight": 1448
+  }
+]

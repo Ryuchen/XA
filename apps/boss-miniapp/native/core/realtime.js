@@ -58,6 +58,8 @@ async function connect(recover = false) {
     attempts = 0;
     events.emit('order.changed');
     events.emit('message.changed');
+    events.emit('site-message.changed');
+    events.emit('reservation.changed');
     events.emit('feed.changed');
     events.emit('wallet.changed', { account_id: auth.getSession()?.user?.id });
     const ping = () => {
@@ -78,6 +80,8 @@ async function connect(recover = false) {
       if (message.type === 'wallet_update' && message.data?.account_id != null
           && String(message.data.account_id) === String(auth.getSession()?.user?.id)) events.emit('wallet.changed', message.data);
       if (message.type === 'club_feed_update') events.emit('feed.changed');
+      if (message.type === 'site_message_update') events.emit('site-message.changed');
+      if (message.type === 'reservation_status_update') events.emit('reservation.changed', message.data);
       if (['chat_message', 'chat_session_update'].includes(message.type)) events.emit('message.changed', message.data);
     } catch (_) { /* Ignore malformed realtime payload; HTTP remains the source of truth. */ }
   });

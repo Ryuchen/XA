@@ -1,0 +1,550 @@
+{
+  "brand": "兴安电竞",
+  "title": "你的护不行",
+  "version": "2026-10-03-r3",
+  "platformPricePolicy": "端游 / 手游同价",
+  "platforms": [
+    {
+      "id": "desktop",
+      "name": "端游"
+    },
+    {
+      "id": "mobile",
+      "name": "手游"
+    }
+  ],
+  "products": [
+    {
+      "id": "dogtag",
+      "name": "狗牌版",
+      "tagline": "行不行？分数说了算！",
+      "coverTagline": "狗牌装备价值 · 累计计分",
+      "adTagline": "按狗牌显示的装备价值计分",
+      "core": "物资保底 ＋ 狗牌积分",
+      "settlement": "保底与当前所需分数均达标，才可结单",
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "source": "绝密：你的护不行-绝密计分四档-20260929/content.json；机密：Obsidian 01_玩法/你的护不行.md 的2026-09-19现行套餐；本轮确认手游同价同规则。",
+      "modes": [
+        {
+          "id": "secret",
+          "name": "绝密",
+          "accent": "#987442",
+          "tint": "#F5EEE1",
+          "tiers": [
+            {
+              "name": "体验版",
+              "badge": "新增",
+              "price": 288,
+              "guarantee": 888,
+              "baseScore": 10,
+              "failureIncrease": 2,
+              "accent": "#577D78",
+              "tint": "#EBF2EE"
+            },
+            {
+              "name": "基础版",
+              "badge": "主推",
+              "price": 488,
+              "guarantee": 1888,
+              "baseScore": 20,
+              "failureIncrease": 2,
+              "accent": "#66889E",
+              "tint": "#EAF1F5"
+            },
+            {
+              "name": "高级版",
+              "badge": "",
+              "price": 888,
+              "guarantee": 3288,
+              "baseScore": 40,
+              "failureIncrease": 2,
+              "accent": "#A47473",
+              "tint": "#F7EFEB"
+            },
+            {
+              "name": "豪华版",
+              "badge": "",
+              "price": 1888,
+              "guarantee": 4288,
+              "baseScore": 60,
+              "failureIncrease": 3,
+              "accent": "#8A829E",
+              "tint": "#F0EDF6"
+            }
+          ],
+          "scoring": {
+            "title": "玩法说明",
+            "description": [
+              "根据对局内打手击杀的干员身份牌",
+              "显示的装备价值计分"
+            ],
+            "bands": [
+              {
+                "points": 1,
+                "min": 100,
+                "minInclusive": true,
+                "max": 140,
+                "maxInclusive": false,
+                "tint": "#EAF2EB",
+                "accent": "#56776B"
+              },
+              {
+                "points": 2,
+                "min": 140,
+                "minInclusive": true,
+                "max": 200,
+                "maxInclusive": false,
+                "tint": "#F8F1E5",
+                "accent": "#A18454"
+              },
+              {
+                "points": 3,
+                "min": 200,
+                "minInclusive": true,
+                "max": null,
+                "maxInclusive": false,
+                "tint": "#EEEAF5",
+                "accent": "#817590"
+              }
+            ]
+          },
+          "failureScoring": {
+            "pointsPerDefeat": 0.5,
+            "cancelAtDefeats": 4,
+            "display": "撤离失败对局，打手每击败1人 +0.5分；击败4人抵消加分。",
+            "interpretationBoundary": "保留用户措辞，不改写成每人抵扣0.5分、不把四人抵消改成抵扣2分、不增加新的六人门槛；原单局最多计2分一句由本轮新文案替代。"
+          },
+          "notices": [
+            {
+              "lines": [
+                "必须是本单打手击杀的狗牌才计算；",
+                "打手双倒前，老板击杀狗牌的计入打手。"
+              ],
+              "emphasized": []
+            },
+            {
+              "lines": [
+                "打手必须提供截图为证。"
+              ],
+              "emphasized": []
+            },
+            {
+              "lines": [
+                "装备价值分数仅计算撤离成功对局。"
+              ],
+              "emphasized": [
+                0
+              ]
+            },
+            {
+              "source": "failureScoring",
+              "emphasized": [
+                1
+              ]
+            },
+            {
+              "lines": [
+                "只计算老板撤出的对局，包括飞鼠、飞升。"
+              ],
+              "emphasized": []
+            }
+          ]
+        },
+        {
+          "id": "confidential",
+          "name": "机密",
+          "accent": "#437D76",
+          "tint": "#E6F0EB",
+          "tiers": [
+            {
+              "name": "基础版",
+              "price": 188,
+              "guarantee": 1088,
+              "baseScore": 10,
+              "failureIncrease": 2
+            },
+            {
+              "name": "高级版",
+              "price": 288,
+              "guarantee": 1688,
+              "baseScore": 20,
+              "failureIncrease": 2
+            },
+            {
+              "name": "豪华版",
+              "price": 488,
+              "guarantee": 2888,
+              "baseScore": 30,
+              "failureIncrease": 2
+            }
+          ],
+          "scoring": {
+            "basis": "打手击杀的干员身份牌显示的装备价值",
+            "bands": [
+              {
+                "min": 60,
+                "max": 100,
+                "points": 1
+              },
+              {
+                "min": 100,
+                "max": 140,
+                "points": 2
+              },
+              {
+                "min": 140,
+                "max": null,
+                "points": 3
+              }
+            ],
+            "boundary": "左闭右开"
+          },
+          "notices": [
+            "必须是本单打手击杀的狗牌才计算；打手双倒前，老板击杀狗牌的计入打手。",
+            "打手必须提供截图为证。",
+            "装备价值分数仅计算撤离成功对局。",
+            "撤离失败对局，打手每击杀一人计0.5分，单局最多计2分。该细则与价目行撤离失败分数+2均按原图保留，不新增解释。",
+            "只计算老板撤出的对局，包括飞鼠、飞升。"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "firearms",
+      "name": "枪械版",
+      "tagline": "满改收集 · 累计带出",
+      "coverTagline": "满改收集 · 累计带出",
+      "adTagline": "累计带出指定满改枪械",
+      "core": "物资保底 ＋ 枪械收集",
+      "settlement": "按所选档位累计带出指定满改枪械",
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "source": "2026-09-26两难度出红拆枪补充稿的玩法数据.json；本轮确认手游同价同规则。",
+      "modes": [
+        {
+          "id": "secret",
+          "name": "绝密",
+          "accent": "#987442",
+          "tint": "#F5EEE1",
+          "tiers": [
+            {
+              "name": "基础版",
+              "price": 488,
+              "guarantee": 1888,
+              "count": 10,
+              "guns": [
+                "M7",
+                "ASVAL",
+                "M14",
+                "MK47",
+                "AWM",
+                "K437"
+              ],
+              "failureAdd": 1
+            },
+            {
+              "name": "高级版",
+              "price": 888,
+              "guarantee": 3288,
+              "count": 20,
+              "guns": [
+                "M7",
+                "ASVAL",
+                "M14",
+                "MK47",
+                "AWM"
+              ],
+              "failureAdd": 1
+            },
+            {
+              "name": "豪华版",
+              "price": 1888,
+              "guarantee": 4288,
+              "count": 40,
+              "guns": [
+                "M7",
+                "ASVAL",
+                "M14",
+                "AWM"
+              ],
+              "failureAdd": 2
+            }
+          ],
+          "sharedGameplay": "基础版和高级版撤离失败+1把，豪华版撤离失败+2把；当局击杀≥4人时抵消加枪惩罚",
+          "notices": [
+            "本单允许打手局内改枪，只可增添镭射，爆闪和瞄具",
+            "满改枪定义为：枪械价值(不包含子弹）>70W",
+            "打手必须优先选择价值高的枪带出",
+            "撤离成功包括飞鼠，飞升",
+            "如果板板出红，陪陪优先选择高价值的物资带出；对应枪械不得已拆枪的话，按照拆枪前计分。"
+          ]
+        },
+        {
+          "id": "confidential",
+          "name": "机密",
+          "accent": "#437D76",
+          "tint": "#E6F0EB",
+          "tiers": [
+            {
+              "name": "基础版",
+              "price": 388,
+              "guarantee": 2088,
+              "count": 10,
+              "guns": [
+                "M7",
+                "ASVAL",
+                "M14",
+                "MK47",
+                "K437",
+                "KC17",
+                "MDR",
+                "RM277",
+                "SR25"
+              ],
+              "failureAdd": 1
+            },
+            {
+              "name": "高级版",
+              "price": 688,
+              "guarantee": 3888,
+              "count": 20,
+              "guns": [
+                "M7",
+                "ASVAL",
+                "M14",
+                "MK47",
+                "K437",
+                "KC17",
+                "SR25"
+              ],
+              "failureAdd": 1
+            },
+            {
+              "name": "豪华版",
+              "price": 988,
+              "guarantee": 5688,
+              "count": 30,
+              "guns": [
+                "M7",
+                "ASVAL",
+                "M14",
+                "MK47",
+                "K437",
+                "KC17"
+              ],
+              "failureAdd": 2
+            }
+          ],
+          "sharedGameplay": [
+            "基础版和高级版撤离失败+1把，豪华版撤离失败+2把；当局击杀≥4人时抵消加枪惩罚",
+            "对局中每带出一把AWM可以抵扣2把满改武器",
+            "单局千万撤离可以抵扣1把满改武器"
+          ],
+          "notices": [
+            "本单允许打手局内改枪，改枪配件范围不限；",
+            "满改枪定义为：枪械价值（不包含子弹）>60W；",
+            "打手必须优先选择价值高的枪带出；",
+            "撤离成功包括飞鼠，飞升；",
+            "如果板板出红，陪陪优先选择高价值的物资带出；对应枪械不得已拆枪的话，按照拆枪前计分。"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "revolver",
+      "name": "左轮版",
+      "tagline": "缴获带出 · 按价值计分",
+      "coverTagline": "缴获带出 · 按价值计分",
+      "adTagline": "缴获左轮 · 带出计分",
+      "core": "物资保底 ＋ 左轮积分",
+      "settlement": "保底与当前所需分数均达标，才可结单",
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "source": "你的护不行-左轮版-20260929/content.json 与 campaign-state.json r5；本轮沿用双平台同价。；2026-10-01 r6机密无缴获时计算一把打手自带左轮的条件例外同步保存。",
+      "modes": [
+        {
+          "id": "secret",
+          "name": "绝密",
+          "accent": "#987442",
+          "tint": "#F5EEE1",
+          "tiers": [
+            {
+              "name": "体验版",
+              "guarantee": 888,
+              "baseScore": 5,
+              "failureIncrease": 1,
+              "price": 288
+            },
+            {
+              "name": "基础版",
+              "guarantee": 1888,
+              "baseScore": 10,
+              "failureIncrease": 1,
+              "price": 488
+            },
+            {
+              "name": "高级版",
+              "guarantee": 3288,
+              "baseScore": 20,
+              "failureIncrease": 1,
+              "price": 888
+            },
+            {
+              "name": "豪华版",
+              "guarantee": 4288,
+              "baseScore": 40,
+              "failureIncrease": 2,
+              "price": 1688
+            }
+          ],
+          "bandPoints": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "id": "confidential",
+          "name": "机密",
+          "accent": "#437D76",
+          "tint": "#E6F0EB",
+          "tiers": [
+            {
+              "name": "体验版",
+              "guarantee": 888,
+              "baseScore": 5,
+              "failureIncrease": 1,
+              "price": 188
+            },
+            {
+              "name": "基础版",
+              "guarantee": 1888,
+              "baseScore": 10,
+              "failureIncrease": 1,
+              "price": 288
+            },
+            {
+              "name": "高级版",
+              "guarantee": 3288,
+              "baseScore": 20,
+              "failureIncrease": 1,
+              "price": 488
+            },
+            {
+              "name": "豪华版",
+              "guarantee": 4288,
+              "baseScore": 40,
+              "failureIncrease": 2,
+              "price": 888
+            }
+          ],
+          "bandPoints": [
+            2,
+            3,
+            4
+          ],
+          "scoringSourceDisplay": "统计从对局中缴获并带出的左轮。",
+          "sourceFallback": {
+            "condition": "若对局中没有缴获的左轮",
+            "source": "打手携带的左轮",
+            "count": 1,
+            "display": "若对局中没有缴获的左轮，则计算一把打手携带的左轮。",
+            "displayLines": [
+              "若对局中没有缴获的左轮，",
+              "则计算一把打手携带的左轮。"
+            ],
+            "scope": {
+              "mode": "confidential",
+              "platforms": [
+                "desktop",
+                "mobile"
+              ]
+            },
+            "interpretation": "机密来源统计规则的条件例外；原价值分档仍适用，不扩展到绝密。"
+          }
+        }
+      ],
+      "scoring": {
+        "basis": "每把在本单对局中缴获并带出的左轮价值",
+        "aggregation": "逐把计分，累计得分",
+        "belowMinimumPoints": 0,
+        "bands": [
+          {
+            "min": 20,
+            "minInclusive": true,
+            "max": 24,
+            "maxInclusive": false
+          },
+          {
+            "min": 24,
+            "minInclusive": true,
+            "max": 28,
+            "maxInclusive": false
+          },
+          {
+            "min": 28,
+            "minInclusive": true,
+            "max": null,
+            "maxInclusive": false
+          }
+        ],
+        "valueDisplay": "左轮图标代表该把缴获带出的左轮价值；比较符与20/24/28w边界保持。"
+      },
+      "failureRule": {
+        "effect": "增加结单目标分数",
+        "increaseFrom": "tiers.failureIncrease",
+        "waiver": {
+          "metric": "当局击杀人数",
+          "operator": ">=",
+          "value": 4
+        },
+        "display": "每次撤离失败，结单目标分数增加：体验版、基础版、高级版各+1分，豪华版+2分；该失败局击杀人数≥4时，结单目标分数不增加。",
+        "boundary": "本轮最新确认：恰好4人即可免加；覆盖此前严格>4的历史口径。",
+        "waiverDisplay": "该失败局击杀人数≥4时，结单目标分数不增加。",
+        "presentation": "每档失败时增加的目标分数在价目表最后一列展示；下方须知仅保留击杀≥4人时目标不增加的例外。"
+      },
+      "notices": [
+        "本单仅统计从对局中缴获并带出的左轮。",
+        "允许打手优先以拼高价值左轮的方式理包。"
+      ]
+    }
+  ],
+  "artwork": {
+    "dogtag": {
+      "file": "assets/illustrations/medic-mouse-dogtag-r2.png",
+      "nativeWidth": 1536,
+      "nativeHeight": 1024,
+      "hasAlpha": true,
+      "status": "approved",
+      "basis": "用户明确回复：通过，继续，做封面。"
+    },
+    "firearms": {
+      "file": "assets/illustrations/medic-mouse-firearms-r2.png",
+      "nativeWidth": 1536,
+      "nativeHeight": 1024,
+      "hasAlpha": true,
+      "status": "approved",
+      "basis": "用户明确回复：通过，继续，做封面。"
+    },
+    "revolver": {
+      "file": "assets/illustrations/medic-mouse-revolver-r2.png",
+      "nativeWidth": 1536,
+      "nativeHeight": 1024,
+      "hasAlpha": true,
+      "status": "approved",
+      "basis": "用户明确回复：通过，继续，做封面。"
+    }
+  },
+  "displayPolicy": {
+    "cover": "品牌、玩法、版本、核心卖点、平台与模式；不展示须知或结算例外。",
+    "social": "价目与核心玩法摘要；完整现行规则保存在content.json及来源海报，不新增或改写。",
+    "gunNames": "保留各档全部指定枪名，避免合并不同档位范围。"
+  }
+}

@@ -408,6 +408,9 @@ def settle_order(order, *, operator=None, operator_account=None, trace_id=None):
     """
     if order.settled_at:
         return []
+    from .direct_payment_models import DirectPaymentIntent
+    if DirectPaymentIntent.objects.filter(order_id=order.pk).exists():
+        raise SettlementError('微信支付订单的渠道结算尚未开放')
     from .financial_lock import lock_order_money
     lock_order_money()
     if order.customer_account_id or order.customer_id:
@@ -644,17 +647,31 @@ def approve_order_report(report_id, *, operator, operator_account):
     report.auditor_account = operator_account
     report.audited_at = timezone.now()
     report.save(update_fields=['status', 'commission_rate', 'payout_amount', 'auditor', 'auditor_account', 'audited_at'])
+    # Direct payment has no trusted channel settlement integration yet. Keep
+    # the verified report even when the normal settlement window has passed;
+    # the isolated payment path must not credit wallets or promise payout.
+    from .direct_payment_models import DirectPaymentIntent
+    is_direct_payment = DirectPaymentIntent.objects.filter(order_id=order.pk).exists()
     if order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL and not order.settled_at:
         provider_ids = required_report_providers(order)
         approved_ids = set(order.provider_reports.filter(status=ProviderReport.Status.APPROVED).values_list('provider_id', flat=True))
-        from engagement.confirmation import settlement_ready, refresh_report_clock
+        from engagement.confirmation import settlement_ready, refresh_report_clock, notify_committed_order
+        previous_clock = (order.report_ready_at, order.consumption_ready_at)
         refresh_report_clock(order)
-        if provider_ids.issubset(approved_ids) and settlement_ready(order):
+        # Match the maturity task: an old order without its customer account
+        # stays available for review, regardless of when its report is approved.
+        if (not is_direct_payment and order.customer_account_id
+                and provider_ids.issubset(approved_ids) and settlement_ready(order)):
             settle_order(order, operator=operator, operator_account=operator_account)
+            if previous_clock == (order.report_ready_at, order.consumption_ready_at):
+                notify_committed_order(order.pk)
+    from wallet.settlement_display import legacy_customer_settlement_reason
+    needs_review = is_direct_payment or bool(legacy_customer_settlement_reason(order))
     transaction.on_commit(lambda: push_message_safe(
-        recipient_id=report.provider_id, title='报单审核通过',
-        preview='收益已结算到账' if order.settled_at else '凭证已通过，全部打手审核通过且售后期结束后自动结算',
-        msg_type='ORDER', related_order_id=order.pk,
+        recipient_id=report.provider_id, recipient_account_id=report.provider_account_id, title='报单审核通过',
+        preview=('凭证已通过，收益待核对，请联系客服' if needs_review else
+                 '收益已结算到账' if order.settled_at else '凭证已通过，全部打手审核通过且售后期结束后自动结算'),
+        msg_type='ORDER', related_order_id=order.pk, action_url='/pages/report/index',
     ))
     from .notifier import notify_report_update
     transaction.on_commit(lambda: notify_report_update(report))
@@ -675,12 +692,22 @@ def refund_to_customer(order, reason='订单退款', *, trace_id=None, operator=
     if order.payment_status not in PAID_STATES:
         # Ordinary cancellation can still close an unpaid legacy order.
         return None
+    # Direct-payment refunds need a distinct channel state machine. Until that
+    # exists, no legacy route may credit a WeChat payment to a local wallet.
+    from .direct_payment_models import DirectPaymentIntent
+    if DirectPaymentIntent.objects.filter(order_id=order.pk).exists():
+        raise SettlementError('微信支付订单暂不支持此退款入口，请联系客服核对')
     lock_order_money()
     prior = refunded_amount(order)
-    amount = parse_refund_amount(refund_amount,order.amount-prior)
-    if amount <= 0:
+    # A fully discounted paid order can still be cancelled. There is no cash
+    # to refund, but the order's consumed coupon and other rights must unwind.
+    zero_payment = order.amount == 0 and prior == 0 and refund_amount is None
+    amount = 0 if zero_payment else parse_refund_amount(refund_amount,order.amount-prior)
+    if amount <= 0 and not zero_payment:
         raise RefundError('订单已无可退余款',code='REFUND_INVALID_AMOUNT')
     settled = posted_settlement(order)
+    if zero_payment and settled:
+        raise SettlementError('已结算的零支付订单请联系客服核对')
     full = prior+amount == order.amount
     if not full and (not settled or order.status != 'COMPLETED'):
         raise RefundError('仅已结算完成订单支持部分退款',code='REFUND_PARTIAL_UNSETTLED')
@@ -693,35 +720,52 @@ def refund_to_customer(order, reason='订单退款', *, trace_id=None, operator=
     if not settled and (order.consumption_confirmed_at or (cutoff and timezone.now() >= cutoff and not order.aftersales.filter(status='OPEN').exists())):
         raise SettlementError('售后期限已结束，订单不再支持退款')
     trace_id = trace_id or new_trace_id()
-    customer_wallet = get_wallet(user_id=order.customer_id,account_id=order.customer_account_id,for_update=True)
+    customer_wallet = get_wallet(user_id=order.customer_id,account_id=order.customer_account_id,for_update=True) if amount else None
     refund = OrderRefund.objects.create(order=order,amount=amount,reason=reason,operator=operator,operator_account=operator_account,
         client_request_id=client_request_id or None,request_fingerprint=request_fingerprint(amount,reason))
-    changed_wallets = [customer_wallet]
+    changed_wallets = [customer_wallet] if customer_wallet else []
     if settled:
         changed_wallets += recover_settlement(order,refund,plan_token=plan_token,operator=operator,operator_account=operator_account)
         customer_wallet.refresh_from_db()
-    before = customer_wallet.balance
-    customer_wallet.balance += amount
-    customer_wallet.save(update_fields=['balance'])
-    Transaction.objects.create(wallet=customer_wallet,order=order,amount=amount,tx_type=Transaction.TxType.REFUND,
-        balance_before=before,balance_after=customer_wallet.balance,remark=f'{reason}：{order.order_no}',
-        operator=operator,operator_account=operator_account)
-    log_money_event('order.refund',account_id=order.customer_account_id,user_id=order.customer_id,
-        order_no=order.order_no,order_id=order.pk,tx_type=Transaction.TxType.REFUND,amount=amount,
-        balance_before=before,balance_after=customer_wallet.balance,trace_id=trace_id,reason=reason)
+    if customer_wallet:
+        before = customer_wallet.balance
+        customer_wallet.balance += amount
+        customer_wallet.save(update_fields=['balance'])
+        Transaction.objects.create(wallet=customer_wallet,order=order,amount=amount,tx_type=Transaction.TxType.REFUND,
+            balance_before=before,balance_after=customer_wallet.balance,remark=f'{reason}：{order.order_no}',
+            operator=operator,operator_account=operator_account)
+        log_money_event('order.refund',account_id=order.customer_account_id,user_id=order.customer_id,
+            order_no=order.order_no,order_id=order.pk,tx_type=Transaction.TxType.REFUND,amount=amount,
+            balance_before=before,balance_after=customer_wallet.balance,trace_id=trace_id,reason=reason)
     order.payment_status = Order.PaymentStatus.REFUNDED if full else Order.PaymentStatus.PARTIALLY_REFUNDED
     order.refunded_at = timezone.now()
     from engagement.services import reverse_order_points, release_order_allocations
-    reverse_order_points(order,refund=refund)
-    release_order_allocations(order,refund=refund)
+    reverse_order_points(order,refund=refund if amount else None)
+    release_order_allocations(order,refund=refund if amount else None)
+    coupon_results = []
     if full:
         from coupons.benefits import restore_order_coupons
+        from coupons.models import UserCoupon
+        # Capture the outcome before restoration removes the order link.
+        used_coupons = list(UserCoupon.objects.select_for_update().filter(
+            order=order, status=UserCoupon.Status.USED,
+        ).select_related('coupon').order_by('pk'))
         restore_order_coupons(order)
+        coupon_results = [{'name': row.coupon.name,
+                           'outcome': 'RETURNED' if row.restore_on_refund else 'NOT_RETURNED'}
+                          for row in used_coupons]
     from engagement.refunds import reverse_refund_benefits
     refund.benefit_effects = reverse_refund_benefits(order,refund,operator_account)
+    if coupon_results:
+        refund.benefit_effects['order_coupon_results'] = coupon_results
     refund.save(update_fields=['benefit_effects','recovered_amount','plan_fingerprint'])
     for wallet in {row.pk:row for row in changed_wallets}.values():
         transaction.on_commit(lambda wallet=wallet:notify_wallet_update(wallet))
+    # Refunds also change the settlement display of approved reports. Refresh
+    # every related report after commit, including for report-only reviewers.
+    from .notifier import notify_report_update
+    for report in ProviderReport.objects.filter(order=order):
+        transaction.on_commit(lambda report=report: notify_report_update(report))
     return refund
 
 
@@ -736,22 +780,25 @@ def schedule_auto_cancel(order):
     (``check_order_timeout``) 会兜底扫描超时单。
     """
     try:
+        if not order.auto_cancel_at:
+            return
+        from math import ceil
         from .tasks import auto_cancel_pending_order
         auto_cancel_pending_order.apply_async(
             args=[order.id],
-            countdown=PENDING_TIMEOUT_MINUTES * 60,
+            countdown=max(0, ceil((order.auto_cancel_at - timezone.now()).total_seconds())),
         )
     except Exception:
         return
 
 
-def pending_timeout_deadline(from_time=None):
+def pending_timeout_deadline(from_time=None, minutes=PENDING_TIMEOUT_MINUTES):
     """返回 PENDING 订单的自动取消时间点。"""
     base = from_time or timezone.now()
-    return base + timedelta(minutes=PENDING_TIMEOUT_MINUTES)
+    return base + timedelta(minutes=minutes)
 
 
-def push_message_safe(*, recipient_id, title, preview='', detail='',
+def push_message_safe(*, recipient_id, recipient_account_id=None, title, preview='', detail='',
                       msg_type='SYSTEM', action_url='', related_order_id=None):
     """安全推送站内消息：站内信模块异常时静默失败，绝不影响主流程。"""
     if create_message is None or recipient_id is None:
@@ -761,6 +808,7 @@ def push_message_safe(*, recipient_id, title, preview='', detail='',
     try:
         create_message(
             recipient_id=recipient_id,
+            recipient_account_id=recipient_account_id,
             title=title,
             preview=preview,
             detail=detail,

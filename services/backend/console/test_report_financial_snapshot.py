@@ -1,7 +1,10 @@
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APITestCase
 
+from club_accounts.services import get_or_create_account_for_legacy_user
 from console.serializers import AdminProviderReportSerializer
-from orders.models import OrderProvider
+from orders.models import AfterSale, OrderProvider
 from orders.tests.factories import (
     make_completed_order, make_escort_level, make_provider, make_superuser, make_user,
 )
@@ -74,8 +77,37 @@ class ReportFinancialSnapshotTest(APITestCase):
         OrderProvider.objects.create(order=order, provider=self.provider,
                                      settlement_base=10000, provider_income=8000)
         report = self.report(order=order)
-        report = ProviderReport.objects.select_related('order', 'provider', 'auditor').prefetch_related(
-            'order__providers', 'result_images',
+        report = ProviderReport.objects.select_related('order', 'provider__escort_profile', 'auditor').prefetch_related(
+            'order__providers', 'order__aftersales', 'result_images',
         ).get(pk=report.pk)
+        from wallet.settlement_display import prepare_order_settlement_display
+        prepare_order_settlement_display([report.order])
         with self.assertNumQueries(0):
             self.assertEqual(AdminProviderReportSerializer(report).data['expected_income'], 8000)
+
+    def test_report_list_batches_aftersale_status_for_multiple_orders(self):
+        self.client.force_authenticate(self.admin)
+
+        def create_report():
+            boss = make_user()
+            order = make_completed_order(boss, self.provider, amount=10000)
+            OrderProvider.objects.create(order=order, provider=self.provider,
+                                         settlement_base=10000, provider_income=8000)
+            AfterSale.objects.create(order=order, account=get_or_create_account_for_legacy_user(boss), reason='隔离测试')
+            return self.report(order=order, status=ProviderReport.Status.PENDING)
+
+        create_report()
+        self.client.get('/api/admin/reports/')  # Populate authentication-related caches.
+        with CaptureQueriesContext(connection) as single_queries:
+            single = self.client.get('/api/admin/reports/').data
+        self.assertEqual(single['code'], 0, single)
+        self.assertEqual(single['data']['list'][0]['aftersale_status'], 'OPEN')
+        for _ in range(7):
+            create_report()
+        with CaptureQueriesContext(connection) as multiple_queries:
+            multiple = self.client.get('/api/admin/reports/').data
+        self.assertEqual(multiple['code'], 0, multiple)
+        self.assertEqual(len(multiple['data']['list']), 8)
+        self.assertTrue(all(row['aftersale_status'] == 'OPEN' for row in multiple['data']['list']))
+        self.assertLessEqual(len(multiple_queries), len(single_queries) + 1,
+                             (len(single_queries), len(multiple_queries)))

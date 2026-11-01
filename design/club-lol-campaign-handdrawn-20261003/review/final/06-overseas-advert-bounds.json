@@ -1,0 +1,154 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "container": "06-overseas-advert-brandSafe",
+    "x": 64,
+    "y": 58.6093744,
+    "w": 191.01562512,
+    "h": 46.78125119999999,
+    "baseline": 98.664061888,
+    "size": 48
+  },
+  {
+    "text": "外服代练",
+    "role": "art-title",
+    "container": "06-overseas-advert-titleSafe",
+    "x": 64,
+    "y": 141.12787153097938,
+    "w": 278.6423671861853,
+    "h": 73.74425693804126,
+    "size": 66
+  },
+  {
+    "text": "/ 打分",
+    "role": "art-title",
+    "container": "06-overseas-advert-titleSafe",
+    "x": 64,
+    "y": 216.50892750024002,
+    "w": 169.53003969547473,
+    "h": 74.98214499951992,
+    "size": 66
+  },
+  {
+    "text": "英雄联盟 · 端游｜海外区服",
+    "role": "platform",
+    "container": "06-overseas-advert-subtitleSafe",
+    "x": 64,
+    "y": 330.46435599999995,
+    "w": 401.60839780000003,
+    "h": 37.071288,
+    "baseline": 358.902832554,
+    "size": 34
+  },
+  {
+    "text": "大师以下 · 铂金以下",
+    "role": "card-heading",
+    "container": "06-overseas-advert-core-prices-0",
+    "x": 393.22460925999997,
+    "y": 464.12402369999995,
+    "w": 413.55078148000007,
+    "h": 44.8769514,
+    "baseline": 502.6894531,
+    "size": 46
+  },
+  {
+    "text": "388",
+    "role": "price-number",
+    "container": "06-overseas-advert-core-prices-0",
+    "x": 512.04820324,
+    "y": 537.0009751,
+    "w": 143.83984352000002,
+    "h": 66.66406479999999,
+    "baseline": 602.9912094704,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "06-overseas-advert-core-prices-0",
+    "x": 663.8880467600001,
+    "y": 568.93324070384,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 602.9912094704,
+    "size": 66.24
+  },
+  {
+    "text": "每大段 / 每小段100r",
+    "role": "card-body",
+    "container": "06-overseas-advert-core-prices-0",
+    "x": 398.97070318,
+    "y": 631.6650399,
+    "w": 402.05859364,
+    "h": 42.7109364,
+    "baseline": 668.510743036,
+    "size": 44
+  },
+  {
+    "text": "大师以上 · 0-200分",
+    "role": "card-heading",
+    "container": "06-overseas-advert-core-prices-1",
+    "x": 394.954103,
+    "y": 767.077147324,
+    "w": 410.09179400000005,
+    "h": 44.472657399999996,
+    "baseline": 805.2832017239999,
+    "size": 46
+  },
+  {
+    "text": "6",
+    "role": "price-number",
+    "container": "06-overseas-advert-core-prices-1",
+    "x": 564.853867176,
+    "y": 839.549804724,
+    "w": 38.228515648,
+    "h": 65.990234352,
+    "baseline": 904.866210974,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "06-overseas-advert-core-prices-1",
+    "x": 611.082382824,
+    "y": 870.80824220744,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 904.866210974,
+    "size": 66.24
+  },
+  {
+    "text": "每分 · 韩服除外",
+    "role": "card-body",
+    "container": "06-overseas-advert-core-prices-1",
+    "x": 450.17871102000004,
+    "y": 933.540039076,
+    "w": 299.64257796,
+    "h": 42.8828136,
+    "baseline": 970.385742212,
+    "size": 44
+  },
+  {
+    "text": "澳服 / 欧服 / 美服 / 东南亚 / 台服",
+    "role": "core-condition",
+    "container": "06-overseas-advert-server",
+    "x": 100,
+    "y": 1114.8942963,
+    "w": 701.3652200000001,
+    "h": 45.191407399999996,
+    "baseline": 1153.729257226,
+    "size": 46
+  },
+  {
+    "text": "韩服与其他分段按完整价目表或客服报价。",
+    "role": "core-condition",
+    "container": "06-overseas-advert-server",
+    "x": 100,
+    "y": 1177.9142963,
+    "w": 841.4316412000001,
+    "h": 45.191407399999996,
+    "baseline": 1216.704335374,
+    "size": 46
+  }
+]

@@ -13,6 +13,7 @@ const EvaluationPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [replying, setReplying] = useState<Evaluation | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [replyConflict, setReplyConflict] = useState(false);
   const [loadError, setLoadError] = useState('');
   const requestVersion = useRef(0);
   const submitLock = useRef(false);
@@ -37,16 +38,18 @@ const EvaluationPage: React.FC = () => {
 
   const pending = useMemo(() => items.filter(item => !item.reply_content).length, [items]);
   const openReply = (item: Evaluation) => {
+    setReplyConflict(false);
     setReplying(item);
   };
 
   const submitReply = async (content: string) => {
-    if (!replying || submitLock.current) return;
+    if (!replying || submitLock.current || replyConflict) return;
     submitLock.current = true;
     const evaluationId = replying.id;
     setSubmitting(true);
     try {
-      const res = await replyEvaluation(evaluationId, content);
+      const res = await replyEvaluation(evaluationId, content, replying.reply_version);
+      if (res.errorCode === 'EVALUATION_REPLY_CONFLICT') { setReplyConflict(true); return; }
       if (res.code !== 0 || !res.data) throw new Error(res.msg || '回复失败');
       requestVersion.current++;
       setItems(prev => prev.map(item => item.id === evaluationId ? res.data! : item));
@@ -92,7 +95,9 @@ const EvaluationPage: React.FC = () => {
         initialValue={replying?.reply_content || ''}
         placeholder='感谢老板的认可，也可以说明本次服务情况…'
         submitting={submitting}
-        onClose={() => setReplying(null)}
+        blocked={replyConflict}
+        hint={replyConflict ? '回复已变化，草稿仍在此处。关闭后将刷新评价，请核对最新回复。' : undefined}
+        onClose={() => { setReplying(null); if (replyConflict) void loadData(); setReplyConflict(false); }}
         onSubmit={submitReply}
       />
     </View></PlatformLayout>

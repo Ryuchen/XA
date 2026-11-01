@@ -1,8 +1,10 @@
+import { nativeColors } from '@/styles/nativeColors';
 import { Component } from 'react';
 import Taro from '@tarojs/taro';
 import { Button, View, Text } from '@tarojs/components';
 import TabIcon from '@/components/TabIcon';
 import styles from './index.module.scss';
+import { MessageUnreadContext } from '@/hooks/useMessageUnread';
 
 const TAB_LIST = [
   { pagePath: '/pages/orders/index', text: '接单', icon: 'gamepad' as const },
@@ -17,6 +19,7 @@ interface TabBarState {
 }
 
 export default class CustomTabBar extends Component<{ active?: 'orders' | 'report' | 'messages' | 'wallet' | 'mine' }, TabBarState> {
+  static contextType = MessageUnreadContext;
   state: TabBarState = {
     selected: this.resolveSelected()
   };
@@ -37,6 +40,7 @@ export default class CustomTabBar extends Component<{ active?: 'orders' | 'repor
   }
 
   render() {
+    const unread = this.context as number | null;
     const selected = this.props.active ? TAB_LIST.findIndex(item => item.pagePath === `/pages/${this.props.active}/index`) : this.state.selected;
     return (
       <View className={styles.tabBar}>
@@ -46,12 +50,13 @@ export default class CustomTabBar extends Component<{ active?: 'orders' | 'repor
             <Button
               key={item.pagePath}
               className={`${styles.tabItem} ${active ? styles.tabItemActive : ''}`}
-              aria-label={item.text}
+              aria-label={item.text === '消息' && unread ? `${item.text}，${unread}条未读` : item.text}
               aria-current={active ? 'page' : undefined}
               onClick={() => this.switchTab(item.pagePath)}
             >
               <View className={styles.iconWrap}>
-                <TabIcon name={item.icon} color={active ? '#136398' : '#336b9a'} />
+                <TabIcon name={item.icon} color={active ? nativeColors.primary : nativeColors.secondary} />
+                {item.text === '消息' && !!unread && <Text className={styles.unread}>{unread > 99 ? '99+' : unread}</Text>}
               </View>
               <Text className={`${styles.tabText} ${active ? styles.tabTextActive : ''}`}>{item.text}</Text>
             </Button>

@@ -1,0 +1,126 @@
+[
+  {
+    "id": "desktop-absolute",
+    "rows": 5,
+    "priceUnitColumn": 287,
+    "guaranteeUnitColumn": 686,
+    "visibleUnitRatios": {
+      "r": 0.6767183051642363,
+      "w": 0.6682349602765296
+    },
+    "verticalCenter": "数字与单位的可见字形分别居中于同一行中心",
+    "pricePairs": [
+      [
+        188,
+        128
+      ],
+      [
+        388,
+        388
+      ],
+      [
+        688,
+        688
+      ],
+      [
+        1288,
+        1288
+      ],
+      [
+        1888,
+        1888
+      ]
+    ]
+  },
+  {
+    "id": "desktop-secret",
+    "rows": 5,
+    "priceUnitColumn": 287,
+    "guaranteeUnitColumn": 686,
+    "visibleUnitRatios": {
+      "r": 0.6767183051642363,
+      "w": 0.6682349602765296
+    },
+    "verticalCenter": "数字与单位的可见字形分别居中于同一行中心",
+    "pricePairs": [
+      [
+        188,
+        128
+      ],
+      [
+        388,
+        388
+      ],
+      [
+        688,
+        688
+      ],
+      [
+        1288,
+        1288
+      ],
+      [
+        1888,
+        1888
+      ]
+    ]
+  },
+  {
+    "id": "mobile-absolute",
+    "rows": 4,
+    "priceUnitColumn": 287,
+    "guaranteeUnitColumn": 686,
+    "visibleUnitRatios": {
+      "r": 0.6767183051642363,
+      "w": 0.6682349602765296
+    },
+    "verticalCenter": "数字与单位的可见字形分别居中于同一行中心",
+    "pricePairs": [
+      [
+        188,
+        188
+      ],
+      [
+        388,
+        488
+      ],
+      [
+        688,
+        888
+      ],
+      [
+        888,
+        1288
+      ]
+    ]
+  },
+  {
+    "id": "mobile-secret",
+    "rows": 4,
+    "priceUnitColumn": 287,
+    "guaranteeUnitColumn": 686,
+    "visibleUnitRatios": {
+      "r": 0.6767183051642363,
+      "w": 0.6682349602765296
+    },
+    "verticalCenter": "数字与单位的可见字形分别居中于同一行中心",
+    "pricePairs": [
+      [
+        188,
+        188
+      ],
+      [
+        388,
+        488
+      ],
+      [
+        688,
+        888
+      ],
+      [
+        888,
+        1288
+      ]
+    ]
+  }
+]

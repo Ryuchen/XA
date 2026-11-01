@@ -1,3 +1,4 @@
+import { nativeColors } from './styles/nativeColors';
 export default defineAppConfig({
   pages: [
     'pages/login/index',
@@ -6,6 +7,8 @@ export default defineAppConfig({
     'pages/report/index',
     'pages/messages/index',
     'pages/message-detail/index',
+    'pages/application-detail/index',
+    'pages/reservations/index',
     'pages/wallet/index',
     'pages/withdrawAccounts/index',
     'pages/mine/index',
@@ -13,6 +16,7 @@ export default defineAppConfig({
     'pages/profile/index',
     'pages/skills/index',
     'pages/support/index',
+    'pages/support-chat/index',
     'pages/audition/index',
     'pages/points/index'
   ],
@@ -27,9 +31,9 @@ export default defineAppConfig({
   themeLocation: 'theme.json',
   tabBar: {
     custom: true,
-    color: '#999999',
-    selectedColor: '#136398',
-    backgroundColor: '#ffffff',
+    color: nativeColors.secondary,
+    selectedColor: nativeColors.primary,
+    backgroundColor: nativeColors.card,
     borderStyle: 'black',
     list: [
       {

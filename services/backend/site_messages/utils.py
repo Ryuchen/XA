@@ -21,7 +21,7 @@ def create_message(
             recipient_account_id = LegacyAccountMap.objects.filter(
                 legacy_user_id=recipient_id,
             ).values_list('account_id', flat=True).first()
-        return Message.objects.create(
+        message = Message.objects.create(
             recipient_id=recipient_id,
             recipient_account_id=recipient_account_id,
             type=msg_type,
@@ -31,5 +31,8 @@ def create_message(
             action_url=action_url[:255],
             related_order_id=related_order_id,
         )
+        from .notifier import notify_messages_after_commit
+        notify_messages_after_commit(message.recipient_account_id)
+        return message
     except Exception:
         return None

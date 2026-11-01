@@ -16,6 +16,11 @@
     </view>
   </block>
   <block wx:else>
+    <view wx:if="{{logged && pendingGift}}" class="panel">
+      <view class="section-title">上次赠送待核对</view>
+      <view class="small muted">{{pendingBlocked ? '请查询结果或联系客服核对。' : '可先查询结果；查不到时可重试原请求。'}}</view>
+      <view class="receipt-actions"><button class="xa-button button" bindtap="checkPending" loading="{{busy}}" disabled="{{busy}}" hover-class="xa-button-hover">查询赠送结果</button><button wx:if="{{!pendingBlocked}}" class="xa-button button-secondary" bindtap="recoverPending" disabled="{{busy}}" hover-class="xa-button-hover">重试原请求</button><button class="xa-button button-secondary" bindtap="viewGiftOrders" disabled="{{busy}}" hover-class="xa-button-hover">查看礼物单</button><button wx:if="{{pendingBlocked}}" class="xa-button button-secondary" bindtap="support" hover-class="xa-button-hover">联系客服</button></view>
+    </view>
     <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
     <block wx:if="{{logged && !error}}">
       <view class="panel recipient-panel">
@@ -76,6 +81,6 @@
 </view>
 <view wx:if="{{logged && !receipt && !error && gifts.length}}" class="gift-footer">
   <view class="gift-total"><text class="small muted">已选 {{selectedCount}} 件 · 合计</text><view class="price">{{totalText}}<text class="small"> 兴安币</text></view></view>
-  <button class="xa-button button" bindtap="send" loading="{{busy}}" disabled="{{busy || loading || !enough || (namingDays && !namingTitle)}}" hover-class="xa-button-hover">送给 TA</button>
+  <button class="xa-button button" bindtap="send" loading="{{busy}}" disabled="{{busy || loading || pendingGift || !enough || (namingDays && !namingTitle)}}" hover-class="xa-button-hover">送给 TA</button>
 </view>
 <bottom-navigation/>

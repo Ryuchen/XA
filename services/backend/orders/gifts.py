@@ -75,7 +75,7 @@ def gift_context(request, *, order_id=None, provider_id=None, lock=False):
             raise ValidationError('原订单不存在')
         if source.status != Order.Status.COMPLETED or source.payment_status not in (Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED):
             raise ValidationError('服务完成后才可以赠送礼物')
-        if source.source_order_id or (source.service.service_category and source.service.service_category.is_gift):
+        if source.source_order_id or source.is_gift_snapshot:
             raise ValidationError('礼物单不能重复打赏')
         users = set(source.providers.filter(settlement_base__gt=0).values_list('provider_id', flat=True))
         if source.provider_id:

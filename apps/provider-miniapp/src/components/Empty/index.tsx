@@ -1,3 +1,4 @@
+import { nativeColors } from '@/styles/nativeColors';
 import React from 'react';
 import { View, Text } from '@tarojs/components';
 import styles from './index.module.scss';
@@ -22,7 +23,7 @@ const Empty: React.FC<EmptyProps> = ({
   return (
     <View className={`${styles.empty} ${className}`}>
       <View className={styles.iconWrap}>
-        <TabIcon name={icon === '🎮' ? 'gamepad' : icon === '💰' || icon === '🎁' || icon === '⚖️' ? 'wallet' : 'receipt'} color='#336b9a' size={64} />
+        <TabIcon name={icon === '🎮' ? 'gamepad' : icon === '💰' || icon === '🎁' || icon === '⚖️' ? 'wallet' : 'receipt'} color={nativeColors.secondary} size={64} />
       </View>
       <Text className={styles.title}>{title}</Text>
       {desc && <Text className={styles.desc}>{desc}</Text>}

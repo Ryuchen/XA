@@ -1,0 +1,80 @@
+[
+  {
+    "id": "m0",
+    "text": "累计摸出3个大大红/房卡（160w以上）生效。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m1",
+    "text": "打手局前可选本局复活点，无论实际复活在哪，",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m2",
+    "text": "都按所选点计算。成功撤离可抵扣所选点；",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m3",
+    "text": "撤离失败则清空，重新累计。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m4",
+    "text": "只计成功撤离。巴克什/航天基地低于788w、",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m5",
+    "text": "潮汐监狱低于688w算流局；监狱禁走直升机撤离点。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m6",
+    "text": "在已成功解锁的复活点复活后，撤离失败超过6次，",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m7",
+    "text": "清除该复活点的撤离成功次数。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m8",
+    "text": "豪华版·全点",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m9",
+    "text": "2个出生点",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "m10",
+    "text": "8888",
+    "font": "Bahnschrift",
+    "style": 0
+  },
+  {
+    "id": "m11",
+    "text": "r",
+    "font": "Bahnschrift",
+    "style": 0
+  },
+  {
+    "id": "m12",
+    "text": "w",
+    "font": "Bahnschrift",
+    "style": 0
+  }
+]

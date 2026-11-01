@@ -239,10 +239,34 @@ def create_reservation(
         raise ReservationError('该双陪套餐需联系客服安排两名打手')
     duration_minutes = int((end_time - start_time).total_seconds() // 60)
     rounds = max(int(game_rounds or 1), 1)
+    # Reservations must not occupy a slot for a product the normal order
+    # flow cannot sell. Reuse its catalog rules without reserving funds.
+    if service.service_category_id and service.service_category.is_gift:
+        raise ReservationError('礼物请从赠送礼物入口购买')
+    from .gameplay import validate_service_gameplay
+    from rest_framework.exceptions import ValidationError
+    try:
+        validate_service_gameplay(service, rounds)
+    except ValidationError as exc:
+        raise ReservationError(_first_error(exc.detail)) from exc
 
     with transaction.atomic():
         # 档期锁：并发抢同一时间片时，后到者阻塞在这里，避免「都查到没冲突」
-        lock_provider_profile(provider_account)
+        profile = lock_provider_profile(provider_account)
+        provider = _legacy_user_for_account(provider_account)
+        if not provider or provider.pk != profile.user_id:
+            raise ReservationError('陪玩账号资料尚未关联，请联系客服核对')
+        if not provider_account.is_active or not provider_account.can_login or not provider.is_active:
+            raise ReservationError('陪玩账号已停用')
+        if not profile.is_verified:
+            raise ReservationError('陪玩尚未通过认证')
+        if not profile.can_take_service(service):
+            raise ReservationError('陪玩未开通对应端手游、难度或档位的接单资格')
+        from users.qualifications import service_skill
+        if service.game_category_id and not service_skill(profile, service):
+            raise ReservationError('陪玩尚未配置该服务技能')
+        # Online status, current-day schedules and current order capacity are
+        # checked on conversion, not against a future appointment request.
 
         conflicting = find_conflicting_reservations(
             provider_account, start_time, end_time,
@@ -255,7 +279,7 @@ def create_reservation(
         reservation = Reservation.objects.create(
             customer=customer,
             customer_account=customer_account,
-            provider=_legacy_user_for_account(provider_account),
+            provider=provider,
             provider_account=provider_account,
             service=service,
             start_time=start_time,
@@ -294,11 +318,44 @@ class _CustomerContext:
         self.legacy_user = legacy_user
 
 
+def reservation_order_pricing(reservation):
+    """Use the same current service and buyer rules for quote and conversion."""
+    from .serializers import CreateOrderSerializer
+    provider_ref = (reservation.provider_id if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
+                    else reservation.provider_account_id)
+    serializer = CreateOrderSerializer(data={
+        'service_id': reservation.service_id,
+        'provider_id': provider_ref,
+        'game_rounds': reservation.game_rounds,
+        'game_region': reservation.game_region,
+        'game_nickname': reservation.game_nickname,
+        'game_uid': reservation.game_uid,
+        'remark': reservation.remark,
+    }, context={'request': _CustomerContext(reservation.customer_account, reservation.customer)})
+    if not serializer.is_valid():
+        raise ReservationError(_first_error(serializer.errors))
+    return serializer.validated_data
+
+
+def reservation_service_terms(item):
+    return {'name': item.name, 'price_unit': item.price_unit,
+            'service_type': item.service_type, 'game_category': item.game_category_id,
+            'billing_provider_count': item.billing_provider_count, 'unit_price': item.price,
+            'gameplay': item.gameplay_id, 'platform': item.platform,
+            'security_level': item.security_level, 'provider_kind': item.provider_kind,
+            'provider_grade': item.provider_grade, 'required_level': item.required_level_id,
+            'service_category': item.service_category_id, 'purchase_mode': item.purchase_mode,
+            'is_addon': item.is_addon, 'experience_kind': item.experience_kind,
+            'allows_discount_coupons': item.allows_discount_coupons}
+
+
 def convert_reservation_to_order(
     request,
     reservation_id: int,
     *,
     client_request_id: Optional[str] = None,
+    expected_amount: Optional[int] = None,
+    expected_service: Optional[dict] = None,
 ) -> Tuple[int, str, Optional[Order]]:
     """把已确认的预约转成正式订单：预约链路上**唯一动钱**的一步。
 
@@ -318,8 +375,6 @@ def convert_reservation_to_order(
         tuple[int, str, Order | None]: ``(业务码, 提示, 订单)``；
         业务码取 0 / 400 / 403 / 404 / 409，非 0 时订单为 None。
     """
-    from .serializers import CreateOrderSerializer
-
     trace_id = new_trace_id()
 
     # 只读探测重放：首次转单成功后预约已是 CONVERTED，重放会先撞
@@ -338,17 +393,28 @@ def convert_reservation_to_order(
         )
         return 409, replay_reason, None
 
+    # Initialize the shared mutex before taking a reservation row lock. Two
+    # first-time conversions can otherwise deadlock while each attempts to
+    # insert the same provider's missing mutex from inside its transaction.
+    from .models import ProviderDispatchLock
+    provider_account_id = Reservation.objects.filter(pk=reservation_id).values_list(
+        'provider_account_id', flat=True,
+    ).first()
+    if provider_account_id:
+        ProviderDispatchLock.objects.get_or_create(account_id=provider_account_id)
+
     with transaction.atomic():
         try:
             reservation = (
                 Reservation.objects.select_for_update()
-                .select_related('customer', 'customer_account', 'provider',
-                                'provider_account', 'service')
                 .get(id=reservation_id)
             )
         except Reservation.DoesNotExist:
             return 404, '预约不存在', None
 
+        from .reservation_expiration import expire_locked_reservation
+        if expire_locked_reservation(reservation):
+            return 409, '预约已过期，请重新预约', None
         if reservation.status != Reservation.Status.CONFIRMED:
             return 409, '仅已确认的预约可转订单', None
         if reservation.provider_id is None:
@@ -363,28 +429,24 @@ def convert_reservation_to_order(
         # 等级是否够、活动/折扣/抽成率怎么算，一处维护。
         # provider_id 的取值口径与 C 端下单一致：兼容模式下传 legacy 用户 ID，
         # 生产模式下传 ClubAccount ID。
-        provider_ref = (
-            reservation.provider_id
-            if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)
-            else reservation.provider_account_id
-        )
-        serializer = CreateOrderSerializer(
-            data={
-                'service_id': reservation.service_id,
-                'provider_id': provider_ref,
-                'game_rounds': reservation.game_rounds,
-                'game_region': reservation.game_region,
-                'game_nickname': reservation.game_nickname,
-                'game_uid': reservation.game_uid,
-                'remark': reservation.remark,
-            },
-            context={'request': _CustomerContext(buyer_account, buyer_user)},
-        )
-        if not serializer.is_valid():
-            return 400, _first_error(serializer.errors), None
-
-        data = serializer.validated_data
+        # Hold the service row until the price check and debit complete.
+        from .models import ServiceItem
+        ServiceItem.objects.select_for_update().get(pk=reservation.service_id)
+        # Compete for the same provider capacity as ordinary orders and repeat
+        # validation while holding that lock. Lock only the reservation above:
+        # locking joined account rows here reverses the ordinary dispatch order.
+        from .services import lock_provider_dispatch
+        lock_provider_dispatch([reservation.provider_account_id])
+        try:
+            data = reservation_order_pricing(reservation)
+        except ReservationError as exc:
+            return 400, str(exc), None
         amount = data['amount']
+        terms = reservation_service_terms(data['service'])
+        if expected_service is not None and any(terms[key] != value for key, value in expected_service.items()):
+            return 409, '商品信息已变化，请刷新报价后重新确认', None
+        if expected_amount is not None and expected_amount != amount:
+            return 409, '价格或优惠已变化，请刷新报价后重新确认', None
         provider = data['provider']
         split = compute_split(amount, inviter_commission_rate=data['inviter_commission_rate'], **data['commission_spec'])
         inviter = data.get('inviter')
@@ -399,11 +461,14 @@ def convert_reservation_to_order(
             return 400, '兴安币不足，请联系企业微信客服充值', None
 
         from .purchase_benefits import lock_purchase, record_paid_benefits
-        locked_coupon = lock_purchase(buyer_account, reservation.service,
+        locked_coupon = lock_purchase(buyer_account, data['service'],
             reservation.game_rounds, data['user_coupon'], data['pricing'])
 
         # 校验全过、即将扣款，此刻才占幂等键：校验失败不占键，用户补足余额后
         # 可以拿同一个键重试。
+        if expire_locked_reservation(reservation):
+            return 409, '预约已过期，请重新预约', None
+        claim_savepoint = transaction.savepoint()
         allowed, reason = claim_fund_write(
             account=request.account,
             request_id=client_request_id,
@@ -411,6 +476,7 @@ def convert_reservation_to_order(
             fingerprint=f'{reservation.id}|{amount}',
         )
         if not allowed:
+            transaction.savepoint_commit(claim_savepoint)
             log_money_event(
                 'reservation.convert.duplicate',
                 account_id=request.account.pk,
@@ -422,9 +488,19 @@ def convert_reservation_to_order(
             )
             return 409, reason, None
 
+        # Locks and pricing can take time; never debit after the booked end.
+        if reservation.end_time <= timezone.now():
+            transaction.savepoint_rollback(claim_savepoint)
+            expire_locked_reservation(reservation)
+            return 409, '预约已过期，请重新预约', None
+        transaction.savepoint_commit(claim_savepoint)
         balance_before = wallet.balance
         wallet.balance -= amount
         wallet.save(update_fields=['balance'])
+        # Keep the buyer's open wallet and finance views in sync with the same
+        # committed debit, just as the ordinary order-creation path does.
+        from wallet.notifier import notify_wallet_update
+        transaction.on_commit(lambda: notify_wallet_update(wallet))
 
         order = Order.objects.create(
             customer=buyer_user,

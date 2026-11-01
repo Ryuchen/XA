@@ -1,0 +1,16 @@
+{
+  "version":"tazhu-v4-sand-with-cover",
+  "palette":{"theme":"巴克什黄沙","paper":["#FFF0D3","#F1D19A"],"cards":"#FFF8E8","border":"#C8AE7C","navy":"#213F53","accent":"#A96D26","sceneSource":"01-illustrations/tazhu-sand-background-v1.png","sceneNativeDimensions":[809,1944]},
+  "cover":{"width":1672,"height":941,"exportWidth":3200,"exportHeight":1800,"textCenterX":326,"copySafeArea":[80,85,492,677],"brandCenterY":132,"titleCentersY":[274,434],"titleSize":164,"platformCenterY":585,"serviceCentersY":[675,735],"serviceCard":[125,636,402,139],"secondarySize":52,"nativeHeroCrop":[0,0,809,390],"phantomPropSlots":[[97,793,138,124],[258,793,138,124],[419,793,138,124]],"safePropSlot":[1441,793,141,128],"content":"品牌、玩法、端游/手游、绝密、刷卡开保与累计物资保底；完整价格和规则保留在详细页"},
+  "detailed":{
+    "width":809,"height":2740,"exportWidth":3200,"exportHeight":10838,
+    "header":{"bounds":[0,0,809,390],"titleSafeArea":[42,58,250,179],"platformBand":[42,262,234,42],"illustrationSafeArea":[307,40,488,350]},
+    "cards":[{"bounds":[40,420,729,326],"amountCenterY":458,"bodyRowCenters":[552,616,680]},{"bounds":[40,768,729,388],"amountCenterY":806,"bodyRowCenters":[894,958,1022,1086]}],
+    "priceUnitX":283,"lootUnitX":681,
+    "rewards":{"bounds":[40,1183,729,774],"titleCenterY":1213.5,"phantomRows":[1320,1440,1560],"phantomPropSlots":[[76,1266,126,108],[76,1386,126,108],[76,1506,126,108]],"onceScopeCenterY":1648,"redTitleCenterY":1701,"redRows":[1768,1835],"nonStackingCenterY":1907},
+    "rules":{"bounds":[40,1981,729,563],"titleCenterY":2011.5,"textSafeArea":[68,2060,674,470],"minimumBodySize":29,"phoneEquivalentSizeAt390":13.98},
+    "footer":{"bounds":[0,2556,809,184]},
+    "propRendering":"native transparent PNGs embedded separately in SVG"
+  },
+  "social":{"width":1086,"height":1448,"exportWidth":2400,"exportHeight":3200,"cards":[[54,554,475,287],[557,554,475,287],[54,867,475,287],[557,867,475,287]],"cardTextCenterOffset":195.5,"cardPropSlotOffset":[342,86,122,176],"phantomPropSlots":[[68,1207,102,91],[179,1207,102,91],[293,1207,102,91]],"content":"仅核心价格、保底、平台、模式及玩法；完整权益和规则保留在两张详细页"}
+}

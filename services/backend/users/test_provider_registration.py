@@ -11,7 +11,7 @@ from rest_framework.test import APITestCase
 from club_accounts.models import ClubAccount, LegacyAccountMap, OtpCredential
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
-from orders.tests.factories import make_console_user
+from orders.tests.factories import make_console_user, make_provider, make_service
 from users.models import EscortLevel, EscortProfile, ProviderRegistration
 from users.provider_registration import decrypt_identity, validate_identity
 from wallet.models import Transaction, Wallet, get_platform_wallet
@@ -232,6 +232,50 @@ class ProviderRegistrationTests(APITestCase):
         self.authenticate_admin(['registration:view'])
         response=self.client.get('/api/admin/options/escort-levels/')
         self.assertEqual(response.status_code,200,response.data)
+
+    def test_registration_list_applies_status_and_search_after_real_review(self):
+        cash = self.submit()
+        earnings_data = self.payload(username='another_test', phone='13900001002', id_number=self.identity('002'),
+                                     display_name='单抵测试', deposit_mode='EARNINGS')
+        del earnings_data['deposit_proof']
+        result = self.client.post(self.url, earnings_data, format='multipart')
+        self.assertEqual(result.status_code, 201, result.data)
+        other = ProviderRegistration.objects.get(pk=result.data['data']['id'])
+        self.authenticate_admin()
+        self.assertEqual(self.approve(cash).data['code'], 0)
+        pending = self.client.get('/api/admin/provider-registrations/', {'status': 'PENDING'}).data['data']['list']
+        self.assertEqual([row['id'] for row in pending], [other.id])
+        approved = self.client.get('/api/admin/provider-registrations/', {'status': 'APPROVED', 'search': 'register_test'}).data['data']['list']
+        self.assertEqual([row['id'] for row in approved], [cash.id])
+        for keyword in ('another_test', '13900001002', '单抵测试', '注册测试'):
+            result = self.client.get('/api/admin/provider-registrations/', {'status': 'PENDING', 'search': keyword})
+            self.assertEqual([row['id'] for row in result.data['data']['list']], [other.id])
+        self.assertEqual(self.client.get('/api/admin/provider-registrations/', {'status': 'INVALID'}).status_code, 400)
+
+    def test_level_deletion_preview_matches_real_references_and_clears_them(self):
+        row = self.submit()
+        self.authenticate_admin(['registration:view', 'registration:audit', 'escort_level:view', 'escort_level:delete'])
+        self.assertEqual(self.approve(row).data['code'], 0)
+        service = make_service(required_level=self.level)
+        lower = EscortLevel.objects.create(name='较低等级', commission_rate=30, sort_order=0)
+        provider = make_provider(level=lower)
+        self.assertFalse(provider.escort_profile.can_take_service(service))
+        url = f'/api/admin/escort-levels/{self.level.pk}/deletion-impact/'
+        impact = self.client.get(url)
+        self.assertEqual(impact.data['data'], {'id': self.level.pk, 'name': self.level.name, 'providers': 1, 'services': 1, 'registrations': 1})
+        self.assertEqual(self.client.delete(f'/api/admin/escort-levels/{self.level.pk}/').status_code, 200)
+        row.refresh_from_db(); service.refresh_from_db()
+        self.assertIsNone(row.level_id)
+        self.assertIsNone(EscortProfile.objects.get(account=row.account).level_id)
+        self.assertIsNone(service.required_level_id)
+        self.assertTrue(provider.escort_profile.can_take_service(service))
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_level_deletion_preview_requires_view_and_delete_permissions(self):
+        url = f'/api/admin/escort-levels/{self.level.pk}/deletion-impact/'
+        for permissions in (['escort_level:view'], ['escort_level:delete']):
+            self.authenticate_admin(permissions)
+            self.assertEqual(self.client.get(url).status_code, 403)
 
 
 from concurrent.futures import ThreadPoolExecutor

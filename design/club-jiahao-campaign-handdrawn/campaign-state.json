@@ -1,0 +1,159 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 嘉豪物资单",
+  "stage": "delivered",
+  "revision": "jiahao-final-r1",
+  "contentVerified": true,
+  "contentVerificationBasis": "16档价目来自本轮文字；用户已明确确认参考规则端手游一致、两种清图方式为或、四项条件任一成立即炸单。",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "沿用既有兴安电竞二次元手绘、男性蜂医与灰鼠角色"
+    },
+    "mechanismAndRules": {
+      "status": "approved",
+      "basis": "用户回复：按此沿用，端手游一致"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在嘉豪主题插画交付后回复：继续",
+      "file": "01-illustrations/jiahao-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户在本轮六张无字底图交付后回复：继续，进入矢量文案阶段",
+      "overview": "review/background-overview.png",
+      "review": "review/backgrounds.html"
+    }
+  },
+  "plannedDeliverables": [
+    "端游·绝密四档价目",
+    "端游·机密四档价目",
+    "手游·绝密四档价目",
+    "手游·机密四档价目",
+    "嘉豪物资单横版封面",
+    "简洁社交广告"
+  ],
+  "layoutInvariants": [
+    "四类各4档，共16档；主表2列：订单价格、带出物资",
+    "整条深蓝表头，绝密暖金、机密薄荷青",
+    "r/w固定单位列；单位可见字高为数字65%–75%，文字组垂直居中",
+    "嘉豪保障：每炸一把绝密+100w、机密+60w；当局物资全送不计订单累计",
+    "20分钟内两种清图方式满足任一；四项炸单条件任一成立即炸单",
+    "保留拉闸清图专用术语，端手游规则一致",
+    "本玩法没有超额门槛、银行超时加息/加仓、工作日+20%等机制"
+  ],
+  "nextStep": "成品已完成；后续按需修改具体档位或文案，继续复用已确认底图",
+  "illustration": {
+    "provider": "built-in image_gen",
+    "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-bd933435-6600-49fd-b16b-b3c1619a1491.png",
+    "file": "01-illustrations/jiahao-medic-mouse-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "channels": 4,
+    "hasAlpha": true,
+    "alpha": {
+      "min": 0,
+      "max": 254
+    },
+    "prompt": "01-illustrations/prompts.md",
+    "review": "review/illustration-overview.png",
+    "reviewPage": "review/illustration.html"
+  },
+  "backgrounds": {
+    "gold": "03-backgrounds/poster-gold.png",
+    "teal": "03-backgrounds/poster-teal.png",
+    "cover": "03-backgrounds/cover.png",
+    "social": "03-backgrounds/social.png"
+  },
+  "exports": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/desktop-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1881,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "desktop-secret",
+      "label": "端游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/desktop-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/mobile-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1881,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/mobile-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "cover",
+      "label": "横版封面",
+      "src": "cover.png",
+      "width": 3200,
+      "height": 1800,
+      "file": "04-png-export/cover-background.png",
+      "nativeWidth": 1672,
+      "nativeHeight": 941,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "social",
+      "label": "简洁广告海报",
+      "src": "social.png",
+      "width": 2400,
+      "height": 3200,
+      "file": "04-png-export/social-background.png",
+      "nativeWidth": 1086,
+      "nativeHeight": 1448,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    }
+  ],
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "desktop-secret",
+    "mobile-absolute",
+    "mobile-secret",
+    "cover",
+    "social"
+  ],
+  "vectorDelivery": {
+    "status": "completed",
+    "overview": "review/final-overview.png",
+    "review": "review/index.html",
+    "notes": "review/final-notes.md",
+    "formats": [
+      "PNG",
+      "editable text SVG",
+      "outlined SVG"
+    ],
+    "rendering": "Final-size vector typography over approved raster backgrounds",
+    "tierCount": 16
+  },
+  "package": "campaign-jiahao-final-r1.zip"
+}

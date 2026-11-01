@@ -1,0 +1,197 @@
+{
+  "brand": "兴安电竞",
+  "title": "塔主大人",
+  "titleLines": [
+    "塔主",
+    "大人"
+  ],
+  "mode": "绝密",
+  "sources": {
+    "pricesAndRules": "2026-09-29 本轮用户完整文字",
+    "redRewardConfirmation": "用户明确回复：只加188w",
+    "illustration": "已确认兴安电竞物资系列，复用蜂医、灰鼠与开箱得吃素材",
+    "phantomFrequencyConfirmation": "用户本轮明确回复：整单一次"
+  },
+  "tiers": [
+    {
+      "id": "desktop-absolute",
+      "platform": "端游",
+      "rows": [
+        {
+          "priceR": 688,
+          "lootW": 2188,
+          "cards": [
+            {
+              "name": "巴克什总裁卡",
+              "count": 1,
+              "action": "刷爆"
+            }
+          ],
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 8
+            },
+            {
+              "name": "普通大保险",
+              "count": 10
+            }
+          ]
+        },
+        {
+          "priceR": 988,
+          "lootW": 3288,
+          "cards": [
+            {
+              "name": "巴克什总裁卡",
+              "count": 1,
+              "action": "刷爆"
+            },
+            {
+              "name": "博物馆地下金库卡",
+              "count": 1,
+              "action": "刷爆"
+            }
+          ],
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 10
+            },
+            {
+              "name": "普通大保险",
+              "count": 20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "platform": "手游",
+      "rows": [
+        {
+          "priceR": 588,
+          "lootW": 2188,
+          "cards": [
+            {
+              "name": "巴克什总裁卡",
+              "count": 1,
+              "action": "刷爆"
+            }
+          ],
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 8
+            },
+            {
+              "name": "普通大保险",
+              "count": 10
+            }
+          ]
+        },
+        {
+          "priceR": 888,
+          "lootW": 3288,
+          "cards": [
+            {
+              "name": "巴克什总裁卡",
+              "count": 1,
+              "action": "刷爆"
+            },
+            {
+              "name": "博物馆地下金库卡",
+              "count": 1,
+              "action": "刷爆"
+            }
+          ],
+          "safes": [
+            {
+              "name": "沙色保险",
+              "count": 10
+            },
+            {
+              "name": "普通大保险",
+              "count": 20
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "rewards": {
+    "phantoms": {
+      "trigger": "摸到",
+      "items": [
+        {
+          "name": "天圆地方",
+          "bonusW": 688
+        },
+        {
+          "name": "万金泪冠",
+          "bonusW": 888
+        },
+        {
+          "name": "纵横",
+          "bonusW": 1088
+        }
+      ],
+      "frequencySourceText": "三幻神特别奖励只计算一次",
+      "frequencyScope": "order-total-once",
+      "confirmationStatus": "confirmed"
+    },
+    "red": {
+      "trigger": "成功带出一个",
+      "tiers": [
+        {
+          "minSlots": 6,
+          "bonusW": 88
+        },
+        {
+          "minSlots": 9,
+          "bonusW": 188
+        }
+      ],
+      "sameItemStacks": false,
+      "confirmationStatus": "confirmed",
+      "extractionResultRestriction": "无论撤离成功与失败，只要成功带出就加保底"
+    }
+  },
+  "rules": {
+    "counts": {
+      "successfulExtractionOnly": true,
+      "failedExtractionCount": false,
+      "items": [
+        "刷卡次数",
+        "沙保次数",
+        "普通大保险次数"
+      ]
+    },
+    "totalGuarantee": {
+      "successfulExtraction": true,
+      "killsComparison": "≥",
+      "kills": 4,
+      "lootComparison": "＞",
+      "lootW": 588,
+      "operator": "且",
+      "belowRequirementsLootFree": true,
+      "belowRequirementsCardAndSafeCounts": true
+    },
+    "redException": "红只要成功带出就加保底，无论撤离成功与失败",
+    "phantomFrequencySourceText": "三幻神特别奖励只计算一次"
+  },
+  "sourceText": {
+    "rewards": [
+      "摸到天圆地方+688w保底，摸到万金泪冠+888w保底，摸到纵横+1088w保底",
+      "成功带出一个6格及以上的红+88w保底",
+      "成功带出一个9格及以上的红+188w保底"
+    ],
+    "orderNotes": [
+      "本单只计入撤离成功的对局，撤离失败不算刷卡次数、沙保和普通大保险次数",
+      "撤离成功时必须击杀人头大于等于4个，并且撤离收益大于588w才计入总保底，否则物资白吃但是开的卡和沙保/普通大保险计入次数",
+      "红只要成功带出就加保底，无论撤离成功与失败",
+      "三幻神特别奖励只计算一次"
+    ]
+  }
+}

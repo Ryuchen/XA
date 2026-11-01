@@ -1,0 +1,37 @@
+{
+  "approvedDate": "2026-10-08",
+  "userBasis": "还是使用上一版的吧，然后将这个插画作为角色原型参考存入skills中；封面按照参考图中的艺术字和布局来进行参考也存入skills中。",
+  "characterPrototype": {
+    "file": "character-trio-prototype-r1.png",
+    "selectedVersion": "r1",
+    "approved": true,
+    "source": "club-character-trio-20261008/illustrations/medic-pinkgirl-mouse-r1.png",
+    "width": 1448,
+    "height": 1086,
+    "pixelFormat": "Format32bppArgb",
+    "sha256": "B9588AAAFAC4F9239DE749DAF9B12854283421668C30B79A9B1EFAFB71ABB172",
+    "characters": [
+      "带额头护目镜的可爱男性蜂医",
+      "粉发电竞女孩",
+      "灰鼠"
+    ],
+    "use": "角色身份、Q版比例、服装、配色和统一二次元手绘风格；按玩法选用角色",
+    "excludedDefault": "r2侧分短发、胡茬、橄榄绿全套服装版本"
+  },
+  "coverReference": {
+    "file": "cover-layout-reference.png",
+    "approvedFor": [
+      "艺术字",
+      "布局",
+      "场景配色"
+    ],
+    "source": "用户2026-10-08附件 codex-clipboard-5db8960d-f3f4-4f1d-a7cf-4bde281ebb6d.png",
+    "width": 1280,
+    "height": 720,
+    "sha256": "935303E3D072B82B4FDC277E776DB74DB8B0BF988603EFAE8AC3D7A489D64CB4",
+    "layout": "16:9左文右图；品牌及错落艺术主标题左对齐；卖点胶囊和平台行在左安全文字区居中",
+    "typography": "厚重深海军蓝、纤细奶白描边、柔和雾蓝右下偏移、暖金弧线",
+    "businessContentApprovedForReuse": false
+  },
+  "guidance": "../../references/approved-characters-and-cover.md"
+}

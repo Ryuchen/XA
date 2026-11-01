@@ -1,0 +1,275 @@
+{
+  "title": "兴安电竞 · 物资价目海报重制",
+  "date": "2026-09-28",
+  "currentStage": "3 - 矢量文案与艺术标题填充完成，六张成品已导出",
+  "gates": [
+    "用户确认插画后才生成高清排版底图",
+    "用户确认底图后才填充矢量文案"
+  ],
+  "style": "整体插画和底图统一采用二次元手绘风格：深蓝手绘线稿、平涂与柔和赛璐璐阴影、简化道具、浅色手绘远景；奶白、雾蓝、海军蓝、暖金及薄荷青。",
+  "outputPlan": [
+    "端游·绝密完整版",
+    "端游·机密完整版",
+    "手游·绝密完整版",
+    "手游·机密完整版",
+    "封面",
+    "简洁特别价目宣发版（小红书、B站、抖音、朋友圈；不加下单须知）"
+  ],
+  "typographyRules": [
+    "文案按语义提炼，不能改动价格或条件逻辑",
+    "各文案组在对应容器内垂直居中，并减少换行",
+    "价格以固定r单位列对齐、物资以固定w单位列对齐",
+    "突出工作日累计物资保底+20%，补偿另计且不参与上浮",
+    "关键标题使用直接渲染的艺术字，正文价格以矢量文字或路径叠加",
+    "最终保留PNG底图、矢量源文件和完整高清PNG"
+  ],
+  "assets": [
+    {
+      "file": "01-illustrations/01-medic-mouse-loot.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "intendedUse": "价目页主插画，蜂医与鼠鼠开箱"
+    },
+    {
+      "file": "01-illustrations/02-loaded-extraction.png",
+      "width": 1536,
+      "height": 1024,
+      "alpha": true,
+      "intendedUse": "封面及宣发主插画，满载撤离"
+    },
+    {
+      "file": "01-illustrations/03-tactical-sticker-atlas.png",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true,
+      "intendedUse": "九组辅助元素图集，优惠、保障及分区装饰；尺寸以文件为准"
+    }
+  ],
+  "sourceOfTruth": "本次用户上传的四张原始价目表。旧目录build.mjs含错误数据，禁止用作价格或规则来源。",
+  "priceTranscription": [
+    {
+      "name": "端游·绝密",
+      "priceR": [
+        188,
+        268,
+        468,
+        668,
+        868,
+        1668
+      ],
+      "lootW": [
+        866,
+        1266,
+        2466,
+        3666,
+        4866,
+        9066
+      ]
+    },
+    {
+      "name": "端游·机密",
+      "priceR": [
+        188,
+        268,
+        468,
+        668,
+        868,
+        1668
+      ],
+      "lootW": [
+        1266,
+        1866,
+        3266,
+        4666,
+        6266,
+        13866
+      ]
+    },
+    {
+      "name": "手游·绝密",
+      "priceR": [
+        168,
+        268,
+        468,
+        668,
+        868,
+        1068
+      ],
+      "lootW": [
+        1388,
+        2288,
+        4088,
+        5888,
+        7688,
+        9488
+      ]
+    },
+    {
+      "name": "手游·机密",
+      "priceR": [
+        168,
+        268,
+        468,
+        668,
+        868,
+        1068
+      ],
+      "lootW": [
+        1588,
+        2588,
+        4588,
+        6588,
+        8588,
+        10588
+      ]
+    }
+  ],
+  "reminders": [
+    "后续改价以本目录 06-typesetting/content.json 为准；第四档均为668r",
+    "保留固定 r/w 单位列和按字形边界居中的排版",
+    "最终 PNG 文字由矢量渲染；背景沿用已确认的二次元手绘位图"
+  ],
+  "illustrationApproval": "用户明确表示很好，要求继续重置价目海报、封面、广告底图；新版二次元手绘插画已确认",
+  "styleRevision": "STYLE-REVISION.md",
+  "stage2": {
+    "status": "approved",
+    "style": "二次元手绘",
+    "overview": "05-review/background-overview.png",
+    "review": "05-review/review-backgrounds.html",
+    "layout": "02-layouts/layout-spec.json",
+    "exports": [
+      {
+        "id": "desktop-absolute",
+        "label": "端游 · 绝密",
+        "src": "poster-gold.png",
+        "width": 3200,
+        "height": 7680,
+        "file": "04-png-export/desktop-absolute-background.png",
+        "nativeWidth": 809,
+        "nativeHeight": 1942,
+        "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+      },
+      {
+        "id": "desktop-secret",
+        "label": "端游 · 机密",
+        "src": "poster-teal.png",
+        "width": 3200,
+        "height": 7680,
+        "file": "04-png-export/desktop-secret-background.png",
+        "nativeWidth": 809,
+        "nativeHeight": 1942,
+        "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+      },
+      {
+        "id": "mobile-absolute",
+        "label": "手游 · 绝密",
+        "src": "poster-gold.png",
+        "width": 3200,
+        "height": 7680,
+        "file": "04-png-export/mobile-absolute-background.png",
+        "nativeWidth": 809,
+        "nativeHeight": 1942,
+        "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+      },
+      {
+        "id": "mobile-secret",
+        "label": "手游 · 机密",
+        "src": "poster-teal.png",
+        "width": 3200,
+        "height": 7680,
+        "file": "04-png-export/mobile-secret-background.png",
+        "nativeWidth": 809,
+        "nativeHeight": 1942,
+        "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+      },
+      {
+        "id": "cover",
+        "label": "横版封面",
+        "src": "cover.png",
+        "width": 3200,
+        "height": 1800,
+        "file": "04-png-export/cover-background.png",
+        "nativeWidth": 1672,
+        "nativeHeight": 941,
+        "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+      },
+      {
+        "id": "social",
+        "label": "简洁广告海报",
+        "src": "social.png",
+        "width": 2400,
+        "height": 3200,
+        "file": "04-png-export/social-background.png",
+        "nativeWidth": 1086,
+        "nativeHeight": 1448,
+        "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+      }
+    ]
+  },
+  "backgroundApproval": "用户已要求将原文案以矢量方式填入，并要求艺术标题及指定对齐；底图已获准进入文案阶段。",
+  "stage3": {
+    "status": "complete",
+    "content": "06-typesetting/content.json",
+    "review": "08-final-review/review-final.html",
+    "overview": "08-final-review/final-overview.png",
+    "exports": [
+      {
+        "id": "desktop-absolute",
+        "label": "端游 · 绝密",
+        "png": "07-final/png/desktop-absolute.png",
+        "outlinedSVG": "07-final/svg-outlined/desktop-absolute.svg",
+        "editableSVG": "07-final/svg-editable/desktop-absolute.svg",
+        "width": 3200,
+        "height": 7680
+      },
+      {
+        "id": "desktop-secret",
+        "label": "端游 · 机密",
+        "png": "07-final/png/desktop-secret.png",
+        "outlinedSVG": "07-final/svg-outlined/desktop-secret.svg",
+        "editableSVG": "07-final/svg-editable/desktop-secret.svg",
+        "width": 3200,
+        "height": 7680
+      },
+      {
+        "id": "mobile-absolute",
+        "label": "手游 · 绝密",
+        "png": "07-final/png/mobile-absolute.png",
+        "outlinedSVG": "07-final/svg-outlined/mobile-absolute.svg",
+        "editableSVG": "07-final/svg-editable/mobile-absolute.svg",
+        "width": 3200,
+        "height": 7680
+      },
+      {
+        "id": "mobile-secret",
+        "label": "手游 · 机密",
+        "png": "07-final/png/mobile-secret.png",
+        "outlinedSVG": "07-final/svg-outlined/mobile-secret.svg",
+        "editableSVG": "07-final/svg-editable/mobile-secret.svg",
+        "width": 3200,
+        "height": 7680
+      },
+      {
+        "id": "cover",
+        "label": "横版封面",
+        "png": "07-final/png/cover.png",
+        "outlinedSVG": "07-final/svg-outlined/cover.svg",
+        "editableSVG": "07-final/svg-editable/cover.svg",
+        "width": 3200,
+        "height": 1800
+      },
+      {
+        "id": "social",
+        "label": "简洁广告海报",
+        "png": "07-final/png/social.png",
+        "outlinedSVG": "07-final/svg-outlined/social.svg",
+        "editableSVG": "07-final/svg-editable/social.svg",
+        "width": 2400,
+        "height": 3200
+      }
+    ],
+    "outlinePolicy": "标题和全部文字有转曲路径版本，正文和数字另有可改文字版本；背景为嵌入位图",
+    "revision": "r2 - 标题栏统一深蓝，r/w 放大，物资列左移以增加图标间距"
+  }
+}

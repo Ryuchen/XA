@@ -1,0 +1,1528 @@
+{
+  "revision": "sand-safe-insurance-mobile-price-r2-20261009",
+  "status": "geometry-and-source-passed",
+  "visualReviewRequired": true,
+  "records": [
+    {
+      "id": "mobile-absolute",
+      "sha256": "f06d307fc139418eb48a0f40e47d68fa0af6ce68d4a741ef062f1a28a192431d",
+      "dimensions": [
+        3200,
+        4800
+      ],
+      "backgroundNative": [
+        1024,
+        1536
+      ],
+      "values": {
+        "priceR": {
+          "expected": [
+            "108",
+            "288",
+            "488"
+          ],
+          "actual": [
+            "108",
+            "288",
+            "488"
+          ],
+          "match": true
+        },
+        "baseGuaranteeW": {
+          "expected": [
+            "688",
+            "1688",
+            "3288"
+          ],
+          "actual": [
+            "688",
+            "1688",
+            "3288"
+          ],
+          "match": true
+        },
+        "sandSafeCount": {
+          "expected": [
+            "2",
+            "6",
+            "10"
+          ],
+          "actual": [
+            "2",
+            "6",
+            "10"
+          ],
+          "match": true
+        },
+        "regularLargeSafeCount": {
+          "expected": [
+            "3",
+            "8",
+            "15"
+          ],
+          "actual": [
+            "3",
+            "8",
+            "15"
+          ],
+          "match": true
+        }
+      },
+      "pairs": [
+        {
+          "role": "price",
+          "number": "108",
+          "unit": "r",
+          "gap": 12,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.6985878027342108,
+          "numberRight": 181.64493589280048,
+          "unitX": 193.64493589280048
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "gap": 12,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 181.64493589280048,
+          "unitX": 193.64493589280048
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "gap": 12,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 181.64493589280048,
+          "unitX": 193.64493589280048
+        },
+        {
+          "role": "loot",
+          "number": "688",
+          "unit": "w",
+          "gap": 12,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002,
+          "numberRight": 898.1588036567548,
+          "unitX": 910.1588036567548
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "gap": 12.000000000000028,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002,
+          "numberRight": 898.1588036567548,
+          "unitX": 910.1588036567548
+        },
+        {
+          "role": "loot",
+          "number": "3288",
+          "unit": "w",
+          "gap": 12.000000000000028,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000002,
+          "numberRight": 898.1588036567548,
+          "unitX": 910.1588036567548
+        }
+      ],
+      "checks": [
+        {
+          "role": "table-row-0",
+          "container": [
+            51,
+            542,
+            922,
+            98
+          ],
+          "margins": {
+            "top": 22.020751738100103,
+            "bottom": 22.020751738099875
+          },
+          "centerDelta": 1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "table-row-1",
+          "container": [
+            51,
+            653,
+            922,
+            96
+          ],
+          "margins": {
+            "top": 21.020751738100103,
+            "bottom": 21.020751738099875
+          },
+          "centerDelta": 1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "table-row-2",
+          "container": [
+            51,
+            761,
+            922,
+            99
+          ],
+          "margins": {
+            "top": 21.97021462700002,
+            "bottom": 22.970214626999905
+          },
+          "centerDelta": -0.5,
+          "status": "passed"
+        },
+        {
+          "role": "brand",
+          "container": [
+            174,
+            42,
+            344,
+            52
+          ],
+          "margins": {
+            "left": 122.47990229499999,
+            "right": 66.31990229500002,
+            "top": 6.995116699999997,
+            "bottom": 6.995116700000011
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "art-title",
+          "container": [
+            104,
+            122,
+            424,
+            95
+          ],
+          "margins": {
+            "left": -0.0000011942599655867525,
+            "right": -0.000001194259994008462,
+            "top": 1.7531159802883565,
+            "bottom": 1.753115980288385
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "subtitle",
+          "container": [
+            133,
+            233,
+            386,
+            35
+          ],
+          "margins": {
+            "left": 56.625730000000004,
+            "right": 56.625729999999976,
+            "top": 2.3784185499999637,
+            "bottom": 2.378418550000049
+          },
+          "centerDelta": -5.684341886080802e-14,
+          "status": "passed"
+        },
+        {
+          "role": "platform-completion",
+          "container": [
+            70,
+            299,
+            877,
+            32
+          ],
+          "margins": {
+            "left": 192.00585743750003,
+            "right": 192.00585743750003,
+            "top": 0.28124960000002375,
+            "bottom": 0.2812495999999669
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "completion-target-0",
+          "container": [
+            98,
+            389,
+            228,
+            48
+          ],
+          "margins": {
+            "left": 9.444335850000002,
+            "right": 9.444335850000016,
+            "top": 6.961426000000017,
+            "bottom": 6.96142599999996
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "completion-target-1",
+          "container": [
+            397,
+            389,
+            228,
+            48
+          ],
+          "margins": {
+            "left": 9.922851475000016,
+            "right": 9.922851475000016,
+            "top": 6.944335500000022,
+            "bottom": 6.944335499999966
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "completion-target-2",
+          "container": [
+            695,
+            389,
+            230,
+            48
+          ],
+          "margins": {
+            "left": 10.39306750000003,
+            "right": 10.393067499999916,
+            "top": 7.012695749999978,
+            "bottom": 7.012695750000034
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "table-heading",
+          "container": [
+            74,
+            493,
+            143,
+            34
+          ],
+          "margins": {
+            "left": 40.878417,
+            "right": 40.87841700000001,
+            "top": 1.9086915999999405,
+            "bottom": 1.908691600000111
+          },
+          "centerDelta": -1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "table-heading",
+          "container": [
+            247,
+            493,
+            224,
+            34
+          ],
+          "margins": {
+            "left": 50.333007735000024,
+            "right": 50.33300773499997,
+            "top": 1.86328125,
+            "bottom": 1.86328125
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "table-heading",
+          "container": [
+            493,
+            493,
+            224,
+            34
+          ],
+          "margins": {
+            "left": 35.559570235000024,
+            "right": 35.55957023499991,
+            "top": 2.014648050000062,
+            "bottom": 2.0146480499998916
+          },
+          "centerDelta": 1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "table-heading",
+          "container": [
+            754,
+            493,
+            204,
+            34
+          ],
+          "margins": {
+            "left": 40.36328125,
+            "right": 40.36328125,
+            "top": 1.7573247999999353,
+            "bottom": 1.7573248000001058
+          },
+          "centerDelta": -1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            331,
+            558,
+            139,
+            66
+          ],
+          "margins": {
+            "left": 30.909179245250016,
+            "right": 30.909179245250016,
+            "top": 6.020751738100103,
+            "bottom": 6.020751738099875
+          },
+          "centerDelta": 1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            579,
+            558,
+            138,
+            66
+          ],
+          "margins": {
+            "left": 29.65112240625001,
+            "right": 29.65112240625001,
+            "top": 6.020751738100103,
+            "bottom": 6.020751738099875
+          },
+          "centerDelta": 1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            331,
+            668,
+            139,
+            66
+          ],
+          "margins": {
+            "left": 31.19555600000001,
+            "right": 31.19555600000001,
+            "top": 6.2734372832500185,
+            "bottom": 6.273437283249905
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            579,
+            668,
+            138,
+            66
+          ],
+          "margins": {
+            "left": 29.24682574860003,
+            "right": 29.246825748599917,
+            "top": 6.020751738100103,
+            "bottom": 6.020751738099875
+          },
+          "centerDelta": 1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            331,
+            777,
+            139,
+            66
+          ],
+          "margins": {
+            "left": 17.88745073824998,
+            "right": 17.88745073825004,
+            "top": 5.9702146270000185,
+            "bottom": 5.970214626999905
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            579,
+            777,
+            138,
+            66
+          ],
+          "margins": {
+            "left": 17.640137156250034,
+            "right": 17.640137156250034,
+            "top": 6.2734372832500185,
+            "bottom": 6.273437283249905
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "reward-art-title",
+          "container": [
+            170,
+            898,
+            756,
+            41
+          ],
+          "margins": {
+            "left": 249.41702416099997,
+            "right": 249.41702416099997,
+            "top": 1.1965018500000042,
+            "bottom": 1.1965018500000042
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "reward-trigger",
+          "container": [
+            170,
+            943,
+            756,
+            32
+          ],
+          "margins": {
+            "left": 198.395508,
+            "right": 198.39550800000006,
+            "top": 1.41015625,
+            "bottom": 1.41015625
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "reward-extra",
+          "container": [
+            101,
+            990,
+            348,
+            68
+          ],
+          "margins": {
+            "left": 12.096445067477731,
+            "right": 12.09644506747776,
+            "top": 9.213379464999889,
+            "bottom": 9.213379465000116
+          },
+          "centerDelta": -1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "reward-gift",
+          "container": [
+            569,
+            990,
+            350,
+            68
+          ],
+          "margins": {
+            "left": 58.10571241100001,
+            "right": 58.1057124109999,
+            "top": 8.960693598249918,
+            "bottom": 8.960693598250145
+          },
+          "centerDelta": -1.1368683772161603e-13,
+          "status": "passed"
+        },
+        {
+          "role": "reward-conditions",
+          "container": [
+            149,
+            1080,
+            727,
+            44
+          ],
+          "margins": {
+            "left": 128.18603940624996,
+            "right": 128.18603940625007,
+            "top": 4.897216380499913,
+            "bottom": 4.897216380499913
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "notes-art-title",
+          "container": [
+            70,
+            1159,
+            310,
+            34
+          ],
+          "margins": {
+            "left": 93.9030124,
+            "right": 93.90301240000002,
+            "top": 1.2094999999999345,
+            "bottom": 1.209500000000162
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "units-key",
+          "container": [
+            713,
+            1161,
+            230,
+            30
+          ],
+          "margins": {
+            "left": 30.716549999999984,
+            "right": 30.716549999999984,
+            "top": 3.745117500000106,
+            "bottom": 3.7451174999998784
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "rule-count",
+          "container": [
+            124,
+            1220,
+            828,
+            39
+          ],
+          "margins": {
+            "left": 0,
+            "right": 284.00781232500003,
+            "top": 2.3247072499998467,
+            "bottom": 2.324707250000074
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "rule-proxy",
+          "container": [
+            124,
+            1291,
+            828,
+            39
+          ],
+          "margins": {
+            "left": 0,
+            "right": 142.23046787500004,
+            "top": 2.3076167500000793,
+            "bottom": 2.307616749999852
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "rule-loot",
+          "container": [
+            124,
+            1365,
+            828,
+            43
+          ],
+          "margins": {
+            "left": 0,
+            "right": 94.97363268499998,
+            "top": 4.765625526999884,
+            "bottom": 4.765625527000111
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "footer",
+          "container": [
+            260,
+            1444,
+            488,
+            41
+          ],
+          "margins": {
+            "left": 31.181640399999992,
+            "right": 31.181640400000106,
+            "top": 8.746093599999995,
+            "bottom": 8.746093599999995
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        }
+      ],
+      "overlaps": [],
+      "source": "references/new-mobile-prices.png"
+    },
+    {
+      "id": "social",
+      "sha256": "cec107576f3cf38c6ca6c53f35381b7b2a6fac934ed7a723a94699fc1e0eda24",
+      "dimensions": [
+        2400,
+        3200
+      ],
+      "backgroundNative": [
+        1086,
+        1448
+      ],
+      "values": {
+        "priceR": {
+          "expected": [
+            "168",
+            "388",
+            "628",
+            "108",
+            "288",
+            "488"
+          ],
+          "actual": [
+            "168",
+            "388",
+            "628",
+            "108",
+            "288",
+            "488"
+          ],
+          "match": true
+        },
+        "baseGuaranteeW": {
+          "expected": [
+            "688",
+            "1688",
+            "3288",
+            "688",
+            "1688",
+            "3288"
+          ],
+          "actual": [
+            "688",
+            "1688",
+            "3288",
+            "688",
+            "1688",
+            "3288"
+          ],
+          "match": true
+        },
+        "sandSafeCount": {
+          "expected": [
+            "2",
+            "6",
+            "10",
+            "2",
+            "6",
+            "10"
+          ],
+          "actual": [
+            "2",
+            "6",
+            "10",
+            "2",
+            "6",
+            "10"
+          ],
+          "match": true
+        },
+        "regularLargeSafeCount": {
+          "expected": [
+            "3",
+            "8",
+            "15",
+            "3",
+            "8",
+            "15"
+          ],
+          "actual": [
+            "3",
+            "8",
+            "15",
+            "3",
+            "8",
+            "15"
+          ],
+          "match": true
+        }
+      },
+      "pairs": [
+        {
+          "role": "price",
+          "number": "168",
+          "unit": "r",
+          "gap": 10,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998,
+          "numberRight": 184.60646510707502,
+          "unitX": 194.60646510707502
+        },
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "gap": 10,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998,
+          "numberRight": 184.60646510707502,
+          "unitX": 194.60646510707502
+        },
+        {
+          "role": "price",
+          "number": "628",
+          "unit": "r",
+          "gap": 10,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998,
+          "numberRight": 184.60646510707502,
+          "unitX": 194.60646510707502
+        },
+        {
+          "role": "price",
+          "number": "108",
+          "unit": "r",
+          "gap": 10,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.6985878027342107,
+          "numberRight": 184.60646510707502,
+          "unitX": 194.60646510707502
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "gap": 10,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998,
+          "numberRight": 184.60646510707502,
+          "unitX": 194.60646510707502
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "gap": 10,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.6999999999999998,
+          "numberRight": 184.60646510707502,
+          "unitX": 194.60646510707502
+        },
+        {
+          "role": "loot",
+          "number": "688",
+          "unit": "w",
+          "gap": 9.999999999999972,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 939.3757694854853,
+          "unitX": 949.3757694854853
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "gap": 9.999999999999972,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 939.3757694854853,
+          "unitX": 949.3757694854853
+        },
+        {
+          "role": "loot",
+          "number": "3288",
+          "unit": "w",
+          "gap": 9.999999999999972,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 939.3757694854853,
+          "unitX": 949.3757694854853
+        },
+        {
+          "role": "loot",
+          "number": "688",
+          "unit": "w",
+          "gap": 9.999999999999972,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 939.3757694854853,
+          "unitX": 949.3757694854853
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "gap": 9.999999999999972,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 939.3757694854853,
+          "unitX": 949.3757694854853
+        },
+        {
+          "role": "loot",
+          "number": "3288",
+          "unit": "w",
+          "gap": 9.999999999999972,
+          "baselineDelta": 0,
+          "centerDelta": 0,
+          "heightRatio": 0.7000000000000001,
+          "numberRight": 939.3757694854853,
+          "unitX": 949.3757694854853
+        }
+      ],
+      "checks": [
+        {
+          "role": "table-row-0",
+          "container": [
+            54,
+            499,
+            979,
+            71
+          ],
+          "margins": {
+            "top": 11.728271288299993,
+            "bottom": 10.728271288299993
+          },
+          "centerDelta": 0.5,
+          "status": "passed"
+        },
+        {
+          "role": "table-row-1",
+          "container": [
+            54,
+            579,
+            979,
+            71
+          ],
+          "margins": {
+            "top": 11.728271288299993,
+            "bottom": 10.728271288299993
+          },
+          "centerDelta": 0.5,
+          "status": "passed"
+        },
+        {
+          "role": "table-row-2",
+          "container": [
+            54,
+            660,
+            979,
+            70
+          ],
+          "margins": {
+            "top": 10.682861130499987,
+            "bottom": 10.682861130499987
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "table-row-3",
+          "container": [
+            54,
+            846,
+            979,
+            70
+          ],
+          "margins": {
+            "top": 10.728271288299993,
+            "bottom": 10.728271288299993
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "table-row-4",
+          "container": [
+            54,
+            926,
+            979,
+            71
+          ],
+          "margins": {
+            "top": 10.728271288299993,
+            "bottom": 11.728271288299993
+          },
+          "centerDelta": -0.5,
+          "status": "passed"
+        },
+        {
+          "role": "table-row-5",
+          "container": [
+            54,
+            1006,
+            979,
+            71
+          ],
+          "margins": {
+            "top": 10.682861130499987,
+            "bottom": 11.682861130499987
+          },
+          "centerDelta": -0.5,
+          "status": "passed"
+        },
+        {
+          "role": "brand",
+          "container": [
+            186,
+            47,
+            406,
+            48
+          ],
+          "margins": {
+            "left": 153.47990229500004,
+            "right": 97.3199022949999,
+            "top": 4.995116699999997,
+            "bottom": 4.995116700000011
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "art-title",
+          "container": [
+            75,
+            128,
+            526,
+            88
+          ],
+          "margins": {
+            "left": 59.23497655457834,
+            "right": 59.23497655457834,
+            "top": -0.00005932068555125625,
+            "bottom": -0.000059320685579677956
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-subtitle",
+          "container": [
+            94,
+            232,
+            493,
+            35
+          ],
+          "margins": {
+            "left": 42.13964899999999,
+            "right": 42.13964899999996,
+            "top": 2.822265999999985,
+            "bottom": 2.8222660000000133
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-completion-targets",
+          "container": [
+            85,
+            297,
+            922,
+            34
+          ],
+          "margins": {
+            "left": 210.77685485,
+            "right": 210.77685485000006,
+            "top": 0.7255863500000146,
+            "bottom": 0.7255863499999577
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-completion-relation",
+          "container": [
+            85,
+            339,
+            922,
+            36
+          ],
+          "margins": {
+            "left": 304.3203125,
+            "right": 304.3203125,
+            "top": 0.91015625,
+            "bottom": 0.91015625
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-platform",
+          "container": [
+            74,
+            412,
+            938,
+            37
+          ],
+          "margins": {
+            "left": 388.90624992,
+            "right": 388.90624991999994,
+            "top": 2.7812496000000237,
+            "bottom": 2.781249599999967
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            77,
+            460,
+            148,
+            29
+          ],
+          "margins": {
+            "left": 46.34179599999999,
+            "right": 46.34179599999999,
+            "top": 0.8691408000000251,
+            "bottom": 0.8691407999999683
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            245,
+            460,
+            231,
+            29
+          ],
+          "margins": {
+            "left": 59.80078118,
+            "right": 59.80078118,
+            "top": 0.828125,
+            "bottom": 0.828125
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            513,
+            460,
+            235,
+            29
+          ],
+          "margins": {
+            "left": 48.457031179999944,
+            "right": 48.45703118000006,
+            "top": 0.9648434000000066,
+            "bottom": 0.9648434000000066
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            791,
+            460,
+            219,
+            29
+          ],
+          "margins": {
+            "left": 53.828125,
+            "right": 53.828125,
+            "top": 0.7324224000000186,
+            "bottom": 0.7324223999999617
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            329,
+            509,
+            147,
+            52
+          ],
+          "margins": {
+            "left": 38.54443319075,
+            "right": 38.54443319075,
+            "top": 1.728271288299993,
+            "bottom": 1.728271288299993
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            598,
+            509,
+            150,
+            52
+          ],
+          "margins": {
+            "left": 39.36328066875001,
+            "right": 39.36328066875001,
+            "top": 1.728271288299993,
+            "bottom": 1.728271288299993
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            329,
+            589,
+            147,
+            52
+          ],
+          "margins": {
+            "left": 38.80175723125001,
+            "right": 38.80175723125001,
+            "top": 1.9553220679999868,
+            "bottom": 1.9553220679999868
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            598,
+            589,
+            150,
+            52
+          ],
+          "margins": {
+            "left": 38.99999961405001,
+            "right": 38.99999961405001,
+            "top": 1.728271288299993,
+            "bottom": 1.728271288299993
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            329,
+            669,
+            147,
+            52
+          ],
+          "margins": {
+            "left": 26.843749604749974,
+            "right": 26.84374960475003,
+            "top": 1.6828611304999868,
+            "bottom": 1.6828611304999868
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            598,
+            669,
+            150,
+            52
+          ],
+          "margins": {
+            "left": 28.570801168749995,
+            "right": 28.570801168749995,
+            "top": 1.9553220679999868,
+            "bottom": 1.9553220679999868
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-platform",
+          "container": [
+            74,
+            757,
+            938,
+            37
+          ],
+          "margins": {
+            "left": 388.95312495999997,
+            "right": 388.95312495999997,
+            "top": 2.7812496000000237,
+            "bottom": 2.7812496000000237
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            77,
+            807,
+            148,
+            28
+          ],
+          "margins": {
+            "left": 46.34179599999999,
+            "right": 46.34179599999999,
+            "top": 0.3691407999999683,
+            "bottom": 0.369140800000082
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            245,
+            807,
+            231,
+            28
+          ],
+          "margins": {
+            "left": 59.80078118,
+            "right": 59.80078118,
+            "top": 0.328125,
+            "bottom": 0.328125
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            513,
+            807,
+            235,
+            28
+          ],
+          "margins": {
+            "left": 48.457031179999944,
+            "right": 48.45703118000006,
+            "top": 0.4648433999999497,
+            "bottom": 0.4648434000000634
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-table-heading",
+          "container": [
+            791,
+            807,
+            219,
+            28
+          ],
+          "margins": {
+            "left": 53.828125,
+            "right": 53.828125,
+            "top": 0.23242240000001857,
+            "bottom": 0.23242240000001857
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            329,
+            855,
+            147,
+            52
+          ],
+          "margins": {
+            "left": 38.54443319075,
+            "right": 38.54443319075,
+            "top": 1.728271288299993,
+            "bottom": 1.728271288299993
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            598,
+            855,
+            150,
+            52
+          ],
+          "margins": {
+            "left": 39.36328066875001,
+            "right": 39.36328066875001,
+            "top": 1.728271288299993,
+            "bottom": 1.728271288299993
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            329,
+            935,
+            147,
+            52
+          ],
+          "margins": {
+            "left": 38.80175723125001,
+            "right": 38.80175723125001,
+            "top": 1.9553220679999868,
+            "bottom": 1.9553220679999868
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            598,
+            935,
+            150,
+            52
+          ],
+          "margins": {
+            "left": 38.99999961405001,
+            "right": 38.99999961405001,
+            "top": 1.728271288299993,
+            "bottom": 1.728271288299993
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "sand-count",
+          "container": [
+            329,
+            1015,
+            147,
+            52
+          ],
+          "margins": {
+            "left": 26.843749604749974,
+            "right": 26.84374960475003,
+            "top": 1.6828611304999868,
+            "bottom": 1.6828611304999868
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "regular-count",
+          "container": [
+            598,
+            1015,
+            150,
+            52
+          ],
+          "margins": {
+            "left": 28.570801168749995,
+            "right": 28.570801168749995,
+            "top": 1.9553220679999868,
+            "bottom": 1.9553220679999868
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "reward-art-title",
+          "container": [
+            291.004890602,
+            1121,
+            167.833969196,
+            46
+          ],
+          "margins": {
+            "left": 0,
+            "right": 0,
+            "top": 5.298000000000002,
+            "bottom": 5.298000000000002
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "reward-extra",
+          "container": [
+            111,
+            1200,
+            385,
+            57
+          ],
+          "margins": {
+            "left": 25.184781497120213,
+            "right": 25.18478149712024,
+            "top": 3.2109380960000635,
+            "bottom": 3.2109380960000635
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "reward-gift",
+          "container": [
+            589,
+            1200,
+            385,
+            57
+          ],
+          "margins": {
+            "left": 69.96874950799997,
+            "right": 69.96874950800009,
+            "top": 3.03710961999991,
+            "bottom": 3.0371096200001375
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "reward-conditions",
+          "container": [
+            92,
+            1278,
+            900,
+            48
+          ],
+          "margins": {
+            "left": 210.68799265625,
+            "right": 210.68799265625012,
+            "top": 6.807616750000079,
+            "bottom": 6.807616749999852
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        },
+        {
+          "role": "social-footer",
+          "container": [
+            246,
+            1390,
+            594,
+            36
+          ],
+          "margins": {
+            "left": 134.06542960000002,
+            "right": 134.06542960000002,
+            "top": 4.341797399999905,
+            "bottom": 4.341797400000132
+          },
+          "centerDelta": 0,
+          "status": "passed"
+        }
+      ],
+      "overlaps": [],
+      "source": "references/new-mobile-prices.png"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "brand": "兴安电竞",
+  "title": "超额累计单",
+  "previousTitle": "千万才是开始",
+  "titleLines": ["超额", "累计单"],
+  "subtitle": "成功撤离 · 超额累计 · 打满结单",
+  "provenance": {
+    "prices": "本轮用户文字：端游五档、手游四档，绝密与机密同平台价格及超额累计保底一致，共18档。文字优先于旧图价目。",
+    "mechanismAndRules": "用户已明确确认：按所询口径沿用，端手游一致。绝密门槛1000w，机密600w，成功撤离只累计超过门槛部分，未超过不计进度；其余须知及补偿沿用各自参考图。",
+    "referenceReadingNote": "初次缩略图读取漏读了‘未’字；放大原图后确认原文已为‘单局未超过门槛，不计订单进度’，与示例一致。已向用户更正说明。新文案沿用用户确认的原规则，不属于规则变更。",
+    "verified": true,
+    "units": {"r": "元", "w": "万"},
+    "sourceFiles": ["source-references/excess-cover-original.png", "source-references/excess-absolute-original.png", "source-references/excess-secret-original.png"]
+  },
+  "tiers": [
+    {"id": "desktop-absolute", "platform": "端游", "mode": "绝密", "color": "gold", "rows": [
+      {"priceR": 188, "excessGuaranteeW": 128},
+      {"priceR": 388, "excessGuaranteeW": 388},
+      {"priceR": 688, "excessGuaranteeW": 688},
+      {"priceR": 1288, "excessGuaranteeW": 1288},
+      {"priceR": 1888, "excessGuaranteeW": 1888}
+    ]},
+    {"id": "desktop-secret", "platform": "端游", "mode": "机密", "color": "teal", "rows": [
+      {"priceR": 188, "excessGuaranteeW": 128},
+      {"priceR": 388, "excessGuaranteeW": 388},
+      {"priceR": 688, "excessGuaranteeW": 688},
+      {"priceR": 1288, "excessGuaranteeW": 1288},
+      {"priceR": 1888, "excessGuaranteeW": 1888}
+    ]},
+    {"id": "mobile-absolute", "platform": "手游", "mode": "绝密", "color": "gold", "rows": [
+      {"priceR": 188, "excessGuaranteeW": 188},
+      {"priceR": 388, "excessGuaranteeW": 488},
+      {"priceR": 688, "excessGuaranteeW": 888},
+      {"priceR": 888, "excessGuaranteeW": 1288}
+    ]},
+    {"id": "mobile-secret", "platform": "手游", "mode": "机密", "color": "teal", "rows": [
+      {"priceR": 188, "excessGuaranteeW": 188},
+      {"priceR": 388, "excessGuaranteeW": 488},
+      {"priceR": 688, "excessGuaranteeW": 888},
+      {"priceR": 888, "excessGuaranteeW": 1288}
+    ]}
+  ],
+  "columns": {"price": "订单价格", "guarantee": "超额累计保底"},
+  "mechanism": {
+    "prerequisite": "成功撤离",
+    "thresholdByModeW": {"绝密": 1000, "机密": 600},
+    "thresholdComparison": ">",
+    "counting": "仅单局收益超过对应门槛的部分，计入超额累计保底",
+    "zeroProgress": "单局未超过门槛，不计订单进度",
+    "formula": "成功撤离时，本局计入 = max(当局带出物资 - 模式门槛, 0)",
+    "examples": {
+      "绝密": {"extractedW": 1200, "thresholdW": 1000, "countedW": 200},
+      "机密": {"extractedW": 800, "thresholdW": 600, "countedW": 200}
+    },
+    "allLootOwnership": "当局带出物资全部归板板",
+    "closeCondition": "打满订单保底及适用炸单补偿后结单",
+    "platforms": "端游、手游一致",
+    "confirmedByUser": true
+  },
+  "rules": {
+    "绝密": {
+      "maps": ["航天", "巴克什"],
+      "mapConfirmation": "下单先与客服确认地图，中途换图需协商",
+      "cards": [
+        {"map": "航天", "included": "核心区金红卡"},
+        {"map": "巴克什", "included": "塔内和博物馆金红卡"}
+      ],
+      "equipment": {"minimumBackpackSlots": 40, "revolverCount": 1, "beforeEntryCheck": true, "exception": "板板主动免带除外"},
+      "missingEquipmentCompensation": [
+        {"reason": "应带未带", "items": [{"label": "金卡", "amountW": 10}, {"label": "红卡", "amountW": 15}]},
+        {"reason": "未经同意未带", "items": [{"label": "背包", "amountW": 15}, {"label": "左轮", "amountW": 10}]}
+      ],
+      "failedOrderCompensation": {"condition": "符合俱乐部下单须知的炸单条件", "byMap": [{"maps": ["航天", "巴克什"], "amountW": 10}]},
+      "settlement": {"condition": "符合俱乐部炸单标准时", "safeBoxLootCounted": false, "noBattleLossCompensationWhenSafeBoxW": {"operator": ">", "value": 100}, "otherwise": "按炸单标准增加累计保底"},
+      "ownershipAndAfterSales": ["对局产出默认归板板；假账须提前征得板板同意，按约定价值计入。", "全程录屏，争议交给客服核实。"]
+    },
+    "机密": {
+      "maps": ["航天", "巴克什", "核电站"],
+      "mapConfirmation": "下单先与客服确认地图，中途换图需协商",
+      "cards": [
+        {"map": "航天", "included": "核心区金红卡"},
+        {"map": "巴克什", "included": "塔内和博物馆金红卡"},
+        {"map": "核电站", "included": "金红卡"}
+      ],
+      "equipment": {"minimumBackpackSlots": 30, "revolverCount": 1, "beforeEntryCheck": true, "exception": "板板主动免带除外"},
+      "missingEquipmentCompensation": [
+        {"reason": "应带未带", "items": [{"label": "金卡", "amountW": 5}, {"label": "红卡", "amountW": 10}]},
+        {"reason": "未经同意未带", "items": [{"label": "背包", "amountW": 10}, {"label": "左轮", "amountW": 5}]}
+      ],
+      "failedOrderCompensation": {"condition": "符合俱乐部下单须知的炸单条件", "perRoundW": 5},
+      "settlement": {"condition": "符合俱乐部炸单标准时", "safeBoxLootCounted": false, "noBattleLossCompensationWhenSafeBoxW": {"operator": ">", "value": 50}, "otherwise": "按炸单标准增加累计保底"},
+      "ownershipAndAfterSales": ["对局产出默认归板板；假账须提前征得板板同意，按约定价值计入。", "全程录屏，争议交给客服核实。"]
+    }
+  },
+  "footerInstruction": "下单前请确认地图及订单规则"
+}

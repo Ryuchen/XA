@@ -1,0 +1,38 @@
+[
+  {
+    "page": "mobile-absolute",
+    "rows": 5,
+    "numericColumns": 4,
+    "data": "pass",
+    "baseline": "pass",
+    "unitGaps": "pass",
+    "output": [
+      3200,
+      7200
+    ]
+  },
+  {
+    "page": "mobile-secret",
+    "rows": 5,
+    "numericColumns": 4,
+    "data": "pass",
+    "baseline": "pass",
+    "unitGaps": "pass",
+    "output": [
+      3200,
+      7200
+    ]
+  },
+  {
+    "page": "social",
+    "rows": 20,
+    "numericColumns": 4,
+    "data": "pass",
+    "baseline": "pass",
+    "unitGaps": "pass",
+    "output": [
+      2400,
+      3200
+    ]
+  }
+]

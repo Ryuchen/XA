@@ -1,0 +1,7 @@
+# 机密色系变体
+
+工具：内置 image_gen，仅编辑已完成绝密底图的模式强调色。
+
++Use case: precise-object-edit / palette variant. Input is the completed text-free timed-map-clear poster background. Create the matching SECRET-mode variant with the EXACT SAME dimensions, panel geometry, character identities and poses, scenery, icons, blank text areas and row counts.
+Change ONLY the mode accent regions from WARM GOLD to soft MINT/TEAL: the sixth/final price row pale cream becomes pale mint, the guarantee banner's pale cream fill becomes pale mint and its gold perimeter becomes muted teal. Small decorative guarantee/check accent can become teal. Keep the bright gold stopwatch hands, mouse flag, real gold keycard and sparkle accents on the hero unchanged. All sky, characters, 6-row table boundaries, lever/crosshair cards, blank center circular badge, minimum strip and four unequal-height order-rule rows remain identical.
+CRITICAL: all three FULL-WIDTH navy section/table headers and the navy platform capsule stay uniformly DARK NAVY across entire width; NO half-green header and no large green blocks. Preserve the blank price table with exactly six rows, two method cards, four notes rows, service strip and bottom capsule. Do not draw any text or numbers. Keep 2D anime hand-drawn style. Do not redraw composition, add/remove panels, move the character or crop the clock. Output solid-background finished flat PNG, same tall 8:19 canvas.

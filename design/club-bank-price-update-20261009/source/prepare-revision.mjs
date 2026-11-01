@@ -1,0 +1,27 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const project=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const prior=path.resolve(project,'../club-bank-campaign-handdrawn');
+const read=async p=>JSON.parse((await fs.readFile(p,'utf8')).replace(/^\uFEFF/,''));
+const write=async(p,v)=>fs.writeFile(p,JSON.stringify(v,null,2));
+const content=await read(path.join(prior,'content.json'));
+const prices=[128,238,368,488,968];
+for(const tier of content.tiers.filter(t=>t.platform==='手游'))tier.rows.forEach((row,i)=>row.priceR=prices[i]);
+// Preserve the desktop top-up terms; the new source explicitly covers mobile.
+content.topUp.byPlatform={desktop:structuredClone(content.topUp.byMode),mobile:{'绝密':{priceR:108,additionalLootW:1388},'机密':{priceR:88,additionalLootW:1088}}};
+delete content.topUp.byMode;
+content.topUp.platforms='按平台分别定义；本轮仅更新手游自愿加仓价格';
+content.provenance={verified:true,date:'2026-10-09',pricesAndRounds:'用户本轮表格：J列新价格、E列保底、F列模式、H列局数。D列旧价仅用于对照。',topUpAndRules:'手游加仓按本轮表格；超时追加保底、规则及端游广告价目按本轮所附旧图沿用。',units:{r:'元',w:'万'},sourceFiles:['references/new-mobile-prices.png','references/prior-social.png','references/prior-mobile-absolute.png','references/prior-mobile-secret.png']};
+await write(path.join(project,'content.json'),content);
+let adapter=await fs.readFile(path.join(prior,'layout-adapter.mjs'),'utf8');
+adapter=adapter.replace('const top=content.topUp.byMode[t.mode];',"const top=content.topUp.byPlatform[t.platform==='手游'?'mobile':'desktop'][t.mode];");
+adapter=adapter.replace("return {version:'bank-v1',requests,pages:[...content.tiers.map(poster),cover(),social()]};","const pages=[...content.tiers.filter(t=>t.platform==='手游').map(poster),social()];\nfor(const p of pages)p.platforms=p.id==='social'?['desktop','mobile']:['mobile'];\nreturn {version:'bank-mobile-price-20261009',requests,pages};");
+await fs.writeFile(path.join(project,'layout-adapter.mjs'),adapter);
+for(const name of ['poster-gold.png','poster-teal.png','social.png'])await fs.copyFile(path.join(prior,'assets/backgrounds',name),path.join(project,'assets/backgrounds',name));
+await fs.mkdir(path.join(project,'references'),{recursive:true});
+for(const [id,name] of [['a798cdca-bbf0-4f91-8243-576f078cf2c4','new-mobile-prices'],['c620d91c-b3ec-4931-9816-835f7a3dd261','prior-social'],['4b6f92a9-07ac-49f4-a8db-17da10c21a64','prior-mobile-absolute'],['18662461-ae47-4a3d-add9-7282895f1339','prior-mobile-secret']])await fs.copyFile(path.join(process.env.TEMP,`codex-clipboard-${id}.png`),path.join(project,'references',name+'.png'));
+const state=await read(path.join(project,'campaign-state.json'));
+Object.assign(state,{campaign:content.title,date:'2026-10-09',revision:'bank-price-r2',stage:'content-verified',contentVerified:true,contentVerificationBasis:'本轮新价表共10档套餐及2档自愿加仓；广告端游、超时追加及其他规则按所附成图沿用。',deliveryScope:{pageIds:['mobile-absolute','mobile-secret','social'],platforms:['desktop','mobile'],basis:'用户点名银行物资单广告页和手游绝密、机密详表，共三张。广告保留端游两卡。'},verifiedPricePlatforms:['desktop','mobile'],priceSourceByPlatform:{desktop:'references/prior-social.png：端游两卡与原项目 content.json 一致，按只改手游的范围沿用。',mobile:'references/new-mobile-prices.png：J列现价对应E列保底、F列模式及H列局数/自愿加仓。'},priorProject:prior,approvals:{illustration:{status:'approved-reuse',basis:'用户本轮附图'},background:{status:'approved-reuse',basis:'复用银行原项目已确认底图；仅改矢量数字'}}});
+await write(path.join(project,'campaign-state.json'),state);
+console.log('Prepared bank revision: 3 pages, 10 mobile packages and 2 top-up options.');

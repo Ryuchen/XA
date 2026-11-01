@@ -1,0 +1,67 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "container": "10-maintenance-cover-brand",
+    "x": 321.55371087,
+    "y": 88.6855462,
+    "w": 214.89257826000002,
+    "h": 52.6289076,
+    "baseline": 133.747069624,
+    "size": 54
+  },
+  {
+    "text": "维护局",
+    "role": "art-title",
+    "container": "10-maintenance-cover-title",
+    "x": 239.9490124056631,
+    "y": 260.80919072799685,
+    "w": 378.10197518867386,
+    "h": 132.3816185440063,
+    "size": 125
+  },
+  {
+    "text": "28局维护",
+    "role": "cover-core",
+    "container": "10-maintenance-cover-core",
+    "x": 317.74365231,
+    "y": 478.93457060000003,
+    "w": 222.51269538,
+    "h": 52.36523640000001,
+    "baseline": 524.1015627740001,
+    "size": 54
+  },
+  {
+    "text": "兴安打分满300分",
+    "role": "cover-core",
+    "container": "10-maintenance-cover-core",
+    "x": 258.961912,
+    "y": 547.299807,
+    "w": 340.076176,
+    "h": 43.0546864,
+    "baseline": 584.3173854,
+    "size": 44
+  },
+  {
+    "text": "后续维护7折",
+    "role": "cover-core",
+    "container": "10-maintenance-cover-core",
+    "x": 261.29004,
+    "y": 606.3544933999999,
+    "w": 335.41992,
+    "h": 58.710936000000004,
+    "baseline": 656.54004026,
+    "size": 60
+  },
+  {
+    "text": "英雄联盟 · 端游",
+    "role": "platform",
+    "container": "10-maintenance-cover-version",
+    "x": 275,
+    "y": 712.3222648,
+    "w": 308,
+    "h": 43.3554704,
+    "baseline": 749.296874164,
+    "size": 44
+  }
+]

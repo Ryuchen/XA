@@ -1,0 +1,13 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {fileURLToPath} from 'node:url';
+const require=createRequire(import.meta.url),sharp=require('C:/Users/chenh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp');
+const dir=path.dirname(fileURLToPath(import.meta.url)),root=path.dirname(dir);
+const data=(await fs.readFile(path.join(root,'01-illustrations/excess-medic-mouse-v1.png'))).toString('base64');
+const tx=(x,y,s,size,color='#213F53')=>`<text x="${x}" y="${y}" font-family="Microsoft YaHei UI" font-size="${size}" font-weight="600" fill="${color}" dominant-baseline="central">${s}</text>`;
+const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1330"><rect width="1700" height="1330" fill="#FFFCF4"/>${tx(70,70,'兴安电竞 · 超额累计单',42)}${tx(70,130,'第一阶段：主题插画确认',28,'#6C8490')}<image href="data:image/png;base64,${data}" x="55" y="180" width="1590" height="1060"/>${tx(70,1280,'蜂医与得吃灰鼠 · 满载撤离 · 超额累计',27,'#6C8490')}</svg>`;
+await sharp(Buffer.from(svg)).png().toFile(path.join(dir,'illustration-overview.png'));
+await fs.writeFile(path.join(dir,'illustration.html'),'<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>超额累计单 · 插画确认</title><style>body{max-width:1300px;margin:30px auto;background:#fffcf4;color:#213f53;font:18px/1.7 "Microsoft YaHei",sans-serif}img{width:100%}a{color:#197d79}</style><h1>超额累计单 · 插画确认</h1><p>沿用已确认的蜂医与灰鼠角色，新增满载物资车、成功撤离标志及上升元素。</p><img src="../01-illustrations/excess-medic-mouse-v1.png"><p><a href="../01-illustrations/excess-medic-mouse-v1.png">透明插画 PNG</a> · <a href="../01-illustrations/prompts.md">内置 image_gen 提示词</a></p><p>确认插画后进入无字底图阶段；端游五档、手游四档，价目表、计算示例与下单须知另行排版。</p></html>');
+let state=JSON.parse(await fs.readFile(path.join(root,'campaign-state.json'),'utf8'));state.stage='illustration-awaiting-user-approval';state.approvals.illustration={status:'awaiting-user-approval',basis:'新绘超额累计主题情景已完成，提交用户确认',file:'01-illustrations/excess-medic-mouse-v1.png'};state.illustration={file:'01-illustrations/excess-medic-mouse-v1.png',prompt:'01-illustrations/prompts.md',metadata:'01-illustrations/image-metadata.json',review:'review/illustration-overview.png',provider:'built-in image_gen'};state.nextStep='用户确认主题插画后，制作端游五档、手游四档的价目底图，以及封面与简洁广告底图';await fs.writeFile(path.join(root,'campaign-state.json'),JSON.stringify(state,null,2));
+console.log('Saved illustration review and approval state.');

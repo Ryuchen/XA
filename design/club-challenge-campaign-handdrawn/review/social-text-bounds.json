@@ -1,0 +1,1592 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 110.15,
+    "y": 62.868163700000004,
+    "width": 115.40527351,
+    "height": 28.263672599999996,
+    "cy": 77,
+    "effectiveSize": 29
+  },
+  {
+    "text": "等于目标也未达标 · 不跨局累计",
+    "role": "strict-equality-and-accumulation",
+    "x": 160,
+    "y": 439.796875,
+    "width": 266.12988210000003,
+    "height": 18.40625,
+    "cy": 449,
+    "effectiveSize": 19
+  },
+  {
+    "text": "端游 · 绝密版",
+    "role": "platform-mode",
+    "x": 218.39672925,
+    "y": 490.956542675,
+    "width": 141.20654150000001,
+    "height": 23.086914649999997,
+    "cy": 502.5,
+    "effectiveSize": 23.5
+  },
+  {
+    "text": "价格",
+    "role": "table-heading",
+    "x": 86.869531204,
+    "y": 533.56953148,
+    "width": 36.260937592,
+    "height": 17.86093704,
+    "cy": 542.5,
+    "effectiveSize": 18.4
+  },
+  {
+    "text": "388",
+    "role": "price-number",
+    "x": 86.53222664,
+    "y": 585.2685543,
+    "width": 48.46777336,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 139,
+    "y": 588.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 87.47070296999999,
+    "y": 651.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 139,
+    "y": 654.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "1088",
+    "role": "price-number",
+    "x": 75.51269539,
+    "y": 718.7458499,
+    "width": 59.48730461,
+    "height": 22.5083002,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 139,
+    "y": 722.3904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "航天",
+    "role": "map-title",
+    "x": 197.297363255,
+    "y": 532.24609375,
+    "width": 41.40527349,
+    "height": 20.5078125,
+    "cy": 542.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 162.97626964,
+    "y": 588.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 596.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1288",
+    "role": "threshold-number",
+    "x": 185.602541,
+    "y": 585.2685543,
+    "width": 58.397459,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 247,
+    "y": 588.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 162.97626964,
+    "y": 654.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 662.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1388",
+    "role": "threshold-number",
+    "x": 185.22412121000002,
+    "y": 651.2685543,
+    "width": 58.77587878999999,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 247,
+    "y": 654.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 162.97626964,
+    "y": 722.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 730,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1488",
+    "role": "threshold-number",
+    "x": 183.98291003999998,
+    "y": 718.7685543,
+    "width": 60.01708996000001,
+    "height": 22.462891399999997,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 247,
+    "y": 722.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "巴克什",
+    "role": "map-title",
+    "x": 309.127931,
+    "y": 532.29736315,
+    "width": 60.74413799999999,
+    "height": 20.4052737,
+    "cy": 542.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 284.97626964,
+    "y": 588.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 596.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "988",
+    "role": "threshold-number",
+    "x": 317.47070297,
+    "y": 585.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 368,
+    "y": 588.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 284.97626964,
+    "y": 654.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 662.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1188",
+    "role": "threshold-number",
+    "x": 312.309083,
+    "y": 651.2685543,
+    "width": 52.690917,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 368,
+    "y": 654.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 284.97626964,
+    "y": 722.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 730,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1288",
+    "role": "threshold-number",
+    "x": 306.602541,
+    "y": 718.7685543,
+    "width": 58.397459,
+    "height": 22.462891399999997,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 368,
+    "y": 722.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "监狱",
+    "role": "map-title",
+    "x": 441.725585885,
+    "y": 532.24609375,
+    "width": 41.54882823,
+    "height": 20.5078125,
+    "cy": 542.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 405.97626964,
+    "y": 588.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 596.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 441.16894539,
+    "y": 585.2685543,
+    "width": 48.83105461,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 493,
+    "y": 588.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 405.97626964,
+    "y": 654.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 662.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "988",
+    "role": "threshold-number",
+    "x": 442.47070297,
+    "y": 651.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 493,
+    "y": 654.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 405.97626964,
+    "y": 722.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 730,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1088",
+    "role": "threshold-number",
+    "x": 430.51269539,
+    "y": 718.7458499,
+    "width": 59.48730461,
+    "height": 22.5083002,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 493,
+    "y": 722.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "端游 · 机密版",
+    "role": "platform-mode",
+    "x": 725.89672925,
+    "y": 490.956542675,
+    "width": 141.20654150000001,
+    "height": 23.086914649999997,
+    "cy": 502.5,
+    "effectiveSize": 23.5
+  },
+  {
+    "text": "价格",
+    "role": "table-heading",
+    "x": 594.869531204,
+    "y": 533.56953148,
+    "width": 36.260937592,
+    "height": 17.86093704,
+    "cy": 542.5,
+    "effectiveSize": 18.4
+  },
+  {
+    "text": "388",
+    "role": "price-number",
+    "x": 595.53222664,
+    "y": 585.2685543,
+    "width": 48.46777336,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 648,
+    "y": 588.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 596.47070297,
+    "y": 651.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 648,
+    "y": 654.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "1088",
+    "role": "price-number",
+    "x": 584.51269539,
+    "y": 718.7458499,
+    "width": 59.48730461,
+    "height": 22.5083002,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 648,
+    "y": 722.3904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "核电站",
+    "role": "map-title",
+    "x": 695.287109375,
+    "y": 532.2768556,
+    "width": 62.42578125,
+    "height": 20.4462888,
+    "cy": 542.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 671.97626964,
+    "y": 588.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 596.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "588",
+    "role": "threshold-number",
+    "x": 703.95605461,
+    "y": 585.2685543,
+    "width": 48.04394539,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 755,
+    "y": 588.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 671.97626964,
+    "y": 654.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 662.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "688",
+    "role": "threshold-number",
+    "x": 704.47070297,
+    "y": 651.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 755,
+    "y": 654.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 671.97626964,
+    "y": 722.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 730,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "788",
+    "role": "threshold-number",
+    "x": 704.62207039,
+    "y": 718.7685543,
+    "width": 47.37792961,
+    "height": 22.462891399999997,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 755,
+    "y": 722.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "巴克什",
+    "role": "map-title",
+    "x": 816.627931,
+    "y": 532.29736315,
+    "width": 60.74413799999999,
+    "height": 20.4052737,
+    "cy": 542.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 792.97626964,
+    "y": 588.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 596.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "688",
+    "role": "threshold-number",
+    "x": 824.47070297,
+    "y": 585.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 875,
+    "y": 588.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 792.97626964,
+    "y": 654.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 662.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "788",
+    "role": "threshold-number",
+    "x": 824.62207039,
+    "y": 651.2685543,
+    "width": 47.37792961,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 875,
+    "y": 654.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 792.97626964,
+    "y": 722.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 730,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 823.16894539,
+    "y": 718.7685543,
+    "width": 48.83105461,
+    "height": 22.462891399999997,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 875,
+    "y": 722.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "航天",
+    "role": "map-title",
+    "x": 949.297363255,
+    "y": 532.24609375,
+    "width": 41.40527349,
+    "height": 20.5078125,
+    "cy": 542.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 912.97626964,
+    "y": 588.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 596.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "788",
+    "role": "threshold-number",
+    "x": 950.62207039,
+    "y": 585.2685543,
+    "width": 47.37792961,
+    "height": 22.462891399999997,
+    "cy": 596.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 1001,
+    "y": 588.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 596.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 912.97626964,
+    "y": 654.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 662.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 949.16894539,
+    "y": 651.2685543,
+    "width": 48.83105461,
+    "height": 22.462891399999997,
+    "cy": 662.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 1001,
+    "y": 654.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 662.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 912.97626964,
+    "y": 722.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 730,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "988",
+    "role": "threshold-number",
+    "x": 950.47070297,
+    "y": 718.7685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 730,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 1001,
+    "y": 722.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 730,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "手游 · 绝密版",
+    "role": "platform-mode",
+    "x": 218.431152285,
+    "y": 794.456542675,
+    "width": 141.13769543,
+    "height": 23.086914649999997,
+    "cy": 806,
+    "effectiveSize": 23.5
+  },
+  {
+    "text": "价格",
+    "role": "table-heading",
+    "x": 86.869531204,
+    "y": 836.56953148,
+    "width": 36.260937592,
+    "height": 17.86093704,
+    "cy": 845.5,
+    "effectiveSize": 18.4
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 87.21337879,
+    "y": 887.7685543,
+    "width": 47.78662121000001,
+    "height": 22.462891399999997,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 139,
+    "y": 891.3904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 87.47070296999999,
+    "y": 954.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 139,
+    "y": 957.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "988",
+    "role": "price-number",
+    "x": 87.47070296999999,
+    "y": 1022.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 139,
+    "y": 1025.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "航天",
+    "role": "map-title",
+    "x": 197.297363255,
+    "y": 835.24609375,
+    "width": 41.40527349,
+    "height": 20.5078125,
+    "cy": 845.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 162.97626964,
+    "y": 891.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 899,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1088",
+    "role": "threshold-number",
+    "x": 184.51269539,
+    "y": 887.7458499,
+    "width": 59.48730461,
+    "height": 22.5083002,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 247,
+    "y": 891.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 162.97626964,
+    "y": 957.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 965.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1288",
+    "role": "threshold-number",
+    "x": 185.602541,
+    "y": 954.2685543,
+    "width": 58.397459,
+    "height": 22.462891399999997,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 247,
+    "y": 957.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 162.97626964,
+    "y": 1025.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 1033.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1388",
+    "role": "threshold-number",
+    "x": 185.22412121000002,
+    "y": 1022.2685543,
+    "width": 58.77587878999999,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 247,
+    "y": 1025.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "巴克什",
+    "role": "map-title",
+    "x": 309.127931,
+    "y": 835.29736315,
+    "width": 60.74413799999999,
+    "height": 20.4052737,
+    "cy": 845.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 284.97626964,
+    "y": 891.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 899,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 316.16894539,
+    "y": 887.7685543,
+    "width": 48.83105461,
+    "height": 22.462891399999997,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 368,
+    "y": 891.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 284.97626964,
+    "y": 957.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 965.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1088",
+    "role": "threshold-number",
+    "x": 305.51269539,
+    "y": 954.2458499,
+    "width": 59.48730461,
+    "height": 22.5083002,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 368,
+    "y": 957.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 284.97626964,
+    "y": 1025.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 1033.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1188",
+    "role": "threshold-number",
+    "x": 312.309083,
+    "y": 1022.2685543,
+    "width": 52.690917,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 368,
+    "y": 1025.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "监狱",
+    "role": "map-title",
+    "x": 441.725585885,
+    "y": 835.24609375,
+    "width": 41.54882823,
+    "height": 20.5078125,
+    "cy": 845.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 405.97626964,
+    "y": 891.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 899,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 441.16894539,
+    "y": 887.7685543,
+    "width": 48.83105461,
+    "height": 22.462891399999997,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 493,
+    "y": 891.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 405.97626964,
+    "y": 957.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 965.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1088",
+    "role": "threshold-number",
+    "x": 430.51269539,
+    "y": 954.2458499,
+    "width": 59.48730461,
+    "height": 22.5083002,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 493,
+    "y": 957.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 405.97626964,
+    "y": 1025.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 1033.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "1188",
+    "role": "threshold-number",
+    "x": 437.309083,
+    "y": 1022.2685543,
+    "width": 52.690917,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 493,
+    "y": 1025.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "手游 · 机密版",
+    "role": "platform-mode",
+    "x": 725.931152285,
+    "y": 794.456542675,
+    "width": 141.13769543,
+    "height": 23.086914649999997,
+    "cy": 806,
+    "effectiveSize": 23.5
+  },
+  {
+    "text": "价格",
+    "role": "table-heading",
+    "x": 594.869531204,
+    "y": 836.56953148,
+    "width": 36.260937592,
+    "height": 17.86093704,
+    "cy": 845.5,
+    "effectiveSize": 18.4
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 596.21337879,
+    "y": 887.7685543,
+    "width": 47.78662121000001,
+    "height": 22.462891399999997,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 648,
+    "y": 891.3904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 596.47070297,
+    "y": 954.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 648,
+    "y": 957.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "988",
+    "role": "price-number",
+    "x": 596.47070297,
+    "y": 1022.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 648,
+    "y": 1025.8904296912,
+    "width": 10.753125,
+    "height": 15.219140617600003,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "核电站",
+    "role": "map-title",
+    "x": 695.287109375,
+    "y": 835.2768556,
+    "width": 62.42578125,
+    "height": 20.4462888,
+    "cy": 845.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 671.97626964,
+    "y": 891.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 899,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "588",
+    "role": "threshold-number",
+    "x": 703.95605461,
+    "y": 887.7685543,
+    "width": 48.04394539,
+    "height": 22.462891399999997,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 755,
+    "y": 891.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 671.97626964,
+    "y": 957.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 965.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "688",
+    "role": "threshold-number",
+    "x": 704.47070297,
+    "y": 954.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 755,
+    "y": 957.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 671.97626964,
+    "y": 1025.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 1033.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "788",
+    "role": "threshold-number",
+    "x": 704.62207039,
+    "y": 1022.2685543,
+    "width": 47.37792961,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 755,
+    "y": 1025.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "巴克什",
+    "role": "map-title",
+    "x": 816.627931,
+    "y": 835.29736315,
+    "width": 60.74413799999999,
+    "height": 20.4052737,
+    "cy": 845.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 792.97626964,
+    "y": 891.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 899,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "588",
+    "role": "threshold-number",
+    "x": 823.95605461,
+    "y": 887.7685543,
+    "width": 48.04394539,
+    "height": 22.462891399999997,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 875,
+    "y": 891.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 792.97626964,
+    "y": 957.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 965.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "788",
+    "role": "threshold-number",
+    "x": 824.62207039,
+    "y": 954.2685543,
+    "width": 47.37792961,
+    "height": 22.462891399999997,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 875,
+    "y": 957.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 792.97626964,
+    "y": 1025.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 1033.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 823.16894539,
+    "y": 1022.2685543,
+    "width": 48.83105461,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 875,
+    "y": 1025.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "航天",
+    "role": "map-title",
+    "x": 949.297363255,
+    "y": 835.24609375,
+    "width": 41.40527349,
+    "height": 20.5078125,
+    "cy": 845.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 912.97626964,
+    "y": 891.3620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 899,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "688",
+    "role": "threshold-number",
+    "x": 950.47070297,
+    "y": 887.7685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 899,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 1001,
+    "y": 891.4988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 899,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 912.97626964,
+    "y": 957.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 965.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 949.16894539,
+    "y": 954.2685543,
+    "width": 48.83105461,
+    "height": 22.462891399999997,
+    "cy": 965.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 1001,
+    "y": 957.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 965.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 912.97626964,
+    "y": 1025.8620117144,
+    "width": 12.04746072,
+    "height": 15.2759765712,
+    "cy": 1033.5,
+    "effectiveSize": 34.8
+  },
+  {
+    "text": "988",
+    "role": "threshold-number",
+    "x": 950.47070297,
+    "y": 1022.2685543,
+    "width": 47.52929703,
+    "height": 22.462891399999997,
+    "cy": 1033.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 1001,
+    "y": 1025.9988281176,
+    "width": 21.592969120000003,
+    "height": 15.0023437648,
+    "cy": 1033.5,
+    "effectiveSize": 29.6
+  },
+  {
+    "text": "对赌保障",
+    "role": "guarantee-label",
+    "x": 282,
+    "y": 1118.78359375,
+    "width": 74.502343844,
+    "height": 18.4328125,
+    "cy": 1128,
+    "effectiveSize": 18.8
+  },
+  {
+    "text": "单局挑战 · 不跨局累计",
+    "role": "guarantee-condition",
+    "x": 283,
+    "y": 1212.3427736,
+    "width": 260.0507806,
+    "height": 25.3144528,
+    "cy": 1225,
+    "effectiveSize": 26
+  },
+  {
+    "text": "达标前，全部物资归板板",
+    "role": "core-conditions",
+    "x": 283,
+    "y": 1250.0875,
+    "width": 210.71250048,
+    "height": 18.825,
+    "cy": 1259.5,
+    "effectiveSize": 19.2
+  },
+  {
+    "text": "对应炸单保底在满足结单条件后另补",
+    "role": "core-conditions",
+    "x": 283,
+    "y": 1279.05937536,
+    "width": 306.75,
+    "height": 18.88124928,
+    "cy": 1288.5,
+    "effectiveSize": 19.2
+  },
+  {
+    "text": "r = 元 / w = 万",
+    "role": "units",
+    "x": 500.858275,
+    "y": 1377.37255875,
+    "width": 84.28345,
+    "height": 11.2548825,
+    "cy": 1383,
+    "effectiveSize": 12.5
+  }
+]

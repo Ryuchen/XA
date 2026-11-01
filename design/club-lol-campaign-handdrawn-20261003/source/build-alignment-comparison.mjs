@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+const root=path.resolve(import.meta.dirname,'..');
+const sharp=createRequire(import.meta.url)(process.argv[2]+'/sharp');
+const id='01-solo-duo-advert',width=840,height=606;
+const background=Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#eef3f1"/><g font-family="Microsoft YaHei UI" font-size="22" fill="#17334b" text-anchor="middle"><text x="215" y="35">调整前</text><text x="625" y="35">调整后 · r2</text></g></svg>`);
+const layers=['before-r2','final'].map((folder,i)=>({input:fs.readFileSync(root+'/review/'+folder+'/'+id+'-390.png'),left:20+i*410,top:60}));
+fs.writeFileSync(root+'/review/alignment-comparison-r2.png',await sharp(background).composite(layers).png().toBuffer());
+console.log('Created alignment before/after comparison from actual poster PNG previews.');

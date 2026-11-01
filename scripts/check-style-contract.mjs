@@ -67,11 +67,15 @@ const moneyExtensions = new Set(['.ts', '.tsx', '.vue'])
 
 // 合法百分比计算（非单位换算），显式豁免。
 const moneyExemptExpressions = new Map([
-  ['apps/admin-web/src/views/report/index.vue', 'Math.floor((Number(row.amount) || 0) * (100 - reportRate(row)) / 100)'],
-  ['apps/admin-web/src/views/order/index.vue', 'Math.floor((providerBase(slot) * rate) / 100)'],
-  ['apps/admin-web/src/views/dashboard/index.vue', 'Math.round((count / total) * 100)'],
+  ['apps/admin-web/src/views/report/index.vue', ['Math.floor((Number(row.amount) || 0) * (100 - reportRate(row)) / 100)']],
+  ['apps/admin-web/src/views/order/index.vue', [
+    'Math.floor((providerBase(slot) * rate) / 100)',
+    'Math.floor(providerBase(slot) * rate / 100)',
+    'Math.floor(row.pool * transfers[index].split_value! / 100)',
+  ]],
+  ['apps/admin-web/src/views/dashboard/index.vue', ['Math.round((count / total) * 100)']],
   // Backend discount_rate is a percentage; 90% displays as 9折, not a money unit.
-  ['apps/provider-miniapp/src/pages/orders/index.tsx', 'bossType!.discount_rate / 10'],
+  ['apps/provider-miniapp/src/pages/orders/index.tsx', ['bossType!.discount_rate / 10']],
 ])
 
 // 裸的单位换算：/10 /100 *10 *100（带词边界，避免误伤 *1000 等）。
@@ -107,9 +111,9 @@ async function visitMoney(directory) {
     const rel = relative(root, path).replaceAll('\\', '/')
     for (const { line, text } of scriptLines(content, extname(entry.name))) {
       const exempt = moneyExemptExpressions.get(rel)
-      if (exempt && text.includes(exempt)) continue
       // 去掉行内注释，避免把说明文字误判为换算。
-      const code = text.split('//')[0]
+      let code = text.split('//')[0]
+      for (const expression of exempt || []) code = code.replaceAll(expression, '')
       if (moneyPattern.test(code)) {
         violations.push(
           `${rel}:${line} 禁止裸金额换算（/10 /100 *10 *100），请改用 @xa/money 的 toCoin / toRawAmount / formatXaCoin`,

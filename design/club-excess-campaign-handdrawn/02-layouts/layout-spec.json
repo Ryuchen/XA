@@ -1,0 +1,106 @@
+{
+  "stage": "pre-generation-guide",
+  "poster": {
+    "w": 1600,
+    "h": 3600,
+    "exportW": 3200,
+    "exportH": 7200,
+    "header": {
+      "x": 90,
+      "y": 60,
+      "w": 1420,
+      "h": 550
+    },
+    "mechanism": {
+      "x": 90,
+      "y": 660,
+      "w": 1420,
+      "h": 160
+    },
+    "table": {
+      "x": 90,
+      "y": 860,
+      "w": 1420,
+      "headerHeight": 90,
+      "rowsTop": 950,
+      "rowsHeight": 700,
+      "desktopRows": 5,
+      "mobileRows": 4,
+      "columns": 2
+    },
+    "example": {
+      "x": 90,
+      "y": 1700,
+      "w": 1420,
+      "h": 460,
+      "tiles": [
+        [
+          140,
+          1860,
+          340,
+          180
+        ],
+        [
+          630,
+          1860,
+          340,
+          180
+        ],
+        [
+          1120,
+          1860,
+          340,
+          180
+        ]
+      ]
+    },
+    "ownership": {
+      "x": 90,
+      "y": 2200,
+      "w": 1420,
+      "h": 240
+    },
+    "rules": {
+      "x": 90,
+      "y": 2600,
+      "w": 1420,
+      "rowHeights": [
+        160,
+        120,
+        140,
+        120,
+        145,
+        125
+      ]
+    }
+  },
+  "cover": {
+    "w": 2560,
+    "h": 1440,
+    "exportW": 3200,
+    "exportH": 1800
+  },
+  "social": {
+    "w": 2400,
+    "h": 3200,
+    "cards": [
+      {
+        "id": "desktop-absolute",
+        "rows": 5
+      },
+      {
+        "id": "desktop-secret",
+        "rows": 5
+      },
+      {
+        "id": "mobile-absolute",
+        "rows": 4
+      },
+      {
+        "id": "mobile-secret",
+        "rows": 4
+      }
+    ]
+  },
+  "note": "所有正式文字等待底图确认后再填；以实际生成面板重新测量。"
+}

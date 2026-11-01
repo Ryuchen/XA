@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "brand": "兴安电竞",
+  "title": "黄金矿工",
+  "subtitle": "摸金摸红 · 累积保底",
+  "date": "2026-10-05",
+  "scope": {
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "noConfidential": true,
+    "sharedGameplayAndNotices": true,
+    "difficultyLabel": null,
+    "mapRestriction": null,
+    "basis": "用户依次要求端游、手游以及本轮附图双端价格封面对应修订；只新增受影响的价格封面页，现有两端海报保留。"
+  },
+  "platforms": [
+    {
+      "id": "desktop",
+      "name": "端游",
+      "priceField": "desktopPrice"
+    },
+    {
+      "id": "mobile",
+      "name": "手游",
+      "priceField": "mobilePrice"
+    }
+  ],
+  "tiers": [
+    {
+      "id": "trial",
+      "name": "体验版",
+      "desktopPrice": 388,
+      "totalGoldRedSlots": 50,
+      "processValueCounts": true,
+      "processLabel": "计入",
+      "mobilePrice": 288
+    },
+    {
+      "id": "standard",
+      "name": "标准版",
+      "desktopPrice": 488,
+      "totalGoldRedSlots": 50,
+      "processValueCounts": false,
+      "processLabel": "不计入",
+      "mobilePrice": 388
+    },
+    {
+      "id": "basic",
+      "name": "基础版",
+      "desktopPrice": 688,
+      "totalGoldRedSlots": 108,
+      "processValueCounts": true,
+      "processLabel": "计入",
+      "mobilePrice": 588
+    },
+    {
+      "id": "advanced",
+      "name": "进阶版",
+      "desktopPrice": 988,
+      "totalGoldRedSlots": 108,
+      "processValueCounts": false,
+      "processLabel": "不计入",
+      "mobilePrice": 788
+    },
+    {
+      "id": "luxury",
+      "name": "豪华版",
+      "desktopPrice": 1188,
+      "totalGoldRedSlots": 208,
+      "processValueCounts": true,
+      "processLabel": "计入",
+      "mobilePrice": 1088
+    },
+    {
+      "id": "ultimate",
+      "name": "终极版",
+      "desktopPrice": 1688,
+      "totalGoldRedSlots": 208,
+      "processValueCounts": false,
+      "processLabel": "不计入",
+      "mobilePrice": 1488
+    }
+  ],
+  "mechanics": {
+    "red": {
+      "name": "红色物品",
+      "perSlotGuaranteeW": 80
+    },
+    "gold": {
+      "name": "金色物品",
+      "perSlotGuaranteeW": 20
+    },
+    "capRule": "格数满了以后，保底不再叠加。",
+    "countOnlySuccessfulExtraction": true,
+    "overCapFinalRunPriority": "红",
+    "example": {
+      "label": "计入档示例",
+      "goldSlots": 10,
+      "redSlots": 10,
+      "extractedValueW": 800,
+      "guaranteeAddedW": 1000,
+      "remainingW": 200,
+      "explanation": "10格金×20w＋10格红×80w＝1000w；本局收获800w，还差200w。",
+      "basis": "用户确认金改为+20w，修正算术冲突；红仍+80w。"
+    }
+  },
+  "notices": [
+    {
+      "id": "process-excluded-tiers",
+      "text": "标准版、进阶版和终极版，带出过程中产生的金额不算入总保底。",
+      "basis": "附件原第1条为进阶/终极；新六档表明确新增标准版不计入，更新档名范围。"
+    },
+    {
+      "id": "accumulation-excludes-destruction-loss",
+      "appliesToTierIds": [
+        "standard",
+        "advanced",
+        "ultimate"
+      ],
+      "metric": "totalGoldRedSlots",
+      "excluded": "炸单战损",
+      "text": "标准版、进阶版、终极版在累计金红格数时，不计炸单战损。",
+      "shortText": "累计金红格数时，不计炸单战损。",
+      "emphasis": "不计炸单战损",
+      "basis": "2026-10-04用户本轮明确新增规则。"
+    },
+    {
+      "id": "successful-only",
+      "text": "只计算撤离成功的，撤离失败的不计算。"
+    },
+    {
+      "id": "screenshot-and-carried-loot",
+      "text": "以撤离成功后老板的行动收获截图计算；吃不下的金和红，由打手帮忙带出，一同计算。"
+    },
+    {
+      "id": "sorting",
+      "text": "本单由打手负责理包，优先以价值更高的物品进行整理。"
+    },
+    {
+      "id": "final-overcap",
+      "text": "若最后一把金红超过格数，优先计算红。"
+    }
+  ],
+  "copy": {
+    "priceHeading": "选择你的挖矿套餐",
+    "priceColumns": [
+      "版本",
+      "价格",
+      "总格数（金＋红）",
+      "带出过程"
+    ],
+    "mechanicsHeading": "玩法规则",
+    "noticesHeading": "注意事项",
+    "socialHeading": "端游 / 手游 · 六档任选",
+    "coverFeature": "摸金摸红 · 累积保底"
+  },
+  "sources": {
+    "request": "2026-10-04用户提供端游现稿，明确格数218降为208，并为标准版、进阶版、终极版新增累计金红格数不计炸单战损；其余价格、规则与美术沿用本轮附件。 用户后续明确“手游也是一样”，按原手游价目同步两项修订。 2026-10-05用户附双端价格封面，要求其中218格对应调整为208格。",
+    "referenceImage": "source/references/黄金矿工-本轮用户原图.png",
+    "corrections": [
+      "用户新表218格覆盖附件208格。",
+      "新增体验/标准50格档。",
+      "金每格+20w覆盖附件+10w；红保持+80w。",
+      "10金10红增加1000w，本局800w，还差200w。",
+      "2026-10-04：本轮用户明确豪华版、终极版由218格修订为208格，覆盖2026-09-30旧决定。",
+      "2026-10-04：标准版、进阶版、终极版累计金红格数时，不计炸单战损。"
+    ],
+    "unrelated": "黄金矿工·钓鱼版独立，不继承鱼饵、鱼获倍率、装备、地图或页脚解释权。",
+    "mobilePriceSource": "2026-09-30已确认黄金矿工双平台项目content.json：体验288、标准388、基础588、进阶788、豪华1088、终极1488r；本轮用户授权沿用手游版。",
+    "coverReferenceImage": "source/references/黄金矿工-双端价格封面-本轮原图.png"
+  }
+}

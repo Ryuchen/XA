@@ -1,3 +1,4 @@
+const { modal: themedModal } = require('../../core/ui');
 const api = require('../../core/api');
 const auth = require('../../core/auth');
 const ui = require('../../core/ui');
@@ -31,7 +32,7 @@ Page(privatePage({
     if (!calendar.makeup_cards) { ui.toast('暂无补签卡，消费达标后可获得'); return; }
     this.setData({ submitting: true });
     try {
-      const choice = await new Promise((resolve, reject) => wx.showModal({ title: '补签 ' + calendar.month + ' 月 ' + day + ' 日', content: '将消耗 1 张补签卡，当前共有 ' + calendar.makeup_cards + ' 张。', confirmText: '确认补签', success: resolve, fail: reject }));
+      const choice = await new Promise((resolve, reject) => themedModal({ title: '补签 ' + calendar.month + ' 月 ' + day + ' 日', content: '将消耗 1 张补签卡，当前共有 ' + calendar.makeup_cards + ' 张。', confirmText: '确认补签', success: resolve, fail: reject }));
       if (choice.confirm) await this.submit(day, true);
     } catch (error) { ui.toast(error); }
     finally { this.setData({ submitting: false }); }
@@ -44,7 +45,7 @@ Page(privatePage({
       const reward = result.reward_amount > 0 ? '，获得 ' + ui.money(result.reward_amount) + ' 兴安币' : '';
       ui.toast((day ? '补签成功' : '签到成功') + reward);
       events.emit('wallet.changed');
-      if (result.full_attendance_awarded) wx.showModal({ title: '本月全勤达成', content: this.data.calendar.full_attendance_reward.name || '已获得全勤奖励', showCancel: false });
+      if (result.full_attendance_awarded) themedModal({ title: '本月全勤达成', content: this.data.calendar.full_attendance_reward.name || '已获得全勤奖励', showCancel: false });
     } catch (error) { ui.toast(error); }
     finally { await this.load(); this.setData({ submitting: false }); }
   }

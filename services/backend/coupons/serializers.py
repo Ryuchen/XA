@@ -43,6 +43,7 @@ class UserCouponSerializer(serializers.ModelSerializer):
     experience_kind = serializers.CharField(source='coupon.experience_kind', read_only=True)
     platform = serializers.CharField(source='coupon.platform', read_only=True)
     valid_to = serializers.DateTimeField(read_only=True)
+    availability_status = serializers.CharField(read_only=True)
 
     class Meta:
         model = UserCoupon
@@ -55,6 +56,7 @@ class UserCouponSerializer(serializers.ModelSerializer):
             'amount',
             'valid_to',
             'status',
+            'availability_status',
             'claimed_at',
             'used_at',
         ]

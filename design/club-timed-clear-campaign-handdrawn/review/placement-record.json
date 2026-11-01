@@ -1,0 +1,497 @@
+[
+  {
+    "id": "desktop-absolute",
+    "art": [
+      {
+        "text": "限时",
+        "left": 56.3878751675969,
+        "top": 86.90553418146371,
+        "right": 211.7616669203688,
+        "bottom": 171.1813112958457
+      },
+      {
+        "text": "清图单",
+        "left": 47.4211916264966,
+        "top": 177.31555177893134,
+        "right": 266.96465987525244,
+        "bottom": 258.1911644779292
+      },
+      {
+        "text": "超时未清图继续打",
+        "left": 159.2,
+        "top": 828.028001098,
+        "right": 449.8479424,
+        "bottom": 865.4519989019999
+      },
+      {
+        "text": "清图标准",
+        "left": 66.7,
+        "top": 921.8000000000001,
+        "right": 166.649978525,
+        "bottom": 947.5749999999999
+      },
+      {
+        "text": "下单须知",
+        "left": 66.7,
+        "top": 1275.875,
+        "right": 165.39998,
+        "bottom": 1301.5
+      }
+    ],
+    "titleToPillGap": 12.808835522070808,
+    "leverCopy": {
+      "bounds": {
+        "left": 133.2963861,
+        "top": 1065.27402319,
+        "right": 310.7036139,
+        "bottom": 1136.65830041
+      },
+      "lastIconBottom": 1054
+    },
+    "cardRuleCopy": {
+      "bounds": {
+        "left": 293,
+        "top": 1523.50390625,
+        "right": 707,
+        "bottom": 1611.95546848
+      },
+      "rowTop": 1506,
+      "rowBottom": 1639
+    },
+    "cardRuleDisplay": {
+      "left": 293,
+      "right": 747,
+      "top": 1523.50390625,
+      "bottom": 1623,
+      "rowCenter": 1572.5,
+      "description": "开卡说明两行 + 两个缺卡补偿条"
+    },
+    "quickExtraction": {
+      "bounds": {
+        "left": 364.000634057,
+        "top": 1661.077734375,
+        "right": 676.9999999999999,
+        "bottom": 1728.6171872
+      },
+      "rowTop": 1639,
+      "rowBottom": 1766,
+      "band": [
+        293,
+        1693,
+        454,
+        48
+      ]
+    },
+    "unitColumns": [
+      {
+        "role": "minimum-loot-unit",
+        "x": 630.32797811,
+        "cy": 1225
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 450.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 686.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "quick-extraction-loot-unit",
+        "x": 511.05092693999995,
+        "cy": 1717
+      }
+    ]
+  },
+  {
+    "id": "desktop-secret",
+    "art": [
+      {
+        "text": "限时",
+        "left": 56.3878751675969,
+        "top": 86.90553418146371,
+        "right": 211.7616669203688,
+        "bottom": 171.1813112958457
+      },
+      {
+        "text": "清图单",
+        "left": 47.4211916264966,
+        "top": 177.31555177893134,
+        "right": 266.96465987525244,
+        "bottom": 258.1911644779292
+      },
+      {
+        "text": "超时未清图继续打",
+        "left": 159.2,
+        "top": 828.028001098,
+        "right": 449.8479424,
+        "bottom": 865.4519989019999
+      },
+      {
+        "text": "清图标准",
+        "left": 66.7,
+        "top": 921.8000000000001,
+        "right": 166.649978525,
+        "bottom": 947.5749999999999
+      },
+      {
+        "text": "下单须知",
+        "left": 66.7,
+        "top": 1275.875,
+        "right": 165.39998,
+        "bottom": 1301.5
+      }
+    ],
+    "titleToPillGap": 12.808835522070808,
+    "leverCopy": {
+      "bounds": {
+        "left": 133.2963861,
+        "top": 1065.27402319,
+        "right": 310.7036139,
+        "bottom": 1136.65830041
+      },
+      "lastIconBottom": 1054
+    },
+    "cardRuleCopy": {
+      "bounds": {
+        "left": 293,
+        "top": 1523.50390625,
+        "right": 707,
+        "bottom": 1611.95546848
+      },
+      "rowTop": 1506,
+      "rowBottom": 1639
+    },
+    "cardRuleDisplay": {
+      "left": 293,
+      "right": 747,
+      "top": 1523.50390625,
+      "bottom": 1623,
+      "rowCenter": 1572.5,
+      "description": "开卡说明两行 + 两个缺卡补偿条"
+    },
+    "quickExtraction": {
+      "bounds": {
+        "left": 363.469384137,
+        "top": 1661.077734375,
+        "right": 677,
+        "bottom": 1728.6171872
+      },
+      "rowTop": 1639,
+      "rowBottom": 1766,
+      "band": [
+        293,
+        1693,
+        454,
+        48
+      ]
+    },
+    "unitColumns": [
+      {
+        "role": "minimum-loot-unit",
+        "x": 630.32797811,
+        "cy": 1225
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 450.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 686.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "quick-extraction-loot-unit",
+        "x": 511.05092694,
+        "cy": 1717
+      }
+    ]
+  },
+  {
+    "id": "mobile-absolute",
+    "art": [
+      {
+        "text": "限时",
+        "left": 56.3878751675969,
+        "top": 86.90553418146371,
+        "right": 211.7616669203688,
+        "bottom": 171.1813112958457
+      },
+      {
+        "text": "清图单",
+        "left": 47.4211916264966,
+        "top": 177.31555177893134,
+        "right": 266.96465987525244,
+        "bottom": 258.1911644779292
+      },
+      {
+        "text": "超时未清图继续打",
+        "left": 159.2,
+        "top": 828.028001098,
+        "right": 449.8479424,
+        "bottom": 865.4519989019999
+      },
+      {
+        "text": "清图标准",
+        "left": 66.7,
+        "top": 921.8000000000001,
+        "right": 166.649978525,
+        "bottom": 947.5749999999999
+      },
+      {
+        "text": "下单须知",
+        "left": 66.7,
+        "top": 1275.875,
+        "right": 165.39998,
+        "bottom": 1301.5
+      }
+    ],
+    "titleToPillGap": 12.808835522070808,
+    "leverCopy": {
+      "bounds": {
+        "left": 133.2963861,
+        "top": 1065.27402319,
+        "right": 310.7036139,
+        "bottom": 1136.65830041
+      },
+      "lastIconBottom": 1054
+    },
+    "cardRuleCopy": {
+      "bounds": {
+        "left": 293,
+        "top": 1523.50390625,
+        "right": 707,
+        "bottom": 1611.95546848
+      },
+      "rowTop": 1506,
+      "rowBottom": 1639
+    },
+    "cardRuleDisplay": {
+      "left": 293,
+      "right": 747,
+      "top": 1523.50390625,
+      "bottom": 1623,
+      "rowCenter": 1572.5,
+      "description": "开卡说明两行 + 两个缺卡补偿条"
+    },
+    "quickExtraction": {
+      "bounds": {
+        "left": 364.000634057,
+        "top": 1661.077734375,
+        "right": 676.9999999999999,
+        "bottom": 1728.6171872
+      },
+      "rowTop": 1639,
+      "rowBottom": 1766,
+      "band": [
+        293,
+        1693,
+        454,
+        48
+      ]
+    },
+    "unitColumns": [
+      {
+        "role": "minimum-loot-unit",
+        "x": 630.32797811,
+        "cy": 1225
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 450.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 686.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "quick-extraction-loot-unit",
+        "x": 511.05092693999995,
+        "cy": 1717
+      }
+    ]
+  },
+  {
+    "id": "mobile-secret",
+    "art": [
+      {
+        "text": "限时",
+        "left": 56.3878751675969,
+        "top": 86.90553418146371,
+        "right": 211.7616669203688,
+        "bottom": 171.1813112958457
+      },
+      {
+        "text": "清图单",
+        "left": 47.4211916264966,
+        "top": 177.31555177893134,
+        "right": 266.96465987525244,
+        "bottom": 258.1911644779292
+      },
+      {
+        "text": "超时未清图继续打",
+        "left": 159.2,
+        "top": 828.028001098,
+        "right": 449.8479424,
+        "bottom": 865.4519989019999
+      },
+      {
+        "text": "清图标准",
+        "left": 66.7,
+        "top": 921.8000000000001,
+        "right": 166.649978525,
+        "bottom": 947.5749999999999
+      },
+      {
+        "text": "下单须知",
+        "left": 66.7,
+        "top": 1275.875,
+        "right": 165.39998,
+        "bottom": 1301.5
+      }
+    ],
+    "titleToPillGap": 12.808835522070808,
+    "leverCopy": {
+      "bounds": {
+        "left": 133.2963861,
+        "top": 1065.27402319,
+        "right": 310.7036139,
+        "bottom": 1136.65830041
+      },
+      "lastIconBottom": 1054
+    },
+    "cardRuleCopy": {
+      "bounds": {
+        "left": 293,
+        "top": 1523.50390625,
+        "right": 707,
+        "bottom": 1611.95546848
+      },
+      "rowTop": 1506,
+      "rowBottom": 1639
+    },
+    "cardRuleDisplay": {
+      "left": 293,
+      "right": 747,
+      "top": 1523.50390625,
+      "bottom": 1623,
+      "rowCenter": 1572.5,
+      "description": "开卡说明两行 + 两个缺卡补偿条"
+    },
+    "quickExtraction": {
+      "bounds": {
+        "left": 363.469384137,
+        "top": 1661.077734375,
+        "right": 677,
+        "bottom": 1728.6171872
+      },
+      "rowTop": 1639,
+      "rowBottom": 1766,
+      "band": [
+        293,
+        1693,
+        454,
+        48
+      ]
+    },
+    "unitColumns": [
+      {
+        "role": "minimum-loot-unit",
+        "x": 630.32797811,
+        "cy": 1225
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 450.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "missing-card-compensation-unit",
+        "x": 686.9389645,
+        "cy": 1601.5
+      },
+      {
+        "role": "quick-extraction-loot-unit",
+        "x": 511.05092694,
+        "cy": 1717
+      }
+    ]
+  },
+  {
+    "id": "cover",
+    "art": [
+      {
+        "text": "限时",
+        "left": 94.48794906173723,
+        "top": 195.60109575684865,
+        "right": 411.9905988110129,
+        "bottom": 367.26166419660655
+      },
+      {
+        "text": "清图单",
+        "left": 72.5525316623028,
+        "top": 403.0068379666764,
+        "right": 587.4033894364043,
+        "bottom": 591.8008462048605
+      }
+    ],
+    "versionLine": {
+      "bounds": {
+        "left": 94,
+        "top": 755.1933591,
+        "right": 339.1367182,
+        "bottom": 776.8066408999999
+      },
+      "safeBand": [
+        749,
+        782
+      ]
+    }
+  },
+  {
+    "id": "social",
+    "art": [
+      {
+        "text": "限时",
+        "left": 63.78301784522162,
+        "top": 113.2481916965107,
+        "right": 264.4234404994519,
+        "bottom": 221.82580052410788
+      },
+      {
+        "text": "清图单",
+        "left": 48.55865343616426,
+        "top": 224.6441990496225,
+        "right": 347.6531168567634,
+        "bottom": 334.4757785442006
+      },
+      {
+        "text": "超时未清图继续打",
+        "left": 230.2,
+        "top": 1200.12000122,
+        "right": 553.019936,
+        "bottom": 1241.5799987799999
+      }
+    ],
+    "featureBox": {
+      "bounds": {
+        "left": 216,
+        "top": 1171.6078125,
+        "right": 877.20693394,
+        "bottom": 1357.8764651249999
+      },
+      "panel": [
+        56,
+        1157,
+        974,
+        212
+      ]
+    }
+  }
+]

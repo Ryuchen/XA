@@ -1,0 +1,144 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 物资银行单",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "五档价目、局数、超时增加保底以本轮用户文字为准；用户通过澄清明确同意加仓和须知沿用参考图，端手游一致。",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "沿用已确认的兴安电竞二次元手绘风格与蜂医、灰鼠角色身份"
+    },
+    "bankIllustration": {
+      "status": "approved",
+      "basis": "用户在插画展示后回复：继续",
+      "file": "01-illustrations/bank-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户在底图总览及成套底图交付后回复：继续",
+      "overview": "review/background-overview.png",
+      "review": "review/index.html"
+    },
+    "topUpAndRules": {
+      "status": "approved",
+      "basis": "用户明确回复：沿用，端手游一致"
+    }
+  },
+  "plannedDeliverables": [
+    "端游·绝密五档价目",
+    "手游·绝密五档价目",
+    "端游·机密五档价目",
+    "手游·机密五档价目",
+    "银行主题封面",
+    "简洁社交广告"
+  ],
+  "layoutInvariants": [
+    "五档四列：价格、带出物资、规定局数、超时增加保底",
+    "表头整条深蓝，不用半绿块",
+    "价格按r列对齐，基础物资和追加物资分别按固定w列对齐",
+    "单位保持足够大且垂直居中；数字栏与图标分开",
+    "银行追加保底不是常规物资单的工作日+20%，不继承后者活动"
+  ],
+  "nextStep": "成品已生成，可按需修改具体档位或文案；继续复用已确认底图",
+  "revision": "bank-final-r1",
+  "illustration": {
+    "prompt": "01-illustrations/prompts.md",
+    "provider": "built-in image_gen",
+    "file": "01-illustrations/bank-medic-mouse-v1.png"
+  },
+  "backgrounds": {
+    "gold": "03-backgrounds/poster-gold.png",
+    "teal": "03-backgrounds/poster-teal.png",
+    "cover": "03-backgrounds/cover.png",
+    "social": "03-backgrounds/social.png"
+  },
+  "exports": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/desktop-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "desktop-secret",
+      "label": "端游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/desktop-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/mobile-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/mobile-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "cover",
+      "label": "横版封面",
+      "src": "cover.png",
+      "width": 3200,
+      "height": 1800,
+      "file": "04-png-export/cover-background.png",
+      "nativeWidth": 1672,
+      "nativeHeight": 941,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "social",
+      "label": "简洁广告海报",
+      "src": "social.png",
+      "width": 2400,
+      "height": 3200,
+      "file": "04-png-export/social-background.png",
+      "nativeWidth": 1086,
+      "nativeHeight": 1448,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    }
+  ],
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "mobile-absolute",
+    "desktop-secret",
+    "mobile-secret",
+    "cover",
+    "social"
+  ],
+  "vectorDelivery": {
+    "status": "completed",
+    "overview": "review/final-overview.png",
+    "review": "review/index.html",
+    "notes": "review/final-notes.md",
+    "formats": [
+      "PNG",
+      "editable text SVG",
+      "outlined SVG"
+    ],
+    "rendering": "Final-size vector typography over approved raster backgrounds"
+  }
+}

@@ -1,0 +1,3794 @@
+{
+  "schemaVersion": 1,
+  "revision": "bg-r1",
+  "stage": "background-approval",
+  "basis": "十套30页；按已核实文案量制定差异化结构，人物确认后复用，背景待用户确认。",
+  "common": {
+    "canvasWidth": 1200,
+    "margin": 64,
+    "gap": 28,
+    "headerHeight": 440,
+    "footerHeight": 180,
+    "minBodyFont": 50,
+    "phoneWidth": 390
+  },
+  "pages": [
+    {
+      "id": "01-solo-duo-price",
+      "setId": "01-solo-duo",
+      "label": "单双 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 2888,
+      "ew": 3200,
+      "eh": 7701,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "duo",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "fixed-tiers",
+          "label": "T0 / T1固定起价",
+          "kind": "cards",
+          "h": 170,
+          "cards": 2,
+          "columns": 2,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "01-solo-duo-price-fixed-tiers"
+        },
+        {
+          "id": "rank-price",
+          "label": "段位 × T2 / T3",
+          "kind": "table",
+          "h": 944,
+          "rows": 9,
+          "columns": 3,
+          "rowHeight": 96,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 638,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "01-solo-duo-price-rank-price"
+        },
+        {
+          "id": "qualification",
+          "label": "陪玩资质",
+          "kind": "cards",
+          "h": 310,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 1610,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "01-solo-duo-price-qualification"
+        },
+        {
+          "id": "settlement",
+          "label": "结算、净胜补偿与新秀大师规则",
+          "kind": "notes",
+          "h": 760,
+          "sourceIndexes": [
+            0,
+            1,
+            2
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1948,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "01-solo-duo-price-settlement"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 2718,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "01-solo-duo-price-fixed-tiers",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 122
+        },
+        {
+          "containerId": "01-solo-duo-price-rank-price",
+          "x": 92,
+          "y": 662,
+          "w": 1016,
+          "h": 896
+        },
+        {
+          "containerId": "01-solo-duo-price-qualification",
+          "x": 92,
+          "y": 1634,
+          "w": 1016,
+          "h": 262
+        },
+        {
+          "containerId": "01-solo-duo-price-settlement",
+          "x": 92,
+          "y": 1972,
+          "w": 1016,
+          "h": 712
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "01-solo-duo-advert",
+      "setId": "01-solo-duo",
+      "label": "单双 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "tiers",
+          "label": "铂金以下四档核心价目",
+          "kind": "cards",
+          "h": 660,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "01-solo-duo-advert-tiers"
+        },
+        {
+          "id": "rank-note",
+          "label": "其他段位提示与档位资质",
+          "kind": "strip",
+          "h": 170,
+          "x": 64,
+          "y": 1118,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "01-solo-duo-advert-rank-note"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "01-solo-duo-advert-tiers",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 612
+        },
+        {
+          "containerId": "01-solo-duo-advert-rank-note",
+          "x": 92,
+          "y": 1142,
+          "w": 1016,
+          "h": 122
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "01-solo-duo-cover",
+      "setId": "01-solo-duo",
+      "label": "单双 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "duo",
+      "titleLines": [
+        "单双陪玩"
+      ],
+      "coverCore": [
+        "从新秀到顶尖",
+        "按段位匹配陪玩"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "01-solo-duo-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "01-solo-duo-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "01-solo-duo-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "01-solo-duo-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "02-flex-price",
+      "setId": "02-flex",
+      "label": "组排 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1928,
+      "ew": 3200,
+      "eh": 5141,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "duo",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "fixed-tiers",
+          "label": "T0 / T1匹配与组排同价",
+          "kind": "cards",
+          "h": 170,
+          "cards": 2,
+          "columns": 2,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "02-flex-price-fixed-tiers"
+        },
+        {
+          "id": "match-price",
+          "label": "匹配 / 组排 × T2 / T3",
+          "kind": "table",
+          "h": 504,
+          "rows": 4,
+          "columns": 3,
+          "rowHeight": 106,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 638,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "02-flex-price-match-price"
+        },
+        {
+          "id": "qualification",
+          "label": "陪玩资质",
+          "kind": "cards",
+          "h": 310,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 1170,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "02-flex-price-qualification"
+        },
+        {
+          "id": "service",
+          "label": "售后口径",
+          "kind": "notes",
+          "h": 240,
+          "sourceIndexes": [
+            0
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1508,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "02-flex-price-service"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1758,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "02-flex-price-fixed-tiers",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 122
+        },
+        {
+          "containerId": "02-flex-price-match-price",
+          "x": 92,
+          "y": 662,
+          "w": 1016,
+          "h": 456
+        },
+        {
+          "containerId": "02-flex-price-qualification",
+          "x": 92,
+          "y": 1194,
+          "w": 1016,
+          "h": 262
+        },
+        {
+          "containerId": "02-flex-price-service",
+          "x": 92,
+          "y": 1532,
+          "w": 1016,
+          "h": 192
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "02-flex-advert",
+      "setId": "02-flex",
+      "label": "组排 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "fixed-tiers",
+          "label": "T0 / T1同价档",
+          "kind": "cards",
+          "h": 170,
+          "cards": 2,
+          "columns": 2,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "02-flex-advert-fixed-tiers"
+        },
+        {
+          "id": "match-price",
+          "label": "匹配与组排核心价目",
+          "kind": "table",
+          "h": 528,
+          "rows": 4,
+          "columns": 3,
+          "rowHeight": 112,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 628,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "02-flex-advert-match-price"
+        },
+        {
+          "id": "tiers",
+          "label": "陪玩资质简述",
+          "kind": "strip",
+          "h": 140,
+          "x": 64,
+          "y": 1184,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "02-flex-advert-tiers"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "02-flex-advert-fixed-tiers",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 122
+        },
+        {
+          "containerId": "02-flex-advert-match-price",
+          "x": 92,
+          "y": 652,
+          "w": 1016,
+          "h": 480
+        },
+        {
+          "containerId": "02-flex-advert-tiers",
+          "x": 92,
+          "y": 1208,
+          "w": 1016,
+          "h": 92
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "02-flex-cover",
+      "setId": "02-flex",
+      "label": "组排 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "duo",
+      "titleLines": [
+        "组排陪玩"
+      ],
+      "coverCore": [
+        "匹配 / 胜率匹配 / 组排"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "02-flex-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "02-flex-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "02-flex-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "02-flex-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "03-arena-price",
+      "setId": "03-arena",
+      "label": "斗魂 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 2472,
+      "ew": 3200,
+      "eh": 6592,
+      "theme": "arena",
+      "accent": "#83b6c8",
+      "hero": "duo",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "tiers",
+          "label": "斗魂四档价目",
+          "kind": "cards",
+          "h": 350,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "03-arena-price-tiers"
+        },
+        {
+          "id": "double-guarantee",
+          "label": "双男三档名次要求",
+          "kind": "table",
+          "h": 428,
+          "rows": 3,
+          "columns": 3,
+          "rowHeight": 116,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 818,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "03-arena-price-double-guarantee"
+        },
+        {
+          "id": "mixed",
+          "label": "混搭与一护二说明",
+          "kind": "notes",
+          "h": 330,
+          "sourceIndexes": [
+            3,
+            4
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1274,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "03-arena-price-mixed"
+        },
+        {
+          "id": "arena-rules",
+          "label": "斗魂3×6规则与赔付例外",
+          "kind": "notes",
+          "h": 660,
+          "sourceIndexes": [
+            0,
+            5,
+            6,
+            7,
+            8
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1632,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "03-arena-price-arena-rules"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 2302,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "03-arena-price-tiers",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 302
+        },
+        {
+          "containerId": "03-arena-price-double-guarantee",
+          "x": 92,
+          "y": 842,
+          "w": 1016,
+          "h": 380
+        },
+        {
+          "containerId": "03-arena-price-mixed",
+          "x": 92,
+          "y": 1298,
+          "w": 1016,
+          "h": 282
+        },
+        {
+          "containerId": "03-arena-price-arena-rules",
+          "x": 92,
+          "y": 1656,
+          "w": 1016,
+          "h": 612
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "03-arena-advert",
+      "setId": "03-arena",
+      "label": "斗魂 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "arena",
+      "accent": "#83b6c8",
+      "hero": "duo",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "tiers",
+          "label": "娱乐 / 技术 / 招牌 / 顶尖",
+          "kind": "cards",
+          "h": 680,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "03-arena-advert-tiers"
+        },
+        {
+          "id": "mode",
+          "label": "3×6竞技场模式说明",
+          "kind": "strip",
+          "h": 150,
+          "x": 64,
+          "y": 1138,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "03-arena-advert-mode"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "03-arena-advert-tiers",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 632
+        },
+        {
+          "containerId": "03-arena-advert-mode",
+          "x": 92,
+          "y": 1162,
+          "w": 1016,
+          "h": 102
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "03-arena-cover",
+      "setId": "03-arena",
+      "label": "斗魂 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "arena",
+      "accent": "#83b6c8",
+      "hero": "duo",
+      "titleLines": [
+        "斗魂陪玩"
+      ],
+      "coverCore": [
+        "3×6斗魂竞技场",
+        "娱乐 / 技术 / 招牌 / 顶尖"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "03-arena-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "03-arena-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "03-arena-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "03-arena-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "04-boost-price",
+      "setId": "04-boost",
+      "label": "代练 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 3744,
+      "ew": 3200,
+      "eh": 9984,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "qualification",
+          "label": "新秀 / 招牌代练资质",
+          "kind": "cards",
+          "h": 240,
+          "cards": 2,
+          "columns": 2,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-price-qualification"
+        },
+        {
+          "id": "basic-ranks",
+          "label": "黑铁到翡翠：新秀 / 招牌对照",
+          "kind": "table",
+          "h": 644,
+          "rows": 6,
+          "columns": 3,
+          "rowHeight": 94,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 708,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-price-basic-ranks"
+        },
+        {
+          "id": "diamond-ranks",
+          "label": "钻石四段：新秀 / 招牌对照",
+          "kind": "table",
+          "h": 456,
+          "rows": 4,
+          "columns": 3,
+          "rowHeight": 94,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 1380,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-price-diamond-ranks"
+        },
+        {
+          "id": "packages",
+          "label": "大师套餐：新秀 / 招牌对照",
+          "kind": "table",
+          "h": 296,
+          "rows": 2,
+          "columns": 3,
+          "rowHeight": 108,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 1864,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-price-packages"
+        },
+        {
+          "id": "compensation",
+          "label": "账号保障与补分规则",
+          "kind": "notes",
+          "h": 520,
+          "sourceIndexes": [
+            0,
+            2,
+            5
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2188,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-price-compensation"
+        },
+        {
+          "id": "designated",
+          "label": "指定位置、英雄、选用率",
+          "kind": "notes",
+          "h": 400,
+          "sourceIndexes": [
+            1,
+            3,
+            4
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2736,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-price-designated"
+        },
+        {
+          "id": "hidden",
+          "label": "高隐藏分条件与费用",
+          "kind": "notes",
+          "h": 400,
+          "sourceIndexes": [
+            6
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 3164,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-price-hidden"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 3574,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "04-boost-price-qualification",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 192
+        },
+        {
+          "containerId": "04-boost-price-basic-ranks",
+          "x": 92,
+          "y": 732,
+          "w": 1016,
+          "h": 596
+        },
+        {
+          "containerId": "04-boost-price-diamond-ranks",
+          "x": 92,
+          "y": 1404,
+          "w": 1016,
+          "h": 408
+        },
+        {
+          "containerId": "04-boost-price-packages",
+          "x": 92,
+          "y": 1888,
+          "w": 1016,
+          "h": 248
+        },
+        {
+          "containerId": "04-boost-price-compensation",
+          "x": 92,
+          "y": 2212,
+          "w": 1016,
+          "h": 472
+        },
+        {
+          "containerId": "04-boost-price-designated",
+          "x": 92,
+          "y": 2760,
+          "w": 1016,
+          "h": 352
+        },
+        {
+          "containerId": "04-boost-price-hidden",
+          "x": 92,
+          "y": 3188,
+          "w": 1016,
+          "h": 352
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "04-boost-advert",
+      "setId": "04-boost",
+      "label": "代练 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "core-prices",
+          "label": "基础段位：新秀 / 招牌",
+          "kind": "table",
+          "h": 650,
+          "rows": 6,
+          "columns": 3,
+          "rowHeight": 95,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-advert-core-prices"
+        },
+        {
+          "id": "packages",
+          "label": "两个大师套餐",
+          "kind": "cards",
+          "h": 220,
+          "cards": 2,
+          "columns": 2,
+          "x": 64,
+          "y": 1108,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "04-boost-advert-packages"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "04-boost-advert-core-prices",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 602
+        },
+        {
+          "containerId": "04-boost-advert-packages",
+          "x": 92,
+          "y": 1132,
+          "w": 1016,
+          "h": 172
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "04-boost-cover",
+      "setId": "04-boost",
+      "label": "代练 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "titleLines": [
+        "段位代练"
+      ],
+      "coverCore": [
+        "新秀 / 招牌",
+        "按段位选择代练"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "04-boost-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "04-boost-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "04-boost-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "04-boost-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "05-lp-price",
+      "setId": "05-lp",
+      "label": "打分 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 3160,
+      "ew": 3200,
+      "eh": 8427,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "qualification",
+          "label": "T2性价比 / T1效率与资质",
+          "kind": "cards",
+          "h": 280,
+          "cards": 2,
+          "columns": 2,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-price-qualification"
+        },
+        {
+          "id": "lp-price",
+          "label": "五个分数区间 × T2 / T1",
+          "kind": "table",
+          "h": 640,
+          "rows": 5,
+          "columns": 3,
+          "rowHeight": 112,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 748,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-price-lp-price"
+        },
+        {
+          "id": "minimum",
+          "label": "大师 / 宗师 / 王者起接分数",
+          "kind": "cards",
+          "h": 180,
+          "cards": 3,
+          "columns": 3,
+          "x": 64,
+          "y": 1416,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-price-minimum"
+        },
+        {
+          "id": "designated",
+          "label": "直播、位置、英雄指定",
+          "kind": "notes",
+          "h": 410,
+          "sourceIndexes": [
+            2,
+            3,
+            4,
+            5
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1624,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-price-designated"
+        },
+        {
+          "id": "hidden",
+          "label": "隐藏分、补分与第三赛段规则",
+          "kind": "notes",
+          "h": 650,
+          "sourceIndexes": [
+            6,
+            7,
+            8,
+            9
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2062,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-price-hidden"
+        },
+        {
+          "id": "region",
+          "label": "一区与高分演员局费用",
+          "kind": "notes",
+          "h": 240,
+          "sourceIndexes": [
+            0,
+            10
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2740,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-price-region"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 2990,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "05-lp-price-qualification",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 232
+        },
+        {
+          "containerId": "05-lp-price-lp-price",
+          "x": 92,
+          "y": 772,
+          "w": 1016,
+          "h": 592
+        },
+        {
+          "containerId": "05-lp-price-minimum",
+          "x": 92,
+          "y": 1440,
+          "w": 1016,
+          "h": 132
+        },
+        {
+          "containerId": "05-lp-price-designated",
+          "x": 92,
+          "y": 1648,
+          "w": 1016,
+          "h": 362
+        },
+        {
+          "containerId": "05-lp-price-hidden",
+          "x": 92,
+          "y": 2086,
+          "w": 1016,
+          "h": 602
+        },
+        {
+          "containerId": "05-lp-price-region",
+          "x": 92,
+          "y": 2764,
+          "w": 1016,
+          "h": 192
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "05-lp-advert",
+      "setId": "05-lp",
+      "label": "打分 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "core-prices",
+          "label": "五个分数区间 × T2 / T1",
+          "kind": "table",
+          "h": 650,
+          "rows": 5,
+          "columns": 3,
+          "rowHeight": 114,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-advert-core-prices"
+        },
+        {
+          "id": "conditions",
+          "label": "起接分数与一区必要条件",
+          "kind": "strip",
+          "h": 220,
+          "x": 64,
+          "y": 1108,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "05-lp-advert-conditions"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "05-lp-advert-core-prices",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 602
+        },
+        {
+          "containerId": "05-lp-advert-conditions",
+          "x": 92,
+          "y": 1132,
+          "w": 1016,
+          "h": 172
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "05-lp-cover",
+      "setId": "05-lp",
+      "label": "打分 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "titleLines": [
+        "打分"
+      ],
+      "coverCore": [
+        "T1效率 · T2性价比"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "05-lp-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "05-lp-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "05-lp-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "05-lp-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "06-overseas-price",
+      "setId": "06-overseas",
+      "label": "外服代练/打分 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 3570,
+      "ew": 3200,
+      "eh": 9520,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "below-master",
+          "label": "大师以下：大段 / 小段",
+          "kind": "table",
+          "h": 428,
+          "rows": 3,
+          "columns": 3,
+          "rowHeight": 116,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-price-below-master"
+        },
+        {
+          "id": "diamond",
+          "label": "钻石单段与钻四到大师",
+          "kind": "cards",
+          "h": 390,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 896,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-price-diamond"
+        },
+        {
+          "id": "above-master",
+          "label": "六个分数区间每分报价",
+          "kind": "table",
+          "h": 644,
+          "rows": 6,
+          "columns": 2,
+          "rowHeight": 94,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 1314,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-price-above-master"
+        },
+        {
+          "id": "payment",
+          "label": "支付方式与账号保障",
+          "kind": "notes",
+          "h": 380,
+          "sourceIndexes": [
+            0,
+            1,
+            2
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1986,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-price-payment"
+        },
+        {
+          "id": "surcharge",
+          "label": "补分加价",
+          "kind": "notes",
+          "h": 300,
+          "sourceIndexes": [
+            3
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2394,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-price-surcharge"
+        },
+        {
+          "id": "designated",
+          "label": "指定位置与英雄条件",
+          "kind": "notes",
+          "h": 400,
+          "sourceIndexes": [
+            4
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2722,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-price-designated"
+        },
+        {
+          "id": "korea",
+          "label": "韩服与800分以上咨询口径",
+          "kind": "notes",
+          "h": 240,
+          "sourceIndexes": [
+            5,
+            6
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 3150,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-price-korea"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 3400,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "06-overseas-price-below-master",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 380
+        },
+        {
+          "containerId": "06-overseas-price-diamond",
+          "x": 92,
+          "y": 920,
+          "w": 1016,
+          "h": 342
+        },
+        {
+          "containerId": "06-overseas-price-above-master",
+          "x": 92,
+          "y": 1338,
+          "w": 1016,
+          "h": 596
+        },
+        {
+          "containerId": "06-overseas-price-payment",
+          "x": 92,
+          "y": 2010,
+          "w": 1016,
+          "h": 332
+        },
+        {
+          "containerId": "06-overseas-price-surcharge",
+          "x": 92,
+          "y": 2418,
+          "w": 1016,
+          "h": 252
+        },
+        {
+          "containerId": "06-overseas-price-designated",
+          "x": 92,
+          "y": 2746,
+          "w": 1016,
+          "h": 352
+        },
+        {
+          "containerId": "06-overseas-price-korea",
+          "x": 92,
+          "y": 3174,
+          "w": 1016,
+          "h": 192
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "06-overseas-advert",
+      "setId": "06-overseas",
+      "label": "外服代练/打分 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "core-prices",
+          "label": "大师以下代练 / 大师以上打分",
+          "kind": "cards",
+          "h": 560,
+          "cards": 2,
+          "columns": 1,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-advert-core-prices"
+        },
+        {
+          "id": "server",
+          "label": "适用外服 / 韩服浮动报价",
+          "kind": "strip",
+          "h": 260,
+          "x": 64,
+          "y": 1018,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "06-overseas-advert-server"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "06-overseas-advert-core-prices",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 512
+        },
+        {
+          "containerId": "06-overseas-advert-server",
+          "x": 92,
+          "y": 1042,
+          "w": 1016,
+          "h": 212
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "06-overseas-cover",
+      "setId": "06-overseas",
+      "label": "外服代练/打分 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "titleLines": [
+        "外服代练",
+        "/ 打分"
+      ],
+      "coverCore": [
+        "外服代练 / 打分"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "06-overseas-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "06-overseas-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "06-overseas-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "06-overseas-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "07-day-price",
+      "setId": "07-day",
+      "label": "联盟包天 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 3736,
+      "ew": 3200,
+      "eh": 9963,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "below-diamond",
+          "label": "陪玩性质 · 钻石以下",
+          "kind": "table",
+          "h": 428,
+          "rows": 3,
+          "columns": 3,
+          "rowHeight": 116,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-below-diamond"
+        },
+        {
+          "id": "above-diamond",
+          "label": "陪玩性质 · 钻石以上",
+          "kind": "table",
+          "h": 428,
+          "rows": 3,
+          "columns": 3,
+          "rowHeight": 116,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 896,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-above-diamond"
+        },
+        {
+          "id": "master-low",
+          "label": "代练性质 · 大师100–500分",
+          "kind": "table",
+          "h": 312,
+          "rows": 2,
+          "columns": 3,
+          "rowHeight": 116,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 1352,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-master-low"
+        },
+        {
+          "id": "master-high",
+          "label": "代练性质 · 大师500–800分",
+          "kind": "table",
+          "h": 312,
+          "rows": 2,
+          "columns": 3,
+          "rowHeight": 116,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 1692,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-master-high"
+        },
+        {
+          "id": "season",
+          "label": "S15 / S16段位取高",
+          "kind": "notes",
+          "h": 360,
+          "sourceIndexes": [
+            0
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2032,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-season"
+        },
+        {
+          "id": "companion",
+          "label": "陪玩结算：死亡条件与补足净胜",
+          "kind": "notes",
+          "h": 350,
+          "sourceIndexes": [
+            1
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2420,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-companion"
+        },
+        {
+          "id": "boost",
+          "label": "代练指定与结算规则",
+          "kind": "notes",
+          "h": 350,
+          "sourceIndexes": [
+            2
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2798,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-boost"
+        },
+        {
+          "id": "event",
+          "label": "500分以上活动前提与客服口径",
+          "kind": "notes",
+          "h": 380,
+          "sourceIndexes": [
+            3
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 3176,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-price-event"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 3566,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "07-day-price-below-diamond",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 380
+        },
+        {
+          "containerId": "07-day-price-above-diamond",
+          "x": 92,
+          "y": 920,
+          "w": 1016,
+          "h": 380
+        },
+        {
+          "containerId": "07-day-price-master-low",
+          "x": 92,
+          "y": 1376,
+          "w": 1016,
+          "h": 264
+        },
+        {
+          "containerId": "07-day-price-master-high",
+          "x": 92,
+          "y": 1716,
+          "w": 1016,
+          "h": 264
+        },
+        {
+          "containerId": "07-day-price-season",
+          "x": 92,
+          "y": 2056,
+          "w": 1016,
+          "h": 312
+        },
+        {
+          "containerId": "07-day-price-companion",
+          "x": 92,
+          "y": 2444,
+          "w": 1016,
+          "h": 302
+        },
+        {
+          "containerId": "07-day-price-boost",
+          "x": 92,
+          "y": 2822,
+          "w": 1016,
+          "h": 302
+        },
+        {
+          "containerId": "07-day-price-event",
+          "x": 92,
+          "y": 3200,
+          "w": 1016,
+          "h": 332
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "07-day-advert",
+      "setId": "07-day",
+      "label": "联盟包天 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "core-prices",
+          "label": "四类包天核心档位",
+          "kind": "cards",
+          "h": 650,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-advert-core-prices"
+        },
+        {
+          "id": "conditions",
+          "label": "大师500分以上活动前提",
+          "kind": "strip",
+          "h": 200,
+          "x": 64,
+          "y": 1108,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "07-day-advert-conditions"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "07-day-advert-core-prices",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 602
+        },
+        {
+          "containerId": "07-day-advert-conditions",
+          "x": 92,
+          "y": 1132,
+          "w": 1016,
+          "h": 152
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "07-day-cover",
+      "setId": "07-day",
+      "label": "联盟包天 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "titleLines": [
+        "联盟包天"
+      ],
+      "coverCore": [
+        "8小时包天",
+        "陪玩 / 代练"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "07-day-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "07-day-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "07-day-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "07-day-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "08-haidou-price",
+      "setId": "08-haidou",
+      "label": "海斗 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 2284,
+      "ew": 3200,
+      "eh": 6091,
+      "theme": "arena",
+      "accent": "#83b6c8",
+      "hero": "duo",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "female-male",
+          "label": "女陪五档 / 男陪四档",
+          "kind": "parallel-tables",
+          "h": 640,
+          "cards": 2,
+          "columns": 2,
+          "rowsByCard": [
+            5,
+            4
+          ],
+          "tableColumns": 2,
+          "rowHeight": 104,
+          "headerHeight": 104,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "08-haidou-price-female-male"
+        },
+        {
+          "id": "settlement",
+          "label": "单陪 / 双陪：满足任一项即结算",
+          "kind": "notes",
+          "h": 390,
+          "sourceIndexes": [
+            1,
+            2,
+            3
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1108,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "08-haidou-price-settlement"
+        },
+        {
+          "id": "compensation",
+          "label": "三陪 / 四陪赔付",
+          "kind": "cards",
+          "h": 330,
+          "cards": 2,
+          "columns": 2,
+          "x": 64,
+          "y": 1526,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "08-haidou-price-compensation"
+        },
+        {
+          "id": "exceptions",
+          "label": "女陪与三陪例外",
+          "kind": "notes",
+          "h": 220,
+          "sourceIndexes": [
+            0,
+            4
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1884,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "08-haidou-price-exceptions"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 2114,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "08-haidou-price-female-male",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 592
+        },
+        {
+          "containerId": "08-haidou-price-settlement",
+          "x": 92,
+          "y": 1132,
+          "w": 1016,
+          "h": 342
+        },
+        {
+          "containerId": "08-haidou-price-compensation",
+          "x": 92,
+          "y": 1550,
+          "w": 1016,
+          "h": 282
+        },
+        {
+          "containerId": "08-haidou-price-exceptions",
+          "x": 92,
+          "y": 1908,
+          "w": 1016,
+          "h": 172
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "08-haidou-advert",
+      "setId": "08-haidou",
+      "label": "海斗 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "arena",
+      "accent": "#83b6c8",
+      "hero": "duo",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "female-male",
+          "label": "女陪五档 / 男陪四档",
+          "kind": "parallel-tables",
+          "h": 640,
+          "cards": 2,
+          "columns": 2,
+          "rowsByCard": [
+            5,
+            4
+          ],
+          "tableColumns": 2,
+          "rowHeight": 104,
+          "headerHeight": 104,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "08-haidou-advert-female-male"
+        },
+        {
+          "id": "tiers",
+          "label": "男陪 / 女陪档位信息",
+          "kind": "strip",
+          "h": 190,
+          "x": 64,
+          "y": 1098,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "08-haidou-advert-tiers"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "08-haidou-advert-female-male",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 592
+        },
+        {
+          "containerId": "08-haidou-advert-tiers",
+          "x": 92,
+          "y": 1122,
+          "w": 1016,
+          "h": 142
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "08-haidou-cover",
+      "setId": "08-haidou",
+      "label": "海斗 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "arena",
+      "accent": "#83b6c8",
+      "hero": "duo",
+      "titleLines": [
+        "海斗陪玩"
+      ],
+      "coverCore": [
+        "女陪 / 男陪",
+        "多档位可选"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "08-haidou-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "08-haidou-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "08-haidou-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "08-haidou-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "09-placement-price",
+      "setId": "09-placement",
+      "label": "单双新赛季定位赛 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 3318,
+      "ew": 3200,
+      "eh": 8848,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "offer",
+          "label": "同区可双排双号一起下单88折",
+          "kind": "offer",
+          "h": 170,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-price-offer"
+        },
+        {
+          "id": "below-master",
+          "label": "大师以下定位赛六档",
+          "kind": "table",
+          "h": 716,
+          "rows": 6,
+          "columns": 3,
+          "rowHeight": 106,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 638,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-price-below-master"
+        },
+        {
+          "id": "above-master",
+          "label": "大师以上定位赛四档",
+          "kind": "table",
+          "h": 504,
+          "rows": 4,
+          "columns": 3,
+          "rowHeight": 106,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 1382,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-price-above-master"
+        },
+        {
+          "id": "new-account",
+          "label": "新号到大师：胜率套餐",
+          "kind": "cards",
+          "h": 210,
+          "cards": 1,
+          "columns": 1,
+          "x": 64,
+          "y": 1914,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-price-new-account"
+        },
+        {
+          "id": "pricing",
+          "label": "上赛季段位 / 隐藏分与一区收费",
+          "kind": "notes",
+          "h": 380,
+          "sourceIndexes": [
+            0,
+            1,
+            2
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2152,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-price-pricing"
+        },
+        {
+          "id": "designated",
+          "label": "位置 / 闪现 / 英雄指定",
+          "kind": "notes",
+          "h": 330,
+          "sourceIndexes": [
+            3
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2560,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-price-designated"
+        },
+        {
+          "id": "compensation",
+          "label": "胜场不足补偿：或关系",
+          "kind": "notes",
+          "h": 220,
+          "sourceIndexes": [
+            4
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2918,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-price-compensation"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 3148,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "09-placement-price-offer",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 122
+        },
+        {
+          "containerId": "09-placement-price-below-master",
+          "x": 92,
+          "y": 662,
+          "w": 1016,
+          "h": 668
+        },
+        {
+          "containerId": "09-placement-price-above-master",
+          "x": 92,
+          "y": 1406,
+          "w": 1016,
+          "h": 456
+        },
+        {
+          "containerId": "09-placement-price-new-account",
+          "x": 92,
+          "y": 1938,
+          "w": 1016,
+          "h": 162
+        },
+        {
+          "containerId": "09-placement-price-pricing",
+          "x": 92,
+          "y": 2176,
+          "w": 1016,
+          "h": 332
+        },
+        {
+          "containerId": "09-placement-price-designated",
+          "x": 92,
+          "y": 2584,
+          "w": 1016,
+          "h": 282
+        },
+        {
+          "containerId": "09-placement-price-compensation",
+          "x": 92,
+          "y": 2942,
+          "w": 1016,
+          "h": 172
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "09-placement-advert",
+      "setId": "09-placement",
+      "label": "单双新赛季定位赛 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "offer",
+          "label": "同区可双排双号88折",
+          "kind": "offer",
+          "h": 160,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-advert-offer"
+        },
+        {
+          "id": "core-prices",
+          "label": "四个代表段位价格与胜场",
+          "kind": "cards",
+          "h": 590,
+          "cards": 4,
+          "columns": 2,
+          "x": 64,
+          "y": 618,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-advert-core-prices"
+        },
+        {
+          "id": "pricing",
+          "label": "按上赛季段位及隐藏分收费",
+          "kind": "strip",
+          "h": 130,
+          "x": 64,
+          "y": 1236,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "09-placement-advert-pricing"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "09-placement-advert-offer",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 112
+        },
+        {
+          "containerId": "09-placement-advert-core-prices",
+          "x": 92,
+          "y": 642,
+          "w": 1016,
+          "h": 542
+        },
+        {
+          "containerId": "09-placement-advert-pricing",
+          "x": 92,
+          "y": 1260,
+          "w": 1016,
+          "h": 82
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "09-placement-cover",
+      "setId": "09-placement",
+      "label": "单双新赛季定位赛 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#d5b57a",
+      "hero": "victory",
+      "titleLines": [
+        "单双新赛季",
+        "定位赛"
+      ],
+      "coverCore": [
+        "同区可双排双号",
+        "一起下单88折"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "09-placement-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "09-placement-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "09-placement-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "09-placement-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    },
+    {
+      "id": "10-maintenance-price",
+      "setId": "10-maintenance",
+      "label": "维护局 · 完整价目页",
+      "type": "price",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 3246,
+      "ew": 3200,
+      "eh": 8656,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 54,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 200
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 344,
+          "w": 580,
+          "h": 68
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 76,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "offers",
+          "label": "后续维护 / 三个月维护优惠",
+          "kind": "cards",
+          "h": 360,
+          "cards": 2,
+          "columns": 1,
+          "x": 64,
+          "y": 440,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-price-offers"
+        },
+        {
+          "id": "maintenance",
+          "label": "28局维护：T1 / T2价格与净胜",
+          "kind": "table",
+          "h": 696,
+          "rows": 4,
+          "columns": 3,
+          "rowHeight": 154,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 828,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-price-maintenance"
+        },
+        {
+          "id": "high-lp",
+          "label": "一千分以上T1咨询档",
+          "kind": "cards",
+          "h": 190,
+          "cards": 1,
+          "columns": 1,
+          "x": 64,
+          "y": 1552,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-price-high-lp"
+        },
+        {
+          "id": "offer-terms",
+          "label": "特惠赔付与按预算调整",
+          "kind": "notes",
+          "h": 440,
+          "sourceIndexes": [
+            0,
+            1
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 1770,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-price-offer-terms"
+        },
+        {
+          "id": "hidden-region",
+          "label": "隐藏分 / 一区与其他区浮动",
+          "kind": "notes",
+          "h": 440,
+          "sourceIndexes": [
+            2,
+            3
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2238,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-price-hidden-region"
+        },
+        {
+          "id": "designated",
+          "label": "原价维护与600分以上指定条件",
+          "kind": "notes",
+          "h": 360,
+          "sourceIndexes": [
+            4
+          ],
+          "bodyFont": 50,
+          "lineHeight": 68,
+          "x": 64,
+          "y": 2706,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-price-designated"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 3076,
+        "w": 1200,
+        "h": 170
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "10-maintenance-price-offers",
+          "x": 92,
+          "y": 464,
+          "w": 1016,
+          "h": 312
+        },
+        {
+          "containerId": "10-maintenance-price-maintenance",
+          "x": 92,
+          "y": 852,
+          "w": 1016,
+          "h": 648
+        },
+        {
+          "containerId": "10-maintenance-price-high-lp",
+          "x": 92,
+          "y": 1576,
+          "w": 1016,
+          "h": 142
+        },
+        {
+          "containerId": "10-maintenance-price-offer-terms",
+          "x": 92,
+          "y": 1794,
+          "w": 1016,
+          "h": 392
+        },
+        {
+          "containerId": "10-maintenance-price-hidden-region",
+          "x": 92,
+          "y": 2262,
+          "w": 1016,
+          "h": 392
+        },
+        {
+          "containerId": "10-maintenance-price-designated",
+          "x": 92,
+          "y": 2730,
+          "w": 1016,
+          "h": 312
+        }
+      ],
+      "notes": [
+        "插画与图案不进入价格栏",
+        "表头统一整条海军蓝",
+        "须知正文50px起，按文案量调整空间",
+        "完整价目不省略业务条件与例外"
+      ]
+    },
+    {
+      "id": "10-maintenance-advert",
+      "setId": "10-maintenance",
+      "label": "维护局 · 广告页",
+      "type": "advert",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1200,
+      "h": 1600,
+      "ew": 2400,
+      "eh": 3200,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "header": {
+        "brandSafe": {
+          "x": 64,
+          "y": 52,
+          "w": 580,
+          "h": 60
+        },
+        "titleSafe": {
+          "x": 64,
+          "y": 130,
+          "w": 580,
+          "h": 172
+        },
+        "subtitleSafe": {
+          "x": 64,
+          "y": 314,
+          "w": 580,
+          "h": 70
+        },
+        "heroBox": {
+          "x": 670,
+          "y": 66,
+          "w": 470,
+          "h": 314
+        }
+      },
+      "blocks": [
+        {
+          "id": "offer",
+          "label": "两项维护7折活动及必要条件",
+          "kind": "offer",
+          "h": 190,
+          "x": 64,
+          "y": 430,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-advert-offer"
+        },
+        {
+          "id": "maintenance",
+          "label": "28局维护：四档核心价目",
+          "kind": "table",
+          "h": 608,
+          "rows": 4,
+          "columns": 3,
+          "rowHeight": 132,
+          "headerHeight": 80,
+          "x": 64,
+          "y": 648,
+          "w": 1072,
+          "safeInset": 28,
+          "containerId": "10-maintenance-advert-maintenance"
+        }
+      ],
+      "footer": {
+        "x": 0,
+        "y": 1480,
+        "w": 1200,
+        "h": 120
+      },
+      "textSafeAreas": [
+        {
+          "containerId": "10-maintenance-advert-offer",
+          "x": 92,
+          "y": 454,
+          "w": 1016,
+          "h": 142
+        },
+        {
+          "containerId": "10-maintenance-advert-maintenance",
+          "x": 92,
+          "y": 672,
+          "w": 1016,
+          "h": 560
+        }
+      ],
+      "notes": [
+        "仅核心价目与优惠必要条件，不附下单须知",
+        "内容可提炼但不得增加承诺",
+        "不把完整价目全量缩小塞进3:4广告"
+      ]
+    },
+    {
+      "id": "10-maintenance-cover",
+      "setId": "10-maintenance",
+      "label": "维护局 · 封面",
+      "type": "cover",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 1600,
+      "h": 900,
+      "ew": 3200,
+      "eh": 1800,
+      "theme": "rift",
+      "accent": "#81b9af",
+      "hero": "victory",
+      "titleLines": [
+        "维护局"
+      ],
+      "coverCore": [
+        "28局维护",
+        "兴安打分满300分 · 后续维护7折"
+      ],
+      "copyZones": {
+        "brand": {
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        "title": {
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        "core": {
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        "version": {
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      },
+      "heroBox": {
+        "x": 810,
+        "y": 270,
+        "w": 730,
+        "h": 487
+      },
+      "blocks": [],
+      "textSafeAreas": [
+        {
+          "containerId": "10-maintenance-cover-brand",
+          "x": 74,
+          "y": 80,
+          "w": 710,
+          "h": 70
+        },
+        {
+          "containerId": "10-maintenance-cover-title",
+          "x": 74,
+          "y": 212,
+          "w": 710,
+          "h": 230
+        },
+        {
+          "containerId": "10-maintenance-cover-core",
+          "x": 74,
+          "y": 476,
+          "w": 710,
+          "h": 140
+        },
+        {
+          "containerId": "10-maintenance-cover-version",
+          "x": 114,
+          "y": 694,
+          "w": 630,
+          "h": 80
+        }
+      ],
+      "notes": [
+        "所有文案组在各自左侧净文字区横向居中",
+        "封面不写注意事项、赔付或结算例外",
+        "活动必须显示必要条件，源数据保留完整规则"
+      ]
+    }
+  ]
+}

@@ -46,20 +46,23 @@
     "pages/favorite/index",
     "pages/settings/index",
     "pages/companion-picker/index",
-    "pages/companion-detail/index"
+    "pages/companion-detail/index",
+    "pages/reservations/index",
+    "pages/reservation-detail/index",
+    "pages/reservation-create/index"
   ],
   "window": {
     "navigationBarTitleText": "兴安电竞",
-    "navigationBarBackgroundColor": "#f1f6f9",
+    "navigationBarBackgroundColor": "#f8f7f1",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f1f6f9",
+    "backgroundColor": "#f8f7f1",
     "backgroundTextStyle": "dark",
     "enablePullDownRefresh": true
   },
   "tabBar": {
-    "color": "#336b9a",
-    "selectedColor": "#136398",
-    "backgroundColor": "#ffffff",
+    "color": "#475569",
+    "selectedColor": "#2563eb",
+    "backgroundColor": "#fffefa",
     "borderStyle": "white",
     "list": [
       {

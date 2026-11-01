@@ -1,0 +1,1490 @@
+[
+  {
+    "page": "desktop-absolute",
+    "role": "brand",
+    "container": [
+      174,
+      42,
+      344,
+      52
+    ],
+    "visibleWidth": 211.36019541000002,
+    "visibleHeight": 43.68000000000001,
+    "fontSize": 39,
+    "phoneSize": 14.853515625,
+    "centerX": 346,
+    "centerY": 68
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "art-title",
+    "container": [
+      104,
+      122,
+      424,
+      95
+    ],
+    "visibleWidth": 424.00000238851993,
+    "visibleHeight": 91.49376803942327,
+    "fontSize": 83.13492147356223,
+    "phoneSize": 31.66271423309499,
+    "centerX": 316,
+    "centerY": 169.5
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "subtitle",
+    "container": [
+      133,
+      233,
+      386,
+      35
+    ],
+    "visibleWidth": 272.74854,
+    "visibleHeight": 30.243162899999998,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 326,
+    "centerY": 250.5
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "platform-completion",
+    "container": [
+      70,
+      299,
+      877,
+      32
+    ],
+    "visibleWidth": 491.67383216,
+    "visibleHeight": 31.4375008,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 508.5,
+    "centerY": 315
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "completion-target-0",
+    "container": [
+      98,
+      389,
+      228,
+      48
+    ],
+    "visibleWidth": 209.11132830000003,
+    "visibleHeight": 34.077148,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 212,
+    "centerY": 413
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "completion-target-1",
+    "container": [
+      397,
+      389,
+      228,
+      48
+    ],
+    "visibleWidth": 208.15429705000003,
+    "visibleHeight": 34.111329,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 511,
+    "centerY": 413
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "completion-target-2",
+    "container": [
+      695,
+      389,
+      230,
+      48
+    ],
+    "visibleWidth": 209.213865,
+    "visibleHeight": 33.9746085,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 810,
+    "centerY": 413
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "table-heading",
+    "container": [
+      74,
+      493,
+      143,
+      34
+    ],
+    "visibleWidth": 61.243166,
+    "visibleHeight": 30.1826168,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 145.5,
+    "centerY": 510
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "table-heading",
+    "container": [
+      247,
+      493,
+      224,
+      34
+    ],
+    "visibleWidth": 123.33398453,
+    "visibleHeight": 30.2734375,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 359,
+    "centerY": 510
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "table-heading",
+    "container": [
+      493,
+      493,
+      224,
+      34
+    ],
+    "visibleWidth": 152.88085953,
+    "visibleHeight": 29.9707039,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 605,
+    "centerY": 510
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "table-heading",
+    "container": [
+      754,
+      493,
+      204,
+      34
+    ],
+    "visibleWidth": 123.2734375,
+    "visibleHeight": 30.485350399999998,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 856,
+    "centerY": 510
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "sand-count",
+    "container": [
+      331,
+      558,
+      139,
+      66
+    ],
+    "visibleWidth": 73.717774322,
+    "visibleHeight": 49.492675764,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 400.5,
+    "centerY": 591
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "regular-count",
+    "container": [
+      579,
+      558,
+      138,
+      66
+    ],
+    "visibleWidth": 74.223145364,
+    "visibleHeight": 49.99804859999999,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 648,
+    "centerY": 591
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "sand-count",
+    "container": [
+      331,
+      668,
+      139,
+      66
+    ],
+    "visibleWidth": 72.808106336,
+    "visibleHeight": 49.492675764,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 400.5,
+    "centerY": 701
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "regular-count",
+    "container": [
+      579,
+      668,
+      138,
+      66
+    ],
+    "visibleWidth": 75.2001953,
+    "visibleHeight": 49.99804859999999,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 648,
+    "centerY": 701
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "sand-count",
+    "container": [
+      331,
+      777,
+      139,
+      66
+    ],
+    "visibleWidth": 98.41357550000001,
+    "visibleHeight": 50.09911980000001,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 400.5,
+    "centerY": 810
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "regular-count",
+    "container": [
+      579,
+      777,
+      138,
+      66
+    ],
+    "visibleWidth": 97.9082057,
+    "visibleHeight": 49.492675764,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 648,
+    "centerY": 810
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "reward-art-title",
+    "container": [
+      170,
+      898,
+      756,
+      41
+    ],
+    "visibleWidth": 257.165951678,
+    "visibleHeight": 38.6069963,
+    "fontSize": 37,
+    "phoneSize": 14.091796875,
+    "centerX": 548,
+    "centerY": 918.5
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "reward-trigger",
+    "container": [
+      170,
+      943,
+      756,
+      32
+    ],
+    "visibleWidth": 359.208984,
+    "visibleHeight": 29.1796875,
+    "fontSize": 30,
+    "phoneSize": 11.42578125,
+    "centerX": 548,
+    "centerY": 959
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "reward-extra",
+    "container": [
+      101,
+      990,
+      348,
+      68
+    ],
+    "visibleWidth": 319.82273486504454,
+    "visibleHeight": 45.7426746,
+    "fontSize": 30,
+    "phoneSize": 11.42578125,
+    "centerX": 275,
+    "centerY": 1024
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "reward-gift",
+    "container": [
+      569,
+      990,
+      350,
+      68
+    ],
+    "visibleWidth": 225.799317472,
+    "visibleHeight": 44.7275367,
+    "fontSize": 30,
+    "phoneSize": 11.42578125,
+    "centerX": 744,
+    "centerY": 1024
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "reward-conditions",
+    "container": [
+      149,
+      1080,
+      727,
+      44
+    ],
+    "visibleWidth": 469.42088985,
+    "visibleHeight": 34.077148,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 512.5,
+    "centerY": 1102
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "notes-art-title",
+    "container": [
+      70,
+      1159,
+      310,
+      34
+    ],
+    "visibleWidth": 122.1939752,
+    "visibleHeight": 31.581,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 225,
+    "centerY": 1176
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "units-key",
+    "container": [
+      713,
+      1161,
+      230,
+      30
+    ],
+    "visibleWidth": 168.56689999999998,
+    "visibleHeight": 22.509765,
+    "fontSize": 25,
+    "phoneSize": 9.521484375,
+    "centerX": 828,
+    "centerY": 1176
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "rule-count",
+    "container": [
+      124,
+      1220,
+      828,
+      39
+    ],
+    "visibleWidth": 539.1386633,
+    "visibleHeight": 34.3505855,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 538,
+    "centerY": 1239.5
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "rule-proxy",
+    "container": [
+      124,
+      1291,
+      828,
+      39
+    ],
+    "visibleWidth": 683.5820322999999,
+    "visibleHeight": 34.3847665,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 538,
+    "centerY": 1310.5
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "rule-loot",
+    "container": [
+      124,
+      1365,
+      828,
+      43
+    ],
+    "visibleWidth": 721.82031148,
+    "visibleHeight": 33.4355456,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 538,
+    "centerY": 1386.5
+  },
+  {
+    "page": "desktop-absolute",
+    "role": "footer",
+    "container": [
+      260,
+      1444,
+      488,
+      41
+    ],
+    "visibleWidth": 425.6367192,
+    "visibleHeight": 23.5078128,
+    "fontSize": 24,
+    "phoneSize": 9.140625,
+    "centerX": 504,
+    "centerY": 1464.5
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "brand",
+    "container": [
+      174,
+      42,
+      344,
+      52
+    ],
+    "visibleWidth": 211.36019541000002,
+    "visibleHeight": 43.68000000000001,
+    "fontSize": 39,
+    "phoneSize": 14.853515625,
+    "centerX": 346,
+    "centerY": 68
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "art-title",
+    "container": [
+      104,
+      122,
+      424,
+      95
+    ],
+    "visibleWidth": 424.00000238851993,
+    "visibleHeight": 91.49376803942327,
+    "fontSize": 83.13492147356223,
+    "phoneSize": 31.66271423309499,
+    "centerX": 316,
+    "centerY": 169.5
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "subtitle",
+    "container": [
+      133,
+      233,
+      386,
+      35
+    ],
+    "visibleWidth": 272.74854,
+    "visibleHeight": 30.243162899999998,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 326,
+    "centerY": 250.5
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "platform-completion",
+    "container": [
+      70,
+      299,
+      877,
+      32
+    ],
+    "visibleWidth": 491.58008208,
+    "visibleHeight": 31.4375008,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 508.5,
+    "centerY": 315
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "completion-target-0",
+    "container": [
+      98,
+      389,
+      228,
+      48
+    ],
+    "visibleWidth": 209.11132830000003,
+    "visibleHeight": 34.077148,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 212,
+    "centerY": 413
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "completion-target-1",
+    "container": [
+      397,
+      389,
+      228,
+      48
+    ],
+    "visibleWidth": 208.15429705000003,
+    "visibleHeight": 34.111329,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 511,
+    "centerY": 413
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "completion-target-2",
+    "container": [
+      695,
+      389,
+      230,
+      48
+    ],
+    "visibleWidth": 209.213865,
+    "visibleHeight": 33.9746085,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 810,
+    "centerY": 413
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "table-heading",
+    "container": [
+      74,
+      493,
+      143,
+      34
+    ],
+    "visibleWidth": 61.243166,
+    "visibleHeight": 30.1826168,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 145.5,
+    "centerY": 510
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "table-heading",
+    "container": [
+      247,
+      493,
+      224,
+      34
+    ],
+    "visibleWidth": 123.33398453,
+    "visibleHeight": 30.2734375,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 359,
+    "centerY": 510
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "table-heading",
+    "container": [
+      493,
+      493,
+      224,
+      34
+    ],
+    "visibleWidth": 152.88085953,
+    "visibleHeight": 29.9707039,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 605,
+    "centerY": 510
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "table-heading",
+    "container": [
+      754,
+      493,
+      204,
+      34
+    ],
+    "visibleWidth": 123.2734375,
+    "visibleHeight": 30.485350399999998,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 856,
+    "centerY": 510
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "sand-count",
+    "container": [
+      331,
+      558,
+      139,
+      66
+    ],
+    "visibleWidth": 73.717774322,
+    "visibleHeight": 49.492675764,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 400.5,
+    "centerY": 591
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "regular-count",
+    "container": [
+      579,
+      558,
+      138,
+      66
+    ],
+    "visibleWidth": 74.223145364,
+    "visibleHeight": 49.99804859999999,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 648,
+    "centerY": 591
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "sand-count",
+    "container": [
+      331,
+      668,
+      139,
+      66
+    ],
+    "visibleWidth": 72.808106336,
+    "visibleHeight": 49.492675764,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 400.5,
+    "centerY": 701
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "regular-count",
+    "container": [
+      579,
+      668,
+      138,
+      66
+    ],
+    "visibleWidth": 75.2001953,
+    "visibleHeight": 49.99804859999999,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 648,
+    "centerY": 701
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "sand-count",
+    "container": [
+      331,
+      777,
+      139,
+      66
+    ],
+    "visibleWidth": 98.41357550000001,
+    "visibleHeight": 50.09911980000001,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 400.5,
+    "centerY": 810
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "regular-count",
+    "container": [
+      579,
+      777,
+      138,
+      66
+    ],
+    "visibleWidth": 97.9082057,
+    "visibleHeight": 49.492675764,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 648,
+    "centerY": 810
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "reward-art-title",
+    "container": [
+      170,
+      898,
+      756,
+      41
+    ],
+    "visibleWidth": 257.165951678,
+    "visibleHeight": 38.6069963,
+    "fontSize": 37,
+    "phoneSize": 14.091796875,
+    "centerX": 548,
+    "centerY": 918.5
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "reward-trigger",
+    "container": [
+      170,
+      943,
+      756,
+      32
+    ],
+    "visibleWidth": 359.208984,
+    "visibleHeight": 29.1796875,
+    "fontSize": 30,
+    "phoneSize": 11.42578125,
+    "centerX": 548,
+    "centerY": 959
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "reward-extra",
+    "container": [
+      101,
+      990,
+      348,
+      68
+    ],
+    "visibleWidth": 319.82273486504454,
+    "visibleHeight": 45.7426746,
+    "fontSize": 30,
+    "phoneSize": 11.42578125,
+    "centerX": 275,
+    "centerY": 1024
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "reward-gift",
+    "container": [
+      569,
+      990,
+      350,
+      68
+    ],
+    "visibleWidth": 225.799317472,
+    "visibleHeight": 44.7275367,
+    "fontSize": 30,
+    "phoneSize": 11.42578125,
+    "centerX": 744,
+    "centerY": 1024
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "reward-conditions",
+    "container": [
+      149,
+      1080,
+      727,
+      44
+    ],
+    "visibleWidth": 469.42088985,
+    "visibleHeight": 34.077148,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 512.5,
+    "centerY": 1102
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "notes-art-title",
+    "container": [
+      70,
+      1159,
+      310,
+      34
+    ],
+    "visibleWidth": 122.1939752,
+    "visibleHeight": 31.581,
+    "fontSize": 31,
+    "phoneSize": 11.806640625,
+    "centerX": 225,
+    "centerY": 1176
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "units-key",
+    "container": [
+      713,
+      1161,
+      230,
+      30
+    ],
+    "visibleWidth": 168.56689999999998,
+    "visibleHeight": 22.509765,
+    "fontSize": 25,
+    "phoneSize": 9.521484375,
+    "centerX": 828,
+    "centerY": 1176
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "rule-count",
+    "container": [
+      124,
+      1220,
+      828,
+      39
+    ],
+    "visibleWidth": 539.1386633,
+    "visibleHeight": 34.3505855,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 538,
+    "centerY": 1239.5
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "rule-proxy",
+    "container": [
+      124,
+      1291,
+      828,
+      39
+    ],
+    "visibleWidth": 683.5820322999999,
+    "visibleHeight": 34.3847665,
+    "fontSize": 35,
+    "phoneSize": 13.330078125,
+    "centerX": 538,
+    "centerY": 1310.5
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "rule-loot",
+    "container": [
+      124,
+      1365,
+      828,
+      43
+    ],
+    "visibleWidth": 721.82031148,
+    "visibleHeight": 33.4355456,
+    "fontSize": 34,
+    "phoneSize": 12.94921875,
+    "centerX": 538,
+    "centerY": 1386.5
+  },
+  {
+    "page": "mobile-absolute",
+    "role": "footer",
+    "container": [
+      260,
+      1444,
+      488,
+      41
+    ],
+    "visibleWidth": 425.6367192,
+    "visibleHeight": 23.5078128,
+    "fontSize": 24,
+    "phoneSize": 9.140625,
+    "centerX": 504,
+    "centerY": 1464.5
+  },
+  {
+    "page": "cover",
+    "role": "brand",
+    "container": [
+      166,
+      110,
+      520,
+      65
+    ],
+    "visibleWidth": 276.39410169,
+    "visibleHeight": 57.120000000000005,
+    "fontSize": 51,
+    "phoneSize": 11.895933014354068,
+    "centerX": 426,
+    "centerY": 142.5
+  },
+  {
+    "page": "cover",
+    "role": "art-title",
+    "container": [
+      66,
+      285,
+      720,
+      152
+    ],
+    "visibleWidth": 704.8214206706641,
+    "visibleHeight": 152.00006301697567,
+    "fontSize": 138.21784960454633,
+    "phoneSize": 32.23980941732839,
+    "centerX": 426,
+    "centerY": 361
+  },
+  {
+    "page": "cover",
+    "role": "cover-subtitle",
+    "container": [
+      111,
+      527,
+      630,
+      61
+    ],
+    "visibleWidth": 404.72363999999993,
+    "visibleHeight": 44.876951399999996,
+    "fontSize": 46,
+    "phoneSize": 10.729665071770334,
+    "centerX": 426,
+    "centerY": 557.5
+  },
+  {
+    "page": "cover",
+    "role": "cover-scope",
+    "container": [
+      156,
+      638,
+      540,
+      50
+    ],
+    "visibleWidth": 362.791512,
+    "visibleHeight": 36.1328125,
+    "fontSize": 37,
+    "phoneSize": 8.630382775119617,
+    "centerX": 426,
+    "centerY": 663
+  },
+  {
+    "page": "social",
+    "role": "brand",
+    "container": [
+      186,
+      47,
+      406,
+      48
+    ],
+    "visibleWidth": 211.36019541000002,
+    "visibleHeight": 43.68000000000001,
+    "fontSize": 39,
+    "phoneSize": 14.005524861878452,
+    "centerX": 389,
+    "centerY": 71
+  },
+  {
+    "page": "social",
+    "role": "art-title",
+    "container": [
+      75,
+      128,
+      526,
+      88
+    ],
+    "visibleWidth": 407.5300468908433,
+    "visibleHeight": 88.00011864137112,
+    "fontSize": 79.89043123366926,
+    "phoneSize": 28.68993386844476,
+    "centerX": 338,
+    "centerY": 172
+  },
+  {
+    "page": "social",
+    "role": "social-subtitle",
+    "container": [
+      94,
+      232,
+      493,
+      35
+    ],
+    "visibleWidth": 408.720702,
+    "visibleHeight": 29.355468000000002,
+    "fontSize": 30,
+    "phoneSize": 10.773480662983426,
+    "centerX": 340.5,
+    "centerY": 249.5
+  },
+  {
+    "page": "social",
+    "role": "social-completion-targets",
+    "container": [
+      85,
+      297,
+      922,
+      34
+    ],
+    "visibleWidth": 500.4462903,
+    "visibleHeight": 32.5488273,
+    "fontSize": 33,
+    "phoneSize": 11.850828729281767,
+    "centerX": 546,
+    "centerY": 314
+  },
+  {
+    "page": "social",
+    "role": "social-completion-relation",
+    "container": [
+      85,
+      339,
+      922,
+      36
+    ],
+    "visibleWidth": 313.359375,
+    "visibleHeight": 34.1796875,
+    "fontSize": 35,
+    "phoneSize": 12.569060773480663,
+    "centerX": 546,
+    "centerY": 357
+  },
+  {
+    "page": "social",
+    "role": "social-platform",
+    "container": [
+      74,
+      412,
+      938,
+      37
+    ],
+    "visibleWidth": 160.18750016,
+    "visibleHeight": 31.4375008,
+    "fontSize": 32,
+    "phoneSize": 11.491712707182321,
+    "centerX": 543,
+    "centerY": 430.5
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      77,
+      460,
+      148,
+      29
+    ],
+    "visibleWidth": 55.316408,
+    "visibleHeight": 27.2617184,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 151,
+    "centerY": 474.5
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      245,
+      460,
+      231,
+      29
+    ],
+    "visibleWidth": 111.39843764,
+    "visibleHeight": 27.34375,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 360.5,
+    "centerY": 474.5
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      513,
+      460,
+      235,
+      29
+    ],
+    "visibleWidth": 138.08593764,
+    "visibleHeight": 27.0703132,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 630.5,
+    "centerY": 474.5
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      791,
+      460,
+      219,
+      29
+    ],
+    "visibleWidth": 111.34375,
+    "visibleHeight": 27.5351552,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 900.5,
+    "centerY": 474.5
+  },
+  {
+    "page": "social",
+    "role": "sand-count",
+    "container": [
+      329,
+      509,
+      147,
+      52
+    ],
+    "visibleWidth": 66.792969556,
+    "visibleHeight": 44.471679672,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 402.5,
+    "centerY": 535
+  },
+  {
+    "page": "social",
+    "role": "regular-count",
+    "container": [
+      598,
+      509,
+      150,
+      52
+    ],
+    "visibleWidth": 67.247071072,
+    "visibleHeight": 44.9257828,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 673,
+    "centerY": 535
+  },
+  {
+    "page": "social",
+    "role": "sand-count",
+    "container": [
+      329,
+      589,
+      147,
+      52
+    ],
+    "visibleWidth": 65.975586728,
+    "visibleHeight": 44.471679672,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 402.5,
+    "centerY": 615
+  },
+  {
+    "page": "social",
+    "role": "regular-count",
+    "container": [
+      598,
+      589,
+      150,
+      52
+    ],
+    "visibleWidth": 68.125,
+    "visibleHeight": 44.9257828,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 673,
+    "centerY": 615
+  },
+  {
+    "page": "social",
+    "role": "sand-count",
+    "container": [
+      329,
+      669,
+      147,
+      52
+    ],
+    "visibleWidth": 88.9833996,
+    "visibleHeight": 45.01660040000001,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 402.5,
+    "centerY": 695
+  },
+  {
+    "page": "social",
+    "role": "regular-count",
+    "container": [
+      598,
+      669,
+      150,
+      52
+    ],
+    "visibleWidth": 88.5292992,
+    "visibleHeight": 44.471679672,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 673,
+    "centerY": 695
+  },
+  {
+    "page": "social",
+    "role": "social-platform",
+    "container": [
+      74,
+      757,
+      938,
+      37
+    ],
+    "visibleWidth": 160.09375008,
+    "visibleHeight": 31.4375008,
+    "fontSize": 32,
+    "phoneSize": 11.491712707182321,
+    "centerX": 543,
+    "centerY": 775.5
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      77,
+      807,
+      148,
+      28
+    ],
+    "visibleWidth": 55.316408,
+    "visibleHeight": 27.2617184,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 151,
+    "centerY": 821
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      245,
+      807,
+      231,
+      28
+    ],
+    "visibleWidth": 111.39843764,
+    "visibleHeight": 27.34375,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 360.5,
+    "centerY": 821
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      513,
+      807,
+      235,
+      28
+    ],
+    "visibleWidth": 138.08593764,
+    "visibleHeight": 27.0703132,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 630.5,
+    "centerY": 821
+  },
+  {
+    "page": "social",
+    "role": "social-table-heading",
+    "container": [
+      791,
+      807,
+      219,
+      28
+    ],
+    "visibleWidth": 111.34375,
+    "visibleHeight": 27.5351552,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 900.5,
+    "centerY": 821
+  },
+  {
+    "page": "social",
+    "role": "sand-count",
+    "container": [
+      329,
+      855,
+      147,
+      52
+    ],
+    "visibleWidth": 66.792969556,
+    "visibleHeight": 44.471679672,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 402.5,
+    "centerY": 881
+  },
+  {
+    "page": "social",
+    "role": "regular-count",
+    "container": [
+      598,
+      855,
+      150,
+      52
+    ],
+    "visibleWidth": 67.247071072,
+    "visibleHeight": 44.9257828,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 673,
+    "centerY": 881
+  },
+  {
+    "page": "social",
+    "role": "sand-count",
+    "container": [
+      329,
+      935,
+      147,
+      52
+    ],
+    "visibleWidth": 65.975586728,
+    "visibleHeight": 44.471679672,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 402.5,
+    "centerY": 961
+  },
+  {
+    "page": "social",
+    "role": "regular-count",
+    "container": [
+      598,
+      935,
+      150,
+      52
+    ],
+    "visibleWidth": 68.125,
+    "visibleHeight": 44.9257828,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 673,
+    "centerY": 961
+  },
+  {
+    "page": "social",
+    "role": "sand-count",
+    "container": [
+      329,
+      1015,
+      147,
+      52
+    ],
+    "visibleWidth": 88.9833996,
+    "visibleHeight": 45.01660040000001,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 402.5,
+    "centerY": 1041
+  },
+  {
+    "page": "social",
+    "role": "regular-count",
+    "container": [
+      598,
+      1015,
+      150,
+      52
+    ],
+    "visibleWidth": 88.5292992,
+    "visibleHeight": 44.471679672,
+    "fontSize": 31,
+    "phoneSize": 11.132596685082873,
+    "centerX": 673,
+    "centerY": 1041
+  },
+  {
+    "page": "social",
+    "role": "reward-heading-group",
+    "container": [
+      165,
+      1118,
+      827,
+      52
+    ],
+    "visibleWidth": 574.990218796,
+    "visibleHeight": 35.403999999999996,
+    "fontSize": 32,
+    "phoneSize": 11.491712707182321,
+    "centerX": 578.5,
+    "centerY": 1144
+  },
+  {
+    "page": "social",
+    "role": "reward-art-title",
+    "container": [
+      291.004890602,
+      1121,
+      167.833969196,
+      46
+    ],
+    "visibleWidth": 167.833969196,
+    "visibleHeight": 35.403999999999996,
+    "fontSize": 34,
+    "phoneSize": 12.209944751381215,
+    "centerX": 374.9218752,
+    "centerY": 1144
+  },
+  {
+    "page": "social",
+    "role": "reward-extra",
+    "container": [
+      111,
+      1200,
+      385,
+      57
+    ],
+    "visibleWidth": 330.5679370057596,
+    "visibleHeight": 46.4687488,
+    "fontSize": 32,
+    "phoneSize": 11.491712707182321,
+    "centerX": 303.5,
+    "centerY": 1228.5
+  },
+  {
+    "page": "social",
+    "role": "reward-gift",
+    "container": [
+      589,
+      1200,
+      385,
+      57
+    ],
+    "visibleWidth": 236.921876096,
+    "visibleHeight": 45.4374976,
+    "fontSize": 32,
+    "phoneSize": 11.491712707182321,
+    "centerX": 781.5,
+    "centerY": 1228.5
+  },
+  {
+    "page": "social",
+    "role": "reward-conditions",
+    "container": [
+      92,
+      1278,
+      900,
+      48
+    ],
+    "visibleWidth": 477.39354585,
+    "visibleHeight": 34.3847665,
+    "fontSize": 35,
+    "phoneSize": 12.569060773480663,
+    "centerX": 542,
+    "centerY": 1302
+  },
+  {
+    "page": "social",
+    "role": "social-footer",
+    "container": [
+      246,
+      1390,
+      594,
+      36
+    ],
+    "visibleWidth": 325.86914079999997,
+    "visibleHeight": 27.3164052,
+    "fontSize": 28,
+    "phoneSize": 10.05524861878453,
+    "centerX": 543,
+    "centerY": 1408
+  }
+]

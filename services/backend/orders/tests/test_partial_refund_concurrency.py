@@ -68,7 +68,8 @@ class PartialRefundConcurrencyTest(APITransactionTestCase):
         if withdrawal['code']==0:
             self.assertEqual(result['errorCode'],'REFUND_RECOVERY_INSUFFICIENT')
             request=WithdrawRequest.objects.get(account=self.provider_account)
-            self.ok(self.admin.post(f'/api/admin/withdrawals/{request.pk}/reject/',{'audit_remark':'并发用例退回'},format='json'))
+            claim=self.ok(self.admin.post(f'/api/admin/withdrawals/{request.pk}/claim/'))
+            self.ok(self.admin.post(f'/api/admin/withdrawals/{request.pk}/reject/',{'audit_remark':'并发用例退回','expected_claimed_at':claim['claimed_at']},format='json'))
             self.ok(self.pay_refund(order,10000))
         self.ok(self.pay_refund(order))
         self.provider_wallet.refresh_from_db()

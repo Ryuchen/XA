@@ -1,0 +1,46 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "preset": "material-v3-approved-r2",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "本轮新价表共10档套餐及2档自愿加仓；广告端游、超时追加及其他规则按所附成图沿用。",
+  "deliveryScope": {
+    "pageIds": [
+      "mobile-absolute",
+      "mobile-secret",
+      "social"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户点名银行物资单广告页和手游绝密、机密详表，共三张。广告保留端游两卡。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "references/prior-social.png：端游两卡与原项目 content.json 一致，按只改手游的范围沿用。",
+    "mobile": "references/new-mobile-prices.png：J列现价对应E列保底、F列模式及H列局数/自愿加仓。"
+  },
+  "approvals": {
+    "illustration": {
+      "status": "approved-reuse",
+      "basis": "用户本轮附图"
+    },
+    "background": {
+      "status": "approved-reuse",
+      "basis": "复用银行原项目已确认底图；仅改矢量数字"
+    }
+  },
+  "revision": "bank-price-r2",
+  "campaign": "物资银行单",
+  "date": "2026-10-09",
+  "priorProject": "G:\\Github\\XA\\design\\club-bank-campaign-handdrawn",
+  "lastRenderedPages": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ]
+}

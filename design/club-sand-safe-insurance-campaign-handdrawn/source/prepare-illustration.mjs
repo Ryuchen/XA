@@ -1,0 +1,21 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const sharp=createRequire(path.resolve(path.dirname(process.execPath),'..','runtime.cjs'))('sharp');
+const file=path.join(root,'01-illustrations/sand-safe-medic-mouse-v1.png');
+const metadata=await sharp(file).metadata();
+const {data,info}=await sharp(file).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+let min=255,max=0,transparent=0,nearOpaque=0;
+for(let i=3;i<data.length;i+=4){const a=data[i];min=Math.min(min,a);max=Math.max(max,a);if(a===0)transparent++;if(a>=240)nearOpaque++;}
+const alpha={min,max,transparentPixels:transparent,nearOpaquePixels:nearOpaque,totalPixels:info.width*info.height,corners:[data[3],data[(info.width-1)*4+3],data[(info.height-1)*info.width*4+3],data[data.length-1]]};
+const originalState=JSON.parse(await fs.readFile(path.resolve(root,'../club-sand-safe-campaign-handdrawn/campaign-state.json'),'utf8'));
+const art={provider:'built-in image_gen (existing illustration reused; no new generation this turn)',sourceProject:'../club-sand-safe-campaign-handdrawn',source:originalState.illustration.source,file:'01-illustrations/sand-safe-medic-mouse-v1.png',width:metadata.width,height:metadata.height,hasAlpha:metadata.hasAlpha,alpha,prompt:'01-illustrations/source-prompt.md',review:'review/illustration-overview.png',basis:'现有蜂医、灰鼠与两类保险开箱插画适合本轮主题；插画道具数量不承担档位数据，正式次数以content.json为准。'};
+await fs.writeFile(path.join(root,'01-illustrations/image-metadata.json'),JSON.stringify(art,null,2));
+const state=JSON.parse(await fs.readFile(path.join(root,'campaign-state.json'),'utf8'));state.illustration=art;
+await fs.writeFile(path.join(root,'campaign-state.json'),JSON.stringify(state,null,2));
+await sharp(file).flatten({background:'#FBF7EE'}).resize({width:1200}).png().toFile(path.join(root,'review/illustration-overview.png'));
+await sharp(file).flatten({background:'#FBF7EE'}).resize({width:390}).png().toFile(path.join(root,'review/illustration-phone.png'));
+await fs.writeFile(path.join(root,'review/illustration.html'),'<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>沙色保险单 · 插画确认稿</title><style>body{margin:0;background:#FBF7EE;color:#213F53;font:16px/1.7 "Microsoft YaHei UI",sans-serif}main{max-width:1250px;margin:auto;padding:24px}img{width:100%;height:auto}a{color:#A76827}</style><main><h1>兴安电竞 · 沙色保险单</h1><p>第一阶段：复用二次元手绘蜂医与灰鼠开箱插画，供本轮确认。仅绝密；正式价目为端手游各三档，随后以图标＋数量排版。插画不承担套餐次数。</p><img src="illustration-overview.png" alt="蜂医、灰鼠与沙色及常规保险"><p><a href="../01-illustrations/sand-safe-medic-mouse-v1.png">透明PNG原图</a> · <a href="illustration-phone.png">390px预览</a></p><p>下一阶段：布局与无字底图确认；之后按重点强调、常规说明、减少换行的规范填入矢量文字。</p></main></html>');
+console.log(JSON.stringify({width:metadata.width,height:metadata.height,hasAlpha:metadata.hasAlpha,alpha,review:art.review},null,2));

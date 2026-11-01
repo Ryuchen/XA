@@ -1,0 +1,23 @@
+Use case: identity-preserve / precise-object-edit.
+Asset type: revision r2 of an existing transparent chibi trio illustration for 兴安电竞.
+Primary request: 只修改左侧男性蜂医，让他更贴近《三角洲行动》默认干员蜂医（Stinger / Roy Smee）的Q版形象。保持另外两位角色及组合构图一致。
+
+Input roles:
+Image 1 is the EDIT TARGET: the existing transparent trio, blond male medic on left, pink-haired girl in center, gray mouse on right, small medical drone at far left.
+Image 2 is the OFFICIAL OPERATOR IDENTITY REFERENCE: Delta Force official art of Stinger / Roy Smee. This is authoritative for the left male's short hair, headset, facial maturity and tactical uniform/equipment. It is NOT a rendering-style reference. Do not import its dark photographic background or realistic 3D rendering.
+
+Edit scope: modify only the left male medic's head/hair, headset, outfit and equipped accessories, keeping his existing standing full-body placement, size, friendly wink, smile and thumbs-up pose. The pink-haired girl, gray mouse, gold ingot, sparkles and small medical drone must stay visually unchanged, including their pose, outfit, faces, hair, outlines and placement. Preserve the original composition and full-body framing. Keep the transparent alpha background.
+
+Stinger identity corrections:
+1. REMOVE the large goggles from his forehead entirely. Default Stinger in official reference does not have this headband/goggle design. No helmet, no cap.
+2. Replace the fluffy spiky anime-boy mop with the recognizable compact, side-parted swept-back / swept-over ASH-BLOND SHORT HAIR from official reference, with much shorter neatly trimmed sides and a textured wave across the top. Preserve an appealing chibi head size. Hair should expose more forehead, have clear side-part structure and less volume. Muted sandy ash blond, not saturated yellow.
+3. Use the official BLACK / very dark charcoal tactical over-ear communications headset, with small angular teal triangle/chevron design on the ear cup and a dark microphone boom. NOT the generic large olive gaming earcup.
+4. Retain cute adult male anime facial proportions and friendly wink, but give him Stinger's slightly stronger eyebrows and a small, tidy light-brown mustache plus short jaw/chin stubble simplified into a few hand-drawn strokes. This must read as a cute chibi version of the adult operator, not a blond child or a realistic bearded face. No large beard.
+5. Change the bright ivory/navy generic medic suit into the actual operator's recognizable OLIVE / SAGE GREEN combat shirt with raised dark collar and sleeves, dark charcoal/tactical-gray armored plate carrier, olive webbing and structured utility pouches. Outfit color and silhouette should be visibly closer to official reference while harmonizing with existing pastel-blue/navy group.
+6. Add the identifiable rectangular rugged shoulder radio/terminal clipped high on his chest/shoulder with a small screen and trailing ribbed cable, as seen in official reference. Add simplified chest-mounted cylindrical medical supplies and compact utility equipment. Use readable large shapes, not dense realistic gun accessories. Medical identifier accents should be restrained mint.
+7. Dark gloves, muted olive/khaki tactical trousers, charcoal knee guards and chunky dark boots. Preserve friendly thumbs-up, complete gloved hands, legs and boots. No extra weapon or new character.
+
+Style/medium: the EXACT same polished Japanese anime CHIBI hand-drawn treatment as Image 1: naturally varying navy contours, clean broad flat colors, soft cel shadows, delicate interior lines, cute large anime eye, rosy cheek hatching. Preserve existing finish and illustration density. Translate realistic official operator reference into this established style. No realism, no 3D lighting, no gritty photographic texture.
+Text: no words, lettering, digits, logos, titles or watermarks; symbolic headset geometry is allowed.
+Transparency: genuinely transparent alpha background throughout, no opaque backdrop, no painted checkerboard, no vignette.
+Constraints: maintain all details outside the left operator unchanged; make this a targeted character correction, not a new scene. Keep all three complete silhouettes and original overall spacing.

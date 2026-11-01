@@ -1,0 +1,357 @@
+{
+  "brand": "兴安电竞",
+  "title": "物资银行单",
+  "titleLines": [
+    "物资",
+    "银行单"
+  ],
+  "subtitle": "限定局数 · 超时加保底",
+  "provenance": {
+    "pricesAndRounds": "本轮用户明确提供的端游/手游、绝密/机密五档文字数据，共20档；优先于图片。",
+    "topUpAndRules": "本轮银行参考图；用户已确认：沿用，端手游一致。",
+    "verified": true,
+    "units": {
+      "r": "元",
+      "w": "万"
+    },
+    "sourceFiles": [
+      "source-references/bank-cover-original.png",
+      "source-references/bank-desktop-absolute-original.png",
+      "source-references/bank-desktop-secret-original.png"
+    ]
+  },
+  "tiers": [
+    {
+      "id": "desktop-absolute",
+      "platform": "端游",
+      "mode": "绝密",
+      "color": "gold",
+      "rows": [
+        {
+          "priceR": 288,
+          "lootW": 1188,
+          "roundLimit": 3,
+          "lateBonusW": 488
+        },
+        {
+          "priceR": 488,
+          "lootW": 2188,
+          "roundLimit": 6,
+          "lateBonusW": 1288
+        },
+        {
+          "priceR": 688,
+          "lootW": 3188,
+          "roundLimit": 9,
+          "lateBonusW": 2088
+        },
+        {
+          "priceR": 888,
+          "lootW": 4188,
+          "roundLimit": 12,
+          "lateBonusW": 2888
+        },
+        {
+          "priceR": 1688,
+          "lootW": 8188,
+          "roundLimit": 24,
+          "lateBonusW": 6088
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "platform": "手游",
+      "mode": "绝密",
+      "color": "gold",
+      "rows": [
+        {
+          "priceR": 188,
+          "lootW": 1188,
+          "roundLimit": 3,
+          "lateBonusW": 488
+        },
+        {
+          "priceR": 388,
+          "lootW": 2188,
+          "roundLimit": 6,
+          "lateBonusW": 1288
+        },
+        {
+          "priceR": 588,
+          "lootW": 3188,
+          "roundLimit": 9,
+          "lateBonusW": 2088
+        },
+        {
+          "priceR": 788,
+          "lootW": 4188,
+          "roundLimit": 12,
+          "lateBonusW": 2888
+        },
+        {
+          "priceR": 1488,
+          "lootW": 8188,
+          "roundLimit": 24,
+          "lateBonusW": 6088
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "platform": "端游",
+      "mode": "机密",
+      "color": "teal",
+      "rows": [
+        {
+          "priceR": 288,
+          "lootW": 1488,
+          "roundLimit": 6,
+          "lateBonusW": 1088
+        },
+        {
+          "priceR": 488,
+          "lootW": 2688,
+          "roundLimit": 12,
+          "lateBonusW": 1888
+        },
+        {
+          "priceR": 688,
+          "lootW": 3888,
+          "roundLimit": 18,
+          "lateBonusW": 2688
+        },
+        {
+          "priceR": 888,
+          "lootW": 5088,
+          "roundLimit": 24,
+          "lateBonusW": 3488
+        },
+        {
+          "priceR": 1688,
+          "lootW": 9888,
+          "roundLimit": 48,
+          "lateBonusW": 6688
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "platform": "手游",
+      "mode": "机密",
+      "color": "teal",
+      "rows": [
+        {
+          "priceR": 188,
+          "lootW": 1488,
+          "roundLimit": 6,
+          "lateBonusW": 1088
+        },
+        {
+          "priceR": 388,
+          "lootW": 2688,
+          "roundLimit": 12,
+          "lateBonusW": 1888
+        },
+        {
+          "priceR": 588,
+          "lootW": 3888,
+          "roundLimit": 18,
+          "lateBonusW": 2688
+        },
+        {
+          "priceR": 788,
+          "lootW": 5088,
+          "roundLimit": 24,
+          "lateBonusW": 3488
+        },
+        {
+          "priceR": 1488,
+          "lootW": 9888,
+          "roundLimit": 48,
+          "lateBonusW": 6688
+        }
+      ]
+    }
+  ],
+  "mechanism": {
+    "requirement": "须在对应规定局数内完成该单",
+    "ifLate": "未在规定局数内完成，增加该档位对应的物资保底",
+    "bonusFrequency": "超时保底整单只增加一次",
+    "closeCondition": "全部保底打满结单",
+    "displaySequence": [
+      "规定局数内完成",
+      "超时追加对应保底",
+      "保底打满结单"
+    ]
+  },
+  "topUp": {
+    "title": "加仓增值 · 物资加码",
+    "byMode": {
+      "绝密": {
+        "priceR": 128,
+        "additionalLootW": 1388
+      },
+      "机密": {
+        "priceR": 88,
+        "additionalLootW": 1088
+      }
+    },
+    "trigger": "超出规定局数后，每次撤离失败可自愿加仓一次",
+    "roundsRule": "加仓不延长或重置原定总局数",
+    "platforms": "端游、手游一致",
+    "confirmedByUser": true,
+    "displayLines": [
+      "超出规定局数后，每次撤离失败",
+      "可自愿加仓一次。加仓不延长",
+      "或重置原定总局数。"
+    ]
+  },
+  "featureCopy": [
+    "打得够强，或撤得够稳",
+    "护航有没有实力，战绩说了算"
+  ],
+  "rules": {
+    "绝密": [
+      {
+        "title": "地图和房卡",
+        "lines": [
+          "下单先与客服确认地图；中途换图需协商。",
+          "航天：核心区金红卡；巴克什：塔内、博物馆金红卡；",
+          "监狱：金红卡 + 一级监狱卡。"
+        ]
+      },
+      {
+        "title": "随行装备",
+        "lines": [
+          "默认40格以上背包 + 一把左轮；进图前核对。",
+          "板板主动免带除外。"
+        ]
+      },
+      {
+        "title": "缺项补偿",
+        "compensation": [
+          {
+            "reason": "应带未带",
+            "items": [
+              {
+                "label": "金卡",
+                "amountW": 200
+              },
+              {
+                "label": "红卡",
+                "amountW": 300
+              }
+            ]
+          },
+          {
+            "reason": "未经同意未带",
+            "items": [
+              {
+                "label": "背包",
+                "amountW": 300
+              },
+              {
+                "label": "左轮",
+                "amountW": 200
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "炸单补偿",
+        "lines": [
+          "符合俱乐部下单须知的炸单条件：",
+          "航天 / 巴克什 +60w；监狱 +80w。"
+        ]
+      },
+      {
+        "title": "结算口径",
+        "lines": [
+          "符合俱乐部炸单标准时，安全箱带出物资均不计入；",
+          "安全箱物资 >100w 无需补战损，否则按炸单标准",
+          "增加累计保底。"
+        ]
+      },
+      {
+        "title": "物资与售后",
+        "lines": [
+          "对局产出默认归板板；假账须提前征得板板同意，",
+          "按约定价值计入。全程录屏，争议交给客服核实。"
+        ]
+      }
+    ],
+    "机密": [
+      {
+        "title": "地图和房卡",
+        "lines": [
+          "下单先与客服确认地图；中途换图需协商。",
+          "航天：核心区金红卡；巴克什：塔内、博物馆金红卡；",
+          "核电站：金红卡。"
+        ]
+      },
+      {
+        "title": "随行装备",
+        "lines": [
+          "默认30格以上背包 + 一把左轮；进图前核对。",
+          "板板主动免带除外。"
+        ]
+      },
+      {
+        "title": "缺项补偿",
+        "compensation": [
+          {
+            "reason": "应带未带",
+            "items": [
+              {
+                "label": "金卡",
+                "amountW": 100
+              },
+              {
+                "label": "红卡",
+                "amountW": 150
+              }
+            ]
+          },
+          {
+            "reason": "未经同意未带",
+            "items": [
+              {
+                "label": "背包",
+                "amountW": 150
+              },
+              {
+                "label": "左轮",
+                "amountW": 100
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "炸单补偿",
+        "lines": [
+          "符合俱乐部下单须知的炸单条件：",
+          "每局增加30w保底。"
+        ]
+      },
+      {
+        "title": "结算口径",
+        "lines": [
+          "符合俱乐部炸单标准时，安全箱带出物资均不计入；",
+          "安全箱物资 >50w 无需补战损，否则按炸单标准",
+          "增加累计保底。"
+        ]
+      },
+      {
+        "title": "物资与售后",
+        "lines": [
+          "对局产出默认归板板；假账须提前征得板板同意，",
+          "按约定价值计入。全程录屏，争议交给客服核实。"
+        ]
+      }
+    ]
+  },
+  "footerInstruction": "下单前请确认地图及订单规则"
+}

@@ -1,0 +1,186 @@
+{
+  "canvas": {
+    "width": 1024,
+    "height": 2304,
+    "ratio": "4:9",
+    "reason": "十档价目、奖励条件、三项目标及四组须知采用约390px手机宽可读字号；延长原3:5草案，避免缩小正文。"
+  },
+  "header": {
+    "x": 44,
+    "y": 34,
+    "width": 936,
+    "height": 294,
+    "copy": {
+      "x": 58,
+      "y": 50,
+      "width": 496,
+      "height": 250
+    },
+    "illustration": {
+      "x": 570,
+      "y": 50,
+      "width": 418,
+      "height": 279
+    }
+  },
+  "reward": {
+    "x": 44,
+    "y": 350,
+    "width": 936,
+    "height": 240,
+    "copy": {
+      "x": 76,
+      "y": 376,
+      "width": 820,
+      "height": 184
+    },
+    "accent": {
+      "x": 910,
+      "y": 380,
+      "width": 50,
+      "height": 130
+    }
+  },
+  "prices": {
+    "x": 44,
+    "y": 612,
+    "width": 936,
+    "height": 505,
+    "header": {
+      "x": 46,
+      "y": 614,
+      "width": 932,
+      "height": 76
+    },
+    "rows": [
+      {
+        "y": 691,
+        "height": 84
+      },
+      {
+        "y": 775,
+        "height": 84
+      },
+      {
+        "y": 859,
+        "height": 84
+      },
+      {
+        "y": 943,
+        "height": 84
+      },
+      {
+        "y": 1027,
+        "height": 88
+      }
+    ],
+    "columns": [
+      {
+        "x": 72,
+        "width": 270
+      },
+      {
+        "x": 373,
+        "width": 268
+      },
+      {
+        "x": 679,
+        "width": 268
+      }
+    ],
+    "rowCount": 5
+  },
+  "objectives": {
+    "x": 44,
+    "y": 1140,
+    "width": 936,
+    "height": 500,
+    "title": {
+      "x": 76,
+      "y": 1170,
+      "width": 864,
+      "height": 108
+    },
+    "rows": [
+      {
+        "x": 76,
+        "y": 1300,
+        "width": 864,
+        "height": 92
+      },
+      {
+        "x": 76,
+        "y": 1405,
+        "width": 864,
+        "height": 92
+      },
+      {
+        "x": 76,
+        "y": 1510,
+        "width": 864,
+        "height": 102
+      }
+    ]
+  },
+  "notices": {
+    "x": 44,
+    "y": 1664,
+    "width": 936,
+    "height": 588,
+    "title": {
+      "x": 76,
+      "y": 1690,
+      "width": 860,
+      "height": 55
+    },
+    "groups": [
+      {
+        "x": 76,
+        "y": 1770,
+        "width": 860,
+        "height": 75
+      },
+      {
+        "x": 76,
+        "y": 1858,
+        "width": 860,
+        "height": 112
+      },
+      {
+        "x": 76,
+        "y": 1984,
+        "width": 860,
+        "height": 116
+      },
+      {
+        "x": 76,
+        "y": 2113,
+        "width": 860,
+        "height": 109
+      }
+    ]
+  },
+  "footer": {
+    "x": 44,
+    "y": 2268,
+    "width": 936,
+    "height": 22
+  },
+  "plannedType": {
+    "body": 38,
+    "bodyLineHeight": 52,
+    "priceNumber": 58,
+    "priceUnit": 50,
+    "rulePhoneEquivalent": 14.47,
+    "noticeRowLabel": 35
+  },
+  "rules": [
+    "无字底图中不写任何中文字母或数字",
+    "标题文案在左侧实际安全区，人物放右侧",
+    "价目表五行三列，表头整条海军蓝",
+    "数值与单位位置不放图标或道具",
+    "须知四组预留清楚的上下内边距",
+    "人物与医疗无人机保持完整轮廓",
+    "不要增加联系方式、二维码或其他模式"
+  ]
+}

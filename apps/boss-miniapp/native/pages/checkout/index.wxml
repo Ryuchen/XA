@@ -1,10 +1,16 @@
+<page-meta page-style="{{helpOpen ? 'overflow:hidden' : ''}}"/>
 <view class="page checkout">
   <view class="checkout-header">
     <text class="title">确认订单</text>
-    <text class="subtitle">核对服务与游戏信息，使用余额支付</text>
+    <text class="subtitle">{{quote && quote.amount === 0 ? '核对服务与游戏信息，本单无需支付' : '核对服务与游戏信息，使用余额支付'}}</text>
     <view class="checkout-steps"><text>1 选择服务</text><text class="current">2 确认订单</text><text>3 开始服务</text></view>
   </view>
   <view wx:if="{{!logged}}" class="panel"><button class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后下单</button></view>
+  <view wx:if="{{logged && pendingOrder}}" class="panel pending-order-panel">
+    <text class="section-title">上次下单结果待核对</text>
+    <text class="field-hint">{{pendingError || '请先重试上次下单或查看订单和钱包记录，确认结果前不能提交新订单。重试会使用上次确认的内容和交易编号。'}}</text>
+    <view class="pending-order-actions"><button wx:if="{{!pendingBlocked}}" class="xa-button button" bindtap="recoverPending" loading="{{submitting}}" disabled="{{submitting}}">重试上次下单</button><button wx:if="{{pendingCanResolve}}" class="xa-button button-secondary" bindtap="resolvePending" disabled="{{submitting}}">核对或停止上次下单</button><button class="xa-button button-secondary" bindtap="checkOrders" disabled="{{submitting}}">查看订单</button><button class="xa-button button-secondary" bindtap="recharge" disabled="{{submitting}}">联系客服</button></view>
+  </view>
   <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
   <block wx:if="{{service && !loading && !error}}">
     <view class="panel checkout-service">
@@ -33,7 +39,21 @@
           <text class="quantity-unit">{{service.price_unit || '份'}}</text>
         </view>
       </view>
-      <view wx:if="{{!provider && selectionLimit === 1}}" class="setting-group">
+      <view wx:if="{{!providers.length}}" class="dispatch-routes setting-group">
+        <text class="dispatch-routes-label">派单方式</text>
+        <button class="xa-button route-option {{dispatchRoute === 'PUBLIC' ? 'route-selected' : ''}}" data-route="PUBLIC" bindtap="selectDispatchRoute" disabled="{{submitting}}" aria-pressed="{{dispatchRoute === 'PUBLIC'}}">
+          <text class="route-title">公开给陪玩接单{{dispatchRoute === 'PUBLIC' ? ' · 已选择' : ''}}</text>
+          <text class="route-description">符合条件的陪玩可在接单池查看</text>
+        </button>
+        <button class="xa-button route-option {{dispatchRoute === 'STAFF' ? 'route-selected' : ''}}" data-route="STAFF" bindtap="selectDispatchRoute" disabled="{{submitting}}" aria-pressed="{{dispatchRoute === 'STAFF'}}">
+          <text class="route-title">由客服指定陪玩{{dispatchRoute === 'STAFF' ? ' · 已选择' : ''}}</text>
+          <text class="route-description">{{selectionLimit === 2 ? '客服安排两名陪玩，不进入公开接单池' : '订单由客服安排，不进入公开接单池'}}</text>
+        </button>
+        <text wx:if="{{selectionLimit === 2 && dispatchRoute === 'PUBLIC'}}" class="field-hint">陪玩需组队报名，队友确认后，请你在订单详情选择接单的两名陪玩。</text>
+        <text wx:if="{{quote}}" class="field-hint">{{quote.amount === 0 ? '下单后' : '付款后'}}待接单时限为 {{quote.pending_timeout_minutes}} 分钟；到期仍未安排将自动取消{{quote.amount === 0 ? '，本单无需退款' : '，实付金额退回余额'}}。实际截止时间以下单后的订单详情为准。</text>
+      </view>
+      <view wx:else class="setting-group"><text class="field-hint selected-route-hint">{{selectionComplete ? '已指定陪玩，本单直接安排给所选陪玩，不进入公开接单池。' : '请选齐陪玩，或取消选择后由平台安排。'}}</text></view>
+      <view wx:if="{{!provider && selectionLimit === 1 && dispatchRoute === 'PUBLIC'}}" class="setting-group">
         <picker range="{{dispatchModes}}" value="{{dispatchIndex}}" bindchange="dispatch" disabled="{{submitting}}">
           <view class="setting-row"><text class="row-label">接单方式</text><view class="row-value"><text>{{dispatchModes[dispatchIndex]}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
         </picker>
@@ -58,9 +78,9 @@
           </view>
         </view>
         <text wx:else class="row-label">指定陪玩</text>
-        <view class="row-value provider-select-action"><text>{{providers.length ? (selectionComplete ? '重新选择' : '继续选择') : '平台安排'}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view>
+        <view class="row-value provider-select-action"><text>{{providers.length ? (selectionComplete ? '重新选择' : providers.length > selectionLimit ? '调整人数' : '继续选择') : '平台安排'}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view>
       </button>
-      <text class="field-hint selection-hint {{!selectionComplete ? 'selection-incomplete' : ''}}">{{providers.length ? '已选 ' + providers.length + ' / ' + selectionLimit + ' 位' + (selectionComplete ? '，套餐价格不变' : '，请再选择1位陪玩') : '可指定' + selectionLimit + '位陪玩，也可由平台安排'}}</text>
+      <text class="field-hint selection-hint {{!selectionComplete ? 'selection-incomplete' : ''}}">{{providers.length ? '已选 ' + providers.length + ' / ' + selectionLimit + ' 位' + (selectionComplete ? '，套餐价格不变' : providers.length > selectionLimit ? '，请移除多余陪玩' : '，请再选择陪玩') : '可指定' + selectionLimit + '位陪玩，也可由平台安排'}}</text>
       <text wx:if="{{shortcutsLoading}}" class="field-hint shortcut-loading">正在加载陪玩…</text>
       <block wx:else>
         <view class="shortcut-group">
@@ -98,9 +118,14 @@
     </view>
 
     <view class="panel payment-panel">
+      <info-sheet label="费用与下单说明" title="确认订单前，请核对" bind:visibilitychange="helpVisibility">
+        <view class="help-section"><text class="help-label">金额与优惠</text><text>应付金额以本页最新报价为准。切换套餐、陪玩、数量或优惠券后，请等待报价完成再提交。</text></view>
+        <view class="help-section"><text class="help-label">单陪与双陪</text><text>双陪套餐需选齐两位陪玩，或清空指定后由平台安排。所选人数与待提交状态会同步显示。</text></view>
+        <view class="help-section"><text class="help-label">提交结果待核对时</text><text>先查看上次订单结果及钱包记录。结果未明确前，请使用页面提供的核对或重试入口。</text></view>
+      </info-sheet>
       <text class="section-title">优惠与支付</text>
       <picker class="coupon-picker" range="{{coupons}}" range-key="name" value="{{couponIndex}}" bindchange="coupon" disabled="{{submitting}}">
-        <view class="setting-row"><text class="row-label">{{service.experience_kind ? '套餐资格' : '优惠券'}}</text><view class="row-value"><text>{{coupons[couponIndex].name || '暂无可用资格券'}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
+        <view class="setting-row"><text class="row-label">{{service.experience_kind ? '套餐资格' : '优惠券'}}</text><view class="row-value"><text>{{!service.experience_kind && coupons.length > 1 && !coupons[couponIndex].id ? '查看 ' + (coupons.length - 1) + ' 张优惠券' : (coupons[couponIndex].name || '暂无可用资格券')}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
       </picker>
       <text wx:if="{{quoting}}" class="quote-loading">正在获取最新报价…</text>
       <block wx:if="{{quote}}">
@@ -111,10 +136,10 @@
           <view wx:if="{{quote.coupon_discount}}" class="fee-row"><text class="muted">优惠券抵扣</text><text class="discount">-{{quote.couponText}} 兴安币</text></view>
         </view>
         <view class="fee-row total-row"><text>应付金额</text><view class="total-value"><text class="price">{{quote.amountText}}</text><text class="price-unit">兴安币</text></view></view>
-        <view class="balance-summary"><view class="fee-row"><text>余额支付</text><text>可用 {{quote.balanceText}} 兴安币</text></view><text wx:if="{{!quote.balance_sufficient}}" class="balance-warning">余额不足，请先联系客服充值</text></view>
+        <view class="balance-summary"><view class="fee-row"><text>{{quote.amount === 0 ? '支付方式' : '余额支付'}}</text><text>{{quote.amount === 0 ? '本单无需支付' : '可用 ' + quote.balanceText + ' 兴安币'}}</text></view><text wx:if="{{!quote.balance_sufficient}}" class="balance-warning">余额不足，请先联系客服充值</text></view>
         <button wx:if="{{!quote.balance_sufficient}}" class="xa-button button-secondary recharge-button" bindtap="recharge" disabled="{{submitting}}" hover-class="xa-button-hover">联系客服充值</button>
       </block>
-      <text wx:if="{{quoteError}}" class="error quote-error">{{quoteError}}</text><button wx:if="{{quoteError}}" class="xa-button button-secondary" bindtap="refreshQuote" disabled="{{submitting}}" hover-class="xa-button-hover">刷新报价</button>
+      <view wx:if="{{quoteError && selectionComplete}}" class="quote-recovery"><text class="error quote-error">{{quoteError}}</text><button wx:if="{{coupons[0].id === 0 && coupons[couponIndex].id}}" class="xa-button button-secondary" bindtap="clearCoupon" disabled="{{submitting}}" hover-class="xa-button-hover">不使用优惠券</button><button class="xa-button button-secondary" bindtap="refreshAvailability" disabled="{{submitting}}" hover-class="xa-button-hover">刷新报价</button></view>
     </view>
 
     <view class="bottom-bar checkout-payment">
@@ -124,9 +149,10 @@
           <view wx:if="{{quote}}" class="payable-value"><text class="payable-amount">{{quote.amountText}}</text><text class="payable-unit">兴安币</text></view>
           <text wx:else class="payable-pending">{{quoting ? '正在报价…' : '报价待确认'}}</text>
         </view>
-        <button class="xa-button button submit-order" loading="{{submitting}}" disabled="{{submitting || quoting || !quote || !quote.balance_sufficient || !selfOrderEnabled || !selectionComplete}}" bindtap="submit" hover-class="xa-button-hover">{{submitting ? '正在提交' : '提交订单'}}</button>
+        <button class="xa-button button submit-order" loading="{{submitting}}" disabled="{{submitting || pendingOrder || quoting || !quote || !quote.balance_sufficient || !selfOrderEnabled || !selectionComplete}}" bindtap="submit" hover-class="xa-button-hover">{{submitting ? '正在提交' : '提交订单'}}</button>
       </view>
-      <text wx:if="{{quoteError}}" class="payment-status payment-warning">报价异常，请核对费用明细</text>
+      <text wx:if="{{!selectionComplete}}" class="payment-status payment-warning">请选齐陪玩，或改为平台安排</text>
+      <text wx:elif="{{quoteError}}" class="payment-status payment-warning">报价异常，请核对费用明细</text>
       <text wx:elif="{{!selfOrderEnabled}}" class="payment-status payment-warning">自主下单暂时关闭，请联系客服</text>
       <text wx:elif="{{quote && !quote.balance_sufficient}}" class="payment-status payment-warning">余额不足，请先联系客服充值</text>
     </view>

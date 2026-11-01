@@ -1,0 +1,3501 @@
+{
+  "version": "sand-safe-insurance-mobile-price-r2-20261009",
+  "requests": [
+    {
+      "id": "t8ba94919758a81ff6c74",
+      "text": "兴安电竞",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7fd129bf2de0ea02e34d",
+      "text": "沙",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t23ad229444c2d4291a28",
+      "text": "色",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t08acaafbf34b4116ba1f",
+      "text": "保",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t394244211ffd6d3e574e",
+      "text": "险",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5987677ea6a76fadffef",
+      "text": "单",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t97ae02f7781d131012e3",
+      "text": "成功撤离 · 累计摸箱",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t3a2bcbe0d48bcc57c7bb",
+      "text": "手游 · 绝密",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tbc6772e2e73fb27754f6",
+      "text": "三项同时达标才结单",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "ta4d8072e481fdd7ee4eb",
+      "text": "沙色次数达标",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t8e0b696139539896c64a",
+      "text": "常规次数达标",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tb51e52116651ef8c6850",
+      "text": "基础保底达标",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t5c9f7245ca83ec0c40fc",
+      "text": "价格",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf6874bb002aa13e76597",
+      "text": "沙色保险",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t158f96c4d955d3b6e91e",
+      "text": "常规大保险",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf4b1bbc75c6c40739b37",
+      "text": "基础保底",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t65b027a020a7a383b470",
+      "text": "168",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t79023ff0afad36e3dd1d",
+      "text": "388",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t2dd6d4487257a15863f9",
+      "text": "628",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t6a151e707c72f2183a37",
+      "text": "108",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t272e357232fbf8252754",
+      "text": "288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td83b826a28f137bacc2a",
+      "text": "488",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t93c49a055a02db78a142",
+      "text": "r",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t4dbf6970c3952f41f571",
+      "text": "688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tb44dab754382164a5fe2",
+      "text": "1688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t39dc954bdc6e82f40c46",
+      "text": "3288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t802de43ed41324b456d5",
+      "text": "w",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t70edf16a32002b1a12e8",
+      "text": "2",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t229b15f6a8bc4170cf70",
+      "text": "个",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t22c455d2b81cd531cff1",
+      "text": "3",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t3a318fe4f80ac28aad30",
+      "text": "6",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tfae761d22cbf02b7f764",
+      "text": "8",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t304bbc48bf26f07dd4c1",
+      "text": "10",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tb48c13674ff9a650b6ac",
+      "text": "15",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t62d2fe879677b7f73805",
+      "text": "三",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "te7fe97c6ad9cffc2cde2",
+      "text": "幻",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "td9826034a80cee4d90fd",
+      "text": "神",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t0fecb7fe9caef13dfb67",
+      "text": "惊",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t902d0219bff059c03ee5",
+      "text": "喜",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "taf25ae0daca1c99894d9",
+      "text": "奖",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tcd6c1cccc08ed2dfcfd3",
+      "text": "励",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t6a8e29e2dc79e2602c60",
+      "text": "对局中出巴克什三幻神之一",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t70359583d55f911d235a",
+      "text": "+800",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc039ba16bbf0d88a4a3a",
+      "text": "额外保底",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t9a05145e4e59581db7e3",
+      "text": "赠沙色保险",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tbc5538232f3ea307cacc",
+      "text": "1",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t743cdd9fe8055676caad",
+      "text": "次",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t8957ef098d62666fe8b9",
+      "text": "整单仅一次",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t1b8a3dbc815c9e12b299",
+      "text": "赠送不计套餐次数",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t6cd1b5177299692db846",
+      "text": "下",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t332e117e415daa41281a",
+      "text": "须",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t81b948f69304c94dedc7",
+      "text": "知",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tc116142e08eac06578b6",
+      "text": "r = 元 / w = 万",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t04d99679daa7842b6a64",
+      "text": "计次",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t8460afbbb49c708ef8c8",
+      "text": "两类保险仅统计",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf46adc7e443a4fa1b1ff",
+      "text": "成功撤离",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tb4691b039d2f11afdab7",
+      "text": "的局",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t7f839b9d83fba96165c1",
+      "text": "代摸",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t99fedfca75ba8c444a47",
+      "text": "战况激烈时，陪玩先询问板板能否代摸",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t7665bdd2282ca3edee53",
+      "text": "累计",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td0d52dba4cfd5399f582",
+      "text": "成功撤离且板板全身物资",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "ta843ede06d7ecb1c3a20",
+      "text": "＞600w",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t2df5d0c37b84708c784f",
+      "text": "才计保底",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t080ce60fa1f24768d23e",
+      "text": "兴安电竞 · 下单前请确认地图及订单规则",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "ta66d386b0134a933b60e",
+      "text": "绝密专属 · 成功撤离 · 累计摸箱",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t380a8c85747f3f65843d",
+      "text": "沙色次数 ＋ 常规次数 ＋ 基础保底",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t20038f946586c87c6f32",
+      "text": "三项同时达标才结单",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tfd162434fe6f905f615c",
+      "text": "端游 · 绝密",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t07ec7779dff5f14c62f2",
+      "text": "兴安电竞 · r = 元 / w = 万",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    }
+  ],
+  "pages": [
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密 · 沙色保险单",
+      "bg": "poster.png",
+      "w": 1024,
+      "h": 1536,
+      "ew": 3200,
+      "eh": 4800,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g data-role=\"brand-logo\" transform=\"translate(240.319902295 46.16) scale(1.4090322580645163)\" fill=\"none\" stroke=\"#183E50\" stroke-width=\"2.2\" stroke-linejoin=\"round\"><path d=\"M0 29L15.5 1L31 29Z M7.5 24L15.5 10L23.5 24Z\"/><path d=\"M12 22L17 14L15 21H21\" stroke-width=\"1.8\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 296.479902295,
+          "cy": 68,
+          "size": 39,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "art",
+          "text": "沙色保险单",
+          "ids": [
+            "t7fd129bf2de0ea02e34d",
+            "t23ad229444c2d4291a28",
+            "t08acaafbf34b4116ba1f",
+            "t394244211ffd6d3e574e",
+            "t5987677ea6a76fadffef"
+          ],
+          "x": 107.55352946621039,
+          "cy": 168.00984884466442,
+          "size": 83.13492147356223,
+          "fill": "#183E50",
+          "shadow": "#D8B98B",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.2,
+          "angles": true,
+          "role": "art-title",
+          "requestedCenter": [
+            316,
+            169.5
+          ],
+          "visibleBounds": [
+            103.99999880574003,
+            123.75311598028836,
+            424.00000238851993,
+            91.49376803942327
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t97ae02f7781d131012e3",
+          "text": "成功撤离 · 累计摸箱",
+          "x": 326,
+          "cy": 250.5,
+          "size": 31,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "subtitle"
+        },
+        {
+          "type": "inline",
+          "role": "platform-completion",
+          "x": 508.5,
+          "cy": 315,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 32,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#FFFDF5",
+              "text": "手游 · 绝密",
+              "id": "t3a2bcbe0d48bcc57c7bb",
+              "role": "platform-completion-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#FFFDF5",
+              "text": "三项同时达标才结单",
+              "gap": 54,
+              "id": "tbc6772e2e73fb27754f6",
+              "role": "platform-completion-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ta4d8072e481fdd7ee4eb",
+          "text": "沙色次数达标",
+          "x": 212,
+          "cy": 413,
+          "size": 35,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "completion-target-0"
+        },
+        {
+          "type": "text",
+          "id": "t8e0b696139539896c64a",
+          "text": "常规次数达标",
+          "x": 511,
+          "cy": 413,
+          "size": 35,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "completion-target-1"
+        },
+        {
+          "type": "text",
+          "id": "tb51e52116651ef8c6850",
+          "text": "基础保底达标",
+          "x": 810,
+          "cy": 413,
+          "size": 35,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "middle",
+          "role": "completion-target-2"
+        },
+        {
+          "type": "text",
+          "id": "t5c9f7245ca83ec0c40fc",
+          "text": "价格",
+          "x": 145.5,
+          "cy": 510,
+          "size": 31,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "tf6874bb002aa13e76597",
+          "text": "沙色保险",
+          "x": 359,
+          "cy": 510,
+          "size": 31,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t158f96c4d955d3b6e91e",
+          "text": "常规大保险",
+          "x": 605,
+          "cy": 510,
+          "size": 31,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "tf4b1bbc75c6c40739b37",
+          "text": "基础保底",
+          "x": 856,
+          "cy": 510,
+          "size": 31,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6a151e707c72f2183a37",
+          "text": "108",
+          "x": 181.64493589280048,
+          "cy": 591,
+          "size": 67.95833169314491,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 193.64493589280048,
+          "cy": 591,
+          "size": 67.04189689723741,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 898.1588036567548,
+          "cy": 591,
+          "size": 66.90075802910094,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 910.1588036567548,
+          "cy": 591,
+          "size": 66.95232155086133,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 400.5,
+          "cy": 591,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 69,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "2",
+              "id": "t70edf16a32002b1a12e8",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 11,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 648,
+          "cy": 591,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 69,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "3",
+              "id": "t22c455d2b81cd531cff1",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 11,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 181.64493589280048,
+          "cy": 701,
+          "size": 67.95833169314491,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 193.64493589280048,
+          "cy": 701,
+          "size": 67.04189689723741,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "tb44dab754382164a5fe2",
+          "text": "1688",
+          "x": 898.1588036567548,
+          "cy": 701,
+          "size": 66.90075802910094,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 910.1588036567548,
+          "cy": 701,
+          "size": 66.95232155086133,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 400.5,
+          "cy": 701,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 69,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "6",
+              "id": "t3a318fe4f80ac28aad30",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 11,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 648,
+          "cy": 701,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 69,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "8",
+              "id": "tfae761d22cbf02b7f764",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 11,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "td83b826a28f137bacc2a",
+          "text": "488",
+          "x": 181.64493589280048,
+          "cy": 810,
+          "size": 67.95833169314491,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 193.64493589280048,
+          "cy": 810,
+          "size": 67.04189689723741,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t39dc954bdc6e82f40c46",
+          "text": "3288",
+          "x": 898.1588036567548,
+          "cy": 810,
+          "size": 66.90075802910094,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 910.1588036567548,
+          "cy": 810,
+          "size": 66.95232155086133,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 400.5,
+          "cy": 810,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 69,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "10",
+              "id": "t304bbc48bf26f07dd4c1",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 11,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 648,
+          "cy": 810,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 69,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "15",
+              "id": "tb48c13674ff9a650b6ac",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 11,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "art",
+          "text": "三幻神惊喜奖励",
+          "ids": [
+            "t62d2fe879677b7f73805",
+            "te7fe97c6ad9cffc2cde2",
+            "td9826034a80cee4d90fd",
+            "t0fecb7fe9caef13dfb67",
+            "t902d0219bff059c03ee5",
+            "taf25ae0daca1c99894d9",
+            "tcd6c1cccc08ed2dfcfd3"
+          ],
+          "x": 420.317024161,
+          "cy": 917.7825,
+          "size": 37,
+          "fill": "#AD6E28",
+          "shadow": "#E9D2AB",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.8,
+          "angles": false,
+          "role": "reward-art-title",
+          "requestedCenter": [
+            548,
+            918.5
+          ],
+          "visibleBounds": [
+            419.417024161,
+            899.19650185,
+            257.165951678,
+            38.6069963
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t6a8e29e2dc79e2602c60",
+          "text": "对局中出巴克什三幻神之一",
+          "x": 548,
+          "cy": 959,
+          "size": 30,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "reward-trigger"
+        },
+        {
+          "type": "inline",
+          "role": "reward-extra",
+          "x": 275,
+          "cy": 1024,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 30,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "额外保底",
+              "id": "tc039ba16bbf0d88a4a3a",
+              "role": "reward-extra-part-0"
+            },
+            {
+              "size": 63,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "+800",
+              "gap": 16,
+              "id": "t70359583d55f911d235a",
+              "role": "reward-extra-part-1"
+            },
+            {
+              "size": 63.17600986692463,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "w",
+              "gap": 9,
+              "id": "t802de43ed41324b456d5",
+              "role": "reward-extra-part-2"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "reward-gift",
+          "x": 744,
+          "cy": 1024,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 30,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "赠沙色保险",
+              "id": "t9a05145e4e59581db7e3",
+              "role": "reward-gift-part-0"
+            },
+            {
+              "size": 63,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "1",
+              "gap": 16,
+              "id": "tbc5538232f3ea307cacc",
+              "role": "reward-gift-part-1"
+            },
+            {
+              "size": 39,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "次",
+              "gap": 9,
+              "id": "t743cdd9fe8055676caad",
+              "role": "reward-gift-part-2"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "reward-conditions",
+          "x": 512.5,
+          "cy": 1102,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "整单仅一次",
+              "id": "t8957ef098d62666fe8b9",
+              "role": "reward-conditions-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "赠送不计套餐次数",
+              "gap": 24,
+              "id": "t1b8a3dbc815c9e12b299",
+              "role": "reward-conditions-part-1"
+            }
+          ]
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ],
+          "x": 164.1530124,
+          "cy": 1175.1225,
+          "size": 31,
+          "fill": "#FFFDF5",
+          "shadow": "#122F40",
+          "outline": "#183E50",
+          "outlineWidth": 0.5,
+          "angles": false,
+          "role": "notes-art-title",
+          "requestedCenter": [
+            225,
+            1176
+          ],
+          "visibleBounds": [
+            163.9030124,
+            1160.2095,
+            122.1939752,
+            31.581
+          ]
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 828,
+          "cy": 1176,
+          "size": 25,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#D7E4E9",
+          "anchor": "middle",
+          "role": "units-key"
+        },
+        {
+          "type": "inline",
+          "role": "rule-count",
+          "x": 124,
+          "cy": 1239.5,
+          "anchor": "start",
+          "gap": 0,
+          "parts": [
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "计次",
+              "id": "t04d99679daa7842b6a64",
+              "role": "rule-count-part-0"
+            },
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "两类保险仅统计",
+              "gap": 22,
+              "id": "t8460afbbb49c708ef8c8",
+              "role": "rule-count-part-1"
+            },
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "成功撤离",
+              "gap": 0,
+              "id": "tf46adc7e443a4fa1b1ff",
+              "role": "rule-count-part-2"
+            },
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "的局",
+              "gap": 0,
+              "id": "tb4691b039d2f11afdab7",
+              "role": "rule-count-part-3"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "rule-proxy",
+          "x": 124,
+          "cy": 1310.5,
+          "anchor": "start",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "代摸",
+              "id": "t7f839b9d83fba96165c1",
+              "role": "rule-proxy-part-0"
+            },
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "战况激烈时，陪玩先询问板板能否代摸",
+              "gap": 22,
+              "id": "t99fedfca75ba8c444a47",
+              "role": "rule-proxy-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "rule-loot",
+          "x": 124,
+          "cy": 1386.5,
+          "anchor": "start",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "累计",
+              "id": "t7665bdd2282ca3edee53",
+              "role": "rule-loot-part-0"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "成功撤离且板板全身物资",
+              "gap": 20,
+              "id": "td0d52dba4cfd5399f582",
+              "role": "rule-loot-part-1"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "＞600w",
+              "gap": 5,
+              "id": "ta843ede06d7ecb1c3a20",
+              "role": "rule-loot-part-2"
+            },
+            {
+              "size": 34,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "才计保底",
+              "gap": 5,
+              "id": "t2df5d0c37b84708c784f",
+              "role": "rule-loot-part-3"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t080ce60fa1f24768d23e",
+          "text": "兴安电竞 · 下单前请确认地图及订单规则",
+          "x": 504,
+          "cy": 1464.5,
+          "size": 24,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "footer"
+        }
+      ],
+      "platforms": [
+        "mobile"
+      ],
+      "sourceRows": [
+        {
+          "id": "mobile-1",
+          "priceR": 108,
+          "sandSafeCount": 2,
+          "regularLargeSafeCount": 3,
+          "baseGuaranteeW": 688
+        },
+        {
+          "id": "mobile-2",
+          "priceR": 288,
+          "sandSafeCount": 6,
+          "regularLargeSafeCount": 8,
+          "baseGuaranteeW": 1688
+        },
+        {
+          "id": "mobile-3",
+          "priceR": 488,
+          "sandSafeCount": 10,
+          "regularLargeSafeCount": 15,
+          "baseGuaranteeW": 3288
+        }
+      ],
+      "alignment": {
+        "price": {
+          "left": 74,
+          "right": 218,
+          "size": 67.95833169314491,
+          "unitSize": 67.04189689723741,
+          "unitX": 193.64493589280048,
+          "numberRight": 181.64493589280048,
+          "unitGap": 12,
+          "ratio": 0.7,
+          "longestWidth": 107.64493589280049,
+          "unitWidth": 24.355064107199528
+        },
+        "loot": {
+          "left": 759,
+          "right": 959,
+          "size": 66.90075802910094,
+          "unitSize": 66.95232155086133,
+          "unitX": 910.1588036567548,
+          "numberRight": 898.1588036567548,
+          "unitGap": 12,
+          "ratio": 0.7,
+          "longestWidth": 139.15880365675477,
+          "unitWidth": 48.84119634324524
+        },
+        "unitVisibleHeightRatio": 0.7,
+        "rows": [
+          [
+            51,
+            542,
+            922,
+            98
+          ],
+          [
+            51,
+            653,
+            922,
+            96
+          ],
+          [
+            51,
+            761,
+            922,
+            99
+          ]
+        ],
+        "bodyStyle": "Regular 400; selective Bold 700",
+        "ordinaryBodySizes": [
+          35,
+          35,
+          34
+        ],
+        "minimumPhoneBodySize": 12.94921875
+      }
+    },
+    {
+      "id": "social",
+      "label": "沙色保险单 · 双平台简洁宣发",
+      "bg": "social.png",
+      "w": 1086,
+      "h": 1448,
+      "ew": 2400,
+      "eh": 3200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g data-role=\"brand-logo\" transform=\"translate(283.319902295 49.16) scale(1.4090322580645163)\" fill=\"none\" stroke=\"#183E50\" stroke-width=\"2.2\" stroke-linejoin=\"round\"><path d=\"M0 29L15.5 1L31 29Z M7.5 24L15.5 10L23.5 24Z\"/><path d=\"M12 22L17 14L15 21H21\" stroke-width=\"1.8\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 339.47990229500004,
+          "cy": 71,
+          "size": 39,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "art",
+          "text": "沙色保险单",
+          "ids": [
+            "t7fd129bf2de0ea02e34d",
+            "t23ad229444c2d4291a28",
+            "t08acaafbf34b4116ba1f",
+            "t394244211ffd6d3e574e",
+            "t5987677ea6a76fadffef"
+          ],
+          "x": 137.71524293028915,
+          "cy": 170.59426863446237,
+          "size": 79.89043123366926,
+          "fill": "#183E50",
+          "shadow": "#D8B98B",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.2,
+          "angles": true,
+          "role": "art-title",
+          "requestedCenter": [
+            338,
+            172
+          ],
+          "visibleBounds": [
+            134.23497655457834,
+            127.99994067931445,
+            407.5300468908433,
+            88.00011864137112
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ta66d386b0134a933b60e",
+          "text": "绝密专属 · 成功撤离 · 累计摸箱",
+          "x": 340.5,
+          "cy": 249.5,
+          "size": 30,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-subtitle"
+        },
+        {
+          "type": "text",
+          "id": "t380a8c85747f3f65843d",
+          "text": "沙色次数 ＋ 常规次数 ＋ 基础保底",
+          "x": 546,
+          "cy": 314,
+          "size": 33,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-completion-targets"
+        },
+        {
+          "type": "text",
+          "id": "t20038f946586c87c6f32",
+          "text": "三项同时达标才结单",
+          "x": 546,
+          "cy": 357,
+          "size": 35,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "middle",
+          "role": "social-completion-relation"
+        },
+        {
+          "type": "text",
+          "id": "tfd162434fe6f905f615c",
+          "text": "端游 · 绝密",
+          "x": 543,
+          "cy": 430.5,
+          "size": 32,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "social-platform"
+        },
+        {
+          "type": "text",
+          "id": "t5c9f7245ca83ec0c40fc",
+          "text": "价格",
+          "x": 151,
+          "cy": 474.5,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "tf6874bb002aa13e76597",
+          "text": "沙色保险",
+          "x": 360.5,
+          "cy": 474.5,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t158f96c4d955d3b6e91e",
+          "text": "常规大保险",
+          "x": 630.5,
+          "cy": 474.5,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "tf4b1bbc75c6c40739b37",
+          "text": "基础保底",
+          "x": 900.5,
+          "cy": 474.5,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t65b027a020a7a383b470",
+          "text": "168",
+          "x": 184.60646510707502,
+          "cy": 535,
+          "size": 63,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 194.60646510707502,
+          "cy": 535,
+          "size": 62.15042952492024,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 939.3757694854853,
+          "cy": 535,
+          "size": 65,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 949.3757694854853,
+          "cy": 535,
+          "size": 65.05009851925693,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 402.5,
+          "cy": 535,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "2",
+              "id": "t70edf16a32002b1a12e8",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 673,
+          "cy": 535,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "3",
+              "id": "t22c455d2b81cd531cff1",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 184.60646510707502,
+          "cy": 615,
+          "size": 63,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 194.60646510707502,
+          "cy": 615,
+          "size": 62.15042952492024,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "tb44dab754382164a5fe2",
+          "text": "1688",
+          "x": 939.3757694854853,
+          "cy": 615,
+          "size": 65,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 949.3757694854853,
+          "cy": 615,
+          "size": 65.05009851925693,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 402.5,
+          "cy": 615,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "6",
+              "id": "t3a318fe4f80ac28aad30",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 673,
+          "cy": 615,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "8",
+              "id": "tfae761d22cbf02b7f764",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t2dd6d4487257a15863f9",
+          "text": "628",
+          "x": 184.60646510707502,
+          "cy": 695,
+          "size": 63,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 194.60646510707502,
+          "cy": 695,
+          "size": 62.15042952492024,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t39dc954bdc6e82f40c46",
+          "text": "3288",
+          "x": 939.3757694854853,
+          "cy": 695,
+          "size": 65,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 949.3757694854853,
+          "cy": 695,
+          "size": 65.05009851925693,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 402.5,
+          "cy": 695,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "10",
+              "id": "t304bbc48bf26f07dd4c1",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 673,
+          "cy": 695,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "15",
+              "id": "tb48c13674ff9a650b6ac",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t3a2bcbe0d48bcc57c7bb",
+          "text": "手游 · 绝密",
+          "x": 543,
+          "cy": 775.5,
+          "size": 32,
+          "font": "Microsoft YaHei UI",
+          "style": 1,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "social-platform"
+        },
+        {
+          "type": "text",
+          "id": "t5c9f7245ca83ec0c40fc",
+          "text": "价格",
+          "x": 151,
+          "cy": 821,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "tf6874bb002aa13e76597",
+          "text": "沙色保险",
+          "x": 360.5,
+          "cy": 821,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t158f96c4d955d3b6e91e",
+          "text": "常规大保险",
+          "x": 630.5,
+          "cy": 821,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "tf4b1bbc75c6c40739b37",
+          "text": "基础保底",
+          "x": 900.5,
+          "cy": 821,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6a151e707c72f2183a37",
+          "text": "108",
+          "x": 184.60646510707502,
+          "cy": 881,
+          "size": 63,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 194.60646510707502,
+          "cy": 881,
+          "size": 62.15042952492024,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 939.3757694854853,
+          "cy": 881,
+          "size": 65,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 949.3757694854853,
+          "cy": 881,
+          "size": 65.05009851925693,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 402.5,
+          "cy": 881,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "2",
+              "id": "t70edf16a32002b1a12e8",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 673,
+          "cy": 881,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "3",
+              "id": "t22c455d2b81cd531cff1",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 184.60646510707502,
+          "cy": 961,
+          "size": 63,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 194.60646510707502,
+          "cy": 961,
+          "size": 62.15042952492024,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "tb44dab754382164a5fe2",
+          "text": "1688",
+          "x": 939.3757694854853,
+          "cy": 961,
+          "size": 65,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 949.3757694854853,
+          "cy": 961,
+          "size": 65.05009851925693,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 402.5,
+          "cy": 961,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "6",
+              "id": "t3a318fe4f80ac28aad30",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 673,
+          "cy": 961,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "8",
+              "id": "tfae761d22cbf02b7f764",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "td83b826a28f137bacc2a",
+          "text": "488",
+          "x": 184.60646510707502,
+          "cy": 1041,
+          "size": 63,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 194.60646510707502,
+          "cy": 1041,
+          "size": 62.15042952492024,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t39dc954bdc6e82f40c46",
+          "text": "3288",
+          "x": 939.3757694854853,
+          "cy": 1041,
+          "size": 65,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "end",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 949.3757694854853,
+          "cy": 1041,
+          "size": 65.05009851925693,
+          "font": "Bahnschrift",
+          "style": 1,
+          "fill": "#AD6E28",
+          "anchor": "start",
+          "role": "loot-unit"
+        },
+        {
+          "type": "inline",
+          "role": "sand-count",
+          "x": 402.5,
+          "cy": 1041,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "10",
+              "id": "t304bbc48bf26f07dd4c1",
+              "role": "sand-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "sand-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "regular-count",
+          "x": 673,
+          "cy": 1041,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 62,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#183E50",
+              "text": "15",
+              "id": "tb48c13674ff9a650b6ac",
+              "role": "regular-count-part-0"
+            },
+            {
+              "size": 31,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "个",
+              "gap": 10,
+              "id": "t229b15f6a8bc4170cf70",
+              "role": "regular-count-part-1"
+            }
+          ]
+        },
+        {
+          "type": "art",
+          "text": "三幻神奖励",
+          "ids": [
+            "t62d2fe879677b7f73805",
+            "te7fe97c6ad9cffc2cde2",
+            "td9826034a80cee4d90fd",
+            "taf25ae0daca1c99894d9",
+            "tcd6c1cccc08ed2dfcfd3"
+          ],
+          "x": 291.904890602,
+          "cy": 1143.365,
+          "size": 34,
+          "fill": "#AD6E28",
+          "shadow": "#E9D2AB",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.8,
+          "angles": false,
+          "role": "reward-art-title",
+          "requestedCenter": [
+            374.9218752,
+            1144
+          ],
+          "visibleBounds": [
+            291.004890602,
+            1126.298,
+            167.833969196,
+            35.403999999999996
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t6a8e29e2dc79e2602c60",
+          "text": "对局中出巴克什三幻神之一",
+          "x": 482.838859798,
+          "cy": 1144,
+          "size": 32,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "start",
+          "role": "reward-trigger"
+        },
+        {
+          "type": "inline",
+          "role": "reward-extra",
+          "x": 303.5,
+          "cy": 1228.5,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 32,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "额外保底",
+              "id": "tc039ba16bbf0d88a4a3a",
+              "role": "reward-extra-part-0"
+            },
+            {
+              "size": 64,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "+800",
+              "gap": 16,
+              "id": "t70359583d55f911d235a",
+              "role": "reward-extra-part-1"
+            },
+            {
+              "size": 64.17880367433614,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "w",
+              "gap": 9,
+              "id": "t802de43ed41324b456d5",
+              "role": "reward-extra-part-2"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "reward-gift",
+          "x": 781.5,
+          "cy": 1228.5,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 32,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "赠沙色保险",
+              "id": "t9a05145e4e59581db7e3",
+              "role": "reward-gift-part-0"
+            },
+            {
+              "size": 64,
+              "font": "Bahnschrift",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "1",
+              "gap": 16,
+              "id": "tbc5538232f3ea307cacc",
+              "role": "reward-gift-part-1"
+            },
+            {
+              "size": 40,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "次",
+              "gap": 9,
+              "id": "t743cdd9fe8055676caad",
+              "role": "reward-gift-part-2"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "role": "reward-conditions",
+          "x": 542,
+          "cy": 1302,
+          "anchor": "middle",
+          "gap": 12,
+          "parts": [
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 1,
+              "fill": "#AD6E28",
+              "text": "整单仅一次",
+              "id": "t8957ef098d62666fe8b9",
+              "role": "reward-conditions-part-0"
+            },
+            {
+              "size": 35,
+              "font": "Microsoft YaHei UI",
+              "style": 0,
+              "fill": "#183E50",
+              "text": "赠送不计套餐次数",
+              "gap": 24,
+              "id": "t1b8a3dbc815c9e12b299",
+              "role": "reward-conditions-part-1"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t07ec7779dff5f14c62f2",
+          "text": "兴安电竞 · r = 元 / w = 万",
+          "x": 543,
+          "cy": 1408,
+          "size": 28,
+          "font": "Microsoft YaHei UI",
+          "style": 0,
+          "fill": "#183E50",
+          "anchor": "middle",
+          "role": "social-footer"
+        }
+      ],
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "sourceRows": [
+        {
+          "id": "desktop-1",
+          "priceR": 168,
+          "sandSafeCount": 2,
+          "regularLargeSafeCount": 3,
+          "baseGuaranteeW": 688
+        },
+        {
+          "id": "desktop-2",
+          "priceR": 388,
+          "sandSafeCount": 6,
+          "regularLargeSafeCount": 8,
+          "baseGuaranteeW": 1688
+        },
+        {
+          "id": "desktop-3",
+          "priceR": 628,
+          "sandSafeCount": 10,
+          "regularLargeSafeCount": 15,
+          "baseGuaranteeW": 3288
+        },
+        {
+          "id": "mobile-1",
+          "priceR": 108,
+          "sandSafeCount": 2,
+          "regularLargeSafeCount": 3,
+          "baseGuaranteeW": 688
+        },
+        {
+          "id": "mobile-2",
+          "priceR": 288,
+          "sandSafeCount": 6,
+          "regularLargeSafeCount": 8,
+          "baseGuaranteeW": 1688
+        },
+        {
+          "id": "mobile-3",
+          "priceR": 488,
+          "sandSafeCount": 10,
+          "regularLargeSafeCount": 15,
+          "baseGuaranteeW": 3288
+        }
+      ],
+      "alignment": {
+        "price": {
+          "left": 77,
+          "right": 225,
+          "size": 63,
+          "unitSize": 62.15042952492024,
+          "unitX": 194.60646510707502,
+          "numberRight": 184.60646510707502,
+          "unitGap": 10,
+          "ratio": 0.7,
+          "longestWidth": 99.79101594,
+          "unitWidth": 22.57808572584993
+        },
+        "loot": {
+          "left": 791,
+          "right": 1010,
+          "size": 65,
+          "unitSize": 65.05009851925693,
+          "unitX": 949.3757694854853,
+          "numberRight": 939.3757694854853,
+          "unitGap": 10,
+          "ratio": 0.7,
+          "longestWidth": 135.20507845,
+          "unitWidth": 47.45353947902948
+        },
+        "unitVisibleHeightRatio": 0.7,
+        "noOrderNotes": true,
+        "rows": [
+          [
+            54,
+            499,
+            979,
+            71
+          ],
+          [
+            54,
+            579,
+            979,
+            71
+          ],
+          [
+            54,
+            660,
+            979,
+            70
+          ],
+          [
+            54,
+            846,
+            979,
+            70
+          ],
+          [
+            54,
+            926,
+            979,
+            71
+          ],
+          [
+            54,
+            1006,
+            979,
+            71
+          ]
+        ],
+        "rewardConditionsIncluded": true
+      }
+    }
+  ],
+  "placements": [
+    {
+      "page": "mobile-absolute",
+      "role": "brand",
+      "container": [
+        174,
+        42,
+        344,
+        52
+      ],
+      "visibleWidth": 211.36019541000002,
+      "visibleHeight": 43.68000000000001,
+      "fontSize": 39,
+      "phoneSize": 14.853515625,
+      "centerX": 346,
+      "centerY": 68
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "art-title",
+      "container": [
+        104,
+        122,
+        424,
+        95
+      ],
+      "visibleWidth": 424.00000238851993,
+      "visibleHeight": 91.49376803942327,
+      "fontSize": 83.13492147356223,
+      "phoneSize": 31.66271423309499,
+      "centerX": 316,
+      "centerY": 169.5
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "subtitle",
+      "container": [
+        133,
+        233,
+        386,
+        35
+      ],
+      "visibleWidth": 272.74854,
+      "visibleHeight": 30.243162899999998,
+      "fontSize": 31,
+      "phoneSize": 11.806640625,
+      "centerX": 326,
+      "centerY": 250.5
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "platform-completion",
+      "container": [
+        70,
+        299,
+        877,
+        32
+      ],
+      "visibleWidth": 492.988285125,
+      "visibleHeight": 31.4375008,
+      "fontSize": 31,
+      "phoneSize": 11.806640625,
+      "centerX": 508.5,
+      "centerY": 315
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "completion-target-0",
+      "container": [
+        98,
+        389,
+        228,
+        48
+      ],
+      "visibleWidth": 209.11132830000003,
+      "visibleHeight": 34.077148,
+      "fontSize": 35,
+      "phoneSize": 13.330078125,
+      "centerX": 212,
+      "centerY": 413
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "completion-target-1",
+      "container": [
+        397,
+        389,
+        228,
+        48
+      ],
+      "visibleWidth": 208.15429705000003,
+      "visibleHeight": 34.111329,
+      "fontSize": 35,
+      "phoneSize": 13.330078125,
+      "centerX": 511,
+      "centerY": 413
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "completion-target-2",
+      "container": [
+        695,
+        389,
+        230,
+        48
+      ],
+      "visibleWidth": 209.213865,
+      "visibleHeight": 33.9746085,
+      "fontSize": 35,
+      "phoneSize": 13.330078125,
+      "centerX": 810,
+      "centerY": 413
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "table-heading",
+      "container": [
+        74,
+        493,
+        143,
+        34
+      ],
+      "visibleWidth": 61.243166,
+      "visibleHeight": 30.1826168,
+      "fontSize": 31,
+      "phoneSize": 11.806640625,
+      "centerX": 145.5,
+      "centerY": 510
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "table-heading",
+      "container": [
+        247,
+        493,
+        224,
+        34
+      ],
+      "visibleWidth": 123.33398453,
+      "visibleHeight": 30.2734375,
+      "fontSize": 31,
+      "phoneSize": 11.806640625,
+      "centerX": 359,
+      "centerY": 510
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "table-heading",
+      "container": [
+        493,
+        493,
+        224,
+        34
+      ],
+      "visibleWidth": 152.88085953,
+      "visibleHeight": 29.9707039,
+      "fontSize": 31,
+      "phoneSize": 11.806640625,
+      "centerX": 605,
+      "centerY": 510
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "table-heading",
+      "container": [
+        754,
+        493,
+        204,
+        34
+      ],
+      "visibleWidth": 123.2734375,
+      "visibleHeight": 30.485350399999998,
+      "fontSize": 31,
+      "phoneSize": 11.806640625,
+      "centerX": 856,
+      "centerY": 510
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "sand-count",
+      "container": [
+        331,
+        558,
+        139,
+        66
+      ],
+      "visibleWidth": 77.1816415095,
+      "visibleHeight": 53.958496523799994,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 400.5,
+      "centerY": 591
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "regular-count",
+      "container": [
+        579,
+        558,
+        138,
+        66
+      ],
+      "visibleWidth": 78.6977551875,
+      "visibleHeight": 53.958496523799994,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 648,
+      "centerY": 591
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "sand-count",
+      "container": [
+        331,
+        668,
+        139,
+        66
+      ],
+      "visibleWidth": 76.608888,
+      "visibleHeight": 53.45312543349999,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 400.5,
+      "centerY": 701
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "regular-count",
+      "container": [
+        579,
+        668,
+        138,
+        66
+      ],
+      "visibleWidth": 79.5063485028,
+      "visibleHeight": 53.958496523799994,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 648,
+      "centerY": 701
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "sand-count",
+      "container": [
+        331,
+        777,
+        139,
+        66
+      ],
+      "visibleWidth": 103.22509852350001,
+      "visibleHeight": 54.05957074599999,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 400.5,
+      "centerY": 810
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "regular-count",
+      "container": [
+        579,
+        777,
+        138,
+        66
+      ],
+      "visibleWidth": 102.71972568749999,
+      "visibleHeight": 53.45312543349999,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 648,
+      "centerY": 810
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "reward-art-title",
+      "container": [
+        170,
+        898,
+        756,
+        41
+      ],
+      "visibleWidth": 257.165951678,
+      "visibleHeight": 38.6069963,
+      "fontSize": 37,
+      "phoneSize": 14.091796875,
+      "centerX": 548,
+      "centerY": 918.5
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "reward-trigger",
+      "container": [
+        170,
+        943,
+        756,
+        32
+      ],
+      "visibleWidth": 359.208984,
+      "visibleHeight": 29.1796875,
+      "fontSize": 30,
+      "phoneSize": 11.42578125,
+      "centerX": 548,
+      "centerY": 959
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "reward-extra",
+      "container": [
+        101,
+        990,
+        348,
+        68
+      ],
+      "visibleWidth": 323.80710986504454,
+      "visibleHeight": 49.57324107,
+      "fontSize": 30,
+      "phoneSize": 11.42578125,
+      "centerX": 275,
+      "centerY": 1024
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "reward-gift",
+      "container": [
+        569,
+        990,
+        350,
+        68
+      ],
+      "visibleWidth": 233.788575178,
+      "visibleHeight": 50.0786128035,
+      "fontSize": 30,
+      "phoneSize": 11.42578125,
+      "centerX": 744,
+      "centerY": 1024
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "reward-conditions",
+      "container": [
+        149,
+        1080,
+        727,
+        44
+      ],
+      "visibleWidth": 470.6279211875,
+      "visibleHeight": 34.205567239000004,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 512.5,
+      "centerY": 1102
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "notes-art-title",
+      "container": [
+        70,
+        1159,
+        310,
+        34
+      ],
+      "visibleWidth": 122.1939752,
+      "visibleHeight": 31.581,
+      "fontSize": 31,
+      "phoneSize": 11.806640625,
+      "centerX": 225,
+      "centerY": 1176
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "units-key",
+      "container": [
+        713,
+        1161,
+        230,
+        30
+      ],
+      "visibleWidth": 168.56689999999998,
+      "visibleHeight": 22.509765,
+      "fontSize": 25,
+      "phoneSize": 9.521484375,
+      "centerX": 828,
+      "centerY": 1176
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "rule-count",
+      "container": [
+        124,
+        1220,
+        828,
+        39
+      ],
+      "visibleWidth": 543.992187675,
+      "visibleHeight": 34.350585499999994,
+      "fontSize": 35,
+      "phoneSize": 13.330078125,
+      "centerX": 538,
+      "centerY": 1239.5
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "rule-proxy",
+      "container": [
+        124,
+        1291,
+        828,
+        39
+      ],
+      "visibleWidth": 685.769532125,
+      "visibleHeight": 34.3847665,
+      "fontSize": 35,
+      "phoneSize": 13.330078125,
+      "centerX": 538,
+      "centerY": 1310.5
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "rule-loot",
+      "container": [
+        124,
+        1365,
+        828,
+        43
+      ],
+      "visibleWidth": 733.026367315,
+      "visibleHeight": 33.468748946000005,
+      "fontSize": 34,
+      "phoneSize": 12.94921875,
+      "centerX": 538,
+      "centerY": 1386.5
+    },
+    {
+      "page": "mobile-absolute",
+      "role": "footer",
+      "container": [
+        260,
+        1444,
+        488,
+        41
+      ],
+      "visibleWidth": 425.6367192,
+      "visibleHeight": 23.5078128,
+      "fontSize": 24,
+      "phoneSize": 9.140625,
+      "centerX": 504,
+      "centerY": 1464.5
+    },
+    {
+      "page": "social",
+      "role": "brand",
+      "container": [
+        186,
+        47,
+        406,
+        48
+      ],
+      "visibleWidth": 211.36019541000002,
+      "visibleHeight": 43.68000000000001,
+      "fontSize": 39,
+      "phoneSize": 14.005524861878452,
+      "centerX": 389,
+      "centerY": 71
+    },
+    {
+      "page": "social",
+      "role": "art-title",
+      "container": [
+        75,
+        128,
+        526,
+        88
+      ],
+      "visibleWidth": 407.5300468908433,
+      "visibleHeight": 88.00011864137112,
+      "fontSize": 79.89043123366926,
+      "phoneSize": 28.68993386844476,
+      "centerX": 338,
+      "centerY": 172
+    },
+    {
+      "page": "social",
+      "role": "social-subtitle",
+      "container": [
+        94,
+        232,
+        493,
+        35
+      ],
+      "visibleWidth": 408.720702,
+      "visibleHeight": 29.355468000000002,
+      "fontSize": 30,
+      "phoneSize": 10.773480662983426,
+      "centerX": 340.5,
+      "centerY": 249.5
+    },
+    {
+      "page": "social",
+      "role": "social-completion-targets",
+      "container": [
+        85,
+        297,
+        922,
+        34
+      ],
+      "visibleWidth": 500.4462903,
+      "visibleHeight": 32.5488273,
+      "fontSize": 33,
+      "phoneSize": 11.850828729281767,
+      "centerX": 546,
+      "centerY": 314
+    },
+    {
+      "page": "social",
+      "role": "social-completion-relation",
+      "container": [
+        85,
+        339,
+        922,
+        36
+      ],
+      "visibleWidth": 313.359375,
+      "visibleHeight": 34.1796875,
+      "fontSize": 35,
+      "phoneSize": 12.569060773480663,
+      "centerX": 546,
+      "centerY": 357
+    },
+    {
+      "page": "social",
+      "role": "social-platform",
+      "container": [
+        74,
+        412,
+        938,
+        37
+      ],
+      "visibleWidth": 160.18750016,
+      "visibleHeight": 31.4375008,
+      "fontSize": 32,
+      "phoneSize": 11.491712707182321,
+      "centerX": 543,
+      "centerY": 430.5
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        77,
+        460,
+        148,
+        29
+      ],
+      "visibleWidth": 55.316408,
+      "visibleHeight": 27.2617184,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 151,
+      "centerY": 474.5
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        245,
+        460,
+        231,
+        29
+      ],
+      "visibleWidth": 111.39843764,
+      "visibleHeight": 27.34375,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 360.5,
+      "centerY": 474.5
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        513,
+        460,
+        235,
+        29
+      ],
+      "visibleWidth": 138.08593764,
+      "visibleHeight": 27.0703132,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 630.5,
+      "centerY": 474.5
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        791,
+        460,
+        219,
+        29
+      ],
+      "visibleWidth": 111.34375,
+      "visibleHeight": 27.5351552,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 900.5,
+      "centerY": 474.5
+    },
+    {
+      "page": "social",
+      "role": "sand-count",
+      "container": [
+        329,
+        509,
+        147,
+        52
+      ],
+      "visibleWidth": 69.9111336185,
+      "visibleHeight": 48.54345742339999,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 402.5,
+      "centerY": 535
+    },
+    {
+      "page": "social",
+      "role": "regular-count",
+      "container": [
+        598,
+        509,
+        150,
+        52
+      ],
+      "visibleWidth": 71.2734386625,
+      "visibleHeight": 48.54345742339999,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 673,
+      "centerY": 535
+    },
+    {
+      "page": "social",
+      "role": "sand-count",
+      "container": [
+        329,
+        589,
+        147,
+        52
+      ],
+      "visibleWidth": 69.39648553749998,
+      "visibleHeight": 48.089355864,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 402.5,
+      "centerY": 615
+    },
+    {
+      "page": "social",
+      "role": "regular-count",
+      "container": [
+        598,
+        589,
+        150,
+        52
+      ],
+      "visibleWidth": 72.00000077189999,
+      "visibleHeight": 48.54345742339999,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 673,
+      "centerY": 615
+    },
+    {
+      "page": "social",
+      "role": "sand-count",
+      "container": [
+        329,
+        669,
+        147,
+        52
+      ],
+      "visibleWidth": 93.3125007905,
+      "visibleHeight": 48.634277739,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 402.5,
+      "centerY": 695
+    },
+    {
+      "page": "social",
+      "role": "regular-count",
+      "container": [
+        598,
+        669,
+        150,
+        52
+      ],
+      "visibleWidth": 92.85839766250001,
+      "visibleHeight": 48.089355864,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 673,
+      "centerY": 695
+    },
+    {
+      "page": "social",
+      "role": "social-platform",
+      "container": [
+        74,
+        757,
+        938,
+        37
+      ],
+      "visibleWidth": 160.09375008,
+      "visibleHeight": 31.4375008,
+      "fontSize": 32,
+      "phoneSize": 11.491712707182321,
+      "centerX": 543,
+      "centerY": 775.5
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        77,
+        807,
+        148,
+        28
+      ],
+      "visibleWidth": 55.316408,
+      "visibleHeight": 27.2617184,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 151,
+      "centerY": 821
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        245,
+        807,
+        231,
+        28
+      ],
+      "visibleWidth": 111.39843764,
+      "visibleHeight": 27.34375,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 360.5,
+      "centerY": 821
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        513,
+        807,
+        235,
+        28
+      ],
+      "visibleWidth": 138.08593764,
+      "visibleHeight": 27.0703132,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 630.5,
+      "centerY": 821
+    },
+    {
+      "page": "social",
+      "role": "social-table-heading",
+      "container": [
+        791,
+        807,
+        219,
+        28
+      ],
+      "visibleWidth": 111.34375,
+      "visibleHeight": 27.5351552,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 900.5,
+      "centerY": 821
+    },
+    {
+      "page": "social",
+      "role": "sand-count",
+      "container": [
+        329,
+        855,
+        147,
+        52
+      ],
+      "visibleWidth": 69.9111336185,
+      "visibleHeight": 48.54345742339999,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 402.5,
+      "centerY": 881
+    },
+    {
+      "page": "social",
+      "role": "regular-count",
+      "container": [
+        598,
+        855,
+        150,
+        52
+      ],
+      "visibleWidth": 71.2734386625,
+      "visibleHeight": 48.54345742339999,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 673,
+      "centerY": 881
+    },
+    {
+      "page": "social",
+      "role": "sand-count",
+      "container": [
+        329,
+        935,
+        147,
+        52
+      ],
+      "visibleWidth": 69.39648553749998,
+      "visibleHeight": 48.089355864,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 402.5,
+      "centerY": 961
+    },
+    {
+      "page": "social",
+      "role": "regular-count",
+      "container": [
+        598,
+        935,
+        150,
+        52
+      ],
+      "visibleWidth": 72.00000077189999,
+      "visibleHeight": 48.54345742339999,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 673,
+      "centerY": 961
+    },
+    {
+      "page": "social",
+      "role": "sand-count",
+      "container": [
+        329,
+        1015,
+        147,
+        52
+      ],
+      "visibleWidth": 93.3125007905,
+      "visibleHeight": 48.634277739,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 402.5,
+      "centerY": 1041
+    },
+    {
+      "page": "social",
+      "role": "regular-count",
+      "container": [
+        598,
+        1015,
+        150,
+        52
+      ],
+      "visibleWidth": 92.85839766250001,
+      "visibleHeight": 48.089355864,
+      "fontSize": 31,
+      "phoneSize": 11.132596685082873,
+      "centerX": 673,
+      "centerY": 1041
+    },
+    {
+      "page": "social",
+      "role": "reward-heading-group",
+      "container": [
+        165,
+        1118,
+        827,
+        52
+      ],
+      "visibleWidth": 574.990218796,
+      "visibleHeight": 35.403999999999996,
+      "fontSize": 32,
+      "phoneSize": 11.491712707182321,
+      "centerX": 578.5,
+      "centerY": 1144
+    },
+    {
+      "page": "social",
+      "role": "reward-art-title",
+      "container": [
+        291.004890602,
+        1121,
+        167.833969196,
+        46
+      ],
+      "visibleWidth": 167.833969196,
+      "visibleHeight": 35.403999999999996,
+      "fontSize": 34,
+      "phoneSize": 12.209944751381215,
+      "centerX": 374.9218752,
+      "centerY": 1144
+    },
+    {
+      "page": "social",
+      "role": "reward-extra",
+      "container": [
+        111,
+        1200,
+        385,
+        57
+      ],
+      "visibleWidth": 334.6304370057596,
+      "visibleHeight": 50.578123808,
+      "fontSize": 32,
+      "phoneSize": 11.491712707182321,
+      "centerX": 303.5,
+      "centerY": 1228.5
+    },
+    {
+      "page": "social",
+      "role": "reward-gift",
+      "container": [
+        589,
+        1200,
+        385,
+        57
+      ],
+      "visibleWidth": 245.062500984,
+      "visibleHeight": 50.925780759999995,
+      "fontSize": 32,
+      "phoneSize": 11.491712707182321,
+      "centerX": 781.5,
+      "centerY": 1228.5
+    },
+    {
+      "page": "social",
+      "role": "reward-conditions",
+      "container": [
+        92,
+        1278,
+        900,
+        48
+      ],
+      "visibleWidth": 478.62401468749994,
+      "visibleHeight": 34.3847665,
+      "fontSize": 35,
+      "phoneSize": 12.569060773480663,
+      "centerX": 542,
+      "centerY": 1302
+    },
+    {
+      "page": "social",
+      "role": "social-footer",
+      "container": [
+        246,
+        1390,
+        594,
+        36
+      ],
+      "visibleWidth": 325.86914079999997,
+      "visibleHeight": 27.3164052,
+      "fontSize": 28,
+      "phoneSize": 10.05524861878453,
+      "centerX": 543,
+      "centerY": 1408
+    }
+  ],
+  "dataSource": "content.json",
+  "method": "真实字形测量、艺术字含描边阴影居中、独立r/w轴、横向权益组、正文常规与重点真实粗体、较少换行。"
+}

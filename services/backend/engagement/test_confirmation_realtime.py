@@ -10,6 +10,7 @@ from club_accounts.services import get_or_create_account_for_legacy_user, link_l
 from engagement.confirmation import process_order
 from engagement.models import ConsumptionConfirmation
 from orders.models import AfterSale, Order
+from orders.direct_payment_models import DirectPaymentIntent
 from orders.tests.factories import make_order, make_provider, make_service, make_user
 from wallet.models import ProviderReport, Transaction
 from wallet.services import get_wallet
@@ -99,6 +100,14 @@ class ConfirmationRealtimeTest(TransactionTestCase):
         for blocker in ('status', 'payment', 'account', 'cycle', 'report', 'aftersale', 'window'):
             with self.subTest(blocker=blocker):
                 order = self.order()
+                # Submitted reports normally persist these clocks at submit
+                # time. Keep this fixture realistic so the test checks only
+                # the blocker rather than a separate clock-repair event.
+                submitted_at = order.provider_reports.get().submitted_at
+                Order.objects.filter(pk=order.pk).update(
+                    report_ready_at=submitted_at,
+                    consumption_ready_at=submitted_at + timedelta(hours=72),
+                )
                 fields = {
                     'status': {'status': 'CANCELLED'}, 'payment': {'payment_status': 'REFUNDED'},
                     'account': {'customer_account': None}, 'cycle': {'business_cycle': order.business_cycle+1},
@@ -114,6 +123,42 @@ class ConfirmationRealtimeTest(TransactionTestCase):
                     self.assertFalse(process_order(order.pk))
                     notify.assert_not_called()
                 self.assertFalse(order.transactions.filter(tx_type='INCOME').exists())
+
+    def test_direct_completion_never_confirms_consumption_before_supported_settlement(self):
+        for index, (status, settled) in enumerate((('PAID', False), ('REVIEW', False), ('PAID', True))):
+            with self.subTest(status=status, settled=settled):
+                order = self.order()
+                order.transactions.filter(tx_type='PAY').delete()
+                Order.objects.filter(pk=order.pk).update(settlement_mode='COMPLETION',
+                    settled_at=self.now if settled else None)
+                DirectPaymentIntent.objects.create(order=order, account=self.boss_account,
+                    client_request_id=f'direct-realtime-{index}', request_fingerprint='x'*64,
+                    merchant_order_no=f'XA-realtime-{index}', appid='wx-test', mchid='mch-test',
+                    openid='test-openid', amount_fen=order.amount, status=status,
+                    transaction_id=f'tx-realtime-{index}', paid_at=self.now,
+                    payer_total_fen=order.amount, payer_currency='CNY')
+                with patch('engagement.confirmation.notify_order_update') as notify, \
+                     patch('engagement.confirmation.refresh_report_clock') as clock, \
+                     patch('engagement.services.update_vip') as vip, \
+                     patch('coupons.benefits.grant_periodic') as benefits:
+                    self.assertFalse(process_order(order.pk))
+                    notify.assert_not_called()
+                    clock.assert_not_called()
+                    vip.assert_not_called()
+                    benefits.assert_not_called()
+                order.refresh_from_db()
+                self.assertIsNone(order.consumption_confirmed_at)
+                self.assertFalse(ConsumptionConfirmation.objects.filter(order=order).exists())
+                self.assertFalse(order.transactions.filter(tx_type='INCOME').exists())
+
+    def test_settled_legacy_completion_still_confirms(self):
+        order = self.order()
+        Order.objects.filter(pk=order.pk).update(settlement_mode='COMPLETION', settled_at=self.now)
+        with patch('engagement.confirmation.notify_order_update'):
+            self.assertTrue(process_order(order.pk))
+            self.assertFalse(process_order(order.pk))
+        row = ConsumptionConfirmation.objects.get(order=order)
+        self.assertEqual((row.amount, row.refunded_amount), (order.amount, 0))
 
     def test_outer_rollback_discards_order_wallet_and_confirmation_changes(self):
         order = self.order()

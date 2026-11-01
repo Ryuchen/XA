@@ -1,0 +1,242 @@
+{
+  "basis": "人工查看本轮生成的实际无字底图后，按原生836×1881坐标重测；不套用结构稿的1024×2304坐标。",
+  "native": {
+    "width": 836,
+    "height": 1881
+  },
+  "export": {
+    "width": 3200,
+    "height": 7200,
+    "method": "Lanczos3放大无字底图；正式文字将在下一阶段直接以目标尺寸矢量渲染。"
+  },
+  "header": {
+    "container": {
+      "x": 30,
+      "y": 92,
+      "width": 420,
+      "height": 194
+    },
+    "copy": {
+      "x": 55,
+      "y": 112,
+      "width": 344,
+      "height": 150
+    },
+    "illustrationBounds": {
+      "x": 421,
+      "y": 51,
+      "width": 389,
+      "height": 249
+    },
+    "safeGap": 22
+  },
+  "reward": {
+    "container": {
+      "x": 34,
+      "y": 309,
+      "width": 767,
+      "height": 170
+    },
+    "copy": {
+      "x": 60,
+      "y": 327,
+      "width": 646,
+      "height": 131
+    },
+    "reservedAccent": {
+      "x": 727,
+      "y": 341,
+      "width": 64,
+      "height": 126
+    }
+  },
+  "prices": {
+    "container": {
+      "x": 36,
+      "y": 491,
+      "width": 765,
+      "height": 374
+    },
+    "header": {
+      "x": 40,
+      "y": 497,
+      "width": 756,
+      "height": 53
+    },
+    "body": {
+      "x": 51,
+      "y": 555,
+      "width": 735,
+      "height": 300
+    },
+    "rowBounds": [
+      [
+        550,
+        612
+      ],
+      [
+        612,
+        674
+      ],
+      [
+        674,
+        736
+      ],
+      [
+        736,
+        799
+      ],
+      [
+        799,
+        863
+      ]
+    ],
+    "rowCenters": [
+      581,
+      643,
+      705,
+      767.5,
+      831
+    ],
+    "columnBounds": [
+      [
+        52,
+        272
+      ],
+      [
+        297,
+        537
+      ],
+      [
+        562,
+        785
+      ]
+    ],
+    "columns": [
+      {
+        "label": "完成目标",
+        "center": 162
+      },
+      {
+        "label": "端游",
+        "center": 417
+      },
+      {
+        "label": "手游",
+        "center": 674
+      }
+    ],
+    "count": 5
+  },
+  "objectives": {
+    "container": {
+      "x": 36,
+      "y": 878,
+      "width": 764,
+      "height": 371
+    },
+    "title": {
+      "x": 62,
+      "y": 897,
+      "width": 711,
+      "height": 71
+    },
+    "rows": [
+      {
+        "x": 75,
+        "y": 995,
+        "width": 685,
+        "height": 47
+      },
+      {
+        "x": 75,
+        "y": 1073,
+        "width": 685,
+        "height": 48
+      },
+      {
+        "x": 75,
+        "y": 1154,
+        "width": 685,
+        "height": 60
+      }
+    ],
+    "stripBounds": [
+      [
+        983,
+        1052
+      ],
+      [
+        1062,
+        1133
+      ],
+      [
+        1143,
+        1226
+      ]
+    ]
+  },
+  "notices": {
+    "container": {
+      "x": 36,
+      "y": 1262,
+      "width": 764,
+      "height": 464
+    },
+    "title": {
+      "x": 62,
+      "y": 1283,
+      "width": 711,
+      "height": 38
+    },
+    "groups": [
+      {
+        "x": 64,
+        "y": 1330,
+        "width": 710,
+        "height": 70
+      },
+      {
+        "x": 64,
+        "y": 1423,
+        "width": 710,
+        "height": 75
+      },
+      {
+        "x": 64,
+        "y": 1525,
+        "width": 710,
+        "height": 77
+      },
+      {
+        "x": 64,
+        "y": 1633,
+        "width": 710,
+        "height": 77
+      }
+    ],
+    "separatorY": [
+      1408,
+      1510,
+      1617
+    ]
+  },
+  "plannedType": {
+    "body": 31,
+    "bodyLineHeight": 37,
+    "priceNumber": 48,
+    "priceUnit": 42,
+    "rulePhoneEquivalent": 14.46,
+    "pricePhoneEquivalent": 22.39
+  },
+  "layoutCheck": {
+    "priceRows": 5,
+    "priceColumns": 3,
+    "continuousNavyHeader": true,
+    "objectiveStrips": 3,
+    "noticeGroups": 4,
+    "textFree": true,
+    "approvedCharacterStyle": true
+  },
+  "reviewStatus": "stage-2-background-only; final typography and business-rule QA remain for stage 3"
+}

@@ -1,0 +1,398 @@
+[
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "巴克什",
+    "priceR": 288,
+    "cumulativeExtractions": 2,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 288,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1266,
+      2466
+    ],
+    "referenceGuaranteeW": 1386,
+    "discountFactor": 0.7,
+    "discountedW": 970.1999999999999,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 988
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "巴克什",
+    "priceR": 388,
+    "cumulativeExtractions": 3,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 388,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1266,
+      2466
+    ],
+    "referenceGuaranteeW": 1986,
+    "discountFactor": 0.7,
+    "discountedW": 1390.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1388
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "巴克什",
+    "priceR": 488,
+    "cumulativeExtractions": 4,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 488,
+    "referenceRangeR": [
+      468,
+      668
+    ],
+    "referenceRangeW": [
+      2466,
+      3666
+    ],
+    "referenceGuaranteeW": 2586,
+    "discountFactor": 0.7,
+    "discountedW": 1810.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1888
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "航天",
+    "priceR": 328,
+    "cumulativeExtractions": 2,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 328,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1266,
+      2466
+    ],
+    "referenceGuaranteeW": 1626,
+    "discountFactor": 0.7,
+    "discountedW": 1138.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1188
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "航天",
+    "priceR": 488,
+    "cumulativeExtractions": 3,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 488,
+    "referenceRangeR": [
+      468,
+      668
+    ],
+    "referenceRangeW": [
+      2466,
+      3666
+    ],
+    "referenceGuaranteeW": 2586,
+    "discountFactor": 0.7,
+    "discountedW": 1810.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1888
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "航天",
+    "priceR": 648,
+    "cumulativeExtractions": 4,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 648,
+    "referenceRangeR": [
+      468,
+      668
+    ],
+    "referenceRangeW": [
+      2466,
+      3666
+    ],
+    "referenceGuaranteeW": 3546,
+    "discountFactor": 0.7,
+    "discountedW": 2482.2,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 2488
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "监狱",
+    "priceR": 288,
+    "cumulativeExtractions": 2,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 288,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1266,
+      2466
+    ],
+    "referenceGuaranteeW": 1386,
+    "discountFactor": 0.7,
+    "discountedW": 970.1999999999999,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 988
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "监狱",
+    "priceR": 388,
+    "cumulativeExtractions": 3,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 388,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1266,
+      2466
+    ],
+    "referenceGuaranteeW": 1986,
+    "discountFactor": 0.7,
+    "discountedW": 1390.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1388
+  },
+  {
+    "platform": "端游",
+    "mode": "绝密",
+    "map": "监狱",
+    "priceR": 488,
+    "cumulativeExtractions": 4,
+    "regularMaterialMode": "绝密",
+    "referencePriceR": 488,
+    "referenceRangeR": [
+      468,
+      668
+    ],
+    "referenceRangeW": [
+      2466,
+      3666
+    ],
+    "referenceGuaranteeW": 2586,
+    "discountFactor": 0.7,
+    "discountedW": 1810.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1888
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "核电站",
+    "priceR": 188,
+    "cumulativeExtractions": 2,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 188,
+    "referenceRangeR": [
+      188,
+      188
+    ],
+    "referenceRangeW": [
+      1266,
+      1266
+    ],
+    "referenceGuaranteeW": 1266,
+    "discountFactor": 0.7,
+    "discountedW": 886.1999999999999,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 888
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "核电站",
+    "priceR": 288,
+    "cumulativeExtractions": 3,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 288,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1866,
+      3266
+    ],
+    "referenceGuaranteeW": 2006,
+    "discountFactor": 0.7,
+    "discountedW": 1404.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1488
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "核电站",
+    "priceR": 388,
+    "cumulativeExtractions": 4,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 388,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1866,
+      3266
+    ],
+    "referenceGuaranteeW": 2706,
+    "discountFactor": 0.7,
+    "discountedW": 1894.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1888
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "巴克什",
+    "priceR": 248,
+    "cumulativeExtractions": 2,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 248,
+    "referenceRangeR": [
+      188,
+      268
+    ],
+    "referenceRangeW": [
+      1266,
+      1866
+    ],
+    "referenceGuaranteeW": 1716,
+    "discountFactor": 0.7,
+    "discountedW": 1201.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1288
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "巴克什",
+    "priceR": 348,
+    "cumulativeExtractions": 3,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 348,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1866,
+      3266
+    ],
+    "referenceGuaranteeW": 2426,
+    "discountFactor": 0.7,
+    "discountedW": 1698.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1688
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "巴克什",
+    "priceR": 448,
+    "cumulativeExtractions": 4,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 448,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1866,
+      3266
+    ],
+    "referenceGuaranteeW": 3126,
+    "discountFactor": 0.7,
+    "discountedW": 2188.2,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 2188
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "航天",
+    "priceR": 268,
+    "cumulativeExtractions": 2,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 268,
+    "referenceRangeR": [
+      268,
+      268
+    ],
+    "referenceRangeW": [
+      1866,
+      1866
+    ],
+    "referenceGuaranteeW": 1866,
+    "discountFactor": 0.7,
+    "discountedW": 1306.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1388
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "航天",
+    "priceR": 368,
+    "cumulativeExtractions": 3,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 368,
+    "referenceRangeR": [
+      268,
+      468
+    ],
+    "referenceRangeW": [
+      1866,
+      3266
+    ],
+    "referenceGuaranteeW": 2566,
+    "discountFactor": 0.7,
+    "discountedW": 1796.1999999999998,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 1788
+  },
+  {
+    "platform": "端游",
+    "mode": "机密",
+    "map": "航天",
+    "priceR": 468,
+    "cumulativeExtractions": 4,
+    "regularMaterialMode": "机密",
+    "referencePriceR": 468,
+    "referenceRangeR": [
+      468,
+      468
+    ],
+    "referenceRangeW": [
+      3266,
+      3266
+    ],
+    "referenceGuaranteeW": 3266,
+    "discountFactor": 0.7,
+    "discountedW": 2286.2,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "finalW": 2288
+  }
+]

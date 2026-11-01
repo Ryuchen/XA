@@ -1,0 +1,335 @@
+{
+  "brand": "兴安电竞",
+  "title": "嘉豪物资单",
+  "titleLines": [
+    "嘉豪",
+    "物资单"
+  ],
+  "subtitle": "20分钟清图 · 高标准护航",
+  "provenance": {
+    "prices": "2026-10-09：手游以本轮表格 J 列新价格与 E 列保底逐行对应 F 列模式；端游按本轮广告截图两张上方卡片沿用。",
+    "rules": "用户已明确确认：按此沿用，端手游一致；两种清图方式任一完成、四项条件任一成立即炸单；其余按原参考图。",
+    "verified": true,
+    "sourceFiles": [
+      "references/new-mobile-prices.png",
+      "references/prior-social.png",
+      "references/prior-mobile-absolute.png",
+      "references/prior-mobile-secret.png"
+    ],
+    "units": {
+      "r": "元",
+      "w": "万"
+    },
+    "verifiedDate": "2026-10-09",
+    "priceSourceByPlatform": {
+      "desktop": "references/prior-social.png，上方端游两卡；逐行与原 content.json 一致。",
+      "mobile": "references/new-mobile-prices.png，J列新价格与E列保底、F列模式；共8档，地图航天。"
+    },
+    "numericalComparison": [
+      {
+        "id": "mobile-absolute",
+        "previous": [
+          [
+            168,
+            888
+          ],
+          [
+            268,
+            1688
+          ],
+          [
+            368,
+            2288
+          ],
+          [
+            468,
+            3088
+          ]
+        ],
+        "current": [
+          [
+            168,
+            888
+          ],
+          [
+            268,
+            1688
+          ],
+          [
+            368,
+            2288
+          ],
+          [
+            468,
+            3088
+          ]
+        ],
+        "numericalChange": false
+      },
+      {
+        "id": "mobile-secret",
+        "previous": [
+          [
+            128,
+            888
+          ],
+          [
+            228,
+            1688
+          ],
+          [
+            328,
+            2288
+          ],
+          [
+            428,
+            3088
+          ]
+        ],
+        "current": [
+          [
+            128,
+            888
+          ],
+          [
+            228,
+            1688
+          ],
+          [
+            328,
+            2288
+          ],
+          [
+            428,
+            3088
+          ]
+        ],
+        "numericalChange": false
+      }
+    ]
+  },
+  "tiers": [
+    {
+      "id": "desktop-absolute",
+      "platform": "端游",
+      "mode": "绝密",
+      "color": "gold",
+      "rows": [
+        {
+          "priceR": 268,
+          "lootW": 788
+        },
+        {
+          "priceR": 388,
+          "lootW": 1288
+        },
+        {
+          "priceR": 688,
+          "lootW": 2388
+        },
+        {
+          "priceR": 1299,
+          "lootW": 4888
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "platform": "端游",
+      "mode": "机密",
+      "color": "teal",
+      "rows": [
+        {
+          "priceR": 168,
+          "lootW": 568
+        },
+        {
+          "priceR": 268,
+          "lootW": 868
+        },
+        {
+          "priceR": 468,
+          "lootW": 1468
+        },
+        {
+          "priceR": 868,
+          "lootW": 2668
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "platform": "手游",
+      "mode": "绝密",
+      "color": "gold",
+      "rows": [
+        {
+          "priceR": 168,
+          "lootW": 888
+        },
+        {
+          "priceR": 268,
+          "lootW": 1688
+        },
+        {
+          "priceR": 368,
+          "lootW": 2288
+        },
+        {
+          "priceR": 468,
+          "lootW": 3088
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "platform": "手游",
+      "mode": "机密",
+      "color": "teal",
+      "rows": [
+        {
+          "priceR": 128,
+          "lootW": 888
+        },
+        {
+          "priceR": 228,
+          "lootW": 1688
+        },
+        {
+          "priceR": 328,
+          "lootW": 2288
+        },
+        {
+          "priceR": 428,
+          "lootW": 3088
+        }
+      ]
+    }
+  ],
+  "columns": {
+    "price": "订单价格",
+    "loot": "带出物资"
+  },
+  "mechanism": {
+    "map": "航天",
+    "scope": "仅限对应模式航天",
+    "timeLimitMinutes": 20,
+    "flow": [
+      "进图",
+      "清图",
+      "装包",
+      "撤离"
+    ],
+    "clearance": {
+      "relation": "or",
+      "deadlineMinutes": 20,
+      "methods": [
+        {
+          "id": "gate",
+          "title": "拉闸清图",
+          "sourceText": "陪玩拉绝户闸撤离，同时航天无人走飞升，仅丢包可以撤离",
+          "requirements": [
+            "陪玩拉绝户闸撤离",
+            "同时航天无人走飞升",
+            "仅丢包可以撤离"
+          ],
+          "preserveTerminology": true
+        },
+        {
+          "id": "eliminations",
+          "title": "击杀清图",
+          "operatorCount": 8,
+          "aggregate": "陪玩单局合计",
+          "target": "敌方干员",
+          "sourceText": "陪玩单局合计击杀8个敌方干员"
+        }
+      ]
+    },
+    "guarantee": {
+      "title": "嘉豪保障",
+      "trigger": "每炸一把",
+      "additionalGuaranteeWByMode": {
+        "绝密": 100,
+        "机密": 60
+      },
+      "failedRoundLoot": "当局物资全送，不计订单累计"
+    },
+    "failureConditions": {
+      "relation": "or",
+      "intro": "任一条件成立即炸单",
+      "items": [
+        {
+          "id": "time",
+          "title": "清图超时",
+          "timeLimitMinutes": 20,
+          "text": "未在20分钟内清图"
+        },
+        {
+          "id": "fallback",
+          "title": "丢包 / 双倒兜底",
+          "text": "老板丢包撤离 / 打手双倒兜底",
+          "preserveSlash": true
+        },
+        {
+          "id": "backpack",
+          "title": "背包不足",
+          "when": "成功撤离时",
+          "minimumSlotsByMode": {
+            "绝密": 40,
+            "机密": 30
+          }
+        },
+        {
+          "id": "extraction",
+          "title": "撤离失败",
+          "text": "撤离失败"
+        }
+      ]
+    },
+    "platforms": "端游、手游一致",
+    "confirmedByUser": true
+  },
+  "rules": {
+    "绝密": {
+      "mapRestriction": "本单仅限绝密航天",
+      "cards": {
+        "included": "航天核心区金红卡",
+        "missingPerCard": [
+          {
+            "label": "金卡",
+            "amountW": 100
+          },
+          {
+            "label": "红卡",
+            "amountW": 150
+          }
+        ]
+      },
+      "ownershipAndAfterSales": [
+        "对局产出默认归板板；假账须提前征得板板同意，按约定价值计入。",
+        "全程录屏，争议交给客服进行核实。"
+      ]
+    },
+    "机密": {
+      "mapRestriction": "本单仅限机密航天",
+      "cards": {
+        "included": "航天核心区金红卡",
+        "missingPerCard": [
+          {
+            "label": "金卡",
+            "amountW": 60
+          },
+          {
+            "label": "红卡",
+            "amountW": 90
+          }
+        ]
+      },
+      "ownershipAndAfterSales": [
+        "对局产出默认归板板；假账须提前征得板板同意，按约定价值计入。",
+        "全程录屏，争议交给客服进行核实。"
+      ]
+    }
+  },
+  "footerInstruction": "下单前请确认地图及订单规则"
+}

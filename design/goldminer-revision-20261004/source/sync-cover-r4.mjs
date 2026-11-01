@@ -1,0 +1,27 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..'),read=f=>JSON.parse(fs.readFileSync(path.join(root,f),'utf8'));
+const write=(f,o)=>fs.writeFileSync(path.join(root,f),JSON.stringify(o,null,2)+'\n');
+const original=fs.readFileSync(process.argv[2],'utf8');
+const start=original.indexOf(' const s=zones.social;'),end=original.indexOf(' const v=zones.cover;');
+if(start<0||end<=start)throw Error('Original attached price-cover layout not found');
+let adapter=fs.readFileSync(path.join(root,'layout-adapter.mjs'),'utf8');
+if(adapter.includes(' const s=zones.social;'))throw Error('Price-cover already added');
+adapter=adapter.replace(" return {schemaVersion:3,revision:'r3',requests,pages};",original.slice(start,end).replace('双端价格对照','双端价格封面')+" return {schemaVersion:3,revision:'r4',requests,pages};");
+fs.writeFileSync(path.join(root,'layout-adapter.mjs'),adapter);
+const c=read('content.json');c.date='2026-10-05';
+c.scope.basis='用户依次要求端游、手游以及本轮附图双端价格封面对应修订；只新增受影响的价格封面页，现有两端海报保留。';
+c.sources.request+=' 2026-10-05用户附双端价格封面，要求其中218格对应调整为208格。';
+c.sources.coverReferenceImage='source/references/黄金矿工-双端价格封面-本轮原图.png';
+write('content.json',c);
+const state=read('campaign-state.json');
+state.previousPNGHashes=read('review/final-verification.json').sha256;
+state.revision='r4';state.stage='vector-revision';state.contentVerificationBasis=c.sources.request;
+state.deliveryScope={pageIds:['desktop','mobile','social'],platforms:['desktop','mobile'],basis:c.scope.basis};
+state.decisions=state.decisions.filter(x=>!x.startsWith('本轮只交付'));
+state.decisions.push('2026-10-05：用户所附双端价格封面豪华版/终极版218格同步改208格；其余价格、文案、底图与排版沿用。');
+state.revisionHistory.push({revision:'r4',date:'2026-10-05',description:'附图双端价格封面两处218格改208格；端游、手游已交付PNG保持。'});
+delete state.finalVisualQA;
+write('campaign-state.json',state);
+console.log('Added original price-cover layout using shared 208-slot data.');
+

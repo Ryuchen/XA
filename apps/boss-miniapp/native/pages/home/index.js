@@ -1,3 +1,4 @@
+const { modal: themedModal } = require('../../core/ui');
 const { request } = require('../../core/api');
 const auth = require('../../core/auth');
 const { money, image, list, go, toast } = require('../../core/ui');
@@ -93,7 +94,7 @@ Page({
       go('/pages/' + item.link_value + '/index');
     }
     else if (item.link_type === 'ANNOUNCEMENT' && /^[1-9]\d*$/.test(item.link_value)) go('/pages/announcement-detail/index?id=' + item.link_value);
-    else if (item.link_type === 'URL' && /^https:\/\//.test(item.link_value)) wx.showModal({ title: '查看活动链接', content: '此活动需要在浏览器查看，是否复制活动链接？', confirmText: '复制链接', success: result => { if (result.confirm) wx.setClipboardData({ data: item.link_value }); } });
+    else if (item.link_type === 'URL' && /^https:\/\//.test(item.link_value)) themedModal({ title: '查看活动链接', content: '此活动需要在浏览器查看，是否复制活动链接？', confirmText: '复制链接', success: result => { if (result.confirm) wx.setClipboardData({ data: item.link_value }); } });
     else if (item.link_type !== 'NONE') toast('活动入口暂不可用');
   },
   onShareAppMessage() { return { title: '兴安电竞 · 找到适合你的游戏服务', path: '/pages/home/index' }; }

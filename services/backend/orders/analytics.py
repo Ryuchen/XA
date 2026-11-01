@@ -4,8 +4,8 @@ from .refunds import proportional_targets,with_net_amount
 
 
 def partial_share_rows(queryset):
-    orders = with_net_amount(queryset.filter(payment_status='PARTIALLY_REFUNDED')).select_related(
-        'service__service_category').prefetch_related('providers','transactions__wallet')
+    orders = with_net_amount(queryset.filter(payment_status='PARTIALLY_REFUNDED')).prefetch_related(
+        'providers','transactions__wallet')
     result = []
     for order in orders:
         members = [row for row in order.providers.all() if not row.released_at or row.settlement_base > 0 or row.provider_income > 0]
@@ -31,11 +31,13 @@ def partial_share_rows(queryset):
                 and not tx.remark.startswith(('推荐分佣：','礼物推荐分佣：'))]
             # Official settlement labels distinguish provider earnings from an
             # inviter credit even when both belong to the very same wallet.
-            # Historical ambiguous credits retain the net snapshot estimate.
+            # When the original entries cannot prove the split, never replace
+            # the missing evidence with a proportional estimate.
             if sum(tx.amount for tx in originals) == snapshot:
                 income = sum(tx.amount+reversals[tx.pk] for tx in originals)
             else:
-                income = snapshot*order._net_paid_amount//order.amount
+                income = None
             result.append({'provider_account_id':account_id,'provider_id':user_id,'amount':amount,
-                'income':income,'count':1,'accepted_at':accepted_at,'is_gift':bool(order.service.service_category and order.service.service_category.is_gift)})
+                'income':income,'income_review_order_id':order.pk if income is None else None,
+                'count':1,'accepted_at':accepted_at,'is_gift':order.is_gift_snapshot})
     return result

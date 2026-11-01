@@ -1,0 +1,42 @@
+name: xa-anniversary
+services:
+  lottery-web:
+    container_name: xa-anniversary-web-1
+    image: ${LOTTERY_IMAGE:?immutable standalone image required}
+    init: true
+    restart: unless-stopped
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      DJANGO_SETTINGS_MODULE: eventsite.settings
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?secret required}
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: ann.xaesports.club,localhost,127.0.0.1
+      LOTTERY_SCRIPT_NAME: ""
+      LOTTERY_CACHE_URL: redis://redis:6379/8
+      CSRF_TRUSTED_ORIGINS: https://ann.xaesports.club
+      MYSQL_DATABASE: xa_anniversary
+      MYSQL_USER: xa_anniversary
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?dedicated database password required}
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+    volumes:
+      - ./runtime/media:/lottery/media
+    networks:
+      existing:
+        aliases:
+          - anniversary-web
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/health/',headers={'Host':'ann.xaesports.club','X-Forwarded-Proto':'https'}),timeout=5)"]
+      interval: 20s
+      timeout: 8s
+      start_period: 25s
+      retries: 5
+networks:
+  existing:
+    external: true
+    name: xa_default

@@ -1,0 +1,15 @@
+@use '@/styles/variables.scss' as *;
+.page { min-height:100dvh; box-sizing:border-box; padding:0 $page-padding 100PX; background:$color-bg-page; }
+.body { max-width:720PX; display:grid; gap:10PX; }
+.intro,.card { padding:16PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-card; color:$color-text-primary; }
+.title,.muted,.label,.value,.reason { display:block; }
+.title { font-size:16PX; font-weight:700; line-height:1.4; overflow-wrap:anywhere; }
+.muted { margin-top:5PX; color:$color-text-secondary; font-size:12PX; line-height:1.5; overflow-wrap:anywhere; }
+.top { display:flex; justify-content:space-between; gap:10PX; align-items:flex-start; }
+.status { flex:none; color:$color-primary; font-size:12PX; font-weight:600; }
+.section { display:grid; gap:7PX; margin-top:14PX; padding-top:12PX; border-top:1PX solid $color-divider; }
+.label { font-size:12PX; color:$color-text-secondary; }.value,.reason { font-size:14PX; line-height:1.5; overflow-wrap:anywhere; }
+.actions { display:flex; flex-wrap:wrap; gap:8PX; margin-top:14PX; }
+.primary,.secondary { min-height:44PX; flex:1; min-width:100PX; margin:0; padding:0 12PX; border-radius:8PX; font-size:13PX; }
+.primary { border:0; background:$color-primary; color:var(--xa-color-on-primary); }.secondary { border:1PX solid $color-border; background:$color-bg-card; color:$color-primary; }
+.input { display:block; box-sizing:border-box; width:100%; min-height:90PX; padding:10PX; border:1PX solid $color-border; border-radius:8PX; background:$color-bg-card; color:$color-text-primary; font-size:14PX; }

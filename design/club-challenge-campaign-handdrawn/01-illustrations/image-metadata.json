@@ -1,0 +1,14 @@
+{
+  "provider": "built-in image_gen",
+  "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-6041fb9c-8518-4c84-bf84-4dfb8528e838.png",
+  "file": "01-illustrations/challenge-medic-mouse-v1.png",
+  "width": 1536,
+  "height": 1024,
+  "channels": 4,
+  "hasAlpha": true,
+  "alpha": {
+    "min": 0,
+    "max": 254
+  },
+  "prompt": "01-illustrations/prompts.md"
+}

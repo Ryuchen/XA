@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.utils import timezone
 
 from club_accounts.models import ClubAccount
@@ -144,19 +145,87 @@ class OrderListSerializer(serializers.ListSerializer):
     def to_representation(self, data):
         from django.db.models import Prefetch, prefetch_related_objects
         from .models import OrderRefund, RefundRecoveryLine
+        from wallet.settlement_display import prepare_order_settlement_display
         rows = list(data.all() if hasattr(data, 'all') else data)
-        recoveries = RefundRecoveryLine.objects.select_related('wallet', 'reversal_transaction')
+        recoveries = RefundRecoveryLine.objects.select_related('wallet', 'reversal_transaction', 'original_transaction')
         refunds = OrderRefund.objects.order_by('-created_at', '-pk').prefetch_related(
             Prefetch('recovery_lines', queryset=recoveries),
         )
-        prefetch_related_objects(rows, 'aftersales', Prefetch('refund_records', queryset=refunds))
+        prefetch_related_objects(rows, 'aftersales', 'reservation', Prefetch('refund_records', queryset=refunds))
+        account = getattr(self.context.get('request'), 'account', None)
+        from .refunds import prepare_provider_refund_evidence
+        prepare_provider_refund_evidence(rows, account)
+        owned = [row for row in rows if account and account.account_type == 'BOSS' and row.customer_account_id == account.pk]
+        if owned:
+            prefetch_related_objects(owned, 'direct_payment')
+        prepare_order_settlement_display(rows)
+        from .team_progress import prepare_team_progress
+        prepare_team_progress(rows)
         scoped=[row for row in rows if row.provider_requirement_snapshot]
         if scoped:prefetch_related_objects(scoped,'applications__applicant__escort_profile__qualifications__game_category','applications__partner__escort_profile__qualifications__game_category')
         return super().to_representation(rows)
 
 
+def reservation_origin(reservation):
+    """Original appointment for a converted order, never a new schedule."""
+    date = serializers.DateTimeField()
+    return {'id': reservation.pk, 'reservation_no': reservation.reservation_no,
+            'start_time': date.to_representation(reservation.start_time),
+            'end_time': date.to_representation(reservation.end_time)}
+
+
 class OrderSerializer(serializers.ModelSerializer):
+    report_entry = serializers.SerializerMethodField()
+    reservation_origin = serializers.SerializerMethodField()
     settled_at = serializers.DateTimeField(read_only=True)
+    settlement_status = serializers.SerializerMethodField()
+    pending_deadline_expired = serializers.SerializerMethodField()
+    payment_display = serializers.SerializerMethodField()
+
+    def get_payment_display(self, obj):
+        # Staging payment records can contain simulated channel evidence. They
+        # must never be represented as confirmed real-world WeChat payments.
+        account = getattr(self.context.get('request'), 'account', None)
+        if not account or account.account_type != 'BOSS' or obj.customer_account_id != account.pk:
+            return None
+        try:
+            intent = obj.direct_payment
+        except ObjectDoesNotExist:
+            return None
+        return {'kind': 'DIRECT_TEST', 'state': 'REVIEW' if intent.status == 'REVIEW' else 'UNCONFIRMED'}
+
+    def get_reservation_origin(self, obj):
+        account = getattr(self.context.get('request'), 'account', None)
+        if not account or account.account_type not in ('BOSS', 'PROVIDER'):
+            return None
+        try:
+            reservation = obj.reservation
+        except ObjectDoesNotExist:
+            return None
+        if account.account_type == 'BOSS':
+            if reservation.customer_account_id != account.pk:
+                return None
+            can_open = True
+        else:
+            assignments = getattr(obj, 'requester_assignments', None)
+            member = (bool(assignments) if assignments is not None else
+                      obj.providers.filter(provider_account=account).exists())
+            visible_pool = (self.context.get('_provider_pool_view') and obj.status == 'PENDING'
+                            and obj.dispatch_route == 'PUBLIC' and obj.payment_status == 'PAID')
+            if obj.provider_account_id != account.pk and not member and not visible_pool:
+                return None
+            can_open = reservation.provider_account_id == account.pk
+        return {**reservation_origin(reservation), 'can_open': can_open}
+
+    def get_pending_deadline_expired(self, obj):
+        now = self.context.get('_pending_deadline_now')
+        if now is None:
+            now = self.context['_pending_deadline_now'] = timezone.now()
+        return bool(obj.status == Order.Status.PENDING and obj.auto_cancel_at and obj.auto_cancel_at <= now)
+
+    def get_settlement_status(self, obj):
+        from wallet.settlement_display import order_settlement_status
+        return order_settlement_status(obj)
     can_aftersale = serializers.SerializerMethodField()
     refund_summary = serializers.SerializerMethodField()
     def get_can_aftersale(self,obj):
@@ -204,6 +273,8 @@ class OrderSerializer(serializers.ModelSerializer):
     applications = serializers.SerializerMethodField()
     my_applications = serializers.SerializerMethodField()
     participants = serializers.SerializerMethodField()
+    team_progress = serializers.SerializerMethodField()
+    my_assignment_released = serializers.SerializerMethodField()
     required_team_size = serializers.SerializerMethodField()
     can_team_apply = serializers.SerializerMethodField()
     quantity_unit = serializers.SerializerMethodField()
@@ -223,7 +294,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_applications(self, obj):
         from .applications import applications_data
-        return applications_data(obj, self.context.get('request'))
+        return applications_data(obj, self.context.get('request'),
+                                 validate_readiness=self.context.get('validate_application_readiness', False))
 
     def get_my_applications(self, obj):
         from .applications import my_applications_data
@@ -231,6 +303,25 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_participants(self, obj):
         return [{'id': row.provider_account_id, 'nickname': row.provider_name_snapshot} for row in (obj.active_participants if hasattr(obj, 'active_participants') else obj.providers.all()) if row.released_at is None]
+
+    def get_team_progress(self, obj):
+        from .team_progress import team_progress
+        return team_progress(obj)
+
+    def get_my_assignment_released(self, obj):
+        request = self.context.get('request')
+        account = getattr(request, 'account', None)
+        if not account or account.account_type != ClubAccount.AccountType.PROVIDER:
+            return None
+        if hasattr(obj, 'requester_assignments'):
+            assignment = next(iter(obj.requester_assignments), None)
+        else:
+            owner = Q(provider_account=account)
+            legacy_user = getattr(request, 'legacy_user', None)
+            if legacy_user:
+                owner |= Q(provider_account__isnull=True, provider=legacy_user)
+            assignment = obj.providers.filter(owner).only('released_at').first()
+        return bool(assignment.released_at) if assignment else None
 
 
     def get_fulfillment(self, obj):
@@ -242,19 +333,20 @@ class OrderSerializer(serializers.ModelSerializer):
         list_serializer_class = OrderListSerializer
         fields = [
             'dispatch_notification_enabled','provider_requirement',
-            'id',
-            'requires_boss_selection', 'escort_mode', 'applications', 'my_applications', 'participants',
+            'id', 'reservation_origin',
+            'dispatch_route', 'requires_boss_selection', 'escort_mode', 'applications', 'my_applications', 'participants', 'team_progress', 'my_assignment_released',
             'required_provider_count', 'required_team_size', 'can_team_apply',
             'order_no', 'gameplay_snapshot', 'roulette_result', 'fulfillment',
             'service_name_snapshot', 'unit_price_snapshot', 'provider_name_snapshot',
             'status',
             'payment_status',
+            'payment_display',
             'amount',
             'original_amount',
             'boss_discount',
             'promo_discount',
             'coupon_discount',
-            'expected_income',
+            'expected_income', 'settlement_status',
             'commission_type', 'commission_fixed', 'commission_override', 'commission_source', 'commission_rate',
             'game_rounds',
             'quantity_unit',
@@ -264,22 +356,22 @@ class OrderSerializer(serializers.ModelSerializer):
             'provider_gender',
             'remark',
             'support_contact',
-            'source_order',
+            'source_order', 'is_gift_snapshot',
             'service',
             'customer',
             'provider',
             'is_evaluated',
             'evaluation',
-            'can_operate',
+            'report_entry', 'can_operate',
             'can_reject',
             'allowed_actions',
             'grabbed_at',
             'in_service_at',
-            'completed_at', 'settled_at', 'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status', 'can_aftersale', 'refund_summary',
+            'completed_at', 'settled_at', 'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status', 'can_aftersale', 'refund_summary', 'pending_deadline_expired',
             'cancelled_at',
             'refunded_at',
             'cancel_reason',
-            'auto_cancel_at',
+            'auto_cancel_at', 'pending_timeout_minutes',
             'reject_count',
             'created_at',
             'updated_at',
@@ -307,11 +399,21 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_can_operate(self, obj):
         request = self.context.get('request')
+        from .ownership import owns_order_party
         return bool(
             request and getattr(request, 'account', None)
-            and obj.provider_account_id == request.account.id
+            and request.account.account_type == ClubAccount.AccountType.PROVIDER
+            and owns_order_party(obj, request, 'provider')
             and obj.status in (Order.Status.GRABBED, Order.Status.IN_SERVICE)
         )
+
+    def get_report_entry(self, obj):
+        account = getattr(self.context.get('request'), 'account', None)
+        if not account or account.account_type != ClubAccount.AccountType.PROVIDER:
+            return None
+        from .report_eligibility import report_entry_error
+        reason = report_entry_error(obj, account, legacy_user=getattr(self.context.get('request'), 'legacy_user', None))
+        return {'available': not reason, 'reason': reason}
 
     def get_can_reject(self, obj):
         return (
@@ -328,16 +430,18 @@ class OrderSerializer(serializers.ModelSerializer):
         account = request.account
         user = request.legacy_user
         actions = []
+        from .ownership import owns_order_party
 
         if (
             account.account_type == ClubAccount.AccountType.BOSS
-            and obj.customer_account_id == account.id
+            and owns_order_party(obj, request, 'customer')
         ):
             if obj.status == Order.Status.PENDING and obj.payment_status == Order.PaymentStatus.PAID:
                 actions.append('CANCEL')
-                if obj.requires_boss_selection:
+                if (obj.requires_boss_selection and obj.dispatch_route == Order.DispatchRoute.PUBLIC
+                        and not self.get_pending_deadline_expired(obj)):
                     actions.append('SELECT_PROVIDER')
-            is_gift = bool(obj.service.service_category and obj.service.service_category.is_gift)
+            is_gift = obj.is_gift_snapshot
             if obj.status == Order.Status.COMPLETED and not is_gift and not hasattr(obj, 'evaluation'):
                 actions.append('EVALUATE')
             if obj.status == Order.Status.COMPLETED and obj.payment_status in (Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED) and not is_gift and (obj.provider_id or obj.escort_mode == Order.EscortMode.DOUBLE):
@@ -364,17 +468,33 @@ class OrderSerializer(serializers.ModelSerializer):
                     and service_skill(profile,obj)
                     and (obj.provider_gender == "ANY" or obj.provider_gender == profile.gender)
                     and obj.payment_status == Order.PaymentStatus.PAID
+                    and obj.dispatch_route == Order.DispatchRoute.PUBLIC
                     and obj.provider_id is None
                     and obj.escort_mode == Order.EscortMode.SINGLE
                     and not obj.source_order_id
-                    and not (obj.service.service_category and obj.service.service_category.is_gift)
+                    and not obj.is_gift_snapshot
                     and (obj.auto_cancel_at is None or obj.auto_cancel_at > timezone.now())
                 ):
                     from datetime import timedelta
                     if (active_count < Order.MAX_CONCURRENT_ORDERS
-                            and timezone.now() >= obj.created_at + timedelta(seconds=delay)):
-                        actions.append('GRAB')
-            participant = obj.provider_account_id == account.id or (any(row.provider_account_id == account.pk for row in obj.active_participants) if hasattr(obj,'active_participants') else obj.providers.filter(provider_account=account, released_at__isnull=True).exists())
+                            and timezone.now() >= (obj.pool_entered_at or obj.created_at) + timedelta(seconds=delay)):
+                        # A malformed direct-payment quote can pass the pool's
+                        # coarse SQL filter. Do not offer an action that the
+                        # locked transition/application check will refuse.
+                        from .direct_payment_models import DirectPaymentIntent
+                        from .direct_payment_quote import quote_matches_intent
+                        try:
+                            intent = obj.direct_payment
+                        except ObjectDoesNotExist:
+                            intent = None
+                        if intent is None or (intent.status == DirectPaymentIntent.Status.PAID
+                                              and quote_matches_intent(intent, obj)):
+                            actions.append('GRAB')
+            assignment_owner = Q(provider_account=account)
+            participant = owns_order_party(obj, request, 'provider') or (any(
+                row.provider_account_id == account.pk
+                for row in obj.active_participants) if hasattr(obj,'active_participants') else obj.providers.filter(
+                    assignment_owner, released_at__isnull=True).exists())
             if participant and obj.status == Order.Status.GRABBED:
                 from .team_fulfillment import team_evidence_submitted
                 if obj.escort_mode != 'DOUBLE' or not team_evidence_submitted(obj,account,'entry_image'):
@@ -403,9 +523,24 @@ class OrderSerializer(serializers.ModelSerializer):
             if hasattr(obj, 'requester_assignments'):
                 assignment = next(iter(obj.requester_assignments), None)
             else:
-                assignment = obj.providers.filter(provider_account=request.account).first()
+                owner = Q(provider_account=request.account)
+                legacy_user = getattr(request, 'legacy_user', None)
+                if getattr(request.account, 'account_type', None) == 'PROVIDER' and legacy_user:
+                    owner |= Q(provider_account__isnull=True, provider=legacy_user)
+                assignment = obj.providers.filter(owner).first()
             if assignment:
+                if getattr(request.account, 'account_type', None) == 'PROVIDER':
+                    legacy_user = getattr(request, 'legacy_user', None)
+                    if not legacy_user or assignment.provider_id != legacy_user.pk:
+                        return None
                 return assignment.provider_income
+            if getattr(request.account, 'account_type', None) == 'PROVIDER':
+                if obj.required_provider_count > 1:
+                    return None
+                if obj.provider_id and obj.provider_account_id != request.account.pk:
+                    legacy_user = getattr(request, 'legacy_user', None)
+                    if obj.provider_account_id or not legacy_user or legacy_user.pk != obj.provider_id:
+                        return None
         return obj.provider_income
 
     def get_customer(self, obj):
@@ -442,8 +577,38 @@ class OrderSerializer(serializers.ModelSerializer):
         }
 
 
+class ExpectedServiceSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100)
+    price_unit = serializers.CharField(max_length=20)
+    service_type = serializers.CharField(max_length=20)
+    game_category = serializers.IntegerField(allow_null=True)
+    billing_provider_count = serializers.IntegerField(min_value=1, max_value=2)
+    unit_price = serializers.IntegerField(min_value=0)
+    # Optional for existing clients and saved retry intents. New checkouts
+    # include the service terms that are visible on the confirmation page.
+    gameplay = serializers.IntegerField(required=False, allow_null=True)
+    platform = serializers.CharField(required=False, allow_blank=True, max_length=10)
+    security_level = serializers.CharField(required=False, allow_blank=True, max_length=15)
+    provider_kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    provider_grade = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    required_level = serializers.IntegerField(required=False, allow_null=True)
+    service_category = serializers.IntegerField(required=False, allow_null=True)
+    purchase_mode = serializers.CharField(required=False, max_length=10)
+    is_addon = serializers.BooleanField(required=False)
+    experience_kind = serializers.CharField(required=False, allow_blank=True, max_length=30)
+    allows_discount_coupons = serializers.BooleanField(required=False)
+
+
+class ExpectedQuoteSerializer(serializers.Serializer):
+    original_amount = serializers.IntegerField(min_value=0)
+    boss_discount = serializers.IntegerField(min_value=0)
+    promo_discount = serializers.IntegerField(min_value=0)
+    coupon_discount = serializers.IntegerField(min_value=0)
+
+
 class CreateOrderSerializer(serializers.Serializer):
     dispatch_mode = serializers.ChoiceField(choices=['BOSS_SELECT', 'AUTO_GRAB'], default='BOSS_SELECT')
+    dispatch_route = serializers.ChoiceField(choices=Order.DispatchRoute.choices, default=Order.DispatchRoute.PUBLIC)
     service_id = serializers.IntegerField(required=False, allow_null=True)
     product_id = serializers.IntegerField(required=False, allow_null=True)
     provider_id = serializers.IntegerField(required=False, allow_null=True)
@@ -455,6 +620,9 @@ class CreateOrderSerializer(serializers.Serializer):
     user_coupon_id = serializers.IntegerField(required=False, allow_null=True)
     game_rounds = serializers.IntegerField(required=False, min_value=1, default=1)
     expected_amount = serializers.IntegerField(required=False, min_value=0)
+    expected_quote = ExpectedQuoteSerializer(required=False)
+    expected_timeout_minutes = serializers.IntegerField(required=False, min_value=1, max_value=1440)
+    expected_service = ExpectedServiceSerializer(required=False)
     game_region = serializers.CharField(required=False, allow_blank=True, max_length=50, default='')
     game_nickname = serializers.CharField(required=False, allow_blank=True, max_length=50, default='')
     game_uid = serializers.CharField(required=False, allow_blank=True, max_length=50, default='')
@@ -513,6 +681,11 @@ class CreateOrderSerializer(serializers.Serializer):
             if selected_ids != [provider_id]:
                 raise serializers.ValidationError('指定陪玩参数不一致，请重新选择')
         selected_ids = selected_ids if selected_ids is not None else ([provider_id] if provider_id else [])
+        if attrs['dispatch_route'] == Order.DispatchRoute.STAFF:
+            if selected_ids:
+                raise serializers.ValidationError('客服派单不能同时指定陪玩')
+            if attrs['dispatch_mode'] == 'AUTO_GRAB':
+                raise serializers.ValidationError('客服派单不支持自动抢单')
         if len(set(selected_ids)) != len(selected_ids):
             raise serializers.ValidationError('不能重复选择同一位陪玩')
         if selected_ids and len(selected_ids) != service.billing_provider_count:
@@ -636,23 +809,26 @@ class EvaluationSerializer(serializers.ModelSerializer):
             'skill_score', 'attitude_score', 'communication_score', 'avg_score',
             'content', 'is_anonymous',
             'customer_name', 'customer_avatar', 'provider_name', 'service_name',
-            'reply_content', 'replied_at', 'created_at',
+            'reply_content', 'replied_at', 'reply_version', 'created_at',
         ]
 
     def get_customer_name(self, obj):
         if obj.is_anonymous:
             return '匿名用户'
-        return obj.customer.nickname or obj.customer.username
+        customer = obj.customer_account if obj.customer_account_id else obj.customer
+        return customer.nickname or customer.username
 
     def get_customer_avatar(self, obj):
         if obj.is_anonymous:
             return ''
-        return obj.customer.avatar_url or ''
+        customer = obj.customer_account if obj.customer_account_id else obj.customer
+        return customer.avatar_url or ''
 
     def get_provider_name(self, obj):
-        if not obj.provider_id:
+        provider = obj.provider_account if obj.provider_account_id else obj.provider
+        if not provider:
             return ''
-        return obj.provider.nickname or obj.provider.username
+        return provider.nickname or provider.username
 
     def get_service_name(self, obj):
         return obj.order.service_name_snapshot
@@ -684,7 +860,11 @@ class CreateEvaluationSerializer(serializers.Serializer):
 
         if order.status != Order.Status.COMPLETED:
             raise serializers.ValidationError('仅已完成订单可评价')
-        if order.customer_id != request.legacy_user.id:
+        if order.customer_account_id:
+            owner = order.customer_account_id == request.account.pk
+        else:
+            owner = request.legacy_user is not None and order.customer_id == request.legacy_user.pk
+        if not owner:
             raise serializers.ValidationError('仅订单所属玩家可评价')
         if hasattr(order, 'evaluation'):
             raise serializers.ValidationError('该订单已评价')

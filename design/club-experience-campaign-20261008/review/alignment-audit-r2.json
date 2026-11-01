@@ -1,0 +1,1611 @@
+{
+  "pages": [
+    {
+      "id": "cover",
+      "checks": [
+        {
+          "block": "brand",
+          "policy": "left",
+          "verticalOffset": -5,
+          "horizontalOffset": -96.42,
+          "beforeVerticalOffset": -5,
+          "beforeHorizontalOffset": -94.12,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "headline",
+          "policy": "left",
+          "verticalOffset": 0.34,
+          "horizontalOffset": -3.25,
+          "beforeVerticalOffset": 0.34,
+          "beforeHorizontalOffset": -3.24,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "claim",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0.5,
+          "beforeHorizontalOffset": 0.5,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "platform",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 2.5,
+          "beforeHorizontalOffset": 0.5,
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "numberChecks": [],
+      "columnChecks": [],
+      "compensation": [],
+      "internalChecks": [],
+      "fonts": [
+        "MiSans VF Semibold"
+      ]
+    },
+    {
+      "id": "social",
+      "checks": [
+        {
+          "block": "brand",
+          "policy": "left",
+          "verticalOffset": -6.5,
+          "horizontalOffset": -92.74,
+          "beforeVerticalOffset": -6.5,
+          "beforeHorizontalOffset": -92.74,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "headline",
+          "policy": "left",
+          "verticalOffset": 0.03,
+          "horizontalOffset": -44.3,
+          "beforeVerticalOffset": 0.03,
+          "beforeHorizontalOffset": -44.3,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "condition",
+          "policy": "center",
+          "verticalOffset": -0.5,
+          "horizontalOffset": 0.5,
+          "beforeVerticalOffset": -0.5,
+          "beforeHorizontalOffset": 0.5,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-0",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -1,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-0-0",
+          "policy": "columns",
+          "verticalOffset": 0.07,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0.67,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-0-1",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-0-2",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-1",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -1,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-1-0",
+          "policy": "columns",
+          "verticalOffset": -0.11,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0.49,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-1-1",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-1-2",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-2",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -1,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-2-0",
+          "policy": "columns",
+          "verticalOffset": -0.08,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0.52,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-2-1",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-2-2",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-3",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -1,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-3-0",
+          "policy": "columns",
+          "verticalOffset": -0.08,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0.52,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-3-1",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "offer-3-2",
+          "policy": "columns",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 3.31,
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "numberChecks": [
+        {
+          "group": "offer-0-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-0-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-0-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-0-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-0-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-0-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-1-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-1-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-1-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-1-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-1-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-1-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-2-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-2-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-2-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-2-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-2-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-2-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-3-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-3-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-3-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-3-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-3-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "offer-3-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        }
+      ],
+      "columnChecks": [
+        {
+          "column": 0,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 0,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 1,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 1,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 2,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 2,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 3,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 3,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        }
+      ],
+      "compensation": [],
+      "internalChecks": [
+        {
+          "block": "offer-panel-0",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "offer-panel-0-guarantee-caption",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "offer-panel-1",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "offer-panel-1-guarantee-caption",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "offer-panel-2",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "offer-panel-2-guarantee-caption",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "offer-panel-3",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "offer-panel-3-guarantee-caption",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        }
+      ],
+      "fonts": [
+        "MiSans VF Semibold",
+        "MiSans VF Bold",
+        "MiSans VF Regular"
+      ]
+    },
+    {
+      "id": "desktop-experience",
+      "checks": [
+        {
+          "block": "brand",
+          "policy": "left",
+          "verticalOffset": -0.5,
+          "horizontalOffset": -64.07,
+          "beforeVerticalOffset": -0.5,
+          "beforeHorizontalOffset": -64.07,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "headline",
+          "policy": "left",
+          "verticalOffset": -1,
+          "horizontalOffset": -30.31,
+          "beforeVerticalOffset": -1,
+          "beforeHorizontalOffset": -30.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "subtitle",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": -1,
+          "beforeHorizontalOffset": -3.5,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-0",
+          "policy": "split-left-right",
+          "verticalOffset": 0,
+          "horizontalOffset": -3,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -3,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-0-0",
+          "policy": "columns",
+          "verticalOffset": 0.35,
+          "horizontalOffset": 10.05,
+          "beforeVerticalOffset": -1.65,
+          "beforeHorizontalOffset": 3.55,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-0-1",
+          "policy": "columns",
+          "verticalOffset": -0.13,
+          "horizontalOffset": 5.96,
+          "beforeVerticalOffset": -8.13,
+          "beforeHorizontalOffset": 4.46,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-0-2",
+          "policy": "columns",
+          "verticalOffset": -0.35,
+          "horizontalOffset": 5.46,
+          "beforeVerticalOffset": -8.35,
+          "beforeHorizontalOffset": 5.46,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-1",
+          "policy": "split-left-right",
+          "verticalOffset": 0,
+          "horizontalOffset": -311.84,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -311.84,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-1-0",
+          "policy": "columns",
+          "verticalOffset": 0.14,
+          "horizontalOffset": -2.97,
+          "beforeVerticalOffset": -1.86,
+          "beforeHorizontalOffset": -9.47,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-1-1",
+          "policy": "columns",
+          "verticalOffset": -0.13,
+          "horizontalOffset": 6.79,
+          "beforeVerticalOffset": -8.13,
+          "beforeHorizontalOffset": 2.71,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-1-2",
+          "policy": "columns",
+          "verticalOffset": -0.35,
+          "horizontalOffset": 6.79,
+          "beforeVerticalOffset": -8.35,
+          "beforeHorizontalOffset": 5.06,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "rules-header",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 1,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 1,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "map",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": -0.01,
+          "beforeVerticalOffset": -2.68,
+          "beforeHorizontalOffset": -22.75,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "equipment",
+          "policy": "center",
+          "verticalOffset": 0.02,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 2.57,
+          "beforeHorizontalOffset": -22.65,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "compensation",
+          "policy": "center",
+          "verticalOffset": -2.01,
+          "horizontalOffset": 0.3,
+          "beforeVerticalOffset": -2.01,
+          "beforeHorizontalOffset": 5.8,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "restriction",
+          "policy": "center",
+          "verticalOffset": -0.28,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": -0.28,
+          "beforeHorizontalOffset": 0,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "footer",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": -1,
+          "beforeHorizontalOffset": 9.5,
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "numberChecks": [
+        {
+          "group": "card-0-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "compensation-secret",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "compensation-absolute",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        }
+      ],
+      "columnChecks": [
+        {
+          "column": 0,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 0,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 1,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 1,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 2,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 2,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        }
+      ],
+      "compensation": [
+        {
+          "mode": "机密",
+          "centerDelta": 0,
+          "passed": true
+        },
+        {
+          "mode": "绝密",
+          "centerDelta": 0,
+          "passed": true
+        }
+      ],
+      "internalChecks": [
+        {
+          "block": "card-0-0",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-0-0",
+          "test": "guarantee-caption-group-gap",
+          "measured": 5.62,
+          "passed": true
+        },
+        {
+          "block": "card-0-0",
+          "test": "price-guarantee-hierarchy",
+          "measured": 6.12,
+          "passed": true
+        },
+        {
+          "block": "card-0-0",
+          "test": "mode-price-gap",
+          "measured": 8.75,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "mode-price-gap",
+          "measured": 11.34,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "mode-price-gap",
+          "measured": 11.46,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "guarantee-caption-group-gap",
+          "measured": 5.62,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "price-guarantee-hierarchy",
+          "measured": 6.12,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "mode-price-gap",
+          "measured": 8.75,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "mode-price-gap",
+          "measured": 11.34,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "mode-price-gap",
+          "measured": 11.46,
+          "passed": true
+        },
+        {
+          "block": "equipment-labels",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-body",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-room-secret",
+          "test": "label-body-baseline",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-bag-secret",
+          "test": "label-body-baseline",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-revolver",
+          "test": "label-body-baseline",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-1",
+          "test": "readable-line-gap",
+          "measured": 4.01,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-2",
+          "test": "readable-line-gap",
+          "measured": 4.12,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-3",
+          "test": "readable-line-gap",
+          "measured": 10.22,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-4",
+          "test": "readable-line-gap",
+          "measured": 4.12,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-5",
+          "test": "readable-line-gap",
+          "measured": 10.35,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-6",
+          "test": "readable-line-gap",
+          "measured": 4.21,
+          "passed": true
+        },
+        {
+          "block": "map-intro",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "map-details",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "restriction",
+          "test": "title-body-common-center",
+          "measured": 0,
+          "passed": true
+        }
+      ],
+      "fonts": [
+        "MiSans VF Semibold",
+        "MiSans VF Regular",
+        "MiSans VF Bold"
+      ]
+    },
+    {
+      "id": "mobile-experience",
+      "checks": [
+        {
+          "block": "brand",
+          "policy": "left",
+          "verticalOffset": -0.5,
+          "horizontalOffset": -64.07,
+          "beforeVerticalOffset": -0.5,
+          "beforeHorizontalOffset": -64.07,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "headline",
+          "policy": "left",
+          "verticalOffset": -1,
+          "horizontalOffset": -30.31,
+          "beforeVerticalOffset": -1,
+          "beforeHorizontalOffset": -30.31,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "subtitle",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": -1,
+          "beforeHorizontalOffset": -3.5,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-0",
+          "policy": "split-left-right",
+          "verticalOffset": 0,
+          "horizontalOffset": -3,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -3,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-0-0",
+          "policy": "columns",
+          "verticalOffset": -0.11,
+          "horizontalOffset": -1.23,
+          "beforeVerticalOffset": -2.11,
+          "beforeHorizontalOffset": -7.73,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-0-1",
+          "policy": "columns",
+          "verticalOffset": -0.13,
+          "horizontalOffset": 6.79,
+          "beforeVerticalOffset": -8.13,
+          "beforeHorizontalOffset": 5.29,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-0-2",
+          "policy": "columns",
+          "verticalOffset": -0.35,
+          "horizontalOffset": 6.79,
+          "beforeVerticalOffset": -8.35,
+          "beforeHorizontalOffset": 6.78,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "header-1",
+          "policy": "split-left-right",
+          "verticalOffset": 0,
+          "horizontalOffset": -311.84,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": -311.84,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-1-0",
+          "policy": "columns",
+          "verticalOffset": 0.14,
+          "horizontalOffset": -8.56,
+          "beforeVerticalOffset": -1.86,
+          "beforeHorizontalOffset": -15.06,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-1-1",
+          "policy": "columns",
+          "verticalOffset": -0.13,
+          "horizontalOffset": -5.84,
+          "beforeVerticalOffset": -8.13,
+          "beforeHorizontalOffset": -7.34,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "card-1-2",
+          "policy": "columns",
+          "verticalOffset": -0.35,
+          "horizontalOffset": -5.84,
+          "beforeVerticalOffset": -8.35,
+          "beforeHorizontalOffset": -5.84,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "rules-header",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 1,
+          "beforeVerticalOffset": 0,
+          "beforeHorizontalOffset": 1,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "map",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": -0.01,
+          "beforeVerticalOffset": -2.68,
+          "beforeHorizontalOffset": -22.75,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "equipment",
+          "policy": "center",
+          "verticalOffset": 0.02,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": 2.57,
+          "beforeHorizontalOffset": -22.65,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "compensation",
+          "policy": "center",
+          "verticalOffset": -2.01,
+          "horizontalOffset": 0.3,
+          "beforeVerticalOffset": -2.01,
+          "beforeHorizontalOffset": 5.8,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "restriction",
+          "policy": "center",
+          "verticalOffset": -0.28,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": -0.28,
+          "beforeHorizontalOffset": 0,
+          "passed": true,
+          "failures": []
+        },
+        {
+          "block": "footer",
+          "policy": "center",
+          "verticalOffset": 0,
+          "horizontalOffset": 0,
+          "beforeVerticalOffset": -1,
+          "beforeHorizontalOffset": 9.5,
+          "passed": true,
+          "failures": []
+        }
+      ],
+      "numberChecks": [
+        {
+          "group": "card-0-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-0-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-0-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-0-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-1-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-1-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-2-price",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "card-1-2-loot",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "compensation-secret",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        },
+        {
+          "group": "compensation-absolute",
+          "baselineDelta": 0,
+          "visibleGap": 6,
+          "passed": true
+        }
+      ],
+      "columnChecks": [
+        {
+          "column": 0,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 0,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 1,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 1,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 2,
+          "type": "price",
+          "axisDelta": 0,
+          "passed": true
+        },
+        {
+          "column": 2,
+          "type": "loot",
+          "axisDelta": 0,
+          "passed": true
+        }
+      ],
+      "compensation": [
+        {
+          "mode": "机密",
+          "centerDelta": 0,
+          "passed": true
+        },
+        {
+          "mode": "绝密",
+          "centerDelta": 0,
+          "passed": true
+        }
+      ],
+      "internalChecks": [
+        {
+          "block": "card-0-0",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-0-0",
+          "test": "guarantee-caption-group-gap",
+          "measured": 6.12,
+          "passed": true
+        },
+        {
+          "block": "card-0-0",
+          "test": "price-guarantee-hierarchy",
+          "measured": 6.12,
+          "passed": true
+        },
+        {
+          "block": "card-0-0",
+          "test": "mode-price-gap",
+          "measured": 8.75,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-0-1",
+          "test": "mode-price-gap",
+          "measured": 11.34,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-0-2",
+          "test": "mode-price-gap",
+          "measured": 11.46,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "guarantee-caption-group-gap",
+          "measured": 5.62,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "price-guarantee-hierarchy",
+          "measured": 6.12,
+          "passed": true
+        },
+        {
+          "block": "card-1-0",
+          "test": "mode-price-gap",
+          "measured": 8.75,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-1-1",
+          "test": "mode-price-gap",
+          "measured": 11.34,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "mode-caption-common-center",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "guarantee-caption-group-gap",
+          "measured": 8.24,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "price-guarantee-hierarchy",
+          "measured": 30.04,
+          "passed": true
+        },
+        {
+          "block": "card-1-2",
+          "test": "mode-price-gap",
+          "measured": 11.46,
+          "passed": true
+        },
+        {
+          "block": "equipment-labels",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-body",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-room-secret",
+          "test": "label-body-baseline",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-bag-secret",
+          "test": "label-body-baseline",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-revolver",
+          "test": "label-body-baseline",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-1",
+          "test": "readable-line-gap",
+          "measured": 4.01,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-2",
+          "test": "readable-line-gap",
+          "measured": 4.12,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-3",
+          "test": "readable-line-gap",
+          "measured": 10.22,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-4",
+          "test": "readable-line-gap",
+          "measured": 4.12,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-5",
+          "test": "readable-line-gap",
+          "measured": 10.35,
+          "passed": true
+        },
+        {
+          "block": "equipment-line-6",
+          "test": "readable-line-gap",
+          "measured": 4.21,
+          "passed": true
+        },
+        {
+          "block": "map-intro",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "map-details",
+          "test": "consistent-left-edge",
+          "measured": 0,
+          "passed": true
+        },
+        {
+          "block": "restriction",
+          "test": "title-body-common-center",
+          "measured": 0,
+          "passed": true
+        }
+      ],
+      "fonts": [
+        "MiSans VF Semibold",
+        "MiSans VF Regular",
+        "MiSans VF Bold"
+      ]
+    }
+  ],
+  "failures": [],
+  "policies": {
+    "free": "品牌和艺术标题按共同左锚点，不要求居中",
+    "center": "胶囊、平台行、标题栏、规则组、补偿和页脚按各自安全区居中",
+    "columns": "价目使用固定r/w列；短数字右对齐，数字可见中心不强求逐档相同",
+    "ruleBody": "多行正文内部左对齐，但按最长行宽度将段落组放在规则区中央",
+    "vertical": "文字语义组按真实卡片的安全区居中；普通价目保底行下移使上下留白平衡"
+  },
+  "summary": {
+    "pages": 4,
+    "blocks": 57,
+    "numberPairs": 52,
+    "unitColumns": 20,
+    "internalChecks": 84,
+    "failures": 0
+  }
+}

@@ -1,4 +1,6 @@
 from django.db import transaction
+import logging
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -21,6 +23,49 @@ def append_history(row):
         'operator_id':row.operator_id,'client_request_id':row.client_request_id}]
 
 
+def notify_aftersale_reports(order):
+    """Refresh report-only reviewers when a case changes the settlement context."""
+    try:
+        from wallet.models import ProviderReport
+        from .notifier import notify_report_update
+        for report in ProviderReport.objects.filter(order=order):
+            notify_report_update(report, notify_owner=False)
+    except Exception:
+        logging.getLogger(__name__).warning('售后报单通知失败: order_id=%s', order.pk, exc_info=True)
+
+
+def schedule_aftersale_notices(order, *, resolved):
+    """Notify offline parties without exposing the customer's private case text."""
+    from .services import push_message_safe
+
+    recipients = []
+    if resolved:
+        recipients.append((order.customer_id, order.customer_account_id, '售后已处理',
+                           '售后已处理，请查看订单中的处理结果。'))
+    shares = list(order.providers.filter(
+        Q(released_at__isnull=True) | Q(settlement_base__gt=0) | Q(provider_income__gt=0)
+    ).values_list('provider_id', 'provider_account_id'))
+    if not shares and order.provider_id:
+        shares = [(order.provider_id, order.provider_account_id)]
+    if resolved:
+        title, preview = '订单售后已处理', '订单售后已处理，请查看订单；收益以结算状态及钱包流水为准。'
+    else:
+        title = '订单售后处理中'
+        preview = ('订单售后处理中，请查看订单；已结算收益以钱包流水为准。' if order.settled_at else
+                   '订单售后处理中，请查看订单；本单暂不结算。')
+    recipients.extend((user_id, account_id, title, preview) for user_id, account_id in shares)
+    seen_users, seen_accounts = set(), set()
+    for user_id, account_id, title, preview in recipients:
+        if not user_id or user_id in seen_users or (account_id and account_id in seen_accounts):
+            continue
+        seen_users.add(user_id)
+        if account_id:
+            seen_accounts.add(account_id)
+        transaction.on_commit(lambda user_id=user_id, account_id=account_id, title=title, preview=preview:
+            push_message_safe(recipient_id=user_id, recipient_account_id=account_id, title=title,
+                              preview=preview, msg_type='ORDER', related_order_id=order.pk))
+
+
 class AfterSaleSerializer(serializers.ModelSerializer):
     order_no = serializers.CharField(source='order.order_no', read_only=True)
     class Meta:
@@ -30,14 +75,21 @@ class AfterSaleSerializer(serializers.ModelSerializer):
 
 class AfterSaleView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
+
+    def customer_orders(self, request):
+        ownership = Q(customer_account=request.account)
+        if request.legacy_user is not None:
+            ownership |= Q(customer_account__isnull=True, customer=request.legacy_user)
+        return Order.objects.filter(ownership)
+
     def get(self, request, order_id):
-        order = get_object_or_404(Order, pk=order_id, customer_account=request.account)
+        order = get_object_or_404(self.customer_orders(request), pk=order_id)
         row = order.aftersales.first()
         return Response({'code': 0, 'data': AfterSaleSerializer(row).data if row else None})
 
     @transaction.atomic
     def post(self, request, order_id):
-        order = get_object_or_404(Order.objects.select_for_update(), pk=order_id, customer_account=request.account)
+        order = get_object_or_404(self.customer_orders(request).select_for_update(), pk=order_id)
         reason = serializers.CharField(min_length=2, max_length=1000).run_validation(request.data.get('reason'))
         request_id = serializers.CharField(max_length=64, allow_blank=True).run_validation(request.data.get('client_request_id',''))
         existing = order.aftersales.first()
@@ -58,6 +110,8 @@ class AfterSaleView(APIView):
         append_history(row)
         row.save()
         transaction.on_commit(lambda: notify_order_update(order))
+        transaction.on_commit(lambda: notify_aftersale_reports(order))
+        schedule_aftersale_notices(order, resolved=False)
         return Response({'code': 0, 'data': AfterSaleSerializer(row).data, 'msg': '售后已提交，等待平台处理'})
 
 
@@ -90,6 +144,8 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         append_history(row)
         row.save()
         transaction.on_commit(lambda: notify_order_update(order))
+        transaction.on_commit(lambda: notify_aftersale_reports(order))
+        schedule_aftersale_notices(order, resolved=True)
         return Response({'code': 0, 'data': self.get_serializer(row).data})
 
     @action(detail=True, methods=['post'])

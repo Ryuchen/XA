@@ -1,0 +1,2719 @@
+{
+  "version": "excess-price-r2",
+  "requests": [
+    {
+      "id": "t8ba94919758a81ff6c74",
+      "text": "兴安电竞",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tad45987044e80da3e0d8",
+      "text": "超",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "ta4758f8d341c09f6eff8",
+      "text": "额",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t0190401925c2959b0003",
+      "text": "累",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t72f5d665c21d7d1c18ec",
+      "text": "计",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5987677ea6a76fadffef",
+      "text": "单",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "ta4eb280cc99ce1280e97",
+      "text": "端游 · 绝密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tf0f9687356a45e8ca8fa",
+      "text": "成功撤离 · 超额才计入",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tb581fc0aa298b956afa7",
+      "text": "只",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t8e46cfde0e4ba7a1c46e",
+      "text": "过",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t4e3f32e6f607d2e83915",
+      "text": "门",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "ta6ebccf9a46c20b7b414",
+      "text": "槛",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t66f0acd9c3f1bbfe1f25",
+      "text": "的",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t521d44e653b866e1b6f6",
+      "text": "部",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t476554a4caa53644c3a3",
+      "text": "分",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tcdfc57d1bd554426d5ff",
+      "text": "绝密单局门槛 1000w · 成功撤离后计入",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te8c600f4bb599445f9bf",
+      "text": "订单价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te9dfe2ddc2bfd5d5bc2d",
+      "text": "超额累计保底",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t17de5238e28af7b51017",
+      "text": "188",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t93c49a055a02db78a142",
+      "text": "r",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tcb35f17b0e93830ac617",
+      "text": "128",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t802de43ed41324b456d5",
+      "text": "w",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t79023ff0afad36e3dd1d",
+      "text": "388",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t4dbf6970c3952f41f571",
+      "text": "688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t6a6b447515f3b2e263cf",
+      "text": "1288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t146d71b576d93e1aeb27",
+      "text": "1888",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t4633ea0dabb9522a1b64",
+      "text": "表内为超额累计保底",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tc116142e08eac06578b6",
+      "text": "r = 元 / w = 万",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "ta9e754707db7d1021faa",
+      "text": "怎",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5f35612ec9d0a97774c0",
+      "text": "么",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t01b5ffabfcf53290f966",
+      "text": "算",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t023898769385fb68604c",
+      "text": "举例 · 成功撤离时",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t867fc8df58f43e99b093",
+      "text": "当局带出",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t471466ad3d3f65e5b3a9",
+      "text": "计入门槛",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t1929356448c06b7e6b66",
+      "text": "本局计入",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tf1102c7473d7f6afca7f",
+      "text": "1200",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc1ac5e312b556cb28959",
+      "text": "1000",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t672ba91cf138e06c60e8",
+      "text": "200",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t197f49793252556b15c5",
+      "text": "−",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t3d962c1663559008ddf2",
+      "text": "=",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc1f8fda48bb189e5d740",
+      "text": "单局未超过 1000w，本局不计订单进度。",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t854fd983b1ccd1c5736c",
+      "text": "带",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "te4d2a43a44eac59d8111",
+      "text": "出",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t6660a6d53f18d889d3b8",
+      "text": "物",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t79d8b4cf9480cee79d34",
+      "text": "资",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tbb90889a007e25a94350",
+      "text": "全",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t88f6647373e248dbe9b2",
+      "text": "归",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t0d3166918307f1f1b3f0",
+      "text": "板",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t025166399cd236de1a24",
+      "text": "未超过门槛也归板板，订单只累计超额部分。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t29362350a361bff8b6b0",
+      "text": "打满订单保底及适用炸单补偿后结单。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t6cd1b5177299692db846",
+      "text": "下",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t332e117e415daa41281a",
+      "text": "须",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t81b948f69304c94dedc7",
+      "text": "知",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tafc81073abc158cad579",
+      "text": "地图 · 装备 · 补偿 · 结算",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tc34e8d1b3bccc12a8e16",
+      "text": "地图与房卡",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t38cf6fa15884fce116cb",
+      "text": "地图：航天 / 巴克什；下单先与客服确认。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t126df8c5e04d0b343bd6",
+      "text": "中途换图需协商。航天含核心区金红卡；",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t4bccb8cbbd2a804b025a",
+      "text": "巴克什含塔内和博物馆金红卡。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tba49bf5f569293003456",
+      "text": "随行装备",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tea4f19b56ba05e5dcd43",
+      "text": "默认 40 格以上背包 + 1 把左轮，进图前核对。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tee5f2cc1f1633edb15e8",
+      "text": "板板主动免带除外。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tb5db17c7437d303bbf99",
+      "text": "缺项补偿",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t2177691e734d734163e4",
+      "text": "应带未带：",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t2e36c55601a4db7d30ea",
+      "text": "金卡",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t8cc0101eda8be7bc1c97",
+      "text": "+10",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t476ccefab8a39a96227e",
+      "text": "红卡",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t042c46e10810731dded6",
+      "text": "+15",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc71a5a3f4ab9b69e1e57",
+      "text": "未经同意未带：",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tbdd1ef7d94f244733f52",
+      "text": "背包",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta83b286bdd6e8b3fa389",
+      "text": "左轮",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t37cefe3c5cfc294df7e3",
+      "text": "炸单补偿",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tbcb704742579e854b8b9",
+      "text": "符合俱乐部下单须知的炸单条件：",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf812f5194abc27f19518",
+      "text": "航天 / 巴克什：+10w。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t50d577442e70b11cbe21",
+      "text": "结算口径",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t1bf3ea8e388c8e09232b",
+      "text": "符合俱乐部炸单标准时，安全箱带出物资不计入；",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t3ba7fa66ab749dd76f5d",
+      "text": "安全箱物资 > 100w 时无需补战损，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t69e7f420f001755e43e9",
+      "text": "否则按炸单标准增加累计保底。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t9a8b2ff48ed88cfdd8b8",
+      "text": "物资与售后",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t4fdbf760f4dc1991acec",
+      "text": "对局产出默认归板板；假账须提前征得板板同意，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tad55fd8b28f254ff27aa",
+      "text": "按约定价值计入。全程录屏，争议交给客服核实。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0b91a48e2322a181b27d",
+      "text": "下单前请确认地图及订单规则",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tcb2aabfb6865c77766a2",
+      "text": "端游 · 机密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te2f14f143ee5bd7f4f65",
+      "text": "机密单局门槛 600w · 成功撤离后计入",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t751c816a1fe57ea8d1bf",
+      "text": "800",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "te0c0a3d6d53ef340d0f0",
+      "text": "600",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tcff2aa4ef8cb1b2552de",
+      "text": "单局未超过 600w，本局不计订单进度。",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t0dbdd3dd22fd6de3f755",
+      "text": "默认 30 格以上背包 + 1 把左轮，进图前核对。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0fd46608f0b42b2a4187",
+      "text": "+5",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t82a343710015baa84a8f",
+      "text": "每局增加 5w 保底。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tcee4c835ae21ffbd5123",
+      "text": "安全箱物资 > 50w 时无需补战损，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t65f0a7d2574ff41adcd2",
+      "text": "手游 · 绝密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td83b826a28f137bacc2a",
+      "text": "488",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td96358e6936c615695c7",
+      "text": "588",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t840f84cf7d266acc0500",
+      "text": "888",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc661d12b0b4d045c5622",
+      "text": "788",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td7abb62b1fc096eee161",
+      "text": "手游 · 机密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t71a907f97cba66ab65e5",
+      "text": "成功撤离 · 超额累计 · 打满结单",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t45defd5868beb8ea865a",
+      "text": "端游 / 手游 · 绝密 / 机密",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td5b720fb7abf90ac11f9",
+      "text": "成",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t6c57e8bf44d7597963af",
+      "text": "功",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tb2198fa811326a135466",
+      "text": "撤",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t3cbb8e757e450841d52e",
+      "text": "离",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tf87f61c7f6e376ecb8fb",
+      "text": "，",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t9041ad21c57f19360377",
+      "text": "绝密超过 1000w / 机密超过 600w 的部分计入进度",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te7aef2bd915da5113d16",
+      "text": "当局带出物资全部归板板",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7acbe8fc03c938818a7e",
+      "text": "未超过门槛不计进度 · 打满订单保底及适用炸单补偿后结单",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    }
+  ],
+  "pages": [
+    {
+      "id": "desktop-secret",
+      "label": "端游 · 机密版 · 超额累计单",
+      "bg": "desktop-secret.png",
+      "w": 836,
+      "h": 1882,
+      "ew": 3200,
+      "eh": 7200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(57 78) scale(0.8928571428571429)\" fill=\"none\" stroke=\"#203F53\" stroke-width=\"2.1\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 90.75,
+          "cy": 91,
+          "size": 25,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "art",
+          "text": "超额",
+          "x": 61,
+          "cy": 166,
+          "size": 88,
+          "maxWidth": 273,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.5,
+          "angles": true,
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "ta4758f8d341c09f6eff8"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "累计单",
+          "x": 54,
+          "cy": 254,
+          "size": 91,
+          "maxWidth": 282,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t0190401925c2959b0003",
+            "t72f5d665c21d7d1c18ec",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "tcb2aabfb6865c77766a2",
+          "text": "端游 · 机密版",
+          "x": 201,
+          "cy": 325,
+          "size": 25,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 254,
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "tf0f9687356a45e8ca8fa",
+          "text": "成功撤离 · 超额才计入",
+          "x": 57,
+          "cy": 370,
+          "size": 17.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 278,
+          "role": "mechanism",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "只累计超过门槛的部分",
+          "x": 68,
+          "cy": 437,
+          "size": 30,
+          "maxWidth": 560,
+          "fill": "#147E77",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.4,
+          "angles": false,
+          "ids": [
+            "tb581fc0aa298b956afa7",
+            "t0190401925c2959b0003",
+            "t72f5d665c21d7d1c18ec",
+            "tad45987044e80da3e0d8",
+            "t8e46cfde0e4ba7a1c46e",
+            "t4e3f32e6f607d2e83915",
+            "ta6ebccf9a46c20b7b414",
+            "t66f0acd9c3f1bbfe1f25",
+            "t521d44e653b866e1b6f6",
+            "t476554a4caa53644c3a3"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "te2f14f143ee5bd7f4f65",
+          "text": "机密单局门槛 600w · 成功撤离后计入",
+          "x": 69,
+          "cy": 473,
+          "size": 18.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 558,
+          "role": "threshold-condition"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 239,
+          "cy": 528,
+          "size": 24,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "te9dfe2ddc2bfd5d5bc2d",
+          "text": "超额累计保底",
+          "x": 648,
+          "cy": 528,
+          "size": 24,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t17de5238e28af7b51017",
+          "text": "188",
+          "x": 279,
+          "cy": 582,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 582,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "tcb35f17b0e93830ac617",
+          "text": "128",
+          "x": 678,
+          "cy": 582,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 582,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 279,
+          "cy": 645.5,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 645.5,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 678,
+          "cy": 645.5,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 645.5,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 279,
+          "cy": 708,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 708,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 678,
+          "cy": 708,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 708,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 279,
+          "cy": 770,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 770,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 678,
+          "cy": 770,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 770,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "t146d71b576d93e1aeb27",
+          "text": "1888",
+          "x": 279,
+          "cy": 832.5,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 832.5,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t146d71b576d93e1aeb27",
+          "text": "1888",
+          "x": 678,
+          "cy": 832.5,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 832.5,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4633ea0dabb9522a1b64",
+          "text": "表内为超额累计保底",
+          "x": 49,
+          "cy": 873,
+          "size": 10.2,
+          "fill": "#57768A",
+          "anchor": "start",
+          "role": "table-note"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 785,
+          "cy": 873,
+          "size": 10.2,
+          "fill": "#57768A",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "art",
+          "text": "超额怎么算",
+          "x": 66,
+          "cy": 910,
+          "size": 24,
+          "maxWidth": 280,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.3,
+          "angles": false,
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "ta4758f8d341c09f6eff8",
+            "ta9e754707db7d1021faa",
+            "t5f35612ec9d0a97774c0",
+            "t01b5ffabfcf53290f966"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t023898769385fb68604c",
+          "text": "举例 · 成功撤离时",
+          "x": 765,
+          "cy": 912,
+          "size": 13.5,
+          "fill": "#57768A",
+          "anchor": "end",
+          "role": "example-prerequisite"
+        },
+        {
+          "type": "text",
+          "id": "t867fc8df58f43e99b093",
+          "text": "当局带出",
+          "x": 175,
+          "cy": 960,
+          "size": 16,
+          "fill": "#57768A",
+          "anchor": "middle",
+          "role": "example-label"
+        },
+        {
+          "type": "text",
+          "id": "t471466ad3d3f65e5b3a9",
+          "text": "计入门槛",
+          "x": 420,
+          "cy": 960,
+          "size": 16,
+          "fill": "#57768A",
+          "anchor": "middle",
+          "role": "example-label"
+        },
+        {
+          "type": "text",
+          "id": "t1929356448c06b7e6b66",
+          "text": "本局计入",
+          "x": 662,
+          "cy": 960,
+          "size": 16,
+          "fill": "#57768A",
+          "anchor": "middle",
+          "role": "example-label"
+        },
+        {
+          "type": "text",
+          "id": "t751c816a1fe57ea8d1bf",
+          "text": "800",
+          "x": 193,
+          "cy": 998,
+          "size": 36,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "example-extracted-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 198,
+          "cy": 998,
+          "size": 34.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "example-extracted-unit"
+        },
+        {
+          "type": "text",
+          "id": "te0c0a3d6d53ef340d0f0",
+          "text": "600",
+          "x": 438,
+          "cy": 998,
+          "size": 36,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "example-threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 443,
+          "cy": 998,
+          "size": 34.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "example-threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t672ba91cf138e06c60e8",
+          "text": "200",
+          "x": 675,
+          "cy": 998,
+          "size": 38,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "example-counted-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 680,
+          "cy": 998,
+          "size": 36.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "example-counted-unit"
+        },
+        {
+          "type": "text",
+          "id": "t197f49793252556b15c5",
+          "text": "−",
+          "x": 298,
+          "cy": 994,
+          "size": 30,
+          "fill": "#147E77",
+          "anchor": "middle",
+          "role": "example-operator"
+        },
+        {
+          "type": "text",
+          "id": "t3d962c1663559008ddf2",
+          "text": "=",
+          "x": 540,
+          "cy": 994,
+          "size": 38,
+          "fill": "#147E77",
+          "anchor": "middle",
+          "role": "example-operator"
+        },
+        {
+          "type": "text",
+          "id": "tcff2aa4ef8cb1b2552de",
+          "text": "单局未超过 600w，本局不计订单进度。",
+          "x": 419,
+          "cy": 1056,
+          "size": 16,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 690,
+          "role": "zero-progress"
+        },
+        {
+          "type": "art",
+          "text": "带出物资全部归板板",
+          "x": 282,
+          "cy": 1127,
+          "size": 26,
+          "maxWidth": 481,
+          "fill": "#147E77",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.2,
+          "angles": false,
+          "ids": [
+            "t854fd983b1ccd1c5736c",
+            "te4d2a43a44eac59d8111",
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34",
+            "tbb90889a007e25a94350",
+            "t521d44e653b866e1b6f6",
+            "t88f6647373e248dbe9b2",
+            "t0d3166918307f1f1b3f0",
+            "t0d3166918307f1f1b3f0"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t025166399cd236de1a24",
+          "text": "未超过门槛也归板板，订单只累计超额部分。",
+          "x": 282,
+          "cy": 1167.5,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "ownership-close"
+        },
+        {
+          "type": "text",
+          "id": "t29362350a361bff8b6b0",
+          "text": "打满订单保底及适用炸单补偿后结单。",
+          "x": 282,
+          "cy": 1192.5,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "ownership-close"
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 68,
+          "cy": 1262,
+          "size": 26,
+          "maxWidth": 170,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "tafc81073abc158cad579",
+          "text": "地图 · 装备 · 补偿 · 结算",
+          "x": 767,
+          "cy": 1262,
+          "size": 15,
+          "fill": "#DCEAF1",
+          "anchor": "end",
+          "maxWidth": 436,
+          "role": "copy"
+        },
+        {
+          "type": "text",
+          "id": "tc34e8d1b3bccc12a8e16",
+          "text": "地图与房卡",
+          "x": 180,
+          "cy": 1322.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t38cf6fa15884fce116cb",
+          "text": "地图：航天 / 巴克什；下单先与客服确认。",
+          "x": 298,
+          "cy": 1305.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t126df8c5e04d0b343bd6",
+          "text": "中途换图需协商。航天含核心区金红卡；",
+          "x": 298,
+          "cy": 1322.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t4bccb8cbbd2a804b025a",
+          "text": "巴克什含塔内和博物馆金红卡。",
+          "x": 298,
+          "cy": 1339.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tba49bf5f569293003456",
+          "text": "随行装备",
+          "x": 180,
+          "cy": 1378.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t0dbdd3dd22fd6de3f755",
+          "text": "默认 30 格以上背包 + 1 把左轮，进图前核对。",
+          "x": 298,
+          "cy": 1370,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tee5f2cc1f1633edb15e8",
+          "text": "板板主动免带除外。",
+          "x": 298,
+          "cy": 1387,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tb5db17c7437d303bbf99",
+          "text": "缺项补偿",
+          "x": 180,
+          "cy": 1435,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t2177691e734d734163e4",
+          "text": "应带未带：",
+          "x": 298,
+          "cy": 1423.5,
+          "size": 13.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t2e36c55601a4db7d30ea",
+          "text": "金卡",
+          "x": 414,
+          "cy": 1423.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t0fd46608f0b42b2a4187",
+          "text": "+5",
+          "x": 554,
+          "cy": 1423.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 558,
+          "cy": 1423.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t476ccefab8a39a96227e",
+          "text": "红卡",
+          "x": 613,
+          "cy": 1423.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t8cc0101eda8be7bc1c97",
+          "text": "+10",
+          "x": 745,
+          "cy": 1423.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 749,
+          "cy": 1423.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc71a5a3f4ab9b69e1e57",
+          "text": "未经同意未带：",
+          "x": 298,
+          "cy": 1446.5,
+          "size": 13.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tbdd1ef7d94f244733f52",
+          "text": "背包",
+          "x": 414,
+          "cy": 1446.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t8cc0101eda8be7bc1c97",
+          "text": "+10",
+          "x": 554,
+          "cy": 1446.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 558,
+          "cy": 1446.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "ta83b286bdd6e8b3fa389",
+          "text": "左轮",
+          "x": 613,
+          "cy": 1446.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t0fd46608f0b42b2a4187",
+          "text": "+5",
+          "x": 745,
+          "cy": 1446.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 749,
+          "cy": 1446.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t37cefe3c5cfc294df7e3",
+          "text": "炸单补偿",
+          "x": 180,
+          "cy": 1491.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tbcb704742579e854b8b9",
+          "text": "符合俱乐部下单须知的炸单条件：",
+          "x": 298,
+          "cy": 1483,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t82a343710015baa84a8f",
+          "text": "每局增加 5w 保底。",
+          "x": 298,
+          "cy": 1500,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t50d577442e70b11cbe21",
+          "text": "结算口径",
+          "x": 180,
+          "cy": 1550.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t1bf3ea8e388c8e09232b",
+          "text": "符合俱乐部炸单标准时，安全箱带出物资不计入；",
+          "x": 298,
+          "cy": 1533.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tcee4c835ae21ffbd5123",
+          "text": "安全箱物资 > 50w 时无需补战损，",
+          "x": 298,
+          "cy": 1550.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t69e7f420f001755e43e9",
+          "text": "否则按炸单标准增加累计保底。",
+          "x": 298,
+          "cy": 1567.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t9a8b2ff48ed88cfdd8b8",
+          "text": "物资与售后",
+          "x": 180,
+          "cy": 1612,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t4fdbf760f4dc1991acec",
+          "text": "对局产出默认归板板；假账须提前征得板板同意，",
+          "x": 298,
+          "cy": 1603.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tad55fd8b28f254ff27aa",
+          "text": "按约定价值计入。全程录屏，争议交给客服核实。",
+          "x": 298,
+          "cy": 1620.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(345 1763.52) scale(0.8571428571428571)\" fill=\"none\" stroke=\"#203F53\" stroke-width=\"2.1\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 377.4,
+          "cy": 1776,
+          "size": 24,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 418,
+          "cy": 1830,
+          "size": 13,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 350,
+          "role": "footer"
+        }
+      ],
+      "alignment": {
+        "rowCenters": [
+          582,
+          645.5,
+          708,
+          770,
+          832.5
+        ],
+        "rowEdges": [
+          550,
+          614,
+          677,
+          739,
+          801,
+          864
+        ],
+        "unitColumns": {
+          "priceR": 287,
+          "guaranteeW": 686
+        },
+        "numberGap": 8,
+        "vertical": "visible glyph center",
+        "tableColumns": [
+          44,
+          400,
+          444,
+          792
+        ],
+        "noRightIcons": true
+      },
+      "platforms": [
+        "desktop"
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密版 · 超额累计单",
+      "bg": "mobile-secret.png",
+      "w": 836,
+      "h": 1882,
+      "ew": 3200,
+      "eh": 7200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(57 78) scale(0.8928571428571429)\" fill=\"none\" stroke=\"#203F53\" stroke-width=\"2.1\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 90.75,
+          "cy": 91,
+          "size": 25,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "art",
+          "text": "超额",
+          "x": 61,
+          "cy": 166,
+          "size": 88,
+          "maxWidth": 273,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.5,
+          "angles": true,
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "ta4758f8d341c09f6eff8"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "累计单",
+          "x": 54,
+          "cy": 254,
+          "size": 91,
+          "maxWidth": 282,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t0190401925c2959b0003",
+            "t72f5d665c21d7d1c18ec",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "td7abb62b1fc096eee161",
+          "text": "手游 · 机密版",
+          "x": 201,
+          "cy": 325,
+          "size": 25,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 254,
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "tf0f9687356a45e8ca8fa",
+          "text": "成功撤离 · 超额才计入",
+          "x": 57,
+          "cy": 370,
+          "size": 17.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 278,
+          "role": "mechanism",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "只累计超过门槛的部分",
+          "x": 68,
+          "cy": 437,
+          "size": 30,
+          "maxWidth": 560,
+          "fill": "#147E77",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.4,
+          "angles": false,
+          "ids": [
+            "tb581fc0aa298b956afa7",
+            "t0190401925c2959b0003",
+            "t72f5d665c21d7d1c18ec",
+            "tad45987044e80da3e0d8",
+            "t8e46cfde0e4ba7a1c46e",
+            "t4e3f32e6f607d2e83915",
+            "ta6ebccf9a46c20b7b414",
+            "t66f0acd9c3f1bbfe1f25",
+            "t521d44e653b866e1b6f6",
+            "t476554a4caa53644c3a3"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "te2f14f143ee5bd7f4f65",
+          "text": "机密单局门槛 600w · 成功撤离后计入",
+          "x": 69,
+          "cy": 473,
+          "size": 18.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 558,
+          "role": "threshold-condition"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 239,
+          "cy": 528,
+          "size": 24,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "te9dfe2ddc2bfd5d5bc2d",
+          "text": "超额累计保底",
+          "x": 648,
+          "cy": 528,
+          "size": 24,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t17de5238e28af7b51017",
+          "text": "188",
+          "x": 279,
+          "cy": 588,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 588,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t17de5238e28af7b51017",
+          "text": "188",
+          "x": 678,
+          "cy": 588,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 588,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 279,
+          "cy": 664.5,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 664.5,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "td83b826a28f137bacc2a",
+          "text": "488",
+          "x": 678,
+          "cy": 664.5,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 664.5,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 279,
+          "cy": 741.5,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 741.5,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 678,
+          "cy": 741.5,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 741.5,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 279,
+          "cy": 822,
+          "size": 54,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 287,
+          "cy": 822,
+          "size": 51.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 678,
+          "cy": 822,
+          "size": 56,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "guarantee-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 686,
+          "cy": 822,
+          "size": 53.5,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "guarantee-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4633ea0dabb9522a1b64",
+          "text": "表内为超额累计保底",
+          "x": 49,
+          "cy": 873,
+          "size": 10.2,
+          "fill": "#57768A",
+          "anchor": "start",
+          "role": "table-note"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 785,
+          "cy": 873,
+          "size": 10.2,
+          "fill": "#57768A",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "art",
+          "text": "超额怎么算",
+          "x": 66,
+          "cy": 910,
+          "size": 24,
+          "maxWidth": 280,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.3,
+          "angles": false,
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "ta4758f8d341c09f6eff8",
+            "ta9e754707db7d1021faa",
+            "t5f35612ec9d0a97774c0",
+            "t01b5ffabfcf53290f966"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t023898769385fb68604c",
+          "text": "举例 · 成功撤离时",
+          "x": 765,
+          "cy": 912,
+          "size": 13.5,
+          "fill": "#57768A",
+          "anchor": "end",
+          "role": "example-prerequisite"
+        },
+        {
+          "type": "text",
+          "id": "t867fc8df58f43e99b093",
+          "text": "当局带出",
+          "x": 175,
+          "cy": 960,
+          "size": 16,
+          "fill": "#57768A",
+          "anchor": "middle",
+          "role": "example-label"
+        },
+        {
+          "type": "text",
+          "id": "t471466ad3d3f65e5b3a9",
+          "text": "计入门槛",
+          "x": 420,
+          "cy": 960,
+          "size": 16,
+          "fill": "#57768A",
+          "anchor": "middle",
+          "role": "example-label"
+        },
+        {
+          "type": "text",
+          "id": "t1929356448c06b7e6b66",
+          "text": "本局计入",
+          "x": 662,
+          "cy": 960,
+          "size": 16,
+          "fill": "#57768A",
+          "anchor": "middle",
+          "role": "example-label"
+        },
+        {
+          "type": "text",
+          "id": "t751c816a1fe57ea8d1bf",
+          "text": "800",
+          "x": 193,
+          "cy": 998,
+          "size": 36,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "example-extracted-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 198,
+          "cy": 998,
+          "size": 34.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "example-extracted-unit"
+        },
+        {
+          "type": "text",
+          "id": "te0c0a3d6d53ef340d0f0",
+          "text": "600",
+          "x": 438,
+          "cy": 998,
+          "size": 36,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "example-threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 443,
+          "cy": 998,
+          "size": 34.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "example-threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t672ba91cf138e06c60e8",
+          "text": "200",
+          "x": 675,
+          "cy": 998,
+          "size": 38,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "example-counted-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 680,
+          "cy": 998,
+          "size": 36.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "example-counted-unit"
+        },
+        {
+          "type": "text",
+          "id": "t197f49793252556b15c5",
+          "text": "−",
+          "x": 298,
+          "cy": 994,
+          "size": 30,
+          "fill": "#147E77",
+          "anchor": "middle",
+          "role": "example-operator"
+        },
+        {
+          "type": "text",
+          "id": "t3d962c1663559008ddf2",
+          "text": "=",
+          "x": 540,
+          "cy": 994,
+          "size": 38,
+          "fill": "#147E77",
+          "anchor": "middle",
+          "role": "example-operator"
+        },
+        {
+          "type": "text",
+          "id": "tcff2aa4ef8cb1b2552de",
+          "text": "单局未超过 600w，本局不计订单进度。",
+          "x": 419,
+          "cy": 1056,
+          "size": 16,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 690,
+          "role": "zero-progress"
+        },
+        {
+          "type": "art",
+          "text": "带出物资全部归板板",
+          "x": 282,
+          "cy": 1127,
+          "size": 26,
+          "maxWidth": 481,
+          "fill": "#147E77",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.2,
+          "angles": false,
+          "ids": [
+            "t854fd983b1ccd1c5736c",
+            "te4d2a43a44eac59d8111",
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34",
+            "tbb90889a007e25a94350",
+            "t521d44e653b866e1b6f6",
+            "t88f6647373e248dbe9b2",
+            "t0d3166918307f1f1b3f0",
+            "t0d3166918307f1f1b3f0"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t025166399cd236de1a24",
+          "text": "未超过门槛也归板板，订单只累计超额部分。",
+          "x": 282,
+          "cy": 1167.5,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "ownership-close"
+        },
+        {
+          "type": "text",
+          "id": "t29362350a361bff8b6b0",
+          "text": "打满订单保底及适用炸单补偿后结单。",
+          "x": 282,
+          "cy": 1192.5,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "ownership-close"
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 68,
+          "cy": 1262,
+          "size": 26,
+          "maxWidth": 170,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "tafc81073abc158cad579",
+          "text": "地图 · 装备 · 补偿 · 结算",
+          "x": 767,
+          "cy": 1262,
+          "size": 15,
+          "fill": "#DCEAF1",
+          "anchor": "end",
+          "maxWidth": 436,
+          "role": "copy"
+        },
+        {
+          "type": "text",
+          "id": "tc34e8d1b3bccc12a8e16",
+          "text": "地图与房卡",
+          "x": 180,
+          "cy": 1322.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t38cf6fa15884fce116cb",
+          "text": "地图：航天 / 巴克什；下单先与客服确认。",
+          "x": 298,
+          "cy": 1305.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t126df8c5e04d0b343bd6",
+          "text": "中途换图需协商。航天含核心区金红卡；",
+          "x": 298,
+          "cy": 1322.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t4bccb8cbbd2a804b025a",
+          "text": "巴克什含塔内和博物馆金红卡。",
+          "x": 298,
+          "cy": 1339.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tba49bf5f569293003456",
+          "text": "随行装备",
+          "x": 180,
+          "cy": 1378.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t0dbdd3dd22fd6de3f755",
+          "text": "默认 30 格以上背包 + 1 把左轮，进图前核对。",
+          "x": 298,
+          "cy": 1370,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tee5f2cc1f1633edb15e8",
+          "text": "板板主动免带除外。",
+          "x": 298,
+          "cy": 1387,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tb5db17c7437d303bbf99",
+          "text": "缺项补偿",
+          "x": 180,
+          "cy": 1435,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t2177691e734d734163e4",
+          "text": "应带未带：",
+          "x": 298,
+          "cy": 1423.5,
+          "size": 13.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t2e36c55601a4db7d30ea",
+          "text": "金卡",
+          "x": 414,
+          "cy": 1423.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t0fd46608f0b42b2a4187",
+          "text": "+5",
+          "x": 554,
+          "cy": 1423.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 558,
+          "cy": 1423.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t476ccefab8a39a96227e",
+          "text": "红卡",
+          "x": 613,
+          "cy": 1423.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t8cc0101eda8be7bc1c97",
+          "text": "+10",
+          "x": 745,
+          "cy": 1423.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 749,
+          "cy": 1423.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc71a5a3f4ab9b69e1e57",
+          "text": "未经同意未带：",
+          "x": 298,
+          "cy": 1446.5,
+          "size": 13.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tbdd1ef7d94f244733f52",
+          "text": "背包",
+          "x": 414,
+          "cy": 1446.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t8cc0101eda8be7bc1c97",
+          "text": "+10",
+          "x": 554,
+          "cy": 1446.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 558,
+          "cy": 1446.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "ta83b286bdd6e8b3fa389",
+          "text": "左轮",
+          "x": 613,
+          "cy": 1446.5,
+          "size": 14.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t0fd46608f0b42b2a4187",
+          "text": "+5",
+          "x": 745,
+          "cy": 1446.5,
+          "size": 18,
+          "fill": "#147E77",
+          "anchor": "end",
+          "role": "compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 749,
+          "cy": 1446.5,
+          "size": 17.2,
+          "fill": "#147E77",
+          "anchor": "start",
+          "role": "compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t37cefe3c5cfc294df7e3",
+          "text": "炸单补偿",
+          "x": 180,
+          "cy": 1491.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tbcb704742579e854b8b9",
+          "text": "符合俱乐部下单须知的炸单条件：",
+          "x": 298,
+          "cy": 1483,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t82a343710015baa84a8f",
+          "text": "每局增加 5w 保底。",
+          "x": 298,
+          "cy": 1500,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t50d577442e70b11cbe21",
+          "text": "结算口径",
+          "x": 180,
+          "cy": 1550.5,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t1bf3ea8e388c8e09232b",
+          "text": "符合俱乐部炸单标准时，安全箱带出物资不计入；",
+          "x": 298,
+          "cy": 1533.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tcee4c835ae21ffbd5123",
+          "text": "安全箱物资 > 50w 时无需补战损，",
+          "x": 298,
+          "cy": 1550.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t69e7f420f001755e43e9",
+          "text": "否则按炸单标准增加累计保底。",
+          "x": 298,
+          "cy": 1567.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "t9a8b2ff48ed88cfdd8b8",
+          "text": "物资与售后",
+          "x": 180,
+          "cy": 1612,
+          "size": 17,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 103,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t4fdbf760f4dc1991acec",
+          "text": "对局产出默认归板板；假账须提前征得板板同意，",
+          "x": 298,
+          "cy": 1603.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "id": "tad55fd8b28f254ff27aa",
+          "text": "按约定价值计入。全程录屏，争议交给客服核实。",
+          "x": 298,
+          "cy": 1620.5,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 479,
+          "role": "rule-body"
+        },
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(345 1763.52) scale(0.8571428571428571)\" fill=\"none\" stroke=\"#203F53\" stroke-width=\"2.1\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 377.4,
+          "cy": 1776,
+          "size": 24,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 418,
+          "cy": 1830,
+          "size": 13,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 350,
+          "role": "footer"
+        }
+      ],
+      "alignment": {
+        "rowCenters": [
+          588,
+          664.5,
+          741.5,
+          822
+        ],
+        "rowEdges": [
+          550,
+          626,
+          703,
+          780,
+          864
+        ],
+        "unitColumns": {
+          "priceR": 287,
+          "guaranteeW": 686
+        },
+        "numberGap": 8,
+        "vertical": "visible glyph center",
+        "tableColumns": [
+          44,
+          400,
+          444,
+          792
+        ],
+        "noRightIcons": true
+      },
+      "platforms": [
+        "mobile"
+      ]
+    }
+  ]
+}

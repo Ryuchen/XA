@@ -1,0 +1,47 @@
+{
+  "stage": "background-review",
+  "assets": [
+    {
+      "id": "poster-gold",
+      "label": "绝密暖金完整价目",
+      "provider": "built-in image_gen",
+      "nativeWidth": 724,
+      "nativeHeight": 2171,
+      "selectedFile": "03-backgrounds/poster-gold.png",
+      "original": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-33d472c5-cea8-461a-b6b3-79406862d44b.png",
+      "prompt": "03-backgrounds/prompt-poster-gold.md"
+    },
+    {
+      "id": "poster-teal",
+      "label": "机密薄荷完整价目",
+      "provider": "built-in image_gen",
+      "nativeWidth": 724,
+      "nativeHeight": 2172,
+      "selectedFile": "03-backgrounds/poster-teal.png",
+      "original": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-f5a1a14b-4191-475e-a0aa-03f01aa7736d.png",
+      "prompt": "03-backgrounds/prompt-poster-teal.md"
+    },
+    {
+      "id": "cover",
+      "label": "横版封面",
+      "provider": "built-in image_gen",
+      "nativeWidth": 1672,
+      "nativeHeight": 941,
+      "selectedFile": "03-backgrounds/cover.png",
+      "original": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-a090336d-155d-476a-8561-ae7c473665a4.png",
+      "prompt": "03-backgrounds/prompt-cover.md"
+    },
+    {
+      "id": "social",
+      "label": "端手游共用双模式宣发结构",
+      "provider": "built-in image_gen",
+      "nativeWidth": 1086,
+      "nativeHeight": 1448,
+      "selectedFile": "03-backgrounds/social.png",
+      "original": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-75a7b527-3d50-462b-bcd1-a67dd02dca01.png",
+      "prompt": "03-backgrounds/prompt-social.md"
+    }
+  ],
+  "processing": "保留原始生成图；交付PNG仅按目标画布尺寸放大。后续正文与艺术字以矢量添加。",
+  "goldRevision": "首版保留为poster-gold-v1-draft.png；选用加高第一/第三须知卡、缩减页尾的修订版。"
+}

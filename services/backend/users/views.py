@@ -916,7 +916,7 @@ class EscortProfileListView(APIView):
             account__is_active=True, account__can_login=True, account__can_view=True,
         ).select_related('account', 'user', 'level').prefetch_related(
             'game_categories',
-            'service_items',
+            'service_items__game_category',
             'user__schedules', 'qualifications__game_category',
         )
         from .qualifications import filtered_qualifications,serialize_qualification,qualification_rows,service_requirement,scope_matches,service_skill
@@ -941,11 +941,15 @@ class EscortProfileListView(APIView):
             # service qualification changes; only the selection action is blocked.
             pass
         elif service_item_id.isdigit():
-            # 最细粒度：仅展示可接该服务项的陪玩（未勾选该服务项的陪玩不出现）
-            skills=Q(service_items__id=int(service_item_id))
-            if service and service.catalog_family:
-                skills |= Q(service_items__catalog_family=service.catalog_family,service_items__game_category_id=service.game_category_id,service_items__platform=service.platform)
-            profiles = profiles.filter(skills).distinct()
+            # Legacy services with no game category do not require an explicit
+            # service skill, matching order_acceptance_error and direct orders.
+            if service.game_category_id is not None:
+                skills=Q(service_items__id=int(service_item_id))
+                if service.catalog_family:
+                    skills |= Q(service_items__catalog_family=service.catalog_family,service_items__game_category_id=service.game_category_id,service_items__platform=service.platform)
+                if service.gameplay_id:
+                    skills |= Q(service_items__gameplay_id=service.gameplay_id,service_items__game_category_id=service.game_category_id,service_items__platform=service.platform)
+                profiles = profiles.filter(skills).distinct()
         elif game_category_id.isdigit():
             # 精准筛选：仅展示可接该游戏类目的陪玩（未配置可接游戏的陪玩不出现）
             profiles = profiles.filter(game_categories__id=int(game_category_id), game_categories__is_active=True).distinct()
@@ -993,6 +997,24 @@ class EscortProfileListView(APIView):
         for naming in ProviderNaming.objects.filter(provider_id__in=profiles.values('account_id'),
                 is_visible=True, expires_at__gt=timezone.now()).order_by('-expires_at'):
             naming_map.setdefault(naming.provider_id, []).append({'id': naming.pk, 'title': naming.title, 'expires_at': naming.expires_at})
+        eligible_variants = []
+        eligible_catalog = detail and not service and request.query_params.get('eligible_catalog') == '1'
+        if eligible_catalog:
+            from orders.purchase_benefits import account_service_q
+            eligible_variants = list(ServiceItem.objects.filter(
+                visible_service_q(), account_service_q(request.account),
+            ).exclude(service_category__is_gift=True).select_related(
+                'gameplay', 'game_category', 'service_category', 'required_level'))
+        elif detail and service:
+            if service.catalog_family and not (service.service_category and service.service_category.is_gift):
+                from orders.purchase_benefits import account_service_q
+                eligible_variants = list(ServiceItem.objects.filter(
+                    visible_service_q(), account_service_q(request.account), catalog_family=service.catalog_family,
+                    gameplay_id=service.gameplay_id, game_category_id=service.game_category_id,
+                ).exclude(service_category__is_gift=True).select_related(
+                    'gameplay', 'game_category', 'service_category', 'required_level'))
+            else:
+                eligible_variants = [service]
         data = []
         listed_profiles = []
         for p in profiles:
@@ -1000,12 +1022,6 @@ class EscortProfileListView(APIView):
             if shortcuts and service and (not p.can_take_service(service) or not service_skill(p,service)):
                 continue
             acceptance_error = p.order_acceptance_error(service, club_rules_enabled=club_rules_enabled, provider_gender=gender)
-            if detail and service and not acceptance_error:
-                configured = any(s.pk == service.pk or (service.catalog_family
-                    and s.catalog_family == service.catalog_family and s.game_category_id == service.game_category_id
-                    and s.platform == service.platform) for s in p.service_items.all())
-                if not configured:
-                    acceptance_error = '陪玩尚未配置该服务技能'
             if not acceptance_error and p.active_order_count >= Order.MAX_CONCURRENT_ORDERS:
                 acceptance_error = '该陪玩当前接单已满，请稍后再约'
             if detail and not acceptance_error and p.status != EscortProfile.Status.AVAILABLE:
@@ -1053,6 +1069,11 @@ class EscortProfileListView(APIView):
             }
             if detail:
                 item['order_unavailable_reason'] = acceptance_error
+                if service or eligible_catalog:
+                    item['eligible_service_item_ids'] = [variant.pk for variant in eligible_variants
+                        if p.status == EscortProfile.Status.AVAILABLE
+                        and p.active_order_count < Order.MAX_CONCURRENT_ORDERS
+                        and not p.order_acceptance_error(variant, club_rules_enabled=club_rules_enabled, provider_gender=gender)]
             data.append(item)
             listed_profiles.append(p)
 

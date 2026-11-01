@@ -1,5 +1,6 @@
 const realtime = require('./core/realtime');
+const messageBadge = require('./core/message-badge');
 App({
-  onShow() { realtime.show(); },
-  onHide() { realtime.hide(); },
+  onShow() { messageBadge.show(); realtime.show(); },
+  onHide() { messageBadge.hide(); realtime.hide(); },
 });

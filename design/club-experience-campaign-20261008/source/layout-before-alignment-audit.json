@@ -1,0 +1,4275 @@
+{
+  "requests": [
+    {
+      "id": "ta8ed2d7c47519e8548fb",
+      "text": "兴安电竞",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "tad45987044e80da3e0d8",
+      "text": "超",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tc58be406d043730a3c05",
+      "text": "值",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t4d4edcb8c3bb721aa1cd",
+      "text": "体",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t2d1b18054eac8d6fc01e",
+      "text": "验",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5987677ea6a76fadffef",
+      "text": "单",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t10c70e4b8f3b4970031b",
+      "text": "新客专享 · 每日一单",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t00baa5a4c76096f98eec",
+      "text": "端游 / 手游 · 机密 / 绝密",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t0c542ed26ea99c0ddf23",
+      "text": "新客专享：同一个三角洲UID仅可下一次",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t095bb02056fddf81b01a",
+      "text": "端游 · 新客专享",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t50887e8ca80e81ee46b9",
+      "text": "机密",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t2357cbbe792ee6394233",
+      "text": "超值券",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "tae45d282013e690dcf11",
+      "text": "98",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t064b0d57fd477d71c1c6",
+      "text": "r",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t4e32ee3a8126e9e30b20",
+      "text": "保",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t73f0864253a776fcf5ef",
+      "text": "988",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t8a16f9aaf0ffbbb23642",
+      "text": "w",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t858822c757d90fdb0ccc",
+      "text": "68",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t60d81cc1b8ca2fc1513e",
+      "text": "428",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "te295238080a4ebedb80c",
+      "text": "绝密",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "te6c480a1cbb4307d26a9",
+      "text": "588",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "taa670d95a5870ed26d4f",
+      "text": "手游 · 新客专享",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t2cb304e2c9d6e1a07c67",
+      "text": "1314",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t50dc1e0d63096d080608",
+      "text": "788",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t15d385f6bd7d632e2086",
+      "text": "88",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "tf30afd50e148f943eeea",
+      "text": "端游 · 每日一单",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t006c964a1497bd10125b",
+      "text": "188",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t6f96502b1bcbfcf1fce9",
+      "text": "1188",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "tebbd57be7b569f814823",
+      "text": "108",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t1d97d2ba5cf040c14506",
+      "text": "138",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t1ea263f0adb88173bd4e",
+      "text": "手游 · 每日一单",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "tac405704debd90999df5",
+      "text": "1688",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t995764728eb3bfa8b554",
+      "text": "1088",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t91d487287bdce419522e",
+      "text": "128",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "t70cc88d7a8b92eac0f88",
+      "text": "三角洲行动 · 端游",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t112a271eda1b8af24d65",
+      "text": "新客专享",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t10c0b19bae874908b44f",
+      "text": "同一个三角洲UID仅可下一次",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t833976f0ec907c7cfb21",
+      "text": "超值券 · 机密",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t816b2855f180e8796b24",
+      "text": "保底",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t86f998e7b0da2b58e884",
+      "text": "每日一单",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t132ed929af91b0c43030",
+      "text": "超值券 · 绝密",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "tdd413e6057c0d4cea133",
+      "text": "下单须知",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t1d9e7f5c08692373b200",
+      "text": "地图说明",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t8e3096413bf6cacb8f53",
+      "text": "打手选图，下单可备注",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t9d0350fad2b9e76d79ac",
+      "text": "但需要排队。",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t88c6ec1989fbc8be857e",
+      "text": "核电站 / 巴克什",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t0dfa8f762123114edd52",
+      "text": "航天",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "tb023e446aa028062ba71",
+      "text": "航天 / 巴克什",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t59e338cb2a2032b0fc46",
+      "text": "装备规范",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t02b34ee9942fdfdad170",
+      "text": "房卡：",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t0d56fe8bb1ec0900cc4b",
+      "text": "机密包1张红卡房",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "ta6f523637271fdeb5a8d",
+      "text": "绝密按俱乐部规定",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t7f27d367092dcdbc1a5e",
+      "text": "包金、红卡",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "tbc94c2fbe7a0ebef3cbb",
+      "text": "背包：",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t01a57306f173056e5270",
+      "text": "机密≥30格",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t82e4a6136314e3ceabd6",
+      "text": "绝密≥40格",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t5065d286bac9053dc681",
+      "text": "左轮：",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "td85ebdacb84297cf93f1",
+      "text": "两种模式均需",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t1043279332faa9e74788",
+      "text": "携带至少1把",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t6a48b23696b4d1a21283",
+      "text": "炸单补偿",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t525e7140930366050807",
+      "text": "+30",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "tc7bf337215f150870248",
+      "text": "+60",
+      "font": "MiSans VF Bold",
+      "style": 0
+    },
+    {
+      "id": "tf1f0f5cd183359bc1c5f",
+      "text": "活动限制",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t043621384a9fb0cf587e",
+      "text": "体验单不参与",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "tdfbb71100d11f7d43313",
+      "text": "任何店铺活动",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "tdc5b0882d62f7eedb2d5",
+      "text": "最终解释权归兴安电竞所有",
+      "font": "MiSans VF Regular",
+      "style": 0
+    },
+    {
+      "id": "t14e56703e3466c906e93",
+      "text": "三角洲行动 · 手游",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    }
+  ],
+  "pages": [
+    {
+      "id": "cover",
+      "label": "兴安电竞 · 体验单封面",
+      "bg": "experience-cover.png",
+      "w": 1672,
+      "h": 941,
+      "ew": 3200,
+      "eh": 1801,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<path d=\"M86 174.35l21.15 -40.5l21.599999999999998 40.5z M98.15 167.15l9 -17.55l9.45 17.55z\" fill=\"none\" stroke=\"#203f53\" stroke-width=\"3.375\" stroke-linejoin=\"round\"/>"
+        },
+        {
+          "type": "text",
+          "text": "兴安电竞",
+          "id": "ta8ed2d7c47519e8548fb",
+          "x": 140.9,
+          "cy": 155,
+          "size": 45,
+          "fill": "#203f53",
+          "anchor": "start",
+          "role": "brand",
+          "group": "brand"
+        },
+        {
+          "type": "art",
+          "text": "超值",
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "tc58be406d043730a3c05"
+          ],
+          "x": 82,
+          "cy": 307,
+          "size": 142,
+          "maxWidth": 450,
+          "fill": "#203f53",
+          "shadow": "#afcadb",
+          "outline": "#fffdf6",
+          "outlineWidth": 2.6,
+          "angles": true,
+          "group": "headline"
+        },
+        {
+          "type": "art",
+          "text": "体验单",
+          "ids": [
+            "t4d4edcb8c3bb721aa1cd",
+            "t2d1b18054eac8d6fc01e",
+            "t5987677ea6a76fadffef"
+          ],
+          "x": 82,
+          "cy": 492,
+          "size": 163,
+          "maxWidth": 494,
+          "fill": "#203f53",
+          "shadow": "#afcadb",
+          "outline": "#fffdf6",
+          "outlineWidth": 2.6,
+          "angles": true,
+          "group": "headline"
+        },
+        {
+          "type": "text",
+          "text": "新客专享 · 每日一单",
+          "id": "t10c70e4b8f3b4970031b",
+          "x": 368,
+          "cy": 739,
+          "size": 43,
+          "fill": "#fffdf6",
+          "anchor": "middle",
+          "group": "claim"
+        },
+        {
+          "type": "text",
+          "text": "端游 / 手游 · 机密 / 绝密",
+          "id": "t00baa5a4c76096f98eec",
+          "x": 368,
+          "cy": 822,
+          "size": 31,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "platform"
+        }
+      ],
+      "containers": [
+        {
+          "id": "brand",
+          "bounds": [
+            70,
+            115,
+            530,
+            90
+          ],
+          "safe": [
+            80,
+            125,
+            485,
+            70
+          ],
+          "centered": true
+        },
+        {
+          "id": "headline",
+          "bounds": [
+            60,
+            207,
+            545,
+            400
+          ],
+          "safe": [
+            80,
+            215,
+            515,
+            380
+          ],
+          "centered": true
+        },
+        {
+          "id": "claim",
+          "bounds": [
+            70,
+            693,
+            599,
+            91
+          ],
+          "safe": [
+            90,
+            707,
+            555,
+            63
+          ],
+          "centered": true
+        },
+        {
+          "id": "platform",
+          "bounds": [
+            80,
+            790,
+            560,
+            56
+          ],
+          "safe": [
+            100,
+            802,
+            535,
+            35
+          ],
+          "centered": true
+        }
+      ]
+    },
+    {
+      "id": "social",
+      "label": "兴安电竞 · 体验单广告页",
+      "bg": "experience-social.png",
+      "w": 1086,
+      "h": 1448,
+      "ew": 2400,
+      "eh": 3200,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<path d=\"M83 138.47l13.629999999999999 -26.1l13.92 26.1z M90.83 133.83l5.800000000000001 -11.31l6.09 11.31z\" fill=\"none\" stroke=\"#203f53\" stroke-width=\"2.175\" stroke-linejoin=\"round\"/>"
+        },
+        {
+          "type": "text",
+          "text": "兴安电竞",
+          "id": "ta8ed2d7c47519e8548fb",
+          "x": 118.38,
+          "cy": 126,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "role": "brand",
+          "group": "brand"
+        },
+        {
+          "type": "art",
+          "text": "超值",
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "tc58be406d043730a3c05"
+          ],
+          "x": 82,
+          "cy": 204,
+          "size": 69,
+          "maxWidth": 310,
+          "fill": "#203f53",
+          "shadow": "#afcadb",
+          "outline": "#fffdf6",
+          "outlineWidth": 2.6,
+          "angles": true,
+          "group": "headline"
+        },
+        {
+          "type": "art",
+          "text": "体验单",
+          "ids": [
+            "t4d4edcb8c3bb721aa1cd",
+            "t2d1b18054eac8d6fc01e",
+            "t5987677ea6a76fadffef"
+          ],
+          "x": 82,
+          "cy": 284,
+          "size": 91,
+          "maxWidth": 340,
+          "fill": "#203f53",
+          "shadow": "#afcadb",
+          "outline": "#fffdf6",
+          "outlineWidth": 2.6,
+          "angles": true,
+          "group": "headline"
+        },
+        {
+          "type": "text",
+          "text": "新客专享：同一个三角洲UID仅可下一次",
+          "id": "t0c542ed26ea99c0ddf23",
+          "x": 543,
+          "cy": 442,
+          "size": 31,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "condition"
+        },
+        {
+          "type": "text",
+          "text": "端游 · 新客专享",
+          "id": "t095bb02056fddf81b01a",
+          "x": 288,
+          "cy": 523,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "middle",
+          "group": "header-0"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 90,
+          "cy": 593,
+          "size": 25,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-0-0"
+        },
+        {
+          "type": "text",
+          "text": "超值券",
+          "id": "t2357cbbe792ee6394233",
+          "x": 90,
+          "cy": 625,
+          "size": 23,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-0-0"
+        },
+        {
+          "type": "text",
+          "text": "98",
+          "id": "tae45d282013e690dcf11",
+          "x": 248,
+          "cy": 608,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-0-0-price",
+          "lineGroup": "offer-0-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 254,
+          "cy": 608,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-0-0-price",
+          "lineGroup": "offer-0-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 296,
+          "cy": 608,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-0-0",
+          "lineGroup": "offer-0-0-loot"
+        },
+        {
+          "type": "text",
+          "text": "988",
+          "id": "t73f0864253a776fcf5ef",
+          "x": 448,
+          "cy": 608,
+          "size": 46,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "offer-0-0-loot",
+          "lineGroup": "offer-0-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 454,
+          "cy": 608,
+          "size": 43.239999999999995,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-0-0-loot",
+          "lineGroup": "offer-0-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 90,
+          "cy": 703,
+          "size": 29,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-0-1"
+        },
+        {
+          "type": "text",
+          "text": "68",
+          "id": "t858822c757d90fdb0ccc",
+          "x": 248,
+          "cy": 703,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-0-1-price",
+          "lineGroup": "offer-0-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 254,
+          "cy": 703,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-0-1-price",
+          "lineGroup": "offer-0-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 296,
+          "cy": 703,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-0-1",
+          "lineGroup": "offer-0-1-loot"
+        },
+        {
+          "type": "text",
+          "text": "428",
+          "id": "t60d81cc1b8ca2fc1513e",
+          "x": 448,
+          "cy": 703,
+          "size": 46,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "offer-0-1-loot",
+          "lineGroup": "offer-0-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 454,
+          "cy": 703,
+          "size": 43.239999999999995,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-0-1-loot",
+          "lineGroup": "offer-0-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 90,
+          "cy": 797,
+          "size": 29,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-0-2"
+        },
+        {
+          "type": "text",
+          "text": "98",
+          "id": "tae45d282013e690dcf11",
+          "x": 248,
+          "cy": 797,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-0-2-price",
+          "lineGroup": "offer-0-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 254,
+          "cy": 797,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-0-2-price",
+          "lineGroup": "offer-0-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 296,
+          "cy": 797,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-0-2",
+          "lineGroup": "offer-0-2-loot"
+        },
+        {
+          "type": "text",
+          "text": "588",
+          "id": "te6c480a1cbb4307d26a9",
+          "x": 448,
+          "cy": 797,
+          "size": 46,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "offer-0-2-loot",
+          "lineGroup": "offer-0-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 454,
+          "cy": 797,
+          "size": 43.239999999999995,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-0-2-loot",
+          "lineGroup": "offer-0-2-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "手游 · 新客专享",
+          "id": "taa670d95a5870ed26d4f",
+          "x": 800,
+          "cy": 523,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "middle",
+          "group": "header-1"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 602,
+          "cy": 593,
+          "size": 25,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-1-0"
+        },
+        {
+          "type": "text",
+          "text": "超值券",
+          "id": "t2357cbbe792ee6394233",
+          "x": 602,
+          "cy": 625,
+          "size": 23,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-1-0"
+        },
+        {
+          "type": "text",
+          "text": "98",
+          "id": "tae45d282013e690dcf11",
+          "x": 760,
+          "cy": 608,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-1-0-price",
+          "lineGroup": "offer-1-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 766,
+          "cy": 608,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-1-0-price",
+          "lineGroup": "offer-1-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 808,
+          "cy": 608,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-1-0",
+          "lineGroup": "offer-1-0-loot"
+        },
+        {
+          "type": "text",
+          "text": "1314",
+          "id": "t2cb304e2c9d6e1a07c67",
+          "x": 960,
+          "cy": 608,
+          "size": 46,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "offer-1-0-loot",
+          "lineGroup": "offer-1-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 966,
+          "cy": 608,
+          "size": 43.239999999999995,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-1-0-loot",
+          "lineGroup": "offer-1-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 602,
+          "cy": 703,
+          "size": 29,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-1-1"
+        },
+        {
+          "type": "text",
+          "text": "68",
+          "id": "t858822c757d90fdb0ccc",
+          "x": 760,
+          "cy": 703,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-1-1-price",
+          "lineGroup": "offer-1-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 766,
+          "cy": 703,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-1-1-price",
+          "lineGroup": "offer-1-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 808,
+          "cy": 703,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-1-1",
+          "lineGroup": "offer-1-1-loot"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 960,
+          "cy": 703,
+          "size": 46,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "offer-1-1-loot",
+          "lineGroup": "offer-1-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 966,
+          "cy": 703,
+          "size": 43.239999999999995,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-1-1-loot",
+          "lineGroup": "offer-1-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 602,
+          "cy": 797,
+          "size": 29,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-1-2"
+        },
+        {
+          "type": "text",
+          "text": "88",
+          "id": "t15d385f6bd7d632e2086",
+          "x": 760,
+          "cy": 797,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-1-2-price",
+          "lineGroup": "offer-1-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 766,
+          "cy": 797,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-1-2-price",
+          "lineGroup": "offer-1-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 808,
+          "cy": 797,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-1-2",
+          "lineGroup": "offer-1-2-loot"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 960,
+          "cy": 797,
+          "size": 46,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "offer-1-2-loot",
+          "lineGroup": "offer-1-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 966,
+          "cy": 797,
+          "size": 43.239999999999995,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-1-2-loot",
+          "lineGroup": "offer-1-2-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "端游 · 每日一单",
+          "id": "tf30afd50e148f943eeea",
+          "x": 288,
+          "cy": 920,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "middle",
+          "group": "header-2"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 90,
+          "cy": 990,
+          "size": 25,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-2-0"
+        },
+        {
+          "type": "text",
+          "text": "超值券",
+          "id": "t2357cbbe792ee6394233",
+          "x": 90,
+          "cy": 1022,
+          "size": 23,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-2-0"
+        },
+        {
+          "type": "text",
+          "text": "188",
+          "id": "t006c964a1497bd10125b",
+          "x": 248,
+          "cy": 1005,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-2-0-price",
+          "lineGroup": "offer-2-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 254,
+          "cy": 1005,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-2-0-price",
+          "lineGroup": "offer-2-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 296,
+          "cy": 1005,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-2-0",
+          "lineGroup": "offer-2-0-loot"
+        },
+        {
+          "type": "text",
+          "text": "1188",
+          "id": "t6f96502b1bcbfcf1fce9",
+          "x": 448,
+          "cy": 1005,
+          "size": 46,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "offer-2-0-loot",
+          "lineGroup": "offer-2-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 454,
+          "cy": 1005,
+          "size": 43.239999999999995,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-2-0-loot",
+          "lineGroup": "offer-2-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 90,
+          "cy": 1099,
+          "size": 29,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-2-1"
+        },
+        {
+          "type": "text",
+          "text": "108",
+          "id": "tebbd57be7b569f814823",
+          "x": 248,
+          "cy": 1099,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-2-1-price",
+          "lineGroup": "offer-2-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 254,
+          "cy": 1099,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-2-1-price",
+          "lineGroup": "offer-2-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 296,
+          "cy": 1099,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-2-1",
+          "lineGroup": "offer-2-1-loot"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 448,
+          "cy": 1099,
+          "size": 46,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "offer-2-1-loot",
+          "lineGroup": "offer-2-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 454,
+          "cy": 1099,
+          "size": 43.239999999999995,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-2-1-loot",
+          "lineGroup": "offer-2-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 90,
+          "cy": 1190,
+          "size": 29,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-2-2"
+        },
+        {
+          "type": "text",
+          "text": "138",
+          "id": "t1d97d2ba5cf040c14506",
+          "x": 248,
+          "cy": 1190,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-2-2-price",
+          "lineGroup": "offer-2-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 254,
+          "cy": 1190,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-2-2-price",
+          "lineGroup": "offer-2-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 296,
+          "cy": 1190,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-2-2",
+          "lineGroup": "offer-2-2-loot"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 448,
+          "cy": 1190,
+          "size": 46,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "offer-2-2-loot",
+          "lineGroup": "offer-2-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 454,
+          "cy": 1190,
+          "size": 43.239999999999995,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-2-2-loot",
+          "lineGroup": "offer-2-2-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "手游 · 每日一单",
+          "id": "t1ea263f0adb88173bd4e",
+          "x": 800,
+          "cy": 920,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "middle",
+          "group": "header-3"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 602,
+          "cy": 990,
+          "size": 25,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-3-0"
+        },
+        {
+          "type": "text",
+          "text": "超值券",
+          "id": "t2357cbbe792ee6394233",
+          "x": 602,
+          "cy": 1022,
+          "size": 23,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-3-0"
+        },
+        {
+          "type": "text",
+          "text": "188",
+          "id": "t006c964a1497bd10125b",
+          "x": 760,
+          "cy": 1005,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-3-0-price",
+          "lineGroup": "offer-3-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 766,
+          "cy": 1005,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-3-0-price",
+          "lineGroup": "offer-3-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 808,
+          "cy": 1005,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-3-0",
+          "lineGroup": "offer-3-0-loot"
+        },
+        {
+          "type": "text",
+          "text": "1688",
+          "id": "tac405704debd90999df5",
+          "x": 960,
+          "cy": 1005,
+          "size": 46,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "offer-3-0-loot",
+          "lineGroup": "offer-3-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 966,
+          "cy": 1005,
+          "size": 43.239999999999995,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-3-0-loot",
+          "lineGroup": "offer-3-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 602,
+          "cy": 1099,
+          "size": 29,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-3-1"
+        },
+        {
+          "type": "text",
+          "text": "108",
+          "id": "tebbd57be7b569f814823",
+          "x": 760,
+          "cy": 1099,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-3-1-price",
+          "lineGroup": "offer-3-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 766,
+          "cy": 1099,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-3-1-price",
+          "lineGroup": "offer-3-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 808,
+          "cy": 1099,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-3-1",
+          "lineGroup": "offer-3-1-loot"
+        },
+        {
+          "type": "text",
+          "text": "1088",
+          "id": "t995764728eb3bfa8b554",
+          "x": 960,
+          "cy": 1099,
+          "size": 46,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "offer-3-1-loot",
+          "lineGroup": "offer-3-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 966,
+          "cy": 1099,
+          "size": 43.239999999999995,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "offer-3-1-loot",
+          "lineGroup": "offer-3-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 602,
+          "cy": 1190,
+          "size": 29,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-3-2"
+        },
+        {
+          "type": "text",
+          "text": "128",
+          "id": "t91d487287bdce419522e",
+          "x": 760,
+          "cy": 1190,
+          "size": 38,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "offer-3-2-price",
+          "lineGroup": "offer-3-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 766,
+          "cy": 1190,
+          "size": 35.72,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-3-2-price",
+          "lineGroup": "offer-3-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保",
+          "id": "t4e32ee3a8126e9e30b20",
+          "x": 808,
+          "cy": 1190,
+          "size": 24,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "offer-3-2",
+          "lineGroup": "offer-3-2-loot"
+        },
+        {
+          "type": "text",
+          "text": "1088",
+          "id": "t995764728eb3bfa8b554",
+          "x": 960,
+          "cy": 1190,
+          "size": 46,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "offer-3-2-loot",
+          "lineGroup": "offer-3-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 966,
+          "cy": 1190,
+          "size": 43.239999999999995,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "offer-3-2-loot",
+          "lineGroup": "offer-3-2-loot",
+          "role": "loot-unit"
+        }
+      ],
+      "containers": [
+        {
+          "id": "brand",
+          "bounds": [
+            65,
+            90,
+            405,
+            75
+          ],
+          "safe": [
+            75,
+            105,
+            385,
+            55
+          ],
+          "centered": true
+        },
+        {
+          "id": "headline",
+          "bounds": [
+            60,
+            159,
+            410,
+            174
+          ],
+          "safe": [
+            75,
+            165,
+            385,
+            170
+          ],
+          "centered": true
+        },
+        {
+          "id": "condition",
+          "bounds": [
+            30,
+            416,
+            1025,
+            52
+          ],
+          "safe": [
+            80,
+            425,
+            925,
+            35
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-0",
+          "bounds": [
+            54,
+            489,
+            470,
+            68
+          ],
+          "safe": [
+            72,
+            498,
+            434,
+            50
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-0-0",
+          "bounds": [
+            62,
+            566,
+            452,
+            84
+          ],
+          "safe": [
+            80,
+            575,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-0-1",
+          "bounds": [
+            62,
+            661,
+            452,
+            84
+          ],
+          "safe": [
+            80,
+            670,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-0-2",
+          "bounds": [
+            62,
+            755,
+            452,
+            84
+          ],
+          "safe": [
+            80,
+            764,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-1",
+          "bounds": [
+            566,
+            489,
+            470,
+            68
+          ],
+          "safe": [
+            584,
+            498,
+            434,
+            50
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-1-0",
+          "bounds": [
+            574,
+            566,
+            452,
+            84
+          ],
+          "safe": [
+            592,
+            575,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-1-1",
+          "bounds": [
+            574,
+            661,
+            452,
+            84
+          ],
+          "safe": [
+            592,
+            670,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-1-2",
+          "bounds": [
+            574,
+            755,
+            452,
+            84
+          ],
+          "safe": [
+            592,
+            764,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-2",
+          "bounds": [
+            54,
+            886,
+            470,
+            68
+          ],
+          "safe": [
+            72,
+            895,
+            434,
+            50
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-2-0",
+          "bounds": [
+            62,
+            963,
+            452,
+            84
+          ],
+          "safe": [
+            80,
+            972,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-2-1",
+          "bounds": [
+            62,
+            1057,
+            452,
+            84
+          ],
+          "safe": [
+            80,
+            1066,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-2-2",
+          "bounds": [
+            62,
+            1148,
+            452,
+            84
+          ],
+          "safe": [
+            80,
+            1157,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-3",
+          "bounds": [
+            566,
+            886,
+            470,
+            68
+          ],
+          "safe": [
+            584,
+            895,
+            434,
+            50
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-3-0",
+          "bounds": [
+            574,
+            963,
+            452,
+            84
+          ],
+          "safe": [
+            592,
+            972,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-3-1",
+          "bounds": [
+            574,
+            1057,
+            452,
+            84
+          ],
+          "safe": [
+            592,
+            1066,
+            417,
+            66
+          ],
+          "centered": true
+        },
+        {
+          "id": "offer-3-2",
+          "bounds": [
+            574,
+            1148,
+            452,
+            84
+          ],
+          "safe": [
+            592,
+            1157,
+            417,
+            66
+          ],
+          "centered": true
+        }
+      ]
+    },
+    {
+      "id": "desktop-experience",
+      "label": "兴安电竞 · 端游体验单",
+      "bg": "experience-price.png",
+      "w": 887,
+      "h": 1774,
+      "ew": 2400,
+      "eh": 4800,
+      "platforms": [
+        "desktop"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<path d=\"M65 99.61l12.69 -24.3l12.959999999999999 24.3z M72.29 95.29l5.4 -10.530000000000001l5.67 10.530000000000001z\" fill=\"none\" stroke=\"#203f53\" stroke-width=\"2.025\" stroke-linejoin=\"round\"/>"
+        },
+        {
+          "type": "text",
+          "text": "兴安电竞",
+          "id": "ta8ed2d7c47519e8548fb",
+          "x": 97.94,
+          "cy": 88,
+          "size": 27,
+          "fill": "#203f53",
+          "anchor": "start",
+          "role": "brand",
+          "group": "brand"
+        },
+        {
+          "type": "art",
+          "text": "体验单",
+          "ids": [
+            "t4d4edcb8c3bb721aa1cd",
+            "t2d1b18054eac8d6fc01e",
+            "t5987677ea6a76fadffef"
+          ],
+          "x": 63,
+          "cy": 167,
+          "size": 79,
+          "maxWidth": 280,
+          "fill": "#203f53",
+          "shadow": "#afcadb",
+          "outline": "#fffdf6",
+          "outlineWidth": 2.6,
+          "angles": true,
+          "group": "headline"
+        },
+        {
+          "type": "text",
+          "text": "三角洲行动 · 端游",
+          "id": "t70cc88d7a8b92eac0f88",
+          "x": 214,
+          "cy": 229,
+          "size": 27,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "subtitle"
+        },
+        {
+          "type": "text",
+          "text": "新客专享",
+          "id": "t112a271eda1b8af24d65",
+          "x": 68,
+          "cy": 414,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "start",
+          "group": "header-0"
+        },
+        {
+          "type": "text",
+          "text": "同一个三角洲UID仅可下一次",
+          "id": "t10c0b19bae874908b44f",
+          "x": 810,
+          "cy": 414,
+          "size": 27,
+          "fill": "#fffdf6",
+          "anchor": "end",
+          "group": "header-0"
+        },
+        {
+          "type": "text",
+          "text": "超值券 · 机密",
+          "id": "t833976f0ec907c7cfb21",
+          "x": 215,
+          "cy": 494,
+          "size": 30,
+          "fill": "#187b75",
+          "anchor": "middle",
+          "group": "card-0-0"
+        },
+        {
+          "type": "text",
+          "text": "98",
+          "id": "tae45d282013e690dcf11",
+          "x": 227,
+          "cy": 536,
+          "size": 46,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-0-0-price",
+          "lineGroup": "card-0-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 233,
+          "cy": 536,
+          "size": 43.239999999999995,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-0-0-price",
+          "lineGroup": "card-0-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 215,
+          "cy": 569,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-0-0"
+        },
+        {
+          "type": "text",
+          "text": "988",
+          "id": "t73f0864253a776fcf5ef",
+          "x": 254,
+          "cy": 615,
+          "size": 72,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "card-0-0-loot",
+          "lineGroup": "card-0-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 260,
+          "cy": 615,
+          "size": 67.67999999999999,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "card-0-0-loot",
+          "lineGroup": "card-0-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 503,
+          "cy": 494,
+          "size": 31,
+          "fill": "#187b75",
+          "anchor": "middle",
+          "group": "card-0-1"
+        },
+        {
+          "type": "text",
+          "text": "68",
+          "id": "t858822c757d90fdb0ccc",
+          "x": 515,
+          "cy": 536,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-0-1-price",
+          "lineGroup": "card-0-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 521,
+          "cy": 536,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-0-1-price",
+          "lineGroup": "card-0-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 503,
+          "cy": 569,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-0-1"
+        },
+        {
+          "type": "text",
+          "text": "428",
+          "id": "t60d81cc1b8ca2fc1513e",
+          "x": 527,
+          "cy": 615,
+          "size": 42,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "card-0-1-loot",
+          "lineGroup": "card-0-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 533,
+          "cy": 615,
+          "size": 39.48,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "card-0-1-loot",
+          "lineGroup": "card-0-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 733,
+          "cy": 494,
+          "size": 31,
+          "fill": "#a96725",
+          "anchor": "middle",
+          "group": "card-0-2"
+        },
+        {
+          "type": "text",
+          "text": "98",
+          "id": "tae45d282013e690dcf11",
+          "x": 745,
+          "cy": 536,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-0-2-price",
+          "lineGroup": "card-0-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 751,
+          "cy": 536,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-0-2-price",
+          "lineGroup": "card-0-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 733,
+          "cy": 569,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-0-2"
+        },
+        {
+          "type": "text",
+          "text": "588",
+          "id": "te6c480a1cbb4307d26a9",
+          "x": 757,
+          "cy": 615,
+          "size": 42,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "card-0-2-loot",
+          "lineGroup": "card-0-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 763,
+          "cy": 615,
+          "size": 39.48,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "card-0-2-loot",
+          "lineGroup": "card-0-2-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "每日一单",
+          "id": "t86f998e7b0da2b58e884",
+          "x": 68,
+          "cy": 730,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "start",
+          "group": "header-1"
+        },
+        {
+          "type": "text",
+          "text": "超值券 · 绝密",
+          "id": "t132ed929af91b0c43030",
+          "x": 215,
+          "cy": 810,
+          "size": 30,
+          "fill": "#a96725",
+          "anchor": "middle",
+          "group": "card-1-0"
+        },
+        {
+          "type": "text",
+          "text": "188",
+          "id": "t006c964a1497bd10125b",
+          "x": 227,
+          "cy": 852,
+          "size": 46,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-1-0-price",
+          "lineGroup": "card-1-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 233,
+          "cy": 852,
+          "size": 43.239999999999995,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-1-0-price",
+          "lineGroup": "card-1-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 215,
+          "cy": 885,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-1-0"
+        },
+        {
+          "type": "text",
+          "text": "1188",
+          "id": "t6f96502b1bcbfcf1fce9",
+          "x": 254,
+          "cy": 931,
+          "size": 72,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "card-1-0-loot",
+          "lineGroup": "card-1-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 260,
+          "cy": 931,
+          "size": 67.67999999999999,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "card-1-0-loot",
+          "lineGroup": "card-1-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 503,
+          "cy": 810,
+          "size": 31,
+          "fill": "#187b75",
+          "anchor": "middle",
+          "group": "card-1-1"
+        },
+        {
+          "type": "text",
+          "text": "108",
+          "id": "tebbd57be7b569f814823",
+          "x": 515,
+          "cy": 852,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-1-1-price",
+          "lineGroup": "card-1-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 521,
+          "cy": 852,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-1-1-price",
+          "lineGroup": "card-1-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 503,
+          "cy": 885,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-1-1"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 527,
+          "cy": 931,
+          "size": 42,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "card-1-1-loot",
+          "lineGroup": "card-1-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 533,
+          "cy": 931,
+          "size": 39.48,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "card-1-1-loot",
+          "lineGroup": "card-1-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 733,
+          "cy": 810,
+          "size": 31,
+          "fill": "#a96725",
+          "anchor": "middle",
+          "group": "card-1-2"
+        },
+        {
+          "type": "text",
+          "text": "138",
+          "id": "t1d97d2ba5cf040c14506",
+          "x": 745,
+          "cy": 852,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-1-2-price",
+          "lineGroup": "card-1-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 751,
+          "cy": 852,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-1-2-price",
+          "lineGroup": "card-1-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 733,
+          "cy": 885,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-1-2"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 757,
+          "cy": 931,
+          "size": 42,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "card-1-2-loot",
+          "lineGroup": "card-1-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 763,
+          "cy": 931,
+          "size": 39.48,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "card-1-2-loot",
+          "lineGroup": "card-1-2-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "下单须知",
+          "id": "tdd413e6057c0d4cea133",
+          "x": 443.5,
+          "cy": 1050,
+          "size": 34,
+          "fill": "#fffdf6",
+          "anchor": "middle",
+          "group": "rules-header"
+        },
+        {
+          "type": "text",
+          "text": "地图说明",
+          "id": "t1d9e7f5c08692373b200",
+          "x": 238,
+          "cy": 1134,
+          "size": 32,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "打手选图，下单可备注",
+          "id": "t8e3096413bf6cacb8f53",
+          "x": 67,
+          "cy": 1180,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "但需要排队。",
+          "id": "t9d0350fad2b9e76d79ac",
+          "x": 67,
+          "cy": 1217,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 67,
+          "cy": 1274,
+          "size": 29,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "核电站 / 巴克什",
+          "id": "t88c6ec1989fbc8be857e",
+          "x": 152,
+          "cy": 1274,
+          "size": 28,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "航天",
+          "id": "t0dfa8f762123114edd52",
+          "x": 152,
+          "cy": 1314,
+          "size": 28,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 67,
+          "cy": 1371,
+          "size": 29,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "航天 / 巴克什",
+          "id": "tb023e446aa028062ba71",
+          "x": 152,
+          "cy": 1371,
+          "size": 28,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "装备规范",
+          "id": "t59e338cb2a2032b0fc46",
+          "x": 647,
+          "cy": 1134,
+          "size": 32,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "equipment"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "房卡：",
+              "id": "t02b34ee9942fdfdad170",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": true
+            },
+            {
+              "text": "机密包1张红卡房",
+              "id": "t0d56fe8bb1ec0900cc4b",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": false
+            }
+          ],
+          "x": 475,
+          "cy": 1178,
+          "size": 29,
+          "fill": "#203f53",
+          "group": "equipment-room-secret",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "text": "绝密按俱乐部规定",
+          "id": "ta6f523637271fdeb5a8d",
+          "x": 475,
+          "cy": 1211,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "text",
+          "text": "包金、红卡",
+          "id": "t7f27d367092dcdbc1a5e",
+          "x": 475,
+          "cy": 1244,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "背包：",
+              "id": "tbc94c2fbe7a0ebef3cbb",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": true
+            },
+            {
+              "text": "机密≥30格",
+              "id": "t01a57306f173056e5270",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": false
+            }
+          ],
+          "x": 475,
+          "cy": 1283,
+          "size": 29,
+          "fill": "#203f53",
+          "group": "equipment-bag-secret",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "text": "绝密≥40格",
+          "id": "t82e4a6136314e3ceabd6",
+          "x": 475,
+          "cy": 1316,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "左轮：",
+              "id": "t5065d286bac9053dc681",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": true
+            },
+            {
+              "text": "两种模式均需",
+              "id": "td85ebdacb84297cf93f1",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": false
+            }
+          ],
+          "x": 475,
+          "cy": 1355,
+          "size": 29,
+          "fill": "#203f53",
+          "group": "equipment-revolver",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "text": "携带至少1把",
+          "id": "t1043279332faa9e74788",
+          "x": 475,
+          "cy": 1388,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "text",
+          "text": "炸单补偿",
+          "id": "t6a48b23696b4d1a21283",
+          "x": 238,
+          "cy": 1470,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "compensation"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 111,
+          "cy": 1510,
+          "size": 26,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "compensation"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 286,
+          "cy": 1510,
+          "size": 26,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "compensation"
+        },
+        {
+          "type": "text",
+          "text": "+30",
+          "id": "t525e7140930366050807",
+          "x": 177,
+          "cy": 1548,
+          "size": 45,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "compensation-secret",
+          "lineGroup": "compensation-secret",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 183,
+          "cy": 1548,
+          "size": 42.3,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "compensation-secret",
+          "lineGroup": "compensation-secret",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "+60",
+          "id": "tc7bf337215f150870248",
+          "x": 350,
+          "cy": 1548,
+          "size": 45,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "compensation-absolute",
+          "lineGroup": "compensation-absolute",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 356,
+          "cy": 1548,
+          "size": 42.3,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "compensation-absolute",
+          "lineGroup": "compensation-absolute",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "活动限制",
+          "id": "tf1f0f5cd183359bc1c5f",
+          "x": 647,
+          "cy": 1470,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "restriction"
+        },
+        {
+          "type": "text",
+          "text": "体验单不参与",
+          "id": "t043621384a9fb0cf587e",
+          "x": 647,
+          "cy": 1518,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "restriction"
+        },
+        {
+          "type": "text",
+          "text": "任何店铺活动",
+          "id": "tdfbb71100d11f7d43313",
+          "x": 647,
+          "cy": 1555,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "restriction"
+        },
+        {
+          "type": "text",
+          "text": "最终解释权归兴安电竞所有",
+          "id": "tdc5b0882d62f7eedb2d5",
+          "x": 443.5,
+          "cy": 1688,
+          "size": 22,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "footer"
+        }
+      ],
+      "containers": [
+        {
+          "id": "brand",
+          "bounds": [
+            52,
+            60,
+            325,
+            50
+          ],
+          "safe": [
+            62,
+            69,
+            305,
+            39
+          ],
+          "centered": true
+        },
+        {
+          "id": "headline",
+          "bounds": [
+            50,
+            118,
+            330,
+            96
+          ],
+          "safe": [
+            60,
+            120,
+            312,
+            96
+          ],
+          "centered": true
+        },
+        {
+          "id": "subtitle",
+          "bounds": [
+            60,
+            208,
+            315,
+            39
+          ],
+          "safe": [
+            65,
+            214,
+            305,
+            32
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-0",
+          "bounds": [
+            44,
+            386,
+            798,
+            55
+          ],
+          "safe": [
+            63,
+            392,
+            758,
+            44
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-0-0",
+          "bounds": [
+            44,
+            458,
+            343,
+            208
+          ],
+          "safe": [
+            67,
+            476,
+            297,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-0-1",
+          "bounds": [
+            400,
+            458,
+            208,
+            208
+          ],
+          "safe": [
+            423,
+            476,
+            162,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-0-2",
+          "bounds": [
+            622,
+            458,
+            221,
+            208
+          ],
+          "safe": [
+            645,
+            476,
+            175,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-1",
+          "bounds": [
+            44,
+            702,
+            798,
+            55
+          ],
+          "safe": [
+            63,
+            708,
+            758,
+            44
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-1-0",
+          "bounds": [
+            44,
+            774,
+            343,
+            208
+          ],
+          "safe": [
+            67,
+            792,
+            297,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-1-1",
+          "bounds": [
+            400,
+            774,
+            208,
+            208
+          ],
+          "safe": [
+            423,
+            792,
+            162,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-1-2",
+          "bounds": [
+            622,
+            774,
+            221,
+            208
+          ],
+          "safe": [
+            645,
+            792,
+            175,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "rules-header",
+          "bounds": [
+            44,
+            1023,
+            798,
+            54
+          ],
+          "safe": [
+            65,
+            1030,
+            755,
+            40
+          ],
+          "centered": true
+        },
+        {
+          "id": "map",
+          "bounds": [
+            44,
+            1095,
+            390,
+            321
+          ],
+          "safe": [
+            64,
+            1110,
+            348,
+            289
+          ],
+          "centered": true
+        },
+        {
+          "id": "equipment",
+          "bounds": [
+            452,
+            1095,
+            390,
+            321
+          ],
+          "safe": [
+            473,
+            1110,
+            348,
+            295
+          ],
+          "centered": true
+        },
+        {
+          "id": "compensation",
+          "bounds": [
+            44,
+            1436,
+            390,
+            155
+          ],
+          "safe": [
+            65,
+            1450,
+            347,
+            126
+          ],
+          "centered": true
+        },
+        {
+          "id": "restriction",
+          "bounds": [
+            452,
+            1436,
+            390,
+            155
+          ],
+          "safe": [
+            473,
+            1450,
+            348,
+            126
+          ],
+          "centered": true
+        },
+        {
+          "id": "footer",
+          "bounds": [
+            210,
+            1657,
+            458,
+            65
+          ],
+          "safe": [
+            219,
+            1674,
+            430,
+            30
+          ],
+          "centered": true
+        }
+      ]
+    },
+    {
+      "id": "mobile-experience",
+      "label": "兴安电竞 · 手游体验单",
+      "bg": "experience-price.png",
+      "w": 887,
+      "h": 1774,
+      "ew": 2400,
+      "eh": 4800,
+      "platforms": [
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<path d=\"M65 99.61l12.69 -24.3l12.959999999999999 24.3z M72.29 95.29l5.4 -10.530000000000001l5.67 10.530000000000001z\" fill=\"none\" stroke=\"#203f53\" stroke-width=\"2.025\" stroke-linejoin=\"round\"/>"
+        },
+        {
+          "type": "text",
+          "text": "兴安电竞",
+          "id": "ta8ed2d7c47519e8548fb",
+          "x": 97.94,
+          "cy": 88,
+          "size": 27,
+          "fill": "#203f53",
+          "anchor": "start",
+          "role": "brand",
+          "group": "brand"
+        },
+        {
+          "type": "art",
+          "text": "体验单",
+          "ids": [
+            "t4d4edcb8c3bb721aa1cd",
+            "t2d1b18054eac8d6fc01e",
+            "t5987677ea6a76fadffef"
+          ],
+          "x": 63,
+          "cy": 167,
+          "size": 79,
+          "maxWidth": 280,
+          "fill": "#203f53",
+          "shadow": "#afcadb",
+          "outline": "#fffdf6",
+          "outlineWidth": 2.6,
+          "angles": true,
+          "group": "headline"
+        },
+        {
+          "type": "text",
+          "text": "三角洲行动 · 手游",
+          "id": "t14e56703e3466c906e93",
+          "x": 214,
+          "cy": 229,
+          "size": 27,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "subtitle"
+        },
+        {
+          "type": "text",
+          "text": "新客专享",
+          "id": "t112a271eda1b8af24d65",
+          "x": 68,
+          "cy": 414,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "start",
+          "group": "header-0"
+        },
+        {
+          "type": "text",
+          "text": "同一个三角洲UID仅可下一次",
+          "id": "t10c0b19bae874908b44f",
+          "x": 810,
+          "cy": 414,
+          "size": 27,
+          "fill": "#fffdf6",
+          "anchor": "end",
+          "group": "header-0"
+        },
+        {
+          "type": "text",
+          "text": "超值券 · 绝密",
+          "id": "t132ed929af91b0c43030",
+          "x": 215,
+          "cy": 494,
+          "size": 30,
+          "fill": "#a96725",
+          "anchor": "middle",
+          "group": "card-0-0"
+        },
+        {
+          "type": "text",
+          "text": "98",
+          "id": "tae45d282013e690dcf11",
+          "x": 227,
+          "cy": 536,
+          "size": 46,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-0-0-price",
+          "lineGroup": "card-0-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 233,
+          "cy": 536,
+          "size": 43.239999999999995,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-0-0-price",
+          "lineGroup": "card-0-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 215,
+          "cy": 569,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-0-0"
+        },
+        {
+          "type": "text",
+          "text": "1314",
+          "id": "t2cb304e2c9d6e1a07c67",
+          "x": 254,
+          "cy": 615,
+          "size": 72,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "card-0-0-loot",
+          "lineGroup": "card-0-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 260,
+          "cy": 615,
+          "size": 67.67999999999999,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "card-0-0-loot",
+          "lineGroup": "card-0-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 503,
+          "cy": 494,
+          "size": 31,
+          "fill": "#187b75",
+          "anchor": "middle",
+          "group": "card-0-1"
+        },
+        {
+          "type": "text",
+          "text": "68",
+          "id": "t858822c757d90fdb0ccc",
+          "x": 515,
+          "cy": 536,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-0-1-price",
+          "lineGroup": "card-0-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 521,
+          "cy": 536,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-0-1-price",
+          "lineGroup": "card-0-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 503,
+          "cy": 569,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-0-1"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 527,
+          "cy": 615,
+          "size": 42,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "card-0-1-loot",
+          "lineGroup": "card-0-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 533,
+          "cy": 615,
+          "size": 39.48,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "card-0-1-loot",
+          "lineGroup": "card-0-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 733,
+          "cy": 494,
+          "size": 31,
+          "fill": "#a96725",
+          "anchor": "middle",
+          "group": "card-0-2"
+        },
+        {
+          "type": "text",
+          "text": "88",
+          "id": "t15d385f6bd7d632e2086",
+          "x": 745,
+          "cy": 536,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-0-2-price",
+          "lineGroup": "card-0-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 751,
+          "cy": 536,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-0-2-price",
+          "lineGroup": "card-0-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 733,
+          "cy": 569,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-0-2"
+        },
+        {
+          "type": "text",
+          "text": "788",
+          "id": "t50dc1e0d63096d080608",
+          "x": 757,
+          "cy": 615,
+          "size": 42,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "card-0-2-loot",
+          "lineGroup": "card-0-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 763,
+          "cy": 615,
+          "size": 39.48,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "card-0-2-loot",
+          "lineGroup": "card-0-2-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "每日一单",
+          "id": "t86f998e7b0da2b58e884",
+          "x": 68,
+          "cy": 730,
+          "size": 32,
+          "fill": "#fffdf6",
+          "anchor": "start",
+          "group": "header-1"
+        },
+        {
+          "type": "text",
+          "text": "超值券 · 绝密",
+          "id": "t132ed929af91b0c43030",
+          "x": 215,
+          "cy": 810,
+          "size": 30,
+          "fill": "#a96725",
+          "anchor": "middle",
+          "group": "card-1-0"
+        },
+        {
+          "type": "text",
+          "text": "188",
+          "id": "t006c964a1497bd10125b",
+          "x": 227,
+          "cy": 852,
+          "size": 46,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-1-0-price",
+          "lineGroup": "card-1-0-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 233,
+          "cy": 852,
+          "size": 43.239999999999995,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-1-0-price",
+          "lineGroup": "card-1-0-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 215,
+          "cy": 885,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-1-0"
+        },
+        {
+          "type": "text",
+          "text": "1688",
+          "id": "tac405704debd90999df5",
+          "x": 254,
+          "cy": 931,
+          "size": 72,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "card-1-0-loot",
+          "lineGroup": "card-1-0-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 260,
+          "cy": 931,
+          "size": 67.67999999999999,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "card-1-0-loot",
+          "lineGroup": "card-1-0-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 503,
+          "cy": 810,
+          "size": 31,
+          "fill": "#187b75",
+          "anchor": "middle",
+          "group": "card-1-1"
+        },
+        {
+          "type": "text",
+          "text": "108",
+          "id": "tebbd57be7b569f814823",
+          "x": 515,
+          "cy": 852,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-1-1-price",
+          "lineGroup": "card-1-1-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 521,
+          "cy": 852,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-1-1-price",
+          "lineGroup": "card-1-1-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 503,
+          "cy": 885,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-1-1"
+        },
+        {
+          "type": "text",
+          "text": "1088",
+          "id": "t995764728eb3bfa8b554",
+          "x": 527,
+          "cy": 931,
+          "size": 42,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "card-1-1-loot",
+          "lineGroup": "card-1-1-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 533,
+          "cy": 931,
+          "size": 39.48,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "card-1-1-loot",
+          "lineGroup": "card-1-1-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 733,
+          "cy": 810,
+          "size": 31,
+          "fill": "#a96725",
+          "anchor": "middle",
+          "group": "card-1-2"
+        },
+        {
+          "type": "text",
+          "text": "128",
+          "id": "t91d487287bdce419522e",
+          "x": 745,
+          "cy": 852,
+          "size": 40,
+          "fill": "#203f53",
+          "anchor": "end",
+          "group": "card-1-2-price",
+          "lineGroup": "card-1-2-price",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "text": "r",
+          "id": "t064b0d57fd477d71c1c6",
+          "x": 751,
+          "cy": 852,
+          "size": 37.599999999999994,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "card-1-2-price",
+          "lineGroup": "card-1-2-price",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "text": "保底",
+          "id": "t816b2855f180e8796b24",
+          "x": 733,
+          "cy": 885,
+          "size": 21,
+          "fill": "#557184",
+          "anchor": "middle",
+          "group": "card-1-2"
+        },
+        {
+          "type": "text",
+          "text": "1088",
+          "id": "t995764728eb3bfa8b554",
+          "x": 757,
+          "cy": 931,
+          "size": 42,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "card-1-2-loot",
+          "lineGroup": "card-1-2-loot",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 763,
+          "cy": 931,
+          "size": 39.48,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "card-1-2-loot",
+          "lineGroup": "card-1-2-loot",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "下单须知",
+          "id": "tdd413e6057c0d4cea133",
+          "x": 443.5,
+          "cy": 1050,
+          "size": 34,
+          "fill": "#fffdf6",
+          "anchor": "middle",
+          "group": "rules-header"
+        },
+        {
+          "type": "text",
+          "text": "地图说明",
+          "id": "t1d9e7f5c08692373b200",
+          "x": 238,
+          "cy": 1134,
+          "size": 32,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "打手选图，下单可备注",
+          "id": "t8e3096413bf6cacb8f53",
+          "x": 67,
+          "cy": 1180,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "但需要排队。",
+          "id": "t9d0350fad2b9e76d79ac",
+          "x": 67,
+          "cy": 1217,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 67,
+          "cy": 1274,
+          "size": 29,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "核电站 / 巴克什",
+          "id": "t88c6ec1989fbc8be857e",
+          "x": 152,
+          "cy": 1274,
+          "size": 28,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "航天",
+          "id": "t0dfa8f762123114edd52",
+          "x": 152,
+          "cy": 1314,
+          "size": 28,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 67,
+          "cy": 1371,
+          "size": 29,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "航天 / 巴克什",
+          "id": "tb023e446aa028062ba71",
+          "x": 152,
+          "cy": 1371,
+          "size": 28,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "map"
+        },
+        {
+          "type": "text",
+          "text": "装备规范",
+          "id": "t59e338cb2a2032b0fc46",
+          "x": 647,
+          "cy": 1134,
+          "size": 32,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "equipment"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "房卡：",
+              "id": "t02b34ee9942fdfdad170",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": true
+            },
+            {
+              "text": "机密包1张红卡房",
+              "id": "t0d56fe8bb1ec0900cc4b",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": false
+            }
+          ],
+          "x": 475,
+          "cy": 1178,
+          "size": 29,
+          "fill": "#203f53",
+          "group": "equipment-room-secret",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "text": "绝密按俱乐部规定",
+          "id": "ta6f523637271fdeb5a8d",
+          "x": 475,
+          "cy": 1211,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "text",
+          "text": "包金、红卡",
+          "id": "t7f27d367092dcdbc1a5e",
+          "x": 475,
+          "cy": 1244,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "背包：",
+              "id": "tbc94c2fbe7a0ebef3cbb",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": true
+            },
+            {
+              "text": "机密≥30格",
+              "id": "t01a57306f173056e5270",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": false
+            }
+          ],
+          "x": 475,
+          "cy": 1283,
+          "size": 29,
+          "fill": "#203f53",
+          "group": "equipment-bag-secret",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "text": "绝密≥40格",
+          "id": "t82e4a6136314e3ceabd6",
+          "x": 475,
+          "cy": 1316,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "左轮：",
+              "id": "t5065d286bac9053dc681",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": true
+            },
+            {
+              "text": "两种模式均需",
+              "id": "td85ebdacb84297cf93f1",
+              "fill": "#203f53",
+              "size": 29,
+              "bold": false
+            }
+          ],
+          "x": 475,
+          "cy": 1355,
+          "size": 29,
+          "fill": "#203f53",
+          "group": "equipment-revolver",
+          "role": "rule-body"
+        },
+        {
+          "type": "text",
+          "text": "携带至少1把",
+          "id": "t1043279332faa9e74788",
+          "x": 475,
+          "cy": 1388,
+          "size": 29,
+          "fill": "#203f53",
+          "anchor": "start",
+          "group": "equipment"
+        },
+        {
+          "type": "text",
+          "text": "炸单补偿",
+          "id": "t6a48b23696b4d1a21283",
+          "x": 238,
+          "cy": 1470,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "compensation"
+        },
+        {
+          "type": "text",
+          "text": "机密",
+          "id": "t50887e8ca80e81ee46b9",
+          "x": 111,
+          "cy": 1510,
+          "size": 26,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "compensation"
+        },
+        {
+          "type": "text",
+          "text": "绝密",
+          "id": "te295238080a4ebedb80c",
+          "x": 286,
+          "cy": 1510,
+          "size": 26,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "compensation"
+        },
+        {
+          "type": "text",
+          "text": "+30",
+          "id": "t525e7140930366050807",
+          "x": 177,
+          "cy": 1548,
+          "size": 45,
+          "fill": "#187b75",
+          "anchor": "end",
+          "group": "compensation-secret",
+          "lineGroup": "compensation-secret",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 183,
+          "cy": 1548,
+          "size": 42.3,
+          "fill": "#187b75",
+          "anchor": "start",
+          "group": "compensation-secret",
+          "lineGroup": "compensation-secret",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "+60",
+          "id": "tc7bf337215f150870248",
+          "x": 350,
+          "cy": 1548,
+          "size": 45,
+          "fill": "#a96725",
+          "anchor": "end",
+          "group": "compensation-absolute",
+          "lineGroup": "compensation-absolute",
+          "role": "loot-number"
+        },
+        {
+          "type": "text",
+          "text": "w",
+          "id": "t8a16f9aaf0ffbbb23642",
+          "x": 356,
+          "cy": 1548,
+          "size": 42.3,
+          "fill": "#a96725",
+          "anchor": "start",
+          "group": "compensation-absolute",
+          "lineGroup": "compensation-absolute",
+          "role": "loot-unit"
+        },
+        {
+          "type": "text",
+          "text": "活动限制",
+          "id": "tf1f0f5cd183359bc1c5f",
+          "x": 647,
+          "cy": 1470,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "restriction"
+        },
+        {
+          "type": "text",
+          "text": "体验单不参与",
+          "id": "t043621384a9fb0cf587e",
+          "x": 647,
+          "cy": 1518,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "restriction"
+        },
+        {
+          "type": "text",
+          "text": "任何店铺活动",
+          "id": "tdfbb71100d11f7d43313",
+          "x": 647,
+          "cy": 1555,
+          "size": 30,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "restriction"
+        },
+        {
+          "type": "text",
+          "text": "最终解释权归兴安电竞所有",
+          "id": "tdc5b0882d62f7eedb2d5",
+          "x": 443.5,
+          "cy": 1688,
+          "size": 22,
+          "fill": "#203f53",
+          "anchor": "middle",
+          "group": "footer"
+        }
+      ],
+      "containers": [
+        {
+          "id": "brand",
+          "bounds": [
+            52,
+            60,
+            325,
+            50
+          ],
+          "safe": [
+            62,
+            69,
+            305,
+            39
+          ],
+          "centered": true
+        },
+        {
+          "id": "headline",
+          "bounds": [
+            50,
+            118,
+            330,
+            96
+          ],
+          "safe": [
+            60,
+            120,
+            312,
+            96
+          ],
+          "centered": true
+        },
+        {
+          "id": "subtitle",
+          "bounds": [
+            60,
+            208,
+            315,
+            39
+          ],
+          "safe": [
+            65,
+            214,
+            305,
+            32
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-0",
+          "bounds": [
+            44,
+            386,
+            798,
+            55
+          ],
+          "safe": [
+            63,
+            392,
+            758,
+            44
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-0-0",
+          "bounds": [
+            44,
+            458,
+            343,
+            208
+          ],
+          "safe": [
+            67,
+            476,
+            297,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-0-1",
+          "bounds": [
+            400,
+            458,
+            208,
+            208
+          ],
+          "safe": [
+            423,
+            476,
+            162,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-0-2",
+          "bounds": [
+            622,
+            458,
+            221,
+            208
+          ],
+          "safe": [
+            645,
+            476,
+            175,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "header-1",
+          "bounds": [
+            44,
+            702,
+            798,
+            55
+          ],
+          "safe": [
+            63,
+            708,
+            758,
+            44
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-1-0",
+          "bounds": [
+            44,
+            774,
+            343,
+            208
+          ],
+          "safe": [
+            67,
+            792,
+            297,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-1-1",
+          "bounds": [
+            400,
+            774,
+            208,
+            208
+          ],
+          "safe": [
+            423,
+            792,
+            162,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "card-1-2",
+          "bounds": [
+            622,
+            774,
+            221,
+            208
+          ],
+          "safe": [
+            645,
+            792,
+            175,
+            176
+          ],
+          "centered": true
+        },
+        {
+          "id": "rules-header",
+          "bounds": [
+            44,
+            1023,
+            798,
+            54
+          ],
+          "safe": [
+            65,
+            1030,
+            755,
+            40
+          ],
+          "centered": true
+        },
+        {
+          "id": "map",
+          "bounds": [
+            44,
+            1095,
+            390,
+            321
+          ],
+          "safe": [
+            64,
+            1110,
+            348,
+            289
+          ],
+          "centered": true
+        },
+        {
+          "id": "equipment",
+          "bounds": [
+            452,
+            1095,
+            390,
+            321
+          ],
+          "safe": [
+            473,
+            1110,
+            348,
+            295
+          ],
+          "centered": true
+        },
+        {
+          "id": "compensation",
+          "bounds": [
+            44,
+            1436,
+            390,
+            155
+          ],
+          "safe": [
+            65,
+            1450,
+            347,
+            126
+          ],
+          "centered": true
+        },
+        {
+          "id": "restriction",
+          "bounds": [
+            452,
+            1436,
+            390,
+            155
+          ],
+          "safe": [
+            473,
+            1450,
+            348,
+            126
+          ],
+          "centered": true
+        },
+        {
+          "id": "footer",
+          "bounds": [
+            210,
+            1657,
+            458,
+            65
+          ],
+          "safe": [
+            219,
+            1674,
+            430,
+            30
+          ],
+          "centered": true
+        }
+      ]
+    }
+  ]
+}

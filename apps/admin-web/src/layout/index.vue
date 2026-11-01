@@ -1,75 +1,14 @@
 <template>
   <div class="ap-shell">
+    <a class="ap-skip-link" href="#ap-main-content">跳到页面内容</a>
     <!-- 移动端遮罩 -->
     <div v-if="mobileOpen" class="ap-scrim" @click="mobileOpen = false" />
 
-    <!-- 侧边栏 -->
-    <aside class="ap-sidebar" :class="{ 'is-open': mobileOpen }" aria-label="主导航">
-      <div class="ap-brand">
-        <span class="ap-brand-logo" aria-hidden="true">
-          <svg class="ap-brand-mark" viewBox="0 0 1456 816" fill="currentColor">
-            <polygon points="300,200 470,200 610,315 555,360 430,320 300,320" />
-            <polygon points="430,320 600,320 230,715 60,715" />
-            <polygon points="760,95 835,95 560,715 485,715" />
-            <polygon points="855,95 945,95 675,715 585,715" />
-            <polygon points="875,95 1015,95 1345,715 1205,715 1150,595 1255,595 1075,470 1180,470 1010,340" />
-          </svg>
-        </span>
-        <span class="ap-brand-text">
-          <span class="ap-brand-name">兴安电竞</span>
-          <span class="ap-brand-caption">运营管理后台</span>
-        </span>
-      </div>
-
-      <button class="ap-nav-search" type="button" @click="openSearch">
-        <el-icon><Search /></el-icon><span>搜索功能</span><kbd>⌘ / Ctrl K</kbd>
-      </button>
-      <nav class="ap-nav" aria-label="功能导航">
-        <section v-for="group in navGroups" :key="group.id" class="ap-nav-group"
-          :aria-labelledby="'nav-group-' + group.id">
-          <h2 :id="'nav-group-' + group.id" class="ap-nav-group-label">{{ group.title }}</h2>
-          <div class="ap-nav-links">
-            <router-link
-              v-for="item in group.centers"
-              :key="item.id"
-              class="ap-nav-item"
-              :to="activeCenter?.id === item.id ? route.fullPath : '/' + item.features[0].path"
-              :data-active="activeCenter?.id === item.id"
-              :aria-current="activeCenter?.id === item.id ? 'page' : undefined"
-              @click="mobileOpen = false"
-            >
-              <el-icon><component :is="item.icon" /></el-icon>
-              <span class="ap-nav-label">{{ item.title }}</span>
-            </router-link>
-          </div>
-        </section>
-      </nav>
-
-      <div class="ap-sidebar-bottom">
-        <a class="ap-nav-item" href="#" @click.prevent="toggleTheme">
-          <el-icon><component :is="isDark ? 'Sunny' : 'Moon'" /></el-icon>
-          <span class="ap-nav-label">{{ isDark ? '浅色模式' : '深色模式' }}</span>
-        </a>
-        <a class="ap-nav-item" href="#" @click.prevent="onLogout">
-          <el-icon><SwitchButton /></el-icon>
-          <span class="ap-nav-label">退出登录</span>
-        </a>
-      </div>
-    </aside>
 
     <!-- 内容列 -->
     <div class="ap-content">
       <header class="ap-topbar">
         <div class="ap-topbar-left">
-          <button
-            class="ap-menu-toggle"
-            type="button"
-            :aria-label="mobileOpen ? '关闭主导航' : '打开主导航'"
-            :aria-expanded="mobileOpen"
-            @click="mobileOpen = !mobileOpen"
-          >
-            <el-icon><Fold /></el-icon>
-          </button>
           <div class="ap-topbar-titles">
             <span class="ap-breadcrumb">{{ breadcrumb }}</span>
             <h1 class="ap-page-title">{{ pageTitle }}</h1>
@@ -78,6 +17,14 @@
 
         <div class="ap-topbar-right">
           <button class="ap-search" type="button" @click="openSearch"><el-icon><Search /></el-icon><span>搜索功能</span><kbd>Ctrl K</kbd></button>
+
+          <button v-if="canDispatch" class="ap-staff-queue" type="button"
+            title="数量在订单变化时及约每分钟更新，详情以待派列表为准" @click="openStaffQueue">
+            <span role="status" aria-atomic="true">{{ staffQueueLabel }}</span>
+          </button>
+          <button v-if="canDispatch" class="ap-sound-toggle" type="button" :aria-pressed="staffNoticeSound.enabled.value"
+            :aria-label="staffNoticeSound.enabled.value ? '关闭客服待派提示音' : '开启客服待派提示音'"
+            @click="staffNoticeSound.toggle()">{{ staffNoticeSound.enabled.value ? '提示音 开' : '提示音 关' }}</button>
 
           <el-dropdown v-if="notificationItems.length" trigger="click" @command="onNavCommand">
             <button class="ap-icon-btn" type="button" aria-label="通知消息">
@@ -107,10 +54,12 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+          <button ref="mobileToggle" class="ap-menu-toggle" type="button" :aria-label="mobileOpen ? '关闭主导航' : '打开主导航'"
+            aria-controls="ap-primary-navigation" :aria-expanded="mobileOpen" @click="mobileOpen = !mobileOpen"><el-icon><Menu /></el-icon></button>
         </div>
       </header>
 
-      <main class="ap-main">
+      <main id="ap-main-content" class="ap-main" tabindex="-1">
         <nav v-if="activeCenter && activeCenter.features.length > 1" class="ap-workspace-nav" :aria-label="activeCenter.title + '功能'">
           <router-link v-for="feature in activeCenter.features" :key="feature.path"
             :to="'/' + feature.path" :data-active="route.path === '/' + feature.path"
@@ -119,12 +68,77 @@
           </router-link>
         </nav>
         <router-view v-slot="{ Component }">
-          <component :is="Component" />
+          <transition name="ocean-page" mode="out-in">
+            <div :key="route.path" class="ocean-route-surface"><component :is="Component" /></div>
+          </transition>
         </router-view>
       </main>
     </div>
+    <!-- 侧边栏 -->
+    <aside id="ap-primary-navigation" ref="sidebar" class="ap-sidebar" :class="{ 'is-open': mobileOpen }" aria-label="主导航"
+      :inert="isMobileNav && !mobileOpen || undefined" :aria-hidden="isMobileNav && !mobileOpen ? 'true' : undefined">
+      <div class="ap-brand">
+        <span class="ap-brand-logo" aria-hidden="true">
+          <svg class="ap-brand-mark" viewBox="0 0 1456 816" fill="currentColor">
+            <polygon points="300,200 470,200 610,315 555,360 430,320 300,320" />
+            <polygon points="430,320 600,320 230,715 60,715" />
+            <polygon points="760,95 835,95 560,715 485,715" />
+            <polygon points="855,95 945,95 675,715 585,715" />
+            <polygon points="875,95 1015,95 1345,715 1205,715 1150,595 1255,595 1075,470 1180,470 1010,340" />
+          </svg>
+        </span>
+        <span class="ap-brand-text">
+          <span class="ap-brand-name">兴安电竞</span>
+          <span class="ap-brand-caption">运营管理后台</span>
+        </span>
+        <button class="ap-nav-close" type="button" aria-label="关闭主导航" @click="closeMobileNav">
+          <el-icon><Close /></el-icon>
+        </button>
+      </div>
+
+      <button ref="mobileNavSearch" class="ap-nav-search" type="button" @click="openSearch">
+        <el-icon><Search /></el-icon><span>搜索功能</span><kbd>⌘ / Ctrl K</kbd>
+      </button>
+      <el-tooltip v-if="canDispatch" content="快捷派单" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen">
+        <button class="ap-rail-quick" type="button" aria-label="快捷派单" @click="openQuickDispatch">
+          <el-icon><Plus /></el-icon><span>快捷派单</span>
+        </button>
+      </el-tooltip>
+      <nav ref="navScroll" class="ap-nav" aria-label="功能导航">
+        <section v-for="group in navGroups" :key="group.id" class="ap-nav-group"
+          :aria-labelledby="'nav-group-' + group.id">
+          <h2 :id="'nav-group-' + group.id" class="ap-nav-group-label">{{ group.title }}</h2>
+          <div class="ap-nav-links">
+            <el-tooltip v-for="item in group.centers" :key="item.id" :content="item.title" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen">
+              <router-link
+                class="ap-nav-item"
+                :to="activeCenter?.id === item.id ? route.fullPath : '/' + item.features[0].path"
+                :data-active="activeCenter?.id === item.id"
+                :aria-current="activeCenter?.id === item.id ? 'page' : undefined"
+                :aria-label="item.title"
+                @click="mobileOpen = false"
+              >
+                <el-icon><component :is="item.icon" /></el-icon>
+                <span class="ap-nav-label">{{ item.title }}</span>
+              </router-link>
+            </el-tooltip>
+          </div>
+        </section>
+      </nav>
+
+      <div class="ap-sidebar-bottom">
+        <el-tooltip :content="isDark ? '浅色模式' : '深色模式'" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen"><a class="ap-nav-item" href="#" :aria-label="isDark ? '浅色模式' : '深色模式'" @click.prevent="toggleTheme">
+          <el-icon><component :is="isDark ? 'Sunny' : 'Moon'" /></el-icon>
+          <span class="ap-nav-label">{{ isDark ? '浅色模式' : '深色模式' }}</span>
+        </a></el-tooltip>
+        <el-tooltip content="退出登录" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen"><a class="ap-nav-item" href="#" aria-label="退出登录" @click.prevent="onLogout">
+          <el-icon><SwitchButton /></el-icon>
+          <span class="ap-nav-label">退出登录</span>
+        </a></el-tooltip>
+      </div>
+    </aside>
     <el-dialog v-model="searchOpen" title="查找功能" width="min(560px, calc(100vw - 24px))"
-      class="ap-function-search" append-to-body @opened="searchInput?.focus()" @closed="searchText = ''">
+      class="ap-function-search" append-to-body @opened="searchInput?.focus()" @closed="onSearchClosed">
       <el-input ref="searchInput" v-model="searchText" placeholder="搜索功能，例如：注册、提现、声卡" :prefix-icon="Search" clearable
         aria-label="搜索后台功能" @keydown.enter.prevent="onSearchEnter" @keydown.down.prevent="firstSearchResult?.focus()" />
       <p class="ap-search-summary">{{ searchText.trim() ? '找到 ' + searchResults.length + ' 项功能' : '按业务分类浏览全部可访问功能' }}</p>
@@ -140,20 +154,45 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, type InputInstance } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useStaffDispatchQueue } from '@/stores/staffDispatchQueue'
+import { staffNoticeSound } from '@/utils/staffNoticeSound'
 import { buildNavigation, flattenNavigation, searchNavigation } from '@/router/navigation'
 
 const auth = useAuthStore()
+const staffQueue = useStaffDispatchQueue()
 const route = useRoute()
 const router = useRouter()
+const canDispatch = computed(() => Boolean(auth.token) && auth.hasPerm('order:view') && auth.hasPerm('order:dispatch'))
+const staffQueueLabel = computed(() => {
+  if (staffQueue.status === 'error') return '客服待派 · 查询失败'
+  if (staffQueue.status === 'review') return '客服待派 · 部分待核对'
+  if (staffQueue.status !== 'ready') return '客服待派 · 更新中'
+  return `客服待派 ${staffQueue.count ?? 0} 单`
+})
+function openStaffQueue() {
+  if (canDispatch.value) void router.push({ name: 'orders', query: { queue: staffQueue.status === 'review' ? 'staff_review' : 'staff' } })
+}
+function openQuickDispatch() {
+  if (!canDispatch.value) return
+  mobileOpen.value = false
+  void router.push({ name: 'orders', query: { quick_dispatch: '1' } })
+}
 
 const mobileOpen = ref(false)
+const logoutConfirmOpen = ref(false)
+const isMobileNav = ref(window.innerWidth <= 900)
+const mobileToggle = ref<HTMLButtonElement | null>(null)
+const mobileNavSearch = ref<HTMLButtonElement | null>(null)
+const sidebar = ref<HTMLElement | null>(null)
+const navScroll = ref<HTMLElement | null>(null)
 const searchText = ref('')
 const searchOpen = ref(false)
+const searchReturnToMobileToggle = ref(false)
 const searchInput = ref<InputInstance>()
 const firstSearchResult = ref<HTMLButtonElement | null>(null)
 
@@ -161,8 +200,33 @@ function closeMobileNav() {
   mobileOpen.value = false
 }
 
+// Search and deep links can select a center below the visible part of the rail.
+// Scroll only the navigation itself so the current location stays discoverable.
+function revealActiveNav() {
+  void nextTick(() => {
+    const nav = navScroll.value
+    const active = nav?.querySelector<HTMLElement>('[data-active="true"]')
+    if (!nav || !active) return
+    const viewport = nav.getBoundingClientRect()
+    const item = active.getBoundingClientRect()
+    if (item.top < viewport.top) nav.scrollTop += item.top - viewport.top
+    else if (item.bottom > viewport.bottom) nav.scrollTop += item.bottom - viewport.bottom
+  })
+}
+
 function onKeydown(event: KeyboardEvent) {
+  if (logoutConfirmOpen.value) return
   if (event.key === 'Escape') closeMobileNav()
+  if (event.key === 'Tab' && mobileOpen.value && isMobileNav.value && sidebar.value) {
+    const targets = [...sidebar.value.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]')].filter(element => element.getClientRects().length > 0)
+    if (targets.length) {
+      const index = targets.indexOf(document.activeElement as HTMLElement)
+      if ((event.shiftKey && index <= 0) || (!event.shiftKey && (index === -1 || index === targets.length - 1))) {
+        event.preventDefault()
+        ;(event.shiftKey ? targets[targets.length - 1] : targets[0]).focus()
+      }
+    }
+  }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
     openSearch()
@@ -170,15 +234,23 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 function onViewportChange() {
-  if (window.innerWidth > 900) closeMobileNav()
+  isMobileNav.value = window.innerWidth <= 900
+  if (!isMobileNav.value) closeMobileNav()
 }
 
 watch(() => route.fullPath, closeMobileNav)
 watch(mobileOpen, (open) => {
+  const restoreFocus = !open && sidebar.value?.contains(document.activeElement)
   document.body.classList.toggle('ap-nav-open', open)
-})
+  if (open && isMobileNav.value) {
+    revealActiveNav()
+    void nextTick(() => requestAnimationFrame(() => { if (mobileOpen.value && isMobileNav.value) mobileNavSearch.value?.focus() }))
+  }
+  else if (restoreFocus && isMobileNav.value && !searchOpen.value) void nextTick(() => mobileToggle.value?.focus())
+}, { flush: 'sync' })
 
 onMounted(() => {
+  revealActiveNav()
   window.addEventListener('keydown', onKeydown)
   window.addEventListener('resize', onViewportChange, { passive: true })
 })
@@ -201,7 +273,7 @@ function toggleTheme() {
   applyTheme()
 }
 
-const pageTitle = computed(() => activeCenter.value?.title || (route.meta?.title as string) || '')
+const pageTitle = computed(() => (route.meta?.title as string) || activeCenter.value?.title || '')
 const breadcrumb = computed(() => {
   const group = (route.meta?.group as string) || ''
   return [...new Set(['首页', group, pageTitle.value, route.meta.title as string].filter(Boolean))].join(' / ')
@@ -216,16 +288,31 @@ const navGroups = computed(() => {
 })
 const activeCenter = computed(() => navGroups.value.flatMap(group => group.centers)
   .find(center => center.id === route.meta.center))
+watch(() => activeCenter.value?.id, revealActiveNav, { flush: 'post' })
 const notificationItems = computed(() => flattenNavigation(navGroups.value).filter(item => ['messages', 'chat'].includes(item.path)))
 const searchResults = computed(() => searchNavigation(navGroups.value, searchText.value))
 function openSearch() {
-  mobileOpen.value = false
+  searchReturnToMobileToggle.value = mobileOpen.value && isMobileNav.value
   searchOpen.value = true
+  mobileOpen.value = false
+}
+function onSearchClosed() {
+  searchText.value = ''
+  if (searchReturnToMobileToggle.value) {
+    requestAnimationFrame(() => {
+      const active = document.activeElement
+      if (!mobileOpen.value && !searchOpen.value && isMobileNav.value && (active === document.body || sidebar.value?.contains(active))) {
+        mobileToggle.value?.focus()
+      }
+    })
+  }
+  searchReturnToMobileToggle.value = false
 }
 function setSearchResultRef(element: Element | ComponentPublicInstance | null, index: number) {
   if (index === 0) firstSearchResult.value = element as HTMLButtonElement | null
 }
 function goToFeature(path: string) {
+  searchReturnToMobileToggle.value = false
   router.push('/' + path)
   searchOpen.value = false
 }
@@ -243,12 +330,16 @@ function onCommand(command: string) {
 }
 
 function onLogout() {
+  if (logoutConfirmOpen.value) return
+  logoutConfirmOpen.value = true
   ElMessageBox.confirm('确定退出登录吗？', '提示', { type: 'warning' })
     .then(() => {
       auth.clear()
       router.replace('/login')
     })
     .catch(() => {})
+    // Keep the navigation suspended until the dismissing key event has finished bubbling.
+    .finally(() => { requestAnimationFrame(() => { logoutConfirmOpen.value = false }) })
 }
 </script>
 
@@ -259,14 +350,27 @@ function onLogout() {
   background: var(--background);
   color: var(--foreground);
 }
+.ap-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 12px;
+  border-radius: var(--control-radius);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  transform: translateY(-160%);
+}
+.ap-skip-link:focus { transform: translateY(0); }
 
 /* ---- Sidebar ---- */
 .ap-sidebar {
+  order: -1;
   position: sticky;
   top: 0;
   align-self: flex-start;
-  flex: 0 0 224px;
-  width: 224px;
+  flex: 0 0 88px;
+  width: 88px;
   height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -280,7 +384,8 @@ function onLogout() {
   gap: 12px;
   height: 64px;
   flex: 0 0 auto;
-  padding: 0 20px;
+  justify-content: center;
+  padding: 0 8px;
 }
 .ap-brand-logo {
   display: flex;
@@ -301,7 +406,7 @@ function onLogout() {
   display: block;
 }
 .ap-brand-text {
-  display: flex;
+  display: none;
   flex-direction: column;
   min-width: 0;
 }
@@ -318,6 +423,7 @@ function onLogout() {
   color: var(--muted-foreground);
   white-space: nowrap;
 }
+.ap-nav-close { display: none; }
 
 /* ---- Navigation ---- */
 .ap-nav-search { display: none; }
@@ -328,23 +434,22 @@ function onLogout() {
   overscroll-behavior-y: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--sidebar-border) transparent;
-  padding: 8px 12px 12px;
+  padding: 8px 8px 12px;
 }
 .ap-nav-group + .ap-nav-group {
   margin-top: 8px;
 }
 .ap-nav-group-label {
-  margin: 0;
-  padding: 0 12px 6px;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
-  letter-spacing: 0.04em;
-  color: var(--muted-foreground);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .ap-nav-links {
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
 .ap-nav-item:focus-visible,
 .ap-workspace-nav a:focus-visible,
@@ -357,28 +462,38 @@ function onLogout() {
 .ap-nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 36px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: 40px;
   margin: 0;
-  padding: 0 14px;
+  padding: 4px;
   border-radius: calc(var(--radius) * 0.6);
   color: var(--sidebar-foreground);
   opacity: 0.82;
-  font-size: 14px;
-  line-height: 1;
+  font-size: 12px;
+  line-height: 1.2;
   text-decoration: none;
   transition: background-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
 }
 .ap-nav-item .el-icon {
-  flex: 0 0 20px;
+  flex: 0 0 auto;
   font-size: 18px;
 }
 .ap-nav-label {
+  max-height: 0;
+  opacity: 0;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: max-height 0.18s ease, opacity 0.18s ease;
 }
+.ap-nav-item[data-active='true'] .ap-nav-label { max-height: 2em; opacity: 1; }
+.ap-rail-quick { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 0 0 var(--control-height-sm); height: var(--control-height-sm); margin: 4px 16px; padding: 0 8px; border: 0; border-radius: var(--control-radius); background: var(--primary); color: var(--primary-foreground); cursor: pointer; font: inherit; }
+.ap-rail-quick .el-icon { font-size: 18px; }
+.ap-rail-quick span:not(.el-icon) { display: none; }
+.ap-rail-quick:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .ap-nav-item:hover {
   background: var(--sidebar-accent);
   opacity: 1;
@@ -396,7 +511,7 @@ function onLogout() {
   gap: 4px;
   flex: 0 0 auto;
   margin-top: auto;
-  padding: 12px;
+  padding: 8px;
   border-top: 1px solid var(--sidebar-border);
 }
 
@@ -420,8 +535,9 @@ function onLogout() {
   height: 64px;
   flex: 0 0 64px;
   padding: 0 32px;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 56%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid transparent;
 }
 .ap-topbar-left {
   display: flex;
@@ -482,7 +598,7 @@ function onLogout() {
   align-items: center;
   gap: 8px;
   width: 220px;
-  height: var(--control-height-md);
+  height: var(--control-height-sm);
   padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: var(--control-radius);
@@ -500,6 +616,27 @@ function onLogout() {
   opacity: 0.8;
   white-space: nowrap;
 }
+
+.ap-staff-queue {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height-sm);
+  max-width: 190px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--control-radius);
+  background: var(--secondary);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ap-staff-queue span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ap-staff-queue:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 .ap-icon-btn {
   position: relative;
@@ -632,6 +769,8 @@ function onLogout() {
 .ap-scrim {
   display: none;
 }
+.ap-sound-toggle { min-height: 32px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--control-radius); background: var(--card); color: var(--muted-foreground); font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.ap-sound-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ---- 响应式 ---- */
 @media (max-width: 1180px) {
@@ -651,8 +790,24 @@ function onLogout() {
 
 @media (max-width: 900px) {
   .ap-nav-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
     min-height: 44px;
+    padding: 0 12px;
+    font-size: 14px;
   }
+  .ap-nav-label { max-height: 2em; opacity: 1; }
+  .ap-search { width: 156px; }
+  .ap-nav-group-label { position: static; width: auto; height: auto; overflow: visible; clip-path: none; margin: 0; padding: 0 12px 6px; color: var(--muted-foreground); font-size: 12px; line-height: 18px; }
+  .ap-brand { justify-content: flex-start; padding: 0 20px; }
+  .ap-brand-text { display: flex; }
+  .ap-nav-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; margin-left: auto; padding: 0; border: 0; border-radius: var(--control-radius); background: transparent; color: var(--sidebar-foreground); font-size: 20px; cursor: pointer; }
+  .ap-nav-close:hover { background: var(--sidebar-accent); }
+  .ap-nav-close:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+  .ap-rail-quick { justify-content: flex-start; flex-basis: 44px; height: 44px; margin: 8px 12px 0; padding: 0 12px; }
+  .ap-rail-quick span:not(.el-icon) { display: inline; }
+  .ap-nav-search { display: flex; align-items: center; gap: 8px; height: 44px; margin: 4px 12px 0; padding: 0 10px; border: 1px solid var(--sidebar-border); border-radius: 8px; background: var(--sidebar-accent); color: var(--sidebar-foreground); text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
   .ap-menu-toggle {
     display: inline-flex;
   }
@@ -660,6 +815,8 @@ function onLogout() {
     position: fixed;
     top: 0;
     left: 0;
+    right: auto;
+    width: min(82vw, 300px);
     z-index: 40;
     transform: translateX(-100%);
     transition: transform 0.24s ease;
@@ -693,6 +850,7 @@ function onLogout() {
   .ap-page-title { font-size: 18px; }
   .ap-breadcrumb { display: none; }
   .ap-topbar-right { gap: 8px; }
+  .ap-staff-queue { max-width: 132px; min-height: var(--control-height-sm); padding: 0 8px; font-size: 12px; }
   .ap-admin-caret { display: none; }
   .ap-main {
     padding: 16px 12px calc(20px + env(safe-area-inset-bottom));
@@ -705,7 +863,8 @@ function onLogout() {
     align-items: center;
     gap: 8px;
     margin: 4px 12px 0;
-    padding: 12px;
+    height: 44px;
+    padding: 0 10px;
     border: 1px solid var(--sidebar-border);
     border-radius: 8px;
     background: var(--sidebar-accent);
@@ -716,6 +875,9 @@ function onLogout() {
     cursor: pointer;
   }
   .ap-workspace-nav { gap: 4px; padding: 4px; margin-bottom: 16px; }
-  .ap-workspace-nav a { padding: 8px 10px; min-height: 40px; }
+  .ap-workspace-nav a { padding: 6px 10px; min-height: var(--control-height-sm); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-sidebar, .ap-nav-item, .ap-nav-label { transition: none; }
 }
 </style>

@@ -1,0 +1,3037 @@
+{
+  "revision": "uiux-typography-r4",
+  "pages": [
+    {
+      "id": "cover",
+      "blocks": [
+        {
+          "id": "game",
+          "policy": "left",
+          "dx": -184.885,
+          "dy": 0,
+          "margins": [
+            0,
+            369.77,
+            2.96,
+            2.96
+          ]
+        },
+        {
+          "id": "brand",
+          "policy": "left",
+          "dx": -96.42,
+          "dy": -5,
+          "margins": [
+            58.6,
+            251.44,
+            8.85,
+            18.85
+          ]
+        },
+        {
+          "id": "headline",
+          "policy": "left",
+          "dx": -3.247,
+          "dy": 0.34,
+          "margins": [
+            2,
+            8.494,
+            14.678,
+            13.999
+          ]
+        },
+        {
+          "id": "claim",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            75.518,
+            75.518,
+            10.148,
+            10.148
+          ]
+        },
+        {
+          "id": "platform",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            97.712,
+            97.712,
+            2.572,
+            2.572
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "game",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "game",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "brand",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "vertical-balance",
+          "value": 0.34,
+          "passed": true
+        },
+        {
+          "id": "claim",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "claim",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "claim",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "platform",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "platform",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "platform",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "no-text-intersections",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "MiSans-body-font",
+          "value": [
+            "MiSans VF Semibold",
+            "MiSans VF Regular"
+          ],
+          "passed": true
+        }
+      ],
+      "fonts": [
+        "MiSans VF Semibold",
+        "MiSans VF Regular"
+      ],
+      "numberPairs": 0
+    },
+    {
+      "id": "social",
+      "blocks": [
+        {
+          "id": "brand",
+          "policy": "left",
+          "dx": -92.744,
+          "dy": -6.5,
+          "margins": [
+            43.38,
+            228.868,
+            7.37,
+            20.37
+          ]
+        },
+        {
+          "id": "headline",
+          "policy": "left",
+          "dx": -44.303,
+          "dy": 0.028,
+          "margins": [
+            7,
+            95.606,
+            1.005,
+            0.949
+          ]
+        },
+        {
+          "id": "condition",
+          "policy": "center",
+          "dx": 0.5,
+          "dy": -0.5,
+          "margins": [
+            203.043,
+            202.043,
+            3.254,
+            4.254
+          ]
+        },
+        {
+          "id": "header-0",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            107.886,
+            107.886,
+            9.139,
+            9.139
+          ]
+        },
+        {
+          "id": "offer-0-0",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0.255,
+          "margins": [
+            6.7,
+            6.692,
+            4.748,
+            4.238
+          ]
+        },
+        {
+          "id": "offer-0-1",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        },
+        {
+          "id": "offer-0-2",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        },
+        {
+          "id": "header-1",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            108.107,
+            108.107,
+            9.258,
+            9.258
+          ]
+        },
+        {
+          "id": "offer-1-0",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0.205,
+          "margins": [
+            6.7,
+            6.692,
+            4.748,
+            4.338
+          ]
+        },
+        {
+          "id": "offer-1-1",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        },
+        {
+          "id": "offer-1-2",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        },
+        {
+          "id": "header-2",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            108.141,
+            108.141,
+            9.139,
+            9.139
+          ]
+        },
+        {
+          "id": "offer-2-0",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0.23,
+          "margins": [
+            6.7,
+            6.692,
+            4.748,
+            4.288
+          ]
+        },
+        {
+          "id": "offer-2-1",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        },
+        {
+          "id": "offer-2-2",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        },
+        {
+          "id": "header-3",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            108.362,
+            108.362,
+            9.258,
+            9.258
+          ]
+        },
+        {
+          "id": "offer-3-0",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0.23,
+          "margins": [
+            6.7,
+            6.692,
+            4.748,
+            4.288
+          ]
+        },
+        {
+          "id": "offer-3-1",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        },
+        {
+          "id": "offer-3-2",
+          "policy": "numeric-columns",
+          "dx": 0.004,
+          "dy": 0,
+          "margins": [
+            6.7,
+            6.692,
+            14.313,
+            14.313
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "brand",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "vertical-balance",
+          "value": 0.028,
+          "passed": true
+        },
+        {
+          "id": "condition",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "condition",
+          "type": "vertical-balance",
+          "value": -0.5,
+          "passed": true
+        },
+        {
+          "id": "condition",
+          "type": "horizontal-balance",
+          "value": 0.5,
+          "passed": true
+        },
+        {
+          "id": "header-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-0",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-0",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-0-0",
+          "type": "vertical-balance",
+          "value": 0.255,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-1",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-1",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0",
+          "type": "vertical-balance",
+          "value": 0.205,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-2",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-2",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0",
+          "type": "vertical-balance",
+          "value": 0.23,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-3",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-3",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-3",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0",
+          "type": "vertical-balance",
+          "value": 0.23,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "no-text-intersections",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "MiSans-body-font",
+          "value": [
+            "MiSans VF Semibold",
+            "MiSans VF Regular",
+            "MiSans VF Bold"
+          ],
+          "passed": true
+        },
+        {
+          "id": "offer-0-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-0-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "offer-0-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 98,
+          "passed": true
+        },
+        {
+          "id": "offer-0-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 988,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 68,
+          "passed": true
+        },
+        {
+          "id": "offer-0-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 428,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 98,
+          "passed": true
+        },
+        {
+          "id": "offer-0-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 588,
+          "passed": true
+        },
+        {
+          "id": "offer-column-0-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-column-0-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 98,
+          "passed": true
+        },
+        {
+          "id": "offer-1-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1314,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 68,
+          "passed": true
+        },
+        {
+          "id": "offer-1-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 88,
+          "passed": true
+        },
+        {
+          "id": "offer-1-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "offer-column-1-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-column-1-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 188,
+          "passed": true
+        },
+        {
+          "id": "offer-2-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1188,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 108,
+          "passed": true
+        },
+        {
+          "id": "offer-2-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 138,
+          "passed": true
+        },
+        {
+          "id": "offer-2-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "offer-column-2-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-column-2-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 188,
+          "passed": true
+        },
+        {
+          "id": "offer-3-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1688,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 108,
+          "passed": true
+        },
+        {
+          "id": "offer-3-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1088,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 128,
+          "passed": true
+        },
+        {
+          "id": "offer-3-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1088,
+          "passed": true
+        },
+        {
+          "id": "offer-column-3-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "offer-column-3-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        }
+      ],
+      "fonts": [
+        "MiSans VF Semibold",
+        "MiSans VF Regular",
+        "MiSans VF Bold"
+      ],
+      "numberPairs": 24
+    },
+    {
+      "id": "desktop-experience",
+      "blocks": [
+        {
+          "id": "brand",
+          "policy": "left",
+          "dx": -64.072,
+          "dy": -0.5,
+          "margins": [
+            35.94,
+            164.084,
+            6.31,
+            7.31
+          ]
+        },
+        {
+          "id": "headline",
+          "policy": "left",
+          "dx": -30.312,
+          "dy": -1,
+          "margins": [
+            3,
+            63.624,
+            3.44,
+            5.44
+          ]
+        },
+        {
+          "id": "subtitle",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            45.116,
+            45.116,
+            4.005,
+            4.005
+          ]
+        },
+        {
+          "id": "header-0",
+          "policy": "split",
+          "dx": -1.988,
+          "dy": 0,
+          "margins": [
+            7.023,
+            11,
+            6.358,
+            6.358
+          ]
+        },
+        {
+          "id": "card-0-0",
+          "policy": "numeric-columns",
+          "dx": 10.047,
+          "dy": 0.353,
+          "margins": [
+            55.599,
+            35.505,
+            4.619,
+            3.912
+          ]
+        },
+        {
+          "id": "card-0-1",
+          "policy": "numeric-columns",
+          "dx": 5.958,
+          "dy": -0.133,
+          "margins": [
+            26.253,
+            14.336,
+            3.765,
+            4.032
+          ]
+        },
+        {
+          "id": "card-0-2",
+          "policy": "numeric-columns",
+          "dx": 5.464,
+          "dy": -0.35,
+          "margins": [
+            31.764,
+            20.836,
+            3.331,
+            4.032
+          ]
+        },
+        {
+          "id": "header-1",
+          "policy": "split",
+          "dx": -3.151,
+          "dy": 0,
+          "margins": [
+            4.698,
+            11,
+            6.556,
+            6.556
+          ]
+        },
+        {
+          "id": "card-1-0",
+          "policy": "numeric-columns",
+          "dx": -2.974,
+          "dy": 0.143,
+          "margins": [
+            29.557,
+            35.505,
+            4.199,
+            3.912
+          ]
+        },
+        {
+          "id": "card-1-1",
+          "policy": "numeric-columns",
+          "dx": 6.788,
+          "dy": -0.133,
+          "margins": [
+            27.913,
+            14.336,
+            3.765,
+            4.032
+          ]
+        },
+        {
+          "id": "card-1-2",
+          "policy": "numeric-columns",
+          "dx": 6.788,
+          "dy": -0.35,
+          "margins": [
+            34.413,
+            20.836,
+            3.331,
+            4.032
+          ]
+        },
+        {
+          "id": "rules-header",
+          "policy": "center",
+          "dx": 1,
+          "dy": 0,
+          "margins": [
+            289.765,
+            287.765,
+            3.986,
+            3.986
+          ]
+        },
+        {
+          "id": "map",
+          "policy": "center",
+          "dx": 0.16,
+          "dy": -0.472,
+          "margins": [
+            25.75,
+            25.43,
+            7.986,
+            8.93
+          ]
+        },
+        {
+          "id": "equipment",
+          "policy": "center",
+          "dx": 0,
+          "dy": -1.847,
+          "margins": [
+            15.168,
+            15.168,
+            7.748,
+            11.443
+          ]
+        },
+        {
+          "id": "compensation",
+          "policy": "center",
+          "dx": 0.298,
+          "dy": -2.013,
+          "margins": [
+            22.807,
+            22.211,
+            5.795,
+            9.82
+          ]
+        },
+        {
+          "id": "restriction",
+          "policy": "center",
+          "dx": 0,
+          "dy": -1.207,
+          "margins": [
+            41.025,
+            41.025,
+            6.275,
+            8.69
+          ]
+        },
+        {
+          "id": "footer",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            84.331,
+            84.331,
+            4.572,
+            4.572
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "brand",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "vertical-balance",
+          "value": -1,
+          "passed": true
+        },
+        {
+          "id": "subtitle",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "subtitle",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "subtitle",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-0",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "vertical-balance",
+          "value": 0.353,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "vertical-balance",
+          "value": -0.133,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "vertical-balance",
+          "value": -0.35,
+          "passed": true
+        },
+        {
+          "id": "header-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-1",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "vertical-balance",
+          "value": 0.143,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "vertical-balance",
+          "value": -0.133,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "vertical-balance",
+          "value": -0.35,
+          "passed": true
+        },
+        {
+          "id": "rules-header",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "rules-header",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "rules-header",
+          "type": "horizontal-balance",
+          "value": 1,
+          "passed": true
+        },
+        {
+          "id": "map",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "map",
+          "type": "vertical-balance",
+          "value": -0.472,
+          "passed": true
+        },
+        {
+          "id": "map",
+          "type": "horizontal-balance",
+          "value": 0.16,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "vertical-balance",
+          "value": -1.847,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "compensation",
+          "type": "vertical-balance",
+          "value": -2.013,
+          "passed": true
+        },
+        {
+          "id": "compensation",
+          "type": "horizontal-balance",
+          "value": 0.298,
+          "passed": true
+        },
+        {
+          "id": "restriction",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "restriction",
+          "type": "vertical-balance",
+          "value": -1.207,
+          "passed": true
+        },
+        {
+          "id": "restriction",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "footer",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "footer",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "footer",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "no-text-intersections",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "MiSans-body-font",
+          "value": [
+            "MiSans VF Semibold",
+            "MiSans VF Regular",
+            "MiSans VF Bold"
+          ],
+          "passed": true
+        },
+        {
+          "id": "card-0-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "compensation-secret",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation-secret",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "compensation-absolute",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation-absolute",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 98,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 988,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "guarantee-label-value-proximity",
+          "value": 5.149,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "price-guarantee-separation",
+          "value": 5.653,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 68,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 428,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 98,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 588,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 188,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1188,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "guarantee-label-value-proximity",
+          "value": 5.149,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "price-guarantee-separation",
+          "value": 5.653,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 108,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 138,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-column-0-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-0-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-1-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-1-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-2-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-2-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-labels",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-body",
+          "type": "hanging-indent",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-room-secret-label",
+          "type": "label-description-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-bag-label",
+          "type": "label-description-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-revolver-label",
+          "type": "label-description-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-1",
+          "type": "line-spacing",
+          "value": 8.711,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-2",
+          "type": "line-spacing",
+          "value": 8.972,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-3",
+          "type": "line-spacing",
+          "value": 17.059,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-4",
+          "type": "line-spacing",
+          "value": 8.856,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-5",
+          "type": "line-spacing",
+          "value": 17.088,
+          "passed": true
+        },
+        {
+          "id": "map-detailed-lines",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation-secret",
+          "type": "mode-number-common-center",
+          "value": 0.003,
+          "passed": true
+        },
+        {
+          "id": "compensation-absolute",
+          "type": "mode-number-common-center",
+          "value": -0.001,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "normal-and-emphasis-weights",
+          "value": null,
+          "passed": true
+        }
+      ],
+      "fonts": [
+        "MiSans VF Semibold",
+        "MiSans VF Regular",
+        "MiSans VF Bold"
+      ],
+      "numberPairs": 14
+    },
+    {
+      "id": "mobile-experience",
+      "blocks": [
+        {
+          "id": "brand",
+          "policy": "left",
+          "dx": -64.072,
+          "dy": -0.5,
+          "margins": [
+            35.94,
+            164.084,
+            6.31,
+            7.31
+          ]
+        },
+        {
+          "id": "headline",
+          "policy": "left",
+          "dx": -30.312,
+          "dy": -1,
+          "margins": [
+            3,
+            63.624,
+            3.44,
+            5.44
+          ]
+        },
+        {
+          "id": "subtitle",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            45.311,
+            45.311,
+            4.11,
+            4.11
+          ]
+        },
+        {
+          "id": "header-0",
+          "policy": "split",
+          "dx": -1.988,
+          "dy": 0,
+          "margins": [
+            7.023,
+            11,
+            6.358,
+            6.358
+          ]
+        },
+        {
+          "id": "card-0-0",
+          "policy": "numeric-columns",
+          "dx": -1.233,
+          "dy": -0.109,
+          "margins": [
+            33.039,
+            35.505,
+            4.199,
+            4.416
+          ]
+        },
+        {
+          "id": "card-0-1",
+          "policy": "numeric-columns",
+          "dx": 6.788,
+          "dy": -0.133,
+          "margins": [
+            27.913,
+            14.336,
+            3.765,
+            4.032
+          ]
+        },
+        {
+          "id": "card-0-2",
+          "policy": "numeric-columns",
+          "dx": 6.788,
+          "dy": -0.35,
+          "margins": [
+            34.413,
+            20.836,
+            3.331,
+            4.032
+          ]
+        },
+        {
+          "id": "header-1",
+          "policy": "split",
+          "dx": -3.151,
+          "dy": 0,
+          "margins": [
+            4.698,
+            11,
+            6.556,
+            6.556
+          ]
+        },
+        {
+          "id": "card-1-0",
+          "policy": "numeric-columns",
+          "dx": -8.564,
+          "dy": 0.143,
+          "margins": [
+            18.377,
+            35.505,
+            4.199,
+            3.912
+          ]
+        },
+        {
+          "id": "card-1-1",
+          "policy": "numeric-columns",
+          "dx": -5.844,
+          "dy": -0.133,
+          "margins": [
+            2.648,
+            14.336,
+            3.765,
+            4.032
+          ]
+        },
+        {
+          "id": "card-1-2",
+          "policy": "numeric-columns",
+          "dx": -5.844,
+          "dy": -0.35,
+          "margins": [
+            9.148,
+            20.836,
+            3.331,
+            4.032
+          ]
+        },
+        {
+          "id": "rules-header",
+          "policy": "center",
+          "dx": 1,
+          "dy": 0,
+          "margins": [
+            289.765,
+            287.765,
+            3.986,
+            3.986
+          ]
+        },
+        {
+          "id": "map",
+          "policy": "center",
+          "dx": 0.16,
+          "dy": -0.472,
+          "margins": [
+            25.75,
+            25.43,
+            7.986,
+            8.93
+          ]
+        },
+        {
+          "id": "equipment",
+          "policy": "center",
+          "dx": 0,
+          "dy": -1.847,
+          "margins": [
+            15.168,
+            15.168,
+            7.748,
+            11.443
+          ]
+        },
+        {
+          "id": "compensation",
+          "policy": "center",
+          "dx": 0.298,
+          "dy": -2.013,
+          "margins": [
+            22.807,
+            22.211,
+            5.795,
+            9.82
+          ]
+        },
+        {
+          "id": "restriction",
+          "policy": "center",
+          "dx": 0,
+          "dy": -1.207,
+          "margins": [
+            41.025,
+            41.025,
+            6.275,
+            8.69
+          ]
+        },
+        {
+          "id": "footer",
+          "policy": "center",
+          "dx": 0,
+          "dy": 0,
+          "margins": [
+            84.331,
+            84.331,
+            4.572,
+            4.572
+          ]
+        }
+      ],
+      "checks": [
+        {
+          "id": "brand",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "headline",
+          "type": "vertical-balance",
+          "value": -1,
+          "passed": true
+        },
+        {
+          "id": "subtitle",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "subtitle",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "subtitle",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "header-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-0",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "vertical-balance",
+          "value": -0.109,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "vertical-balance",
+          "value": -0.133,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "vertical-balance",
+          "value": -0.35,
+          "passed": true
+        },
+        {
+          "id": "header-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "header-1",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "vertical-balance",
+          "value": 0.143,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "vertical-balance",
+          "value": -0.133,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "vertical-balance",
+          "value": -0.35,
+          "passed": true
+        },
+        {
+          "id": "rules-header",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "rules-header",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "rules-header",
+          "type": "horizontal-balance",
+          "value": 1,
+          "passed": true
+        },
+        {
+          "id": "map",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "map",
+          "type": "vertical-balance",
+          "value": -0.472,
+          "passed": true
+        },
+        {
+          "id": "map",
+          "type": "horizontal-balance",
+          "value": 0.16,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "vertical-balance",
+          "value": -1.847,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "compensation",
+          "type": "vertical-balance",
+          "value": -2.013,
+          "passed": true
+        },
+        {
+          "id": "compensation",
+          "type": "horizontal-balance",
+          "value": 0.298,
+          "passed": true
+        },
+        {
+          "id": "restriction",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "restriction",
+          "type": "vertical-balance",
+          "value": -1.207,
+          "passed": true
+        },
+        {
+          "id": "restriction",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "footer",
+          "type": "inside-real-safe-area",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "footer",
+          "type": "vertical-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "footer",
+          "type": "horizontal-balance",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "no-text-intersections",
+          "value": null,
+          "passed": true
+        },
+        {
+          "id": "all-copy",
+          "type": "MiSans-body-font",
+          "value": [
+            "MiSans VF Semibold",
+            "MiSans VF Regular",
+            "MiSans VF Bold"
+          ],
+          "passed": true
+        },
+        {
+          "id": "card-0-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-price",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-price",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-loot",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-loot",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "compensation-secret",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation-secret",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "compensation-absolute",
+          "type": "common-number-unit-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation-absolute",
+          "type": "visible-number-unit-gap",
+          "value": 6,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 98,
+          "passed": true
+        },
+        {
+          "id": "card-0-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1314,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "guarantee-label-value-proximity",
+          "value": 5.653,
+          "passed": true
+        },
+        {
+          "id": "card-0-0",
+          "type": "price-guarantee-separation",
+          "value": 5.653,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 68,
+          "passed": true
+        },
+        {
+          "id": "card-0-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-0-1",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 88,
+          "passed": true
+        },
+        {
+          "id": "card-0-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 788,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-0-2",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-price",
+          "type": "displayed-offer-matches-source",
+          "value": 188,
+          "passed": true
+        },
+        {
+          "id": "card-1-0-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1688,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "guarantee-label-value-proximity",
+          "value": 5.149,
+          "passed": true
+        },
+        {
+          "id": "card-1-0",
+          "type": "price-guarantee-separation",
+          "value": 5.653,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-price",
+          "type": "displayed-offer-matches-source",
+          "value": 108,
+          "passed": true
+        },
+        {
+          "id": "card-1-1-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1088,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-1-1",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-price",
+          "type": "displayed-offer-matches-source",
+          "value": 128,
+          "passed": true
+        },
+        {
+          "id": "card-1-2-loot",
+          "type": "displayed-offer-matches-source",
+          "value": 1088,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "mode-caption-common-center",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "guarantee-label-value-proximity",
+          "value": 8.236,
+          "passed": true
+        },
+        {
+          "id": "card-1-2",
+          "type": "price-guarantee-separation",
+          "value": 27.244,
+          "passed": true
+        },
+        {
+          "id": "card-column-0-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-0-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-1-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-1-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-2-price",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "card-column-2-loot",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-labels",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-body",
+          "type": "hanging-indent",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-room-secret-label",
+          "type": "label-description-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-bag-label",
+          "type": "label-description-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-revolver-label",
+          "type": "label-description-baseline",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-1",
+          "type": "line-spacing",
+          "value": 8.711,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-2",
+          "type": "line-spacing",
+          "value": 8.972,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-3",
+          "type": "line-spacing",
+          "value": 17.059,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-4",
+          "type": "line-spacing",
+          "value": 8.856,
+          "passed": true
+        },
+        {
+          "id": "equipment-row-5",
+          "type": "line-spacing",
+          "value": 17.088,
+          "passed": true
+        },
+        {
+          "id": "map-detailed-lines",
+          "type": "fixed-column-axis",
+          "value": 0,
+          "passed": true
+        },
+        {
+          "id": "compensation-secret",
+          "type": "mode-number-common-center",
+          "value": 0.003,
+          "passed": true
+        },
+        {
+          "id": "compensation-absolute",
+          "type": "mode-number-common-center",
+          "value": -0.001,
+          "passed": true
+        },
+        {
+          "id": "equipment",
+          "type": "normal-and-emphasis-weights",
+          "value": null,
+          "passed": true
+        }
+      ],
+      "fonts": [
+        "MiSans VF Semibold",
+        "MiSans VF Regular",
+        "MiSans VF Bold"
+      ],
+      "numberPairs": 14
+    }
+  ],
+  "failures": [],
+  "summary": {
+    "pages": 4,
+    "blocks": 58,
+    "numberPairs": 52,
+    "checks": 377,
+    "failures": 0
+  }
+}

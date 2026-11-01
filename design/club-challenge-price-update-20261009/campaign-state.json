@@ -1,0 +1,272 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 物资对赌单",
+  "date": "2026-10-09",
+  "priorProject": "G:\\Github\\XA\\design\\club-challenge-campaign-handdrawn",
+  "stage": "delivered",
+  "revision": "challenge-mobile-price-r2-20261009",
+  "contentVerified": true,
+  "contentVerificationBasis": "本轮15行价格截图映射手游18档，保留严格大于及原目标值。原广告两张端游卡18档与源数据一致。用户明确要求更新物资对赌单广告页和两张手游价目，既有视觉与规则沿用。",
+  "deliveryScope": {
+    "pageIds": [
+      "mobile-absolute",
+      "mobile-secret",
+      "social"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户点名广告页、手游绝密和机密价格表，共3页；广告上方保留本轮附图中的端游价目。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "本轮附件 prior-social.png 上方端游绝密、机密两卡，18档与此前已确认源数据逐项一致；广告继续沿用。",
+    "mobile": "本轮附件 new-mobile-prices.png：右侧“新价格”列与保底/模式/地图逐行对应。绝密巴克什/监狱三行分别展开为两地图，合计手游18档。"
+  },
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "延续已确认的兴安电竞二次元手绘男性蜂医与灰鼠角色"
+    },
+    "mechanismAndRules": {
+      "status": "approved",
+      "basis": "用户回复：全部沿用，端手游一致"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在物资对赌单主题插画交付后回复：继续"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户于2026-09-29在本轮六张无字底图交付后回复：继续"
+    }
+  },
+  "plannedDeliverables": [
+    "手游·绝密三地图各三档价目",
+    "手游·机密三地图各三档价目",
+    "物资对赌单总广告页"
+  ],
+  "layoutInvariants": [
+    "每张价目三地图×三档，共9档；四张合计36档",
+    "严格大于 >，不能写成≥；等于仍未达标",
+    "不跨局累计；未达标继续打",
+    "机密仅核电站、巴克什、航天；不包含大坝",
+    "r/w固定单位列，数字右对齐，单位可见字高65%–75%，组内垂直居中",
+    "表头整条海军蓝，绝密暖金，机密薄荷青",
+    "达标前物资归板板；补偿达标后另补；不编造炸单补偿金额",
+    "本玩法不引入20分钟清图、击杀8人、累计门槛、超时加息、工作日优惠"
+  ],
+  "priceChanges": [
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "航天",
+      "tier": 1,
+      "oldPriceR": 288,
+      "newPriceR": 248,
+      "thresholdW": 1088,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "航天",
+      "tier": 2,
+      "oldPriceR": 688,
+      "newPriceR": 428,
+      "thresholdW": 1288,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "航天",
+      "tier": 3,
+      "oldPriceR": 988,
+      "newPriceR": 728,
+      "thresholdW": 1388,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "巴克什",
+      "tier": 1,
+      "oldPriceR": 288,
+      "newPriceR": 228,
+      "thresholdW": 888,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "巴克什",
+      "tier": 2,
+      "oldPriceR": 688,
+      "newPriceR": 388,
+      "thresholdW": 1088,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "巴克什",
+      "tier": 3,
+      "oldPriceR": 988,
+      "newPriceR": 588,
+      "thresholdW": 1188,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "监狱",
+      "tier": 1,
+      "oldPriceR": 288,
+      "newPriceR": 228,
+      "thresholdW": 888,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "监狱",
+      "tier": 2,
+      "oldPriceR": 688,
+      "newPriceR": 388,
+      "thresholdW": 1088,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "map": "监狱",
+      "tier": 3,
+      "oldPriceR": 988,
+      "newPriceR": 588,
+      "thresholdW": 1188,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "核电站",
+      "tier": 1,
+      "oldPriceR": 288,
+      "newPriceR": 168,
+      "thresholdW": 588,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "核电站",
+      "tier": 2,
+      "oldPriceR": 688,
+      "newPriceR": 248,
+      "thresholdW": 688,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "核电站",
+      "tier": 3,
+      "oldPriceR": 988,
+      "newPriceR": 388,
+      "thresholdW": 788,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "巴克什",
+      "tier": 1,
+      "oldPriceR": 288,
+      "newPriceR": 188,
+      "thresholdW": 588,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "巴克什",
+      "tier": 2,
+      "oldPriceR": 688,
+      "newPriceR": 298,
+      "thresholdW": 788,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "巴克什",
+      "tier": 3,
+      "oldPriceR": 988,
+      "newPriceR": 428,
+      "thresholdW": 888,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "航天",
+      "tier": 1,
+      "oldPriceR": 288,
+      "newPriceR": 198,
+      "thresholdW": 688,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "航天",
+      "tier": 2,
+      "oldPriceR": 688,
+      "newPriceR": 328,
+      "thresholdW": 888,
+      "comparison": ">"
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "map": "航天",
+      "tier": 3,
+      "oldPriceR": 988,
+      "newPriceR": 468,
+      "thresholdW": 988,
+      "comparison": ">"
+    }
+  ],
+  "vectorDelivery": {
+    "status": "completed",
+    "formats": [
+      "PNG",
+      "editable text SVG",
+      "outlined SVG"
+    ],
+    "pageIds": [
+      "mobile-absolute",
+      "mobile-secret",
+      "social"
+    ],
+    "changedPriceCount": 18,
+    "overview": "review/updated-overview.png",
+    "review": "review/index.html",
+    "visualQA": "review/visual-qa.md",
+    "audit": "review/price-and-layout-audit.json",
+    "completedAt": "2026-10-09",
+    "rendering": "Typography rendered from vector at final export dimensions over approved raster backgrounds"
+  },
+  "nextStep": "三张受影响页面已完成成图验收。后续改价从本项目content.json与适配器继续。",
+  "lastRenderedPages": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ],
+  "package": "campaign-challenge-mobile-price-r2-20261009.zip"
+}
