@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from django.conf import settings
-from django.test import LiveServerTestCase, override_settings
+from django.test import LiveServerTestCase, override_settings, tag
 from rest_framework.test import APIClient
 
 from club_accounts.models import ClubAccount
@@ -14,6 +14,7 @@ from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_console_user
 
 
+@tag('filedb')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class StaffChatVisibilityHTTPTest(LiveServerTestCase):
     def test_hidden_tab_keeps_shared_message_unread_until_staff_returns(self):

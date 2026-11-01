@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from django.test import LiveServerTestCase, override_settings
+from django.test import LiveServerTestCase, override_settings, tag
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 from rest_framework.test import APIClient
@@ -19,6 +19,7 @@ from console.models import AdminMembership
 from orders.tests.factories import make_console_user
 
 
+@tag('filedb')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class StaffReplyRecoveryHTTPTest(LiveServerTestCase):
     def setUp(self):
