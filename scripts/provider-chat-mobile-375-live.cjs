@@ -2,7 +2,7 @@
 const fs = require('node:fs'), http = require('node:http'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require('../.tools/club-source-20261003/node_modules/playwright');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-const root = path.resolve('.tools/provider-chat-h5-image-restore-20261101');
+const root = path.resolve('.tools/provider-chat-h5-contrast-20261101');
 const target = new URL(input.base);
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
 let dropNextSendResponse = false, droppedResponse = null, resolveDropped;
@@ -41,6 +41,8 @@ async function main() {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'horizontal overflow');
     const send = page.getByText('发送', { exact: true });
     const bounds = await send.boundingBox(); assert.ok(bounds && bounds.width >= 44 && bounds.height >= 44, JSON.stringify(bounds));
+    const pictureBounds = await page.getByText('发送图片', { exact: true }).boundingBox();
+    assert.ok(pictureBounds && pictureBounds.width >= 44 && pictureBounds.height >= 44 && Math.abs(pictureBounds.y - bounds.y) < 2 && pictureBounds.x + pictureBounds.width <= bounds.x, JSON.stringify({ pictureBounds, bounds }));
     await page.locator('textarea').fill('小屏验收咨询'); await send.click();
     await page.getByText('小屏验收咨询', { exact: true }).waitFor({ timeout: 15000 });
     await page.locator('textarea').fill('排班截图，麻烦核对');

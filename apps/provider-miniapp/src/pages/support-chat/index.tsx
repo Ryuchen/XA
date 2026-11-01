@@ -170,7 +170,7 @@ const SupportChat: React.FC = () => {
       {browsing && <Button className={styles.secondary} onClick={latest}>回到最新消息</Button>}
       {pending && <View className={styles.pending}><Text>上条消息结果未确认，请先核对。</Text>{!pendingStored && <Text>设备未能保存核对编号，请保持此页面。</Text>}{pending.kind === 'image' && !imagePath.current && <Text>原图片已不可用，请先核对发送结果。</Text>}<Text className={styles.pendingContent}>{pending.kind === 'image' ? `图片消息${pending.content ? '：' + pending.content : ''}` : pending.content}</Text><View className={styles.actions}><Button className={styles.secondary} disabled={busy} onClick={check}>核对结果</Button>{(pending.kind !== 'image' || !!imagePath.current) && <Button className={styles.secondary} disabled={busy} onClick={() => submit(pending, true)}>重试原消息</Button>}<Button className={styles.secondary} disabled={busy} onClick={abandon}>放弃核对</Button></View></View>}
       <Textarea className={styles.input} value={input} maxlength={1000} disabled={!!pending || busy} placeholder='输入咨询内容，也可作为图片说明' onInput={event => { setInput(event.detail.value); saveDraft(event.detail.value); }} />
-      <View className={styles.actions}><Button className={styles.secondary} disabled={busy || !!pending} onClick={chooseImage}>发送图片</Button><Button className={styles.send} disabled={busy || !!pending || !input.trim()} loading={busy} onClick={() => submit()}>发送</Button></View>
+      <View className={styles.composer}><Button className={styles.secondary} disabled={busy || !!pending} onClick={chooseImage}>发送图片</Button><Button className={styles.send} disabled={busy || !!pending || !input.trim()} loading={busy} onClick={() => submit()}>发送</Button></View>
     </View>
   </View></PlatformLayout>;
 };
