@@ -69,7 +69,7 @@ async function main() {
   await show();
   assert.ok(item('返回前的新消息')); assert.ok(item('旧消息 0'));
   assert.equal(nodes(item('旧消息 0')).some(n=>n.props.className==='dot'),false);
-  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'65 条消息等待查看');
+  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'65 条平台通知等待查看');
   const push = async title => {
     const response = await fetch(args.base+'/api/admin/messages/push/', {method:'POST',headers:{Authorization:'Bearer '+args.staffToken,'Content-Type':'application/json'},body:JSON.stringify({audience:'CUSTOM',recipient_account_ids:[args.firstAccount],title})});
     assert.equal((await response.json()).code,0);
@@ -78,21 +78,21 @@ async function main() {
   socketEvents.get('site_message_update')?.forEach(fn => fn({}));
   await new Promise(resolve => setTimeout(resolve, 600)); await settle();
   assert.ok(item('页面停留时的新消息')); assert.ok(item('旧消息 0'));
-  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'66 条消息等待查看');
+  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'66 条平台通知等待查看');
   page.didHide();
   await push('离线期间的新消息');
   socketEvents.get('site_message_update')?.forEach(fn => fn({}));
   await new Promise(resolve => setTimeout(resolve, 600)); await settle();
   assert.equal(item('离线期间的新消息'),undefined);
   await show(); assert.ok(item('离线期间的新消息')); assert.ok(item('旧消息 0'));
-  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'67 条消息等待查看');
+  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'67 条平台通知等待查看');
   await push('断线期间的新消息');
   socketEvents.get('connected')?.forEach(fn => fn());
   await new Promise(resolve => setTimeout(resolve, 600)); await settle();
   assert.ok(item('断线期间的新消息')); assert.ok(item('旧消息 0'));
-  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'68 条消息等待查看');
+  assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'68 条平台通知等待查看');
   await nodes(page.tree).find(n=>n.type==='PageHeading').props.action.props.onClick(); await settle();
-  assert.ok(item('旧消息 0')); assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'所有消息均已阅读');
+  assert.ok(item('旧消息 0')); assert.equal(nodes(page.tree).find(n=>n.type==='PageHeading').props.hint,'平台通知均已阅读');
   auth.clearStoredUser(); auth.persistLoginData({token:args.secondToken,userInfo:{id:'2',username:'second'}});
   await show(); assert.equal(item('旧消息 0'),undefined); assert.equal(item('返回前的新消息'),undefined); assert.ok(item('另一账号消息'));
   // The detail remains mounted when a provider signs out or changes account.

@@ -62,6 +62,8 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: xa-ci-ephemeral-only
           MYSQL_DATABASE: xa_test_release
+          MYSQL_USER: xa_test_ci
+          MYSQL_PASSWORD: xa-ci-ephemeral-only
         ports:
           - 13306:3306
         options: >-
@@ -70,13 +72,20 @@ jobs:
           --health-timeout=5s
           --health-retries=12
     env:
-      XA_TEST_MYSQL_USER: root
+      XA_TEST_MYSQL_USER: xa_test_ci
       XA_TEST_MYSQL_PASSWORD: xa-ci-ephemeral-only
     defaults:
       run:
         working-directory: services/backend
     steps:
       - uses: actions/checkout@v6
+      # The direct-payment simulation requires a non-root test-only account.
+      # This account and its access exist only inside the ephemeral CI service.
+      - name: Permit the isolated Django test database
+        run: |
+          docker exec -i -e MYSQL_PWD=xa-ci-ephemeral-only "${{ job.services.mysql.id }}" mysql -uroot <<'SQL'
+          GRANT ALL PRIVILEGES ON `test\_xa\_test\_release`.* TO 'xa_test_ci'@'%';
+          SQL
       # MySQL integration tests also invoke frontend drivers over real HTTP.
       - uses: pnpm/action-setup@v4.4.0
       - uses: actions/setup-node@v6

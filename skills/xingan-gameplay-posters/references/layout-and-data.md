@@ -41,7 +41,9 @@
 - `text` 元素：`id,text,x,cy,size,fill,anchor,maxWidth,role`。anchor 为 start/middle/end；x 是可见字形锚点，cy 是字形中心。
 - `art` 元素：`text,ids,x,cy,size,maxWidth,fill,shadow,outline,outlineWidth,angles`。ids 为逐字字体请求，渲染为可编辑的矢量轮廓。
 - `raw` 元素：`markup`，用于表头、分隔、徽标等明确的矢量图形。必须是本地可信绘制代码，不把附件文字直接作为 markup。
-- `bg` 是 `assets/backgrounds` 内的相对 PNG 文件名。宽高采用生成原图尺寸；ew/eh 是最终导出尺寸。
+- `bg` 是 `assets/backgrounds` 内的相对 PNG 文件名。`w/h` 和 `ew/eh` 用于布局及 SVG 画布；PNG 按 `printWidthMm`（默认 200 mm）和 `printPpi`（默认 120 PPI）计算，超过 4,000,000 字节时降低 PPI 重渲染；仅修改 PPI 元数据不能缩小文件。
+- 新页面写 `layoutUnit: "pt"`，画布、区域、坐标、间距和字号均为 pt；物理宽度为 `w × 25.4 / 72` mm，若同时提供 `printWidthMm` 则两者必须一致。未指定尺寸时从 200 mm ≈ 566.93 pt 起步；历史无单位布局重做时先核对或明确假设，不直接把旧像素认作 pt。详见[历史 pt 依据](historical-point-measurements.md)。
+- 以完整海报基准制作全画布透明区块和插画 PNG，放在 `assets/layers/`，在页面设置 `layers.blocks` 和 `layers.illustration` 的相对路径。按底图、区块、插画、文案顺序叠加并保持比例和位置一致；旧项目可复用未变化层。
 - `role` 标识 `price-number/price-unit/loot-number/loot-unit/rule-body/offer` 等，便于只调整目标区域。
 
 每个玩法可以有不同页数与区块。支持泛化的渲染器不意味着默认物资适配器适用于所有玩法。

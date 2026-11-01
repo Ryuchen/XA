@@ -40,7 +40,7 @@ const deps = {
   '@/utils/env': { BASE_URL: args.base + '/api' },
   '@/utils/orderNetwork': {scopeFor: () => '', cooldownRemaining: () => 0, recordOrderRequest() {}},
   '@/services/orderAlerts': {orderAlerts: {}},
-  '@/utils/orderNavigation': {clearOrderFocus() {}, queueOrderFocus() {}},
+  '@/utils/orderNavigation': {clearOrderFocus() {}, queueOrderFocus() {}, queueOrderPool() {}},
   '@/utils/reportNavigation': {queueReportOrder() {}, clearReportOrder() {}},
   '@/components/PageNav': {default: 'PageNav'}, '@/components/PlatformLayout': {default: 'PlatformLayout'},
   './index.module.scss': {default: {}},
@@ -50,6 +50,7 @@ deps['./env'] = deps['@/utils/env'];
 deps['./orderNetwork'] = deps['@/utils/orderNetwork'];
 deps['./orderAlerts'] = deps['@/services/orderAlerts'];
 function load(name, file) { const module = {exports: {}}; vm.runInNewContext(compile(file), {module, exports: module.exports, require: id => { if (!(id in deps)) throw Error('Missing import ' + id); return deps[id]; }, Number, Date, Error, Promise, setTimeout, clearTimeout}); deps[name] = module.exports; return module.exports; }
+load('@/types/order', 'src/types/order.ts');
 load('@/utils/request', 'src/utils/request.ts');
 load('@/services/order', 'src/services/order.ts');
 load('@/services/message', 'src/services/message.ts');

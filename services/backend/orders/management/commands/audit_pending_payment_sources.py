@@ -3,7 +3,8 @@ import json
 from collections import Counter
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Count, Exists, F, OuterRef, Q
+from django.db.models import BigIntegerField, Count, Exists, F, OuterRef, Q
+from django.db.models.functions import Cast
 
 from orders.direct_payment_models import DirectPaymentIntent
 from orders.models import Order, OrderRefund
@@ -38,7 +39,9 @@ class Command(BaseCommand):
         pay = (Transaction.objects.filter(order_id__in=ids, tx_type=Transaction.TxType.PAY)
             .annotate(has_reversal=Exists(reversals)).values('order_id').annotate(
                 count=Count('pk'),
-                bad_amount=Count('pk', filter=~Q(amount=-F('order__amount'))),
+                # PositiveIntegerField is unsigned on MySQL. Negating it
+                # before conversion raises ER_DATA_OUT_OF_RANGE (1690).
+                bad_amount=Count('pk', filter=~Q(amount=-Cast(F('order__amount'), BigIntegerField()))),
                 bad_user=Count('pk', filter=~Q(wallet__user_id=F('order__customer_id'))),
                 bad_account=Count('pk', filter=Q(order__customer_account__isnull=False,
                     wallet__account__isnull=False) & ~Q(wallet__account_id=F('order__customer_account_id'))),

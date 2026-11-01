@@ -4,6 +4,7 @@ import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
+import {exportPosterPng} from './png-export.mjs';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const hash=value=>createHash('sha256').update(value).digest('hex');
@@ -77,29 +78,40 @@ export async function renderProject(project,options={}){
   const pageCache=await readJSON(path.join(cacheDir,'pages.json'),{});
   const previous=await readJSON(path.join(project,'output/manifest.json'),[]);
   const records=new Map(previous.filter(r=>plan.pages.some(p=>p.id===r.id)).map(r=>[r.id,r]));
-  const rendererHash=hash(await fs.readFile(fileURLToPath(import.meta.url)));
+  const rendererHash=hash(Buffer.concat([await fs.readFile(fileURLToPath(import.meta.url)),await fs.readFile(path.join(here,'png-export.mjs'))]));
   for(const p of pages){
     const bgRoot=path.resolve(project,'assets/backgrounds'),bgPath=path.resolve(bgRoot,p.bg);
     if(!bgPath.startsWith(bgRoot+path.sep))throw new Error('底图路径必须位于项目 assets/backgrounds 内');
     const bg=await fs.readFile(bgPath),native=await sharp(bg).metadata();
+    const layerRoot=path.resolve(project,'assets/layers');
+    const layers=[];
+    for(const kind of ['blocks','illustration']){
+      const name=p.layers?.[kind];
+      if(!name)continue;
+      const layerPath=path.resolve(layerRoot,name);
+      if(!layerPath.startsWith(layerRoot+path.sep)||path.extname(layerPath).toLowerCase()!=='.png')throw new Error('区块和插画层须为项目 assets/layers 内的透明 PNG。');
+      layers.push(await fs.readFile(layerPath));
+    }
     const requestIds=new Set(p.elements.flatMap(e=>e.type==='text'?[e.id]:e.type==='art'?e.ids:[]));
-    const fingerprint=hash(JSON.stringify([p,rendererHash,hash(bg),[...requestIds].map(id=>glyphs[id])]));
+    const fingerprint=hash(JSON.stringify([p,rendererHash,hash(bg),layers.map(hash),[...requestIds].map(id=>glyphs[id])]));
     const files={png:`output/png/${p.id}.png`,outlinedSVG:`output/svg-outlined/${p.id}.svg`,editableSVG:`output/svg-editable/${p.id}.svg`,preview:`review/${p.id}.png`};
-    if(!options.force&&pageCache[p.id]===fingerprint&&records.has(p.id)&&(await Promise.all(Object.values(files).map(f=>exists(path.join(project,f))))).every(Boolean)){
+    if(!options.force&&pageCache[p.id]===fingerprint&&records.has(p.id)&&(await Promise.all(Object.values(files).map(f=>exists(path.join(project,f))))).every(Boolean)&&(await fs.stat(path.join(project,files.png))).size<=4_000_000){
       console.log('Reused '+p.id);continue;
     }
-    const head=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${p.ew}" height="${p.eh}" viewBox="0 0 ${p.w} ${p.h}"><title>${esc(p.label)}</title><desc>正文、标题与数字保留矢量，背景为嵌入位图。</desc><image x="0" y="0" width="${p.w}" height="${p.h}" preserveAspectRatio="none" xlink:href="data:image/png;base64,${bg.toString('base64')}"/>`;
+    const head=`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${p.ew}" height="${p.eh}" viewBox="0 0 ${p.w} ${p.h}"><title>${esc(p.label)}</title><desc>正文、标题与数字保留矢量，美术层为嵌入位图。</desc><image x="0" y="0" width="${p.w}" height="${p.h}" preserveAspectRatio="none" xlink:href="data:image/png;base64,${bg.toString('base64')}"/>`+layers.map(layer=>`<image x="0" y="0" width="${p.w}" height="${p.h}" preserveAspectRatio="none" xlink:href="data:image/png;base64,${layer.toString('base64')}"/>`).join('');
     const bounds=[];
+    let pngInfo;
     for(const editable of [false,true]){
       const svg=head+p.elements.map(e=>e.type==='text'?textElement(e,editable,bounds):e.type==='art'?artElement(e):e.markup).join('')+'</svg>';
       await fs.writeFile(path.join(project,editable?files.editableSVG:files.outlinedSVG),svg);
       if(!editable){
-        await sharp(Buffer.from(svg),{limitInputPixels:false}).withMetadata({density:300}).png({compressionLevel:9}).toFile(path.join(project,files.png));
+        pngInfo=await exportPosterPng(sharp,svg,p,path.join(project,files.png));
+        console.log(`PNG ${p.id}: ${pngInfo.widthMm} mm, ${pngInfo.actualPpi.toFixed(1)} PPI, ${pngInfo.bytes} bytes`);
         await sharp(Buffer.from(svg),{limitInputPixels:false}).resize({width:Math.min(p.w,1280)}).png().toFile(path.join(project,files.preview));
       }
     }
     await fs.writeFile(path.join(project,'review',p.id+'-text-bounds.json'),JSON.stringify(bounds,null,2));
-    records.set(p.id,{id:p.id,label:p.label,...files,width:p.ew,height:p.eh,nativeWidth:native.width,nativeHeight:native.height});
+    records.set(p.id,{id:p.id,label:p.label,...files,width:pngInfo.widthPx,height:pngInfo.heightPx,printWidthMm:pngInfo.widthMm,ppi:pngInfo.actualPpi,pngBytes:pngInfo.bytes,nativeWidth:native.width,nativeHeight:native.height});
     pageCache[p.id]=fingerprint;console.log('Exported '+p.id);
   }
   await fs.writeFile(path.join(cacheDir,'pages.json'),JSON.stringify(pageCache,null,2));
