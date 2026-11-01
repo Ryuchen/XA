@@ -4,7 +4,7 @@ import json
 from django.utils import timezone
 
 from django.core.management import call_command
-from django.test import override_settings
+from django.test import override_settings, tag
 from rest_framework.test import APITestCase
 
 from orders.management.commands.seed_club_catalog import CATALOG
@@ -26,6 +26,7 @@ class DashboardOrderSnapshotWorkflowTest(APITestCase):
     finish = release_flow.ReleaseFlowTest.finish
     settle_after_window = release_flow.ReleaseFlowTest.settle_after_window
 
+    @tag('catalog_verify')
     def test_paid_and_partially_refunded_types_survive_catalog_reimport(self):
         book = json.loads(CATALOG.read_text(encoding='utf-8'))
         gift_key = next(row['catalog_key'] for row in book['items'] if row['is_gift'])

@@ -49,10 +49,10 @@ jobs:
           python-version: '3.13'
       - run: pip install -r requirements.txt
       - run: python manage.py check
-      - run: python manage.py test --settings=config.test_settings --noinput --exclude-tag=filedb
-      # Run concurrent live-server tests with independent SQLite connections.
-      # Keep the payment simulator's in-memory-only safety boundary unchanged.
-      - run: python manage.py test chat.test_staff_reply_recovery_http chat.test_staff_visibility_http orders.tests.test_native_frontend_http.NativeFrontendHTTPTest.test_native_self_order_direct_grab_uses_real_backend_contracts orders.tests.test_provider_flow_response_lost.ProviderFlowResponseLostTest.test_team_partial_evidence_response_loss --settings=config.ci_test_settings --noinput
+      - run: python manage.py test --settings=config.test_settings --testrunner=config.ci_test_runner.SplitLiveServerRunner --noinput --exclude-tag=filedb
+      # Live HTTP servers need independent SQLite connections. Preserve the
+      # payment simulator's in-memory-only safety boundary in the first run.
+      - run: python manage.py test --settings=config.ci_test_settings --testrunner=config.ci_test_runner.SplitLiveServerRunner --noinput --tag=filedb
         env:
           XA_CI_SQLITE_TEST_DB: ${{ runner.temp }}/xa-ci-backend-test.sqlite3
       - run: python manage.py test support orders.tests.test_release_flow orders.tests.test_release_websocket console.test_bootstrap --settings=config.migration_test_settings --noinput
@@ -107,4 +107,36 @@ jobs:
           python-version: '3.13'
       - run: pip install -r requirements.txt
       - run: python manage.py check_mysql_readiness --settings=config.mysql_test_settings
-      - run: python manage.py test --settings=config.mysql_test_settings --noinput
+      - run: python manage.py test --settings=config.mysql_test_settings --noinput --exclude-tag=catalog_verify
+
+  catalog-mysql:
+    name: Isolated MySQL catalog workflows
+    runs-on: ubuntu-latest
+    container: python:3.13-slim
+    services:
+      db:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: xa-catalog-ci-ephemeral-only
+          MYSQL_DATABASE: xa_verify
+          MYSQL_USER: xa_verify
+          MYSQL_PASSWORD: xa-catalog-ci-ephemeral-only
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      XA_LOCAL_VALIDATION: 'true'
+      XA_CATALOG_TEST_PASSWORD: xa-catalog-ci-ephemeral-only
+    defaults:
+      run:
+        working-directory: services/backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: pip install -r requirements.txt
+      # This service has no published ports, persistent volume, or production credentials.
+      - run: python manage.py test console.test_dashboard_snapshot_workflow orders.tests.test_order_catalog_snapshot_flow orders.tests.test_report_sale_type_workflow --settings=config.catalog_ci_settings --noinput

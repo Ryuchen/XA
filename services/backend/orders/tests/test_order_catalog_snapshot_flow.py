@@ -4,7 +4,7 @@ import json
 from datetime import timedelta
 from unittest.mock import patch
 from django.core.management import call_command
-from django.test import override_settings
+from django.test import override_settings, tag
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -22,6 +22,7 @@ class OrderCatalogSnapshotFlowTest(APITestCase):
     ok = release_flow.ReleaseFlowTest.ok
     recharge = release_flow.ReleaseFlowTest.recharge
 
+    @tag('catalog_verify')
     def test_reimport_does_not_remove_paid_order_from_pool_or_block_fulfillment(self):
         book = json.loads(CATALOG.read_text(encoding='utf-8'))
         self.service.catalog_key = next(row['catalog_key'] for row in book['items'] if row['is_gift'])

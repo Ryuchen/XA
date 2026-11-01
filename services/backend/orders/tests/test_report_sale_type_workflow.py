@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from django.core.management import call_command
-from django.test import override_settings
+from django.test import override_settings, tag
 from rest_framework.test import APITestCase
 
 from orders.management.commands.seed_club_catalog import CATALOG
@@ -25,6 +25,7 @@ class ReportSaleTypeWorkflowTest(APITestCase):
     finish = release_flow.ReleaseFlowTest.finish
     settle_after_window = release_flow.ReleaseFlowTest.settle_after_window
 
+    @tag('catalog_verify')
     def test_report_and_gift_history_use_sale_type_after_catalog_reimport(self):
         catalog = json.loads(CATALOG.read_text(encoding='utf-8'))['items']
         self.service.catalog_key = next(item['catalog_key'] for item in catalog if item['is_gift'])
