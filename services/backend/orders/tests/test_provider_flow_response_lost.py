@@ -10,7 +10,7 @@ from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
-from django.test import LiveServerTestCase, override_settings
+from django.test import LiveServerTestCase, override_settings, tag
 from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
@@ -161,6 +161,7 @@ class ProviderFlowResponseLostTest(LiveServerTestCase):
         self.assertEqual(selected.data['code'], 0, selected.data)
         self.assertEqual(selected.data['data']['status'], 'GRABBED')
 
+    @tag('filedb')
     def test_team_partial_evidence_response_loss(self):
         node = shutil.which('node')
         if not node:

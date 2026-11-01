@@ -52,7 +52,7 @@ jobs:
       - run: python manage.py test --settings=config.test_settings --noinput --exclude-tag=filedb
       # Run concurrent live-server tests with independent SQLite connections.
       # Keep the payment simulator's in-memory-only safety boundary unchanged.
-      - run: python manage.py test chat.test_staff_reply_recovery_http chat.test_staff_visibility_http --settings=config.ci_test_settings --noinput
+      - run: python manage.py test chat.test_staff_reply_recovery_http chat.test_staff_visibility_http orders.tests.test_native_frontend_http.NativeFrontendHTTPTest.test_native_self_order_direct_grab_uses_real_backend_contracts orders.tests.test_provider_flow_response_lost.ProviderFlowResponseLostTest.test_team_partial_evidence_response_loss --settings=config.ci_test_settings --noinput
         env:
           XA_CI_SQLITE_TEST_DB: ${{ runner.temp }}/xa-ci-backend-test.sqlite3
       - run: python manage.py test support orders.tests.test_release_flow orders.tests.test_release_websocket console.test_bootstrap --settings=config.migration_test_settings --noinput
