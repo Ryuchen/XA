@@ -47,6 +47,11 @@ async function main() {
   assert.ok(index > 0, 'claimed coupon is initially selectable');
   page.coupon({ detail: { value: index } }); await waitFor(() => !page.data.quoting);
   assert.equal(page.data.quote.amount, input.zero ? 0 : 9000);
+  page.clearCoupon(); await waitFor(() => !page.data.quoting);
+  assert.equal(page.data.couponIndex, 0);
+  assert.equal(page.data.quote.amount, 10000, 'clearing the coupon refreshes the real quote');
+  page.coupon({ detail: { value: index } }); await waitFor(() => !page.data.quoting);
+  assert.equal(page.data.quote.amount, input.zero ? 0 : 9000);
   page.input({ currentTarget: { dataset: { field: 'region' } }, detail: { value: '本地大区' } });
   page.input({ currentTarget: { dataset: { field: 'nickname' } }, detail: { value: '本地昵称' } });
   if (input.zero) {

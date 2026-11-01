@@ -163,6 +163,7 @@ Page({
     this.setProviders(result.providers); this.refreshQuote();
   },
   coupon(event) { this.setData({ couponIndex: Number(event.detail.value) }); this.refreshQuote(); },
+  clearCoupon() { if (this.data.submitting || !this.data.coupons.length || this.data.coupons[0].id !== 0) return; this.setData({ couponIndex: 0 }); this.refreshQuote(); },
   contact(event) { this.setData({ contactIndex: Number(event.detail.value) }); },
   chooseProvider() {
     if (this.data.submitting) return;

@@ -81,6 +81,7 @@
 .checkout .input:focus { border-color: var(--xa-color-primary); }
 .checkout textarea.input { height: 80px; padding: 16rpx; }
 .coupon-picker { display: block; }
+.quote-recovery { display: flex; flex-direction: column; gap: 8rpx; }
 .coupon-picker .setting-row { padding-top: 0; padding-bottom: 16rpx; }
 .fee-breakdown { padding: 16rpx 0; border-top: 1rpx solid var(--xa-color-border); }
 .fee-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16rpx; padding: 8rpx 0; font-size: var(--xa-control-font); line-height: 1.5; }

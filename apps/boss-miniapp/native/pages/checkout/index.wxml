@@ -139,7 +139,7 @@
         <view class="balance-summary"><view class="fee-row"><text>{{quote.amount === 0 ? '支付方式' : '余额支付'}}</text><text>{{quote.amount === 0 ? '本单无需支付' : '可用 ' + quote.balanceText + ' 兴安币'}}</text></view><text wx:if="{{!quote.balance_sufficient}}" class="balance-warning">余额不足，请先联系客服充值</text></view>
         <button wx:if="{{!quote.balance_sufficient}}" class="xa-button button-secondary recharge-button" bindtap="recharge" disabled="{{submitting}}" hover-class="xa-button-hover">联系客服充值</button>
       </block>
-      <text wx:if="{{quoteError && selectionComplete}}" class="error quote-error">{{quoteError}}</text><button wx:if="{{quoteError && selectionComplete}}" class="xa-button button-secondary" bindtap="refreshAvailability" disabled="{{submitting}}" hover-class="xa-button-hover">刷新报价</button>
+      <view wx:if="{{quoteError && selectionComplete}}" class="quote-recovery"><text class="error quote-error">{{quoteError}}</text><button wx:if="{{coupons[0].id === 0 && coupons[couponIndex].id}}" class="xa-button button-secondary" bindtap="clearCoupon" disabled="{{submitting}}" hover-class="xa-button-hover">不使用优惠券</button><button class="xa-button button-secondary" bindtap="refreshAvailability" disabled="{{submitting}}" hover-class="xa-button-hover">刷新报价</button></view>
     </view>
 
     <view class="bottom-bar checkout-payment">
