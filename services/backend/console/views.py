@@ -3124,6 +3124,8 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 qs = qs.filter(claimed_by_account__isnull=True)
             elif claim_scope == 'mine':
                 qs = qs.filter(claimed_by_account=self.request.account)
+            elif claim_scope == 'other':
+                qs = qs.filter(claimed_by_account__isnull=False).exclude(claimed_by_account=self.request.account)
             elif claim_scope:
                 raise rest_serializers.ValidationError({'claim_scope': '领取范围无效'})
         def provider_match(field, value):

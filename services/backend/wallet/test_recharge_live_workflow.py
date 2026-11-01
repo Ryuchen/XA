@@ -169,7 +169,9 @@ class RechargeLiveWorkflowTest(APITransactionTestCase):
 
             async def wallet_events(socket):
                 events = []
-                while not await socket.receive_nothing(timeout=0.15):
+                # MySQL commit callbacks and the channel consumer can run on
+                # different threads; allow the first committed event to arrive.
+                while not await socket.receive_nothing(timeout=1 if not events else 0.15):
                     event = await socket.receive_json_from(timeout=1)
                     if event['type'] == 'wallet_update':
                         events.append(event['data'])

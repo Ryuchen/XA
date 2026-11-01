@@ -38,6 +38,10 @@ class DashboardWithdrawalWorkflowTest(APITestCase):
                 self.assertEqual(result['claim_scope_applied'], scope)
                 self.assertEqual(result['total'], len(expected))
                 self.assertEqual({row['id'] for row in result['list']}, set(expected))
+            others = self.ok(client.get('/api/admin/withdrawals/', {'status': 'PENDING', 'claim_scope': 'other'}))['data']
+            self.assertEqual(others['claim_scope_applied'], 'other')
+            self.assertEqual(others['total'], total - unclaimed - mine)
+            self.assertTrue(all(row['claimed_by_account'] and not row['claim_is_mine'] for row in others['list']))
 
         check(self.staff_client, 2, 2, 0, ids, [])
         first = self.ok(self.staff_client.post(f'/api/admin/withdrawals/{ids[0]}/claim/'))['data']

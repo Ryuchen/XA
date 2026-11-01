@@ -48,11 +48,12 @@
             <button class="db-route-item" @click="router.push({ path: '/orders', query: { queue: 'paid_pending_public' } })"><span>公开接单</span><strong>{{ count(stats.pending_paid_routes.public) }} 单</strong><span aria-hidden="true">›</span></button>
           </div>
         </div>
-        <div v-if="auth.hasPerm('withdraw:view') && auth.hasPerm('withdraw:audit') && hasPendingWithdrawClaims" class="db-route-breakdown" aria-label="待审核提现按领取状态">
-          <div class="db-route-title"><strong>待审核提现 · 领取状态</strong><span>领取后由本人审核</span></div>
+        <div v-if="auth.hasPerm('withdraw:view') && hasPendingWithdrawClaims" class="db-route-breakdown" aria-label="待审核提现按领取状态">
+          <div class="db-route-title"><strong>待审核提现 · 领取状态</strong><span>领取后由领取人审核</span></div>
           <div class="db-route-items">
             <button class="db-route-item" @click="router.push({ path: '/withdrawals', query: { status: 'PENDING', claim_scope: 'unclaimed' } })"><span>未领取</span><strong>{{ count(stats.pending_withdraw_unclaimed) }} 笔</strong><span aria-hidden="true">›</span></button>
             <button class="db-route-item" @click="router.push({ path: '/withdrawals', query: { status: 'PENDING', claim_scope: 'mine' } })"><span>我已领取</span><strong>{{ count(stats.pending_withdraw_mine) }} 笔</strong><span aria-hidden="true">›</span></button>
+            <button class="db-route-item" @click="router.push({ path: '/withdrawals', query: { status: 'PENDING', claim_scope: 'other' } })"><span>其他客服已领取</span><strong>{{ count(stats.pending_withdraw_total - stats.pending_withdraw_unclaimed - stats.pending_withdraw_mine) }} 笔</strong><span aria-hidden="true">›</span></button>
           </div>
         </div>
       </section>
@@ -312,7 +313,7 @@ button.db-daily-item:focus-visible { outline: 2px solid var(--primary); outline-
 .db-route-breakdown { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 .db-route-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
 .db-route-title span { color: var(--muted-foreground); font-size: 12px; }
-.db-route-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.db-route-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
 .db-route-item { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--background); color: var(--foreground); text-align: left; cursor: pointer; }
 .db-route-item > span:first-child { flex: 1; }.db-route-item strong { font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .db-route-item:hover { border-color: var(--el-color-primary); }.db-route-item:focus-visible { outline: 2px solid var(--el-color-primary); outline-offset: 2px; }

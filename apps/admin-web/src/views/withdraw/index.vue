@@ -72,6 +72,7 @@
         <el-select v-model="query.claim_scope" placeholder="领取状态" clearable style="width: 130px" @change="reload">
           <el-option label="未领取" value="unclaimed" />
           <el-option label="我已领取" value="mine" />
+          <el-option label="其他客服已领取" value="other" />
         </el-select>
         <el-button type="primary" :icon="Search" @click="reload">查询</el-button>
       </template>
@@ -220,7 +221,7 @@ import { useRoute } from 'vue-router'
 const auth = useAuthStore()
 const route = useRoute()
 const routeStatus = (value: unknown) => typeof value === 'string' && Object.prototype.hasOwnProperty.call(WITHDRAW_STATUS, value) ? value : ''
-const routeClaimScope = (value: unknown) => value === 'unclaimed' || value === 'mine' ? value : ''
+const routeClaimScope = (value: unknown) => value === 'unclaimed' || value === 'mine' || value === 'other' ? value : ''
 const canReadWithdrawals = computed(() => Boolean(auth.token) && auth.hasPerm('withdraw:view'))
 const tableRef = ref()
 const claimScopeUnsupported = ref(false)
@@ -791,9 +792,9 @@ async function saveConfig() {
 .wd-mobile-list { display: flex; flex-direction: column; gap: 12px; }
 .wd-mobile-card { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
 .wd-mobile-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.wd-mobile-head strong { overflow-wrap: anywhere; }
-.wd-mobile-head .el-tag { flex: none; }
-.wd-mobile-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0 0; font-size: 13px; }
+.wd-mobile-head strong { min-width: 0; overflow-wrap: anywhere; }
+.wd-mobile-head :deep(.el-tag) { flex: none; white-space: nowrap; }
+.wd-mobile-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 0; font-size: 13px; }
 .wd-mobile-card dt { color: var(--muted-foreground); }
 .wd-mobile-card dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 .wd-mobile-card p { color: var(--muted-foreground); font-size: 12px; margin: 12px 0; }

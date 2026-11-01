@@ -90,6 +90,9 @@ jobs:
         run: |
           docker exec -i -e MYSQL_PWD=xa-ci-ephemeral-only "${{ job.services.mysql.id }}" mysql -uroot <<'SQL'
           GRANT ALL PRIVILEGES ON `test\_xa\_test\_release`.* TO 'xa_test_ci'@'%';
+          -- Race tests inspect lock waits using SHOW ENGINE INNODB STATUS.
+          -- This global diagnostic privilege exists only in this disposable CI service.
+          GRANT PROCESS ON *.* TO 'xa_test_ci'@'%';
           SQL
       # MySQL integration tests also invoke frontend drivers over real HTTP.
       - uses: pnpm/action-setup@v4.4.0
