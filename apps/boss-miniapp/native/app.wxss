@@ -9,10 +9,10 @@ page {
   --xa-radius: 24rpx;
   --xa-radius-control: 16rpx;
   /* Keep controls optically stable on large phones; page layout still uses rpx. */
-  --xa-control-height: 40px;
-  --xa-input-height: 38px;
-  --xa-control-secondary: 36px;
-  --xa-control-compact: 30px;
+  --xa-control-height: 44px;
+  --xa-input-height: 44px;
+  --xa-control-secondary: 44px;
+  --xa-control-compact: 44px;
   --xa-control-font: 14px;
   --xa-control-small-font: 12px;
   --xa-icon-small: 16px;
@@ -95,3 +95,26 @@ textarea.input { height: max(152rpx, 76px); line-height: 1.65; }
 .between > .xa-button.button-quiet { width: auto; margin: 0; min-height:var(--xa-control-secondary); flex-shrink: 0; padding: 10rpx 8rpx; }
 .ui-icon { width: var(--xa-icon-medium); height: var(--xa-icon-medium); flex-shrink: 0; }
 @media (prefers-reduced-motion: reduce) { .xa-button-hover { opacity: 1; } }
+
+/* Ocean / milk: native touch feedback, linked selections and quiet page entry. */
+.page .panel, .page .card, .page .page-heading, .page .section-surface { box-shadow:var(--xa-shadow-card); }
+.page .xa-button, .bottom-bar .xa-button { transition:background-color var(--xa-motion-fast),border-color var(--xa-motion-fast),box-shadow var(--xa-motion-fast),transform var(--xa-motion-fast); }
+.page .xa-button-hover, .bottom-bar .xa-button-hover { opacity:.84; transform:scale(.985); }
+.page .xa-button[disabled] { transform:none; box-shadow:none; }
+.page .xa-button.chip-active, .page .xa-button.shortcut-selected, .page .xa-button.provider-selected { border-color:var(--xa-color-primary); box-shadow:0 0 0 2rpx var(--xa-color-primary-soft); }
+.page .service-tab { position:relative; min-height:44px; }
+.page .service-tab::after { content:''; position:absolute; bottom:4rpx; left:24rpx; right:24rpx; height:4rpx; border-radius:4rpx; background:var(--xa-color-primary); transform:scaleX(0); transition:transform var(--xa-motion-base); }
+.page .service-tab.active::after { transform:scaleX(1); }
+.page .service-card { transition:box-shadow var(--xa-motion-base),border-color var(--xa-motion-base),transform var(--xa-motion-fast); }
+.page .service-card.xa-button-hover { box-shadow:var(--xa-shadow-float); border-color:var(--xa-color-primary); }
+.page .results-head { position:sticky; top:0; z-index:8; border-bottom:2rpx solid var(--xa-color-border); background:var(--xa-color-surface-card); }
+.page .service-tabs, .page .filter-scroll { -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
+.page .service-tab, .page .filter-scroll .chip { scroll-snap-align:start; }
+.page .picker-selection-hint, .page .selection-hint { padding:16rpx 20rpx; border-radius:16rpx; background:var(--xa-color-primary-soft); }
+.bottom-bar { box-shadow:0 -8rpx 32rpx rgba(var(--xa-primary-rgb),.06); }
+.page .help-section { display:flex; flex-direction:column; gap:8rpx; margin:0 0 28rpx; }
+.page .help-label { font-weight:650; color:var(--xa-color-primary); }
+.page .balance-warning, .page .quote-error, .page .pending-order-warning { border-left:4rpx solid var(--xa-color-warning); }
+@keyframes ocean-native-enter { from { opacity:.35; } to { opacity:1; } }
+.page { animation:ocean-native-enter 250ms var(--xa-ease-out); }
+@media(prefers-reduced-motion:reduce) { .page,.page .xa-button,.bottom-bar .xa-button,.page .service-tab::after { animation:none; transition:none; }.page .xa-button-hover,.bottom-bar .xa-button-hover { transform:none; } }

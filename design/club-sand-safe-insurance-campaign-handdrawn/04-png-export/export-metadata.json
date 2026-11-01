@@ -1,0 +1,54 @@
+{
+  "stage": "background-confirmation",
+  "note": "目标尺寸为高分辨率导出；底图由原生绘制放大，未填正式文案。",
+  "files": [
+    {
+      "id": "desktop-absolute",
+      "art": "poster",
+      "label": "端游绝密价目底图",
+      "width": 3200,
+      "height": 4800,
+      "native": [
+        1024,
+        1536
+      ],
+      "file": "04-png-export/desktop-absolute-background.png"
+    },
+    {
+      "id": "mobile-absolute",
+      "art": "poster",
+      "label": "手游绝密价目底图",
+      "width": 3200,
+      "height": 4800,
+      "native": [
+        1024,
+        1536
+      ],
+      "file": "04-png-export/mobile-absolute-background.png"
+    },
+    {
+      "id": "cover",
+      "art": "cover",
+      "label": "横版封面底图",
+      "width": 3200,
+      "height": 1800,
+      "native": [
+        1672,
+        941
+      ],
+      "file": "04-png-export/cover-background.png"
+    },
+    {
+      "id": "social",
+      "art": "social",
+      "label": "双平台宣发底图",
+      "width": 2400,
+      "height": 3200,
+      "native": [
+        1086,
+        1448
+      ],
+      "file": "04-png-export/social-background.png"
+    }
+  ]
+}

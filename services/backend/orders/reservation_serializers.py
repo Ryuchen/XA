@@ -26,6 +26,7 @@ class ReservationCreateSerializer(serializers.Serializer):
 
     provider_account_id = serializers.IntegerField(required=True)
     service_id = serializers.IntegerField(required=True)
+    customer_account_id = serializers.IntegerField(required=False, min_value=1)
     start_time = serializers.DateTimeField(required=True)
     end_time = serializers.DateTimeField(required=True)
     game_rounds = serializers.IntegerField(required=False, min_value=1, default=1)
@@ -70,6 +71,27 @@ class ReservationCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(str(exc)) from exc
 
         attrs['duration_minutes'] = duration
+        request = self.context['request']
+        account = request.account
+        requested_customer = attrs.get('customer_account_id')
+        if account.account_type == ClubAccount.AccountType.STAFF:
+            if not requested_customer:
+                raise serializers.ValidationError('客服代约请先选择老板')
+            customer_account = ClubAccount.objects.filter(
+                pk=requested_customer, account_type=ClubAccount.AccountType.BOSS,
+            ).first()
+            if customer_account is None:
+                raise serializers.ValidationError('所选老板不存在')
+            from .reservation_services import _legacy_user_for_account
+            customer = _legacy_user_for_account(customer_account)
+        else:
+            if requested_customer is not None and requested_customer != account.pk:
+                raise serializers.ValidationError('只能为本人创建预约')
+            customer_account, customer = account, request.legacy_user
+        if customer is None:
+            raise serializers.ValidationError('老板账号资料尚未关联，请联系客服核对')
+        attrs['customer_account'] = customer_account
+        attrs['customer'] = customer
         attrs['provider_account'] = self.context['provider_account']
         attrs['service'] = self.context['service']
         return attrs
@@ -154,19 +176,24 @@ class ReservationSerializer(serializers.ModelSerializer):
             return []
 
         actions = []
-        is_customer = obj.customer_account_id == account.pk
-        is_provider = obj.provider_account_id == account.pk
-        is_staff = account.account_type == ClubAccount.AccountType.STAFF
+        is_customer = account.account_type == ClubAccount.AccountType.BOSS and obj.customer_account_id == account.pk
+        is_provider = account.account_type == ClubAccount.AccountType.PROVIDER and obj.provider_account_id == account.pk
+        from .reservation_permissions import staff_permissions
+        if '_reservation_staff_permissions' not in self.context:
+            self.context['_reservation_staff_permissions'] = staff_permissions(account)
+        permissions = self.context['_reservation_staff_permissions']
+        staff_dispatch = 'order:dispatch' in permissions
+        staff_cancel = 'order:cancel' in permissions
 
         if obj.status == Reservation.Status.PENDING:
-            if is_provider or is_staff:
+            if is_provider or staff_dispatch:
                 actions.extend(['confirm', 'reject'])
-            if is_customer or is_staff:
+            if is_customer or staff_cancel:
                 actions.append('cancel')
         elif obj.status == Reservation.Status.CONFIRMED:
-            if is_customer or is_provider or is_staff:
+            if is_customer or is_provider or staff_cancel:
                 actions.append('cancel')
-            if is_customer or is_staff:
+            if is_customer or staff_dispatch:
                 actions.append('convert')
         return actions
 

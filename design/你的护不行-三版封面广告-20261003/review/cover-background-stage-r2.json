@@ -1,0 +1,361 @@
+{
+  "stage": "awaiting-cover-background-approval",
+  "date": "2026-10-01",
+  "items": [
+    {
+      "id": "dogtag-cover",
+      "name": "狗牌版",
+      "file": "assets/backgrounds/dogtag-cover-medic-mouse-r2.png",
+      "preview": "review/cover-background-dogtag-r2.png",
+      "nativeWidth": 1586,
+      "nativeHeight": 992,
+      "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0f320-018a-7441-9bd5-883d38691610\\exec-36197dc8-7334-460c-b1a2-41edec7bed6c.png",
+      "tool": "built-in image_gen",
+      "viewBox": [
+        1600,
+        1000
+      ],
+      "panelsInViewBox": {
+        "version": [
+          130,
+          407,
+          610,
+          92
+        ],
+        "platform": [
+          136,
+          640,
+          600,
+          74
+        ],
+        "mode": [
+          226,
+          745,
+          416,
+          73
+        ]
+      },
+      "safeTextZonesInViewBox": {
+        "brand": [
+          214,
+          122,
+          440,
+          60
+        ],
+        "title": [
+          108,
+          233,
+          650,
+          123
+        ],
+        "version": [
+          160,
+          422,
+          550,
+          60
+        ],
+        "tagline": [
+          235,
+          544,
+          390,
+          60
+        ],
+        "platform": [
+          164,
+          651,
+          544,
+          52
+        ],
+        "mode": [
+          245,
+          756,
+          378,
+          51
+        ]
+      },
+      "safeTextZonesNative": {
+        "brand": [
+          212,
+          121,
+          436,
+          60
+        ],
+        "title": [
+          107,
+          231,
+          644,
+          122
+        ],
+        "version": [
+          159,
+          419,
+          545,
+          60
+        ],
+        "tagline": [
+          233,
+          540,
+          387,
+          60
+        ],
+        "platform": [
+          163,
+          646,
+          539,
+          52
+        ],
+        "mode": [
+          243,
+          750,
+          375,
+          51
+        ]
+      },
+      "zoneBasis": "依据实际生成PNG重新量取；用于下一步文字排版，非最终字体边界。",
+      "status": "awaiting-user-approval",
+      "review": {
+        "characters": "蜂医与灰鼠身份一致，各自两只手，头耳脚及尾巴完整。",
+        "style": "角色、仓库、塔楼、直升机和箱体统一手绘；奶白雾蓝、海军蓝、薄荷与暖金。",
+        "copy": "主阅读区无生成的正文或数字；版本、平台、模式底板为空；文字仅在审核叠层标注。",
+        "composition": "左文右图，约8:5；各版本按实图分别定位。"
+      }
+    },
+    {
+      "id": "firearms-cover",
+      "name": "枪械版",
+      "file": "assets/backgrounds/firearms-cover-medic-mouse-r2.png",
+      "preview": "review/cover-background-firearms-r2.png",
+      "nativeWidth": 1586,
+      "nativeHeight": 992,
+      "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0f320-018a-7441-9bd5-883d38691610\\exec-53e0d0a9-6c8f-46d7-b753-df3a248cdac1.png",
+      "tool": "built-in image_gen",
+      "viewBox": [
+        1600,
+        1000
+      ],
+      "panelsInViewBox": {
+        "version": [
+          128,
+          413,
+          603,
+          81
+        ],
+        "platform": [
+          141,
+          622,
+          585,
+          63
+        ],
+        "mode": [
+          237,
+          710,
+          395,
+          60
+        ]
+      },
+      "safeTextZonesInViewBox": {
+        "brand": [
+          214,
+          111,
+          432,
+          60
+        ],
+        "title": [
+          169,
+          204,
+          514,
+          100
+        ],
+        "version": [
+          160,
+          426,
+          539,
+          55
+        ],
+        "tagline": [
+          235,
+          523,
+          390,
+          48
+        ],
+        "platform": [
+          164,
+          633,
+          539,
+          41
+        ],
+        "mode": [
+          254,
+          718,
+          362,
+          44
+        ]
+      },
+      "safeTextZonesNative": {
+        "brand": [
+          212,
+          110,
+          428,
+          60
+        ],
+        "title": [
+          168,
+          202,
+          510,
+          99
+        ],
+        "version": [
+          159,
+          423,
+          534,
+          55
+        ],
+        "tagline": [
+          233,
+          519,
+          387,
+          48
+        ],
+        "platform": [
+          163,
+          628,
+          534,
+          41
+        ],
+        "mode": [
+          252,
+          712,
+          359,
+          44
+        ]
+      },
+      "zoneBasis": "依据实际生成PNG重新量取；用于下一步文字排版，非最终字体边界。",
+      "status": "awaiting-user-approval",
+      "review": {
+        "characters": "蜂医与灰鼠身份一致，各自两只手，头耳脚及尾巴完整。",
+        "style": "角色、仓库、塔楼、直升机和箱体统一手绘；奶白雾蓝、海军蓝、薄荷与暖金。",
+        "copy": "主阅读区无生成的正文或数字；版本、平台、模式底板为空；文字仅在审核叠层标注。",
+        "composition": "左文右图，约8:5；各版本按实图分别定位。"
+      },
+      "repair": "首次生成2.5:1长横幅，已通过ImageGen重排为8:5；初稿保留但不入选。"
+    },
+    {
+      "id": "revolver-cover",
+      "name": "左轮版",
+      "file": "assets/backgrounds/revolver-cover-medic-mouse-r2.png",
+      "preview": "review/cover-background-revolver-r2.png",
+      "nativeWidth": 1586,
+      "nativeHeight": 992,
+      "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0f320-018a-7441-9bd5-883d38691610\\exec-06d82f54-4edc-4a39-bbf5-6bdb25895f9a.png",
+      "tool": "built-in image_gen",
+      "viewBox": [
+        1600,
+        1000
+      ],
+      "panelsInViewBox": {
+        "version": [
+          129,
+          408,
+          612,
+          94
+        ],
+        "platform": [
+          133,
+          674,
+          587,
+          74
+        ],
+        "mode": [
+          221,
+          776,
+          422,
+          69
+        ]
+      },
+      "safeTextZonesInViewBox": {
+        "brand": [
+          215,
+          126,
+          440,
+          60
+        ],
+        "title": [
+          117,
+          224,
+          630,
+          118
+        ],
+        "version": [
+          163,
+          424,
+          544,
+          62
+        ],
+        "tagline": [
+          235,
+          539,
+          390,
+          62
+        ],
+        "platform": [
+          157,
+          687,
+          539,
+          48
+        ],
+        "mode": [
+          243,
+          787,
+          378,
+          47
+        ]
+      },
+      "safeTextZonesNative": {
+        "brand": [
+          213,
+          125,
+          436,
+          60
+        ],
+        "title": [
+          116,
+          222,
+          624,
+          117
+        ],
+        "version": [
+          162,
+          421,
+          539,
+          62
+        ],
+        "tagline": [
+          233,
+          535,
+          387,
+          62
+        ],
+        "platform": [
+          156,
+          682,
+          534,
+          48
+        ],
+        "mode": [
+          241,
+          781,
+          375,
+          47
+        ]
+      },
+      "zoneBasis": "依据实际生成PNG重新量取；用于下一步文字排版，非最终字体边界。",
+      "status": "awaiting-user-approval",
+      "review": {
+        "characters": "蜂医与灰鼠身份一致，各自两只手，头耳脚及尾巴完整。",
+        "style": "角色、仓库、塔楼、直升机和箱体统一手绘；奶白雾蓝、海军蓝、薄荷与暖金。",
+        "copy": "主阅读区无生成的正文或数字；版本、平台、模式底板为空；文字仅在审核叠层标注。",
+        "composition": "左文右图，约8:5；各版本按实图分别定位。"
+      }
+    }
+  ]
+}

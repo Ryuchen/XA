@@ -6,6 +6,7 @@ from uuid import uuid4
 from unittest.mock import patch, AsyncMock
 
 from django.test import override_settings
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -14,6 +15,7 @@ from club_accounts.tokens import issue_account_tokens
 from orders.models import Order, OrderProvider
 from orders.services import count_active_orders
 from orders.notifier import notify_order_update
+from orders.state_machine import IllegalTransitionError
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
 from orders.tests.test_release_flow import screenshot
 from wallet.models import ProviderReport, Transaction, Wallet
@@ -213,6 +215,60 @@ class OrderClosureAuditTest(APITestCase):
         payload['expected_amount'] = 15000
         self.ok(self.client.post('/api/admin/orders/dispatch/', payload, format='json'))
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 85000)
+
+    def test_admin_dispatch_sends_order_updates_and_timeout_only_after_commit(self):
+        self.login(self.admin)
+        payload = {'customer_id': self.accounts[self.boss.pk].pk, 'service_id': self.service.pk,
+                   'client_request_id': str(uuid4())}
+        with patch('console.views.notify_order_update') as notify, \
+             patch('console.views._schedule_auto_cancel') as schedule, \
+             patch('console.views.enqueue_kook_dispatch'), patch('console.views.enqueue_wecom_dispatch'):
+            with self.captureOnCommitCallbacks(execute=True):
+                order = self.ok(self.client.post('/api/admin/orders/dispatch/', payload, format='json'))
+                notify.assert_not_called()
+                schedule.assert_not_called()
+            self.assertEqual(notify.call_args.args[0].pk, order['id'])
+            self.assertEqual(schedule.call_args.args[0].pk, order['id'])
+
+    def test_admin_dispatch_rollback_does_not_send_order_update_or_timeout(self):
+        self.login(self.admin)
+        payload = {'customer_id': self.accounts[self.boss.pk].pk, 'service_id': self.service.pk,
+                   'client_request_id': str(uuid4())}
+        with patch('console.views.notify_order_update') as notify, \
+             patch('console.views._schedule_auto_cancel') as schedule, \
+             patch('console.views.enqueue_kook_dispatch'), patch('console.views.enqueue_wecom_dispatch'):
+            with self.captureOnCommitCallbacks(execute=True):
+                with transaction.atomic():
+                    self.ok(self.client.post('/api/admin/orders/dispatch/', payload, format='json'))
+                    transaction.set_rollback(True)
+            notify.assert_not_called()
+            schedule.assert_not_called()
+        self.assertFalse(Order.objects.exists())
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
+
+    def test_admin_dispatch_assignment_failure_rolls_back_and_same_request_can_retry(self):
+        self.login(self.admin)
+        payload = {'customer_id': self.accounts[self.boss.pk].pk, 'service_id': self.service.pk,
+                   'provider_id': self.accounts[self.first.pk].pk, 'client_request_id': str(uuid4())}
+        with patch('console.views.transition', side_effect=IllegalTransitionError('指派状态已变化')), \
+             patch('console.views.notify_order_update') as notify, \
+             patch('console.views._push_message_safe') as push:
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post('/api/admin/orders/dispatch/', payload, format='json')
+            self.assertEqual(response.data['code'], 400)
+            notify.assert_not_called()
+            push.assert_not_called()
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(Transaction.objects.filter(tx_type='PAY').exists())
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
+        with patch('console.views.notify_order_update') as notify:
+            with self.captureOnCommitCallbacks(execute=True):
+                order = self.ok(self.client.post('/api/admin/orders/dispatch/', payload, format='json'))
+                notify.assert_not_called()
+            notify.assert_called_once()
+        self.assertEqual(order['status'], Order.Status.GRABBED)
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 90000)
+        self.assertEqual(Transaction.objects.filter(order_id=order['id'], tx_type='PAY').count(), 1)
 
     def test_public_broadcast_contains_no_private_order_data(self):
         order = self.new_order()

@@ -1,0 +1,7468 @@
+{
+  "version": "challenge-v1",
+  "requests": [
+    {
+      "id": "t8ba94919758a81ff6c74",
+      "text": "兴安电竞",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6660a6d53f18d889d3b8",
+      "text": "物",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t79d8b4cf9480cee79d34",
+      "text": "资",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t3682e07a066fd7762870",
+      "text": "对",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t3d9e324109658ac3eab2",
+      "text": "赌",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5987677ea6a76fadffef",
+      "text": "单",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "ta4eb280cc99ce1280e97",
+      "text": "端游 · 绝密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t324783abeab38cc10b6f",
+      "text": "局",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tb2198fa811326a135466",
+      "text": "撤",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t3cbb8e757e450841d52e",
+      "text": "离",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5b205cdfd8126a251408",
+      "text": "必",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t332e117e415daa41281a",
+      "text": "须",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tdb3b1e04552464d4e632",
+      "text": "严",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5ec90f1f5df2b00be9d3",
+      "text": "格",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t695c2156973d8d76b2d4",
+      "text": "大",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tffa30f786dda5deff9ea",
+      "text": "于",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t889ba82cd07cc02d37fa",
+      "text": "应",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t7817937b3720fd9c7046",
+      "text": "目",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t52221f014e33a06b0c14",
+      "text": "标",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t57981439f1255afe696f",
+      "text": "等于目标也未达标 · 不跨局累计",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td9b629e18aa258260cde",
+      "text": "绝密航天",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te8c600f4bb599445f9bf",
+      "text": "订单价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t3e10c5cfbe8cfda2a17c",
+      "text": "单局撤离物资",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t79023ff0afad36e3dd1d",
+      "text": "388",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t93c49a055a02db78a142",
+      "text": "r",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t4b057e05e257fd1658ed",
+      "text": ">",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t6a6b447515f3b2e263cf",
+      "text": "1288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t802de43ed41324b456d5",
+      "text": "w",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t4dbf6970c3952f41f571",
+      "text": "688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t8b7b29f1f43e4849716b",
+      "text": "1388",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t3c3170e3c2f74cde7d7f",
+      "text": "1088",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t15fac4c013b9602cdeb7",
+      "text": "1488",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc0d87a4fbe5a50030cfd",
+      "text": "绝密巴克什",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t516fb4ff2600f7c0fc7e",
+      "text": "988",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t8516d8f5af8cddf0c9f2",
+      "text": "1188",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t352bb423a7f7868dde8d",
+      "text": "绝密监狱",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t840f84cf7d266acc0500",
+      "text": "888",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc116142e08eac06578b6",
+      "text": "r = 元 / w = 万",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t051b306a055d1ae79b53",
+      "text": "对赌保障",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te2da0773263b81feaee8",
+      "text": "未",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tf215bfd98d7a1a2280c2",
+      "text": "达",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t6cacae540cd954d528e4",
+      "text": "就",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t97ec823fe69ad9383d61",
+      "text": "继",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t38970ed6f54c4475b3ac",
+      "text": "续",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t196df8cfe6aeaec3d9ba",
+      "text": "打",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "ted0309b1e5971a331172",
+      "text": "单局挑战 · 不跨局累计",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta31124a9726237db3e40",
+      "text": "特",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t9a703ad8a3a3c471f146",
+      "text": "别",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t7548d4651822352dc11f",
+      "text": "声",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tecfd82fbcf293a5456c0",
+      "text": "明",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "te876705da0e1c2e09cec",
+      "text": "物资归属 · 补偿结算 · 存储限制",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t5744902e689d3cce52a7",
+      "text": "物资归属",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta291b8dd8882280d589f",
+      "text": "达标前，全部物资归板板",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t76cc56df2cdc0e8a7624",
+      "text": "补偿结算",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tafbd42fb45a25081ebb5",
+      "text": "对应炸单保底在满足结单条件后另补",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t225c5a1e1666d650e900",
+      "text": "存储限制",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "teb3bed9ca6fd41b33c66",
+      "text": "陪玩不允许自带空白存储洗给板板",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t6cd1b5177299692db846",
+      "text": "下",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t81b948f69304c94dedc7",
+      "text": "知",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t6bf8311d32b23f4eb1e0",
+      "text": "地图 · 房卡 · 理包 · 装备",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tbe865225f6201e69b658",
+      "text": "地图选择",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te0e5e5e6b4cf9c7198f8",
+      "text": "仅限 绝密航天 / 绝密巴克什 / 绝密监狱",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t252bc7428558eba3d1e7",
+      "text": "默认绝密航天；可选地图按本版价目表。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t6ce47b03f3686245b1f8",
+      "text": "房卡保障",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t408a37e9f36bec632023",
+      "text": "含航天核心区金红卡；每少一张补偿：",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t2e36c55601a4db7d30ea",
+      "text": "金卡",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t41b1212004a81a286da4",
+      "text": "+200",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t476ccefab8a39a96227e",
+      "text": "红卡",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t88a27db54aec1fa147b6",
+      "text": "+300",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t45965708e54b603a34e2",
+      "text": "理包与速撤",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tb7b7553022b30d252303",
+      "text": "必须由陪玩理包",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t1fb6aa0f069888a4efc8",
+      "text": "达到结单要求后，打手允许速撤",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "td82166a61b3e7e97bace",
+      "text": "装备例外",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6d5f97a30cc84e7e9eb1",
+      "text": "125以上的六套、龟包、金胸挂，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t048ec2bfdbf292faf813",
+      "text": "满红头修/甲修，不算假账。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0b91a48e2322a181b27d",
+      "text": "下单前请确认地图及订单规则",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tcb2aabfb6865c77766a2",
+      "text": "端游 · 机密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6837a5ef3a6d350b28e1",
+      "text": "机密核电站",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td96358e6936c615695c7",
+      "text": "588",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc661d12b0b4d045c5622",
+      "text": "788",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tdef5758eab0654951fb7",
+      "text": "机密巴克什",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tf318abc93b831a6b6447",
+      "text": "机密航天",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tb743a10c157d04265f43",
+      "text": "仅限 机密核电站 / 机密巴克什 / 机密航天",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tac31912cae10fddffbcb",
+      "text": "默认机密航天；可选地图按本版价目表。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0d0ba474d499af9ff868",
+      "text": "+100",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t22ccecf1b4c69f678ccf",
+      "text": "+150",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t65f0a7d2574ff41adcd2",
+      "text": "手游 · 绝密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t272e357232fbf8252754",
+      "text": "288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td7abb62b1fc096eee161",
+      "text": "手游 · 机密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta02542e8526cdb02e9ae",
+      "text": "单局达标 · 未达继续",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t45defd5868beb8ea865a",
+      "text": "端游 / 手游 · 绝密 / 机密",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td92c22f9610d9a3a0653",
+      "text": "单局严格大于目标 · 不跨局累计",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t231aa1b0d9127d7b4323",
+      "text": "价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t1256914c3b9ac7bb832c",
+      "text": "航天",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tc36bc0630b84d65b1675",
+      "text": "巴克什",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tdc8f8c0e7e96b392d8da",
+      "text": "监狱",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t176ee5a3177c86ffd5fd",
+      "text": "核电站",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    }
+  ],
+  "pages": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游 · 绝密版 · 物资对赌单",
+      "bg": "poster-gold.png",
+      "w": 836,
+      "h": 1881,
+      "ew": 3200,
+      "eh": 7200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(60 52.519999999999996) scale(0.8571428571428571)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#FFFDF5\" stroke-width=\"7\"/><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 92.4,
+          "cy": 65,
+          "size": 24,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "物资",
+          "x": 62,
+          "cy": 140,
+          "size": 80,
+          "maxWidth": 245,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "对赌单",
+          "x": 51,
+          "cy": 227,
+          "size": 78,
+          "maxWidth": 259,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t3682e07a066fd7762870",
+            "t3d9e324109658ac3eab2",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ta4eb280cc99ce1280e97",
+          "text": "端游 · 绝密版",
+          "x": 190,
+          "cy": 302,
+          "size": 24.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 260,
+          "role": "platform-mode"
+        },
+        {
+          "type": "art",
+          "text": "单局撤离物资必须严格大于对应目标",
+          "x": 159,
+          "cy": 367,
+          "size": 25,
+          "maxWidth": 603,
+          "fill": "#A8651B",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1,
+          "angles": false,
+          "ids": [
+            "t5987677ea6a76fadffef",
+            "t324783abeab38cc10b6f",
+            "tb2198fa811326a135466",
+            "t3cbb8e757e450841d52e",
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34",
+            "t5b205cdfd8126a251408",
+            "t332e117e415daa41281a",
+            "tdb3b1e04552464d4e632",
+            "t5ec90f1f5df2b00be9d3",
+            "t695c2156973d8d76b2d4",
+            "tffa30f786dda5deff9ea",
+            "t3682e07a066fd7762870",
+            "t889ba82cd07cc02d37fa",
+            "t7817937b3720fd9c7046",
+            "t52221f014e33a06b0c14"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t57981439f1255afe696f",
+          "text": "等于目标也未达标 · 不跨局累计",
+          "x": 160,
+          "cy": 395,
+          "size": 18.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 603,
+          "role": "strict-equality-and-accumulation"
+        },
+        {
+          "type": "text",
+          "id": "td9b629e18aa258260cde",
+          "text": "绝密航天",
+          "x": 69,
+          "cy": 460,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 460,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 460,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 302,
+          "cy": 507,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 507,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 507,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 690,
+          "cy": 507,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 507,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 558,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 558,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 558,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8b7b29f1f43e4849716b",
+          "text": "1388",
+          "x": 690,
+          "cy": 558,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 558,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 302,
+          "cy": 608.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 608.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 608.5,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t15fac4c013b9602cdeb7",
+          "text": "1488",
+          "x": 690,
+          "cy": 608.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 608.5,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc0d87a4fbe5a50030cfd",
+          "text": "绝密巴克什",
+          "x": 69,
+          "cy": 669.5,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 669.5,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 669.5,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 302,
+          "cy": 716.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 716.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 716.5,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 690,
+          "cy": 716.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 716.5,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 767,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 767,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 767,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8516d8f5af8cddf0c9f2",
+          "text": "1188",
+          "x": 690,
+          "cy": 767,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 767,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 302,
+          "cy": 818,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 818,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 818,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 690,
+          "cy": 818,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 818,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t352bb423a7f7868dde8d",
+          "text": "绝密监狱",
+          "x": 69,
+          "cy": 880,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 880,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 880,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 302,
+          "cy": 927,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 927,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 927,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 690,
+          "cy": 927,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 927,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 978.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 978.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 978.5,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 690,
+          "cy": 978.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 978.5,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 302,
+          "cy": 1029,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 1029,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 1029,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 690,
+          "cy": 1029,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 1029,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 783,
+          "cy": 1065,
+          "size": 10.2,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "text",
+          "id": "t051b306a055d1ae79b53",
+          "text": "对赌保障",
+          "x": 205,
+          "cy": 1094,
+          "size": 15.4,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "guarantee-label"
+        },
+        {
+          "type": "art",
+          "text": "未达标就继续打",
+          "x": 205,
+          "cy": 1127,
+          "size": 39,
+          "maxWidth": 558,
+          "fill": "#A8651B",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.6,
+          "angles": false,
+          "ids": [
+            "te2da0773263b81feaee8",
+            "tf215bfd98d7a1a2280c2",
+            "t52221f014e33a06b0c14",
+            "t6cacae540cd954d528e4",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ted0309b1e5971a331172",
+          "text": "单局挑战 · 不跨局累计",
+          "x": 206,
+          "cy": 1161,
+          "size": 20.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 552,
+          "role": "guarantee-condition"
+        },
+        {
+          "type": "art",
+          "text": "特别声明",
+          "x": 68,
+          "cy": 1214.5,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "ta31124a9726237db3e40",
+            "t9a703ad8a3a3c471f146",
+            "t7548d4651822352dc11f",
+            "tecfd82fbcf293a5456c0"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "te876705da0e1c2e09cec",
+          "text": "物资归属 · 补偿结算 · 存储限制",
+          "x": 765,
+          "cy": 1214.5,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "t5744902e689d3cce52a7",
+          "text": "物资归属",
+          "x": 158,
+          "cy": 1270.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "ta291b8dd8882280d589f",
+          "text": "达标前，全部物资归板板",
+          "x": 307,
+          "cy": 1270.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t76cc56df2cdc0e8a7624",
+          "text": "补偿结算",
+          "x": 158,
+          "cy": 1320,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "tafbd42fb45a25081ebb5",
+          "text": "对应炸单保底在满足结单条件后另补",
+          "x": 307,
+          "cy": 1320,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t225c5a1e1666d650e900",
+          "text": "存储限制",
+          "x": 158,
+          "cy": 1372.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "teb3bed9ca6fd41b33c66",
+          "text": "陪玩不允许自带空白存储洗给板板",
+          "x": 307,
+          "cy": 1372.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 68,
+          "cy": 1439,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t6bf8311d32b23f4eb1e0",
+          "text": "地图 · 房卡 · 理包 · 装备",
+          "x": 765,
+          "cy": 1439,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "tbe865225f6201e69b658",
+          "text": "地图选择",
+          "x": 158,
+          "cy": 1499.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "te0e5e5e6b4cf9c7198f8",
+          "text": "仅限 绝密航天 / 绝密巴克什 / 绝密监狱",
+          "x": 307,
+          "cy": 1488,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "t252bc7428558eba3d1e7",
+          "text": "默认绝密航天；可选地图按本版价目表。",
+          "x": 307,
+          "cy": 1511,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "t6ce47b03f3686245b1f8",
+          "text": "房卡保障",
+          "x": 158,
+          "cy": 1562,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t408a37e9f36bec632023",
+          "text": "含航天核心区金红卡；每少一张补偿：",
+          "x": 307,
+          "cy": 1548,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "included-cards"
+        },
+        {
+          "type": "text",
+          "id": "t2e36c55601a4db7d30ea",
+          "text": "金卡",
+          "x": 307,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t41b1212004a81a286da4",
+          "text": "+200",
+          "x": 489,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 494,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t476ccefab8a39a96227e",
+          "text": "红卡",
+          "x": 554,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t88a27db54aec1fa147b6",
+          "text": "+300",
+          "x": 731,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 736,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t45965708e54b603a34e2",
+          "text": "理包与速撤",
+          "x": 158,
+          "cy": 1627,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tb7b7553022b30d252303",
+          "text": "必须由陪玩理包",
+          "x": 307,
+          "cy": 1615,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "t1fb6aa0f069888a4efc8",
+          "text": "达到结单要求后，打手允许速撤",
+          "x": 307,
+          "cy": 1639,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "td82166a61b3e7e97bace",
+          "text": "装备例外",
+          "x": 158,
+          "cy": 1691.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t6d5f97a30cc84e7e9eb1",
+          "text": "125以上的六套、龟包、金胸挂，",
+          "x": 307,
+          "cy": 1679.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t048ec2bfdbf292faf813",
+          "text": "满红头修/甲修，不算假账。",
+          "x": 307,
+          "cy": 1703.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 418,
+          "cy": 1829,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 390,
+          "role": "footer"
+        }
+      ],
+      "alignment": [
+        {
+          "map": "航天",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "监狱",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "label": "端游 · 机密版 · 物资对赌单",
+      "bg": "poster-teal.png",
+      "w": 836,
+      "h": 1882,
+      "ew": 3200,
+      "eh": 7200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(60 52.519999999999996) scale(0.8571428571428571)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#FFFDF5\" stroke-width=\"7\"/><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 92.4,
+          "cy": 65,
+          "size": 24,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "物资",
+          "x": 62,
+          "cy": 140,
+          "size": 80,
+          "maxWidth": 245,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "对赌单",
+          "x": 51,
+          "cy": 227,
+          "size": 78,
+          "maxWidth": 259,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t3682e07a066fd7762870",
+            "t3d9e324109658ac3eab2",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "tcb2aabfb6865c77766a2",
+          "text": "端游 · 机密版",
+          "x": 190,
+          "cy": 302,
+          "size": 24.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 260,
+          "role": "platform-mode"
+        },
+        {
+          "type": "art",
+          "text": "单局撤离物资必须严格大于对应目标",
+          "x": 159,
+          "cy": 367,
+          "size": 25,
+          "maxWidth": 603,
+          "fill": "#117D72",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1,
+          "angles": false,
+          "ids": [
+            "t5987677ea6a76fadffef",
+            "t324783abeab38cc10b6f",
+            "tb2198fa811326a135466",
+            "t3cbb8e757e450841d52e",
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34",
+            "t5b205cdfd8126a251408",
+            "t332e117e415daa41281a",
+            "tdb3b1e04552464d4e632",
+            "t5ec90f1f5df2b00be9d3",
+            "t695c2156973d8d76b2d4",
+            "tffa30f786dda5deff9ea",
+            "t3682e07a066fd7762870",
+            "t889ba82cd07cc02d37fa",
+            "t7817937b3720fd9c7046",
+            "t52221f014e33a06b0c14"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t57981439f1255afe696f",
+          "text": "等于目标也未达标 · 不跨局累计",
+          "x": 160,
+          "cy": 395,
+          "size": 18.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 603,
+          "role": "strict-equality-and-accumulation"
+        },
+        {
+          "type": "text",
+          "id": "t6837a5ef3a6d350b28e1",
+          "text": "机密核电站",
+          "x": 69,
+          "cy": 460,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 460,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 460,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 302,
+          "cy": 507,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 507,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 507,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 690,
+          "cy": 507,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 507,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 558,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 558,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 558,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 690,
+          "cy": 558,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 558,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 302,
+          "cy": 608.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 608.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 608.5,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 690,
+          "cy": 608.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 608.5,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tdef5758eab0654951fb7",
+          "text": "机密巴克什",
+          "x": 69,
+          "cy": 669.5,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 669.5,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 669.5,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 302,
+          "cy": 716.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 716.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 716.5,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 690,
+          "cy": 716.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 716.5,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 767,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 767,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 767,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 690,
+          "cy": 767,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 767,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 302,
+          "cy": 818,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 818,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 818,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 690,
+          "cy": 818,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 818,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tf318abc93b831a6b6447",
+          "text": "机密航天",
+          "x": 69,
+          "cy": 880,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 880,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 880,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 302,
+          "cy": 927,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 927,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 927,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 690,
+          "cy": 927,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 927,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 978.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 978.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 978.5,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 690,
+          "cy": 978.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 978.5,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 302,
+          "cy": 1029,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 1029,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 1029,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 690,
+          "cy": 1029,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 1029,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 783,
+          "cy": 1065,
+          "size": 10.2,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "text",
+          "id": "t051b306a055d1ae79b53",
+          "text": "对赌保障",
+          "x": 205,
+          "cy": 1094,
+          "size": 15.4,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "guarantee-label"
+        },
+        {
+          "type": "art",
+          "text": "未达标就继续打",
+          "x": 205,
+          "cy": 1127,
+          "size": 39,
+          "maxWidth": 558,
+          "fill": "#117D72",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.6,
+          "angles": false,
+          "ids": [
+            "te2da0773263b81feaee8",
+            "tf215bfd98d7a1a2280c2",
+            "t52221f014e33a06b0c14",
+            "t6cacae540cd954d528e4",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ted0309b1e5971a331172",
+          "text": "单局挑战 · 不跨局累计",
+          "x": 206,
+          "cy": 1161,
+          "size": 20.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 552,
+          "role": "guarantee-condition"
+        },
+        {
+          "type": "art",
+          "text": "特别声明",
+          "x": 68,
+          "cy": 1214.5,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "ta31124a9726237db3e40",
+            "t9a703ad8a3a3c471f146",
+            "t7548d4651822352dc11f",
+            "tecfd82fbcf293a5456c0"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "te876705da0e1c2e09cec",
+          "text": "物资归属 · 补偿结算 · 存储限制",
+          "x": 765,
+          "cy": 1214.5,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "t5744902e689d3cce52a7",
+          "text": "物资归属",
+          "x": 158,
+          "cy": 1270.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "ta291b8dd8882280d589f",
+          "text": "达标前，全部物资归板板",
+          "x": 307,
+          "cy": 1270.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t76cc56df2cdc0e8a7624",
+          "text": "补偿结算",
+          "x": 158,
+          "cy": 1320,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "tafbd42fb45a25081ebb5",
+          "text": "对应炸单保底在满足结单条件后另补",
+          "x": 307,
+          "cy": 1320,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t225c5a1e1666d650e900",
+          "text": "存储限制",
+          "x": 158,
+          "cy": 1372.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "teb3bed9ca6fd41b33c66",
+          "text": "陪玩不允许自带空白存储洗给板板",
+          "x": 307,
+          "cy": 1372.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 68,
+          "cy": 1439,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t6bf8311d32b23f4eb1e0",
+          "text": "地图 · 房卡 · 理包 · 装备",
+          "x": 765,
+          "cy": 1439,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "tbe865225f6201e69b658",
+          "text": "地图选择",
+          "x": 158,
+          "cy": 1499.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tb743a10c157d04265f43",
+          "text": "仅限 机密核电站 / 机密巴克什 / 机密航天",
+          "x": 307,
+          "cy": 1488,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "tac31912cae10fddffbcb",
+          "text": "默认机密航天；可选地图按本版价目表。",
+          "x": 307,
+          "cy": 1511,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "t6ce47b03f3686245b1f8",
+          "text": "房卡保障",
+          "x": 158,
+          "cy": 1562,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t408a37e9f36bec632023",
+          "text": "含航天核心区金红卡；每少一张补偿：",
+          "x": 307,
+          "cy": 1548,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "included-cards"
+        },
+        {
+          "type": "text",
+          "id": "t2e36c55601a4db7d30ea",
+          "text": "金卡",
+          "x": 307,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t0d0ba474d499af9ff868",
+          "text": "+100",
+          "x": 489,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 494,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t476ccefab8a39a96227e",
+          "text": "红卡",
+          "x": 554,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t22ccecf1b4c69f678ccf",
+          "text": "+150",
+          "x": 731,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 736,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t45965708e54b603a34e2",
+          "text": "理包与速撤",
+          "x": 158,
+          "cy": 1627,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tb7b7553022b30d252303",
+          "text": "必须由陪玩理包",
+          "x": 307,
+          "cy": 1615,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "t1fb6aa0f069888a4efc8",
+          "text": "达到结单要求后，打手允许速撤",
+          "x": 307,
+          "cy": 1639,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "td82166a61b3e7e97bace",
+          "text": "装备例外",
+          "x": 158,
+          "cy": 1691.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t6d5f97a30cc84e7e9eb1",
+          "text": "125以上的六套、龟包、金胸挂，",
+          "x": 307,
+          "cy": 1679.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t048ec2bfdbf292faf813",
+          "text": "满红头修/甲修，不算假账。",
+          "x": 307,
+          "cy": 1703.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 418,
+          "cy": 1829,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 390,
+          "role": "footer"
+        }
+      ],
+      "alignment": [
+        {
+          "map": "核电站",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "航天",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密版 · 物资对赌单",
+      "bg": "poster-gold.png",
+      "w": 836,
+      "h": 1881,
+      "ew": 3200,
+      "eh": 7200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(60 52.519999999999996) scale(0.8571428571428571)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#FFFDF5\" stroke-width=\"7\"/><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 92.4,
+          "cy": 65,
+          "size": 24,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "物资",
+          "x": 62,
+          "cy": 140,
+          "size": 80,
+          "maxWidth": 245,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "对赌单",
+          "x": 51,
+          "cy": 227,
+          "size": 78,
+          "maxWidth": 259,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t3682e07a066fd7762870",
+            "t3d9e324109658ac3eab2",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t65f0a7d2574ff41adcd2",
+          "text": "手游 · 绝密版",
+          "x": 190,
+          "cy": 302,
+          "size": 24.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 260,
+          "role": "platform-mode"
+        },
+        {
+          "type": "art",
+          "text": "单局撤离物资必须严格大于对应目标",
+          "x": 159,
+          "cy": 367,
+          "size": 25,
+          "maxWidth": 603,
+          "fill": "#A8651B",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1,
+          "angles": false,
+          "ids": [
+            "t5987677ea6a76fadffef",
+            "t324783abeab38cc10b6f",
+            "tb2198fa811326a135466",
+            "t3cbb8e757e450841d52e",
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34",
+            "t5b205cdfd8126a251408",
+            "t332e117e415daa41281a",
+            "tdb3b1e04552464d4e632",
+            "t5ec90f1f5df2b00be9d3",
+            "t695c2156973d8d76b2d4",
+            "tffa30f786dda5deff9ea",
+            "t3682e07a066fd7762870",
+            "t889ba82cd07cc02d37fa",
+            "t7817937b3720fd9c7046",
+            "t52221f014e33a06b0c14"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t57981439f1255afe696f",
+          "text": "等于目标也未达标 · 不跨局累计",
+          "x": 160,
+          "cy": 395,
+          "size": 18.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 603,
+          "role": "strict-equality-and-accumulation"
+        },
+        {
+          "type": "text",
+          "id": "td9b629e18aa258260cde",
+          "text": "绝密航天",
+          "x": 69,
+          "cy": 460,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 460,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 460,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 302,
+          "cy": 507,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 507,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 507,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 690,
+          "cy": 507,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 507,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 558,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 558,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 558,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 690,
+          "cy": 558,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 558,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 302,
+          "cy": 608.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 608.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 608.5,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8b7b29f1f43e4849716b",
+          "text": "1388",
+          "x": 690,
+          "cy": 608.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 608.5,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc0d87a4fbe5a50030cfd",
+          "text": "绝密巴克什",
+          "x": 69,
+          "cy": 669.5,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 669.5,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 669.5,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 302,
+          "cy": 716.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 716.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 716.5,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 690,
+          "cy": 716.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 716.5,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 767,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 767,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 767,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 690,
+          "cy": 767,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 767,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 302,
+          "cy": 818,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 818,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 818,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8516d8f5af8cddf0c9f2",
+          "text": "1188",
+          "x": 690,
+          "cy": 818,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 818,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t352bb423a7f7868dde8d",
+          "text": "绝密监狱",
+          "x": 69,
+          "cy": 880,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 880,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 880,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 302,
+          "cy": 927,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 927,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 927,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 690,
+          "cy": 927,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 927,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 978.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 978.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 978.5,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 690,
+          "cy": 978.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 978.5,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 302,
+          "cy": 1029,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 1029,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 1029,
+          "size": 56,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8516d8f5af8cddf0c9f2",
+          "text": "1188",
+          "x": 690,
+          "cy": 1029,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 1029,
+          "size": 47.75,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 783,
+          "cy": 1065,
+          "size": 10.2,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "text",
+          "id": "t051b306a055d1ae79b53",
+          "text": "对赌保障",
+          "x": 205,
+          "cy": 1094,
+          "size": 15.4,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "guarantee-label"
+        },
+        {
+          "type": "art",
+          "text": "未达标就继续打",
+          "x": 205,
+          "cy": 1127,
+          "size": 39,
+          "maxWidth": 558,
+          "fill": "#A8651B",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.6,
+          "angles": false,
+          "ids": [
+            "te2da0773263b81feaee8",
+            "tf215bfd98d7a1a2280c2",
+            "t52221f014e33a06b0c14",
+            "t6cacae540cd954d528e4",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ted0309b1e5971a331172",
+          "text": "单局挑战 · 不跨局累计",
+          "x": 206,
+          "cy": 1161,
+          "size": 20.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 552,
+          "role": "guarantee-condition"
+        },
+        {
+          "type": "art",
+          "text": "特别声明",
+          "x": 68,
+          "cy": 1214.5,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "ta31124a9726237db3e40",
+            "t9a703ad8a3a3c471f146",
+            "t7548d4651822352dc11f",
+            "tecfd82fbcf293a5456c0"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "te876705da0e1c2e09cec",
+          "text": "物资归属 · 补偿结算 · 存储限制",
+          "x": 765,
+          "cy": 1214.5,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "t5744902e689d3cce52a7",
+          "text": "物资归属",
+          "x": 158,
+          "cy": 1270.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "ta291b8dd8882280d589f",
+          "text": "达标前，全部物资归板板",
+          "x": 307,
+          "cy": 1270.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t76cc56df2cdc0e8a7624",
+          "text": "补偿结算",
+          "x": 158,
+          "cy": 1320,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "tafbd42fb45a25081ebb5",
+          "text": "对应炸单保底在满足结单条件后另补",
+          "x": 307,
+          "cy": 1320,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t225c5a1e1666d650e900",
+          "text": "存储限制",
+          "x": 158,
+          "cy": 1372.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "teb3bed9ca6fd41b33c66",
+          "text": "陪玩不允许自带空白存储洗给板板",
+          "x": 307,
+          "cy": 1372.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 68,
+          "cy": 1439,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t6bf8311d32b23f4eb1e0",
+          "text": "地图 · 房卡 · 理包 · 装备",
+          "x": 765,
+          "cy": 1439,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "tbe865225f6201e69b658",
+          "text": "地图选择",
+          "x": 158,
+          "cy": 1499.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "te0e5e5e6b4cf9c7198f8",
+          "text": "仅限 绝密航天 / 绝密巴克什 / 绝密监狱",
+          "x": 307,
+          "cy": 1488,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "t252bc7428558eba3d1e7",
+          "text": "默认绝密航天；可选地图按本版价目表。",
+          "x": 307,
+          "cy": 1511,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "t6ce47b03f3686245b1f8",
+          "text": "房卡保障",
+          "x": 158,
+          "cy": 1562,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t408a37e9f36bec632023",
+          "text": "含航天核心区金红卡；每少一张补偿：",
+          "x": 307,
+          "cy": 1548,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "included-cards"
+        },
+        {
+          "type": "text",
+          "id": "t2e36c55601a4db7d30ea",
+          "text": "金卡",
+          "x": 307,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t41b1212004a81a286da4",
+          "text": "+200",
+          "x": 489,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 494,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t476ccefab8a39a96227e",
+          "text": "红卡",
+          "x": 554,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t88a27db54aec1fa147b6",
+          "text": "+300",
+          "x": 731,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 736,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t45965708e54b603a34e2",
+          "text": "理包与速撤",
+          "x": 158,
+          "cy": 1627,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tb7b7553022b30d252303",
+          "text": "必须由陪玩理包",
+          "x": 307,
+          "cy": 1615,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "t1fb6aa0f069888a4efc8",
+          "text": "达到结单要求后，打手允许速撤",
+          "x": 307,
+          "cy": 1639,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "td82166a61b3e7e97bace",
+          "text": "装备例外",
+          "x": 158,
+          "cy": 1691.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t6d5f97a30cc84e7e9eb1",
+          "text": "125以上的六套、龟包、金胸挂，",
+          "x": 307,
+          "cy": 1679.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t048ec2bfdbf292faf813",
+          "text": "满红头修/甲修，不算假账。",
+          "x": 307,
+          "cy": 1703.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 418,
+          "cy": 1829,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 390,
+          "role": "footer"
+        }
+      ],
+      "alignment": [
+        {
+          "map": "航天",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "监狱",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密版 · 物资对赌单",
+      "bg": "poster-teal.png",
+      "w": 836,
+      "h": 1882,
+      "ew": 3200,
+      "eh": 7200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(60 52.519999999999996) scale(0.8571428571428571)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#FFFDF5\" stroke-width=\"7\"/><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 92.4,
+          "cy": 65,
+          "size": 24,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "物资",
+          "x": 62,
+          "cy": 140,
+          "size": 80,
+          "maxWidth": 245,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "对赌单",
+          "x": 51,
+          "cy": 227,
+          "size": 78,
+          "maxWidth": 259,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t3682e07a066fd7762870",
+            "t3d9e324109658ac3eab2",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "td7abb62b1fc096eee161",
+          "text": "手游 · 机密版",
+          "x": 190,
+          "cy": 302,
+          "size": 24.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 260,
+          "role": "platform-mode"
+        },
+        {
+          "type": "art",
+          "text": "单局撤离物资必须严格大于对应目标",
+          "x": 159,
+          "cy": 367,
+          "size": 25,
+          "maxWidth": 603,
+          "fill": "#117D72",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1,
+          "angles": false,
+          "ids": [
+            "t5987677ea6a76fadffef",
+            "t324783abeab38cc10b6f",
+            "tb2198fa811326a135466",
+            "t3cbb8e757e450841d52e",
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34",
+            "t5b205cdfd8126a251408",
+            "t332e117e415daa41281a",
+            "tdb3b1e04552464d4e632",
+            "t5ec90f1f5df2b00be9d3",
+            "t695c2156973d8d76b2d4",
+            "tffa30f786dda5deff9ea",
+            "t3682e07a066fd7762870",
+            "t889ba82cd07cc02d37fa",
+            "t7817937b3720fd9c7046",
+            "t52221f014e33a06b0c14"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t57981439f1255afe696f",
+          "text": "等于目标也未达标 · 不跨局累计",
+          "x": 160,
+          "cy": 395,
+          "size": 18.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 603,
+          "role": "strict-equality-and-accumulation"
+        },
+        {
+          "type": "text",
+          "id": "t6837a5ef3a6d350b28e1",
+          "text": "机密核电站",
+          "x": 69,
+          "cy": 460,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 460,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 460,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 302,
+          "cy": 507,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 507,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 507,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 690,
+          "cy": 507,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 507,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 558,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 558,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 558,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 690,
+          "cy": 558,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 558,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 302,
+          "cy": 608.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 608.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 608.5,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 690,
+          "cy": 608.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 608.5,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tdef5758eab0654951fb7",
+          "text": "机密巴克什",
+          "x": 69,
+          "cy": 669.5,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 669.5,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 669.5,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 302,
+          "cy": 716.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 716.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 716.5,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 690,
+          "cy": 716.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 716.5,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 767,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 767,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 767,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 690,
+          "cy": 767,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 767,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 302,
+          "cy": 818,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 818,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 818,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 690,
+          "cy": 818,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 818,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tf318abc93b831a6b6447",
+          "text": "机密航天",
+          "x": 69,
+          "cy": 880,
+          "size": 23.5,
+          "fill": "#FFFDF5",
+          "anchor": "start",
+          "maxWidth": 155,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 282,
+          "cy": 880,
+          "size": 17.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t3e10c5cfbe8cfda2a17c",
+          "text": "单局撤离物资",
+          "x": 633,
+          "cy": 880,
+          "size": 18.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 302,
+          "cy": 927,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 927,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 927,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 690,
+          "cy": 927,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 927,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 302,
+          "cy": 978.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 978.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 978.5,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 690,
+          "cy": 978.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 978.5,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 302,
+          "cy": 1029,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 310,
+          "cy": 1029,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 511,
+          "cy": 1029,
+          "size": 56,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 690,
+          "cy": 1029,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 698,
+          "cy": 1029,
+          "size": 47.75,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 783,
+          "cy": 1065,
+          "size": 10.2,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "text",
+          "id": "t051b306a055d1ae79b53",
+          "text": "对赌保障",
+          "x": 205,
+          "cy": 1094,
+          "size": 15.4,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "guarantee-label"
+        },
+        {
+          "type": "art",
+          "text": "未达标就继续打",
+          "x": 205,
+          "cy": 1127,
+          "size": 39,
+          "maxWidth": 558,
+          "fill": "#117D72",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.6,
+          "angles": false,
+          "ids": [
+            "te2da0773263b81feaee8",
+            "tf215bfd98d7a1a2280c2",
+            "t52221f014e33a06b0c14",
+            "t6cacae540cd954d528e4",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ted0309b1e5971a331172",
+          "text": "单局挑战 · 不跨局累计",
+          "x": 206,
+          "cy": 1161,
+          "size": 20.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 552,
+          "role": "guarantee-condition"
+        },
+        {
+          "type": "art",
+          "text": "特别声明",
+          "x": 68,
+          "cy": 1214.5,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "ta31124a9726237db3e40",
+            "t9a703ad8a3a3c471f146",
+            "t7548d4651822352dc11f",
+            "tecfd82fbcf293a5456c0"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "te876705da0e1c2e09cec",
+          "text": "物资归属 · 补偿结算 · 存储限制",
+          "x": 765,
+          "cy": 1214.5,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "t5744902e689d3cce52a7",
+          "text": "物资归属",
+          "x": 158,
+          "cy": 1270.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "ta291b8dd8882280d589f",
+          "text": "达标前，全部物资归板板",
+          "x": 307,
+          "cy": 1270.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t76cc56df2cdc0e8a7624",
+          "text": "补偿结算",
+          "x": 158,
+          "cy": 1320,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "tafbd42fb45a25081ebb5",
+          "text": "对应炸单保底在满足结单条件后另补",
+          "x": 307,
+          "cy": 1320,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "text",
+          "id": "t225c5a1e1666d650e900",
+          "text": "存储限制",
+          "x": 158,
+          "cy": 1372.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "declaration-label"
+        },
+        {
+          "type": "text",
+          "id": "teb3bed9ca6fd41b33c66",
+          "text": "陪玩不允许自带空白存储洗给板板",
+          "x": 307,
+          "cy": 1372.5,
+          "size": 18,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "declaration-body"
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 68,
+          "cy": 1439,
+          "size": 25,
+          "maxWidth": 190,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t6bf8311d32b23f4eb1e0",
+          "text": "地图 · 房卡 · 理包 · 装备",
+          "x": 765,
+          "cy": 1439,
+          "size": 16.3,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 468,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "tbe865225f6201e69b658",
+          "text": "地图选择",
+          "x": 158,
+          "cy": 1499.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tb743a10c157d04265f43",
+          "text": "仅限 机密核电站 / 机密巴克什 / 机密航天",
+          "x": 307,
+          "cy": 1488,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "tac31912cae10fddffbcb",
+          "text": "默认机密航天；可选地图按本版价目表。",
+          "x": 307,
+          "cy": 1511,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "t6ce47b03f3686245b1f8",
+          "text": "房卡保障",
+          "x": 158,
+          "cy": 1562,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t408a37e9f36bec632023",
+          "text": "含航天核心区金红卡；每少一张补偿：",
+          "x": 307,
+          "cy": 1548,
+          "size": 16.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "included-cards"
+        },
+        {
+          "type": "text",
+          "id": "t2e36c55601a4db7d30ea",
+          "text": "金卡",
+          "x": 307,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t0d0ba474d499af9ff868",
+          "text": "+100",
+          "x": 489,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 494,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t476ccefab8a39a96227e",
+          "text": "红卡",
+          "x": 554,
+          "cy": 1579,
+          "size": 17.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "missing-card"
+        },
+        {
+          "type": "text",
+          "id": "t22ccecf1b4c69f678ccf",
+          "text": "+150",
+          "x": 731,
+          "cy": 1579,
+          "size": 23,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "missing-card-compensation-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 736,
+          "cy": 1579,
+          "size": 22,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "missing-card-compensation-unit"
+        },
+        {
+          "type": "text",
+          "id": "t45965708e54b603a34e2",
+          "text": "理包与速撤",
+          "x": 158,
+          "cy": 1627,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tb7b7553022b30d252303",
+          "text": "必须由陪玩理包",
+          "x": 307,
+          "cy": 1615,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "t1fb6aa0f069888a4efc8",
+          "text": "达到结单要求后，打手允许速撤",
+          "x": 307,
+          "cy": 1639,
+          "size": 17.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "packing-quick-extraction"
+        },
+        {
+          "type": "text",
+          "id": "td82166a61b3e7e97bace",
+          "text": "装备例外",
+          "x": 158,
+          "cy": 1691.5,
+          "size": 18.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 128,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t6d5f97a30cc84e7e9eb1",
+          "text": "125以上的六套、龟包、金胸挂，",
+          "x": 307,
+          "cy": 1679.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t048ec2bfdbf292faf813",
+          "text": "满红头修/甲修，不算假账。",
+          "x": 307,
+          "cy": 1703.5,
+          "size": 17.3,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 461,
+          "role": "equipment-exception"
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 418,
+          "cy": 1829,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 390,
+          "role": "footer"
+        }
+      ],
+      "alignment": [
+        {
+          "map": "核电站",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "航天",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    },
+    {
+      "id": "cover",
+      "label": "物资对赌单 · 横版封面",
+      "bg": "cover.png",
+      "w": 1672,
+      "h": 941,
+      "ew": 3200,
+      "eh": 1800,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(98 110.24) scale(1.3571428571428572)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 149.3,
+          "cy": 130,
+          "size": 38,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "art",
+          "text": "物资",
+          "x": 103,
+          "cy": 280,
+          "size": 156,
+          "maxWidth": 550,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 6,
+          "angles": true,
+          "ids": [
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "对赌单",
+          "x": 84,
+          "cy": 468,
+          "size": 174,
+          "maxWidth": 560,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 7,
+          "angles": true,
+          "ids": [
+            "t3682e07a066fd7762870",
+            "t3d9e324109658ac3eab2",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ta02542e8526cdb02e9ae",
+          "text": "单局达标 · 未达继续",
+          "x": 375,
+          "cy": 663,
+          "size": 35,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 601,
+          "role": "mechanism"
+        },
+        {
+          "type": "text",
+          "id": "t45defd5868beb8ea865a",
+          "text": "端游 / 手游 · 绝密 / 机密",
+          "x": 95,
+          "cy": 740,
+          "size": 26.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 580,
+          "role": "versions",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "text",
+          "id": "td92c22f9610d9a3a0653",
+          "text": "单局严格大于目标 · 不跨局累计",
+          "x": 95,
+          "cy": 786,
+          "size": 22,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 580,
+          "role": "strict-condition",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        }
+      ]
+    },
+    {
+      "id": "social",
+      "label": "物资对赌单 · 简洁宣发海报",
+      "bg": "social.png",
+      "w": 1086,
+      "h": 1448,
+      "ew": 2400,
+      "eh": 3200,
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(71 61.92) scale(1.0357142857142858)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 110.15,
+          "cy": 77,
+          "size": 29,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand"
+        },
+        {
+          "type": "art",
+          "text": "物资",
+          "x": 77,
+          "cy": 172,
+          "size": 95,
+          "maxWidth": 349,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 4,
+          "angles": true,
+          "ids": [
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "对赌单",
+          "x": 64,
+          "cy": 278,
+          "size": 102,
+          "maxWidth": 367,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 4.4,
+          "angles": true,
+          "ids": [
+            "t3682e07a066fd7762870",
+            "t3d9e324109658ac3eab2",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "单局撤离物资必须严格大于对应目标",
+          "x": 159,
+          "cy": 416,
+          "size": 29,
+          "maxWidth": 847,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.3,
+          "angles": false,
+          "ids": [
+            "t5987677ea6a76fadffef",
+            "t324783abeab38cc10b6f",
+            "tb2198fa811326a135466",
+            "t3cbb8e757e450841d52e",
+            "t6660a6d53f18d889d3b8",
+            "t79d8b4cf9480cee79d34",
+            "t5b205cdfd8126a251408",
+            "t332e117e415daa41281a",
+            "tdb3b1e04552464d4e632",
+            "t5ec90f1f5df2b00be9d3",
+            "t695c2156973d8d76b2d4",
+            "tffa30f786dda5deff9ea",
+            "t3682e07a066fd7762870",
+            "t889ba82cd07cc02d37fa",
+            "t7817937b3720fd9c7046",
+            "t52221f014e33a06b0c14"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t57981439f1255afe696f",
+          "text": "等于目标也未达标 · 不跨局累计",
+          "x": 160,
+          "cy": 449,
+          "size": 19,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 847,
+          "role": "strict-equality-and-accumulation"
+        },
+        {
+          "type": "text",
+          "id": "ta4eb280cc99ce1280e97",
+          "text": "端游 · 绝密版",
+          "x": 289,
+          "cy": 502.5,
+          "size": 23.5,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "t231aa1b0d9127d7b4323",
+          "text": "价格",
+          "x": 105,
+          "cy": 542.5,
+          "size": 18.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 135,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 139,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 135,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 139,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 135,
+          "cy": 730,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 139,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t1256914c3b9ac7bb832c",
+          "text": "航天",
+          "x": 218,
+          "cy": 542.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 112,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 169,
+          "cy": 596.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 244,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 247,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 169,
+          "cy": 662.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8b7b29f1f43e4849716b",
+          "text": "1388",
+          "x": 244,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 247,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 169,
+          "cy": 730,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t15fac4c013b9602cdeb7",
+          "text": "1488",
+          "x": 244,
+          "cy": 730,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 247,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc36bc0630b84d65b1675",
+          "text": "巴克什",
+          "x": 339.5,
+          "cy": 542.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 111,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 291,
+          "cy": 596.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 365,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 368,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 291,
+          "cy": 662.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8516d8f5af8cddf0c9f2",
+          "text": "1188",
+          "x": 365,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 368,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 291,
+          "cy": 730,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 365,
+          "cy": 730,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 368,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tdc8f8c0e7e96b392d8da",
+          "text": "监狱",
+          "x": 462.5,
+          "cy": 542.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 115,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 412,
+          "cy": 596.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 490,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 493,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 412,
+          "cy": 662.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 490,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 493,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 412,
+          "cy": 730,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 490,
+          "cy": 730,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 493,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tcb2aabfb6865c77766a2",
+          "text": "端游 · 机密版",
+          "x": 796.5,
+          "cy": 502.5,
+          "size": 23.5,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "t231aa1b0d9127d7b4323",
+          "text": "价格",
+          "x": 613,
+          "cy": 542.5,
+          "size": 18.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 644,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 648,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 644,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 648,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 644,
+          "cy": 730,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 648,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t176ee5a3177c86ffd5fd",
+          "text": "核电站",
+          "x": 726.5,
+          "cy": 542.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 111,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 678,
+          "cy": 596.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 752,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 755,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 678,
+          "cy": 662.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 752,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 755,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 678,
+          "cy": 730,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 752,
+          "cy": 730,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 755,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc36bc0630b84d65b1675",
+          "text": "巴克什",
+          "x": 847,
+          "cy": 542.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 110,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 799,
+          "cy": 596.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 872,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 875,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 799,
+          "cy": 662.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 872,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 875,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 799,
+          "cy": 730,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 872,
+          "cy": 730,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 875,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t1256914c3b9ac7bb832c",
+          "text": "航天",
+          "x": 970,
+          "cy": 542.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 116,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 919,
+          "cy": 596.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 998,
+          "cy": 596.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 1001,
+          "cy": 596.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 919,
+          "cy": 662.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 998,
+          "cy": 662.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 1001,
+          "cy": 662.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 919,
+          "cy": 730,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 998,
+          "cy": 730,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 1001,
+          "cy": 730,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t65f0a7d2574ff41adcd2",
+          "text": "手游 · 绝密版",
+          "x": 289,
+          "cy": 806,
+          "size": 23.5,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "t231aa1b0d9127d7b4323",
+          "text": "价格",
+          "x": 105,
+          "cy": 845.5,
+          "size": 18.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 135,
+          "cy": 899,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 139,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 135,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 139,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 135,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 139,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t1256914c3b9ac7bb832c",
+          "text": "航天",
+          "x": 218,
+          "cy": 845.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 112,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 169,
+          "cy": 899,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 244,
+          "cy": 899,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 247,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 169,
+          "cy": 965.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t6a6b447515f3b2e263cf",
+          "text": "1288",
+          "x": 244,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 247,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 169,
+          "cy": 1033.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8b7b29f1f43e4849716b",
+          "text": "1388",
+          "x": 244,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 247,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc36bc0630b84d65b1675",
+          "text": "巴克什",
+          "x": 339.5,
+          "cy": 845.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 111,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 291,
+          "cy": 899,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 365,
+          "cy": 899,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 368,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 291,
+          "cy": 965.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 365,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 368,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 291,
+          "cy": 1033.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8516d8f5af8cddf0c9f2",
+          "text": "1188",
+          "x": 365,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 368,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tdc8f8c0e7e96b392d8da",
+          "text": "监狱",
+          "x": 462.5,
+          "cy": 845.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 115,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 412,
+          "cy": 899,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 490,
+          "cy": 899,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 493,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 412,
+          "cy": 965.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t3c3170e3c2f74cde7d7f",
+          "text": "1088",
+          "x": 490,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 493,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 412,
+          "cy": 1033.5,
+          "size": 34.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t8516d8f5af8cddf0c9f2",
+          "text": "1188",
+          "x": 490,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 493,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "td7abb62b1fc096eee161",
+          "text": "手游 · 机密版",
+          "x": 796.5,
+          "cy": 806,
+          "size": 23.5,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "t231aa1b0d9127d7b4323",
+          "text": "价格",
+          "x": 613,
+          "cy": 845.5,
+          "size": 18.4,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 644,
+          "cy": 899,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 648,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 644,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 648,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 644,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 648,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t176ee5a3177c86ffd5fd",
+          "text": "核电站",
+          "x": 726.5,
+          "cy": 845.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 111,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 678,
+          "cy": 899,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 752,
+          "cy": 899,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 755,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 678,
+          "cy": 965.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 752,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 755,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 678,
+          "cy": 1033.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 752,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 755,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "tc36bc0630b84d65b1675",
+          "text": "巴克什",
+          "x": 847,
+          "cy": 845.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 110,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 799,
+          "cy": 899,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 872,
+          "cy": 899,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 875,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 799,
+          "cy": 965.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "tc661d12b0b4d045c5622",
+          "text": "788",
+          "x": 872,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 875,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 799,
+          "cy": 1033.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 872,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 875,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t1256914c3b9ac7bb832c",
+          "text": "航天",
+          "x": 970,
+          "cy": 845.5,
+          "size": 21,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 116,
+          "role": "map-title"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 919,
+          "cy": 899,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 998,
+          "cy": 899,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 1001,
+          "cy": 899,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 919,
+          "cy": 965.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 998,
+          "cy": 965.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 1001,
+          "cy": 965.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t4b057e05e257fd1658ed",
+          "text": ">",
+          "x": 919,
+          "cy": 1033.5,
+          "size": 34.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "strict-comparison"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 998,
+          "cy": 1033.5,
+          "size": 31,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "threshold-number"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 1001,
+          "cy": 1033.5,
+          "size": 29.6,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "threshold-unit"
+        },
+        {
+          "type": "text",
+          "id": "t051b306a055d1ae79b53",
+          "text": "对赌保障",
+          "x": 282,
+          "cy": 1128,
+          "size": 18.8,
+          "fill": "#55788B",
+          "anchor": "start",
+          "role": "guarantee-label"
+        },
+        {
+          "type": "art",
+          "text": "未达标就继续打",
+          "x": 282,
+          "cy": 1178,
+          "size": 49,
+          "maxWidth": 721,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.7,
+          "angles": false,
+          "ids": [
+            "te2da0773263b81feaee8",
+            "tf215bfd98d7a1a2280c2",
+            "t52221f014e33a06b0c14",
+            "t6cacae540cd954d528e4",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "ted0309b1e5971a331172",
+          "text": "单局挑战 · 不跨局累计",
+          "x": 283,
+          "cy": 1225,
+          "size": 26,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 723,
+          "role": "guarantee-condition"
+        },
+        {
+          "type": "text",
+          "id": "ta291b8dd8882280d589f",
+          "text": "达标前，全部物资归板板",
+          "x": 283,
+          "cy": 1259.5,
+          "size": 19.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 723,
+          "role": "core-conditions"
+        },
+        {
+          "type": "text",
+          "id": "tafbd42fb45a25081ebb5",
+          "text": "对应炸单保底在满足结单条件后另补",
+          "x": 283,
+          "cy": 1288.5,
+          "size": 19.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 723,
+          "role": "core-conditions"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 543,
+          "cy": 1383,
+          "size": 12.5,
+          "fill": "#55788B",
+          "anchor": "middle",
+          "role": "units"
+        }
+      ],
+      "alignment": [
+        {
+          "id": "desktop-absolute",
+          "rowCenters": [
+            596.5,
+            662.5,
+            730
+          ],
+          "rowEdges": [
+            565,
+            628,
+            697,
+            763
+          ],
+          "colEdges": [
+            53,
+            157,
+            279,
+            400,
+            525
+          ],
+          "priceUnitColumn": 139,
+          "thresholdUnitColumns": [
+            {
+              "map": "航天",
+              "x": 247,
+              "cellLeft": 157,
+              "cellRight": 279
+            },
+            {
+              "map": "巴克什",
+              "x": 368,
+              "cellLeft": 279,
+              "cellRight": 400
+            },
+            {
+              "map": "监狱",
+              "x": 493,
+              "cellLeft": 400,
+              "cellRight": 525
+            }
+          ],
+          "sharedPriceRows": true,
+          "comparisons": "strict > per target cell"
+        },
+        {
+          "id": "desktop-secret",
+          "rowCenters": [
+            596.5,
+            662.5,
+            730
+          ],
+          "rowEdges": [
+            565,
+            628,
+            697,
+            763
+          ],
+          "colEdges": [
+            560,
+            666,
+            787,
+            907,
+            1033
+          ],
+          "priceUnitColumn": 648,
+          "thresholdUnitColumns": [
+            {
+              "map": "核电站",
+              "x": 755,
+              "cellLeft": 666,
+              "cellRight": 787
+            },
+            {
+              "map": "巴克什",
+              "x": 875,
+              "cellLeft": 787,
+              "cellRight": 907
+            },
+            {
+              "map": "航天",
+              "x": 1001,
+              "cellLeft": 907,
+              "cellRight": 1033
+            }
+          ],
+          "sharedPriceRows": true,
+          "comparisons": "strict > per target cell"
+        },
+        {
+          "id": "mobile-absolute",
+          "rowCenters": [
+            899,
+            965.5,
+            1033.5
+          ],
+          "rowEdges": [
+            867,
+            931,
+            1000,
+            1067
+          ],
+          "colEdges": [
+            53,
+            157,
+            279,
+            400,
+            525
+          ],
+          "priceUnitColumn": 139,
+          "thresholdUnitColumns": [
+            {
+              "map": "航天",
+              "x": 247,
+              "cellLeft": 157,
+              "cellRight": 279
+            },
+            {
+              "map": "巴克什",
+              "x": 368,
+              "cellLeft": 279,
+              "cellRight": 400
+            },
+            {
+              "map": "监狱",
+              "x": 493,
+              "cellLeft": 400,
+              "cellRight": 525
+            }
+          ],
+          "sharedPriceRows": true,
+          "comparisons": "strict > per target cell"
+        },
+        {
+          "id": "mobile-secret",
+          "rowCenters": [
+            899,
+            965.5,
+            1033.5
+          ],
+          "rowEdges": [
+            867,
+            931,
+            1000,
+            1067
+          ],
+          "colEdges": [
+            560,
+            666,
+            787,
+            907,
+            1033
+          ],
+          "priceUnitColumn": 648,
+          "thresholdUnitColumns": [
+            {
+              "map": "核电站",
+              "x": 755,
+              "cellLeft": 666,
+              "cellRight": 787
+            },
+            {
+              "map": "巴克什",
+              "x": 875,
+              "cellLeft": 787,
+              "cellRight": 907
+            },
+            {
+              "map": "航天",
+              "x": 1001,
+              "cellLeft": 907,
+              "cellRight": 1033
+            }
+          ],
+          "sharedPriceRows": true,
+          "comparisons": "strict > per target cell"
+        }
+      ]
+    }
+  ]
+}

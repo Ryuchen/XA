@@ -1,0 +1,13 @@
+{
+  "revision": "final-r3",
+  "PNG": 30,
+  "editableSVG": 30,
+  "outlinedSVG": 30,
+  "CRC32": "passed",
+  "packagePNGHashes": "passed",
+  "contentSHA256": "a5ef5469d9ab4c0b31dbfa114a7b000fc4d6d4894f68487e68afa34c9eec8928",
+  "fullBytes": 357514048,
+  "pngBytes": 217616720,
+  "fullSHA256": "fa46c63c3d1a9e7781c678c6d004f369538a6542a5c629880057d0d7c1d90474",
+  "pngSHA256": "5b0654cfaae264b9688783a5bbd8840c90967dd79598d68d07836e9f9851af01"
+}

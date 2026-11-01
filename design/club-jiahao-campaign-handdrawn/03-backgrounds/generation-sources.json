@@ -1,0 +1,21 @@
+{
+  "provider": "built-in image_gen",
+  "files": [
+    {
+      "file": "poster-gold.png",
+      "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-b4180cf5-1f49-48c1-bb59-61640745754c.png"
+    },
+    {
+      "file": "poster-teal.png",
+      "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-b11603e8-25c8-4bc9-a5b6-3e170a78e3f5.png"
+    },
+    {
+      "file": "cover.png",
+      "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-886544cc-b68d-4e30-a2b4-dea79548bde4.png"
+    },
+    {
+      "file": "social.png",
+      "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-c8fd3349-1778-4c62-a889-50fd581798f9.png"
+    }
+  ]
+}

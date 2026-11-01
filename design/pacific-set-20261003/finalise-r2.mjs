@@ -1,0 +1,23 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const project=String.raw`C:\Users\chenh\Documents\ChatGPT\兴安电竞玩法\环太平洋-四版价目广告封面-20261003`;
+const here=path.dirname(fileURLToPath(import.meta.url)),require=createRequire(import.meta.url),sharp=require(String.raw`C:\Users\chenh\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\sharp`);
+const read=async rel=>JSON.parse(await fs.readFile(path.join(project,rel),'utf8'));
+const s=await read('campaign-state.json'),qa=await read('review/layout-and-data-checks-r2.json'),business=await read('review/business-source-checks-r2.json'),manifest=await read('output/manifest.json');
+if(!business.passed||qa.failures.length||qa.missingPages.length)throw new Error('验收未通过');
+await fs.copyFile(path.join(project,'archive/r1/review/visual-qa.md'),path.join(project,'review/visual-qa-r1.md'));
+const priceDetails=['review/mobile-prices-contact-r2.png',...['mobile-secret','mobile-absolute'].flatMap(id=>[0,1,2].map(i=>`review/${id}-map-${i}-prices-r2.png`))];
+const report=`# 环太平洋手游八处售价修订 r2\n\n2026-10-03。已实际打开两张本轮最终PNG、两张390px手机预览、六个地图价格局部合图及两张规则局部复查，修订通过。其他四页复用r1验收结果，文件哈希一致，未重复生成美术。\n\n## 价格与确认\n\n| 模式 | 地图 | 档位 | r1售价 | r2售价 |\n|---|---|---|---:|---:|\n${s.revisionScope.priceChanges.map(x=>`| ${x.variant==='mobile-secret'?'手游机密':'手游绝密'} | ${x.map} | ${x.tier} | ${x.previousPrice}r | ${x.price}r |`).join('\n')}\n\n- 用户明确回复“是，修改豪华版·全点”，将1668/1868/1568r映射机密巴克什/航天基地/核电站全点档；机密航天、核电站5点豪华为968/868r。追加绝密三地图全点为2488/2688/2888r。\n- 共八处指定售价，手游其余22档售价、30档基础保底、全部目标/地图/附加玩法/须知均保留。两张端游、体验价广告和封面12个PNG/SVG文件哈希与r1完全一致。广告展示体验档，相关数字未变。\n- content中为手游两版记录初始减价依据和本轮指定售价覆盖，避免后续误按旧全档-200/-220公式覆盖新价。机密保底原绝密、手游绝密保底原绝密减400w继续适用。\n\n## 成图复查与证据\n\n- 实际文件：output/png/mobile-secret.png（3200×9600）、mobile-absolute.png（3200×9596）；对应SVG已同步。手机图review/mobile-{secret,absolute}-mobile390.png。\n- 六地图价格局部：${priceDetails.join('；')}。两张规则局部：review/mobile-secret-rules-detail.png、mobile-absolute-rules-detail.png。\n- 八个新金额目视对应地图与档位正确；首末行留白、固定r列、价格与r基线、单位字高和可见间隙正常。新的三位5点售价与四位全点售价没有拥挤或偏右，相邻保底和目标清楚。\n- 所有改价行均保持原容器，未扩大安全区或容差。航天全点行因3068→1868/3088→2688字形高度改变，整行共用基线自动上移0.02637原生布局单位，维持原行居中；目视无偏移问题。\n- 两张手机预览及整图保持原风格、标题、人物和须知空间；普通说明26px（390宽等效14.01px）无maxWidth缩字。规则局部文字、关键条件、比较符与6次失败门槛完整无裁切。\n- 新旧原生预览像素比对：除八处价格区域及上述两行0.02637基线居中外，变化像素为0。119个业务/差异检查通过；当前六页248展示映射、381容器文字组、120数字单位检查全部无失败。几何检查辅助，实际成图已独立复查。\n- 保留r1全套包，受影响两图和源数据快照在archive/r1。本轮记录见layout-and-data-checks-r2.json、business-source-checks-r2.json、final-file-hashes-r2.json。\n\n## 导出说明\n\n- 两张手游价目使用已确认的原生724×2171/2172位图底图，矢量文字按3200宽输出；可改正文SVG与转曲SVG均同步，不将放大底图描述为原生3200绘制。\n- r2整套下载仍为六张，只有手游两张改价；六张PNG及12SVG哈希已登记，打包后逐项核对包内版本。\n`;
+await fs.writeFile(path.join(project,'review/visual-qa.md'),report);
+const pieces=[];
+for(const [i,p]of manifest.entries()){const input=await sharp(path.join(project,p.png)).resize({width:390,height:1175,fit:'contain',background:'#f8f7f0'}).png().toBuffer();pieces.push({input,left:(i%3)*410+10,top:Math.floor(i/3)*1195+10});}
+await sharp({create:{width:1230,height:2390,channels:3,background:'#f8f7f0'}}).composite(pieces).png().toFile(path.join(project,'review/final-contact-sheet-r2.png'));
+s.finalVisualQA={...s.finalVisualQA,passed:true,basis:'两张改价最终PNG、390px手机预览、六地图价格与两张规则局部复查；八指定价格和其他数据不变核查通过',priceDetails};s.stage='final-qa-passed';
+await fs.writeFile(path.join(project,'campaign-state.json'),JSON.stringify(s,null,2));
+await fs.copyFile(path.join(here,'pack-final.ps1'),path.join(project,'source/pack.ps1'));
+await fs.copyFile(path.join(here,'verify-package.ps1'),path.join(project,'source/verify-package.ps1'));
+await fs.copyFile(path.join(here,'audit-r2.mjs'),path.join(project,'source/audit-r2.mjs'));
+await fs.copyFile(path.join(here,'check-layout-r2.mjs'),path.join(project,'source/check-layout-r2.mjs'));
+console.log(JSON.stringify({visualQA:'passed',revision:'r2',affectedPages:s.revisionScope.affectedPageIds}));

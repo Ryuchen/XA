@@ -1,0 +1,1 @@
+"""Independent room lottery application."""

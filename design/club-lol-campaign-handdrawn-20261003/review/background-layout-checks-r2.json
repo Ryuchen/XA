@@ -1,0 +1,121 @@
+[
+  {
+    "id": "01-solo-duo-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 4,
+    "textSafeAreas": 4
+  },
+  {
+    "id": "01-solo-duo-advert",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 2,
+    "textSafeAreas": 2
+  },
+  {
+    "id": "02-flex-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 4,
+    "textSafeAreas": 4
+  },
+  {
+    "id": "02-flex-advert",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 3,
+    "textSafeAreas": 3
+  },
+  {
+    "id": "03-arena-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 4,
+    "textSafeAreas": 4
+  },
+  {
+    "id": "04-boost-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 7,
+    "textSafeAreas": 7
+  },
+  {
+    "id": "04-boost-advert",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 2,
+    "textSafeAreas": 2
+  },
+  {
+    "id": "05-lp-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 6,
+    "textSafeAreas": 6
+  },
+  {
+    "id": "06-overseas-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 7,
+    "textSafeAreas": 7
+  },
+  {
+    "id": "06-overseas-advert",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 2,
+    "textSafeAreas": 2
+  },
+  {
+    "id": "07-day-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 8,
+    "textSafeAreas": 8
+  },
+  {
+    "id": "07-day-advert",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 2,
+    "textSafeAreas": 2
+  },
+  {
+    "id": "08-haidou-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 4,
+    "textSafeAreas": 4
+  },
+  {
+    "id": "09-placement-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 7,
+    "textSafeAreas": 7
+  },
+  {
+    "id": "09-placement-advert",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 3,
+    "textSafeAreas": 3
+  },
+  {
+    "id": "10-maintenance-price",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 6,
+    "textSafeAreas": 6
+  },
+  {
+    "id": "10-maintenance-advert",
+    "failed": [],
+    "copyToHeroGap": 26,
+    "containers": 2,
+    "textSafeAreas": 2
+  }
+]

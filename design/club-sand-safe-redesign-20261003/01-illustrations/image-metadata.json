@@ -1,0 +1,25 @@
+{
+  "width": 1536,
+  "height": 1024,
+  "format": "png",
+  "hasAlpha": true,
+  "alpha": {
+    "min": 0,
+    "max": 254,
+    "transparentPixels": 639456,
+    "nearOpaquePixels": 829973,
+    "totalPixels": 1572864,
+    "corners": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "opaqueBounds": {
+    "left": 34,
+    "top": 40,
+    "right": 1508,
+    "bottom": 956
+  }
+}

@@ -79,6 +79,14 @@ def transition(
     order = Order.objects.select_for_update().get(id=order_id)
 
     from_status = order.status
+    if to_status == Order.Status.GRABBED and order.payment_status != Order.PaymentStatus.PAID:
+        raise IllegalTransitionError('订单未支付，不能接单或派单')
+    if to_status == Order.Status.GRABBED:
+        from .direct_payment_models import DirectPaymentIntent
+        from .direct_payment_quote import quote_matches_intent
+        intent = DirectPaymentIntent.objects.filter(order=order).first()
+        if intent and (intent.status != DirectPaymentIntent.Status.PAID or not quote_matches_intent(intent, order)):
+            raise IllegalTransitionError('支付证据待核对，不能接单或派单')
     authorized_settled_refund = False
     if allow_settled_refund:
         from .refunds import authorized_refund
@@ -144,6 +152,10 @@ def transition(
         operator_account=operator_account,
         reason=reason,
     )
+
+    if from_status == Order.Status.PENDING and to_status == Order.Status.CANCELLED:
+        from .applications import notify_cancelled_applicants
+        notify_cancelled_applicants(order)
 
     return order
 

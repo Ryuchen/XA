@@ -26,6 +26,7 @@ export interface OrderUser {
 }
 
 export interface ServiceInfo {
+  available?: boolean;
   service_type?: string;
   gameplay?: number; gameplay_name?: string; gameplay_kind?: string;
   gameplay_theme?: string; gameplay_cover_url?: string;

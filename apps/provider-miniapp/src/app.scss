@@ -5,7 +5,7 @@
 
 @include design.install-foundation;
 
-// Share the traditional blue palette across all three work surfaces, including
+// Share the ocean and milk palette across all three work surfaces, including
 // devices requesting a dark browser theme.
 page, body, #app {
   @include theme.light;
@@ -35,3 +35,11 @@ button:focus-visible, taro-button-core:focus-visible, [tabindex]:focus-visible {
 }
 
 body .taro_page { background-color: var(--xa-color-surface-page) !important; }
+
+/* Preserve system scrolling, use snap only for horizontal option strips. */
+html { scroll-padding-block:72PX; }
+body button, body taro-button-core { transition:background-color var(--xa-motion-fast),border-color var(--xa-motion-fast),box-shadow var(--xa-motion-fast),transform var(--xa-motion-fast); }
+body button:not([disabled]):active, body taro-button-core[aria-disabled='false']:active { transform:scale(.98); }
+@keyframes ocean-surface-enter { from { opacity:0; } to { opacity:1; } }
+.xa-provider-page { animation:ocean-surface-enter 250ms var(--xa-ease-out); }
+@media(prefers-reduced-motion:reduce) { .xa-provider-page { animation:none; } body button:active,body taro-button-core:active { transform:none; } }

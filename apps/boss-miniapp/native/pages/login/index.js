@@ -1,3 +1,4 @@
+const { modal: themedModal } = require('../../core/ui');
 const auth = require('../../core/auth');
 const { request } = require('../../core/api');
 const { go, toast } = require('../../core/ui');
@@ -32,7 +33,7 @@ Page({
   },
   createAccount() {
     if (this.data.busy || !this.data.agreed) return;
-    wx.showModal({ title: '创建新的老板账号', content: '新账号拥有独立的钱包和订单。已有余额或历史订单，请优先授权手机号找回原账号。', confirmText: '确认创建', success: result => { if (result.confirm && this._alive) this.login('', true); } });
+    themedModal({ title: '创建新的老板账号', content: '新账号拥有独立的钱包和订单。已有余额或历史订单，请优先授权手机号找回原账号。', confirmText: '确认创建', success: result => { if (result.confirm && this._alive) this.login('', true); } });
   },
   support() { go('/pages/support/index'); },
 });

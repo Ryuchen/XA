@@ -1,0 +1,1967 @@
+{
+  "revision": "streak-r3-route",
+  "userPreference": "缩小文字，保留上下间距；默认允许航天飞升和巴克什飞鼠，禁止对应撤离点才加价25%",
+  "records": [
+    {
+      "page": "desktop-absolute",
+      "label": "端游 · 绝密版 · 连续撤离单",
+      "dataMatch": true,
+      "sourceTierCount": 9,
+      "pairs": [
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "688",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1688",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1688",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "5888",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "2088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "3888",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "7488",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "2088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "3888",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "7488",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "compensation",
+          "number": "+200",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+300",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 5.00000000000005,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+300",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+200",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "margins": [
+        {
+          "role": "completion",
+          "top": 9.909423425,
+          "bottom": 13.909423425,
+          "groupCenterDelta": -2
+        },
+        {
+          "role": "valid-streak",
+          "top": 17.699096899999972,
+          "bottom": 16.69909689999986,
+          "groupCenterDelta": 0.5
+        },
+        {
+          "role": "failure-reset",
+          "top": 8.981933887499963,
+          "bottom": 14.981933887499963,
+          "groupCenterDelta": -3
+        },
+        {
+          "role": "card-rules",
+          "top": 13.6342777750001,
+          "bottom": 13.634277774999873,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "equipment-rules",
+          "top": 10.5390625,
+          "bottom": 10.5390625,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "top": 18.016601849999915,
+          "bottom": 18.016601850000143,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "top": 14.960448499999984,
+          "bottom": 14.960448499999984,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "loot-settlement",
+          "top": 11.46411175000003,
+          "bottom": 11.46411175000003,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "quick-extraction",
+          "top": 9.004882225000074,
+          "bottom": 9.004882225000074,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "top": 10.986084124999934,
+          "bottom": 10.986084125000161,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "top": 17.405956750000087,
+          "bottom": 17.40595674999986,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "map-0-row-0",
+          "top": 5.819335500000022,
+          "bottom": 5.819335499999966
+        },
+        {
+          "role": "map-0-row-1",
+          "top": 5.293701499999997,
+          "bottom": 5.293701499999997
+        },
+        {
+          "role": "map-0-row-2",
+          "top": 5.819335500000022,
+          "bottom": 5.819335499999966
+        },
+        {
+          "role": "map-1-row-0",
+          "top": 5.793701499999997,
+          "bottom": 5.793701499999997
+        },
+        {
+          "role": "map-1-row-1",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-1-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        },
+        {
+          "role": "map-2-row-0",
+          "top": 5.293701499999997,
+          "bottom": 5.293701499999997
+        },
+        {
+          "role": "map-2-row-1",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-2-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        }
+      ],
+      "bodyMinimumPhoneSize": 12.120165745856353,
+      "ordinaryBodyBold": true
+    },
+    {
+      "page": "desktop-secret",
+      "label": "端游 · 机密版 · 连续撤离单",
+      "dataMatch": true,
+      "sourceTierCount": 9,
+      "pairs": [
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "2788",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "4988",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "2788",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "4988",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "2288",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3388",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "5588",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "compensation",
+          "number": "+100",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 5,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+150",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+150",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+100",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 4.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "margins": [
+        {
+          "role": "completion",
+          "top": 9.909423425,
+          "bottom": 13.909423425,
+          "groupCenterDelta": -2
+        },
+        {
+          "role": "valid-streak",
+          "top": 17.699096899999972,
+          "bottom": 16.69909689999986,
+          "groupCenterDelta": 0.5
+        },
+        {
+          "role": "failure-reset",
+          "top": 8.981933887499963,
+          "bottom": 14.981933887499963,
+          "groupCenterDelta": -3
+        },
+        {
+          "role": "card-rules",
+          "top": 13.679199075000042,
+          "bottom": 13.679199074999815,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "equipment-rules",
+          "top": 10.5390625,
+          "bottom": 10.5390625,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "top": 18.08398495000006,
+          "bottom": 18.08398494999983,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "top": 14.960448499999984,
+          "bottom": 14.960448499999984,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "loot-settlement",
+          "top": 11.46411175000003,
+          "bottom": 11.46411175000003,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "quick-extraction",
+          "top": 9.004882225000074,
+          "bottom": 9.004882225000074,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "top": 10.986084124999934,
+          "bottom": 10.986084125000161,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "top": 17.405956750000087,
+          "bottom": 17.40595674999986,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "map-0-row-0",
+          "top": 5.819335500000022,
+          "bottom": 5.819335499999966
+        },
+        {
+          "role": "map-0-row-1",
+          "top": 5.319335500000022,
+          "bottom": 5.319335499999966
+        },
+        {
+          "role": "map-0-row-2",
+          "top": 5.819335500000022,
+          "bottom": 5.819335499999966
+        },
+        {
+          "role": "map-1-row-0",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        },
+        {
+          "role": "map-1-row-1",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-1-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        },
+        {
+          "role": "map-2-row-0",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-2-row-1",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-2-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        }
+      ],
+      "bodyMinimumPhoneSize": 12.120165745856353,
+      "ordinaryBodyBold": true
+    },
+    {
+      "page": "mobile-absolute",
+      "label": "手游 · 绝密版 · 连续撤离单",
+      "dataMatch": true,
+      "sourceTierCount": 9,
+      "pairs": [
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "688",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "5888",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "2088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "3488",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "7488",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "5888",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "compensation",
+          "number": "+200",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+300",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 5.00000000000005,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+300",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+200",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "margins": [
+        {
+          "role": "completion",
+          "top": 9.909423425,
+          "bottom": 13.909423425,
+          "groupCenterDelta": -2
+        },
+        {
+          "role": "valid-streak",
+          "top": 17.699096899999972,
+          "bottom": 16.69909689999986,
+          "groupCenterDelta": 0.5
+        },
+        {
+          "role": "failure-reset",
+          "top": 8.981933887499963,
+          "bottom": 14.981933887499963,
+          "groupCenterDelta": -3
+        },
+        {
+          "role": "card-rules",
+          "top": 13.6342777750001,
+          "bottom": 13.634277774999873,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "equipment-rules",
+          "top": 10.5390625,
+          "bottom": 10.5390625,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "top": 18.016601849999915,
+          "bottom": 18.016601850000143,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "top": 14.960448499999984,
+          "bottom": 14.960448499999984,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "loot-settlement",
+          "top": 11.46411175000003,
+          "bottom": 11.46411175000003,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "quick-extraction",
+          "top": 9.004882225000074,
+          "bottom": 9.004882225000074,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "top": 10.986084124999934,
+          "bottom": 10.986084125000161,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "top": 17.405956750000087,
+          "bottom": 17.40595674999986,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "map-0-row-0",
+          "top": 5.819335500000022,
+          "bottom": 5.819335499999966
+        },
+        {
+          "role": "map-0-row-1",
+          "top": 5.293701499999997,
+          "bottom": 5.293701499999997
+        },
+        {
+          "role": "map-0-row-2",
+          "top": 5.819335500000022,
+          "bottom": 5.819335499999966
+        },
+        {
+          "role": "map-1-row-0",
+          "top": 5.793701499999997,
+          "bottom": 5.793701499999997
+        },
+        {
+          "role": "map-1-row-1",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-1-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        },
+        {
+          "role": "map-2-row-0",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-2-row-1",
+          "top": 5.293701499999997,
+          "bottom": 5.293701499999997
+        },
+        {
+          "role": "map-2-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        }
+      ],
+      "bodyMinimumPhoneSize": 12.120165745856353,
+      "ordinaryBodyBold": true
+    },
+    {
+      "page": "mobile-secret",
+      "label": "手游 · 机密版 · 连续撤离单",
+      "dataMatch": true,
+      "sourceTierCount": 9,
+      "pairs": [
+        {
+          "role": "price",
+          "number": "188",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 7.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 168.74663912921133,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "5488",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "1288",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.75
+        },
+        {
+          "role": "loot",
+          "number": "5488",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "2288",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "3688",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 7.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "loot",
+          "number": "6488",
+          "unit": "w",
+          "unitX": 389.1271528464338,
+          "gap": 8.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7500000000000001
+        },
+        {
+          "role": "compensation",
+          "number": "+100",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 5,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+150",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+150",
+          "unit": "w",
+          "unitX": 414,
+          "gap": 4.999999999999993,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "compensation",
+          "number": "+100",
+          "unit": "w",
+          "unitX": 647,
+          "gap": 4.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "margins": [
+        {
+          "role": "completion",
+          "top": 9.909423425,
+          "bottom": 13.909423425,
+          "groupCenterDelta": -2
+        },
+        {
+          "role": "valid-streak",
+          "top": 17.699096899999972,
+          "bottom": 16.69909689999986,
+          "groupCenterDelta": 0.5
+        },
+        {
+          "role": "failure-reset",
+          "top": 8.981933887499963,
+          "bottom": 14.981933887499963,
+          "groupCenterDelta": -3
+        },
+        {
+          "role": "card-rules",
+          "top": 13.679199075000042,
+          "bottom": 13.679199074999815,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "equipment-rules",
+          "top": 10.5390625,
+          "bottom": 10.5390625,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "failed-order-compensation",
+          "top": 18.08398495000006,
+          "bottom": 18.08398494999983,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "safe-box-settlement",
+          "top": 14.960448499999984,
+          "bottom": 14.960448499999984,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "loot-settlement",
+          "top": 11.46411175000003,
+          "bottom": 11.46411175000003,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "quick-extraction",
+          "top": 9.004882225000074,
+          "bottom": 9.004882225000074,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "extraction-uplift",
+          "top": 10.986084124999934,
+          "bottom": 10.986084125000161,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "missing-compensation-group",
+          "top": 17.405956750000087,
+          "bottom": 17.40595674999986,
+          "groupCenterDelta": 0
+        },
+        {
+          "role": "map-0-row-0",
+          "top": 5.793701499999997,
+          "bottom": 5.793701499999997
+        },
+        {
+          "role": "map-0-row-1",
+          "top": 5.293701499999997,
+          "bottom": 5.293701499999997
+        },
+        {
+          "role": "map-0-row-2",
+          "top": 5.819335500000022,
+          "bottom": 5.819335499999966
+        },
+        {
+          "role": "map-1-row-0",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        },
+        {
+          "role": "map-1-row-1",
+          "top": 5.293701499999997,
+          "bottom": 5.293701499999997
+        },
+        {
+          "role": "map-1-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        },
+        {
+          "role": "map-2-row-0",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-2-row-1",
+          "top": 5.319335499999966,
+          "bottom": 5.319335500000079
+        },
+        {
+          "role": "map-2-row-2",
+          "top": 5.819335499999966,
+          "bottom": 5.819335500000079
+        }
+      ],
+      "bodyMinimumPhoneSize": 12.120165745856353,
+      "ordinaryBodyBold": true
+    },
+    {
+      "page": "cover",
+      "label": "连续撤离单 · 横版封面",
+      "dataMatch": true,
+      "sourceTierCount": 0,
+      "pairs": [],
+      "margins": [],
+      "ordinaryBodyBold": true
+    },
+    {
+      "page": "desktop-social",
+      "label": "端游 · 连续撤离单 · 简洁宣发",
+      "dataMatch": true,
+      "sourceTierCount": 18,
+      "pairs": [
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "688",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1288",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1688",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1688",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999957,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 6.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999957,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 6.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 6.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "5888",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "2088",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3888",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "7488",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "2088",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3888",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "7488",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000043,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "2788",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "4988",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000043,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "2788",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "4988",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "2288",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3388",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999957,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "5588",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "margins": [],
+      "ordinaryBodyBold": true
+    },
+    {
+      "page": "mobile-social",
+      "label": "手游 · 连续撤离单 · 简洁宣发",
+      "dataMatch": true,
+      "sourceTierCount": 18,
+      "pairs": [
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "388",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "688",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "1288",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 172.99577490529424,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "188",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 6.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999957,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "488",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "888",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 6.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "288",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999957,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "588",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999972,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "price",
+          "number": "988",
+          "unit": "r",
+          "unitX": 675.4957749052942,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "5888",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "2088",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3488",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "7488",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1688",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "5888",
+          "unit": "w",
+          "unitX": 336.7027064355168,
+          "gap": 6,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1088",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000028,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "5488",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000043,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "1288",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3088",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999943,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "5488",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000043,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "2288",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999986,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "3688",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 5.999999999999957,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        },
+        {
+          "role": "loot",
+          "number": "6488",
+          "unit": "w",
+          "unitX": 839.2027064355168,
+          "gap": 6.000000000000014,
+          "verticalCenterDelta": 0,
+          "visibleHeightRatio": 0.7499999999999999
+        }
+      ],
+      "margins": [],
+      "ordinaryBodyBold": true
+    }
+  ]
+}

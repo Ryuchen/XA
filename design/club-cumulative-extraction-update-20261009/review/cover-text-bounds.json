@@ -1,0 +1,73 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "lineGroup": "cy:115",
+    "x": 204.48571428571427,
+    "y": 95.50781199999999,
+    "width": 159.17968760000002,
+    "height": 38.984376,
+    "cy": 114.99999999999999,
+    "baseline": 128.88671824,
+    "effectiveSize": 40,
+    "requestedSize": 40,
+    "font": "Microsoft YaHei UI",
+    "fontWeight": 700
+  },
+  {
+    "text": "累计",
+    "role": "art-title",
+    "x": 145,
+    "y": 211.85557239246236,
+    "width": 363.9783165596674,
+    "height": 196.28885521507527,
+    "cy": 310,
+    "effectiveSize": 180,
+    "font": "Noto Sans SC Black",
+    "fontWeight": 900,
+    "includesDecoration": true
+  },
+  {
+    "text": "撤离单",
+    "role": "art-title",
+    "x": 145,
+    "y": 441.584838350307,
+    "width": 546.2365689343173,
+    "height": 202.830323299386,
+    "cy": 543,
+    "effectiveSize": 182,
+    "font": "Noto Sans SC Black",
+    "fontWeight": 900,
+    "includesDecoration": true
+  },
+  {
+    "text": "累计撤离 · 物资保底",
+    "role": "cover-subtitle",
+    "lineGroup": "cy:737",
+    "x": 250.39160146999998,
+    "y": 718.9877931999999,
+    "width": 333.21679706000003,
+    "height": 36.0244136,
+    "cy": 737,
+    "baseline": 750.0078124999999,
+    "effectiveSize": 37,
+    "requestedSize": 37,
+    "font": "Microsoft YaHei UI",
+    "fontWeight": 700
+  },
+  {
+    "text": "端游 / 手游 · 绝密 / 机密",
+    "role": "cover-platforms",
+    "lineGroup": "cy:832",
+    "x": 255.43261755,
+    "y": 817.75488245,
+    "width": 323.1347649,
+    "height": 28.490235099999996,
+    "cy": 832,
+    "baseline": 842.039550426,
+    "effectiveSize": 29,
+    "requestedSize": 29,
+    "font": "Microsoft YaHei UI",
+    "fontWeight": 700
+  }
+]

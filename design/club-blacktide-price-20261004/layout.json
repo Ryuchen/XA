@@ -1,0 +1,4667 @@
+{
+  "requests": [
+    {
+      "id": "t9f5e488d1e564e725a5d",
+      "text": "XINGAN CLUB",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t8ba94919758a81ff6c74",
+      "text": "兴安电竞",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tcbf27f5a9fd9b86e51f2",
+      "text": "黑",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t905b7d55eeab9a31ca15",
+      "text": "潮",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tb80600a6065ea63a3ac9",
+      "text": "爆",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t97e5ac8f4dbd6781ba6a",
+      "text": "破",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t21e412323ee16166eb69",
+      "text": "陪玩价目表",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td554f071b9cfb4d5de3f",
+      "text": "三角洲行动 · DELTA FORCE",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t1fb266184c4930a8c5bc",
+      "text": "01",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tefd529fe2758153fafed",
+      "text": "时薪陪玩",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t068370c7e4b514d75761",
+      "text": "单位：元／小时",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0acf65fc76c57010ff40",
+      "text": "02",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t10aa69569769f2bd224d",
+      "text": "排位按把",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tcc655250751f98dc0a94",
+      "text": "单位：元／把",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tbbe0252cf0193df3cba3",
+      "text": "段位",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t5e6a2cee4827107ecb66",
+      "text": "娱乐",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td63756aa96c328fd6049",
+      "text": "王者",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t16cb3766a6c7a955f63b",
+      "text": "大师",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te32d5d2d877b4d9f3ce5",
+      "text": "传奇",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t3addbee32f8f9580f6e9",
+      "text": "荣耀",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td0fe38288b225f025536",
+      "text": "明星",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tf0734f26c3a2c3615bfe",
+      "text": "下三",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tbda2e416df44a0fc56f3",
+      "text": "／匹配",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t113c2000d68707d51485",
+      "text": "40",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t3be0fb6b30adb6bff8bf",
+      "text": "r",
+      "font": "Bahnschrift",
+      "style": 0
+    },
+    {
+      "id": "ta3d3bdc5da8b4b531450",
+      "text": "50",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tf7585db47e328129605c",
+      "text": "60",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "ta0e91384ced2b698830e",
+      "text": "70",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t66afe2363e781a9cad97",
+      "text": "80",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "ta84c315ccb05b655f9f1",
+      "text": "90",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td3b4084fb42dcf42c4e7",
+      "text": "铂金",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t310a06cb8e28e7e9652e",
+      "text": "100",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tf1738d71200ff688cc21",
+      "text": "钻石",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t0efefe7dd09f69cd6097",
+      "text": "110",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "te1f5ea74e91002047adb",
+      "text": "赤枭",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t88e21deb81eee3e32b62",
+      "text": "120",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t1cf75e05c073a15a76a8",
+      "text": "—",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0488424720f40575be93",
+      "text": "130",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "ta03ff10c6c5c1f2b7262",
+      "text": "王冠",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t9410785adaf959997e6e",
+      "text": "140",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t007ccc1e7e347944e6df",
+      "text": "20",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td40b0080a74c83950fed",
+      "text": "30",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tfae8ff52123f0d296735",
+      "text": "35",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "ta55f66ff279754383a99",
+      "text": "45",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "te631c03f9f6735f2218c",
+      "text": "25",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tbb4a95b1aa5ef510baf0",
+      "text": "55",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t3f9dd5d96d9fb2a72915",
+      "text": "65",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tf1e60746c98b5d17e785",
+      "text": "75",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t4f94a488e14d5bb850a5",
+      "text": "女陪／娱乐陪无赔付",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t73bfaca4ceb7ba3f0054",
+      "text": "  ·  ",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf70b34254a2b3ad0fd34",
+      "text": "— 表示无对应段位单价，接单口径见须知",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t078ea459fccefc38eb89",
+      "text": "03",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t0b55d7b90297c1db30b5",
+      "text": "赔付标准",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7c2bd666804b3ca3a8c3",
+      "text": "一陪",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t54ed522f41170bbc6652",
+      "text": "赢局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tdbc2ef72025cd1c82a95",
+      "text": "或",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf3ff78aefce8471d38c3",
+      "text": "SVP",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t69f2fa935ee1ccd9e94f",
+      "text": "对局伤害最高",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tc8a8e1908897d5fd1564",
+      "text": "满足任意一项，即正常结算",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t8952e461d05eec4d4dff",
+      "text": "要求打工程位无赔付",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7eb20534c9621edc2269",
+      "text": "双陪",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6dacbdd40c1e7721d643",
+      "text": "两人中任意一人达成任意一项，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tc088696701a2d83433c8",
+      "text": "即正常结算",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t7958a89545569f7ed1c8",
+      "text": "三陪",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t703e3904e202a3ac6953",
+      "text": "输路人",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t1f40d5ef95dd67510c15",
+      "text": "→",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "td89596ea6fddffc8040f",
+      "text": "免当局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7d1af98c4970fa97ddae",
+      "text": "不含陪玩车、胜率车",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t78bb4b8ad06aedb21bc1",
+      "text": "四陪",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tfe46bee064ae0b21ea08",
+      "text": "免1小时",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te3cfd627a63fdab6a172",
+      "text": "输车队",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t078737b02345b407cabe",
+      "text": "五陪",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t2e1947beee45356afb5e",
+      "text": "只结赢局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t8648e82472ed58b2c943",
+      "text": "（挂局不计入）",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "td7ba7d1ef57ea021032b",
+      "text": "04",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t577d8900c9ee83fb7b84",
+      "text": "加价说明",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t3fa1603b2c2b1c8cf936",
+      "text": "技术陪1陪多／2陪3",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7e928696afe4a5ec1845",
+      "text": "下三",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0fd46608f0b42b2a4187",
+      "text": "+5",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "ta7c52303f62440d1b4cf",
+      "text": "R/小时/人",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tdcf2c8c4d25b0b8d46de",
+      "text": "铂金至赤枭",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t8cc0101eda8be7bc1c97",
+      "text": "+10",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tf0141ad9972bce6255ad",
+      "text": "传奇及以上",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t6870203ad730016daa8a",
+      "text": "+20",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t61c67624904cdffcec00",
+      "text": "无需赔付则无需加价",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t664c617a6734510929e7",
+      "text": "甜蜜／教学",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t80de997b61ae1e0a4310",
+      "text": "R/人",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t5641fc56db7b102f5f1b",
+      "text": "特殊称呼",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t370f7f804c656af7b6ff",
+      "text": "按把结算",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te45e82408f606b1c1021",
+      "text": "指定女陪",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tc1c715415375bf969531",
+      "text": "R/把",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t625aa88573339955f815",
+      "text": "≥4陪",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0f3e34f545d1b7f4ca3a",
+      "text": "−5",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t18f71d1b030839b65b5e",
+      "text": "R/把/人",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "te5d6aedc92f2cfcc2a3c",
+      "text": "1陪多／2陪3",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf94e7e0b1b8ca40c5046",
+      "text": "不加价",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te19cf27d695fb1d4432b",
+      "text": "技术陪人数＜娱乐陪人数，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t466269db2991430c9029",
+      "text": "按少陪多计算",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta4dc3b5ad70afb4e52bf",
+      "text": "05",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td49449d692c05cf684db",
+      "text": "红屏计时",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t1c4a6b8b6a4ef893a4a4",
+      "text": "适用于有赔付订单 · 红屏即检测到挂",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t894f1a497e529719879a",
+      "text": "未满11回合",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6e3085fe506d1cc098ba",
+      "text": "不计入",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t4dd1e24c69a8af78cb4d",
+      "text": "11回合及以上",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tcab339a1c2601ff67824",
+      "text": "计半局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t8f108cb2c6f4abf06575",
+      "text": "赛点及加时",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te14dc9362270b9a55ee9",
+      "text": "计整局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tdbcf108088e274603acb",
+      "text": "娱乐陪红屏正常计费",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tab0d5b2a55925a683ea9",
+      "text": "默认 ",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t7cb1101577fe930b9711",
+      "text": "1小时",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t70d2c40d0088180fb994",
+      "text": " = ",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t7e3c4c7cf1677591fa4b",
+      "text": "2局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t45815625a89c61c50504",
+      "text": "免1局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tb9b8a5285e12a91cb7e1",
+      "text": " = 0.5小时",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "td1ae8ce6fe6b67cffed4",
+      "text": "免半局",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta78019128e0a1bc663fa",
+      "text": " = 0.25小时",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t3b25f2ab3a7329942c78",
+      "text": "06",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t0707301366230f97ee2f",
+      "text": "结算与补充",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t273d487b9568897d4bca",
+      "text": "平局按赢局结算",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te0385ebc35c4c317c55d",
+      "text": "赔付标准适用于时薪陪玩单和按把结算单",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "tf3080b297cde7ffd5eca",
+      "text": "无对应段位价格时，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t95edb177e68baeeed3e9",
+      "text": "按该陪玩最高单价接单，且无赔付",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t76d7608e5a6f1cf3e108",
+      "text": "1P0按1P1赔付标准计算",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "ta6fa420e2d3d5dbb671e",
+      "text": "兴安电竞 · 黑潮爆破 · 陪玩价目表与点单须知",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    }
+  ],
+  "pages": [
+    {
+      "id": "blacktide",
+      "label": "兴安电竞 · 黑潮爆破陪玩价目表 · 双倍宽版",
+      "bg": "blacktide.png",
+      "w": 2160,
+      "h": 3430,
+      "ew": 4800,
+      "eh": 7622,
+      "platforms": [
+        "desktop"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<rect x=\"427\" y=\"66\" width=\"438\" height=\"61\" rx=\"30\" fill=\"#fff\" stroke=\"#b9cbd9\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t9f5e488d1e564e725a5d",
+          "text": "XINGAN CLUB",
+          "x": 646,
+          "cy": 96,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hero"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 646,
+          "cy": 174,
+          "size": 66,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hero"
+        },
+        {
+          "type": "art",
+          "text": "黑潮爆破",
+          "ids": [
+            "tcbf27f5a9fd9b86e51f2",
+            "t905b7d55eeab9a31ca15",
+            "tb80600a6065ea63a3ac9",
+            "t97e5ac8f4dbd6781ba6a"
+          ],
+          "x": 646,
+          "cy": 304,
+          "size": 166,
+          "maxWidth": 1100,
+          "anchor": "middle",
+          "fill": "#243f55",
+          "shadow": "#b7c6e0",
+          "outline": "#fffefa",
+          "outlineWidth": 5.4,
+          "angles": true
+        },
+        {
+          "type": "text",
+          "id": "t21e412323ee16166eb69",
+          "text": "陪玩价目表",
+          "x": 646,
+          "cy": 432,
+          "size": 66,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hero"
+        },
+        {
+          "type": "text",
+          "id": "td554f071b9cfb4d5de3f",
+          "text": "三角洲行动 · DELTA FORCE",
+          "x": 646,
+          "cy": 506,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hero"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"579\" width=\"58\" height=\"67\" rx=\"12\" fill=\"#243f55\" stroke=\"#243f55\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t1fb266184c4930a8c5bc",
+          "text": "01",
+          "x": 83,
+          "cy": 613,
+          "size": 34,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "heading-hourly"
+        },
+        {
+          "type": "text",
+          "id": "tefd529fe2758153fafed",
+          "text": "时薪陪玩",
+          "x": 132,
+          "cy": 613,
+          "size": 54,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "heading-hourly"
+        },
+        {
+          "type": "text",
+          "id": "t068370c7e4b514d75761",
+          "text": "单位：元／小时",
+          "x": 1025,
+          "cy": 613,
+          "size": 36,
+          "fill": "#647d91",
+          "anchor": "end",
+          "role": "copy",
+          "group": "heading-hourly"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"579\" width=\"58\" height=\"67\" rx=\"12\" fill=\"#243f55\" stroke=\"#243f55\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t0acf65fc76c57010ff40",
+          "text": "02",
+          "x": 1163,
+          "cy": 613,
+          "size": 34,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "heading-rounds"
+        },
+        {
+          "type": "text",
+          "id": "t10aa69569769f2bd224d",
+          "text": "排位按把",
+          "x": 1212,
+          "cy": 613,
+          "size": 54,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "heading-rounds"
+        },
+        {
+          "type": "text",
+          "id": "tcc655250751f98dc0a94",
+          "text": "单位：元／把",
+          "x": 2105,
+          "cy": 613,
+          "size": 36,
+          "fill": "#647d91",
+          "anchor": "end",
+          "role": "copy",
+          "group": "heading-rounds"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"677\" width=\"972\" height=\"676\" rx=\"20\" fill=\"#fff\" stroke=\"#b8cbd9\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M74 677H1006Q1026 677 1026 697V765H54V697Q54 677 74 677Z\" fill=\"#243f55\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tbbe0252cf0193df3cba3",
+          "text": "段位",
+          "x": 138,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-header"
+        },
+        {
+          "type": "text",
+          "id": "t5e6a2cee4827107ecb66",
+          "text": "娱乐",
+          "x": 289,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-header"
+        },
+        {
+          "type": "text",
+          "id": "td63756aa96c328fd6049",
+          "text": "王者",
+          "x": 423,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-header"
+        },
+        {
+          "type": "text",
+          "id": "t16cb3766a6c7a955f63b",
+          "text": "大师",
+          "x": 557,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-header"
+        },
+        {
+          "type": "text",
+          "id": "te32d5d2d877b4d9f3ce5",
+          "text": "传奇",
+          "x": 691,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-header"
+        },
+        {
+          "type": "text",
+          "id": "t3addbee32f8f9580f6e9",
+          "text": "荣耀",
+          "x": 825,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-header"
+        },
+        {
+          "type": "text",
+          "id": "td0fe38288b225f025536",
+          "text": "明星",
+          "x": 959,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-header"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"56\" y=\"765\" width=\"968\" height=\"98\" fill=\"#e9f2f8\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tf0734f26c3a2c3615bfe",
+          "text": "下三",
+          "x": 138,
+          "cy": 794,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "tbda2e416df44a0fc56f3",
+          "text": "／匹配",
+          "x": 138,
+          "cy": 837,
+          "size": 30,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t113c2000d68707d51485",
+          "text": "40",
+          "x": 310,
+          "cy": 814,
+          "size": 44,
+          "fill": "#647d91",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 318,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "ta3d3bdc5da8b4b531450",
+          "text": "50",
+          "x": 444,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 452,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "tf7585db47e328129605c",
+          "text": "60",
+          "x": 578,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 586,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "ta0e91384ced2b698830e",
+          "text": "70",
+          "x": 712,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 720,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t66afe2363e781a9cad97",
+          "text": "80",
+          "x": 846,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 854,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "ta84c315ccb05b655f9f1",
+          "text": "90",
+          "x": 980,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 988,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-0"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M71 863H1009\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"56\" y=\"863\" width=\"968\" height=\"98\" fill=\"#ffffff\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "td3b4084fb42dcf42c4e7",
+          "text": "铂金",
+          "x": 138,
+          "cy": 912,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "ta3d3bdc5da8b4b531450",
+          "text": "50",
+          "x": 310,
+          "cy": 912,
+          "size": 44,
+          "fill": "#647d91",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 318,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "tf7585db47e328129605c",
+          "text": "60",
+          "x": 444,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 452,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "ta0e91384ced2b698830e",
+          "text": "70",
+          "x": 578,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 586,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t66afe2363e781a9cad97",
+          "text": "80",
+          "x": 712,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 720,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "ta84c315ccb05b655f9f1",
+          "text": "90",
+          "x": 846,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 854,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t310a06cb8e28e7e9652e",
+          "text": "100",
+          "x": 980,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 988,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-1"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M71 961H1009\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"56\" y=\"961\" width=\"968\" height=\"98\" fill=\"#e9f2f8\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tf1738d71200ff688cc21",
+          "text": "钻石",
+          "x": 138,
+          "cy": 1010,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "tf7585db47e328129605c",
+          "text": "60",
+          "x": 310,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#647d91",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 318,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "ta0e91384ced2b698830e",
+          "text": "70",
+          "x": 444,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 452,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t66afe2363e781a9cad97",
+          "text": "80",
+          "x": 578,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 586,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "ta84c315ccb05b655f9f1",
+          "text": "90",
+          "x": 712,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 720,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t310a06cb8e28e7e9652e",
+          "text": "100",
+          "x": 846,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 854,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t0efefe7dd09f69cd6097",
+          "text": "110",
+          "x": 980,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 988,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-2"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M71 1059H1009\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"56\" y=\"1059\" width=\"968\" height=\"98\" fill=\"#ffffff\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "te1f5ea74e91002047adb",
+          "text": "赤枭",
+          "x": 138,
+          "cy": 1108,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "ta0e91384ced2b698830e",
+          "text": "70",
+          "x": 310,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#647d91",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 318,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t66afe2363e781a9cad97",
+          "text": "80",
+          "x": 444,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 452,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "ta84c315ccb05b655f9f1",
+          "text": "90",
+          "x": 578,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 586,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t310a06cb8e28e7e9652e",
+          "text": "100",
+          "x": 712,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 720,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t0efefe7dd09f69cd6097",
+          "text": "110",
+          "x": 846,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 854,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t88e21deb81eee3e32b62",
+          "text": "120",
+          "x": 980,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 988,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-3"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M71 1157H1009\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"56\" y=\"1157\" width=\"968\" height=\"98\" fill=\"#e9f2f8\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "te32d5d2d877b4d9f3ce5",
+          "text": "传奇",
+          "x": 138,
+          "cy": 1206,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 289,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "ta84c315ccb05b655f9f1",
+          "text": "90",
+          "x": 444,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 452,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t310a06cb8e28e7e9652e",
+          "text": "100",
+          "x": 578,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 586,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t0efefe7dd09f69cd6097",
+          "text": "110",
+          "x": 712,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 720,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t88e21deb81eee3e32b62",
+          "text": "120",
+          "x": 846,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 854,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t0488424720f40575be93",
+          "text": "130",
+          "x": 980,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 988,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-4"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M71 1255H1009\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"56\" y=\"1255\" width=\"968\" height=\"98\" fill=\"#ffffff\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "ta03ff10c6c5c1f2b7262",
+          "text": "王冠",
+          "x": 138,
+          "cy": 1304,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 289,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t310a06cb8e28e7e9652e",
+          "text": "100",
+          "x": 444,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 452,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t0efefe7dd09f69cd6097",
+          "text": "110",
+          "x": 578,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 586,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t88e21deb81eee3e32b62",
+          "text": "120",
+          "x": 712,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 720,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t0488424720f40575be93",
+          "text": "130",
+          "x": 846,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 854,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t9410785adaf959997e6e",
+          "text": "140",
+          "x": 980,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 988,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "hourly-row-5"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M222 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M356 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M490 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M624 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M758 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M892 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"677\" width=\"972\" height=\"676\" rx=\"20\" fill=\"#fff\" stroke=\"#b8cbd9\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1154 677H2086Q2106 677 2106 697V765H1134V697Q1134 677 1154 677Z\" fill=\"#243f55\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tbbe0252cf0193df3cba3",
+          "text": "段位",
+          "x": 1218,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-header"
+        },
+        {
+          "type": "text",
+          "id": "t5e6a2cee4827107ecb66",
+          "text": "娱乐",
+          "x": 1369,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-header"
+        },
+        {
+          "type": "text",
+          "id": "td63756aa96c328fd6049",
+          "text": "王者",
+          "x": 1503,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-header"
+        },
+        {
+          "type": "text",
+          "id": "t16cb3766a6c7a955f63b",
+          "text": "大师",
+          "x": 1637,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-header"
+        },
+        {
+          "type": "text",
+          "id": "te32d5d2d877b4d9f3ce5",
+          "text": "传奇",
+          "x": 1771,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-header"
+        },
+        {
+          "type": "text",
+          "id": "t3addbee32f8f9580f6e9",
+          "text": "荣耀",
+          "x": 1905,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-header"
+        },
+        {
+          "type": "text",
+          "id": "td0fe38288b225f025536",
+          "text": "明星",
+          "x": 2039,
+          "cy": 721,
+          "size": 40,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-header"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1136\" y=\"765\" width=\"968\" height=\"98\" fill=\"#e9f2f8\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tf0734f26c3a2c3615bfe",
+          "text": "下三",
+          "x": 1218,
+          "cy": 814,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1369,
+          "cy": 814,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t007ccc1e7e347944e6df",
+          "text": "20",
+          "x": 1524,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1532,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "td40b0080a74c83950fed",
+          "text": "30",
+          "x": 1658,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1666,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "tfae8ff52123f0d296735",
+          "text": "35",
+          "x": 1792,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1800,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t113c2000d68707d51485",
+          "text": "40",
+          "x": 1926,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1934,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "ta55f66ff279754383a99",
+          "text": "45",
+          "x": 2060,
+          "cy": 814,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 2068,
+          "cy": 814,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-0"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1151 863H2089\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1136\" y=\"863\" width=\"968\" height=\"98\" fill=\"#ffffff\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "td3b4084fb42dcf42c4e7",
+          "text": "铂金",
+          "x": 1218,
+          "cy": 912,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1369,
+          "cy": 912,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "te631c03f9f6735f2218c",
+          "text": "25",
+          "x": 1524,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1532,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "tfae8ff52123f0d296735",
+          "text": "35",
+          "x": 1658,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1666,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t113c2000d68707d51485",
+          "text": "40",
+          "x": 1792,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1800,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "ta55f66ff279754383a99",
+          "text": "45",
+          "x": 1926,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1934,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "ta3d3bdc5da8b4b531450",
+          "text": "50",
+          "x": 2060,
+          "cy": 912,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 2068,
+          "cy": 912,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-1"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1151 961H2089\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1136\" y=\"961\" width=\"968\" height=\"98\" fill=\"#e9f2f8\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tf1738d71200ff688cc21",
+          "text": "钻石",
+          "x": 1218,
+          "cy": 1010,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1369,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "td40b0080a74c83950fed",
+          "text": "30",
+          "x": 1524,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1532,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t113c2000d68707d51485",
+          "text": "40",
+          "x": 1658,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1666,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "ta55f66ff279754383a99",
+          "text": "45",
+          "x": 1792,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1800,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "ta3d3bdc5da8b4b531450",
+          "text": "50",
+          "x": 1926,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1934,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "tbb4a95b1aa5ef510baf0",
+          "text": "55",
+          "x": 2060,
+          "cy": 1010,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 2068,
+          "cy": 1010,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-2"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1151 1059H2089\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1136\" y=\"1059\" width=\"968\" height=\"98\" fill=\"#ffffff\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "te1f5ea74e91002047adb",
+          "text": "赤枭",
+          "x": 1218,
+          "cy": 1108,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1369,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "tfae8ff52123f0d296735",
+          "text": "35",
+          "x": 1524,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1532,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "ta55f66ff279754383a99",
+          "text": "45",
+          "x": 1658,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1666,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "ta3d3bdc5da8b4b531450",
+          "text": "50",
+          "x": 1792,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1800,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "tbb4a95b1aa5ef510baf0",
+          "text": "55",
+          "x": 1926,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1934,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "tf7585db47e328129605c",
+          "text": "60",
+          "x": 2060,
+          "cy": 1108,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 2068,
+          "cy": 1108,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-3"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1151 1157H2089\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1136\" y=\"1157\" width=\"968\" height=\"98\" fill=\"#e9f2f8\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "te32d5d2d877b4d9f3ce5",
+          "text": "传奇",
+          "x": 1218,
+          "cy": 1206,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1369,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1503,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "ta3d3bdc5da8b4b531450",
+          "text": "50",
+          "x": 1658,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1666,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "tbb4a95b1aa5ef510baf0",
+          "text": "55",
+          "x": 1792,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1800,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "tf7585db47e328129605c",
+          "text": "60",
+          "x": 1926,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1934,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3f9dd5d96d9fb2a72915",
+          "text": "65",
+          "x": 2060,
+          "cy": 1206,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 2068,
+          "cy": 1206,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-4"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1151 1255H2089\" fill=\"none\" stroke=\"#dfe7ef\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1136\" y=\"1255\" width=\"968\" height=\"98\" fill=\"#ffffff\" opacity=\".66\"/>"
+        },
+        {
+          "type": "text",
+          "id": "ta03ff10c6c5c1f2b7262",
+          "text": "王冠",
+          "x": 1218,
+          "cy": 1304,
+          "size": 38,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1369,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1503,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t1cf75e05c073a15a76a8",
+          "text": "—",
+          "x": 1637,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#9eb0bd",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3f9dd5d96d9fb2a72915",
+          "text": "65",
+          "x": 1792,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1800,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "ta0e91384ced2b698830e",
+          "text": "70",
+          "x": 1926,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 1934,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "tf1e60746c98b5d17e785",
+          "text": "75",
+          "x": 2060,
+          "cy": 1304,
+          "size": 44,
+          "fill": "#243f55",
+          "anchor": "end",
+          "role": "price-number",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "text",
+          "id": "t3be0fb6b30adb6bff8bf",
+          "text": "r",
+          "x": 2068,
+          "cy": 1304,
+          "size": 30,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "price-unit",
+          "group": "rounds-row-5"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1302 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1436 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1570 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1704 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1838 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1972 765V1343\" stroke=\"#d7e2ec\" stroke-width=\"1.5\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"1375\" width=\"2052\" height=\"75\" rx=\"22\" fill=\"#f3f0fa\" stroke=\"#d8d1e9\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "女陪／娱乐陪无赔付",
+              "bold": true,
+              "fill": "#8170b1",
+              "size": 44,
+              "id": "t4f94a488e14d5bb850a5"
+            },
+            {
+              "text": "  ·  ",
+              "fill": "#647d91",
+              "size": 38,
+              "id": "t73bfaca4ceb7ba3f0054"
+            },
+            {
+              "text": "— 表示无对应段位单价，接单口径见须知",
+              "size": 38,
+              "fill": "#647d91",
+              "id": "tf70b34254a2b3ad0fd34"
+            }
+          ],
+          "x": 1080,
+          "cy": 1412.5,
+          "size": 44,
+          "anchor": "middle",
+          "role": "table-note",
+          "group": "price-note-line-213"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"1481\" width=\"58\" height=\"67\" rx=\"12\" fill=\"#243f55\" stroke=\"#243f55\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t078ea459fccefc38eb89",
+          "text": "03",
+          "x": 83,
+          "cy": 1515,
+          "size": 34,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "heading-compensation"
+        },
+        {
+          "type": "text",
+          "id": "t0b55d7b90297c1db30b5",
+          "text": "赔付标准",
+          "x": 132,
+          "cy": 1515,
+          "size": 54,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "heading-compensation"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"1573\" width=\"972\" height=\"222\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"74\" y=\"1593\" width=\"124\" height=\"182\" rx=\"14\" fill=\"#f3f0fa\" stroke=\"#e0daed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t7c2bd666804b3ca3a8c3",
+          "text": "一陪",
+          "x": 136,
+          "cy": 1684,
+          "size": 43,
+          "fill": "#8170b1",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "compensation-一陪"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "赢局",
+              "bold": true,
+              "id": "t54ed522f41170bbc6652",
+              "fill": "#243f55"
+            },
+            {
+              "text": "或",
+              "fill": "#647d91",
+              "id": "tdbc2ef72025cd1c82a95"
+            },
+            {
+              "text": "SVP",
+              "bold": true,
+              "font": "Bahnschrift",
+              "id": "tf3ff78aefce8471d38c3",
+              "fill": "#243f55"
+            },
+            {
+              "text": "或",
+              "fill": "#647d91",
+              "id": "tdbc2ef72025cd1c82a95"
+            },
+            {
+              "text": "对局伤害最高",
+              "bold": true,
+              "id": "t69f2fa935ee1ccd9e94f",
+              "fill": "#243f55"
+            }
+          ],
+          "x": 229,
+          "cy": 1624,
+          "size": 44,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-一陪-line-220"
+        },
+        {
+          "type": "text",
+          "id": "tc8a8e1908897d5fd1564",
+          "text": "满足任意一项，即正常结算",
+          "x": 229,
+          "cy": 1684,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-一陪"
+        },
+        {
+          "type": "text",
+          "id": "t8952e461d05eec4d4dff",
+          "text": "要求打工程位无赔付",
+          "x": 229,
+          "cy": 1744,
+          "size": 42,
+          "fill": "#8170b1",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-一陪"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"1815\" width=\"972\" height=\"232\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"74\" y=\"1835\" width=\"124\" height=\"192\" rx=\"14\" fill=\"#f3f0fa\" stroke=\"#e0daed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t7eb20534c9621edc2269",
+          "text": "双陪",
+          "x": 136,
+          "cy": 1931,
+          "size": 43,
+          "fill": "#8170b1",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "compensation-双陪"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "赢局",
+              "bold": true,
+              "id": "t54ed522f41170bbc6652",
+              "fill": "#243f55"
+            },
+            {
+              "text": "或",
+              "fill": "#647d91",
+              "id": "tdbc2ef72025cd1c82a95"
+            },
+            {
+              "text": "SVP",
+              "bold": true,
+              "font": "Bahnschrift",
+              "id": "tf3ff78aefce8471d38c3",
+              "fill": "#243f55"
+            },
+            {
+              "text": "或",
+              "fill": "#647d91",
+              "id": "tdbc2ef72025cd1c82a95"
+            },
+            {
+              "text": "对局伤害最高",
+              "bold": true,
+              "id": "t69f2fa935ee1ccd9e94f",
+              "fill": "#243f55"
+            }
+          ],
+          "x": 229,
+          "cy": 1865,
+          "size": 44,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-双陪-line-226"
+        },
+        {
+          "type": "text",
+          "id": "t6dacbdd40c1e7721d643",
+          "text": "两人中任意一人达成任意一项，",
+          "x": 229,
+          "cy": 1930,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-双陪"
+        },
+        {
+          "type": "text",
+          "id": "tc088696701a2d83433c8",
+          "text": "即正常结算",
+          "x": 229,
+          "cy": 1990,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-双陪"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"2067\" width=\"972\" height=\"174\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"74\" y=\"2087\" width=\"124\" height=\"134\" rx=\"14\" fill=\"#f3f0fa\" stroke=\"#e0daed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t7958a89545569f7ed1c8",
+          "text": "三陪",
+          "x": 136,
+          "cy": 2154,
+          "size": 43,
+          "fill": "#8170b1",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "compensation-三陪"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "输路人",
+              "id": "t703e3904e202a3ac6953",
+              "fill": "#243f55"
+            },
+            {
+              "text": "→",
+              "fill": "#647d91",
+              "id": "t1f40d5ef95dd67510c15"
+            },
+            {
+              "text": "免当局",
+              "bold": true,
+              "fill": "#8170b1",
+              "id": "td89596ea6fddffc8040f"
+            }
+          ],
+          "x": 229,
+          "cy": 2118,
+          "size": 48,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-三陪-line-232"
+        },
+        {
+          "type": "text",
+          "id": "t7d1af98c4970fa97ddae",
+          "text": "不含陪玩车、胜率车",
+          "x": 229,
+          "cy": 2186,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-三陪"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"2261\" width=\"972\" height=\"194\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"74\" y=\"2281\" width=\"124\" height=\"154\" rx=\"14\" fill=\"#f3f0fa\" stroke=\"#e0daed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t78bb4b8ad06aedb21bc1",
+          "text": "四陪",
+          "x": 136,
+          "cy": 2358,
+          "size": 43,
+          "fill": "#8170b1",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "compensation-四陪"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "输路人",
+              "id": "t703e3904e202a3ac6953",
+              "fill": "#243f55"
+            },
+            {
+              "text": "→",
+              "fill": "#647d91",
+              "id": "t1f40d5ef95dd67510c15"
+            },
+            {
+              "text": "免1小时",
+              "bold": true,
+              "fill": "#8170b1",
+              "id": "tfe46bee064ae0b21ea08"
+            }
+          ],
+          "x": 229,
+          "cy": 2321,
+          "size": 48,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-四陪-line-237"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "输车队",
+              "id": "te3cfd627a63fdab6a172",
+              "fill": "#243f55"
+            },
+            {
+              "text": "→",
+              "fill": "#647d91",
+              "id": "t1f40d5ef95dd67510c15"
+            },
+            {
+              "text": "免当局",
+              "bold": true,
+              "fill": "#8170b1",
+              "id": "td89596ea6fddffc8040f"
+            }
+          ],
+          "x": 229,
+          "cy": 2393,
+          "size": 48,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-四陪-line-238"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"2475\" width=\"972\" height=\"117\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"74\" y=\"2495\" width=\"124\" height=\"77\" rx=\"14\" fill=\"#f3f0fa\" stroke=\"#e0daed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t078737b02345b407cabe",
+          "text": "五陪",
+          "x": 136,
+          "cy": 2533.5,
+          "size": 43,
+          "fill": "#8170b1",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "compensation-五陪"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "只结赢局",
+              "bold": true,
+              "id": "t2e1947beee45356afb5e",
+              "fill": "#243f55"
+            },
+            {
+              "text": "（挂局不计入）",
+              "fill": "#647d91",
+              "id": "t8648e82472ed58b2c943"
+            }
+          ],
+          "x": 229,
+          "cy": 2533,
+          "size": 44,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "compensation-五陪-line-242"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"1481\" width=\"58\" height=\"67\" rx=\"12\" fill=\"#243f55\" stroke=\"#243f55\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "td7ba7d1ef57ea021032b",
+          "text": "04",
+          "x": 1163,
+          "cy": 1515,
+          "size": 34,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "heading-additions"
+        },
+        {
+          "type": "text",
+          "id": "t577d8900c9ee83fb7b84",
+          "text": "加价说明",
+          "x": 1212,
+          "cy": 1515,
+          "size": 54,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "heading-additions"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"1573\" width=\"972\" height=\"391\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t3fa1603b2c2b1c8cf936",
+          "text": "技术陪1陪多／2陪3",
+          "x": 1620,
+          "cy": 1625,
+          "size": 46,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "hourly-additions"
+        },
+        {
+          "type": "text",
+          "id": "t7e928696afe4a5ec1845",
+          "text": "下三",
+          "x": 1172,
+          "cy": 1694,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "hourly-additions"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "+5",
+              "bold": true,
+              "font": "Bahnschrift",
+              "fill": "#8170b1",
+              "size": 48,
+              "id": "t0fd46608f0b42b2a4187"
+            },
+            {
+              "text": "R/小时/人",
+              "size": 35,
+              "fill": "#8170b1",
+              "id": "ta7c52303f62440d1b4cf"
+            }
+          ],
+          "x": 2066,
+          "cy": 1694,
+          "size": 44,
+          "anchor": "end",
+          "role": "price-unit",
+          "group": "hourly-additions-line-249"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1172 1730H2066\" fill=\"none\" stroke=\"#dce4ed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tdcf2c8c4d25b0b8d46de",
+          "text": "铂金至赤枭",
+          "x": 1172,
+          "cy": 1765,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "hourly-additions"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "+10",
+              "bold": true,
+              "font": "Bahnschrift",
+              "fill": "#8170b1",
+              "size": 48,
+              "id": "t8cc0101eda8be7bc1c97"
+            },
+            {
+              "text": "R/小时/人",
+              "size": 35,
+              "fill": "#8170b1",
+              "id": "ta7c52303f62440d1b4cf"
+            }
+          ],
+          "x": 2066,
+          "cy": 1765,
+          "size": 44,
+          "anchor": "end",
+          "role": "price-unit",
+          "group": "hourly-additions-line-252"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1172 1801H2066\" fill=\"none\" stroke=\"#dce4ed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tf0141ad9972bce6255ad",
+          "text": "传奇及以上",
+          "x": 1172,
+          "cy": 1836,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "hourly-additions"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "+20",
+              "bold": true,
+              "font": "Bahnschrift",
+              "fill": "#8170b1",
+              "size": 48,
+              "id": "t6870203ad730016daa8a"
+            },
+            {
+              "text": "R/小时/人",
+              "size": 35,
+              "fill": "#8170b1",
+              "id": "ta7c52303f62440d1b4cf"
+            }
+          ],
+          "x": 2066,
+          "cy": 1836,
+          "size": 44,
+          "anchor": "end",
+          "role": "price-unit",
+          "group": "hourly-additions-line-255"
+        },
+        {
+          "type": "text",
+          "id": "t61c67624904cdffcec00",
+          "text": "无需赔付则无需加价",
+          "x": 1620,
+          "cy": 1914,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "rule-body",
+          "group": "hourly-additions"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"1984\" width=\"476\" height=\"150\" rx=\"22\" fill=\"#f3f0fa\" stroke=\"#d7d1e7\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t664c617a6734510929e7",
+          "text": "甜蜜／教学",
+          "x": 1372,
+          "cy": 2027,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "extra-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "+10",
+              "bold": true,
+              "font": "Bahnschrift",
+              "fill": "#8170b1",
+              "size": 48,
+              "id": "t8cc0101eda8be7bc1c97"
+            },
+            {
+              "text": "R/人",
+              "fill": "#8170b1",
+              "size": 35,
+              "id": "t80de997b61ae1e0a4310"
+            }
+          ],
+          "x": 1372,
+          "cy": 2091,
+          "size": 44,
+          "anchor": "middle",
+          "role": "price-unit",
+          "group": "extra-0-line-259"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1630\" y=\"1984\" width=\"476\" height=\"150\" rx=\"22\" fill=\"#f3f0fa\" stroke=\"#d7d1e7\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t5641fc56db7b102f5f1b",
+          "text": "特殊称呼",
+          "x": 1868,
+          "cy": 2027,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "extra-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "+10",
+              "bold": true,
+              "font": "Bahnschrift",
+              "fill": "#8170b1",
+              "size": 48,
+              "id": "t8cc0101eda8be7bc1c97"
+            },
+            {
+              "text": "R/人",
+              "fill": "#8170b1",
+              "size": 35,
+              "id": "t80de997b61ae1e0a4310"
+            }
+          ],
+          "x": 1868,
+          "cy": 2091,
+          "size": 44,
+          "anchor": "middle",
+          "role": "price-unit",
+          "group": "extra-1-line-262"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"2154\" width=\"972\" height=\"290\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t370f7f804c656af7b6ff",
+          "text": "按把结算",
+          "x": 1170,
+          "cy": 2198,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "round-additions"
+        },
+        {
+          "type": "text",
+          "id": "te45e82408f606b1c1021",
+          "text": "指定女陪",
+          "x": 1170,
+          "cy": 2265,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "round-additions"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "+10",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 48,
+              "fill": "#8170b1",
+              "id": "t8cc0101eda8be7bc1c97"
+            },
+            {
+              "text": "R/把",
+              "size": 35,
+              "fill": "#8170b1",
+              "id": "tc1c715415375bf969531"
+            }
+          ],
+          "x": 2062,
+          "cy": 2265,
+          "size": 44,
+          "anchor": "end",
+          "role": "price-unit",
+          "group": "round-additions-line-266"
+        },
+        {
+          "type": "text",
+          "id": "t625aa88573339955f815",
+          "text": "≥4陪",
+          "x": 1170,
+          "cy": 2334,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "round-additions"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "−5",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 48,
+              "fill": "#8170b1",
+              "id": "t0f3e34f545d1b7f4ca3a"
+            },
+            {
+              "text": "R/把/人",
+              "size": 35,
+              "fill": "#8170b1",
+              "id": "t18f71d1b030839b65b5e"
+            }
+          ],
+          "x": 2062,
+          "cy": 2334,
+          "size": 44,
+          "anchor": "end",
+          "role": "price-unit",
+          "group": "round-additions-line-268"
+        },
+        {
+          "type": "text",
+          "id": "te5d6aedc92f2cfcc2a3c",
+          "text": "1陪多／2陪3",
+          "x": 1170,
+          "cy": 2403,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "round-additions"
+        },
+        {
+          "type": "text",
+          "id": "tf94e7e0b1b8ca40c5046",
+          "text": "不加价",
+          "x": 2062,
+          "cy": 2403,
+          "size": 42,
+          "fill": "#8170b1",
+          "anchor": "end",
+          "role": "copy",
+          "group": "round-additions"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"2464\" width=\"972\" height=\"128\" rx=\"22\" fill=\"#f3f0fa\" stroke=\"#d7d1e7\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "te19cf27d695fb1d4432b",
+          "text": "技术陪人数＜娱乐陪人数，",
+          "x": 1172,
+          "cy": 2504,
+          "size": 42,
+          "fill": "#647d91",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "mixed-party"
+        },
+        {
+          "type": "text",
+          "id": "t466269db2991430c9029",
+          "text": "按少陪多计算",
+          "x": 1172,
+          "cy": 2552,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "mixed-party"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"2621\" width=\"58\" height=\"67\" rx=\"12\" fill=\"#243f55\" stroke=\"#243f55\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "ta4dc3b5ad70afb4e52bf",
+          "text": "05",
+          "x": 83,
+          "cy": 2655,
+          "size": 34,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "heading-red"
+        },
+        {
+          "type": "text",
+          "id": "td49449d692c05cf684db",
+          "text": "红屏计时",
+          "x": 132,
+          "cy": 2655,
+          "size": 54,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "heading-red"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"2713\" width=\"972\" height=\"371\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t1c4a6b8b6a4ef893a4a4",
+          "text": "适用于有赔付订单 · 红屏即检测到挂",
+          "x": 540,
+          "cy": 2760,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "rule-body",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "t894f1a497e529719879a",
+          "text": "未满11回合",
+          "x": 93,
+          "cy": 2832,
+          "size": 46,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "t1f40d5ef95dd67510c15",
+          "text": "→",
+          "x": 666,
+          "cy": 2832,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "t6e3085fe506d1cc098ba",
+          "text": "不计入",
+          "x": 985,
+          "cy": 2832,
+          "size": 46,
+          "fill": "#8170b1",
+          "anchor": "end",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M93 2872H985\" fill=\"none\" stroke=\"#dce4ed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t4dd1e24c69a8af78cb4d",
+          "text": "11回合及以上",
+          "x": 93,
+          "cy": 2910,
+          "size": 46,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "t1f40d5ef95dd67510c15",
+          "text": "→",
+          "x": 666,
+          "cy": 2910,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "tcab339a1c2601ff67824",
+          "text": "计半局",
+          "x": 985,
+          "cy": 2910,
+          "size": 46,
+          "fill": "#8170b1",
+          "anchor": "end",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M93 2950H985\" fill=\"none\" stroke=\"#dce4ed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t8f108cb2c6f4abf06575",
+          "text": "赛点及加时",
+          "x": 93,
+          "cy": 2988,
+          "size": 46,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "t1f40d5ef95dd67510c15",
+          "text": "→",
+          "x": 666,
+          "cy": 2988,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "te14dc9362270b9a55ee9",
+          "text": "计整局",
+          "x": 985,
+          "cy": 2988,
+          "size": 46,
+          "fill": "#8170b1",
+          "anchor": "end",
+          "role": "copy",
+          "group": "red-screen"
+        },
+        {
+          "type": "text",
+          "id": "tdbcf108088e274603acb",
+          "text": "娱乐陪红屏正常计费",
+          "x": 540,
+          "cy": 3044,
+          "size": 40,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "rule-body",
+          "group": "red-screen"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"54\" y=\"3104\" width=\"972\" height=\"180\" rx=\"22\" fill=\"#f3f0fa\" stroke=\"#d7d1e7\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "默认 ",
+              "fill": "#647d91",
+              "id": "tab0d5b2a55925a683ea9"
+            },
+            {
+              "text": "1小时",
+              "bold": true,
+              "id": "t7cb1101577fe930b9711",
+              "fill": "#243f55"
+            },
+            {
+              "text": " = ",
+              "fill": "#647d91",
+              "id": "t70d2c40d0088180fb994"
+            },
+            {
+              "text": "2局",
+              "bold": true,
+              "id": "t7e3c4c7cf1677591fa4b",
+              "fill": "#243f55"
+            }
+          ],
+          "x": 540,
+          "cy": 3157,
+          "size": 46,
+          "anchor": "middle",
+          "role": "rule-body",
+          "group": "conversion-line-292"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "免1局",
+              "bold": true,
+              "id": "t45815625a89c61c50504",
+              "fill": "#243f55"
+            },
+            {
+              "text": " = 0.5小时",
+              "fill": "#647d91",
+              "id": "tb9b8a5285e12a91cb7e1"
+            }
+          ],
+          "x": 299,
+          "cy": 3231,
+          "size": 42,
+          "anchor": "middle",
+          "role": "rule-body",
+          "group": "conversion-line-293"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "免半局",
+              "bold": true,
+              "id": "td1ae8ce6fe6b67cffed4",
+              "fill": "#243f55"
+            },
+            {
+              "text": " = 0.25小时",
+              "fill": "#647d91",
+              "id": "ta78019128e0a1bc663fa"
+            }
+          ],
+          "x": 784,
+          "cy": 3231,
+          "size": 42,
+          "anchor": "middle",
+          "role": "rule-body",
+          "group": "conversion-line-294"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"2621\" width=\"58\" height=\"67\" rx=\"12\" fill=\"#243f55\" stroke=\"#243f55\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t3b25f2ab3a7329942c78",
+          "text": "06",
+          "x": 1163,
+          "cy": 2655,
+          "size": 34,
+          "fill": "#fffefa",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "heading-settlement"
+        },
+        {
+          "type": "text",
+          "id": "t0707301366230f97ee2f",
+          "text": "结算与补充",
+          "x": 1212,
+          "cy": 2655,
+          "size": 54,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "copy",
+          "group": "heading-settlement"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"1134\" y=\"2713\" width=\"972\" height=\"571\" rx=\"22\" fill=\"#fffefa\" stroke=\"#c9d5e0\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t273d487b9568897d4bca",
+          "text": "平局按赢局结算",
+          "x": 1171,
+          "cy": 2808,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "settlement"
+        },
+        {
+          "type": "text",
+          "id": "te0385ebc35c4c317c55d",
+          "text": "赔付标准适用于时薪陪玩单和按把结算单",
+          "x": 1171,
+          "cy": 2865,
+          "size": 42,
+          "fill": "#647d91",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "settlement"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1171 2937H2068\" fill=\"none\" stroke=\"#dce4ed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tf3080b297cde7ffd5eca",
+          "text": "无对应段位价格时，",
+          "x": 1171,
+          "cy": 2990,
+          "size": 42,
+          "fill": "#647d91",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "settlement"
+        },
+        {
+          "type": "text",
+          "id": "t95edb177e68baeeed3e9",
+          "text": "按该陪玩最高单价接单，且无赔付",
+          "x": 1171,
+          "cy": 3047,
+          "size": 42,
+          "fill": "#243f55",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "settlement"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M1171 3128H2068\" fill=\"none\" stroke=\"#dce4ed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t76d7608e5a6f1cf3e108",
+          "text": "1P0按1P1赔付标准计算",
+          "x": 1171,
+          "cy": 3190,
+          "size": 42,
+          "fill": "#647d91",
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "settlement"
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M62 3327H2098\" fill=\"none\" stroke=\"#dce4ed\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "ta6fa420e2d3d5dbb671e",
+          "text": "兴安电竞 · 黑潮爆破 · 陪玩价目表与点单须知",
+          "x": 1080,
+          "cy": 3374,
+          "size": 36,
+          "fill": "#647d91",
+          "anchor": "middle",
+          "role": "copy",
+          "group": "footer"
+        }
+      ]
+    }
+  ],
+  "reviewRegions": [
+    {
+      "page": "blacktide",
+      "containerId": "hero",
+      "x": 68,
+      "y": 50,
+      "w": 1140,
+      "h": 490,
+      "safe": {
+        "x": 80,
+        "y": 62,
+        "w": 1116,
+        "h": 466
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "heading-hourly",
+      "x": 54,
+      "y": 572,
+      "w": 972,
+      "h": 84,
+      "safe": {
+        "x": 54,
+        "y": 572,
+        "w": 972,
+        "h": 84
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "heading-rounds",
+      "x": 1134,
+      "y": 572,
+      "w": 972,
+      "h": 84,
+      "safe": {
+        "x": 1134,
+        "y": 572,
+        "w": 972,
+        "h": 84
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-header",
+      "x": 54,
+      "y": 677,
+      "w": 972,
+      "h": 88,
+      "safe": {
+        "x": 66,
+        "y": 689,
+        "w": 948,
+        "h": 64
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-row-0",
+      "x": 56,
+      "y": 765,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 68,
+        "y": 773,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-row-1",
+      "x": 56,
+      "y": 863,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 68,
+        "y": 871,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-row-2",
+      "x": 56,
+      "y": 961,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 68,
+        "y": 969,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-row-3",
+      "x": 56,
+      "y": 1059,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 68,
+        "y": 1067,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-row-4",
+      "x": 56,
+      "y": 1157,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 68,
+        "y": 1165,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-row-5",
+      "x": 56,
+      "y": 1255,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 68,
+        "y": 1263,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "rounds-header",
+      "x": 1134,
+      "y": 677,
+      "w": 972,
+      "h": 88,
+      "safe": {
+        "x": 1146,
+        "y": 689,
+        "w": 948,
+        "h": 64
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "rounds-row-0",
+      "x": 1136,
+      "y": 765,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 1148,
+        "y": 773,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "rounds-row-1",
+      "x": 1136,
+      "y": 863,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 1148,
+        "y": 871,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "rounds-row-2",
+      "x": 1136,
+      "y": 961,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 1148,
+        "y": 969,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "rounds-row-3",
+      "x": 1136,
+      "y": 1059,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 1148,
+        "y": 1067,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "rounds-row-4",
+      "x": 1136,
+      "y": 1157,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 1148,
+        "y": 1165,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "rounds-row-5",
+      "x": 1136,
+      "y": 1255,
+      "w": 968,
+      "h": 98,
+      "safe": {
+        "x": 1148,
+        "y": 1263,
+        "w": 944,
+        "h": 82
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "price-note",
+      "x": 54,
+      "y": 1375,
+      "w": 2052,
+      "h": 75,
+      "safe": {
+        "x": 78,
+        "y": 1389,
+        "w": 2004,
+        "h": 47
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "heading-compensation",
+      "x": 54,
+      "y": 1474,
+      "w": 972,
+      "h": 84,
+      "safe": {
+        "x": 54,
+        "y": 1474,
+        "w": 972,
+        "h": 84
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "compensation-一陪",
+      "x": 54,
+      "y": 1573,
+      "w": 972,
+      "h": 222,
+      "safe": {
+        "x": 78,
+        "y": 1593,
+        "w": 924,
+        "h": 182
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "compensation-双陪",
+      "x": 54,
+      "y": 1815,
+      "w": 972,
+      "h": 232,
+      "safe": {
+        "x": 78,
+        "y": 1835,
+        "w": 924,
+        "h": 192
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "compensation-三陪",
+      "x": 54,
+      "y": 2067,
+      "w": 972,
+      "h": 174,
+      "safe": {
+        "x": 78,
+        "y": 2087,
+        "w": 924,
+        "h": 134
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "compensation-四陪",
+      "x": 54,
+      "y": 2261,
+      "w": 972,
+      "h": 194,
+      "safe": {
+        "x": 78,
+        "y": 2281,
+        "w": 924,
+        "h": 154
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "compensation-五陪",
+      "x": 54,
+      "y": 2475,
+      "w": 972,
+      "h": 117,
+      "safe": {
+        "x": 78,
+        "y": 2495,
+        "w": 924,
+        "h": 77
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "heading-additions",
+      "x": 1134,
+      "y": 1474,
+      "w": 972,
+      "h": 84,
+      "safe": {
+        "x": 1134,
+        "y": 1474,
+        "w": 972,
+        "h": 84
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "hourly-additions",
+      "x": 1134,
+      "y": 1573,
+      "w": 972,
+      "h": 391,
+      "safe": {
+        "x": 1158,
+        "y": 1593,
+        "w": 924,
+        "h": 351
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "extra-0",
+      "x": 1134,
+      "y": 1984,
+      "w": 476,
+      "h": 150,
+      "safe": {
+        "x": 1158,
+        "y": 2004,
+        "w": 428,
+        "h": 110
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "extra-1",
+      "x": 1630,
+      "y": 1984,
+      "w": 476,
+      "h": 150,
+      "safe": {
+        "x": 1654,
+        "y": 2004,
+        "w": 428,
+        "h": 110
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "round-additions",
+      "x": 1134,
+      "y": 2154,
+      "w": 972,
+      "h": 290,
+      "safe": {
+        "x": 1158,
+        "y": 2174,
+        "w": 924,
+        "h": 250
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "mixed-party",
+      "x": 1134,
+      "y": 2464,
+      "w": 972,
+      "h": 128,
+      "safe": {
+        "x": 1158,
+        "y": 2484,
+        "w": 924,
+        "h": 88
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "heading-red",
+      "x": 54,
+      "y": 2614,
+      "w": 972,
+      "h": 84,
+      "safe": {
+        "x": 54,
+        "y": 2614,
+        "w": 972,
+        "h": 84
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "red-screen",
+      "x": 54,
+      "y": 2713,
+      "w": 972,
+      "h": 371,
+      "safe": {
+        "x": 78,
+        "y": 2733,
+        "w": 924,
+        "h": 331
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "conversion",
+      "x": 54,
+      "y": 3104,
+      "w": 972,
+      "h": 180,
+      "safe": {
+        "x": 78,
+        "y": 3124,
+        "w": 924,
+        "h": 140
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "heading-settlement",
+      "x": 1134,
+      "y": 2614,
+      "w": 972,
+      "h": 84,
+      "safe": {
+        "x": 1134,
+        "y": 2614,
+        "w": 972,
+        "h": 84
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "settlement",
+      "x": 1134,
+      "y": 2713,
+      "w": 972,
+      "h": 571,
+      "safe": {
+        "x": 1158,
+        "y": 2733,
+        "w": 924,
+        "h": 531
+      }
+    },
+    {
+      "page": "blacktide",
+      "containerId": "footer",
+      "x": 54,
+      "y": 3334,
+      "w": 2052,
+      "h": 69,
+      "safe": {
+        "x": 54,
+        "y": 3334,
+        "w": 2052,
+        "h": 69
+      }
+    }
+  ]
+}

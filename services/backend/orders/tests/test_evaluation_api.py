@@ -181,7 +181,8 @@ class ReplyEvaluationTest(APITestCase):
         self.client.force_authenticate(self.provider)
         res = self.client.post(
             f'/api/orders/evaluations/{self.evaluation.id}/reply/',
-            {'reply_content': '感谢支持'},
+            {'reply_content': '感谢支持', 'reply_version': 0},
+            format='json',
         )
         self.assertEqual(res.data['code'], 0)
         self.evaluation.refresh_from_db()
@@ -246,6 +247,6 @@ class ReplyEvaluationTest(APITestCase):
         token, _ = issue_account_tokens(owner)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
         self.assertEqual(self.client.get('/api/orders/evaluations/mine/').data['data']['total'], 1)
-        res = self.client.post(f'/api/orders/evaluations/{self.evaluation.pk}/reply/', {'reply_content': '业务账号回复'})
+        res = self.client.post(f'/api/orders/evaluations/{self.evaluation.pk}/reply/', {'reply_content': '业务账号回复', 'reply_version': 0}, format='json')
         self.assertEqual(res.data['code'], 0, res.data)
         self.assertEqual(res.data['data']['reply_content'], '业务账号回复')

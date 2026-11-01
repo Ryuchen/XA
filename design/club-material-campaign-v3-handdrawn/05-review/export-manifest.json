@@ -1,0 +1,68 @@
+[
+  {
+    "id": "desktop-absolute",
+    "label": "端游 · 绝密",
+    "src": "poster-gold.png",
+    "width": 3200,
+    "height": 7680,
+    "file": "04-png-export/desktop-absolute-background.png",
+    "nativeWidth": 809,
+    "nativeHeight": 1942,
+    "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+  },
+  {
+    "id": "desktop-secret",
+    "label": "端游 · 机密",
+    "src": "poster-teal.png",
+    "width": 3200,
+    "height": 7680,
+    "file": "04-png-export/desktop-secret-background.png",
+    "nativeWidth": 809,
+    "nativeHeight": 1942,
+    "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+  },
+  {
+    "id": "mobile-absolute",
+    "label": "手游 · 绝密",
+    "src": "poster-gold.png",
+    "width": 3200,
+    "height": 7680,
+    "file": "04-png-export/mobile-absolute-background.png",
+    "nativeWidth": 809,
+    "nativeHeight": 1942,
+    "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+  },
+  {
+    "id": "mobile-secret",
+    "label": "手游 · 机密",
+    "src": "poster-teal.png",
+    "width": 3200,
+    "height": 7680,
+    "file": "04-png-export/mobile-secret-background.png",
+    "nativeWidth": 809,
+    "nativeHeight": 1942,
+    "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+  },
+  {
+    "id": "cover",
+    "label": "横版封面",
+    "src": "cover.png",
+    "width": 3200,
+    "height": 1800,
+    "file": "04-png-export/cover-background.png",
+    "nativeWidth": 1672,
+    "nativeHeight": 941,
+    "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+  },
+  {
+    "id": "social",
+    "label": "简洁广告海报",
+    "src": "social.png",
+    "width": 2400,
+    "height": 3200,
+    "file": "04-png-export/social-background.png",
+    "nativeWidth": 1086,
+    "nativeHeight": 1448,
+    "method": "生成原图经 Lanczos3 放大导出；非原生高分辨率生成，无文字叠加"
+  }
+]

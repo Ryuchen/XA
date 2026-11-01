@@ -1,0 +1,86 @@
+{
+  "version": "sand-safe-insurance-background-v1",
+  "basis": "观察实际生成 PNG 的面板与图标边界后重新定位；非原始线框坐标直接套用。文字框为净安全区域，最终还须按真实字形居中。",
+  "poster": {
+    "native": [1024,1536],
+    "hero": [547,18,439,265],
+    "zones": [
+      {"id":"brand","label":"品牌","rect":[174,42,344,52]},
+      {"id":"title","label":"艺术标题","rect":[104,122,424,95]},
+      {"id":"subtitle","label":"核心卖点","rect":[133,233,386,35]},
+      {"id":"platform","label":"平台 · 绝密","rect":[70,299,877,32],"dark":true},
+      {"id":"goal-sand","label":"沙色次数达标","rect":[98,389,228,48]},
+      {"id":"goal-regular","label":"常规次数达标","rect":[397,389,228,48]},
+      {"id":"goal-guarantee","label":"基础保底达标","rect":[695,389,230,48]},
+      {"id":"table-price-header","label":"价格","rect":[74,493,143,34],"dark":true},
+      {"id":"table-sand-header","label":"沙色保险","rect":[247,493,224,34],"dark":true},
+      {"id":"table-regular-header","label":"常规大保险","rect":[493,493,224,34],"dark":true},
+      {"id":"table-guarantee-header","label":"基础保底","rect":[754,493,204,34],"dark":true},
+      {"id":"reward-title","label":"奖励艺术标题","rect":[170,902,756,35]},
+      {"id":"reward-trigger","label":"奖励触发条件","rect":[170,942,756,30]},
+      {"id":"reward-extra","label":"额外保底权益","rect":[101,990,348,68]},
+      {"id":"reward-gift","label":"赠送沙色权益","rect":[569,990,350,68]},
+      {"id":"reward-conditions","label":"整单次数及赠送限制","rect":[149,1080,727,44]},
+      {"id":"notes-header","label":"规则标题","rect":[69,1160,875,31],"dark":true},
+      {"id":"notes-count","label":"保险计次｜短句","rect":[124,1220,828,39]},
+      {"id":"notes-proxy","label":"陪玩代摸｜短句","rect":[124,1291,828,39]},
+      {"id":"notes-loot","label":"物资累计｜前提＋严格门槛","rect":[124,1365,828,43]},
+      {"id":"footer","label":"品牌／订单提示","rect":[260,1444,488,41]}
+    ],
+    "table": {
+      "rowBounds": [[51,542,922,98],[51,653,922,96],[51,761,922,99]],
+      "rowCenters": [591,701,810],
+      "price": {"left":74,"numberRight":176,"unitX":188,"unitRight":218},
+      "sand": {"iconRight":307,"left":331,"numberRight":432,"unitX":444,"right":470},
+      "regular": {"iconRight":554,"left":579,"numberRight":677,"unitX":688,"right":717},
+      "guarantee": {"left":759,"numberRight":914,"unitX":928,"unitRight":959},
+      "textSafeHeight": 66,
+      "outerMinVerticalPadding": 15,
+      "unitDigitVisibleHeightRatio": [0.65,0.75]
+    },
+    "rewardLayout": "两项权益各用一组横向短句，按最大数值字形确定高度；标题、触发、次数限制分别安排，不跨装饰线。",
+    "notesLayout": "图标右侧统一净文字区；分类与短句可在同一行组合，分类/决定性条件选择性加粗，解释常规字重，优先不换行。"
+  },
+  "cover": {
+    "native": [1672,941],
+    "hero": [819,162,807,526],
+    "textCenterX": 426,
+    "zones": [
+      {"id":"brand","label":"品牌组居中","rect":[166,110,520,65]},
+      {"id":"title","label":"艺术标题居中","rect":[66,285,720,152]},
+      {"id":"subtitle","label":"核心卖点居中","rect":[111,527,630,61],"dark":true},
+      {"id":"scope","label":"绝密 · 端游／手游居中","rect":[156,638,540,50]}
+    ]
+  },
+  "social": {
+    "native": [1086,1448],
+    "hero": [643,20,408,250],
+    "zones": [
+      {"id":"brand","label":"品牌","rect":[186,47,406,48]},
+      {"id":"title","label":"艺术标题","rect":[75,128,526,88]},
+      {"id":"subtitle","label":"绝密 · 两端适用","rect":[94,232,493,35]},
+      {"id":"completion","label":"三项达标关系图","rect":[85,297,922,76]},
+      {"id":"pc-platform","label":"端游价目标题","rect":[74,417,938,29],"dark":true},
+      {"id":"pc-columns","label":"价格／沙色／常规／保底","rect":[74,460,938,29]},
+      {"id":"mobile-platform","label":"手游价目标题","rect":[74,763,938,28],"dark":true},
+      {"id":"mobile-columns","label":"价格／沙色／常规／保底","rect":[74,807,938,28]},
+      {"id":"reward-heading","label":"奖励标题＋触发条件（一组短句）","rect":[165,1118,827,52]},
+      {"id":"reward-extra","label":"额外保底权益","rect":[111,1200,385,57]},
+      {"id":"reward-gift","label":"赠送沙色权益","rect":[589,1200,385,57]},
+      {"id":"reward-conditions","label":"整单次数及赠送限制","rect":[92,1278,900,48]},
+      {"id":"footer","label":"品牌","rect":[246,1390,594,36]}
+    ],
+    "tables": {
+      "desktop": {"rowBounds":[[54,499,979,71],[54,579,979,71],[54,660,979,70]],"rowCenters":[535,615,695]},
+      "mobile": {"rowBounds":[[54,846,979,70],[54,926,979,71],[54,1006,979,71]],"rowCenters":[881,961,1041]},
+      "price": {"left":77,"numberRight":183,"unitX":196,"unitRight":225},
+      "sand": {"iconRight":296,"left":329,"numberRight":419,"unitX":434,"right":476},
+      "regular": {"iconRight":564,"left":598,"numberRight":699,"unitX":712,"right":748},
+      "guarantee": {"left":791,"numberRight":962,"unitX":976,"unitRight":1010},
+      "textSafeHeight": 52,
+      "outerMinVerticalPadding": 9,
+      "unitDigitVisibleHeightRatio": [0.65,0.75]
+    },
+    "rewardLayout": "标题与触发条件组合成横向一组；权益各一行，留出完整的条件区，不添加下单须知。"
+  }
+}

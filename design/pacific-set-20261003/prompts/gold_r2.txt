@@ -1,0 +1,10 @@
+Use case: precise-object-edit. Input is the TEXT-FREE gold long-poster background edit target, native 724x2172.
+Preserve EVERYTHING above y1320 including the full header/characters, objective ticket, all THREE map tables, their EXACT FIVE blank data rows, map vignettes, navy column headers and all upper margin decoration. Keep the same 724x2172 1:3 canvas.
+Make ONLY a lower-layout correction to increase readable rule-copy space. There must still be exactly THREE empty lower rule cards, now at these native approximate coordinates:
+1. Prophet card: x32-692, y1332-1536 (about204px height). Its two empty pale-gold title/fee tickets are at y1347-1383, one left and one right; empty body from y1395-1516. Keep only a faint divider at y1440.
+2. Portal card: x32-692, y1549-1841 (about292px height). Empty pale-gold title ticket at x50-237/y1565-1600; empty body x52-674/y1616-1822. This is the MOST important enlargement. No decorative objects inside this card.
+3. Notice card: x32-692, y1854-2095 (about241px height). Empty pale-gold title ticket at x50-244/y1870-1905; empty body x52-674/y1920-2074. No decorative objects inside.
+All cards have matching rounded warm-gold outlines, blank pale ivory interiors, and balanced inner padding.
+COMPRESS the previous large bottom beach scenery into only the final y2107-2172 band (65px tall), keeping a delicate small hand-drawn shoreline with small corner props. Remove any signpost or map props that protrude into the rule cards. Do not extend the canvas. Keep a clear modest center footer area x120-604 in that last band.
+Maintain the original hand-drawn anime style, ivory/mist-blue/navy/warm-gold palette, matching upper card geometry and figure anatomy.
+No new text, letters, digits, prices, pseudo-writing, logos, watermarks, QR. This is a structural edit of the EMPTY bottom rule panels and compact footer only.

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -27,8 +28,19 @@ class MessageListView(APIView):
             is_read=False,
         ).count()
 
-        start = (page - 1) * page_size
-        items = qs.order_by('-created_at')[start:start + page_size]
+        before = request.query_params.get('before')
+        if before:
+            try:
+                anchor = qs.only('id', 'created_at').get(pk=int(before))
+            except (ValueError, TypeError, Message.DoesNotExist):
+                return Response({'code': 400, 'msg': '消息列表已变化，请刷新后重试'}, status=400)
+            qs = qs.filter(Q(created_at__lt=anchor.created_at) | Q(created_at=anchor.created_at, pk__lt=anchor.pk))
+            start = 0
+        else:
+            start = (page - 1) * page_size
+        window = list(qs.order_by('-created_at', '-id')[start:start + page_size + 1])
+        items = window[:page_size]
+        has_more = len(window) > page_size
 
         return Response({
             'code': 0,
@@ -38,6 +50,8 @@ class MessageListView(APIView):
                 'unread': unread,
                 'page': page,
                 'page_size': page_size,
+                'has_more': has_more,
+                'next_before': items[-1].pk if has_more and items else None,
             }
         })
 
@@ -57,6 +71,8 @@ class MessageDetailView(APIView):
         if not msg.is_read:
             msg.is_read = True
             msg.save(update_fields=['is_read'])
+            from .notifier import notify_messages_after_commit
+            notify_messages_after_commit(request.account.pk)
 
         return Response({'code': 0, 'data': MessageDetailSerializer(msg).data})
 
@@ -65,10 +81,13 @@ class MessageReadAllView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
-        Message.objects.filter(
+        updated = Message.objects.filter(
             recipient_account=request.account,
             is_read=False,
         ).update(is_read=True)
+        if updated:
+            from .notifier import notify_messages_after_commit
+            notify_messages_after_commit(request.account.pk)
         return Response({'code': 0, 'msg': '全部已读'})
 
 

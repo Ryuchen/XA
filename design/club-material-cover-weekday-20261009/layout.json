@@ -1,0 +1,235 @@
+{
+  "requests": [
+    {
+      "id": "t7efdb4316abc6b55a7ba",
+      "text": "兴安电竞",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t971309adedfbec32db2c",
+      "text": "常",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t70b77a539635797ff78a",
+      "text": "规",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "td2d84202031f21eacbd0",
+      "text": "物",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tf9287041efc987f8d3e5",
+      "text": "资",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t1ace17671e331ef9e358",
+      "text": "单",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tb148fcb736411ab62790",
+      "text": "累计带出物资",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t3ba576c5d5a36d0a8b74",
+      "text": "端游 · 手游 / 绝密 · 机密",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t2314b6c75246b857ccdf",
+      "text": "工作日专享",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "t6162cf6185e048d66436",
+      "text": "保底上浮",
+      "font": "MiSans VF Semibold",
+      "style": 0
+    },
+    {
+      "id": "tec4eba3bc8498c835158",
+      "text": "20%",
+      "font": "MiSans VF Bold",
+      "style": 0
+    }
+  ],
+  "pages": [
+    {
+      "id": "cover",
+      "label": "常规物资单 · 工作日专享封面",
+      "bg": "cover.png",
+      "w": 1672,
+      "h": 941,
+      "ew": 3200,
+      "eh": 1800,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(95 142.24) scale(1.3571428571428572)\" fill=\"none\" stroke=\"#213F53\" stroke-width=\"2.1\" stroke-linejoin=\"round\"><path d=\"M0 27 L15 0 L31 27 Z M8 22 L15 10 L23 22 Z\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t7efdb4316abc6b55a7ba",
+          "text": "兴安电竞",
+          "x": 146.3,
+          "cy": 162,
+          "size": 38,
+          "fill": "#213F53",
+          "anchor": "start",
+          "group": "brand",
+          "role": "brand"
+        },
+        {
+          "type": "art",
+          "text": "常规物资单",
+          "x": 87,
+          "cy": 348,
+          "size": 125,
+          "maxWidth": 645,
+          "fill": "#213F53",
+          "shadow": "#A4BFD5",
+          "outline": "#FFFDF7",
+          "outlineWidth": 7,
+          "angles": true,
+          "group": "headline",
+          "ids": [
+            "t971309adedfbec32db2c",
+            "t70b77a539635797ff78a",
+            "td2d84202031f21eacbd0",
+            "tf9287041efc987f8d3e5",
+            "t1ace17671e331ef9e358"
+          ]
+        },
+        {
+          "type": "raw",
+          "markup": "<path d=\"M105 432 Q366 461 689 433\" fill=\"none\" stroke=\"#E4B474\" stroke-width=\"11\" stroke-linecap=\"round\"/>"
+        },
+        {
+          "type": "text",
+          "id": "tb148fcb736411ab62790",
+          "text": "累计带出物资",
+          "x": 96,
+          "cy": 497,
+          "size": 39,
+          "fill": "#213F53",
+          "anchor": "start",
+          "group": "subtitle"
+        },
+        {
+          "type": "text",
+          "id": "t3ba576c5d5a36d0a8b74",
+          "text": "端游 · 手游 / 绝密 · 机密",
+          "x": 366.5,
+          "cy": 578,
+          "size": 32,
+          "fill": "#FFFDF7",
+          "anchor": "middle",
+          "group": "platform"
+        },
+        {
+          "type": "text",
+          "id": "t2314b6c75246b857ccdf",
+          "text": "工作日专享",
+          "x": 366.5,
+          "cy": 638,
+          "size": 36,
+          "fill": "#213F53",
+          "anchor": "middle",
+          "group": "activity"
+        },
+        {
+          "type": "rich",
+          "x": 366.5,
+          "cy": 681,
+          "size": 38,
+          "anchor": "middle",
+          "fill": "#A96620",
+          "group": "activity-benefit",
+          "role": "offer",
+          "runs": [
+            {
+              "text": "保底上浮",
+              "id": "t6162cf6185e048d66436",
+              "size": 38,
+              "fill": "#A96620",
+              "bold": true
+            },
+            {
+              "text": "20%",
+              "id": "tec4eba3bc8498c835158",
+              "size": 48,
+              "fill": "#A96620",
+              "bold": true,
+              "gap": 12
+            }
+          ]
+        }
+      ],
+      "containers": [
+        {
+          "id": "brand",
+          "safe": [
+            93,
+            140,
+            620,
+            45
+          ]
+        },
+        {
+          "id": "headline",
+          "safe": [
+            85,
+            265,
+            675,
+            163
+          ]
+        },
+        {
+          "id": "subtitle",
+          "safe": [
+            93,
+            472,
+            610,
+            50
+          ]
+        },
+        {
+          "id": "platform",
+          "safe": [
+            115,
+            553,
+            503,
+            50
+          ]
+        },
+        {
+          "id": "activity",
+          "safe": [
+            96,
+            618,
+            541,
+            88
+          ]
+        }
+      ]
+    }
+  ]
+}

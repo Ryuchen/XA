@@ -14,6 +14,8 @@ export interface TransactionRecord {
   created_at: string;
   reversal_of?: number | null;
   is_reversal?: boolean;
+  is_referral_income?: boolean;
+  gift_source?: 'ORDER_GIFT' | 'RECHARGE_GIFT' | null;
 }
 
 export interface TransactionsResponse {

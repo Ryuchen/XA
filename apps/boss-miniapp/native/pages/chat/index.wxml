@@ -1,21 +1,26 @@
 <view class="chat-page">
   <view class="chat-heading"><view class="chat-heading-row"><text class="chat-title" role="heading" aria-level="1">平台客服</text><view class="chat-heading-icon" aria-hidden="true"><image src="/assets/icons/chat.png"/></view></view><text class="chat-subtitle">客服回复会自动更新，支持文字与图片</text><button wx:if="{{!logged}}" class="xa-button button chat-login" bindtap="login" hover-class="xa-button-hover">登录后咨询客服</button></view>
+  <view wx:if="{{contextLoading || contextError}}" class="chat-context"><text>{{contextLoading ? '正在读取订单号…' : contextError}}</text><button wx:if="{{contextError}}" class="xa-button button-secondary" bindtap="retryContext">重试</button></view>
+  <view wx:if="{{contextOrderNo}}" class="chat-context"><text>当前关联订单 {{contextOrderNo}}，发送图片时会附带订单号。</text><button class="xa-button button-secondary" bindtap="clearContext" disabled="{{sending || pendingSend}}">取消关联</button></view>
 
   <view class="chat-thread">
     <text class="history-heading" role="heading" aria-level="2">聊天记录</text>
-    <scroll-view scroll-y class="history" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+    <scroll-view scroll-y class="history" scroll-into-view="{{scrollTo}}" scroll-with-animation bindscroll="onHistoryScroll" bindtouchstart="onHistoryTouchStart" bindtouchmove="onHistoryTouchMove" bindtouchend="onHistoryTouchEnd" bindtouchcancel="onHistoryTouchEnd">
       <state-view loading="{{loading}}" error="{{error}}" empty="{{logged && !loading && !error && !items.length}}" empty-text="写下你想咨询的问题" bind:retry="load"/>
       <text wx:if="{{!logged}}" class="chat-guest">登录后查看会话记录并咨询客服</text>
       <block wx:if="{{logged}}">
+        <button wx:if="{{hasMore}}" class="xa-button button-secondary history-more" bindtap="loadOlder" disabled="{{historyLoading}}" loading="{{historyLoading}}">{{historyLoading ? '加载中' : '加载更早消息'}}</button>
+        <text wx:if="{{historyError}}" class="history-error">{{historyError}}，请重试</text>
         <view class="message {{item.is_from_support ? 'support' : 'self'}}" wx:for="{{items}}" wx:key="id" id="message-{{item.id}}">
           <view class="message-meta"><text class="message-sender">{{item.is_from_support ? '平台客服' : '我'}}</text><text class="message-time">{{item.time}}</text></view>
-          <view class="bubble"><image wx:if="{{item.image}}" class="chat-image" src="{{item.image}}" mode="widthFix" data-url="{{item.image}}" data-id="{{item.id}}" binderror="imageError" bindtap="preview"/><text wx:else selectable>{{item.content}}</text></view>
+          <view class="bubble"><image wx:if="{{item.image}}" class="chat-image" src="{{item.image}}" mode="widthFix" data-url="{{item.image}}" data-id="{{item.id}}" binderror="imageError" bindtap="preview"/><text wx:if="{{item.content}}" selectable>{{item.content}}</text></view>
         </view>
       </block>
       <view class="end-space"></view>
     </scroll-view>
+    <button wx:if="{{historyBrowsing}}" class="xa-button button-secondary history-latest" bindtap="latest">回到最新消息</button>
   </view>
 
-  <view wx:if="{{logged}}" class="composer"><text class="composer-label">发送消息</text><view class="composer-main"><textarea class="input chat-input" aria-label="消息内容" auto-height maxlength="2000" value="{{content}}" bindinput="input" placeholder="输入你想咨询的问题" placeholder-class="input-placeholder" cursor-spacing="120"/><view class="composer-actions"><button class="xa-button button-secondary image-button" aria-label="发送图片" bindtap="chooseImage" disabled="{{sending}}" hover-class="xa-button-hover">图片</button><button class="xa-button button send-button" aria-label="{{sending ? '正在发送消息' : '发送消息'}}" bindtap="send" disabled="{{sending || !content}}" loading="{{sending}}" hover-class="xa-button-hover">发送</button></view></view></view>
+  <view wx:if="{{logged}}" class="composer"><view wx:if="{{pendingSend}}" class="chat-pending"><text>上条消息结果未确认，请先核对。</text><text wx:if="{{pendingStorageError}}">设备未能保存核对编号，请保持当前页面。</text><view class="chat-pending-actions"><button class="xa-button button-secondary" bindtap="checkPending" disabled="{{sending}}">核对结果</button><button wx:if="{{!pendingRestored}}" class="xa-button button-secondary" bindtap="retryPending" disabled="{{sending}}">重试原消息</button><button class="xa-button button-secondary" bindtap="abandonPending" disabled="{{sending}}">放弃核对</button></view></view><text class="composer-label">发送消息</text><view class="composer-main"><textarea class="input chat-input" aria-label="消息内容" auto-height maxlength="1000" value="{{content}}" bindinput="input" disabled="{{contextLoading || pendingSend}}" placeholder="输入你想咨询的问题" placeholder-class="input-placeholder" cursor-spacing="120"/><view class="composer-actions"><button class="xa-button button-secondary image-button" aria-label="发送图片" bindtap="chooseImage" disabled="{{sending || pendingSend || contextLoading}}" hover-class="xa-button-hover">图片</button><button class="xa-button button send-button" aria-label="{{sending ? '正在发送消息' : '发送消息'}}" bindtap="send" disabled="{{sending || pendingSend || contextLoading || !content}}" loading="{{sending}}" hover-class="xa-button-hover">发送</button></view></view></view>
 </view>
 <bottom-navigation/>

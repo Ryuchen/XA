@@ -1,11 +1,13 @@
 import hashlib
+import logging
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.conf import settings
 from django.db import IntegrityError, transaction
-from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Sum
-from django.db.models.functions import Coalesce
+from django.db.models import Case, CharField, Count, Exists, F, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models.functions import Coalesce, TruncDate
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -28,16 +30,18 @@ from club_accounts.services import (
 )
 from coupons.models import Coupon, UserCoupon
 from orders.models import (
+    AfterSale,
     Evaluation,
     GameCategory,
     KookDispatchRecord,
     Order,
     OrderProvider,
     OrderStatusLog,
+    Reservation,
     ServiceCategory,
     ServiceItem,
 )
-from orders.ratings import rollback_escort_rating
+from orders.ratings import refresh_escort_rating
 from orders.settlement import (
     SettlementError,
     aggregate_order_split,
@@ -68,14 +72,14 @@ from orders.services import (
 from orders.notifier import notify_order_update, notify_report_update
 from orders.refunds import RefundError, build_refund_plan
 from orders.kook_dispatch import enqueue_kook_dispatch
-from orders.dispatching import dispatch_preview, enqueue_wecom_dispatch, queue_dispatch, channel_config, eligibility_error
+from orders.dispatching import dispatch_preview, enqueue_wecom_dispatch, queue_dispatch
 from promotions.models import Promotion
 from site_messages.models import Message
 from site_messages.utils import create_message
 from support.models import SupportContactCard
 from users.models import (
     Achievement, BossType, CheckinGift, CheckinMonthProgress, CheckinRuleConfig,
-    EscortLevel, EscortProfile, EscortSchedule,
+    EscortLevel, EscortProfile, EscortSchedule, ProviderRegistration,
 )
 from wallet.models import (
     COMMISSION_RATE_KEY,
@@ -94,6 +98,7 @@ from wallet.models import (
     get_withdraw_tax_rate,
 )
 from wallet.services import WalletAddressingError, claim_fund_write, get_wallet, peek_fund_write
+from wallet.receipts import fund_success, recover_fund_result
 from common.media import build_media_url
 
 from .ban_utils import active_ban_for, apply_ban, lift_ban
@@ -116,6 +121,7 @@ from .serializers import (
     AdminBannerSerializer,
     AdminBossTypeSerializer,
     AdminChatMessageSerializer,
+    AdminChatReadSerializer,
     AdminChatReplySerializer,
     AdminChatSessionSerializer,
     AdminCheckinGiftSerializer,
@@ -133,7 +139,9 @@ from .serializers import (
     AdminMembershipSerializer,
     AdminMessageSerializer,
     AdminOrderLogSerializer,
+    AdminOrderDetailSerializer,
     AdminOrderSerializer,
+    AdminOrderWithIdentitySerializer,
     AdminProviderReportSerializer,
     AdminPromotionSerializer,
     AdminRechargeRecordSerializer,
@@ -265,16 +273,49 @@ class DashboardView(APIView):
     permission_classes = [IsConsoleUser]
 
     def get(self, request):
-        if 'dashboard:view' not in get_account_permissions(request.account):
+        permissions = get_account_permissions(request.account)
+        if 'dashboard:view' not in permissions:
             return Response({'code': 403, 'msg': '无操作权限'}, status=403)
+        if 'order:view' in permissions:
+            from orders.reservation_expiration import expire_due_reservations
+            expire_due_reservations()
         orders = Order.objects.all()
         from orders.refunds import with_net_amount,PAID_STATES
+        snapshot_at = timezone.now()
+        from .serializers import pending_report_order_block_q
         paid = with_net_amount(orders.filter(payment_status__in=PAID_STATES)).aggregate(amount=Sum('_net_paid_amount'),count=Count('id'))
-        today = timezone.localdate()
+        pending_paid = orders.filter(status=Order.Status.PENDING, payment_status=Order.PaymentStatus.PAID).aggregate(
+            total=Count('id'),
+            staff=Count('id', filter=Q(dispatch_route=Order.DispatchRoute.STAFF)),
+            public=Count('id', filter=Q(dispatch_route=Order.DispatchRoute.PUBLIC)),
+        )
+        pending_withdrawals = None
+        if 'withdraw:view' in permissions:
+            pending_withdrawals = WithdrawRequest.objects.filter(status=WithdrawRequest.Status.PENDING).aggregate(
+                total=Count('id'), unclaimed=Count('id', filter=Q(claimed_by_account__isnull=True)),
+                mine=Count('id', filter=Q(claimed_by_account=request.account)),
+            )
+        today = timezone.localdate(snapshot_at)
         today_orders = orders.filter(created_at__date=today)
 
         status_rows = orders.values('status').annotate(count=Count('id'))
         status_map = {row['status']: row['count'] for row in status_rows}
+        first_day = today - timedelta(days=6)
+        zone = timezone.get_current_timezone()
+        start = timezone.make_aware(datetime.combine(first_day, time.min), zone)
+        end = timezone.make_aware(datetime.combine(today + timedelta(days=1), time.min), zone)
+        daily = orders.filter(created_at__gte=start, created_at__lt=end).annotate(
+            day=TruncDate('created_at', tzinfo=zone),
+        ).values('day').annotate(count=Count('id'))
+        daily_counts = {row['day']: row['count'] for row in daily}
+        # Cohort net value follows the order's creation day, with refunds
+        # reflected in the current snapshot rather than the refund day.
+        daily_net = with_net_amount(orders.filter(
+            created_at__gte=start, created_at__lt=end, payment_status__in=PAID_STATES,
+        )).annotate(day=TruncDate('created_at', tzinfo=zone)).values('day').annotate(
+            amount=Sum('_net_paid_amount'),
+        )
+        daily_net_amounts = {row['day']: row['amount'] or 0 for row in daily_net}
 
         return Response({
             'code': 0,
@@ -288,12 +329,32 @@ class DashboardView(APIView):
                 ).count(),
                 'order_total': orders.count(),
                 'today_order_total': today_orders.count(),
+                'snapshot_at': snapshot_at.isoformat(),
+                'timezone': str(zone),
+                'pending_paid_total': pending_paid['total'],
+                'pending_paid_routes': {'staff': pending_paid['staff'], 'public': pending_paid['public']},
+                'pending_unpaid_total': orders.filter(status=Order.Status.PENDING, payment_status=Order.PaymentStatus.UNPAID).count(),
+                'pending_report_total': ProviderReport.objects.filter(status=ProviderReport.Status.PENDING).count() if 'report:view' in permissions else None,
+                'pending_report_order_blocked_total': ProviderReport.objects.filter(pending_report_order_block_q()).count() if 'report:view' in permissions else None,
+                'pending_withdraw_total': pending_withdrawals['total'] if pending_withdrawals is not None else None,
+                'pending_withdraw_unclaimed': pending_withdrawals['unclaimed'] if pending_withdrawals is not None else None,
+                'pending_withdraw_mine': pending_withdrawals['mine'] if pending_withdrawals is not None else None,
+                'open_aftersale_order_total': orders.filter(Exists(AfterSale.objects.filter(order_id=OuterRef('pk'), status='OPEN'))).count() if 'order:view' in permissions else None,
+                'pending_reservation_total': Reservation.objects.filter(status=Reservation.Status.PENDING).count() if 'order:view' in permissions else None,
+                'confirmed_reservation_total': Reservation.objects.filter(status=Reservation.Status.CONFIRMED).count() if 'order:view' in permissions else None,
+                'unread_chat_session_total': ChatSession.objects.filter(unread_support__gt=0).count() if 'chat:view' in permissions else None,
+                'daily_new_orders': [
+                    {'date': (first_day + timedelta(days=i)).isoformat(),
+                     'count': daily_counts.get(first_day + timedelta(days=i), 0),
+                     'net_amount': daily_net_amounts.get(first_day + timedelta(days=i), 0)}
+                    for i in range(7)
+                ],
                 'order_amount_total': paid['amount'] or 0,
                 'paid_amount_total': paid['amount'] or 0,
                 'paid_order_total': paid['count'],
                 'order_status': status_map,
-                'recent_orders': AdminOrderSerializer(
-                    orders.select_related('customer', 'provider').order_by('-created_at')[:10],
+                'recent_orders': (AdminOrderWithIdentitySerializer if 'order:view' in permissions else AdminOrderSerializer)(
+                    orders.select_related('customer', 'customer_account', 'provider__escort_profile', 'provider_account__escort_profile').prefetch_related('providers__provider_account__escort_profile', 'providers__provider__escort_profile').order_by('-created_at')[:10],
                     many=True,
                 ).data,
             },
@@ -315,6 +376,7 @@ class PlayerDashboardView(APIView):
         if 'player_dashboard:view' not in get_user_permissions(request.account):
             return Response({'code': 403, 'msg': '无操作权限'}, status=403)
 
+        snapshot_at = timezone.now()
         from orders.refunds import PAID_STATES
         order_qs = Order.objects.filter(payment_status__in=PAID_STATES)
         date_range = DashboardRangeSerializer(data=request.query_params)
@@ -326,13 +388,16 @@ class PlayerDashboardView(APIView):
         if end_date:
             order_qs = order_qs.filter(created_at__date__lte=end_date)
 
-        kpi, rank = player_order_metrics(order_qs)
+        kpi, rank, income_review = player_order_metrics(order_qs)
         return Response({
             'code': 0,
             'data': {
+                'snapshot_at': snapshot_at.isoformat(),
+                'timezone': str(timezone.get_current_timezone()),
                 'kpi': kpi,
                 'secondary': self._build_secondary(),
                 'rank': rank,
+                'income_review': income_review,
             },
         })
 
@@ -519,36 +584,40 @@ def _do_ban(request, account, *, role):
             {'code': 403, 'msg': '无强制封禁权限（user:ban_force）'}, status=403,
         )
 
-    # 无论拦不拦，都要先把在途情况算出来：拦的时候用来报错，不拦的时候用来
-    # 在成功响应里告诉客服「你刚才让这几单没了对手方」。
-    if role == 'provider':
-        active_count, active_sample = _provider_active_orders(account)
-        block_on_active = True
-    else:
-        active_count, active_sample = _customer_active_orders(account)
-        block_on_active = False
-
-    if block_on_active and not force and active_count:
-        return Response({
-            'code': 409,
-            'msg': f'该账户还有 {active_count} 笔在途订单，请先处理完再封禁',
-            'data': {
-                'active_order_count': active_count,
-                'active_order_ids': [row[0] for row in active_sample],
-                'active_order_nos': [row[1] for row in active_sample],
-                # 超过采样上限时明确告知列表被截断，别让运营以为就这几单。
-                'truncated': active_count > len(active_sample),
-            },
-        }, status=409)
-
     try:
-        ban = apply_ban(
-            account,
-            reason=reason,
-            operator=getattr(request, 'legacy_user', None),
-            operator_account=getattr(request, 'account', None),
-            expires_at=expires_at,
-        )
+        with transaction.atomic():
+            # All dispatch paths acquire this same per-provider lock before
+            # checking eligibility and claiming capacity. Hold it through the
+            # active-order check and account update so a non-forced ban cannot
+            # use a count made stale by a concurrently committed assignment.
+            # The ban must not lock an order row after taking this lock: the
+            # assignment lock order is order -> provider capacity lock.
+            if role == 'provider':
+                lock_provider_dispatch([account.pk])
+                active_count, active_sample = _provider_active_orders(account)
+            else:
+                # Boss bans intentionally do not block on active orders.
+                active_count, active_sample = _customer_active_orders(account)
+
+            if role == 'provider' and not force and active_count:
+                return Response({
+                    'code': 409,
+                    'msg': f'该账户还有 {active_count} 笔在途订单，请先处理完再封禁',
+                    'data': {
+                        'active_order_count': active_count,
+                        'active_order_ids': [row[0] for row in active_sample],
+                        'active_order_nos': [row[1] for row in active_sample],
+                        'truncated': active_count > len(active_sample),
+                    },
+                }, status=409)
+
+            ban = apply_ban(
+                account,
+                reason=reason,
+                operator=getattr(request, 'legacy_user', None),
+                operator_account=getattr(request, 'account', None),
+                expires_at=expires_at,
+            )
     except ValueError as exc:
         return Response({'code': 400, 'msg': str(exc)}, status=400)
 
@@ -661,6 +730,10 @@ class UserViewSet(EnvelopeViewSetMixin, ModelViewSet):
         nickname = self.request.query_params.get('nickname')
         if nickname:
             qs = qs.filter(nickname__icontains=nickname)
+        keyword = self.request.query_params.get('keyword', '').strip()
+        if keyword:
+            qs = qs.filter(Q(nickname__icontains=keyword) | Q(username__icontains=keyword)
+                           | Q(account_no__icontains=keyword))
         phone = self.request.query_params.get('phone')
         if phone:
             qs = qs.filter(phone__icontains=phone)
@@ -776,6 +849,12 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
         verified = self.request.query_params.get('is_verified')
         if verified is not None and verified != '':
             qs = qs.filter(is_verified=_truthy(verified))
+        account_username = self.request.query_params.get('account_username')
+        if account_username is not None:
+            account_username = account_username.strip()
+            if not account_username or len(account_username) > 150:
+                raise rest_serializers.ValidationError('登录账号参数无效')
+            qs = qs.filter(account__username=account_username)
         game_id = self.request.query_params.get('game_category')
         if game_id:
             if not game_id.isascii() or not game_id.isdigit() or len(game_id) > 18:
@@ -860,19 +939,24 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
         return Response({'code': 0, 'data': self.get_serializer(profile).data})
 
     @action(detail=True, methods=['post'])
+    @recover_fund_result('admin.dispose')
     def dispose(self, request, pk=None):
         """奖励或罚款：直接影响陪玩钱包余额，落流水 + 累加统计 + 记录。"""
         profile = self.get_object()
-        dispose_type = (request.data.get('dispose_type') or '').strip().upper()
+        dispose_type = request.data.get('dispose_type')
+        dispose_type = dispose_type.strip().upper() if isinstance(dispose_type, str) else ''
         if dispose_type not in DisposeRecord.DisposeType.values:
             return Response({'code': 400, 'msg': '请选择奖励或罚款'})
         try:
-            amount = int(request.data.get('amount', 0))
-        except (TypeError, ValueError):
+            amount = rest_serializers.IntegerField(min_value=1, max_value=2147483647).run_validation(request.data.get('amount'))
+        except rest_serializers.ValidationError:
             return Response({'code': 400, 'msg': '请输入合法的兴安币金额'})
         if amount <= 0:
             return Response({'code': 400, 'msg': '金额必须大于 0'})
-        reason = (request.data.get('reason') or '').strip()[:255]
+        reason = request.data.get('reason', '')
+        if not isinstance(reason, str) or len(reason.strip()) > 255:
+            return Response({'code': 400, 'msg': '原因须为255字以内的文本'})
+        reason = reason.strip()
 
         is_reward = dispose_type == DisposeRecord.DisposeType.REWARD
         signed = amount if is_reward else -amount
@@ -883,8 +967,23 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
                 account_id=profile.account_id,
                 for_update=True,
             )
+            replayed, duplicate_reason = peek_fund_write(account=request.account, request_id=request.data.get('client_request_id'))
+            if replayed:
+                return Response({'code': 409, 'msg': duplicate_reason}, status=409)
             if wallet.balance + signed < 0:
                 return Response({'code': 400, 'msg': '罚款后余额不能为负'})
+            if wallet.balance + signed > 2147483647:
+                return Response({'code': 400, 'msg': '奖励后余额超过系统范围'})
+            locked_profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
+            total = locked_profile.total_reward if is_reward else locked_profile.total_penalty
+            if total + amount > 2147483647:
+                return Response({'code': 400, 'msg': '奖罚累计超过系统范围'})
+            allowed, duplicate_reason = claim_fund_write(
+                account=request.account, request_id=request.data.get('client_request_id'),
+                scope='admin.dispose', fingerprint=f'{profile.pk}:{dispose_type}:{amount}:{reason}',
+            )
+            if not allowed:
+                return Response({'code': 409, 'msg': duplicate_reason}, status=409)
             balance_before = wallet.balance
             wallet.balance += signed
             wallet.save(update_fields=['balance'])
@@ -896,9 +995,10 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
                 balance_before=balance_before,
                 balance_after=wallet.balance,
                 remark=reason or ('奖励' if is_reward else '罚款'),
+                operator=request.legacy_user,
+                operator_account=request.account,
             )
 
-            locked_profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
             if is_reward:
                 locked_profile.total_reward += amount
                 locked_profile.save(update_fields=['total_reward'])
@@ -908,6 +1008,7 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
 
             record = DisposeRecord.objects.create(
                 user_id=profile.user_id,
+                account_id=wallet.account_id,
                 dispose_type=dispose_type,
                 amount=amount,
                 reason=reason,
@@ -915,19 +1016,18 @@ class EscortViewSet(EnvelopeViewSetMixin, ModelViewSet):
                 operator_account=request.account,
                 transaction=tx,
             )
-
-        profile.refresh_from_db()
-        return Response({
-            'code': 0,
-            'msg': '操作成功',
-            'data': {
-                'escort': self.get_serializer(profile).data,
+            from wallet.notifier import notify_wallet_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
+            return fund_success(request, 'admin.dispose', data={
                 'record': AdminDisposeRecordSerializer(record).data,
-            },
-        })
+                'balance_after': wallet.balance,
+            }, msg='奖罚已记账')
 
 
 # ---------------- 订单 ----------------
+STAFF_DIRECT_VERIFY_LIMIT = 500
+
+
 class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     serializer_class = AdminOrderSerializer
     default_perm = 'order:view'
@@ -944,36 +1044,135 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         'complete': 'order:settle',
     }
 
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return AdminOrderDetailSerializer
+        if self.action == 'list':
+            return AdminOrderWithIdentitySerializer
+        return super().get_serializer_class()
+
     def get_queryset(self):
-        qs = Order.objects.select_related('customer', 'provider').prefetch_related(
-            'providers__provider', 'aftersales'
-        ).order_by('-created_at')
+        qs = Order.objects.select_related('customer', 'customer_account', 'provider__escort_profile', 'provider_account__escort_profile', 'service__service_category', 'direct_payment__fee_quote').prefetch_related(
+            'providers__provider__escort_profile', 'providers__provider_account__escort_profile', 'aftersales'
+        ).order_by('-created_at', '-pk')
         status_filter = self.request.query_params.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter.upper())
         payment = self.request.query_params.get('payment_status')
         if payment:
             qs = qs.filter(payment_status=payment.upper())
+        dispatch_route = self.request.query_params.get('dispatch_route')
+        if dispatch_route:
+            qs = qs.filter(dispatch_route=dispatch_route.upper())
+        actionable_staff = self.request.query_params.get('actionable_staff') == '1'
+        if self.request.query_params.get('aftersale_open') == '1':
+            open_ticket = AfterSale.objects.filter(order_id=OuterRef('pk'), status='OPEN')
+            qs = qs.filter(Exists(open_ticket))
+            if not actionable_staff:
+                # Queue age belongs to the current request, not the order's
+                # original creation date; a resolved case can be reopened.
+                qs = qs.annotate(_open_aftersale_at=Subquery(open_ticket.values('created_at')[:1])).order_by('_open_aftersale_at', 'pk')
+        def customer_field_match(field, value):
+            # Match the same identity displayed in AdminOrderSerializer. A
+            # linked business account takes precedence over legacy fields.
+            return Q(**{f'customer_account__{field}__icontains': value}) | (
+                Q(customer_account__isnull=True) & Q(**{f'customer__{field}__icontains': value})
+            )
         keyword = self.request.query_params.get('keyword')
         if keyword:
             qs = qs.filter(
                 Q(order_no__icontains=keyword)
-                | Q(customer__username__icontains=keyword)
-                | Q(customer__phone__icontains=keyword)
+                | customer_field_match('username', keyword)
+                | customer_field_match('phone', keyword)
             )
         order_no = self.request.query_params.get('order_no')
         if order_no:
             qs = qs.filter(order_no__icontains=order_no)
+        order_no_exact = self.request.query_params.get('order_no_exact')
+        if order_no_exact:
+            qs = qs.filter(order_no=order_no_exact)
+        created_day = self.request.query_params.get('created_day')
+        if created_day:
+            try:
+                day = datetime.strptime(created_day, '%Y-%m-%d').date()
+                if day.isoformat() != created_day or not 1000 <= day.year <= 9998:
+                    raise ValueError
+            except ValueError:
+                raise rest_serializers.ValidationError('订单创建日期无效')
+            zone = timezone.get_current_timezone()
+            start = timezone.make_aware(datetime.combine(day, time.min), zone)
+            end = timezone.make_aware(datetime.combine(day + timedelta(days=1), time.min), zone)
+            qs = qs.filter(created_at__gte=start, created_at__lt=end)
+            self._created_day_applied = {'date': created_day, 'timezone': str(zone)}
+        customer_account_id = self.request.query_params.get('customer_account_id')
+        if customer_account_id:
+            if not customer_account_id.isascii() or not customer_account_id.isdigit() or len(customer_account_id) > 18 or int(customer_account_id) <= 0:
+                raise rest_serializers.ValidationError('老板账户编号无效')
+            account_id = int(customer_account_id)
+            legacy_ids = LegacyAccountMap.objects.filter(account_id=account_id).values('legacy_user_id')
+            qs = qs.filter(Q(customer_account_id=account_id) | Q(customer_account__isnull=True, customer_id__in=legacy_ids))
         customer_username = self.request.query_params.get('customer_username')
         if customer_username:
-            qs = qs.filter(customer__username__icontains=customer_username)
+            qs = qs.filter(customer_field_match('username', customer_username))
         customer_nickname = self.request.query_params.get('customer_nickname')
         if customer_nickname:
-            qs = qs.filter(customer__nickname__icontains=customer_nickname)
+            qs = qs.filter(customer_field_match('nickname', customer_nickname))
         customer_phone = self.request.query_params.get('customer_phone')
         if customer_phone:
-            qs = qs.filter(customer__phone__icontains=customer_phone)
+            qs = qs.filter(customer_field_match('phone', customer_phone))
+        if actionable_staff:
+            from orders.staff_dispatch_readiness import dispatch_assignment_allowed, staff_dispatch_candidate_q
+            from django.db import DatabaseError
+            # Verify a bounded set of direct-payment candidates *before*
+            # pagination and COUNT. Balance orders do not go through this
+            # scan and remain visible even if the direct-payment bound is hit.
+            now = timezone.now()
+            candidate_q = staff_dispatch_candidate_q(now=now)
+            base = qs.filter(Q(auto_cancel_at__isnull=True) | Q(auto_cancel_at__gt=now),
+                             dispatch_route=Order.DispatchRoute.STAFF,
+                             status=Order.Status.PENDING, payment_status=Order.PaymentStatus.PAID,
+                             provider__isnull=True, provider_account__isnull=True)
+            # Check the earliest deadlines first before applying the bounded
+            # direct-payment verification, then use the same order for pages.
+            queue_order = (F('auto_cancel_at').asc(nulls_last=True), 'created_at', 'pk')
+            candidates = qs.filter(candidate_q).order_by(*queue_order)
+            needs_review = base.filter(direct_payment__isnull=False).exclude(candidate_q).exists()
+            direct_rows = list(candidates.filter(direct_payment__isnull=False).select_related(
+                'direct_payment__fee_quote')[:STAFF_DIRECT_VERIFY_LIMIT + 1])
+            if len(direct_rows) > STAFF_DIRECT_VERIFY_LIMIT:
+                needs_review = True
+                direct_rows = direct_rows[:STAFF_DIRECT_VERIFY_LIMIT]
+            valid_ids = []
+            for order in direct_rows:
+                try:
+                    if dispatch_assignment_allowed(order, now=now):
+                        valid_ids.append(order.pk)
+                    else:
+                        needs_review = True
+                except DatabaseError:
+                    raise
+                except Exception:
+                    # Do not leak or silently count malformed financial data.
+                    logging.getLogger(__name__).warning('待派订单校验失败: order_id=%s', order.pk)
+                    needs_review = True
+            self._staff_queue_needs_review = needs_review
+            qs = candidates.filter(Q(direct_payment__isnull=True) | Q(pk__in=valid_ids)).order_by(*queue_order)
         return qs
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        if request.query_params.get('aftersale_open') == '1' and request.query_params.get('actionable_staff') != '1' and response.data.get('code') == 0:
+            response.data['data']['aftersale_queue_order'] = 'opened_asc'
+        if request.query_params.get('order_no_exact') and response.data.get('code') == 0:
+            response.data['data']['order_no_exact_applied'] = True
+        if request.query_params.get('customer_account_id') and response.data.get('code') == 0:
+            response.data['data']['customer_account_id_applied'] = str(int(request.query_params['customer_account_id']))
+        if request.query_params.get('created_day') and response.data.get('code') == 0:
+            response.data['data']['created_day_applied'] = getattr(self, '_created_day_applied', None)
+        if request.query_params.get('actionable_staff') == '1' and response.data.get('code') == 0:
+            response.data['data']['staff_queue_needs_review'] = bool(getattr(self, '_staff_queue_needs_review', True))
+            response.data['data']['staff_queue_order'] = 'deadline_asc'
+        return response
 
     @action(detail=False, methods=['get'], url_path='dispatch-quote')
     def dispatch_quote(self, request):
@@ -1013,15 +1212,22 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 or any(c not in ('KOOK', 'WECOM') for c in channels)
                 or len(set(channels)) != len(channels)):
             return Response({'code': 400, 'msg': '请选择有效的发单渠道'}, status=400)
+        expected = request.data.get('confirmation_keys')
+        if (not isinstance(expected, dict) or set(expected) != set(channels)
+                or any(not isinstance(value, str) or len(value) != 64 for value in expected.values())):
+            return Response({'code': 400, 'msg': '请先读取发单预览并确认渠道'}, status=400)
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=order.pk)
-            reason = eligibility_error(order)
-            if reason:
-                return Response({'code': 409, 'msg': reason}, status=409)
-            if any(not channel_config(c, order)[0] for c in channels):
+            preview, plans = dispatch_preview(order, include_plans=True)
+            if not preview['can_send']:
+                return Response({'code': 409, 'msg': preview['reason']}, status=409)
+            current = {item['channel']: item['confirmation_key'] for item in preview['channels']}
+            if any(current[channel] != expected[channel] for channel in channels):
+                return Response({'code': 409, 'errorCode': 'DISPATCH_PREVIEW_CHANGED', 'msg': '订单、渠道或文案已变化，请刷新并重新确认'}, status=409)
+            if any(not plans[c]['ready'] for c in channels):
                 return Response({'code': 400, 'msg': '所选渠道尚未配置，可先复制文案'}, status=400)
             for channel in channels:
-                queue_dispatch(order, channel, manual=True)
+                queue_dispatch(order, channel, manual=True, prepared=plans[channel])
         return Response({'code': 0, 'data': dispatch_preview(order), 'msg': '已处理发单请求'})
 
     @action(detail=True, methods=['get'])
@@ -1034,6 +1240,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     def assign(self, request, pk=None):
         """将已有待接单订单指派给一名当前可接单的陪玩。"""
         order = self.get_object()
+        if 'provider_ids' in request.data:
+            return self._assign_staff_team(request, order)
         provider_id = request.data.get('provider_id')
         if not provider_id:
             return Response({'code': 400, 'msg': '请选择陪玩'})
@@ -1065,7 +1273,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             from orders.team_rules import required_team_size
             if required_team_size(o) != 1:
                 raise IllegalTransitionError('双陪订单请通过快捷派单创建并同时指定两名陪玩')
-            if not profile.can_take_service(o.service):
+            if not current_profile.can_take_service(o):
                 raise IllegalTransitionError('该服务要求更高的陪玩档位，所选陪玩不符合')
             # 产能闸门放在 pre_check 而不是上面的入参解析段：pre_check 由
             # transition() 在 @transaction.atomic + Order.select_for_update()
@@ -1083,6 +1291,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             o.provider = provider
             o.provider_account = provider_account
             o.provider_name_snapshot = profile.display_name or provider.nickname or provider.username
+            from orders.applications import close_applications_for_staff_assignment
+            close_applications_for_staff_assignment(o, [provider_account.pk])
             mark_escort_busy(
                 provider_ids=[provider.id],
                 account_ids=[provider_account.pk],
@@ -1108,20 +1318,121 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许派单'})
 
         notify_order_update(order)
+        from orders.notice_text import service_arrangement_hint
         _push_message_safe(
             recipient_id=provider.id,
+            recipient_account_id=provider_account.pk,
             title='客服派单给你',
-            preview=f'客服为你派单「{order.service_name_snapshot}」，请尽快开始服务',
+            preview=f'客服为你派单「{order.service_name_snapshot}」，{service_arrangement_hint(order)}',
             msg_type='ORDER',
             related_order_id=order.id,
         )
         _push_message_safe(
             recipient_id=order.customer_id,
+            recipient_account_id=order.customer_account_id,
             title='已为你指派大神',
             preview=f'{order.provider_name_snapshot}已接单你的「{order.service_name_snapshot}」',
             msg_type='ORDER',
             related_order_id=order.id,
         )
+        return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '派单成功'})
+
+    def _assign_staff_team(self, request, order):
+        """为已付款的客服待派双陪一次指派完整队伍。"""
+        ids = request.data.get('provider_ids')
+        if ('provider_id' in request.data or not isinstance(ids, list) or len(ids) != 2
+                or any(type(pk) is not int or pk <= 0 for pk in ids) or len(set(ids)) != 2):
+            return Response({'code': 400, 'msg': '请同时选择两名不同的陪玩'})
+        accounts_by_id = ClubAccount.objects.select_related('legacy_mapping').filter(
+            pk__in=ids, account_type=ClubAccount.AccountType.PROVIDER,
+        ).in_bulk()
+        if len(accounts_by_id) != 2:
+            return Response({'code': 404, 'msg': '所选陪玩不存在'})
+        try:
+            accounts = [accounts_by_id[pk] for pk in ids]
+            users = [_legacy_user_for_account(account) for account in accounts]
+        except User.DoesNotExist:
+            return Response({'code': 404, 'msg': '陪玩账户映射不存在'})
+        profiles = []
+
+        def pre_check(current):
+            from orders.team_rules import required_team_size
+            if current.dispatch_route != Order.DispatchRoute.STAFF or required_team_size(current) != 2:
+                raise IllegalTransitionError('仅客服待派双陪订单支持两人指派')
+            if current.payment_status != Order.PaymentStatus.PAID:
+                raise IllegalTransitionError('订单未支付，不能派单')
+            if current.auto_cancel_at and current.auto_cancel_at <= timezone.now():
+                raise IllegalTransitionError('订单已超时，请刷新订单')
+            if current.provider_id or current.provider_account_id or current.providers.exists():
+                raise IllegalTransitionError('订单已有陪玩记录，请联系客服核对后处理')
+            locked = {profile.account_id: profile for profile in EscortProfile.objects.select_for_update().filter(
+                account_id__in=ids,
+            ).order_by('account_id')}
+            if len(locked) != 2:
+                raise IllegalTransitionError('所选陪玩资料不存在')
+            for account in accounts:
+                profile = locked[account.pk]
+                if profile.status != EscortProfile.Status.AVAILABLE:
+                    raise IllegalTransitionError(f'{profile.display_name or "陪玩"}：当前不可接单')
+                reason = profile.order_acceptance_error(current, provider_gender=current.provider_gender)
+                if reason:
+                    raise IllegalTransitionError(f'{profile.display_name or "陪玩"}：{reason}')
+                reason = _capacity_reject_reason(account.pk, display_name=profile.display_name,
+                                                 exclude_order_ids=[current.pk])
+                if reason:
+                    raise IllegalTransitionError(reason)
+                profiles.append(profile)
+
+        def side_effect(current):
+            from orders.pricing import club_provider_specs
+            from orders.settlement import build_provider_shares, aggregate_order_split
+            specs = club_provider_specs(current, profiles, current.amount)
+            if specs is None:
+                specs = [{'commission_rate': current.commission_rate} for _ in profiles]
+            shares = build_provider_shares(current.amount, specs)
+            split = aggregate_order_split(current.amount, shares,
+                current.inviter_commission_rate_snapshot if current.inviter_id else 0)
+            current.provider, current.provider_account = users[0], accounts[0]
+            current.provider_name_snapshot = profiles[0].display_name or users[0].nickname or users[0].username
+            current.escort_mode = Order.EscortMode.DOUBLE
+            # Existing team fulfillment dispatches both members through this flag.
+            current.requires_boss_selection = True
+            current.commission_rate = split.commission_rate
+            current.provider_income = split.provider_income
+            current.inviter_commission = split.inviter_commission
+            current.shop_income = split.shop_income
+            for account, user, profile, share in zip(accounts, users, profiles, shares):
+                OrderProvider.objects.create(
+                    order=current, provider=user, provider_account=account,
+                    provider_name_snapshot=profile.display_name or user.nickname or user.username,
+                    settlement_base=share.settlement_base, commission_type=share.commission_type,
+                    commission_rate=share.commission_rate, commission_fixed=share.commission_fixed,
+                    provider_income=share.provider_income,
+                )
+            mark_escort_busy(provider_ids=[user.pk for user in users], account_ids=ids)
+
+        try:
+            order = transition(order.pk, Order.Status.GRABBED, operator=request.legacy_user,
+                operator_account=request.account, action=OrderStatusLog.Action.ASSIGN,
+                reason='客服指派双陪', pre_check=pre_check, side_effect=side_effect,
+                dispatch_account_ids=ids, update_fields=[
+                    'provider', 'provider_account', 'provider_name_snapshot', 'escort_mode',
+                    'requires_boss_selection', 'commission_rate', 'provider_income',
+                    'inviter_commission', 'shop_income',
+                ])
+        except (IllegalTransitionError, SettlementError) as exc:
+            return Response({'code': 400, 'msg': str(exc) or '当前状态不允许派单'})
+
+        notify_order_update(order)
+        from orders.notice_text import service_arrangement_hint
+        service_hint = service_arrangement_hint(order)
+        for user, account in zip(users, accounts):
+            _push_message_safe(recipient_id=user.id, recipient_account_id=account.pk, title='客服派单给你',
+                preview=f'客服为你派单「{order.service_name_snapshot}」，{service_hint}',
+                msg_type='ORDER', related_order_id=order.id)
+        _push_message_safe(recipient_id=order.customer_id, recipient_account_id=order.customer_account_id, title='已为你指派双陪',
+            preview=f'已为你的「{order.service_name_snapshot}」指派两位陪玩',
+            msg_type='ORDER', related_order_id=order.id)
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '派单成功'})
 
     @action(detail=True, methods=['post'])
@@ -1137,6 +1448,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         order = self.get_object()
         if order.status != Order.Status.IN_SERVICE:
             return Response({'code': 400, 'msg': '仅服务中的订单可转单'})
+        from orders.direct_payment_models import DirectPaymentIntent
+        if DirectPaymentIntent.objects.filter(order_id=order.pk).exists():
+            return Response({'code': 400, 'msg': '微信支付订单转单及结算尚未开放'})
 
         transfers = request.data.get('transfers')
         if not isinstance(transfers, list) or not transfers:
@@ -1207,6 +1521,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 locked_order = Order.objects.select_for_update().get(pk=order.pk)
                 if locked_order.status != Order.Status.IN_SERVICE:
                     raise IllegalTransitionError('订单状态已变更，无法转单')
+                if DirectPaymentIntent.objects.filter(order_id=locked_order.pk).exists():
+                    raise IllegalTransitionError('微信支付订单转单及结算尚未开放')
                 # Transfer can touch a wallet and then change provider status.
                 # Join settlement/refund arbitration before any funds/profile
                 # lock, including when the same provider has another order.
@@ -1395,6 +1711,10 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     if not created:
                         if new_row.settled_at and new_row.provider_income > 0:
                             raise IllegalTransitionError('该打手已收到本单转单结算收益，不能重新转入同一历史订单')
+                        if new_row.released_at and locked_order.escort_mode == Order.EscortMode.DOUBLE:
+                            # Keep the old report image as evidence, but require
+                            # a fresh completion action for this assignment.
+                            new_row.team_completion_pending = True
                         new_row.provider_income += new_income
                         new_row.settlement_base += transferred_base
                         if locked_order.commission_type == 'FIXED':
@@ -1404,7 +1724,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         new_row.settled_at = None
                         new_row.released_at = None
                         new_row.save(update_fields=[
-                            'provider_income', 'settlement_base', 'settled_at', 'released_at', 'commission_type', 'commission_rate', 'commission_fixed',
+                            'provider_income', 'settlement_base', 'settled_at', 'released_at', 'commission_type', 'commission_rate', 'commission_fixed', 'team_completion_pending',
                         ])
                     mark_escort_busy(
                         provider_ids=[new_provider.id],
@@ -1426,6 +1746,23 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         'provider', 'provider_account', 'provider_name_snapshot',
                     ])
 
+                # Existing evidence drafts were created at entry with the old
+                # share. Keep those drafts aligned with the transferred shares;
+                # submitted/audited reports remain historical records.
+                changed_accounts = {cmd['old_provider_account_id'] for cmd in parsed}
+                changed_accounts.update(cmd['new_provider_account'].pk for cmd in parsed)
+                changed_shares = {row.provider_account_id: row for row in locked_order.providers.filter(
+                    provider_account_id__in=changed_accounts)}
+                for draft in ProviderReport.objects.select_for_update().filter(
+                        order=locked_order, provider_account_id__in=changed_accounts,
+                        status=ProviderReport.Status.DRAFT):
+                    share = changed_shares.get(draft.provider_account_id)
+                    if share and (draft.amount != share.settlement_base or draft.commission_rate != share.commission_rate):
+                        draft.amount = share.settlement_base
+                        draft.commission_rate = share.commission_rate
+                        draft.save(update_fields=['amount', 'commission_rate', 'updated_at'])
+                        transaction.on_commit(lambda draft=draft: notify_report_update(draft))
+
                 log_only(
                     locked_order,
                     action=OrderStatusLog.Action.TRANSFER,
@@ -1438,13 +1775,29 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '转单失败'})
 
+        # A teammate who remains on a two-person service must also learn about
+        # the handoff, including when they were offline during the update.
+        if order.escort_mode == Order.EscortMode.DOUBLE:
+            for row in rows.values():
+                if row.provider_account_id in changed_accounts or row.released_at:
+                    continue
+                _push_message_safe(
+                    recipient_id=row.provider_id,
+                    recipient_account_id=row.provider_account_id,
+                    title='服务搭档已更换',
+                    preview=f'「{order.service_name_snapshot}」的服务搭档已更换，请查看订单并确认服务安排',
+                    msg_type='ORDER', related_order_id=order.id,
+                )
         for cmd in parsed:
             _push_message_safe(
                 recipient_id=rows[cmd['old_provider_account_id']].provider_id,
+                recipient_account_id=cmd['old_provider_account_id'],
                 title='订单已转出',
                 preview=(
                     f'你的「{order.service_name_snapshot}」已转交其他大神，'
-                    + ('保留收益待整单报单通过后结算'
+                    + ('本单无保留份额，无需提交报单'
+                       if rows[cmd['old_provider_account_id']].settlement_base <= 0 else
+                       '保留收益待整单报单通过后结算'
                        if order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL
                        else '本次转单份额已结算')
                 ),
@@ -1453,13 +1806,15 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             )
             _push_message_safe(
                 recipient_id=cmd['new_provider'].id,
+                recipient_account_id=cmd['new_provider_account'].pk,
                 title='客服转单给你',
-                preview=f'客服为你转入「{order.service_name_snapshot}」，请尽快开始服务',
+                preview=f'客服为你转入「{order.service_name_snapshot}」，请接手并继续服务，完成后提交结单截图',
                 msg_type='ORDER',
                 related_order_id=order.id,
             )
         _push_message_safe(
             recipient_id=order.customer_id,
+            recipient_account_id=order.customer_account_id,
             title='已为你更换大神',
             preview=f'你的「{order.service_name_snapshot}」已更换服务大神',
             msg_type='ORDER',
@@ -1764,6 +2119,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if wallet.balance < amount:
                 return Response({'code': 400, 'msg': '该老板兴安币不足，请先通过企微客服充值'})
 
+            from orders.timeout import current_timeout_config
+            timeout_minutes = current_timeout_config().minutes
             locked_coupon = lock_purchase(customer_account, service, game_rounds, user_coupon, pricing)
             allowed, reason = claim_fund_write(
                 account=request.account, request_id=request.data.get('client_request_id'),
@@ -1791,7 +2148,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 escort_mode=escort_mode,
                 provider_gender=provider_gender,
                 payment_status=Order.PaymentStatus.PAID,
-                auto_cancel_at=pending_timeout_deadline(),
+                pending_timeout_minutes=timeout_minutes,
+                auto_cancel_at=pending_timeout_deadline(minutes=timeout_minutes),
                 original_amount=pricing.original_amount,
                 boss_discount=pricing.boss_discount,
                 promo_discount=pricing.promo_discount,
@@ -1833,6 +2191,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 operator=request.legacy_user,
                 operator_account=request.account,
             )
+            from wallet.notifier import notify_wallet_update
+            transaction.on_commit(lambda wallet=wallet: notify_wallet_update(wallet))
             log_only(
                 order,
                 action=OrderStatusLog.Action.CREATE,
@@ -1881,7 +2241,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 related_order_id=order.id,
             )
         else:
-            _schedule_auto_cancel(order)
+            # quick_dispatch itself is atomic: workers must not receive an
+            # order ID before its debit and order have committed.
+            transaction.on_commit(lambda order=order: _schedule_auto_cancel(order))
             enqueue_kook_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
             enqueue_wecom_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
             _push_message_safe(
@@ -1892,7 +2254,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 related_order_id=order.id,
             )
 
-        notify_order_update(order)
+        # A rolled-back order must not be broadcast to other clients.
+        transaction.on_commit(lambda order=order: notify_order_update(order))
         return Response({
             'code': 0,
             'msg': '派单成功',
@@ -2015,6 +2378,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
+        from orders.direct_payment import DirectPaymentCancellationUnconfirmed
         order = self.get_object()
         reason = (request.data.get('reason') or '').strip()[:255]
         if order.status != Order.Status.PENDING:
@@ -2027,6 +2391,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 reason or '后台取消',
                 action=OrderStatusLog.Action.CANCEL,
             )
+        except DirectPaymentCancellationUnconfirmed as exc:
+            return Response({'code': 409, 'errorCode': 'DIRECT_PAYMENT_CANCELLATION_UNCONFIRMED', 'msg': str(exc)})
         except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许取消'})
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '已取消'})
@@ -2051,8 +2417,14 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 transaction.on_commit(lambda:notify_order_update(order))
             return order
         def pre_check(order):
+            # The initial view lookup is not locked: a provider may have
+            # accepted the order before transition acquired its row lock.
+            if action == OrderStatusLog.Action.CANCEL and order.status != Order.Status.PENDING:
+                raise IllegalTransitionError('仅待接单订单可直接取消，其它状态请用退款')
             if order.status == Order.Status.CANCELLED:
                 raise IllegalTransitionError('订单已是终态，无法退款')
+            from orders.direct_payment import require_cancel_channel_confirmation
+            require_cancel_channel_confirmation(order)
 
         def side_effect(order):
             refund_to_customer(order, reason=reason, operator=operator, operator_account=operator_account,
@@ -2104,9 +2476,13 @@ class EvaluationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = (
-            Evaluation.objects.select_related('customer', 'provider', 'order')
+            Evaluation.objects.select_related('customer', 'customer_account', 'provider', 'provider_account', 'order')
             .order_by('-created_at')
         )
+        def account_match(role, field, value):
+            return Q(**{f'{role}_account__{field}__icontains': value}) | (
+                Q(**{f'{role}_account__isnull': True}) & Q(**{f'{role}__{field}__icontains': value})
+            )
         score = self.request.query_params.get('score')
         if score:
             qs = qs.filter(score=score)
@@ -2117,26 +2493,26 @@ class EvaluationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if keyword:
             qs = qs.filter(
                 Q(order__order_no__icontains=keyword)
-                | Q(customer__username__icontains=keyword)
-                | Q(customer__nickname__icontains=keyword)
-                | Q(provider__username__icontains=keyword)
-                | Q(provider__nickname__icontains=keyword)
+                | account_match('customer', 'username', keyword)
+                | account_match('customer', 'nickname', keyword)
+                | account_match('provider', 'username', keyword)
+                | account_match('provider', 'nickname', keyword)
             )
         order_no = self.request.query_params.get('order_no')
         if order_no:
             qs = qs.filter(order__order_no__icontains=order_no)
         customer_username = self.request.query_params.get('customer_username')
         if customer_username:
-            qs = qs.filter(customer__username__icontains=customer_username)
+            qs = qs.filter(account_match('customer', 'username', customer_username))
         customer_nickname = self.request.query_params.get('customer_nickname')
         if customer_nickname:
-            qs = qs.filter(customer__nickname__icontains=customer_nickname)
+            qs = qs.filter(account_match('customer', 'nickname', customer_nickname))
         provider_username = self.request.query_params.get('provider_username')
         if provider_username:
-            qs = qs.filter(provider__username__icontains=provider_username)
+            qs = qs.filter(account_match('provider', 'username', provider_username))
         provider_nickname = self.request.query_params.get('provider_nickname')
         if provider_nickname:
-            qs = qs.filter(provider__nickname__icontains=provider_nickname)
+            qs = qs.filter(account_match('provider', 'nickname', provider_nickname))
         return qs
 
     @action(detail=True, methods=['post'])
@@ -2148,9 +2524,20 @@ class EvaluationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if not content:
             return Response({'code': 400, 'msg': '回复内容不能为空'})
         evaluation = self.get_object()
-        evaluation.reply_content = content
-        evaluation.replied_at = timezone.now()
-        evaluation.save(update_fields=['reply_content', 'replied_at', 'updated_at'])
+        from orders.evaluation_replies import valid_reply_version, write_reply_if_current
+        version = request.data.get('reply_version')
+        if not valid_reply_version(version):
+            return Response({'code': 400, 'msg': '请刷新评价后再回复'}, status=400)
+        with transaction.atomic():
+            if not write_reply_if_current(evaluation, content, version):
+                return Response({'code': 409, 'errorCode': 'EVALUATION_REPLY_CONFLICT', 'msg': '回复已变化，请读取最新内容后核对'}, status=409)
+            transaction.on_commit(lambda: _push_message_safe(
+                recipient_id=evaluation.customer_id,
+                recipient_account_id=evaluation.customer_account_id,
+                title='客服回复了你的评价',
+                preview=f'「{evaluation.order.service_name_snapshot}」的评价收到回复，可在订单中查看',
+                msg_type='ORDER', related_order_id=evaluation.order_id))
+            transaction.on_commit(lambda: notify_order_update(Order.objects.get(pk=evaluation.order_id)))
         return Response({
             'code': 0,
             'data': self.get_serializer(evaluation).data,
@@ -2158,10 +2545,18 @@ class EvaluationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         })
 
     def destroy(self, request, *args, **kwargs):
+        from orders.evaluation_replies import valid_reply_version
+        version = request.data.get('reply_version')
+        if not valid_reply_version(version):
+            return Response({'code': 400, 'msg': '请刷新评价后再删除'}, status=400)
         with transaction.atomic():
-            evaluation = Evaluation.objects.select_for_update().get(pk=kwargs['pk'])
-            rollback_escort_rating(evaluation.provider_id, evaluation.score)
+            evaluation = get_object_or_404(Evaluation.objects.select_for_update(), pk=kwargs['pk'])
+            if evaluation.reply_version != version:
+                return Response({'code': 409, 'errorCode': 'EVALUATION_REPLY_CONFLICT', 'msg': '回复已变化，请读取最新评价后核对'}, status=409)
+            refresh_escort_rating(evaluation.provider_id, provider_account_id=evaluation.provider_account_id, exclude_evaluation_id=evaluation.pk)
+            order_id = evaluation.order_id
             evaluation.delete()
+            transaction.on_commit(lambda: notify_order_update(Order.objects.get(pk=order_id)))
         return Response({'code': 0, 'msg': '已删除'})
 
 
@@ -2188,6 +2583,16 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             .select_related('user', 'user__boss_type', 'account')
             .order_by('-updated_at')
         )
+        # 统一关键词在账户标识中任一匹配，仍与独立条件和账户类型叠加。
+        keyword = (self.request.query_params.get('keyword') or '').strip()
+        if keyword:
+            qs = qs.filter(
+                Q(account__account_no__icontains=keyword)
+                | Q(account__isnull=True, user__boss_no__icontains=keyword)
+                | Q(user__username__icontains=keyword)
+                | Q(user__nickname__icontains=keyword)
+                | Q(user__phone__icontains=keyword)
+            )
         # 编号 / 昵称 / 手机号 三个独立条件，相互 AND 叠加（支持输入即查提示）
         boss_no = self.request.query_params.get('boss_no')
         if boss_no:
@@ -2243,6 +2648,8 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 operator=request.legacy_user,
                 operator_account=request.account,
             )
+            from wallet.notifier import notify_wallet_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
         return Response({'code': 0, 'data': self.get_serializer(wallet).data, 'msg': '调账成功'})
 
     @action(detail=False, methods=['post'])
@@ -2365,6 +2772,8 @@ class WalletViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             record.save(update_fields=['recharge_tx', 'gift_tx'])
             from engagement.services import record_recharge
             record_recharge(record)
+            from wallet.notifier import notify_wallet_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
             transaction.on_commit(lambda: _push_message_safe(
                 recipient_id=legacy_user_id, title='充值已到账',
                 preview=f'客服确认收款，到账 {(amount + gift_amount) / 10:g} 兴安币',
@@ -2390,6 +2799,17 @@ class RechargeRecordViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = RechargeRecord.objects.select_related('user', 'user__boss_type', 'operator', 'account').order_by('-created_at')
+        wallet_id = self.request.query_params.get('wallet_id')
+        if wallet_id:
+            from rest_framework.exceptions import ValidationError
+            if not wallet_id.isascii() or not wallet_id.isdigit() or len(wallet_id) > 19 or not 0 < int(wallet_id) <= 9223372036854775807:
+                raise ValidationError('钱包编号无效')
+            # Wallet belongs to one legacy user; include that user's older records
+            # even when a historical record has no account or transaction link.
+            qs = qs.filter(user__wallet__pk=int(wallet_id))
+        trade_no = self.request.query_params.get('trade_no', '').strip()
+        if trade_no:
+            qs = qs.filter(trade_no__iexact=trade_no)
         account_id = self.request.query_params.get('account_id')
         user_id = self.request.query_params.get('user_id')
         if account_id:
@@ -2443,7 +2863,16 @@ class TransactionViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     default_perm = 'transaction:view'
 
     def get_queryset(self):
-        qs = Transaction.objects.select_related('wallet', 'wallet__user', 'operator').order_by('-created_at')
+        qs = Transaction.objects.select_related('wallet', 'wallet__user', 'operator', 'order').order_by('-created_at')
+        order_no = self.request.query_params.get('order_no_exact', '').strip()
+        if order_no:
+            qs = qs.filter(order__order_no=order_no)
+        wallet_id = self.request.query_params.get('wallet_id')
+        if wallet_id:
+            from rest_framework.exceptions import ValidationError
+            if not wallet_id.isascii() or not wallet_id.isdigit() or len(wallet_id) > 19 or not 0 < int(wallet_id) <= 9223372036854775807:
+                raise ValidationError('钱包编号无效')
+            qs = qs.filter(wallet_id=int(wallet_id))
         tx_type = self.request.query_params.get('tx_type')
         if tx_type:
             qs = qs.filter(tx_type=tx_type.upper())
@@ -2467,29 +2896,47 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = ProviderReport.objects.select_related(
-            'provider', 'provider__escort_profile__level', 'auditor', 'order',
+            'provider', 'provider__escort_profile__level', 'provider_account',
+            'provider_account__escort_profile', 'auditor', 'order',
         ).prefetch_related(
             'result_images', 'order__providers',
         ).exclude(status=ProviderReport.Status.DRAFT).order_by('-created_at')
         status_filter = self.request.query_params.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter.upper())
+        if self.request.query_params.get('order_blocked') == '1':
+            from .serializers import pending_report_order_block_q
+            qs = qs.filter(pending_report_order_block_q())
+        def provider_match(field, value):
+            return Q(**{f'provider_account__{field}__icontains': value}) | (
+                Q(provider_account__isnull=True) & Q(**{f'provider__{field}__icontains': value})
+            )
+        def profile_name_match(value):
+            return Q(provider_account__escort_profile__display_name__icontains=value) | (
+                Q(provider_account__isnull=True) & Q(provider__escort_profile__display_name__icontains=value)
+            )
+        def profile_no_match(value):
+            return Q(provider_account__escort_profile__escort_no__icontains=value) | (
+                Q(provider_account__isnull=True) & Q(provider__escort_profile__escort_no__icontains=value)
+            )
         keyword = self.request.query_params.get('keyword')
         if keyword:
             qs = qs.filter(
                 Q(game_name__icontains=keyword)
-                | Q(provider__username__icontains=keyword)
-                | Q(provider__nickname__icontains=keyword)
+                | provider_match('username', keyword)
+                | provider_match('nickname', keyword)
+                | profile_name_match(keyword)
+                | profile_no_match(keyword)
             )
         game_name = self.request.query_params.get('game_name')
         if game_name:
             qs = qs.filter(game_name__icontains=game_name)
         provider_username = self.request.query_params.get('provider_username')
         if provider_username:
-            qs = qs.filter(provider__username__icontains=provider_username)
+            qs = qs.filter(provider_match('username', provider_username))
         provider_nickname = self.request.query_params.get('provider_nickname')
         if provider_nickname:
-            qs = qs.filter(provider__nickname__icontains=provider_nickname)
+            qs = qs.filter(provider_match('nickname', provider_nickname) | profile_name_match(provider_nickname) | profile_no_match(provider_nickname))
         return qs
 
     @action(detail=True, methods=['post'])
@@ -2552,12 +2999,14 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
         create_message(
             recipient_id=report.provider_id,
+            recipient_account_id=report.provider_account_id,
             title='报单审核通过',
             preview=f'{report.game_name} 报单已通过，入账 {payout / 10:g} 兴安币',
             detail=(
                 f'报单金额 {report.amount / 10:g} 兴安币，'
                 f'平台抽成 {rate}%（{source_label}），实际入账 {payout / 10:g} 兴安币。'
             ),
+            action_url='/pages/report/index',
         )
         return Response({'code': 0, 'data': self.get_serializer(report).data, 'msg': '已通过并入账'})
 
@@ -2588,9 +3037,13 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
         create_message(
             recipient_id=report.provider_id,
+            recipient_account_id=report.provider_account_id,
             title='报单审核未通过',
             preview=f'{report.game_name} 报单被驳回',
             detail=f'驳回原因：{audit_remark}',
+            msg_type='ORDER' if report.order_id else 'SYSTEM',
+            related_order_id=report.order_id,
+            action_url='/pages/report/index',
         )
         return Response({'code': 0, 'data': self.get_serializer(report).data, 'msg': '已驳回'})
 
@@ -2632,33 +3085,66 @@ class CommissionConfigView(APIView):
 
 
 # ---------------- 提现申请 ----------------
+def _withdraw_claim_is_current(withdraw, expected_claimed_at):
+    """Bind a review to the claim the operator actually inspected."""
+    from django.utils.dateparse import parse_datetime
+    if not isinstance(expected_claimed_at, str):
+        return False
+    try:
+        expected = parse_datetime(expected_claimed_at)
+    except (TypeError, ValueError):
+        return False
+    return bool(expected and timezone.is_aware(expected) and withdraw.claimed_at == expected)
+
+
 class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     serializer_class = AdminWithdrawSerializer
     default_perm = 'withdraw:view'
     required_perms = {
+        'claim': 'withdraw:audit',
+        'release_claim': ['withdraw:view', 'withdraw:release'],
         'approve': 'withdraw:audit',
         'reject': 'withdraw:audit',
     }
 
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        claim_scope = request.query_params.get('claim_scope', '')
+        if claim_scope:
+            response.data['data']['claim_scope_applied'] = claim_scope
+        return response
+
     def get_queryset(self):
-        qs = WithdrawRequest.objects.select_related('user', 'auditor').order_by('-created_at')
+        qs = WithdrawRequest.objects.select_related('user', 'account', 'auditor', 'auditor_account', 'claimed_by_account').order_by('-created_at')
+        # Queue filters only apply to listing; a stale list URL must never
+        # hide the record during a claim or review action.
+        if self.action == 'list':
+            claim_scope = self.request.query_params.get('claim_scope', '')
+            if claim_scope == 'unclaimed':
+                qs = qs.filter(claimed_by_account__isnull=True)
+            elif claim_scope == 'mine':
+                qs = qs.filter(claimed_by_account=self.request.account)
+            elif claim_scope:
+                raise rest_serializers.ValidationError({'claim_scope': '领取范围无效'})
+        def provider_match(field, value):
+            return Q(**{f'account__{field}__icontains': value}) | Q(account__isnull=True, **{f'user__{field}__icontains': value})
         status_filter = self.request.query_params.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter.upper())
         keyword = self.request.query_params.get('keyword')
         if keyword:
             qs = qs.filter(
-                Q(user__username__icontains=keyword)
-                | Q(user__nickname__icontains=keyword)
+                provider_match('username', keyword)
+                | provider_match('nickname', keyword)
                 | Q(payee_name__icontains=keyword)
                 | Q(payee_account__icontains=keyword)
             )
         provider_username = self.request.query_params.get('provider_username')
         if provider_username:
-            qs = qs.filter(user__username__icontains=provider_username)
+            qs = qs.filter(provider_match('username', provider_username))
         provider_nickname = self.request.query_params.get('provider_nickname')
         if provider_nickname:
-            qs = qs.filter(user__nickname__icontains=provider_nickname)
+            qs = qs.filter(provider_match('nickname', provider_nickname))
         payee_name = self.request.query_params.get('payee_name')
         if payee_name:
             qs = qs.filter(payee_name__icontains=payee_name)
@@ -2666,6 +3152,77 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if payee_account:
             qs = qs.filter(payee_account__icontains=payee_account)
         return qs
+
+    @action(detail=True, methods=['post'])
+    def claim(self, request, pk=None):
+        # Conditional UPDATE is atomic across workers and also works in SQLite;
+        # a retry by the same claimant is idempotent.
+        with transaction.atomic():
+            updated = WithdrawRequest.objects.filter(
+                pk=pk, status=WithdrawRequest.Status.PENDING, claimed_by_account__isnull=True,
+            ).update(claimed_by_account=request.account, claimed_at=timezone.now())
+            # List query parameters must not hide a claim that was just
+            # written and turn a successful mutation into a false 404.
+            withdraw = WithdrawRequest.objects.select_related(
+                'user', 'account', 'auditor', 'auditor_account', 'claimed_by_account',
+            ).filter(pk=pk).first()
+            if not withdraw:
+                return Response({'code': 404, 'msg': '提现申请不存在'}, status=404)
+            if withdraw.status != WithdrawRequest.Status.PENDING:
+                return Response({'code': 409, 'msg': '该提现已审核，请刷新列表'}, status=409)
+            if withdraw.claimed_by_account_id != request.account.pk:
+                return Response({'code': 409, 'msg': '该申请已由其他客服领取，请刷新列表'}, status=409)
+            if updated:
+                from wallet.notifier import notify_withdraw_update
+                transaction.on_commit(lambda: notify_withdraw_update(withdraw))
+        return Response({'code': 0, 'data': self.get_serializer(withdraw).data, 'msg': '已领取'})
+
+    @action(detail=True, methods=['post'], url_path='release-claim')
+    def release_claim(self, request, pk=None):
+        from django.utils.dateparse import parse_datetime
+
+        reason = request.data.get('reason')
+        expected_account = request.data.get('expected_claimed_by_account')
+        expected_time = request.data.get('expected_claimed_at')
+        if request.data.get('confirmed_unpaid') is not True:
+            return Response({'code': 400, 'msg': '请确认已核实该申请尚未打款'}, status=400)
+        if not isinstance(reason, str) or not reason.strip() or len(reason.strip()) > 255:
+            return Response({'code': 400, 'msg': '请填写 255 字以内的释放原因'}, status=400)
+        if type(expected_account) is not int or expected_account < 1 or not isinstance(expected_time, str):
+            return Response({'code': 400, 'msg': '领取信息已变化，请刷新后重新核实'}, status=400)
+        try:
+            expected_time_value = parse_datetime(expected_time)
+        except (TypeError, ValueError):
+            expected_time_value = None
+        if not expected_time_value or timezone.is_naive(expected_time_value):
+            return Response({'code': 400, 'msg': '领取时间无效，请刷新后重新核实'}, status=400)
+
+        with transaction.atomic():
+            withdraw = WithdrawRequest.objects.select_for_update().filter(pk=pk).first()
+            if not withdraw:
+                return Response({'code': 404, 'msg': '提现申请不存在'}, status=404)
+            if (withdraw.status != WithdrawRequest.Status.PENDING or not withdraw.claimed_by_account_id
+                    or withdraw.claimed_by_account_id != expected_account or withdraw.claimed_at != expected_time_value):
+                return Response({'code': 409, 'msg': '申请状态或领取人已变化，请刷新后重新核实'}, status=409)
+
+            old_claimed_at = withdraw.claimed_at.isoformat()
+            withdraw.claimed_by_account = None
+            withdraw.claimed_at = None
+            withdraw.save(update_fields=['claimed_by_account', 'claimed_at'])
+            AdminAuditLog.objects.create(
+                operator=request.legacy_user,
+                operator_account=request.account,
+                operator_name=(request.account.nickname or request.account.username)[:150],
+                method='POST', path=request.path[:255], resource='withdrawals', object_id=str(withdraw.pk),
+                request_body={'reason': reason.strip(), 'confirmed_unpaid': True,
+                              'previous_claimed_by_account': expected_account, 'previous_claimed_at': old_claimed_at},
+                status_code=200,
+                ip=request.META.get('REMOTE_ADDR') or None,
+            )
+            from wallet.notifier import notify_withdraw_update
+            transaction.on_commit(lambda: notify_withdraw_update(withdraw))
+        request._request._business_audit_recorded = True
+        return Response({'code': 0, 'data': self.get_serializer(withdraw).data, 'msg': '已释放，可由其他客服领取'})
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -2676,6 +3233,10 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             withdraw = WithdrawRequest.objects.select_for_update().get(pk=pk)
             if withdraw.status != WithdrawRequest.Status.PENDING:
                 return Response({'code': 400, 'msg': '该提现已审核，无法重复操作'})
+            if withdraw.claimed_by_account_id != request.account.pk:
+                return Response({'code': 409, 'msg': '请先领取该申请；已由其他客服领取的申请不能审核'}, status=409)
+            if not _withdraw_claim_is_current(withdraw, request.data.get('expected_claimed_at')):
+                return Response({'code': 409, 'msg': '领取状态已变化，请刷新后重新核对打款和申请信息'}, status=409)
 
             wallet = get_wallet(
                 user_id=withdraw.user_id,
@@ -2738,7 +3299,9 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             transaction.on_commit(lambda: notify_wallet_update(wallet))
             transaction.on_commit(lambda: notify_withdraw_update(withdraw))
 
-        # 通知一律以实际到账口径为准，避免陪玩按税前金额对账产生客诉。
+        # 管理员已登记人工打款，提现账户收到的是人民币而非兴安币。
+        yuan, fen = divmod(withdraw.actual_amount, 100)
+        payout_yuan = f'{yuan}.{fen:02d}'
         tax_note = (
             f'（税前 {withdraw.amount / 10:g} 兴安币，'
             f'代扣税 {withdraw.tax_rate}% 计 {withdraw.tax_amount / 10:g} 兴安币）'
@@ -2746,10 +3309,12 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         )
         create_message(
             recipient_id=withdraw.user_id,
+            recipient_account_id=withdraw.account_id,
             title='提现审核通过',
-            preview=f'提现已通过，实际到账 {withdraw.actual_amount / 10:g} 兴安币',
-            detail=f'您申请的提现已审核通过，实际到账 {withdraw.actual_amount / 10:g} 兴安币{tax_note}，'
-                   f'将结算至 {withdraw.get_payee_method_display()}（{withdraw.payee_account}）。',
+            preview=f'提现已通过，已登记打款人民币 ¥{payout_yuan}',
+            detail=f'您申请的提现已审核通过，已登记打款人民币 ¥{payout_yuan}'
+                   f'（折合 {withdraw.actual_amount / 10:g} 兴安币）{tax_note}，'
+                   f'收款账户为 {withdraw.get_payee_method_display()}（{withdraw.payee_account}）。',
         )
         return Response({'code': 0, 'data': self.get_serializer(withdraw).data, 'msg': '已通过'})
 
@@ -2762,6 +3327,10 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             withdraw = WithdrawRequest.objects.select_for_update().get(pk=pk)
             if withdraw.status != WithdrawRequest.Status.PENDING:
                 return Response({'code': 400, 'msg': '该提现已审核，无法重复操作'})
+            if withdraw.claimed_by_account_id != request.account.pk:
+                return Response({'code': 409, 'msg': '请先领取该申请；已由其他客服领取的申请不能审核'}, status=409)
+            if not _withdraw_claim_is_current(withdraw, request.data.get('expected_claimed_at')):
+                return Response({'code': 409, 'msg': '领取状态已变化，请刷新后重新核对打款和申请信息'}, status=409)
 
             wallet = get_wallet(
                 user_id=withdraw.user_id,
@@ -2797,6 +3366,7 @@ class WithdrawRequestViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
         create_message(
             recipient_id=withdraw.user_id,
+            recipient_account_id=withdraw.account_id,
             title='提现审核未通过',
             preview=f'提现 {withdraw.amount / 10:g} 兴安币被驳回',
             detail=f'驳回原因：{audit_remark}。已退回 {withdraw.amount / 10:g} 兴安币至您的余额。',
@@ -2861,14 +3431,18 @@ class ChatSessionViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     required_perms = {
         'reply': 'chat:reply',
         'read': 'chat:reply',
+        'message_status': 'chat:reply',
     }
 
     def get_queryset(self):
-        qs = ChatSession.objects.select_related('user').order_by('-last_message_at', '-created_at')
+        qs = ChatSession.objects.select_related('account', 'user').order_by('-last_message_at', '-created_at')
         keyword = self.request.query_params.get('keyword')
         if keyword:
             qs = qs.filter(
-                Q(user__username__icontains=keyword)
+                Q(account__username__icontains=keyword)
+                | Q(account__nickname__icontains=keyword)
+                | Q(account__account_no__icontains=keyword)
+                | Q(user__username__icontains=keyword)
                 | Q(user__nickname__icontains=keyword)
             )
         only_unread = self.request.query_params.get('only_unread')
@@ -2879,7 +3453,25 @@ class ChatSessionViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
         session = self.get_object()
-        messages = session.messages.select_related('sender').order_by('created_at')
+        messages = session.messages.select_related('sender')
+        if request.query_params.get('cursor') == '1':
+            from chat.views import MESSAGE_PAGE_SIZE
+            total = messages.count()
+            before = request.query_params.get('before_id')
+            if before is not None:
+                if not before.isascii() or not before.isdigit() or len(before) > 18 or int(before) < 1:
+                    return Response({'code': 400, 'msg': '聊天记录位置无效'}, status=400)
+                anchor = session.messages.filter(pk=int(before)).only('id', 'created_at').first()
+                if anchor is None:
+                    return Response({'code': 400, 'msg': '聊天记录位置已变化，请重新加载'}, status=400)
+                messages = messages.filter(Q(created_at__lt=anchor.created_at) | Q(created_at=anchor.created_at, pk__lt=anchor.pk))
+            rows = list(messages.order_by('-created_at', '-id')[:MESSAGE_PAGE_SIZE + 1])
+            has_more = len(rows) > MESSAGE_PAGE_SIZE
+            rows = list(reversed(rows[:MESSAGE_PAGE_SIZE]))
+            data = AdminChatMessageSerializer(rows, many=True, context={'request': request}).data
+            return Response({'code': 0, 'data': {'list': data, 'total': total, 'has_more': has_more,
+                                                'next_before_id': rows[0].pk if has_more else None}})
+        messages = messages.order_by('created_at', 'id')
         data = AdminChatMessageSerializer(
             messages, many=True, context={'request': request}
         ).data
@@ -2891,12 +3483,30 @@ class ChatSessionViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         serializer.is_valid(raise_exception=True)
         content = serializer.validated_data['content']
         image = serializer.validated_data.get('image')
+        read_through_id = serializer.validated_data.get('read_through_id')
+        client_id = serializer.validated_data.get('client_message_id')
 
         content_type = (
             ChatMessage.ContentType.IMAGE if image else ChatMessage.ContentType.TEXT
         )
+        fingerprint = ''
+        if client_id:
+            import hashlib
+            digest = hashlib.sha256()
+            digest.update(content_type.encode('utf-8') + b'\x00' + content.encode('utf-8') + b'\x00')
+            if image:
+                for chunk in image.chunks():
+                    digest.update(chunk)
+                image.seek(0)
+            fingerprint = digest.hexdigest()
         with transaction.atomic():
             session = get_object_or_404(ChatSession.objects.select_for_update(), pk=pk)
+            if client_id:
+                existing = session.messages.filter(sender_account=request.account, client_message_id=client_id).first()
+                if existing:
+                    if not existing.is_from_support or existing.message_fingerprint != fingerprint:
+                        return Response({'code': 409, 'msg': '消息内容已变化，请重新发送'}, status=409)
+                    return Response({'code': 0, 'data': AdminChatMessageSerializer(existing, context={'request': request}).data, 'msg': '已发送'})
             message = ChatMessage.objects.create(
                 session=session,
                 sender=request.legacy_user,
@@ -2905,15 +3515,17 @@ class ChatSessionViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 content_type=content_type,
                 content=content,
                 image=image,
+                client_message_id=client_id,
+                message_fingerprint=fingerprint,
             )
             session.last_message = message.preview
             session.last_message_at = message.created_at
             session.unread_user += 1
-            session.unread_support = 0
+            from chat.read_state import mark_read_through
+            session.unread_support = mark_read_through(session, from_support=False, through_id=read_through_id)
             session.save(update_fields=[
                 'last_message', 'last_message_at', 'unread_user', 'unread_support', 'updated_at',
             ])
-            session.messages.filter(is_from_support=False, is_read=False).update(is_read=True)
 
         notify_chat_message(session, message)
         return Response({
@@ -2922,15 +3534,33 @@ class ChatSessionViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             'msg': '已发送',
         })
 
+    @action(detail=True, methods=['get'], url_path='message-status')
+    def message_status(self, request, pk=None):
+        from chat.views import CLIENT_MESSAGE_ID
+        client_id = request.query_params.get('client_message_id')
+        if not isinstance(client_id, str) or not CLIENT_MESSAGE_ID.fullmatch(client_id):
+            return Response({'code': 400, 'msg': '消息编号无效'}, status=400)
+        session = self.get_object()
+        message = session.messages.filter(sender_account=request.account, is_from_support=True, client_message_id=client_id).first()
+        return Response({'code': 0, 'data': {'status': 'FOUND' if message else 'UNKNOWN',
+            'message': AdminChatMessageSerializer(message, context={'request': request}).data if message else None}})
+
     @action(detail=True, methods=['post'])
     def read(self, request, pk=None):
+        from chat.read_state import mark_read_through
+        data = AdminChatReadSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
         with transaction.atomic():
             session = get_object_or_404(ChatSession.objects.select_for_update(), pk=pk)
-            session.messages.filter(is_from_support=False, is_read=False).update(is_read=True)
-            session.unread_support = 0
+            if 'message_ids' in data.validated_data:
+                unread = session.messages.filter(is_from_support=False, is_read=False)
+                unread.filter(pk__in=data.validated_data['message_ids']).update(is_read=True)
+                session.unread_support = unread.count()
+            else:
+                session.unread_support = mark_read_through(session, from_support=False, through_id=data.validated_data.get('through_id'))
             session.save(update_fields=['unread_support', 'updated_at'])
         notify_chat_session_update(session)
-        return Response({'code': 0, 'data': {'unread_support': 0}})
+        return Response({'code': 0, 'data': {'unread_support': session.unread_support}})
 
 
 # ---------------- 优惠券 ----------------
@@ -2982,16 +3612,30 @@ class UserCouponViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     serializer_class = AdminUserCouponSerializer
     default_perm = 'coupon:view'
 
+    def get_paginated_response(self, data):
+        response = super().get_paginated_response(data)
+        response.data['data']['claim_status_version'] = 1
+        return response
+
     def get_queryset(self):
-        qs = UserCoupon.objects.select_related('user', 'account', 'coupon', 'order').order_by('-claimed_at')
-        status_filter = self.request.query_params.get('status')
+        now = timezone.now()
+        expired = Q(expires_at__lte=now) | Q(expires_at__isnull=True, coupon__valid_to__lte=now)
+        previous_cycle = Q(account__isnull=False) & ~Q(business_cycle=F('account__business_cycle'))
+        qs = UserCoupon.objects.select_related('user', 'account', 'coupon', 'order').annotate(
+            admin_status=Case(
+                When(status=UserCoupon.Status.USED, then=Value('USED')),
+                When(status=UserCoupon.Status.EXPIRED, then=Value('EXPIRED')),
+                When(Q(status=UserCoupon.Status.UNUSED) & expired, then=Value('EXPIRED')),
+                When(status=UserCoupon.Status.UNUSED, coupon__is_active=False, then=Value('DISABLED')),
+                When(Q(status=UserCoupon.Status.UNUSED) & previous_cycle, then=Value('PREVIOUS_CYCLE')),
+                default=Value('UNUSED'), output_field=CharField(),
+            )
+        ).order_by('-claimed_at', '-id')
+        status_filter = (self.request.query_params.get('status') or '').strip().upper()
         if status_filter:
-            if status_filter.upper() == UserCoupon.Status.EXPIRED:
-                qs = qs.filter(Q(status=UserCoupon.Status.EXPIRED) | Q(status=UserCoupon.Status.UNUSED, coupon__valid_to__lte=timezone.now()))
-            elif status_filter.upper() == UserCoupon.Status.UNUSED:
-                qs = qs.filter(status=UserCoupon.Status.UNUSED, coupon__valid_to__gt=timezone.now())
-            else:
-                qs = qs.filter(status=status_filter.upper())
+            if status_filter not in ('UNUSED', 'USED', 'EXPIRED', 'DISABLED', 'PREVIOUS_CYCLE'):
+                raise rest_serializers.ValidationError({'status': '无效的领取状态'})
+            qs = qs.filter(admin_status=status_filter)
         coupon_id = self.request.query_params.get('coupon')
         if coupon_id:
             qs = qs.filter(coupon_id=coupon_id)
@@ -3117,6 +3761,16 @@ class ServiceItemViewSet(EnvelopeViewSetMixin, ModelViewSet):
             .select_related('game_category', 'service_category')
             .order_by('sort_order', 'id')
         )
+        item_id = self.request.query_params.get('item_id', '').strip()
+        if item_id:
+            if not item_id.isascii() or not item_id.isdigit() or len(item_id) > 18:
+                raise rest_serializers.ValidationError('商品编号无效')
+            qs = qs.filter(pk=int(item_id))
+        keyword = self.request.query_params.get('keyword', '').strip()
+        if len(keyword) > 100:
+            raise rest_serializers.ValidationError('商品名称搜索不能超过100字')
+        if keyword:
+            qs = qs.filter(name__icontains=keyword)
         for key in ('gameplay', 'platform', 'security_level', 'provider_kind', 'provider_grade'):
             value = self.request.query_params.get(key)
             if value:
@@ -3199,6 +3853,7 @@ class EscortLevelViewSet(EnvelopeViewSetMixin, ModelViewSet):
         'update': 'escort_level:edit',
         'partial_update': 'escort_level:edit',
         'destroy': 'escort_level:delete',
+        'deletion_impact': ['escort_level:view', 'escort_level:delete'],
     }
 
     def get_queryset(self):
@@ -3207,6 +3862,16 @@ class EscortLevelViewSet(EnvelopeViewSetMixin, ModelViewSet):
         if is_active is not None and is_active != '':
             qs = qs.filter(is_active=_truthy(is_active))
         return qs
+
+    @action(detail=True, methods=['get'], url_path='deletion-impact')
+    def deletion_impact(self, request, pk=None):
+        level = self.get_object()
+        return Response({'code': 0, 'data': {
+            'id': level.pk, 'name': level.name,
+            'providers': EscortProfile.objects.filter(level=level).count(),
+            'services': ServiceItem.objects.filter(required_level=level).count(),
+            'registrations': ProviderRegistration.objects.filter(level=level).count(),
+        }})
 
 
 # ---------------- 促销活动 ----------------
@@ -3221,7 +3886,15 @@ class PromotionViewSet(EnvelopeViewSetMixin, ModelViewSet):
     }
 
     def get_queryset(self):
-        qs = Promotion.objects.prefetch_related('items').all()
+        now = timezone.now()
+        qs = Promotion.objects.select_related('category').prefetch_related('items').annotate(
+            window_status=Case(
+                When(is_active=False, then=Value('DISABLED')),
+                When(start_at__gt=now, then=Value('SCHEDULED')),
+                When(end_at__lt=now, then=Value('ENDED')),
+                default=Value('IN_WINDOW'), output_field=CharField(),
+            )
+        )
         is_active = self.request.query_params.get('is_active')
         if is_active is not None and is_active != '':
             qs = qs.filter(is_active=_truthy(is_active))
@@ -3246,7 +3919,11 @@ class SupportCardViewSet(EnvelopeViewSetMixin, ModelViewSet):
     }
 
     def get_queryset(self):
-        return SupportContactCard.objects.all()
+        qs = SupportContactCard.objects.all()
+        keyword = self.request.query_params.get('keyword', '').strip()
+        if keyword:
+            qs = qs.filter(Q(name__icontains=keyword) | Q(company__icontains=keyword) | Q(wechat_id__icontains=keyword))
+        return qs
 
 
 # ---------------- 试音链接 ----------------
@@ -3258,10 +3935,17 @@ class AuditionLinkViewSet(EnvelopeViewSetMixin, ModelViewSet):
         'update': 'audition:edit',
         'partial_update': 'audition:edit',
         'destroy': 'audition:delete',
+        'bind_boss': 'audition:bind_boss',
+        'bind_provider': 'audition:bind_provider',
     }
 
     def get_queryset(self):
-        qs = AuditionLink.objects.select_related('operator', 'boss_user', 'provider_user').all()
+        now = timezone.now()
+        qs = AuditionLink.objects.select_related('operator', 'boss_user', 'boss_account', 'provider_user', 'provider_account').annotate(
+            entry_status=Case(When(is_active=False, then=Value('DISABLED')),
+                              When(expire_at__lt=now, then=Value('EXPIRED')),
+                              default=Value('ACTIVE'), output_field=CharField()),
+        ).order_by('-created_at', '-id')
         is_active = self.request.query_params.get('is_active')
         if is_active is not None and is_active != '':
             qs = qs.filter(is_active=_truthy(is_active))
@@ -3282,6 +3966,63 @@ class AuditionLinkViewSet(EnvelopeViewSetMixin, ModelViewSet):
             raise ValidationError('已有试音报名，请停用链接，保留报名与审核记录')
         instance.delete()
 
+    @action(detail=True, methods=['post'], url_path='bind-boss')
+    def bind_boss(self, request, pk=None):
+        from audition.models import _gen_token
+        expected_raw = request.data.get('expected_updated_at')
+        try:
+            expected = rest_serializers.DateTimeField().run_validation(expected_raw)
+        except rest_serializers.ValidationError:
+            return Response({'code': 400, 'msg': '请重新读取链接后再操作'}, status=400)
+        if 'account_id' not in request.data:
+            return Response({'code': 400, 'msg': '请选择老板账号或明确解除绑定'}, status=400)
+        raw = request.data['account_id']
+        if raw is not None and (isinstance(raw, bool) or not isinstance(raw, int) or raw <= 0):
+            return Response({'code': 400, 'msg': '老板账号标识无效'}, status=400)
+        with transaction.atomic():
+            link = get_object_or_404(AuditionLink.objects.select_for_update(), pk=pk)
+            if link.updated_at != expected:
+                return Response({'code': 409, 'msg': '链接已变化，请重新读取后核对'}, status=409)
+            account = None
+            if raw is not None:
+                account = ClubAccount.objects.filter(pk=raw, account_type=ClubAccount.AccountType.BOSS, is_active=True, can_login=True).first()
+                if not account:
+                    return Response({'code': 400, 'msg': '老板账号不存在或已不可用，请重新选择'}, status=400)
+            if link.boss_account_id != raw or link.boss_user_id is not None:
+                link.boss_account = account
+                link.boss_user = None
+                link.boss_token = _gen_token()
+                link.save(update_fields=['boss_account', 'boss_user', 'boss_token', 'updated_at'])
+        return Response({'code': 0, 'data': self.get_serializer(link).data, 'msg': '老板入口绑定已更新'})
+
+    @action(detail=True, methods=['post'], url_path='bind-provider')
+    def bind_provider(self, request, pk=None):
+        from audition.models import _gen_token
+        try:
+            expected = rest_serializers.DateTimeField().run_validation(request.data.get('expected_updated_at'))
+        except rest_serializers.ValidationError:
+            return Response({'code': 400, 'msg': '请重新读取链接后再操作'}, status=400)
+        if 'account_id' not in request.data:
+            return Response({'code': 400, 'msg': '请选择陪玩账号或明确解除绑定'}, status=400)
+        raw = request.data['account_id']
+        if raw is not None and (isinstance(raw, bool) or not isinstance(raw, int) or raw <= 0):
+            return Response({'code': 400, 'msg': '陪玩账号标识无效'}, status=400)
+        with transaction.atomic():
+            link = get_object_or_404(AuditionLink.objects.select_for_update(), pk=pk)
+            if link.updated_at != expected:
+                return Response({'code': 409, 'msg': '链接已变化，请重新读取后核对'}, status=409)
+            account = None
+            if raw is not None:
+                account = ClubAccount.objects.filter(pk=raw, account_type=ClubAccount.AccountType.PROVIDER, is_active=True, can_login=True).first()
+                if not account:
+                    return Response({'code': 400, 'msg': '陪玩账号不存在或已不可用，请重新选择'}, status=400)
+            if link.provider_account_id != raw or link.provider_user_id is not None:
+                link.provider_account = account
+                link.provider_user = None
+                link.provider_token = _gen_token()
+                link.save(update_fields=['provider_account', 'provider_user', 'provider_token', 'updated_at'])
+        return Response({'code': 0, 'data': self.get_serializer(link).data, 'msg': '陪玩入口绑定已更新'})
+
 
 # ---------------- 试音报名 ----------------
 class AuditionSignupViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
@@ -3293,7 +4034,7 @@ class AuditionSignupViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     }
 
     def get_queryset(self):
-        qs = AuditionSignup.objects.select_related('link', 'applicant', 'auditor').order_by('-created_at')
+        qs = AuditionSignup.objects.select_related('link', 'applicant', 'applicant_account', 'auditor', 'auditor_account').order_by('-created_at', '-id')
         status_filter = self.request.query_params.get('status')
         if status_filter:
             qs = qs.filter(status=status_filter.upper())
@@ -3307,6 +4048,9 @@ class AuditionSignupViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 | Q(contact__icontains=keyword)
                 | Q(applicant__username__icontains=keyword)
                 | Q(applicant__nickname__icontains=keyword)
+                | Q(applicant_account__username__icontains=keyword)
+                | Q(applicant_account__nickname__icontains=keyword)
+                | Q(applicant_account__account_no__icontains=keyword)
             )
         return qs
 
@@ -3315,7 +4059,7 @@ class AuditionSignupViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         with transaction.atomic():
             signup = get_object_or_404(AuditionSignup.objects.select_for_update(), pk=pk)
             if signup.status != AuditionSignup.Status.PENDING:
-                return Response({'code': 400, 'msg': '该报名已审核，无法重复操作'})
+                return Response({'code': 409, 'msg': '该报名已审核，请刷新后核对'}, status=409)
             signup.status = AuditionSignup.Status.APPROVED
             signup.auditor = request.legacy_user
             signup.auditor_account = request.account
@@ -3340,7 +4084,7 @@ class AuditionSignupViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         with transaction.atomic():
             signup = get_object_or_404(AuditionSignup.objects.select_for_update(), pk=pk)
             if signup.status != AuditionSignup.Status.PENDING:
-                return Response({'code': 400, 'msg': '该报名已审核，无法重复操作'})
+                return Response({'code': 409, 'msg': '该报名已审核，请刷新后核对'}, status=409)
             signup.status = AuditionSignup.Status.REJECTED
             signup.audit_remark = audit_remark
             signup.auditor = request.legacy_user
@@ -3366,7 +4110,7 @@ class MessageViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     required_perms = {'push': 'message:push'}
 
     def get_queryset(self):
-        qs = Message.objects.select_related('recipient').order_by('-created_at')
+        qs = Message.objects.select_related('recipient', 'recipient_account').order_by('-created_at', '-id')
         msg_type = self.request.query_params.get('type')
         if msg_type:
             qs = qs.filter(type=msg_type.upper())
@@ -3409,10 +4153,16 @@ class MessageViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             # 单向映射为 legacy 用户 id，避免两套 ID 空间错充；recipient_ids 为 legacy 兼容。
             targets = []
             for rid in recipient_account_ids:
-                lid = _legacy_user_id_from_account_id(rid)
-                if lid is None:
-                    return Response({'code': 400, 'msg': '存在无效接收账号，请重新选择'}, status=400)
-                targets.append(lid)
+                try:
+                    account_id = int(rid)
+                except (TypeError, ValueError):
+                    return Response({'code': 400, 'msg': '接收账号标识无效'}, status=400)
+                account = ClubAccount.objects.filter(pk=account_id, is_active=True, can_login=True,
+                    account_type__in=[ClubAccount.AccountType.BOSS, ClubAccount.AccountType.PROVIDER]).first()
+                mapping = LegacyAccountMap.objects.filter(account_id=account_id).first() if account else None
+                if not mapping or not User.objects.filter(pk=mapping.legacy_user_id).exists():
+                    return Response({'code': 400, 'msg': '接收账号已不可用或缺少有效身份映射，请重新选择'}, status=400)
+                targets.append(mapping.legacy_user_id)
             for rid in recipient_ids:
                 try:
                     lid = int(rid)

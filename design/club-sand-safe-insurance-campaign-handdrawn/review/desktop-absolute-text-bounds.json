@@ -1,0 +1,604 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 296.479902295,
+    "y": 48.9951167,
+    "width": 155.20019541000002,
+    "height": 38.0097666,
+    "cy": 68,
+    "effectiveSize": 39
+  },
+  {
+    "text": "沙色保险单",
+    "role": "art-title",
+    "x": 103.99999880574003,
+    "y": 123.75311598028836,
+    "width": 424.00000238851993,
+    "height": 91.49376803942327,
+    "requestedCenter": [
+      316,
+      169.5
+    ],
+    "effectiveSize": 83.13492147356223,
+    "includesOutlineAndShadow": true
+  },
+  {
+    "text": "成功撤离 · 累计摸箱",
+    "role": "subtitle",
+    "x": 189.62573,
+    "y": 235.37841855,
+    "width": 272.74854,
+    "height": 30.243162899999998,
+    "cy": 250.5,
+    "effectiveSize": 31
+  },
+  {
+    "text": "端游 · 绝密",
+    "role": "platform-completion-part-0",
+    "x": 262.66308391999996,
+    "y": 299.2812496,
+    "width": 160.18750016,
+    "height": 31.4375008,
+    "cy": 315,
+    "effectiveSize": 32
+  },
+  {
+    "text": "三项同时达标才结单",
+    "role": "platform-completion-part-1",
+    "x": 476.85058408,
+    "y": 299.77246055,
+    "width": 277.486332,
+    "height": 30.455078899999997,
+    "cy": 315,
+    "effectiveSize": 31
+  },
+  {
+    "text": "沙色次数达标",
+    "role": "completion-target-0",
+    "x": 107.44433585,
+    "y": 395.961426,
+    "width": 209.1113283,
+    "height": 34.077148,
+    "cy": 413,
+    "effectiveSize": 35
+  },
+  {
+    "text": "常规次数达标",
+    "role": "completion-target-1",
+    "x": 406.922851475,
+    "y": 395.9443355,
+    "width": 208.15429705,
+    "height": 34.111329,
+    "cy": 413,
+    "effectiveSize": 35
+  },
+  {
+    "text": "基础保底达标",
+    "role": "completion-target-2",
+    "x": 705.3930675,
+    "y": 396.01269575,
+    "width": 209.213865,
+    "height": 33.9746085,
+    "cy": 413,
+    "effectiveSize": 35
+  },
+  {
+    "text": "价格",
+    "role": "table-heading",
+    "x": 114.878417,
+    "y": 494.9086916,
+    "width": 61.243166,
+    "height": 30.1826168,
+    "cy": 510,
+    "effectiveSize": 31
+  },
+  {
+    "text": "沙色保险",
+    "role": "table-heading",
+    "x": 297.333007735,
+    "y": 494.86328125,
+    "width": 123.33398453,
+    "height": 30.2734375,
+    "cy": 510,
+    "effectiveSize": 31
+  },
+  {
+    "text": "常规大保险",
+    "role": "table-heading",
+    "x": 528.559570235,
+    "y": 495.01464805,
+    "width": 152.88085953,
+    "height": 29.970703899999997,
+    "cy": 510,
+    "effectiveSize": 31
+  },
+  {
+    "text": "基础保底",
+    "role": "table-heading",
+    "x": 794.36328125,
+    "y": 494.7573248,
+    "width": 123.2734375,
+    "height": 30.485350399999998,
+    "cy": 510,
+    "effectiveSize": 31
+  },
+  {
+    "text": "168",
+    "role": "price-number",
+    "x": 92.08461522977406,
+    "y": 566.3783770234146,
+    "width": 89.56032066302642,
+    "height": 49.243245953170714,
+    "cy": 591,
+    "effectiveSize": 67.9583
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 193.64493589280048,
+    "y": 573.7648639163903,
+    "width": 24.355064107199528,
+    "height": 34.470272167219505,
+    "cy": 591,
+    "effectiveSize": 67.0419
+  },
+  {
+    "text": "688",
+    "role": "loot-number",
+    "x": 795.5863520471646,
+    "y": 566.761540932494,
+    "width": 102.57245160959019,
+    "height": 48.476918135012006,
+    "cy": 591,
+    "effectiveSize": 66.9008
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 910.1588036567548,
+    "y": 574.0330786527458,
+    "width": 48.84119634324524,
+    "height": 33.933842694508414,
+    "cy": 591,
+    "effectiveSize": 66.9523
+  },
+  {
+    "text": "2",
+    "role": "sand-count-part-0",
+    "x": 363.641112839,
+    "y": 566.253662118,
+    "width": 29.581054721999994,
+    "height": 49.49267576399999,
+    "cy": 591,
+    "effectiveSize": 69
+  },
+  {
+    "text": "个",
+    "role": "sand-count-part-1",
+    "x": 404.222167561,
+    "y": 575.0126951,
+    "width": 33.1367196,
+    "height": 31.9746098,
+    "cy": 591,
+    "effectiveSize": 34
+  },
+  {
+    "text": "3",
+    "role": "regular-count-part-0",
+    "x": 610.888427318,
+    "y": 566.0009757,
+    "width": 30.086425763999998,
+    "height": 49.99804859999999,
+    "cy": 591,
+    "effectiveSize": 69
+  },
+  {
+    "text": "个",
+    "role": "regular-count-part-1",
+    "x": 651.974853082,
+    "y": 575.0126951,
+    "width": 33.1367196,
+    "height": 31.9746098,
+    "cy": 591,
+    "effectiveSize": 34
+  },
+  {
+    "text": "388",
+    "role": "price-number",
+    "x": 75.39367723386329,
+    "y": 676.3783770234146,
+    "width": 106.25125865893719,
+    "height": 49.243245953170714,
+    "cy": 701,
+    "effectiveSize": 67.9583
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 193.64493589280048,
+    "y": 683.7648639163903,
+    "width": 24.355064107199528,
+    "height": 34.470272167219505,
+    "cy": 701,
+    "effectiveSize": 67.0419
+  },
+  {
+    "text": "1688",
+    "role": "loot-number",
+    "x": 772.360552359748,
+    "y": 676.761540932494,
+    "width": 125.79825129700677,
+    "height": 48.476918135012006,
+    "cy": 701,
+    "effectiveSize": 66.9008
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 910.1588036567548,
+    "y": 684.0330786527458,
+    "width": 48.84119634324524,
+    "height": 33.933842694508414,
+    "cy": 701,
+    "effectiveSize": 66.9523
+  },
+  {
+    "text": "6",
+    "role": "sand-count-part-0",
+    "x": 364.095946832,
+    "y": 676.253662118,
+    "width": 28.671386735999995,
+    "height": 49.49267576399999,
+    "cy": 701,
+    "effectiveSize": 69
+  },
+  {
+    "text": "个",
+    "role": "sand-count-part-1",
+    "x": 403.76733356799997,
+    "y": 685.0126951,
+    "width": 33.1367196,
+    "height": 31.9746098,
+    "cy": 701,
+    "effectiveSize": 34
+  },
+  {
+    "text": "8",
+    "role": "regular-count-part-0",
+    "x": 610.39990235,
+    "y": 676.0009757,
+    "width": 31.0634757,
+    "height": 49.99804859999999,
+    "cy": 701,
+    "effectiveSize": 69
+  },
+  {
+    "text": "个",
+    "role": "regular-count-part-1",
+    "x": 652.4633780500001,
+    "y": 685.0126951,
+    "width": 33.1367196,
+    "height": 31.9746098,
+    "cy": 701,
+    "effectiveSize": 34
+  },
+  {
+    "text": "628",
+    "role": "price-number",
+    "x": 80.57019044101041,
+    "y": 785.3783770234146,
+    "width": 101.07474545179006,
+    "height": 49.243245953170714,
+    "cy": 810,
+    "effectiveSize": 67.9583
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 193.64493589280048,
+    "y": 792.7648639163903,
+    "width": 24.355064107199528,
+    "height": 34.470272167219505,
+    "cy": 810,
+    "effectiveSize": 67.0419
+  },
+  {
+    "text": "3288",
+    "role": "loot-number",
+    "x": 759,
+    "y": 785.761540932494,
+    "width": 139.15880365675477,
+    "height": 48.476918135012006,
+    "cy": 810,
+    "effectiveSize": 66.9008
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 910.1588036567548,
+    "y": 793.0330786527458,
+    "width": 48.84119634324524,
+    "height": 33.933842694508414,
+    "cy": 810,
+    "effectiveSize": 66.9523
+  },
+  {
+    "text": "10",
+    "role": "sand-count-part-0",
+    "x": 351.29321225,
+    "y": 784.9504401,
+    "width": 54.276855899999994,
+    "height": 50.0991198,
+    "cy": 810,
+    "effectiveSize": 69
+  },
+  {
+    "text": "个",
+    "role": "sand-count-part-1",
+    "x": 416.57006815,
+    "y": 794.0126951,
+    "width": 33.1367196,
+    "height": 31.9746098,
+    "cy": 810,
+    "effectiveSize": 34
+  },
+  {
+    "text": "15",
+    "role": "regular-count-part-0",
+    "x": 599.04589715,
+    "y": 785.253662118,
+    "width": 53.77148609999999,
+    "height": 49.49267576399999,
+    "cy": 810,
+    "effectiveSize": 69
+  },
+  {
+    "text": "个",
+    "role": "regular-count-part-1",
+    "x": 663.8173832499999,
+    "y": 794.0126951,
+    "width": 33.1367196,
+    "height": 31.9746098,
+    "cy": 810,
+    "effectiveSize": 34
+  },
+  {
+    "text": "三幻神惊喜奖励",
+    "role": "reward-art-title",
+    "x": 419.417024161,
+    "y": 899.19650185,
+    "width": 257.165951678,
+    "height": 38.6069963,
+    "requestedCenter": [
+      548,
+      918.5
+    ],
+    "effectiveSize": 37,
+    "includesOutlineAndShadow": true
+  },
+  {
+    "text": "对局中出巴克什三幻神之一",
+    "role": "reward-trigger",
+    "x": 368.395508,
+    "y": 944.41015625,
+    "width": 359.208984,
+    "height": 29.1796875,
+    "cy": 959,
+    "effectiveSize": 30
+  },
+  {
+    "text": "额外保底",
+    "role": "reward-extra-part-0",
+    "x": 115.08863256747773,
+    "y": 1009.249024,
+    "width": 119.4140625,
+    "height": 29.501951999999996,
+    "cy": 1024,
+    "effectiveSize": 30
+  },
+  {
+    "text": "+800",
+    "role": "reward-extra-part-1",
+    "x": 250.50269506747773,
+    "y": 1001.1286627,
+    "width": 129.32226594,
+    "height": 45.7426746,
+    "cy": 1024,
+    "effectiveSize": 63
+  },
+  {
+    "text": "w",
+    "role": "reward-extra-part-2",
+    "x": 388.8249610074777,
+    "y": 1007.99006389,
+    "width": 46.08640642504456,
+    "height": 32.019872219999996,
+    "cy": 1024,
+    "effectiveSize": 63.176
+  },
+  {
+    "text": "赠沙色保险",
+    "role": "reward-gift-part-0",
+    "x": 631.100341264,
+    "y": 1009.3369135,
+    "width": 148.9160157,
+    "height": 29.326173,
+    "cy": 1024,
+    "effectiveSize": 30
+  },
+  {
+    "text": "1",
+    "role": "reward-gift-part-1",
+    "x": 796.016356964,
+    "y": 1001.63623165,
+    "width": 13.873535171999999,
+    "height": 44.727536699999995,
+    "cy": 1024,
+    "effectiveSize": 63
+  },
+  {
+    "text": "次",
+    "role": "reward-gift-part-2",
+    "x": 818.889892136,
+    "y": 1005.0141604,
+    "width": 38.0097666,
+    "height": 37.971679200000004,
+    "cy": 1024,
+    "effectiveSize": 39
+  },
+  {
+    "text": "整单仅一次",
+    "role": "reward-conditions-part-0",
+    "x": 277.789555075,
+    "y": 1084.961426,
+    "width": 174.35058585,
+    "height": 34.077148,
+    "cy": 1102,
+    "effectiveSize": 35
+  },
+  {
+    "text": "赠送不计套餐次数",
+    "role": "reward-conditions-part-1",
+    "x": 476.14014092499997,
+    "y": 1085.2988277,
+    "width": 271.070304,
+    "height": 33.4023446,
+    "cy": 1102,
+    "effectiveSize": 34
+  },
+  {
+    "text": "下单须知",
+    "role": "notes-art-title",
+    "x": 163.9030124,
+    "y": 1160.2095,
+    "width": 122.1939752,
+    "height": 31.581,
+    "requestedCenter": [
+      225,
+      1176
+    ],
+    "effectiveSize": 31,
+    "includesOutlineAndShadow": true
+  },
+  {
+    "text": "r = 元 / w = 万",
+    "role": "units-key",
+    "x": 743.71655,
+    "y": 1164.7451175,
+    "width": 168.5669,
+    "height": 22.509765,
+    "cy": 1176,
+    "effectiveSize": 25
+  },
+  {
+    "text": "计次",
+    "role": "rule-count-part-0",
+    "x": 124,
+    "y": 1222.461426,
+    "width": 68.9404296,
+    "height": 34.077148,
+    "cy": 1239.5,
+    "effectiveSize": 35
+  },
+  {
+    "text": "两类保险仅统计",
+    "role": "rule-count-part-1",
+    "x": 214.94042960000002,
+    "y": 1222.32470725,
+    "width": 243.49608499999997,
+    "height": 34.3505855,
+    "cy": 1239.5,
+    "effectiveSize": 35
+  },
+  {
+    "text": "成功撤离",
+    "role": "rule-count-part-2",
+    "x": 458.4365146,
+    "y": 1222.41015625,
+    "width": 139.00878915,
+    "height": 34.1796875,
+    "cy": 1239.5,
+    "effectiveSize": 35
+  },
+  {
+    "text": "的局",
+    "role": "rule-count-part-3",
+    "x": 597.44530375,
+    "y": 1222.93994075,
+    "width": 65.69335955,
+    "height": 33.1201185,
+    "cy": 1239.5,
+    "effectiveSize": 35
+  },
+  {
+    "text": "代摸",
+    "role": "rule-proxy-part-0",
+    "x": 124,
+    "y": 1293.478515625,
+    "width": 69.1113283,
+    "height": 34.04296875,
+    "cy": 1310.5,
+    "effectiveSize": 35
+  },
+  {
+    "text": "战况激烈时，陪玩先询问板板能否代摸",
+    "role": "rule-proxy-part-1",
+    "x": 215.1113283,
+    "y": 1293.30761675,
+    "width": 592.470704,
+    "height": 34.3847665,
+    "cy": 1310.5,
+    "effectiveSize": 35
+  },
+  {
+    "text": "累计",
+    "role": "rule-loot-part-0",
+    "x": 124,
+    "y": 1370.0810549,
+    "width": 66.97070304,
+    "height": 32.837890200000004,
+    "cy": 1386.5,
+    "effectiveSize": 34
+  },
+  {
+    "text": "成功撤离且板板全身物资",
+    "role": "rule-loot-part-1",
+    "x": 210.97070304,
+    "y": 1369.8652348,
+    "width": 373.00390540000006,
+    "height": 33.26953040000001,
+    "cy": 1386.5,
+    "effectiveSize": 34
+  },
+  {
+    "text": "＞600w",
+    "role": "rule-loot-part-2",
+    "x": 588.97460844,
+    "y": 1373.2021478,
+    "width": 116.77539054,
+    "height": 26.595704400000002,
+    "cy": 1386.5,
+    "effectiveSize": 34
+  },
+  {
+    "text": "才计保底",
+    "role": "rule-loot-part-3",
+    "x": 710.74999898,
+    "y": 1369.7822272,
+    "width": 135.0703125,
+    "height": 33.4355456,
+    "cy": 1386.5,
+    "effectiveSize": 34
+  },
+  {
+    "text": "兴安电竞 · 下单前请确认地图及订单规则",
+    "role": "footer",
+    "x": 291.1816404,
+    "y": 1452.7460936,
+    "width": 425.63671919999996,
+    "height": 23.5078128,
+    "cy": 1464.5,
+    "effectiveSize": 24
+  }
+]

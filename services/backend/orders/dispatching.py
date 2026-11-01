@@ -1,5 +1,6 @@
 """各发单渠道共用单钱快照、订单校验与投递去重。"""
 import hashlib
+import json
 import logging
 from decimal import Decimal
 
@@ -16,16 +17,27 @@ MODELS = {'KOOK': KookDispatchRecord, 'WECOM': WecomDispatchRecord}
 
 
 def eligibility_error(order):
+    if order.dispatch_route != Order.DispatchRoute.PUBLIC:
+        return '该订单由客服派单，不进入接单频道'
     if order.status != Order.Status.PENDING or order.payment_status != Order.PaymentStatus.PAID:
         return '仅已支付、待接单的订单可发单'
+    from .direct_payment_models import DirectPaymentIntent
+    from .direct_payment_quote import quote_matches_intent
+    if 'direct_payment' in order._state.fields_cache:
+        intent = order._state.fields_cache['direct_payment']
+    else:
+        intent = DirectPaymentIntent.objects.filter(order=order).first()
+    if intent and (intent.status != DirectPaymentIntent.Status.PAID or intent.evidence_risk_at
+                   or not quote_matches_intent(intent, order)):
+        return '支付证据待核对，不能发单'
     if order.provider_id or order.provider_account_id:
         return '订单已经指定打手'
     if order.auto_cancel_at and order.auto_cancel_at <= timezone.now():
         return '订单接单时间已过期'
     from .team_rules import required_team_size
     if required_team_size(order) != 1:
-        return '双陪订单请直接指定两名打手，避免将汇总单钱误认为个人单钱'
-    if order.source_order_id or (order.service.service_category and order.service.service_category.is_gift):
+        return '双陪订单暂不支持群发，避免将整单收益误认为单人收益'
+    if order.source_order_id or order.is_gift_snapshot:
         return '礼物订单不进入接单频道'
     return ''
 
@@ -57,9 +69,9 @@ def build_dispatch_text(order):
     return '\n'.join(lines)
 
 
-def channel_config(channel, order=None):
+def channel_config(channel, order=None, *, kook_config=None):
     if channel == 'KOOK':
-        config = get_kook_config()
+        config = kook_config if kook_config is not None else get_kook_config()
         route = route_for_order(config, order) if order else next((r for r in config.routes if r['enabled']), None)
         return bool(config.ready and route), route['channel_id'] if route else '', 'KOOK 频道'
     ready = bool(settings.WECOM_DISPATCH_ENABLED and valid_webhook(settings.WECOM_DISPATCH_WEBHOOK))
@@ -67,59 +79,93 @@ def channel_config(channel, order=None):
     return ready, target, '企业微信群'
 
 
-def dispatch_preview(order):
+def prepare_dispatch(order, channel, *, kook_config=None):
+    """Construct a server-side plan that can be checked and queued unchanged."""
+    ready, target, label = channel_config(channel, order, kook_config=kook_config)
+    defaults = None
+    if ready:
+        model = MODELS[channel]
+        trigger = model.Trigger.PROVIDER_REJECTED if order.reject_count else model.Trigger.NEW_ORDER
+        defaults = {'trigger': trigger, 'channel_id': target, 'content': build_dispatch_text(order)}
+        if channel == 'KOOK':
+            from .dispatch_templates import render_template
+            from .kook_dispatch import build_order_card
+            config = kook_config if kook_config is not None else get_kook_config()
+            route = route_for_order(config, order)
+            if not config.ready or not route:
+                return {'ready': False, 'target': '', 'label': label, 'defaults': None}
+            defaults.update(channel_id=route['channel_id'], route_key=route['id'],
+                card_content=build_order_card(order, trigger, config=config, route=route))
+            if route.get('template'):
+                defaults['content'] = render_template(order, trigger, route['template'])
+    return {'ready': ready, 'target': target, 'label': label, 'defaults': defaults}
+
+
+def dispatch_preview(order, *, kook_config=None, include_plans=False):
+    config = kook_config if kook_config is not None else get_kook_config()
+    reason = eligibility_error(order)
     channels = []
+    plans = {}
     for channel, model in MODELS.items():
-        ready, target, label = channel_config(channel, order)
+        plan = prepare_dispatch(order, channel, kook_config=config)
+        ready, target, label = plan['ready'], plan['target'], plan['label']
         record = model.objects.filter(order=order, sequence=order.reject_count).first()
+        signature = {'order_id': order.pk, 'sequence': order.reject_count, 'channel': channel,
+                     'reason': reason, 'status': record.status if record else 'NOT_SENT',
+                     'record_id': record.pk if record else None, 'plan': plan}
+        confirmation_key = hashlib.sha256(json.dumps(signature, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')).hexdigest()
+        plans[channel] = plan
+        # A failed record may be retried against the current configuration;
+        # all other existing records describe their original queued attempt.
+        recorded = bool(record and record.status != 'FAILED')
         channels.append({
             'channel': channel, 'label': label, 'configured': ready,
             'status': record.status if record else 'NOT_SENT',
+            'confirmation_key': confirmation_key,
             'last_error': record.last_error if record else '',
             'sent_at': record.sent_at if record else None,
-            'target_id': record.channel_id if record else target,
+            'target_id': record.channel_id if recorded else target,
         })
         if channel == 'KOOK':
             from .dispatch_templates import render_template
-            config = get_kook_config()
+            from .kook_dispatch import summarize_card
             route = route_for_order(config, order)
-            channels[-1]['route_name'] = route['name'] if route else ''
-            channels[-1]['content'] = (record.content if record and record.status in ('SENT', 'SENDING', 'UNKNOWN')
-                else render_template(order, 'PROVIDER_REJECTED' if order.reject_count else 'NEW_ORDER', route['template'])
+            channels[-1]['target_source'] = 'recorded' if recorded else 'current'
+            channels[-1]['route_name'] = '' if recorded else (route['name'] if route else '')
+            channels[-1]['previous_target_id'] = record.channel_id if record and record.status == 'FAILED' and record.channel_id != target else ''
+            channels[-1]['content_source'] = (('recorded' if record.content else 'unavailable') if recorded
+                else ('fallback' if not route else 'retry' if record else 'current'))
+            channels[-1]['content'] = (record.content if recorded else
+                render_template(order, 'PROVIDER_REJECTED' if order.reject_count else 'NEW_ORDER', route['template'])
                 if route and route.get('template') else build_dispatch_text(order))
-    reason = eligibility_error(order)
-    return {
+            card = record.card_content if recorded else (plan['defaults']['card_content'] if plan['defaults'] else '')
+            channels[-1]['card_details'] = summarize_card(card)
+    data = {
         'order_id': order.id, 'order_no': order.order_no,
         'provider_income': order.provider_income, 'content': build_dispatch_text(order),
         'can_send': not reason, 'reason': reason, 'channels': channels,
     }
+    return (data, plans) if include_plans else data
 
 
-def queue_dispatch(order, channel, *, manual=False):
+def queue_dispatch(order, channel, *, manual=False, prepared=None):
     """同一订单待接单轮次、同一渠道只发一次；明确失败才允许人工重试。"""
     model = MODELS[channel]
-    ready, target, _ = channel_config(channel, order)
+    if prepared is None:
+        ready, _, _ = channel_config(channel, order)
+    else:
+        ready = prepared['ready']
     if not ready:
         return None
     with transaction.atomic():
         locked = Order.objects.select_for_update().get(pk=order.pk)
         if eligibility_error(locked):
             return None
-        defaults = {
-            'trigger': model.Trigger.PROVIDER_REJECTED if locked.reject_count else model.Trigger.NEW_ORDER,
-            'channel_id': target, 'content': build_dispatch_text(locked),
-        }
-        if channel == 'KOOK':
-            from .dispatch_templates import render_template
-            from .kook_dispatch import build_order_card
-            config = get_kook_config()
-            route = route_for_order(config, locked)
-            if not config.ready or not route:
-                return None
-            defaults.update(channel_id=route['channel_id'], route_key=route['id'],
-                card_content=build_order_card(locked, defaults['trigger'], config=config, route=route))
-            if route.get('template'):
-                defaults['content'] = render_template(locked, defaults['trigger'], route['template'])
+        # Automatic callers build their plan after acquiring the order lock.
+        plan = prepared if prepared is not None else prepare_dispatch(locked, channel)
+        if not plan['ready']:
+            return None
+        defaults = plan['defaults']
         record, created = model.objects.get_or_create(
             order=locked, sequence=locked.reject_count,
             defaults=defaults,
@@ -201,7 +247,9 @@ def deliver_dispatch(channel, record_id):
             return 'failed:configuration'
         record.status = 'SENDING'
         record.attempts += 1
-        if channel != 'KOOK' or not record.card_content:
+        # New WeCom records already carry the checked text. Only legacy rows
+        # without a text snapshot need a fallback; KOOK keeps its card snapshot.
+        if (channel == 'WECOM' and not record.content) or (channel == 'KOOK' and not record.card_content):
             record.content = build_dispatch_text(order)
         record.save(update_fields=['status', 'attempts', 'content'])
     try:

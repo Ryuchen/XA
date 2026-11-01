@@ -1,0 +1,30 @@
+{
+  "stage": "illustrations-awaiting-approval",
+  "createdDate": "2026-10-03",
+  "mode": "built-in image_gen",
+  "reference": "G:/Github/XA/design/club-material-campaign-v3-handdrawn/01-illustrations/01-medic-mouse-loot.png",
+  "assets": [
+    {
+      "id": "01-ez-lux-duo",
+      "file": "assets/illustrations/01-ez-lux-duo.png",
+      "prompt": "Use case: precise-object-edit.\nAsset: reusable independent transparent illustration for 兴安电竞 League of Legends 10-project poster campaign, first illustration stage.\nInput image 1 is the approved existing series STYLE reference and composition starting point. Retain its charming polished Japanese anime chibi hand-drawn aesthetic, expressive huge eyes, soft cheek hatching, naturally varying navy ink contours, broad flat colors and restrained soft cel shading.\nReplace the male tactical medic completely with classic League of Legends Ezreal (EZ), a cute young male with messy golden blonde hair, large blue eyes, signature bronze goggles on his forehead, blue explorer jacket, brown leather straps, and a distinctive large ornate golden arcane gauntlet with a glowing blue gem on his LEFT arm.\nReplace the grey mouse completely with classic League of Legends Lux, a cute young female with long golden blonde hair, bright blue eyes, white and navy blue Demacian light armor with small restrained gold details, and her recognizable golden double-winged light staff with a pale blue glowing focus. Lux must be a human woman, equally expressive and nearly equal body size to Ezreal.\nNew scene matching the companionship service: the two smiling duo partners ready for an adventure in Summoner's Rift, standing side by side. Ezreal on the left confidently raising his magic gauntlet in a thumbs-up-like friendly pose, Lux on the right holding her light staff and greeting the viewer with her free hand. Energetic welcoming mood. Full bodies, roughly 2.5 heads tall chibi proportions. Complete hands, feet, hair, staff and gauntlet silhouettes, generous outer padding, compact group suitable for poster headers.\nReplace all original tactical loot, medical drones, gun equipment, gold bars, mouse elements, luggage and money with ONLY a tiny League of Legends themed pale blue crystalline rune and a few understated gold sparkle accents. No chest is needed, no large ground scenery.\nPalette ivory, mist blue, navy, muted leather brown and restrained warm gold. All props are drawn in the same anime hand-drawn style. True transparent background, clean alpha around complete silhouette; NO painted opaque backdrop, floor rectangle, dark vignette or shadow halo.\nNo text, letters, numbers, brands, logos, watermark, prices, QR codes or pseudo-writing. No photography, 3D metallic materials, realistic rendering, military gear, mouse or medic.\nThis is a character artwork approval asset, NOT a finished poster or mockup.",
+      "sourceFile": "C:/Users/chenh/.codex/generated_images/01a100ce-0ee4-7cc2-aff4-b5e311e26a8a/exec-6ec16137-8701-4549-8db8-4ccafaf2027f.png",
+      "nativeResolution": {
+        "width": 1536,
+        "height": 1024
+      },
+      "role": "双人开黑与陪伴"
+    },
+    {
+      "id": "02-ez-lux-victory",
+      "file": "assets/illustrations/02-ez-lux-victory.png",
+      "prompt": "Use case: precise-object-edit.\nAsset: second independent character illustration for 兴安电竞 League of Legends ten-project poster campaign. Input image 1 is the current EZ and Lux character identity and series style reference; preserve their faces, golden blonde hair, blue eyes, clothing, signature props, colors, drawing quality and roughly 2.5-head-tall chibi proportions.\nCreate a new compact full-body duo VICTORY celebration pose. Classic Ezreal on the left and Lux on the right, both joyful with warm cheek hatching, cheering together over a small symbolic blue crystalline victory trophy with restrained golden wings near the lower center. Ezreal wears forehead bronze goggles, blue explorer jacket, brown leather straps and navy trousers, his magical golden blue-gem gauntlet correctly on HIS LEFT arm (the arm closer to Lux in a front-facing view), raised in a confident cheer. His other hand rests near the trophy. Lux wears ivory and navy Demacian light armor with fine muted golden trims and keeps her golden winged light staff in her outer hand; her other hand does a cheerful small raised fist toward the viewer. Complete readable natural hands and all fingers, no extra limbs. Distinct silhouettes with a small gap between faces.\nUse a few pale blue runic crystals and tiny warm golden sparkles only, no text on trophy or props. Symbolic celebration represents game services and is not a literal new business guarantee.\nPolished Japanese anime chibi hand drawing, naturally varied deep navy contours, broad flat colors, soft cel shading, gentle drawn hair highlights, ivory/mist blue/navy palette with limited gold and brown. Same hand-drawn style on every prop, no 3D reflections or photorealistic materials.\nGenerous transparent margin around the ENTIRE group, at least 8 percent clear space on all four sides. Staff and gauntlet must be completely within frame. True transparent background, clean alpha silhouette, NO solid backdrop, dark vignette, painted ambient haze, poster panels, text areas, scenery, ground plane or rectangle.\nNo letters, Chinese, digits, logos, watermarks, prices, medals with ranks, military gear, medic or mouse. An independent illustration asset only, no finished poster or mockup.",
+      "sourceFile": "C:/Users/chenh/.codex/generated_images/01a100ce-0ee4-7cc2-aff4-b5e311e26a8a/exec-4f5a2d5e-1f55-4a00-9136-68d786775ad8.png",
+      "nativeResolution": {
+        "width": 1536,
+        "height": 1024
+      },
+      "role": "胜利庆祝与冲分"
+    }
+  ]
+}

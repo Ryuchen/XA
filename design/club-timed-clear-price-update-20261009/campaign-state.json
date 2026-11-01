@@ -1,0 +1,193 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 限时清图单",
+  "date": "2026-10-09",
+  "priorProject": "G:\\Github\\XA\\design\\club-timed-clear-campaign-handdrawn",
+  "stage": "delivered",
+  "revision": "timed-clear-mobile-price-r3-20261009",
+  "contentVerified": true,
+  "contentVerificationBasis": "本轮12行价目截图右侧新价格列；手游模式、航天地图及时限逐行对应。表中未列固定物资保底，无新金额；原图最低要求和规则继续沿用。广告端游两卡12档与源数据一致。",
+  "deliveryScope": {
+    "pageIds": [
+      "mobile-absolute",
+      "mobile-secret",
+      "social"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户点名限时清图单广告页及手游绝密/机密价格表，共3页；广告上方端游价目继续沿用本轮参考。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "source-references/prior-social.png上方端游两卡12档，逐项与旧已确认源数据一致。",
+    "mobile": "source-references/new-mobile-prices.png右侧新价格列12行，按常规及16/14/12/10/8分钟逐行核对。"
+  },
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "沿用既有二次元手绘男性蜂医、开心灰鼠及奶白雾蓝海军蓝配色"
+    },
+    "modeNaming": {
+      "status": "approved",
+      "basis": "用户回复：机密改为机密航天，其他规则需要调整"
+    },
+    "mechanismAndRules": {
+      "status": "ready-from-user-sources",
+      "secret": {
+        "status": "provided",
+        "basis": "用户本轮补充完整机密规则，端手游共用"
+      },
+      "absolute": {
+        "status": "reference-carried-forward",
+        "basis": "采用本轮绝密附件的规则；已向用户说明600w最低门槛、>900w速撤及对应房卡补偿"
+      }
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在限时清图单主题插画交付后回复：继续",
+      "file": "01-illustrations/timed-clear-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户在本轮无字底图及布局交付后回复：继续",
+      "overview": "review/background-overview.png",
+      "review": "review/backgrounds.html"
+    }
+  },
+  "plannedDeliverables": [
+    "手游绝密六档价格页",
+    "手游机密六档价格页",
+    "限时清图单广告页"
+  ],
+  "priceChanges": [
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "tier": "regular",
+      "deadlineMinutes": null,
+      "oldPriceR": 108,
+      "newPriceR": 108
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "tier": "timed",
+      "deadlineMinutes": 16,
+      "oldPriceR": 288,
+      "newPriceR": 188
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "tier": "timed",
+      "deadlineMinutes": 14,
+      "oldPriceR": 388,
+      "newPriceR": 328
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "tier": "timed",
+      "deadlineMinutes": 12,
+      "oldPriceR": 588,
+      "newPriceR": 468
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "tier": "timed",
+      "deadlineMinutes": 10,
+      "oldPriceR": 888,
+      "newPriceR": 668
+    },
+    {
+      "pageId": "mobile-absolute",
+      "mode": "绝密",
+      "tier": "timed",
+      "deadlineMinutes": 8,
+      "oldPriceR": 1488,
+      "newPriceR": 888
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "tier": "regular",
+      "deadlineMinutes": null,
+      "oldPriceR": 88,
+      "newPriceR": 88
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "tier": "timed",
+      "deadlineMinutes": 16,
+      "oldPriceR": 228,
+      "newPriceR": 128
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "tier": "timed",
+      "deadlineMinutes": 14,
+      "oldPriceR": 328,
+      "newPriceR": 188
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "tier": "timed",
+      "deadlineMinutes": 12,
+      "oldPriceR": 428,
+      "newPriceR": 288
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "tier": "timed",
+      "deadlineMinutes": 10,
+      "oldPriceR": 828,
+      "newPriceR": 468
+    },
+    {
+      "pageId": "mobile-secret",
+      "mode": "机密",
+      "tier": "timed",
+      "deadlineMinutes": 8,
+      "oldPriceR": 1228,
+      "newPriceR": 688
+    }
+  ],
+  "nextStep": "本轮三張成品已完成成图验收；后续改价从本项目content.json与layout-adapter.mjs继续。",
+  "lastRenderedPages": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ],
+  "vectorDelivery": {
+    "status": "completed",
+    "formats": [
+      "PNG",
+      "editable text SVG",
+      "outlined SVG"
+    ],
+    "pageIds": [
+      "mobile-absolute",
+      "mobile-secret",
+      "social"
+    ],
+    "changedPriceCount": 10,
+    "updatedPriceAppearances": 20,
+    "overview": "review/updated-overview.png",
+    "review": "review/index.html",
+    "visualQA": "review/visual-qa.md",
+    "audit": "review/price-and-layout-audit.json",
+    "completedAt": "2026-10-09",
+    "rendering": "Typography rendered from vector at final export dimensions over approved raster backgrounds"
+  },
+  "package": "campaign-timed-clear-mobile-price-r3-20261009.zip"
+}

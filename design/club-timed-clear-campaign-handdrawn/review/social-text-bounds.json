@@ -1,0 +1,1162 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 98.45,
+    "y": 51.8427731,
+    "width": 107.44628913000001,
+    "height": 26.3144538,
+    "cy": 65,
+    "effectiveSize": 27
+  },
+  {
+    "text": "航天清图一把 · 常规 / 限时档",
+    "role": "service",
+    "x": 156,
+    "y": 374.2919917,
+    "width": 340.10742220000003,
+    "height": 25.416016600000003,
+    "cy": 387,
+    "effectiveSize": 26
+  },
+  {
+    "text": "端游 · 绝密版",
+    "role": "platform-mode",
+    "x": 222.99980539999999,
+    "y": 440.30039034,
+    "width": 137.00038920000003,
+    "height": 22.39921932,
+    "cy": 451.5,
+    "effectiveSize": 22.8
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 140.3332519775,
+    "y": 479.535644775,
+    "width": 77.333496045,
+    "height": 18.92871045,
+    "cy": 489,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "清图时限",
+    "role": "table-heading",
+    "x": 358.2666015625,
+    "y": 479.56420935,
+    "width": 77.466796875,
+    "height": 18.8715813,
+    "cy": 489,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "168",
+    "role": "price-number",
+    "x": 152.502343888,
+    "y": 518.66718704,
+    "width": 48.497656111999994,
+    "height": 26.665625919999997,
+    "cy": 532,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 522.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 532,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "常规清图",
+    "role": "regular-tier",
+    "x": 350.21875,
+    "y": 520.3632808,
+    "width": 93.5625,
+    "height": 23.2734384,
+    "cy": 532,
+    "effectiveSize": 24
+  },
+  {
+    "text": "388",
+    "role": "price-number",
+    "x": 143.464062592,
+    "y": 563.66718704,
+    "width": 57.535937408,
+    "height": 26.665625919999997,
+    "cy": 577,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 567.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 577,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "16",
+    "role": "deadline-number",
+    "x": 357.2548833,
+    "y": 563.012939458,
+    "width": 29.7451167,
+    "height": 27.974121084,
+    "cy": 577,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 566.787109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 577,
+    "effectiveSize": 21
+  },
+  {
+    "text": "488",
+    "role": "price-number",
+    "x": 142.709374816,
+    "y": 609.16718704,
+    "width": 58.290625184,
+    "height": 26.665625919999997,
+    "cy": 622.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 613.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 622.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "14",
+    "role": "deadline-number",
+    "x": 354.703125,
+    "y": 608.6462406,
+    "width": 32.296875,
+    "height": 27.707518800000003,
+    "cy": 622.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 612.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 622.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 144.578124816,
+    "y": 654.16718704,
+    "width": 56.421875184,
+    "height": 26.665625919999997,
+    "cy": 667.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 658.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 667.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "12",
+    "role": "deadline-number",
+    "x": 356.9311521,
+    "y": 653.512939458,
+    "width": 30.0688479,
+    "height": 27.974121084,
+    "cy": 667.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 657.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 667.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "988",
+    "role": "price-number",
+    "x": 144.578124816,
+    "y": 699.16718704,
+    "width": 56.421875184,
+    "height": 26.665625919999997,
+    "cy": 712.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 703.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 712.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "10",
+    "role": "deadline-number",
+    "x": 356.3217771,
+    "y": 698.3415531,
+    "width": 30.6782229,
+    "height": 28.316893800000003,
+    "cy": 712.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 702.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 712.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "1688",
+    "role": "price-number",
+    "x": 131.802343888,
+    "y": 744.16718704,
+    "width": 69.19765611199999,
+    "height": 26.665625919999997,
+    "cy": 757.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 748.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 757.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "8",
+    "role": "deadline-number",
+    "x": 369.4423833,
+    "y": 743.3701167,
+    "width": 17.5576167,
+    "height": 28.2597666,
+    "cy": 757.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 747.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 757.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "端游 · 机密版",
+    "role": "platform-mode",
+    "x": 725.9998054,
+    "y": 440.30039034,
+    "width": 137.00038920000003,
+    "height": 22.39921932,
+    "cy": 451.5,
+    "effectiveSize": 22.8
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 643.3332519775,
+    "y": 479.535644775,
+    "width": 77.333496045,
+    "height": 18.92871045,
+    "cy": 489,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "清图时限",
+    "role": "table-heading",
+    "x": 858.7666015625,
+    "y": 479.56420935,
+    "width": 77.466796875,
+    "height": 18.8715813,
+    "cy": 489,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "108",
+    "role": "price-number",
+    "x": 654.082812592,
+    "y": 518.64023472,
+    "width": 49.917187408,
+    "height": 26.719530560000003,
+    "cy": 532,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 522.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 532,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "常规清图",
+    "role": "regular-tier",
+    "x": 850.71875,
+    "y": 520.3632808,
+    "width": 93.5625,
+    "height": 23.2734384,
+    "cy": 532,
+    "effectiveSize": 24
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 647.272656112,
+    "y": 563.66718704,
+    "width": 56.72734388800001,
+    "height": 26.665625919999997,
+    "cy": 577,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 567.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 577,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "16",
+    "role": "deadline-number",
+    "x": 855.2548833,
+    "y": 563.012939458,
+    "width": 29.7451167,
+    "height": 27.974121084,
+    "cy": 577,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 566.787109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 577,
+    "effectiveSize": 21
+  },
+  {
+    "text": "388",
+    "role": "price-number",
+    "x": 646.464062592,
+    "y": 609.16718704,
+    "width": 57.535937408,
+    "height": 26.665625919999997,
+    "cy": 622.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 613.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 622.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "14",
+    "role": "deadline-number",
+    "x": 852.703125,
+    "y": 608.6462406,
+    "width": 32.296875,
+    "height": 27.707518800000003,
+    "cy": 622.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 612.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 622.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "588",
+    "role": "price-number",
+    "x": 646.967187408,
+    "y": 654.16718704,
+    "width": 57.032812592,
+    "height": 26.665625919999997,
+    "cy": 667.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 658.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 667.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "12",
+    "role": "deadline-number",
+    "x": 854.9311521,
+    "y": 653.512939458,
+    "width": 30.0688479,
+    "height": 27.974121084,
+    "cy": 667.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 657.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 667.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "888",
+    "role": "price-number",
+    "x": 646.032812592,
+    "y": 699.16718704,
+    "width": 57.967187408,
+    "height": 26.665625919999997,
+    "cy": 712.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 703.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 712.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "10",
+    "role": "deadline-number",
+    "x": 854.3217771,
+    "y": 698.3415531,
+    "width": 30.6782229,
+    "height": 28.316893800000003,
+    "cy": 712.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 702.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 712.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "1488",
+    "role": "price-number",
+    "x": 632.753906112,
+    "y": 744.16718704,
+    "width": 71.246093888,
+    "height": 26.665625919999997,
+    "cy": 757.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 748.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 757.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "8",
+    "role": "deadline-number",
+    "x": 867.4423833,
+    "y": 743.3701167,
+    "width": 17.5576167,
+    "height": 28.2597666,
+    "cy": 757.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 747.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 757.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "手游 · 绝密版",
+    "role": "platform-mode",
+    "x": 223.03320306799998,
+    "y": 801.80039034,
+    "width": 136.93359386400002,
+    "height": 22.39921932,
+    "cy": 813,
+    "effectiveSize": 22.8
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 140.3332519775,
+    "y": 840.535644775,
+    "width": 77.333496045,
+    "height": 18.92871045,
+    "cy": 850,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "清图时限",
+    "role": "table-heading",
+    "x": 358.2666015625,
+    "y": 840.56420935,
+    "width": 77.466796875,
+    "height": 18.8715813,
+    "cy": 850,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "108",
+    "role": "price-number",
+    "x": 151.082812592,
+    "y": 879.64023472,
+    "width": 49.917187408,
+    "height": 26.719530560000003,
+    "cy": 893,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 883.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 893,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "常规清图",
+    "role": "regular-tier",
+    "x": 350.21875,
+    "y": 881.3632808,
+    "width": 93.5625,
+    "height": 23.2734384,
+    "cy": 893,
+    "effectiveSize": 24
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 144.272656112,
+    "y": 925.16718704,
+    "width": 56.72734388800001,
+    "height": 26.665625919999997,
+    "cy": 938.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 929.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 938.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "16",
+    "role": "deadline-number",
+    "x": 357.2548833,
+    "y": 924.512939458,
+    "width": 29.7451167,
+    "height": 27.974121084,
+    "cy": 938.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 928.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 938.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "388",
+    "role": "price-number",
+    "x": 143.464062592,
+    "y": 970.16718704,
+    "width": 57.535937408,
+    "height": 26.665625919999997,
+    "cy": 983.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 974.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 983.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "14",
+    "role": "deadline-number",
+    "x": 354.703125,
+    "y": 969.6462406,
+    "width": 32.296875,
+    "height": 27.707518800000003,
+    "cy": 983.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 973.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 983.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "588",
+    "role": "price-number",
+    "x": 143.967187408,
+    "y": 1015.16718704,
+    "width": 57.032812592,
+    "height": 26.665625919999997,
+    "cy": 1028.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 1019.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 1028.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "12",
+    "role": "deadline-number",
+    "x": 356.9311521,
+    "y": 1014.512939458,
+    "width": 30.0688479,
+    "height": 27.974121084,
+    "cy": 1028.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 1018.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 1028.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "888",
+    "role": "price-number",
+    "x": 143.032812592,
+    "y": 1060.16718704,
+    "width": 57.967187408,
+    "height": 26.665625919999997,
+    "cy": 1073.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 1064.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 1073.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "10",
+    "role": "deadline-number",
+    "x": 356.3217771,
+    "y": 1059.3415531,
+    "width": 30.6782229,
+    "height": 28.316893800000003,
+    "cy": 1073.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 1063.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 1073.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "1488",
+    "role": "price-number",
+    "x": 129.75390611199998,
+    "y": 1105.66718704,
+    "width": 71.246093888,
+    "height": 26.665625919999997,
+    "cy": 1119,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 207,
+    "y": 1109.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 1119,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "8",
+    "role": "deadline-number",
+    "x": 369.4423833,
+    "y": 1104.8701167,
+    "width": 17.5576167,
+    "height": 28.2597666,
+    "cy": 1119,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 394,
+    "y": 1108.787109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 1119,
+    "effectiveSize": 21
+  },
+  {
+    "text": "手游 · 机密版",
+    "role": "platform-mode",
+    "x": 726.033203068,
+    "y": 801.80039034,
+    "width": 136.93359386400002,
+    "height": 22.39921932,
+    "cy": 813,
+    "effectiveSize": 22.8
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 643.3332519775,
+    "y": 840.535644775,
+    "width": 77.333496045,
+    "height": 18.92871045,
+    "cy": 850,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "清图时限",
+    "role": "table-heading",
+    "x": 858.7666015625,
+    "y": 840.56420935,
+    "width": 77.466796875,
+    "height": 18.8715813,
+    "cy": 850,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "88",
+    "role": "price-number",
+    "x": 666.732812592,
+    "y": 879.66718704,
+    "width": 37.267187408,
+    "height": 26.665625919999997,
+    "cy": 893,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 883.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 893,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "常规清图",
+    "role": "regular-tier",
+    "x": 850.71875,
+    "y": 881.3632808,
+    "width": 93.5625,
+    "height": 23.2734384,
+    "cy": 893,
+    "effectiveSize": 24
+  },
+  {
+    "text": "228",
+    "role": "price-number",
+    "x": 648.961718704,
+    "y": 925.16718704,
+    "width": 55.038281296,
+    "height": 26.665625919999997,
+    "cy": 938.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 929.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 938.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "16",
+    "role": "deadline-number",
+    "x": 855.2548833,
+    "y": 924.512939458,
+    "width": 29.7451167,
+    "height": 27.974121084,
+    "cy": 938.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 928.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 938.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "328",
+    "role": "price-number",
+    "x": 648.153124816,
+    "y": 970.16718704,
+    "width": 55.846875184,
+    "height": 26.665625919999997,
+    "cy": 983.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 974.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 983.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "14",
+    "role": "deadline-number",
+    "x": 852.703125,
+    "y": 969.6462406,
+    "width": 32.296875,
+    "height": 27.707518800000003,
+    "cy": 983.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 973.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 983.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "428",
+    "role": "price-number",
+    "x": 647.3984352,
+    "y": 1015.16718704,
+    "width": 56.601564800000006,
+    "height": 26.665625919999997,
+    "cy": 1028.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 1019.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 1028.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "12",
+    "role": "deadline-number",
+    "x": 854.9311521,
+    "y": 1014.512939458,
+    "width": 30.0688479,
+    "height": 27.974121084,
+    "cy": 1028.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 1018.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 1028.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "828",
+    "role": "price-number",
+    "x": 647.721874816,
+    "y": 1060.16718704,
+    "width": 56.278125184,
+    "height": 26.665625919999997,
+    "cy": 1073.5,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 1064.4636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 1073.5,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "10",
+    "role": "deadline-number",
+    "x": 854.3217771,
+    "y": 1059.3415531,
+    "width": 30.6782229,
+    "height": 28.316893800000003,
+    "cy": 1073.5,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 1063.287109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 1073.5,
+    "effectiveSize": 21
+  },
+  {
+    "text": "1228",
+    "role": "price-number",
+    "x": 636.365624816,
+    "y": 1105.66718704,
+    "width": 67.63437518399999,
+    "height": 26.665625919999997,
+    "cy": 1119,
+    "effectiveSize": 36.8
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 710,
+    "y": 1109.9636352583,
+    "width": 12.7693359375,
+    "height": 18.0727294834,
+    "cy": 1119,
+    "effectiveSize": 35.15
+  },
+  {
+    "text": "8",
+    "role": "deadline-number",
+    "x": 867.4423833,
+    "y": 1104.8701167,
+    "width": 17.5576167,
+    "height": 28.2597666,
+    "cy": 1119,
+    "effectiveSize": 39
+  },
+  {
+    "text": "分钟内",
+    "role": "deadline-unit",
+    "x": 892,
+    "y": 1108.787109375,
+    "width": 61.23632823,
+    "height": 20.42578125,
+    "cy": 1119,
+    "effectiveSize": 21
+  },
+  {
+    "text": "限时档保障",
+    "role": "guarantee-scope",
+    "x": 232,
+    "y": 1171.6078125,
+    "width": 74.857031288,
+    "height": 14.784374999999999,
+    "cy": 1179,
+    "effectiveSize": 15.2
+  },
+  {
+    "text": "拉闸清图 或 规定时限内陪玩击杀≥8人",
+    "role": "method-summary",
+    "x": 232,
+    "y": 1259.501953125,
+    "width": 364.32421875,
+    "height": 20.99609375,
+    "cy": 1270,
+    "effectiveSize": 21.5
+  },
+  {
+    "text": "成功撤离仍需：陪玩击杀≥4人 且 物资达标",
+    "role": "minimum-condition",
+    "x": 339.285400525,
+    "y": 1300.501953125,
+    "width": 407.42919895,
+    "height": 20.99609375,
+    "cy": 1311,
+    "effectiveSize": 21.5
+  },
+  {
+    "text": "绝密 ≥",
+    "role": "minimum-mode",
+    "x": 216,
+    "y": 1336.123534875,
+    "width": 65.7312012,
+    "height": 21.75293025,
+    "cy": 1347,
+    "effectiveSize": 22.5
+  },
+  {
+    "text": "600",
+    "role": "minimum-loot-number",
+    "x": 304.93896488,
+    "y": 1336.4719241,
+    "width": 43.06103511999999,
+    "height": 21.0561518,
+    "cy": 1347,
+    "effectiveSize": 29
+  },
+  {
+    "text": "w",
+    "role": "minimum-loot-unit",
+    "x": 354,
+    "y": 1339.9803222587,
+    "width": 20.206933939999995,
+    "height": 14.039355482599998,
+    "cy": 1347,
+    "effectiveSize": 27.7
+  },
+  {
+    "text": "机密 ≥",
+    "role": "minimum-mode",
+    "x": 719,
+    "y": 1336.123534875,
+    "width": 65.7092286,
+    "height": 21.75293025,
+    "cy": 1347,
+    "effectiveSize": 22.5
+  },
+  {
+    "text": "300",
+    "role": "minimum-loot-number",
+    "x": 807.06103512,
+    "y": 1336.4719241,
+    "width": 43.93896488,
+    "height": 21.0561518,
+    "cy": 1347,
+    "effectiveSize": 29
+  },
+  {
+    "text": "w",
+    "role": "minimum-loot-unit",
+    "x": 857,
+    "y": 1339.9803222587,
+    "width": 20.206933939999995,
+    "height": 14.039355482599998,
+    "cy": 1347,
+    "effectiveSize": 27.7
+  },
+  {
+    "text": "r = 元 / w = 万",
+    "role": "units",
+    "x": 500.858275,
+    "y": 1401.37255875,
+    "width": 84.28345,
+    "height": 11.2548825,
+    "cy": 1407,
+    "effectiveSize": 12.5
+  }
+]

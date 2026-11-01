@@ -9,7 +9,7 @@ function environment(respond = () => ({ code: 0, data: {} })) {
   for (const key of Object.keys(require.cache)) if (key.startsWith(root + path.sep)) delete require.cache[key];
   const storage = new Map(), calls = [], navigation = [];
   global.wx = {
-    getStorageSync: key => storage.get(key), setStorageSync: (key, value) => storage.set(key, value), removeStorageSync: key => storage.delete(key),
+    getStorageSync: key => storage.get(key), getStorageInfoSync: () => ({ keys: [...storage.keys()] }), setStorageSync: (key, value) => storage.set(key, value), removeStorageSync: key => storage.delete(key),
     getAccountInfoSync: () => ({ miniProgram: { envVersion: 'develop' } }),
     getSystemInfoSync: () => ({ windowWidth: 375 }),
     getFileSystemManager: () => ({ getFileInfo: options => options.success({ size: 1000 }) }),
@@ -17,7 +17,7 @@ function environment(respond = () => ({ code: 0, data: {} })) {
     navigateTo(options) { navigation.push(options.url); if (options.complete) options.complete(); },
     navigateBack() { navigation.push('back'); }, switchTab(options) { navigation.push(options.url); },
     redirectTo(options) { navigation.push(options.url); },
-    showModal(options) { options.success({ confirm: true }); },
+    showModal(options) { if (options.success) options.success({ confirm: true }); },
     login(options) { options.success({ code: 'fresh-' + calls.length }); },
     request(options) { calls.push(options); Promise.resolve().then(() => respond(options)).then(response => {
       if (response instanceof Error) options.fail(response);
@@ -47,6 +47,66 @@ function environment(respond = () => ({ code: 0, data: {} })) {
 }
 
 const wecomCard = { id: 1, name: '测试客服', wecom_corp_id: 'wwtest', wecom_service_url: 'https://work.weixin.qq.com/kfid/kfc_test' };
+test('unconfirmed payment is not presented as dispatch or completed payment on order pages', async () => {
+  const unpaid = { id: 25, order_no: 'O-25', status: 'PENDING', payment_status: 'UNPAID', dispatch_route: 'STAFF', amount: 1200, service: { name: '陪玩' }, created_at: '2026-10-27 12:00', fulfillment: '正在等待客服安排', allowed_actions: ['SELECT_PROVIDER', 'CANCEL', 'EVALUATE', 'TIP'] };
+  const env = environment(options => ({ code: 0, data: options.url.includes('/orders/orders/?') ? [unpaid] : unpaid }));
+  env.login();
+  const page = env.page('orders'); await page.load();
+  const item = page.data.items[0];
+  assert.equal(item.statusText, '支付待确认');
+  assert.equal(item.paymentUnconfirmed, true);
+  assert.equal(item.waitingStaff, false);
+  assert.match(item.fulfillment, /付款状态尚未确认/);
+  assert.equal(item.providerDisplay, '付款状态待确认');
+  assert.equal(item.deadlineDescription, '');
+  assert.equal(item.canSelectProvider || item.canCancel || item.canEvaluate || item.canTip, false);
+  assert.deepEqual(item.timeline.map(entry => entry.title), ['订单已创建']);
+  const { present } = require(path.join(root, 'core/orders'));
+  const cancelled = present({ ...unpaid, status: 'CANCELLED' });
+  assert.equal(cancelled.statusText, '已取消');
+  const gift = present({ ...unpaid, service: { name: '礼物', is_gift: true }, status: 'COMPLETED' });
+  assert.equal(gift.statusText, '支付待确认');
+  assert.equal(gift.timeline.some(entry => entry.title === '礼物已送达'), false);
+  const paid = present({ ...unpaid, payment_status: 'PAID', auto_cancel_at: '2026-10-27 13:00' });
+  assert.equal(paid.statusText, '等待客服安排');
+  assert.match(paid.deadlineDescription, /退回余额/);
+  assert.equal(paid.canCancel, true);
+  const balancePool = present({ ...unpaid, payment_status: 'PAID', dispatch_route: 'POOL', fulfillment: '' });
+  assert.equal(balancePool.statusText, '待接单');
+  assert.equal(balancePool.paymentUnconfirmed, false);
+  const list = fs.readFileSync(path.join(root, 'pages/orders/index.wxml'), 'utf8');
+  const detail = fs.readFileSync(path.join(root, 'pages/order-detail/index.wxml'), 'utf8');
+  assert.match(list, /item\.paymentUnconfirmed \? '订单金额'/);
+  assert.match(detail, /order\.paymentUnconfirmed \? '订单金额'/);
+  page.onUnload();
+});
+test('order cancellation explains that paid funds return to the in-app balance', async () => {
+  const env = environment(); env.login(); const page = env.page('order-detail', { id: '25' });
+  page.setData({ order: { canCancel: true } });
+  let message = '';
+  wx.showModal = options => { message = options.content; options.success({ confirm: false }); };
+  await page.cancel();
+  assert.match(message, /已付款金额将退回兴安币余额/);
+  assert.doesNotMatch(message, /原路/);
+  assert.equal(env.calls.some(call => call.url.endsWith('/cancel/')), false);
+  page.onUnload();
+});
+test('failed selection refreshes the order so current eligibility is visible', async () => {
+  const order = { id: 25, status: 'PENDING', payment_status: 'PAID', allowed_actions: ['SELECT_PROVIDER'],
+    service: { name: '服务' }, applications: [{ id: 7, ready: false, team_size: 1,
+      not_ready_reason: '陪玩：陪玩当前处于离线状态', members: [{ nickname: '陪玩', level: '大师' }] }] };
+  const env = environment(options => options.url.includes('/select/')
+    ? { code: 400, msg: '陪玩当前处于离线状态' } : { code: 0, data: order });
+  env.login();
+  const page = env.page('order-detail', { id: '25' });
+  page._visible = true;
+  page.setData({ order: { canSelectProvider: true, applications: [{ ...order.applications[0], ready: true }] } });
+  await page.selectProvider({ currentTarget: { dataset: { id: 7 } } });
+  assert.equal(page.data.order.applications[0].ready, false);
+  assert.match(page.data.order.applications[0].not_ready_reason, /离线/);
+  assert.ok(env.calls.some(call => call.url.endsWith('/orders/25/')));
+  page.onUnload();
+});
 test('guest support resolves the public card and opens exactly one native customer service chat', async () => {
   const env = environment(() => ({ code: 0, data: wecomCard }));
   const page = env.page('support'); await page.load();
@@ -247,7 +307,7 @@ test('checkout selection confirms a detail-page draft before filling the checkou
   const env = environment(options => ({code:0,data:options.url.includes('/users/escorts/12/') ? {...rows[0],nickname:'详情最新昵称',monthly_order_amount:205}
     : options.url.includes('/users/escorts/') ? rows
     : options.url.includes('/orders/services/') ? {id:91,name:'单陪套餐',service_type:'COMPANION',billing_provider_count:1}
-    : options.url.includes('/orders/quote/') ? {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true} : []}));
+    : options.url.includes('/orders/quote/') ? {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true,pending_timeout_minutes:30} : []}));
   env.login();
   const checkout = env.page('checkout', {service_id:'91',provider_gender:'FEMALE'});
   checkout.setData({service:{id:91,service_type:'COMPANION'}});
@@ -292,7 +352,7 @@ test('checkout selection confirms a detail-page draft before filling the checkou
 
 test('checkout keeps selection on cancel, replaces it on selection, and clears it for platform or account change', async () => {
   const env = environment(options => ({code:0,data:options.url.includes('/orders/quote/')
-    ? {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true} : []}));
+    ? {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true,pending_timeout_minutes:30} : []}));
   env.login();
   const checkout = env.page('checkout', {service_id:'91'});
   checkout.setData({service:{id:91,service_type:'COMPANION'}});
@@ -364,7 +424,7 @@ test('detail refresh failures and account changes clear profiles and prevent sta
 });
 
 test('selecting from companion details opens only that provider’s supported catalog services', async () => {
-  const provider = {id:12,nickname:'听风',can_order:true,service_item_ids:[3]};
+  const provider = {id:12,nickname:'听风',can_order:true,service_item_ids:[4],eligible_service_item_ids:[3]};
   const env = environment(options => ({code:0,data:options.url.includes('/users/escorts/12/') ? provider : options.url.includes('/users/escorts/') ? [provider]
     : options.url.endsWith('/orders/services/') ? [{id:3,name:'支持的服务',price:1250},{id:4,name:'其他服务',price:990}] : []})); env.login();
   const detail = env.page('companion-detail', {id:'12'}); await detail.load(); detail.select();
@@ -580,9 +640,19 @@ test('a late favorite response cannot animate the previous tier while its replac
 
 test('a selected companion only exposes its supported price tiers', async () => {
   const rows=[{ id: 1, platform:'PC', security_level:'ANY', price:600, name:'娱乐' },{ id:2, platform:'PC', security_level:'ANY', price:1000, name:'技术' }];
-  const env=environment(options=>({code:0,data:options.url.endsWith('/users/escorts/')?[{id:7,service_item_ids:[1]}]:options.url.endsWith('/evaluations/')?{list:[],total:0}:{...rows[0],variants:rows}})); env.login();
+  const env=environment(options=>({code:0,data:options.url.includes('/users/escorts/7/')?{id:7,eligible_service_item_ids:[1]}:options.url.endsWith('/evaluations/')?{list:[],total:0}:{...rows[0],variants:rows}})); env.login();
   const page=env.page('service',{id:1,provider_id:7}); await page.load();
   assert.equal(page.data.variantTotal,1); await page.selectVariant(2); assert.equal(page.data.service.id,1);
+  page.checkout(); assert.equal(env.navigation.at(-1),'/pages/checkout/index?service_id=1&provider_id=7');
+  page.onUnload();
+});
+
+test('service page uses the server eligible tiers rather than exact saved skills', async () => {
+  const rows=[{id:1,platform:'PC',security_level:'CONFIDENTIAL',price:600,name:'大师'}, {id:2,platform:'PC',security_level:'CONFIDENTIAL',price:1000,name:'传奇'}];
+  const env=environment(options=>({code:0,data:options.url.includes('/users/escorts/7/')?{id:7,service_item_ids:[2],eligible_service_item_ids:[1,2]}:options.url.endsWith('/evaluations/')?{list:[],total:0}:{...rows[0],variants:rows}})); env.login();
+  const page=env.page('service',{id:1,provider_id:7}); await page.load();
+  assert.equal(page.data.service.id,1); assert.equal(page.data.variantTotal,2);
+  assert.ok(env.calls.some(call=>call.url.endsWith('/users/escorts/7/?service_item=1')));
   page.checkout(); assert.equal(env.navigation.at(-1),'/pages/checkout/index?service_id=1&provider_id=7');
   page.onUnload();
 });
@@ -739,11 +809,11 @@ test('fund replay refuses mismatched and incomplete receipts', async () => {
 });
 
 test('checkout never posts a purchase when the latest quote differs from the displayed amount', async () => {
-  const env = environment(() => ({ code: 0, data: { amount: 200, balance_sufficient: true } })); env.login();
+  const env = environment(options => ({ code: 0, data: options.url.includes('/orders/services/') ? { id: 1 } : { amount: 200, balance_sufficient: true, pending_timeout_minutes: 30 } })); env.login();
   const page = env.page('checkout', { service_id: '1' });
   page.setData({ service: { id: 1 }, quote: { amount: 100 }, nickname: '游戏昵称', region: '微信区' });
   await page.submit();
-  assert.equal(env.calls.length, 1); assert.match(env.calls[0].url, /\/quote\/$/);
+  assert.equal(env.calls.length, 2); assert.match(env.calls[1].url, /\/quote\/$/);
   assert.match(page.data.quoteError, /价格或优惠已变化/);
 });
 
@@ -997,7 +1067,7 @@ test('service details never expose original preview and deduplicate the same pos
 test('companion checkout selects recent and recommended people and clears a mismatched gender', async () => {
   const male = {id:11,nickname:'男陪',gender:'MALE',can_order:true};
   const female = {id:12,nickname:'女陪',gender:'FEMALE',can_order:true};
-  const env = environment(options => ({code:0,data:options.url.includes('shortcuts=1') ? {recent:[male],recommended:[female]} : {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true}}));
+  const env = environment(options => ({code:0,data:options.url.includes('shortcuts=1') ? {recent:[male],recommended:[female]} : {original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true,pending_timeout_minutes:30}}));
   env.login(); const page = env.page('checkout',{service_id:14});
   page.setData({service:{id:14,service_type:'COMPANION'}}); await page.loadShortcuts();
   assert.equal(page.data.recent[0].id,11); assert.equal(page.data.recommended[0].id,12);
@@ -1011,7 +1081,7 @@ test('companion checkout selects recent and recommended people and clears a mism
   page.onUnload();
 });
 test('shortcut failure preserves a valid quote and unavailable companions cannot be selected', async () => {
-  const env=environment(options=>options.url.includes('shortcuts=1') ? new Error('推荐加载失败') : {code:0,data:{original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true}});
+  const env=environment(options=>options.url.includes('shortcuts=1') ? new Error('推荐加载失败') : {code:0,data:{original_amount:9000,amount:9000,wallet_balance:100000,balance_sufficient:true,pending_timeout_minutes:30}});
   env.login();const page=env.page('checkout',{service_id:14});page.setData({service:{id:14,service_type:'COMPANION'}});
   await Promise.all([page.refreshQuote(),page.loadShortcuts()]);
   assert.equal(page.data.quote.amount,9000);assert.ok(page.data.shortcutsError);
@@ -1026,7 +1096,7 @@ test('double companion checkout restores both people and quotes and creates the 
     { id: 14, nickname: '小满', gender: 'FEMALE', can_order: true },
   ];
   const packagePrice = 16000;
-  const quote = { original_amount: packagePrice, amount: packagePrice, wallet_balance: 100000, balance_sufficient: true };
+  const quote = { original_amount: packagePrice, amount: packagePrice, wallet_balance: 100000, balance_sufficient: true, pending_timeout_minutes: 30 };
   const env = environment(options => ({ code: 0, data:
     options.url.includes('/orders/services/') ? { id: 43, name: '双陪套餐', service_type: 'COMPANION', billing_provider_count: 2, price: packagePrice, purchase_mode: 'CONSULT', game_category: 7 }
       : options.url.includes('/users/me/') ? { game_profiles: [{ game_category: 7, nickname: '测试玩家', region: '微信区' }] }
@@ -1070,8 +1140,8 @@ test('double companion checkout restores both people and quotes and creates the 
 
 test('double companion checkout blocks a partial selection and permits a fully cleared platform order', async () => {
   const female = { id: 12, nickname: '小禾', gender: 'FEMALE', can_order: true };
-  const quote = { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true };
-  const env = environment(options => ({ code: 0, data: options.url.includes('/orders/create/') ? { id: 992 } : quote }));
+  const quote = { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true, pending_timeout_minutes: 30 };
+  const env = environment(options => ({ code: 0, data: options.url.includes('/orders/create/') ? { id: 992 } : options.url.includes('/orders/services/') ? { id: 43, service_type: 'COMPANION', billing_provider_count: 2 } : quote }));
   env.login(); const page = env.page('checkout', { service_id: '43' });
   page.setData({ service: { id: 43, service_type: 'COMPANION', billing_provider_count: 2 }, nickname: '测试玩家', region: '微信区' });
   let pickerNavigation; wx.navigateTo = options => { pickerNavigation = options; };
@@ -1100,7 +1170,7 @@ test('double companion shortcuts cap and toggle people, and gender changes retai
     { id: 14, nickname: '女陪乙', gender: 'FEMALE', can_order: true },
   ];
   const env = environment(options => ({ code: 0, data: options.url.includes('shortcuts=1') ? { recent: [], recommended: providers.filter(item => !options.url.endsWith('FEMALE') || item.gender === 'FEMALE') }
-    : { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true } }));
+    : { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true, pending_timeout_minutes: 30 } }));
   env.login(); const page = env.page('checkout', { service_id: '43' });
   page.setData({ service: { id: 43, service_type: 'COMPANION', billing_provider_count: 2 }, recommended: providers });
   const choose = id => page.selectShortcut({ currentTarget: { dataset: { id } } });
@@ -1120,7 +1190,7 @@ test('double companion shortcuts cap and toggle people, and gender changes retai
 });
 
 test('multi-selection callbacks from a previous session cannot repopulate checkout', async () => {
-  const env = environment(() => ({ code: 0, data: { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true } }));
+  const env = environment(() => ({ code: 0, data: { original_amount: 16000, amount: 16000, wallet_balance: 100000, balance_sufficient: true, pending_timeout_minutes: 30 } }));
   env.login(); const page = env.page('checkout', { service_id: '43' });
   page.setData({ service: { id: 43, service_type: 'COMPANION', billing_provider_count: 2 } });
   let pickerNavigation; wx.navigateTo = options => { pickerNavigation = options; };
@@ -1140,7 +1210,7 @@ test('single companion links and legacy selection callbacks retain the provider_
   const env = environment(options => ({ code: 0, data:
     options.url.includes('/orders/services/') ? { id: 91, name: '单陪', billing_provider_count: 1, service_type: 'COMPANION' }
       : options.url.includes('/users/escorts/') ? options.url.includes('shortcuts=1') ? { recent: [], recommended: [] } : [provider]
-      : options.url.includes('/orders/quote/') ? { original_amount: 9000, amount: 9000, wallet_balance: 100000, balance_sufficient: true }
+      : options.url.includes('/orders/quote/') ? { original_amount: 9000, amount: 9000, wallet_balance: 100000, balance_sufficient: true, pending_timeout_minutes: 30 }
       : options.url.includes('/orders/traffic-status/') ? { self_order_enabled: true } : [] }));
   env.login(); const page = env.page('checkout', { service_id: '91', provider_id: '12' }); await page.load();
   assert.deepEqual(page.data.selectedProviderIds, [12]); assert.equal(page.payload().provider_id, 12);

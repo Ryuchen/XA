@@ -46,6 +46,14 @@
           <el-button v-if="auth.hasPerm('coupon:delete')" link type="danger" :disabled="row.claimed_qty > 0" @click="onDelete(row)">删除</el-button>
         </template>
       </el-table-column>
+      <template #mobile="{ rows }"><ul class="coupon-list" aria-label="优惠券模板">
+        <li v-for="row in rows" :key="row.id" class="coupon-item">
+          <div class="coupon-head"><strong>{{ row.name }}</strong><el-tag :type="row.is_active ? 'success' : 'info'" size="small">{{ row.is_active ? '模板启用' : '模板停用' }}</el-tag></div>
+          <p>{{ row.discount_type_display }} · {{ row.discount_type === 'QUALIFICATION' ? '套餐资格' : row.discount_type === 'RATE' ? `${row.discount_rate}%` : `${amountToXaCoin(row.amount)} 币` }}</p>
+          <p>发放 {{ row.total_qty || '不限' }} · 已领 {{ row.claimed_qty }}</p>
+          <div class="coupon-actions"><el-button size="small" @click="onClaims(row)">领取记录</el-button><el-button v-if="auth.hasPerm('coupon:edit')" size="small" @click="onEdit(row)">编辑</el-button><el-button v-if="auth.hasPerm('coupon:delete')" size="small" type="danger" plain :disabled="row.claimed_qty > 0" @click="onDelete(row)">删除</el-button></div>
+        </li>
+      </ul></template>
     </crud-table>
   </div>
 
@@ -82,21 +90,35 @@
     </template>
   </el-dialog>
 
-  <el-drawer v-model="claimsVisible" :title="`领取记录 · ${claimsCoupon?.name || ''}`" size="760px" destroy-on-close class="ap-panel">
-    <p class="ap-page-intro">已领取的优惠券保留领取与核销记录；停止发放请在编辑中关闭启用。</p>
-    <crud-table v-if="claimsVisible && claimsCoupon" :key="claimsCoupon.id" :fetcher="userCouponApi.list" :query="claimsQuery">
+  <el-drawer v-model="claimsVisible" :title="`领取记录 · ${claimsCoupon?.name || ''}`" size="min(760px, 100vw)" destroy-on-close class="ap-panel">
+    <p class="ap-page-intro">状态按读取时的券、有效期和账号周期计算；未使用不代表适用于所有订单。
+      <el-tooltip content="同时满足多个条件时，依次优先显示已使用、已过期、模板停用和非当前周期。" :trigger="['hover', 'focus', 'click']" placement="top"><el-button link type="primary" aria-label="查看领取状态判定顺序">状态说明</el-button></el-tooltip>
+    </p>
+    <el-alert v-if="claimsIncompatible" type="error" :closable="false" show-icon title="领取状态接口版本不兼容，请更新服务端后重试。" />
+    <crud-table v-if="claimsVisible && claimsCoupon" :key="claimsCoupon.id" :fetcher="fetchClaims" :query="claimsQuery">
       <template #toolbar="{ reload }">
         <el-select v-model="claimsQuery.status" placeholder="领取状态" clearable style="width: 140px" @change="reload">
           <el-option label="未使用" value="UNUSED" />
           <el-option label="已使用" value="USED" />
           <el-option label="已过期" value="EXPIRED" />
+          <el-option label="模板停用" value="DISABLED" />
+          <el-option label="非当前周期" value="PREVIOUS_CYCLE" />
         </el-select>
       </template>
-      <el-table-column prop="user_name" label="领取人" min-width="120" />
-      <el-table-column prop="status_display" label="状态" width="90" />
-      <el-table-column label="领取时间" width="165"><template #default="{ row }">{{ formatDateTime(row.claimed_at) }}</template></el-table-column>
-      <el-table-column label="使用时间" width="165"><template #default="{ row }">{{ formatDateTime(row.used_at) }}</template></el-table-column>
-      <el-table-column prop="order_no" label="核销订单" min-width="180" />
+      <el-table-column label="领取人" min-width="130"><template #default="{ row }">{{ row.user_name || '—' }}<span class="claim-account">{{ row.username || '—' }}</span></template></el-table-column>
+      <el-table-column label="状态" width="100"><template #default="{ row }"><el-tag :type="claimStatusType(row.status)" size="small">{{ row.status_display }}</el-tag></template></el-table-column>
+      <el-table-column label="领取 / 使用" min-width="145"><template #default="{ row }"><span class="claim-date">领 {{ formatDateTime(row.claimed_at) }}</span><span v-if="row.used_at" class="claim-date">用 {{ formatDateTime(row.used_at) }}</span></template></el-table-column>
+      <el-table-column label="有效期至" min-width="135"><template #default="{ row }">{{ row.effective_valid_to ? formatDateTime(row.effective_valid_to) : '无期限' }}</template></el-table-column>
+      <el-table-column label="核销订单" min-width="155"><template #default="{ row }"><router-link v-if="row.order_no && auth.hasPerm('order:view')" :to="{ path: '/orders', query: { find_order: row.order_no } }">{{ row.order_no }}</router-link><span v-else>{{ row.order_no || '—' }}</span></template></el-table-column>
+      <template #mobile="{ rows }"><ul class="coupon-list" aria-label="优惠券领取记录">
+        <li v-for="row in rows" :key="row.id" class="coupon-item">
+          <div class="coupon-head"><strong>{{ row.user_name || '—' }}</strong><el-tag :type="claimStatusType(row.status)" size="small">{{ row.status_display }}</el-tag></div>
+          <p>账号 {{ row.username || '—' }}</p><p>领取 {{ formatDateTime(row.claimed_at) }}</p>
+          <p>有效期至 {{ row.effective_valid_to ? formatDateTime(row.effective_valid_to) : '无期限' }}</p>
+          <p v-if="row.used_at">使用 {{ formatDateTime(row.used_at) }}</p>
+          <p v-if="row.order_no">订单 <router-link v-if="auth.hasPerm('order:view')" :to="{ path: '/orders', query: { find_order: row.order_no } }">{{ row.order_no }}</router-link><span v-else>{{ row.order_no }}</span></p>
+        </li>
+      </ul></template>
     </crud-table>
   </el-drawer>
 </template>
@@ -133,13 +155,29 @@ watch([dialogVisible, () => form.discount_type], async ([visible, kind]) => {
 const claimsVisible = ref(false)
 const claimsCoupon = ref<any>(null)
 const claimsQuery = reactive({ coupon: 0, status: '' })
+const claimsIncompatible = ref(false)
+let claimsSequence = 0
+
+async function fetchClaims(params: Record<string, any>) {
+  const sequence = claimsSequence, revision = auth.sessionRevision
+  const result = await userCouponApi.list(params)
+  if (sequence !== claimsSequence || revision !== auth.sessionRevision || !claimsVisible.value || claimsCoupon.value?.id !== params.coupon) throw new Error('领取记录已切换')
+  if ((result.data as any).claim_status_version !== 1) { claimsIncompatible.value = true; throw new Error('领取状态接口版本不兼容') }
+  claimsIncompatible.value = false
+  return result
+}
+function claimStatusType(status: string) { return status === 'UNUSED' ? 'success' : status === 'USED' ? 'info' : 'warning' }
 
 function onClaims(row: any) {
+  ++claimsSequence
+  claimsIncompatible.value = false
   claimsCoupon.value = row
   claimsQuery.coupon = row.id
   claimsQuery.status = ''
   claimsVisible.value = true
 }
+watch(claimsVisible, (visible) => { if (!visible) { ++claimsSequence; claimsIncompatible.value = false } }, { flush: 'sync' })
+watch(() => auth.sessionRevision, () => { ++claimsSequence; claimsVisible.value = false; claimsCoupon.value = null; claimsIncompatible.value = false }, { flush: 'sync' })
 
 function blank() {
   return {
@@ -222,4 +260,8 @@ async function onDelete(row: any) {
   font-size: 12px;
   color: var(--muted-foreground);
 }
+.claim-account { display:block; color:var(--el-text-color-secondary); font-size:12px; overflow-wrap:anywhere; }.claim-date { display:block; white-space:nowrap; font-size:12px; }
+.coupon-list { list-style:none; padding:0 12px; margin:0; }.coupon-item { padding:14px 0; border-bottom:1px solid var(--el-border-color); }
+.coupon-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }.coupon-head strong { min-width:0; overflow-wrap:anywhere; }.coupon-item p { margin:8px 0; font-size:12px; color:var(--el-text-color-secondary); overflow-wrap:anywhere; }
+.coupon-actions { display:flex; flex-wrap:wrap; gap:8px; }.coupon-actions :deep(.el-button) { margin:0; }
 </style>

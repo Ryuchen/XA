@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
-import { fetchFavorites, toggleFavorite } from '@/services/favorite';
+import { fetchFavorites, removeFavorite } from '@/services/favorite';
 import { ServiceInfo } from '@/types/order';
 import { formatXaCoin } from '@xa/money';
 import { Skeleton } from '@/components';
@@ -47,8 +47,9 @@ const FavoritePage: React.FC = () => {
     load();
   };
 
-  const handleClick = (serviceId: number) => {
-    Taro.navigateTo({ url: `/pages/productDetail/index?id=${serviceId}` });
+  const handleClick = (service: ServiceInfo) => {
+    if (service.available === false) { Taro.showToast({ title: '服务暂不可购买', icon: 'none' }); return; }
+    Taro.navigateTo({ url: `/pages/productDetail/index?id=${service.id}` });
   };
 
   // 取消收藏：二次确认后调用 toggle 接口，成功即从列表移除
@@ -65,7 +66,7 @@ const FavoritePage: React.FC = () => {
 
     try {
       setRemovingId(service.id);
-      const res = (await toggleFavorite(service.id)) as { code?: number; msg?: string };
+      const res = await removeFavorite(service.id);
       if (res?.code === 0) {
         setServices(prev => prev.filter(item => item.id !== service.id));
         Taro.showToast({ title: '已取消收藏', icon: 'none' });
@@ -105,7 +106,7 @@ const FavoritePage: React.FC = () => {
       ) : (
         <View className={styles.grid}>
           {services.map(service => (
-            <View key={service.id} className={styles.card} onClick={() => handleClick(service.id)}>
+            <View key={service.id} className={styles.card} onClick={() => handleClick(service)}>
               <View className={styles.imageWrap}>
                 <Image
                   className={styles.image}
@@ -128,10 +129,10 @@ const FavoritePage: React.FC = () => {
               </View>
               <View className={styles.info}>
                 <Text className={styles.name}>{service.name}</Text>
-                <Text className={styles.desc}>{service.description}</Text>
-                <View className={styles.priceRow}>
+                <Text className={styles.desc}>{service.available === false ? '暂不可购买' : service.description}</Text>
+                {service.available !== false && <View className={styles.priceRow}>
                   <Text className={styles.price}>{formatXaCoin(service.price)}兴安币</Text>
-                </View>
+                </View>}
               </View>
             </View>
           ))}

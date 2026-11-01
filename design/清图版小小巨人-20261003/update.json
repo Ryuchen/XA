@@ -1,0 +1,12 @@
+{
+  "failureGainByTier": [1, 1, 1, 2],
+  "deductions": [
+    {"minutes": 25, "healthLoss": 5},
+    {"minutes": 21, "healthLoss": 6},
+    {"minutes": 17, "healthLoss": 7},
+    {"minutes": 13, "healthLoss": 8},
+    {"minutes": 9, "healthLoss": 9},
+    {"minutes": 5, "healthLoss": 11}
+  ],
+  "scope": "清图版小小巨人；端游/手游×绝密/机密"
+}

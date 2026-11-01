@@ -1,0 +1,728 @@
+[
+  {
+    "id": "t0",
+    "text": "兴安电竞",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t1",
+    "text": "常",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t2",
+    "text": "规",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t3",
+    "text": "物",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t4",
+    "text": "资",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t5",
+    "text": "单",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t6",
+    "text": "端游 · 绝密版",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t7",
+    "text": "累计带出物资",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t8",
+    "text": "工",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t9",
+    "text": "作",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t10",
+    "text": "日",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t11",
+    "text": "专",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t12",
+    "text": "享",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t13",
+    "text": "累计物资保底",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t14",
+    "text": "+20%",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t15",
+    "text": "补偿另计，不参与上浮",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t16",
+    "text": "订单价格",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t17",
+    "text": "01",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t18",
+    "text": "188",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t19",
+    "text": "r",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t20",
+    "text": "866",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t21",
+    "text": "w",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t22",
+    "text": "02",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t23",
+    "text": "268",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t24",
+    "text": "1266",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t25",
+    "text": "03",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t26",
+    "text": "468",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t27",
+    "text": "2466",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t28",
+    "text": "04",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t29",
+    "text": "668",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t30",
+    "text": "3666",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t31",
+    "text": "05",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t32",
+    "text": "868",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t33",
+    "text": "4866",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t34",
+    "text": "06",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t35",
+    "text": "1668",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t36",
+    "text": "9066",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t37",
+    "text": "表内为基础累计保底；工作日按上方活动规则执行。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t38",
+    "text": "r = 元 / w = 万",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t39",
+    "text": "猛",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t40",
+    "text": "攻",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t41",
+    "text": "保",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t42",
+    "text": "障",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t43",
+    "text": "成功撤离时适用",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t44",
+    "text": "陪玩击杀人数 ≤4人",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t45",
+    "text": "或",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t46",
+    "text": "当局物资 <600w",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t47",
+    "text": "当局带出的物资不计入累计保底",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t48",
+    "text": "两项条件满足任意一项即可",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t49",
+    "text": "下",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t50",
+    "text": "须",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t51",
+    "text": "知",
+    "font": "Noto Sans SC Black",
+    "style": 0
+  },
+  {
+    "id": "t52",
+    "text": "物资归属 · 装备权益 · 补偿结算",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t53",
+    "text": "地图和房卡",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t54",
+    "text": "下单先与客服确认地图；中途换图需协商。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t55",
+    "text": "航天：核心区金红卡；巴克什：塔内、博物馆金红卡；",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t56",
+    "text": "监狱：金红卡 + 一级监狱卡。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t57",
+    "text": "随行装备",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t58",
+    "text": "默认40格以上背包 + 一把左轮；进图前核对。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t59",
+    "text": "板板主动免带除外。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t60",
+    "text": "缺项补偿",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t61",
+    "text": "应带未带",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t62",
+    "text": "金卡",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t63",
+    "text": "+200",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t64",
+    "text": "红卡",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t65",
+    "text": "+300",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t66",
+    "text": "未经同意未带",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t67",
+    "text": "背包",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t68",
+    "text": "左轮",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t69",
+    "text": "炸单补偿",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t70",
+    "text": "符合俱乐部下单须知的炸单条件：",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t71",
+    "text": "航天 / 巴克什 +60w；监狱 +80w。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t72",
+    "text": "结算口径",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t73",
+    "text": "符合俱乐部炸单标准时，安全箱带出物资均不计入；",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t74",
+    "text": "安全箱物资 >100w 无需补战损，否则按炸单标准",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t75",
+    "text": "增加累计保底。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t76",
+    "text": "物资与售后",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t77",
+    "text": "对局产出默认归板板；假账须提前征得板板同意，",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t78",
+    "text": "按约定价值计入。全程录屏，争议交给客服核实。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t79",
+    "text": "01  确认平台与版本",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t80",
+    "text": "02  确认地图与档位",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t81",
+    "text": "03  按规则累计带出",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t82",
+    "text": "兴安电竞  ·  端游 · 绝密版  |  下单前请确认地图及订单规则",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t83",
+    "text": "端游 · 机密版",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t84",
+    "text": "1866",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t85",
+    "text": "3266",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t86",
+    "text": "4666",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t87",
+    "text": "6266",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t88",
+    "text": "13866",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t89",
+    "text": "当局物资 <300w",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t90",
+    "text": "核电站：金红卡。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t91",
+    "text": "默认30格以上背包 + 一把左轮；进图前核对。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t92",
+    "text": "+100",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t93",
+    "text": "+150",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t94",
+    "text": "每局增加30w保底。",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t95",
+    "text": "安全箱物资 >50w 无需补战损，否则按炸单标准",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t96",
+    "text": "兴安电竞  ·  端游 · 机密版  |  下单前请确认地图及订单规则",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t97",
+    "text": "手游 · 绝密版",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t98",
+    "text": "168",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t99",
+    "text": "1388",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t100",
+    "text": "2288",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t101",
+    "text": "4088",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t102",
+    "text": "5888",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t103",
+    "text": "7688",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t104",
+    "text": "1068",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t105",
+    "text": "9488",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t106",
+    "text": "兴安电竞  ·  手游 · 绝密版  |  下单前请确认地图及订单规则",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t107",
+    "text": "手游 · 机密版",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t108",
+    "text": "1588",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t109",
+    "text": "2588",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t110",
+    "text": "4588",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t111",
+    "text": "6588",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t112",
+    "text": "8588",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t113",
+    "text": "10588",
+    "font": "Bahnschrift",
+    "style": 1
+  },
+  {
+    "id": "t114",
+    "text": "兴安电竞  ·  手游 · 机密版  |  下单前请确认地图及订单规则",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t115",
+    "text": "端游 · 手游  /  绝密 · 机密",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t116",
+    "text": "工作日专享",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t117",
+    "text": "累计物资保底 +20%",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t118",
+    "text": "端游 / 手游 · 四类价目",
+    "font": "Microsoft YaHei UI",
+    "style": 1
+  },
+  {
+    "id": "t119",
+    "text": "表内为基础累计物资保底 · 工作日按上方规则加成",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  },
+  {
+    "id": "t120",
+    "text": "r = 元   /   w = 万",
+    "font": "Microsoft YaHei UI",
+    "style": 0
+  }
+]

@@ -1,0 +1,87 @@
+{
+  "tierChecks": 21,
+  "latestRevolverFallbackPreserved": true,
+  "measurements": [
+    {
+      "id": "dogtag-cover",
+      "titleWidth": 610.3981737166404,
+      "titleSize": 121.06540217351544,
+      "margins": {
+        "left": 26.800913141679857,
+        "right": 26.800913141679757,
+        "top": 17.853724109168155,
+        "bottom": 17.853724109168127
+      },
+      "centerOffset": 5.684341886080802e-14,
+      "titleTextCollisions": 0,
+      "widthIncreasePercent": 24.90389063144911
+    },
+    {
+      "id": "dogtag-social",
+      "titleWidth": 650.0756295126109,
+      "titleSize": 129.13642898508314,
+      "margins": {
+        "left": 18.46218524369454,
+        "right": 18.462185243694535,
+        "top": 9.4409124344526,
+        "bottom": 9.440912434452628
+      },
+      "centerOffset": 0,
+      "titleTextCollisions": 0
+    },
+    {
+      "id": "firearms-cover",
+      "titleWidth": 610.3981737166404,
+      "titleSize": 121.06540217351544,
+      "margins": {
+        "left": 26.800913141679857,
+        "right": 26.800913141679757,
+        "top": 17.853724109168155,
+        "bottom": 17.853724109168127
+      },
+      "centerOffset": 5.684341886080802e-14,
+      "titleTextCollisions": 0,
+      "widthIncreasePercent": 35.877865397928055
+    },
+    {
+      "id": "firearms-social",
+      "titleWidth": 650.0756295126109,
+      "titleSize": 129.13642898508314,
+      "margins": {
+        "left": 18.46218524369454,
+        "right": 18.462185243694535,
+        "top": 9.4409124344526,
+        "bottom": 9.440912434452628
+      },
+      "centerOffset": 0,
+      "titleTextCollisions": 0
+    },
+    {
+      "id": "revolver-cover",
+      "titleWidth": 610.3981737166404,
+      "titleSize": 121.06540217351544,
+      "margins": {
+        "left": 26.800913141679857,
+        "right": 26.800913141679757,
+        "top": 17.853724109168155,
+        "bottom": 17.853724109168127
+      },
+      "centerOffset": 5.684341886080802e-14,
+      "titleTextCollisions": 0,
+      "widthIncreasePercent": 24.90389063144911
+    },
+    {
+      "id": "revolver-social",
+      "titleWidth": 650.0756295126109,
+      "titleSize": 129.13642898508314,
+      "margins": {
+        "left": 18.46218524369454,
+        "right": 18.462185243694535,
+        "top": 9.4409124344526,
+        "bottom": 9.440912434452628
+      },
+      "centerOffset": 0,
+      "titleTextCollisions": 0
+    }
+  ]
+}

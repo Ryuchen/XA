@@ -1,0 +1,21 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {execFileSync} from 'node:child_process';
+import {renderProject} from './render.mjs';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const modules=process.argv[2];
+await renderProject(root,{modules});
+const read=async p=>JSON.parse(await fs.readFile(path.join(root,p),'utf8'));
+const c=await read('content.json'),state=await read('campaign-state.json'),manifest=await read('output/manifest.json'),verification=await read('review/verification.json');
+if(verification.pages.length!==6||verification.pages.some(p=>p.overlaps||p.outside.length||p.groups.some(g=>!g.inside)))throw Error('Visual QA is incomplete');
+state.visualQA={status:'passed',record:'review/visual-qa.md',checks:'六张实际PNG、390px预览、价目局部与文图交界；21档数值与完整枪名对应核对；0相交，0画布/面板安全区越界。'};
+state.memorySync={status:'completed',date:'2026-10-01',scope:'对应玩法卡、当前共识、变更日志、设计决策与素材索引'};
+state.stage='delivered';state.revision='r1';state.lastRenderedPages=state.deliveryScope.pageIds;
+await fs.writeFile(path.join(root,'campaign-state.json'),JSON.stringify(state,null,2));
+for(const m of manifest){const prod=c.products.find(p=>m.id.startsWith(p.id));m.artwork=c.artwork[prod.id];}
+await fs.writeFile(path.join(root,'output/manifest.json'),JSON.stringify(manifest,null,2));
+const cards=manifest.map(p=>`<figure><figcaption>${p.label}<small>${p.width} × ${p.height}</small></figcaption><a href="../${p.png}"><img src="${p.id}.png" alt="${p.label}"></a><nav><a download href="../${p.png}">下载高清PNG</a><a download href="../${p.editableSVG}">可改文字SVG</a><a download href="../${p.outlinedSVG}">转曲SVG</a></nav></figure>`).join('');
+await fs.writeFile(path.join(root,'review/index.html'),`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>你的护不行｜三版封面与广告</title><style>*{box-sizing:border-box}body{margin:0;background:#edf2f2;color:#20394a;font:16px/1.7 "Microsoft YaHei UI",sans-serif}main{max-width:1500px;margin:auto;padding:36px 24px}h1{margin:0 0 8px;font-size:34px}header p{margin:8px 0 22px;color:#647e89}.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}figure{margin:0;background:#fbfaf7;border:1px solid #d2dde1;border-radius:18px;overflow:hidden}figcaption{padding:18px 22px;font-size:20px;font-weight:700}small{float:right;color:#718897;font-size:14px;font-weight:400}img{display:block;width:100%;height:auto}a{color:#316d6b}nav{display:flex;gap:20px;flex-wrap:wrap;padding:16px 22px}header nav{padding:0 0 26px}header nav a{padding:8px 16px;background:#20394a;color:white;border-radius:8px;text-decoration:none}footer{margin:24px 0;color:#718897;font-size:14px}@media(max-width:760px){.grid{grid-template-columns:1fr}h1{font-size:26px}main{padding:22px 12px}small{float:none;display:block}}</style><main><header><h1>你的护不行 · 三版封面与广告</h1><p>狗牌版 / 枪械版 / 左轮版 · 端游与手游同价同规则 · 2026.10.01</p><nav><a href="../你的护不行-三版封面广告-PNG.zip">下载六张高清PNG</a><a href="../campaign-r1.zip">下载完整源稿包</a></nav></header><div class="grid">${cards}</div><footer>封面3200×2000，广告3000×4000。正文与数字可编辑，转曲版保留字形；插画为内嵌位图。广告为核心玩法摘要，完整规则保留于源数据和原详细海报。</footer></main></html>`);
+await fs.writeFile(path.join(root,'output/DELIVERY.md'),`# 你的护不行 · 三版封面与广告\n\n本轮六张，均端游/手游通用，同难度同价同规则。\n\n${manifest.map(m=>`- ${m.label}：${m.width}×${m.height}。`).join('\n')}\n\n## 文件\n\n- 你的护不行-三版封面广告-PNG.zip：六张中文命名高清PNG。\n- campaign-r1.zip：六张PNG、可改文字SVG、转曲SVG、源数据、独立插画、排版与渲染脚本、查看页及检查记录。\n- review/index.html：本地查看和逐张下载。\n- content.json：唯一业务源；规则随用户本轮确认扩展为端手游通用。\n\n## 美术与文字\n\n复用已确认插画，实际文件尺寸：${Object.entries(c.artwork).map(([id,a])=>`${id} ${a.nativeWidth}×${a.nativeHeight}`).join('、')}。插画为位图，输出尺寸并不代表其原生绘制尺寸。文字由矢量直接渲染；可改文字版依赖Microsoft YaHei UI与Bahnschrift，艺术标题为字形轮廓。跨设备保持外观可用转曲版。\n\n## 复检\n\n六张实际成图、390px预览与关键局部通过；21档价目核对，无文字相交或安全区越界。详见review/visual-qa.md。\n\n## 重建\n\n使用workspace dependency loader提供的Node与Node包目录，依次运行source/workflow.mjs layout、render，source/review.mjs <Node包目录>，检查实际图片后再运行source/deliver.mjs <Node包目录>。prepare.mjs只用于首次准备，不要对后续已改价的项目重跑。\n`);
+console.log(execFileSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(root,'source/pack.ps1'),'-Project',root,'-Revision','r1'],{encoding:'utf8'}));

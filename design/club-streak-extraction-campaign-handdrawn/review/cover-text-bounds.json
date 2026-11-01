@@ -1,0 +1,60 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 367.1530133428571,
+    "y": 95.507812,
+    "width": 159.17968760000002,
+    "height": 38.984376,
+    "cy": 115,
+    "effectiveSize": 40
+  },
+  {
+    "text": "连续",
+    "role": "art-title",
+    "x": 206.47553508562785,
+    "y": 198.46630615101873,
+    "width": 421.0489298287443,
+    "height": 223.06738769796254,
+    "requestedCenter": [
+      417,
+      310
+    ],
+    "effectiveSize": 200,
+    "includesOutlineAndShadow": true
+  },
+  {
+    "text": "撤离单",
+    "role": "art-title",
+    "x": 143.88171553284133,
+    "y": 441.584838350307,
+    "width": 546.2365689343173,
+    "height": 202.830323299386,
+    "requestedCenter": [
+      417,
+      543
+    ],
+    "effectiveSize": 182,
+    "includesOutlineAndShadow": true
+  },
+  {
+    "text": "稳定连撤 · 物资保底",
+    "role": "cover-subtitle",
+    "x": 250.51806636,
+    "y": 718.9877931999999,
+    "width": 332.96386728,
+    "height": 36.0244136,
+    "cy": 737,
+    "effectiveSize": 37
+  },
+  {
+    "text": "端游 / 手游 · 绝密 / 机密",
+    "role": "cover-platforms",
+    "x": 255.43261755,
+    "y": 817.75488245,
+    "width": 323.1347649,
+    "height": 28.490235099999996,
+    "cy": 832,
+    "effectiveSize": 29
+  }
+]

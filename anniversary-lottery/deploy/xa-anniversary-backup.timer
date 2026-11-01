@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily anniversary lottery backup at 03:15 Shanghai time
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 Asia/Shanghai
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

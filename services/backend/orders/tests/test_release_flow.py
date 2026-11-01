@@ -1,10 +1,12 @@
 import io
 import tempfile
+from datetime import timedelta
 from unittest.mock import patch
 
 from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from django.utils.dateparse import parse_datetime
 from rest_framework.test import APITestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -32,7 +34,7 @@ class ReleaseFlowTest(APITestCase):
         self.addCleanup(self.settings_override.disable)
         self.boss = make_user()
         self.provider = make_provider()
-        self.admin = make_console_user(['wallet:recharge', 'report:view', 'report:audit', 'order:dispatch', 'order:view', 'order:refund'])
+        self.admin = make_console_user(['wallet:recharge', 'report:view', 'report:audit', 'order:dispatch', 'order:view', 'order:refund', 'order:settle'])
         self.accounts = {user.pk: get_or_create_account_for_legacy_user(user) for user in (self.boss, self.provider, self.admin)}
         membership = self.admin.admin_membership
         membership.account = self.accounts[self.admin.pk]
@@ -137,19 +139,96 @@ class ReleaseFlowTest(APITestCase):
         self.assertEqual(self.client.get('/api/support/contact-card/', {'order_id': order.pk}).data['code'], 404)
 
     def test_rejected_report_can_be_corrected_and_resubmitted(self):
-        report = self.finish(self.new_order())
+        order = self.new_order()
+        report = self.finish(order)
+        self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/images/', {'kind': 'RESULT', 'image': screenshot()}, format='multipart'))
+        first_submission = self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/submit/'))
+        self.assertEqual(first_submission['status'], 'PENDING')
+        report.refresh_from_db()
+        order.refresh_from_db()
+        first_submitted_at = report.submitted_at
+        self.assertEqual(order.report_ready_at, first_submitted_at)
+        self.assertEqual(order.consumption_ready_at, first_submitted_at + timedelta(hours=72))
+        self.login(self.boss)
+        boss_order = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertEqual(parse_datetime(boss_order['consumption_ready_at']), order.consumption_ready_at)
+
+        self.login(self.admin)
+        rejected = self.ok(self.client.post(f'/api/admin/reports/{report.pk}/reject/', {'audit_remark': '结单截图不清晰'}))
+        self.assertEqual(rejected['status'], 'REJECTED')
+        self.assertEqual(rejected['auditor'], self.admin.pk)
+        self.assertIsNotNone(rejected['audited_at'])
+        from site_messages.models import Message
+        notice = Message.objects.get(recipient_account=self.accounts[self.provider.pk], related_order_id=order.pk, title='报单审核未通过')
+        self.assertIn('结单截图不清晰', notice.detail)
+        order.refresh_from_db()
+        self.assertIsNone(order.report_ready_at)
+        self.assertIsNone(order.consumption_ready_at)
+        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 0)
+        self.login(self.boss)
+        boss_order = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertIsNone(boss_order['consumption_ready_at'])
+
+        self.login(self.provider)
+        provider_reports = self.ok(self.client.get('/api/wallet/reports/'))
+        provider_report = next(row for row in provider_reports if row['id'] == report.pk)
+        self.assertEqual(provider_report['status'], 'REJECTED')
+        self.assertEqual(provider_report['audit_remark'], '结单截图不清晰')
+        self.assertEqual(parse_datetime(provider_report['submitted_at']), first_submitted_at)
+        self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/images/', {'kind': 'COMPLETION', 'image': screenshot()}, format='multipart'))
+        resubmitted = self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/submit/'))
+        self.assertEqual(resubmitted['status'], 'PENDING')
+        self.assertEqual(resubmitted['audit_remark'], '')
+        report.refresh_from_db()
+        order.refresh_from_db()
+        self.assertGreater(report.submitted_at, first_submitted_at)
+        self.assertEqual(order.report_ready_at, report.submitted_at)
+        self.assertEqual(order.consumption_ready_at, report.submitted_at + timedelta(hours=72))
+        self.login(self.boss)
+        boss_order = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertEqual(parse_datetime(boss_order['consumption_ready_at']), order.consumption_ready_at)
+
+        self.login(self.admin)
+        pending = self.ok(self.client.get(f'/api/admin/reports/{report.pk}/'))
+        self.assertEqual(pending['status'], 'PENDING')
+        self.assertIsNone(pending['auditor'])
+        self.assertFalse(pending['auditor_name'])
+        self.assertIsNone(pending['audited_at'])
+        notice.refresh_from_db()
+        self.assertIn('结单截图不清晰', notice.detail)
+        approved = self.ok(self.client.post(f'/api/admin/reports/{report.pk}/approve/'))
+        self.assertEqual(approved['auditor'], self.admin.pk)
+        self.assertIsNotNone(approved['audited_at'])
+        self.settle_after_window()
+        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 8000)
+
+    def test_open_aftersale_blocks_confirmation_after_report_clock_until_resolved(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from engagement.confirmation import process_order
+
+        order = self.new_order()
+        report = self.finish(order)
         self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/images/', {'kind': 'RESULT', 'image': screenshot()}, format='multipart'))
         self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/submit/'))
         self.login(self.admin)
-        self.ok(self.client.post(f'/api/admin/reports/{report.pk}/reject/', {'audit_remark': '结单截图不清晰'}))
-        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 0)
-        self.login(self.provider)
-        self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/images/', {'kind': 'COMPLETION', 'image': screenshot()}, format='multipart'))
-        self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/submit/'))
-        self.login(self.admin)
         self.ok(self.client.post(f'/api/admin/reports/{report.pk}/approve/'))
-        self.settle_after_window()
-        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 8000)
+        self.login(self.boss)
+        opened = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {'reason': '服务问题请核对'}, format='json'))
+        with patch('django.utils.timezone.now', return_value=timezone.now() + timedelta(hours=73)):
+            self.assertFalse(process_order(order.pk))
+            detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+            self.assertEqual(detail['aftersale_status'], 'OPEN')
+            self.assertIsNotNone(detail['consumption_ready_at'])
+            self.assertIsNone(detail['consumption_confirmed_at'])
+            self.assertIsNone(detail['settled_at'])
+            self.login(self.admin)
+            self.ok(self.client.post(f"/api/admin/aftersales/{opened['id']}/resolve/", {'resolution': '已沟通确认'}, format='json'))
+            self.assertTrue(process_order(order.pk))
+            self.login(self.boss)
+            resolved = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+            self.assertEqual(resolved['aftersale_status'], 'RESOLVED')
+            self.assertIsNotNone(resolved['consumption_confirmed_at'])
 
     def test_invalid_start_and_completion_images_do_not_advance_order(self):
         def fake_image():

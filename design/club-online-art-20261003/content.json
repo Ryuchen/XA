@@ -1,0 +1,469 @@
+{
+  "brand": "兴安电竞",
+  "families": [
+    {
+      "family": "不服单挑",
+      "id": "play-d2f5aa1b2acf",
+      "art": "play-d2f5aa1b2acf.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\不服单挑-四版价目广告封面-20260930\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "九九归一",
+      "id": "play-b8631dd33ba1",
+      "art": "play-b8631dd33ba1.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "你的护不行·左轮版",
+      "id": "play-590cfdf3e9a7",
+      "art": "play-590cfdf3e9a7.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\你的护不行-三版封面广告-20261003\\output\\png\\revolver-cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "你的护不行·枪械版",
+      "id": "play-5f74551f7719",
+      "art": "play-5f74551f7719.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\你的护不行-三版封面广告-20261003\\output\\png\\firearms-cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "你的护不行·狗牌版",
+      "id": "play-014a5ce7d1d7",
+      "art": "play-014a5ce7d1d7.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\你的护不行-三版封面广告-20261003\\output\\png\\dogtag-cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "利滚利",
+      "id": "play-dfd9d9dc73b1",
+      "art": "play-dfd9d9dc73b1.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "PC"
+      ]
+    },
+    {
+      "family": "劳模单",
+      "id": "play-fbc555eaa9cb",
+      "art": "play-fbc555eaa9cb.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\劳模单-四版价目封面广告-20260929\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "千万才刚开始",
+      "id": "play-551e6e32d7b4",
+      "art": "play-551e6e32d7b4.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "变废为宝",
+      "id": "play-0deb166aa353",
+      "art": "play-0deb166aa353.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\变废为宝-四版价目广告封面-20260929\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "听令开火",
+      "id": "play-b0b5376a96db",
+      "art": "play-b0b5376a96db.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": []
+    },
+    {
+      "family": "周年庆限定红",
+      "id": "play-bc35301dd98d",
+      "art": "play-bc35301dd98d.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "嘉豪物资单",
+      "id": "play-94d2a74c53b4",
+      "art": "play-94d2a74c53b4.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-jiahao-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "塔主大人单",
+      "id": "play-f47e57fdf92c",
+      "art": "play-f47e57fdf92c.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-tazhu-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "子弹采购",
+      "id": "play-199de1977acf",
+      "art": "play-199de1977acf.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": []
+    },
+    {
+      "family": "小小巨人",
+      "id": "play-fd2e6dc3536d",
+      "art": "play-fd2e6dc3536d.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\小小巨人-常规版四版价目广告封面-20260929\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "常规沙保单",
+      "id": "play-3c9af2f537c4",
+      "art": "play-3c9af2f537c4.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-sand-safe-insurance-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "常规物资单",
+      "id": "play-31c56c489c39",
+      "art": "play-31c56c489c39.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "常规陪玩",
+      "id": "play-fe88d1d97692",
+      "art": "play-fe88d1d97692.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "我要上大学",
+      "id": "play-db2bbd6acc6b",
+      "art": "play-db2bbd6acc6b.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\我要上大学-四版价目广告封面-20260930\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "打空100M",
+      "id": "play-a380d1ec3192",
+      "art": "play-a380d1ec3192.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": []
+    },
+    {
+      "family": "拔萝卜",
+      "id": "play-05bb3e33e090",
+      "art": "play-05bb3e33e090.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "PC"
+      ]
+    },
+    {
+      "family": "数字黑洞",
+      "id": "play-560405c521eb",
+      "art": "play-560405c521eb.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\数字黑洞-端手游绝密航天-20260929\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "新客体验单",
+      "id": "play-55c7fabe8f4e",
+      "art": "play-55c7fabe8f4e.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "杀人如麻",
+      "id": "play-126d40e09d42",
+      "art": "play-126d40e09d42.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": []
+    },
+    {
+      "family": "每日一单",
+      "id": "play-7e4707395c61",
+      "art": "play-7e4707395c61.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "沙保连连看",
+      "id": "play-eeb64e39aa41",
+      "art": "play-eeb64e39aa41.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-sand-safe-campaign-handdrawn\\output\\png\\combined-cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "法外狂徒",
+      "id": "play-dd4882078c65",
+      "art": "play-dd4882078c65.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": []
+    },
+    {
+      "family": "清图版小小巨人",
+      "id": "play-b33bf9692306",
+      "art": "play-b33bf9692306.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\清图版小小巨人-四版价目广告封面-20260930\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "物资对赌单",
+      "id": "play-953e07148c60",
+      "art": "play-953e07148c60.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-challenge-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "物资银行加仓",
+      "id": "play-58e2a8f262f6",
+      "art": "play-58e2a8f262f6.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-bank-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "物资银行单",
+      "id": "play-7bd3e083d963",
+      "art": "play-7bd3e083d963.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-bank-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "狗牌收集者",
+      "id": "play-df5914ac6ecb",
+      "art": "play-df5914ac6ecb.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": []
+    },
+    {
+      "family": "环太平洋",
+      "id": "play-78e5ad756b99",
+      "art": "play-78e5ad756b99.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\环太平洋-四版价目广告封面-20261003\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "甜蜜教学单",
+      "id": "play-66fd82f72ca3",
+      "art": "play-66fd82f72ca3.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "PC"
+      ]
+    },
+    {
+      "family": "盲盒猜猜乐",
+      "id": "play-6027aedf8a52",
+      "art": "play-6027aedf8a52.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "童趣跳房子",
+      "id": "play-174d0312bef0",
+      "art": "play-174d0312bef0.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\童趣跳房子-四版价目广告封面-20260930\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "赛龙舟",
+      "id": "play-347ac49d744e",
+      "art": "play-347ac49d744e.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\赛龙舟-四版价目广告封面-20260929\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "连续撤离单",
+      "id": "play-9bf5f1c489c4",
+      "art": "play-9bf5f1c489c4.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-streak-extraction-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "钓鱼陪玩包天",
+      "id": "play-18293279756c",
+      "art": "play-18293279756c.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "钓鱼陪玩单",
+      "id": "play-68bb769bf0c5",
+      "art": "play-68bb769bf0c5.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "限时清图单",
+      "id": "play-a77d02b7a6d2",
+      "art": "play-a77d02b7a6d2.png",
+      "reuse_final_cover": true,
+      "source": "G:\\Github\\XA\\design\\club-timed-clear-campaign-handdrawn\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "陪玩包天",
+      "id": "play-b0a54e67e2f1",
+      "art": "play-b0a54e67e2f1.png",
+      "reuse_final_cover": false,
+      "source": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn\\03-backgrounds\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "黄金矿工·钓鱼版",
+      "id": "play-b1f638302872",
+      "art": "play-b1f638302872.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\黄金矿工钓鱼版-四版价目广告封面-20260930\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    },
+    {
+      "family": "黄金矿工常规版",
+      "id": "play-a0b897f34b49",
+      "art": "play-a0b897f34b49.png",
+      "reuse_final_cover": true,
+      "source": "C:\\Users\\chenh\\Documents\\ChatGPT\\兴安电竞玩法\\黄金矿工-双平台价目广告封面-20260930\\output\\png\\cover.png",
+      "platforms": [
+        "MOBILE",
+        "PC"
+      ]
+    }
+  ],
+  "pricePolicy": "本轮封面与简介广告不填价格，报价以对应套餐为准；避免尚待确认的价格和图档进入广告。"
+}

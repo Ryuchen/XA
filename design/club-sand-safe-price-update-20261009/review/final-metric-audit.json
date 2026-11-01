@@ -1,0 +1,1390 @@
+{
+  "basis": "Final PNG hash + measured vector glyphs; supplements visual QA",
+  "prices": [
+    {
+      "label": "累计一次",
+      "desktop": 218,
+      "mobile": 108,
+      "unit": "r"
+    },
+    {
+      "label": "累计两次",
+      "desktop": 428,
+      "mobile": 188,
+      "unit": "r"
+    },
+    {
+      "label": "累计三次",
+      "desktop": 628,
+      "mobile": 268,
+      "unit": "r"
+    },
+    {
+      "label": "连续两次",
+      "desktop": 688,
+      "mobile": 388,
+      "unit": "r"
+    },
+    {
+      "label": "连续三次",
+      "desktop": 1288,
+      "mobile": 688,
+      "unit": "r"
+    }
+  ],
+  "objectives": {
+    "scope": "单局",
+    "extraction": "成功撤离",
+    "relation": "三项目标同时完成",
+    "sandSafes": {
+      "count": 2,
+      "verb": "摸",
+      "name": "沙色保险",
+      "original": "单局摸 2个 沙色保险"
+    },
+    "regularSafes": {
+      "count": 4,
+      "verb": "摸",
+      "name": "常规大保险",
+      "original": "单局摸 4个 常规大保险"
+    },
+    "loot": {
+      "desktop": 788,
+      "mobile": 688,
+      "operator": ">",
+      "unit": "w",
+      "original": "2026-10-09用户指定：端游物资保底改成788，手游改成688；沿用既有达标逻辑，单局带出物资严格>端游788w/手游688w。"
+    },
+    "operator": "AND",
+    "singleRoundRequired": true,
+    "successfulExtractionRequired": true
+  },
+  "pages": [
+    {
+      "id": "desktop-absolute",
+      "png": "output/png/desktop-absolute.png",
+      "sha256": "62767eaebe16cfc5c74b163c310da3cc44867c82dfb3d6858b3a4957925cd16d",
+      "numeric": [
+        {
+          "line": "line9",
+          "number": "788",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 5.999999999999943,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 707.5930461055,
+          "numberRight": 701.5930461055
+        },
+        {
+          "line": "price-desktop-0",
+          "number": "218",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 660.160154375,
+          "numberRight": 651.160154375
+        },
+        {
+          "line": "price-desktop-1",
+          "number": "428",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 660.160154375,
+          "numberRight": 651.160154375
+        },
+        {
+          "line": "price-desktop-2",
+          "number": "628",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 660.160154375,
+          "numberRight": 651.160154375
+        },
+        {
+          "line": "price-desktop-3",
+          "number": "688",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 660.160154375,
+          "numberRight": 651.160154375
+        },
+        {
+          "line": "price-desktop-4",
+          "number": "1288",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 8.999999999999986,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 660.160154375,
+          "numberRight": 651.160154375
+        },
+        {
+          "line": "line36",
+          "number": "1688",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 5.999999999999972,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 336.43785109099997,
+          "numberRight": 330.43785109099997
+        }
+      ],
+      "columnAudit": [
+        {
+          "platform": "desktop",
+          "unitSpread": 0,
+          "numberRightSpread": 0
+        }
+      ],
+      "shrink": [],
+      "bodyPhonePx": {
+        "min": 13.995215311004785,
+        "max": 13.995215311004785
+      },
+      "groups": [
+        {
+          "id": "header",
+          "margins": {
+            "left": 8.598060296669956,
+            "right": 8.598060296669928,
+            "top": 6.460937599999994,
+            "bottom": 6.4609376000000225
+          },
+          "verticalCenterDelta": 1.4210854715202004e-14,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "condition-title",
+          "margins": {
+            "left": 164.29395,
+            "right": 164.29395,
+            "top": 10.708007500000008,
+            "bottom": 10.708007500000008
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "condition-0",
+          "margins": {
+            "left": 23.843749919999993,
+            "right": 23.843749919999993,
+            "top": 14.594482314299967,
+            "bottom": 14.594482314299967
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "condition-1",
+          "margins": {
+            "left": 8.593749919999993,
+            "right": 8.593749919999993,
+            "top": 14.797607173499955,
+            "bottom": 14.797607173499955
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "condition-2",
+          "margins": {
+            "left": 7.635039150500006,
+            "right": 7.635039150500006,
+            "top": 14.665038899999956,
+            "bottom": 14.665038900000013
+          },
+          "verticalCenterDelta": 2.842170943040401e-14,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "result",
+          "margins": {
+            "left": 15.58984375,
+            "right": 15.58984375,
+            "top": 7.848143950000008,
+            "bottom": 7.848143950000008
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-heading-0",
+          "margins": {
+            "left": 112.59374992,
+            "right": 112.59374992,
+            "top": 4.421875199999931,
+            "bottom": 4.421875200000045
+          },
+          "verticalCenterDelta": 5.684341886080802e-14,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-heading-1",
+          "margins": {
+            "left": 99.04687504000003,
+            "right": 99.04687504000003,
+            "top": 4.468750399999976,
+            "bottom": 4.468750399999976
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-label-0",
+          "margins": {
+            "left": 100.723634,
+            "right": 100.723634,
+            "top": 8.66796875,
+            "bottom": 8.66796875
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-desktop-0",
+          "margins": {
+            "left": 125.46874797500004,
+            "right": 91.13281437499995,
+            "top": 5.2617179999999735,
+            "bottom": 5.2617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 17.167966800000045
+        },
+        {
+          "id": "price-label-1",
+          "margins": {
+            "left": 100.723634,
+            "right": 100.723634,
+            "top": 8.66796875,
+            "bottom": 8.66796875
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-desktop-1",
+          "margins": {
+            "left": 111.87499437500003,
+            "right": 91.13281437499995,
+            "top": 5.2617179999999735,
+            "bottom": 5.2617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 10.371090000000038
+        },
+        {
+          "id": "price-label-2",
+          "margins": {
+            "left": 100.723634,
+            "right": 100.723634,
+            "top": 8.16796875,
+            "bottom": 8.16796875
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-desktop-2",
+          "margins": {
+            "left": 114.92187297500004,
+            "right": 91.13281437499995,
+            "top": 4.7617179999999735,
+            "bottom": 4.7617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 11.894529300000045
+        },
+        {
+          "id": "price-label-3",
+          "margins": {
+            "left": 100.68652338999999,
+            "right": 100.68652338999999,
+            "top": 8.408203599999979,
+            "bottom": 8.408203599999979
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-desktop-3",
+          "margins": {
+            "left": 112.16796657500004,
+            "right": 91.13281437499995,
+            "top": 5.2617179999999735,
+            "bottom": 5.2617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 10.517576100000042
+        },
+        {
+          "id": "price-label-4",
+          "margins": {
+            "left": 100.68652338999999,
+            "right": 100.68652338999999,
+            "top": 7.908203599999979,
+            "bottom": 7.908203599999979
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-desktop-4",
+          "margins": {
+            "left": 91.13281437500007,
+            "right": 91.13281437499995,
+            "top": 4.7617179999999735,
+            "bottom": 4.7617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "reward",
+          "margins": {
+            "left": 35.976913800999995,
+            "right": 35.97691380100002,
+            "top": 5.525635045700028,
+            "bottom": 5.525635045700028
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "notice-heading",
+          "margins": {
+            "left": 0,
+            "right": 558.953125,
+            "top": 3.386719200000016,
+            "bottom": 3.386719200000016
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 279.4765625
+        },
+        {
+          "id": "notice-0",
+          "margins": {
+            "left": 0,
+            "right": 119.55858813999998,
+            "top": 4.336913784999979,
+            "bottom": 4.336913784999979
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 59.77929406999999
+        },
+        {
+          "id": "notice-1",
+          "margins": {
+            "left": 0,
+            "right": 69.45800020000001,
+            "top": 16.366211499999963,
+            "bottom": 16.366211499999963
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 34.72900010000001
+        },
+        {
+          "id": "notice-2",
+          "margins": {
+            "left": 0,
+            "right": 116.79297039999994,
+            "top": 15.249022875000037,
+            "bottom": 15.249022875000037
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 58.39648519999997
+        },
+        {
+          "id": "notice-3",
+          "margins": {
+            "left": 0,
+            "right": 177.99413800000002,
+            "top": 17.249023999999963,
+            "bottom": 17.249023999999963
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 88.99706900000001
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "png": "output/png/mobile-absolute.png",
+      "sha256": "3b5e5635ff17833b23144e41b8feebaace1471f3ff74b1e9e3091e635f15c73c",
+      "numeric": [
+        {
+          "line": "line9",
+          "number": "688",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 6.000000000000014,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 712.3762494480001,
+          "numberRight": 706.3762494480001
+        },
+        {
+          "line": "price-mobile-0",
+          "number": "108",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9,
+          "unitHeightRatio": 0.6727303465678851,
+          "unitX": 653.550781175,
+          "numberRight": 644.550781175
+        },
+        {
+          "line": "price-mobile-1",
+          "number": "188",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 653.550781175,
+          "numberRight": 644.550781175
+        },
+        {
+          "line": "price-mobile-2",
+          "number": "268",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 653.550781175,
+          "numberRight": 644.550781175
+        },
+        {
+          "line": "price-mobile-3",
+          "number": "388",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 653.550781175,
+          "numberRight": 644.550781175
+        },
+        {
+          "line": "price-mobile-4",
+          "number": "688",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6740902729111712,
+          "unitX": 653.550781175,
+          "numberRight": 644.550781175
+        },
+        {
+          "line": "line36",
+          "number": "1688",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 5.999999999999972,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 323.75136676249997,
+          "numberRight": 317.75136676249997
+        }
+      ],
+      "columnAudit": [
+        {
+          "platform": "mobile",
+          "unitSpread": 0,
+          "numberRightSpread": 0
+        }
+      ],
+      "shrink": [],
+      "bodyPhonePx": {
+        "min": 13.995215311004785,
+        "max": 13.995215311004785
+      },
+      "groups": [
+        {
+          "id": "header",
+          "margins": {
+            "left": 8.74267199231575,
+            "right": 8.742671992315707,
+            "top": 9.460937599999994,
+            "bottom": 9.460937600000022
+          },
+          "verticalCenterDelta": 1.4210854715202004e-14,
+          "horizontalCenterDelta": 2.1316282072803006e-14
+        },
+        {
+          "id": "condition-title",
+          "margins": {
+            "left": 136.0351599999999,
+            "right": 136.03516000000013,
+            "top": 3.066406000000029,
+            "bottom": 3.066405999999972
+          },
+          "verticalCenterDelta": 2.842170943040401e-14,
+          "horizontalCenterDelta": 1.1368683772161603e-13
+        },
+        {
+          "id": "condition-0",
+          "margins": {
+            "left": 26.343749919999993,
+            "right": 26.343749919999993,
+            "top": 4.594482314299967,
+            "bottom": 4.594482314299967
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "condition-1",
+          "margins": {
+            "left": 11.093749919999993,
+            "right": 11.093749919999993,
+            "top": 4.797607173499955,
+            "bottom": 4.797607173499955
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "condition-2",
+          "margins": {
+            "left": 9.851835808000033,
+            "right": 9.851835807999919,
+            "top": 4.665038899999956,
+            "bottom": 4.665038900000013
+          },
+          "verticalCenterDelta": 2.842170943040401e-14,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "result",
+          "margins": {
+            "left": 15.58984375,
+            "right": 15.58984375,
+            "top": 7.848143950000008,
+            "bottom": 7.848143950000008
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-heading-0",
+          "margins": {
+            "left": 112.59374992,
+            "right": 112.59374992,
+            "top": 4.421875199999931,
+            "bottom": 4.421875200000045
+          },
+          "verticalCenterDelta": 5.684341886080802e-14,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-heading-1",
+          "margins": {
+            "left": 99.04687504000003,
+            "right": 99.04687504000003,
+            "top": 4.468750399999976,
+            "bottom": 4.468750399999976
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-label-0",
+          "margins": {
+            "left": 100.723634,
+            "right": 100.723634,
+            "top": 9.66796875,
+            "bottom": 9.66796875
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-mobile-0",
+          "margins": {
+            "left": 113.164062575,
+            "right": 100.742187575,
+            "top": 6.217773999999963,
+            "bottom": 6.217774000000077
+          },
+          "verticalCenterDelta": 5.684341886080802e-14,
+          "horizontalCenterDelta": 6.2109375
+        },
+        {
+          "id": "price-label-1",
+          "margins": {
+            "left": 100.723634,
+            "right": 100.723634,
+            "top": 10.16796875,
+            "bottom": 10.16796875
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-mobile-1",
+          "margins": {
+            "left": 112.519531175,
+            "right": 100.742187575,
+            "top": 6.7617179999999735,
+            "bottom": 6.7617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 5.888671799999997
+        },
+        {
+          "id": "price-label-2",
+          "margins": {
+            "left": 100.723634,
+            "right": 100.723634,
+            "top": 9.16796875,
+            "bottom": 9.16796875
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-mobile-2",
+          "margins": {
+            "left": 106.77734337499999,
+            "right": 100.742187575,
+            "top": 5.7617179999999735,
+            "bottom": 5.7617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 3.017577899999992
+        },
+        {
+          "id": "price-label-3",
+          "margins": {
+            "left": 100.68652338999999,
+            "right": 100.68652338999999,
+            "top": 8.908203599999979,
+            "bottom": 8.908203599999979
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-mobile-3",
+          "margins": {
+            "left": 100.742187575,
+            "right": 100.742187575,
+            "top": 5.7617179999999735,
+            "bottom": 5.7617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-label-4",
+          "margins": {
+            "left": 100.68652338999999,
+            "right": 100.68652338999999,
+            "top": 7.908203599999979,
+            "bottom": 7.908203599999979
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-mobile-4",
+          "margins": {
+            "left": 102.55859337499999,
+            "right": 100.742187575,
+            "top": 4.7617179999999735,
+            "bottom": 4.7617179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0.908202899999992
+        },
+        {
+          "id": "reward",
+          "margins": {
+            "left": 38.777734137500005,
+            "right": 38.77773413750003,
+            "top": 5.085937779999995,
+            "bottom": 5.085937779999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "notice-heading",
+          "margins": {
+            "left": 0,
+            "right": 491.28125,
+            "top": 6.929687999999942,
+            "bottom": 6.929688000000169
+          },
+          "verticalCenterDelta": 1.1368683772161603e-13,
+          "horizontalCenterDelta": 245.640625
+        },
+        {
+          "id": "notice-0",
+          "margins": {
+            "left": 0,
+            "right": 67.55858813999998,
+            "top": 13.836913784999979,
+            "bottom": 13.836913784999979
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 33.77929406999999
+        },
+        {
+          "id": "notice-1",
+          "margins": {
+            "left": 0,
+            "right": 17.458000200000015,
+            "top": 15.366211499999963,
+            "bottom": 15.366211499999963
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 8.729000100000007
+        },
+        {
+          "id": "notice-2",
+          "margins": {
+            "left": 0,
+            "right": 64.79297039999994,
+            "top": 15.249022875000037,
+            "bottom": 15.249022875000037
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 32.39648519999997
+        },
+        {
+          "id": "notice-3",
+          "margins": {
+            "left": 0,
+            "right": 55.99413800000002,
+            "top": 8.749023999999963,
+            "bottom": 8.749023999999963
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 27.99706900000001
+        }
+      ]
+    },
+    {
+      "id": "combined-advert",
+      "png": "output/png/combined-advert.png",
+      "sha256": "9291dda640d9ca184d56e7e04c45fa7af8406f706a6c0e0b7c6459274110a9c2",
+      "numeric": [
+        {
+          "line": "line9",
+          "number": "788",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 5.999999999999943,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 955.465468249,
+          "numberRight": 949.465468249
+        },
+        {
+          "line": "line10",
+          "number": "688",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 5.999999999999986,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 955.465468249,
+          "numberRight": 949.465468249
+        },
+        {
+          "line": "price-desktop-0",
+          "number": "218",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 636.858885,
+          "numberRight": 627.858885
+        },
+        {
+          "line": "price-mobile-0",
+          "number": "108",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 8.999999999999972,
+          "unitHeightRatio": 0.6695115410819145,
+          "unitX": 922.5502929,
+          "numberRight": 913.5502929
+        },
+        {
+          "line": "price-desktop-1",
+          "number": "428",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 636.858885,
+          "numberRight": 627.858885
+        },
+        {
+          "line": "price-mobile-1",
+          "number": "188",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 922.5502929,
+          "numberRight": 913.5502929
+        },
+        {
+          "line": "price-desktop-2",
+          "number": "628",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000014,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 636.858885,
+          "numberRight": 627.858885
+        },
+        {
+          "line": "price-mobile-2",
+          "number": "268",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000043,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 922.5502929,
+          "numberRight": 913.5502929
+        },
+        {
+          "line": "price-desktop-3",
+          "number": "688",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000043,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 636.858885,
+          "numberRight": 627.858885
+        },
+        {
+          "line": "price-mobile-3",
+          "number": "388",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 8.999999999999972,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 922.5502929,
+          "numberRight": 913.5502929
+        },
+        {
+          "line": "price-desktop-4",
+          "number": "1288",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 8.999999999999972,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 636.858885,
+          "numberRight": 627.858885
+        },
+        {
+          "line": "price-mobile-4",
+          "number": "688",
+          "unit": "r",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 9.000000000000043,
+          "unitHeightRatio": 0.6708649606005915,
+          "unitX": 922.5502929,
+          "numberRight": 913.5502929
+        },
+        {
+          "line": "line47",
+          "number": "1688",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 2.2737367544323206e-13,
+          "visibleGap": 5.999999999999929,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 615.4528120054999,
+          "numberRight": 609.4528120055
+        }
+      ],
+      "columnAudit": [
+        {
+          "platform": "desktop",
+          "unitSpread": 0,
+          "numberRightSpread": 0
+        },
+        {
+          "platform": "mobile",
+          "unitSpread": 0,
+          "numberRightSpread": 0
+        },
+        {
+          "type": "combined-loot",
+          "unitSpread": 0
+        }
+      ],
+      "shrink": [],
+      "bodyPhonePx": null,
+      "groups": [
+        {
+          "id": "header",
+          "margins": {
+            "left": 35.164880034844174,
+            "right": 35.16488003484426,
+            "top": 1.4736329000000126,
+            "bottom": 1.4736328999999841
+          },
+          "verticalCenterDelta": 1.4210854715202004e-14,
+          "horizontalCenterDelta": 4.263256414560601e-14
+        },
+        {
+          "id": "condition-title",
+          "margins": {
+            "left": 220.03516000000002,
+            "right": 220.0351599999999,
+            "top": 1.566406000000029,
+            "bottom": 1.5664059999999722
+          },
+          "verticalCenterDelta": 2.842170943040401e-14,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "condition-0",
+          "margins": {
+            "left": 36.42968739999999,
+            "right": 36.42968739999998,
+            "top": 9.434081911000021,
+            "bottom": 9.434081911000021
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 7.105427357601002e-15
+        },
+        {
+          "id": "condition-1",
+          "margins": {
+            "left": 17.367187399999978,
+            "right": 17.367187400000034,
+            "top": 9.66845672574999,
+            "bottom": 9.668456725750048
+          },
+          "verticalCenterDelta": 2.842170943040401e-14,
+          "horizontalCenterDelta": 2.842170943040401e-14
+        },
+        {
+          "id": "condition-2",
+          "margins": {
+            "left": 7.5055076789999475,
+            "right": 7.505507679000061,
+            "top": 3.488525639299951,
+            "bottom": 3.488525639299951
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "result",
+          "margins": {
+            "left": 31.40625,
+            "right": 31.40625,
+            "top": 5.4492179999999735,
+            "bottom": 5.4492179999999735
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-heading-0",
+          "margins": {
+            "left": 112.16796866000004,
+            "right": 112.16796865999993,
+            "top": 5.974609600000008,
+            "bottom": 5.974609600000008
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "price-heading-1",
+          "margins": {
+            "left": 44.296875,
+            "right": 44.296875,
+            "top": 5.816405799999984,
+            "bottom": 5.816405799999984
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-heading-2",
+          "margins": {
+            "left": 47.84960941999998,
+            "right": 47.84960941999998,
+            "top": 5.816405799999984,
+            "bottom": 5.816405799999984
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-label-0",
+          "margins": {
+            "left": 104.26172,
+            "right": 104.26171999999997,
+            "top": 7.203125,
+            "bottom": 7.203125
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "price-desktop-0",
+          "margins": {
+            "left": 100.72509579999996,
+            "right": 69.25049000000001,
+            "top": 6.573241499999995,
+            "bottom": 6.573241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 15.737302899999975
+        },
+        {
+          "id": "price-mobile-0",
+          "margins": {
+            "left": 92.94580085000007,
+            "right": 81.55908209999996,
+            "top": 6.532959499999947,
+            "bottom": 6.532959500000061
+          },
+          "verticalCenterDelta": 5.684341886080802e-14,
+          "horizontalCenterDelta": 5.693359375000057
+        },
+        {
+          "id": "price-label-1",
+          "margins": {
+            "left": 104.26172,
+            "right": 104.26171999999997,
+            "top": 8.703125,
+            "bottom": 8.703125
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "price-desktop-1",
+          "margins": {
+            "left": 88.26415499999996,
+            "right": 69.25049000000001,
+            "top": 8.073241499999995,
+            "bottom": 8.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 9.506832499999973
+        },
+        {
+          "id": "price-mobile-1",
+          "margins": {
+            "left": 92.35498040000004,
+            "right": 81.55908209999996,
+            "top": 8.073241499999995,
+            "bottom": 8.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 5.397949150000045
+        },
+        {
+          "id": "price-label-2",
+          "margins": {
+            "left": 104.26172,
+            "right": 104.26171999999997,
+            "top": 9.703125,
+            "bottom": 9.703125
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "price-desktop-2",
+          "margins": {
+            "left": 91.05712704999996,
+            "right": 69.25049000000001,
+            "top": 9.073241499999995,
+            "bottom": 9.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 10.903318524999975
+        },
+        {
+          "id": "price-mobile-2",
+          "margins": {
+            "left": 87.09130825,
+            "right": 81.55908209999996,
+            "top": 9.073241499999995,
+            "bottom": 9.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 2.766113075000021
+        },
+        {
+          "id": "price-label-3",
+          "margins": {
+            "left": 104.22265619999999,
+            "right": 104.22265619999996,
+            "top": 9.429687999999942,
+            "bottom": 9.42968800000017
+          },
+          "verticalCenterDelta": 1.1368683772161603e-13,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "price-desktop-3",
+          "margins": {
+            "left": 88.53271284999994,
+            "right": 69.25049000000001,
+            "top": 9.073241499999995,
+            "bottom": 9.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 9.641111424999963
+        },
+        {
+          "id": "price-mobile-3",
+          "margins": {
+            "left": 81.55908210000007,
+            "right": 81.55908209999996,
+            "top": 9.073241499999995,
+            "bottom": 9.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "price-label-4",
+          "margins": {
+            "left": 104.22265619999999,
+            "right": 104.22265619999996,
+            "top": 6.429687999999942,
+            "bottom": 6.429688000000169
+          },
+          "verticalCenterDelta": 1.1368683772161603e-13,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "price-desktop-4",
+          "margins": {
+            "left": 69.25049000000001,
+            "right": 69.25049000000001,
+            "top": 6.073241499999995,
+            "bottom": 6.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "price-mobile-4",
+          "margins": {
+            "left": 83.22412075,
+            "right": 81.55908209999996,
+            "top": 6.073241499999995,
+            "bottom": 6.073241499999995
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0.8325193250000211
+        },
+        {
+          "id": "reward",
+          "margins": {
+            "left": 50.5644532,
+            "right": 50.5644532,
+            "top": 3.2092288141000154,
+            "bottom": 3.2092288141002427
+          },
+          "verticalCenterDelta": 1.1368683772161603e-13,
+          "horizontalCenterDelta": 0
+        }
+      ]
+    },
+    {
+      "id": "combined-cover",
+      "png": "output/png/combined-cover.png",
+      "sha256": "f751768361f98214e67b939659b5e45d020b8c6ed640f8dfc5b699775089f459",
+      "numeric": [
+        {
+          "line": "line9",
+          "number": "788",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 6.000000000000057,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 942.504667398,
+          "numberRight": 936.504667398
+        },
+        {
+          "line": "line10",
+          "number": "688",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 6.000000000000014,
+          "unitHeightRatio": 0.657493239419748,
+          "unitX": 942.504667398,
+          "numberRight": 936.504667398
+        },
+        {
+          "line": "line18",
+          "number": "1688",
+          "unit": "w",
+          "numberFont": "Bahnschrift",
+          "unitFont": "Bahnschrift",
+          "baselineDelta": 0,
+          "visibleGap": 6.000000000000014,
+          "unitHeightRatio": 0.659107379942055,
+          "unitX": 644.305136275,
+          "numberRight": 638.305136275
+        }
+      ],
+      "columnAudit": [
+        {
+          "type": "combined-loot",
+          "unitSpread": 0
+        }
+      ],
+      "shrink": [],
+      "bodyPhonePx": null,
+      "groups": [
+        {
+          "id": "header",
+          "margins": {
+            "left": 59.32218191243879,
+            "right": 59.322181912438964,
+            "top": 2.540527400000002,
+            "bottom": 2.5405274000000304
+          },
+          "verticalCenterDelta": 1.4210854715202004e-14,
+          "horizontalCenterDelta": 8.526512829121202e-14
+        },
+        {
+          "id": "condition-title",
+          "margins": {
+            "left": 180.542961,
+            "right": 180.542961,
+            "top": 1.3779293000000052,
+            "bottom": 1.3779293000000052
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "condition-0",
+          "margins": {
+            "left": 36.45117177,
+            "right": 36.45117176999997,
+            "top": 3.521484248400043,
+            "bottom": 3.521484248399929
+          },
+          "verticalCenterDelta": 5.684341886080802e-14,
+          "horizontalCenterDelta": 1.4210854715202004e-14
+        },
+        {
+          "id": "condition-1",
+          "margins": {
+            "left": 16.435546769999974,
+            "right": 16.435546769999974,
+            "top": 3.7646481149998863,
+            "bottom": 3.764648115
+          },
+          "verticalCenterDelta": 5.684341886080802e-14,
+          "horizontalCenterDelta": 0
+        },
+        {
+          "id": "condition-2",
+          "margins": {
+            "left": 6.723417858000062,
+            "right": 6.723417857999948,
+            "top": 3.7934572301000458,
+            "bottom": 3.793457230099989
+          },
+          "verticalCenterDelta": 2.842170943040401e-14,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "result",
+          "margins": {
+            "left": 73.72070380000002,
+            "right": 73.72070379999991,
+            "top": 6.404296199999976,
+            "bottom": 6.404296199999976
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 5.684341886080802e-14
+        },
+        {
+          "id": "reward",
+          "margins": {
+            "left": 121.12499995999997,
+            "right": 121.12499995999997,
+            "top": 1.7182622654000852,
+            "bottom": 1.7182622654000852
+          },
+          "verticalCenterDelta": 0,
+          "horizontalCenterDelta": 0
+        }
+      ]
+    }
+  ]
+}

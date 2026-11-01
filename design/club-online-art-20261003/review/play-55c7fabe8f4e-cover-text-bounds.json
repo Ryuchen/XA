@@ -1,0 +1,60 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "copy",
+    "lineGroup": "cy:145",
+    "x": 266.43066401,
+    "y": 124.53320260000001,
+    "width": 167.13867198,
+    "height": 40.933594799999995,
+    "cy": 145,
+    "baseline": 159.581054152,
+    "effectiveSize": 42,
+    "requestedSize": 42,
+    "font": "Microsoft YaHei UI",
+    "fontWeight": 700
+  },
+  {
+    "text": "新客体验单",
+    "role": "art-title",
+    "x": 92.4794301731412,
+    "y": 314.37319965123964,
+    "width": 515.0411396537176,
+    "height": 111.25360069752071,
+    "cy": 370,
+    "effectiveSize": 100,
+    "font": "Noto Sans SC Black",
+    "fontWeight": 900,
+    "includesDecoration": true
+  },
+  {
+    "text": "挑选套餐 · 一起开局",
+    "role": "copy",
+    "lineGroup": "cy:550",
+    "x": 218.728025,
+    "y": 535.3515625,
+    "width": 262.54395,
+    "height": 29.296875,
+    "cy": 550,
+    "baseline": 560.47363282,
+    "effectiveSize": 30,
+    "requestedSize": 30,
+    "font": "Microsoft YaHei UI",
+    "fontWeight": 400
+  },
+  {
+    "text": "三角洲行动",
+    "role": "copy",
+    "lineGroup": "cy:740",
+    "x": 276.1572266,
+    "y": 725.2783205000001,
+    "width": 147.6855468,
+    "height": 29.443359,
+    "cy": 740.0000000000001,
+    "baseline": 750.5175785,
+    "effectiveSize": 30,
+    "requestedSize": 30,
+    "font": "Microsoft YaHei UI",
+    "fontWeight": 400
+  }
+]

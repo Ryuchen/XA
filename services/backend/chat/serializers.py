@@ -4,6 +4,16 @@ from common.media import build_media_url
 from .models import ChatMessage, ChatSession
 
 
+class ChatReadSerializer(serializers.Serializer):
+    through_id = serializers.IntegerField(min_value=0, required=False)
+    message_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=200, required=False)
+
+    def validate(self, attrs):
+        if 'through_id' in attrs and 'message_ids' in attrs:
+            raise serializers.ValidationError('请选择一种已读范围')
+        return attrs
+
+
 class ChatMessageSerializer(serializers.ModelSerializer):
     """C 端聊天消息序列化器。"""
 
@@ -14,7 +24,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         model = ChatMessage
         fields = [
             'id', 'is_from_support', 'content_type', 'content_type_display',
-            'content', 'image_url', 'is_read', 'created_at',
+            'content', 'image_url', 'is_read', 'created_at', 'client_message_id',
         ]
 
     def get_image_url(self, obj):

@@ -1,0 +1,35 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const sharp=createRequire(import.meta.url)(path.join(process.argv[2],'sharp'));
+const variants=[['dogtag','狗牌版','展示身份牌与装备价值扫描器'],['firearms','枪械版','收集满改枪械与运输箱'],['revolver','左轮版','整理高价值左轮与收纳箱']];
+const items=[],tiles=[];
+for(const [i,[id,name,scene]]of variants.entries()){
+ const file=`assets/illustrations/medic-mouse-${id}-r2.png`,full=path.join(root,file);
+ const m=await sharp(full).metadata(),stats=await sharp(full).stats();
+ const alpha=m.hasAlpha?stats.channels[m.channels-1]:null;
+ const preview=`review/illustration-${id}-r2.png`;
+ await sharp(full).flatten({background:'#FBFAF7'}).resize({width:1200}).png().toFile(path.join(root,preview));
+ const tile=await sharp(full).flatten({background:'#FBFAF7'}).resize({width:520,height:350,fit:'contain',background:'#FBFAF7'}).png().toBuffer();
+ tiles.push({input:tile,left:20+i*540,top:70});
+ const text=Buffer.from(`<svg width="520" height="48"><text x="260" y="34" text-anchor="middle" font-family="Microsoft YaHei UI" font-size="28" font-weight="bold" fill="#20394A">${name}</text></svg>`);
+ tiles.push({input:text,left:20+i*540,top:14});
+ items.push({id,name,scene,file,preview,width:m.width,height:m.height,hasAlpha:m.hasAlpha,alphaRange:alpha?[alpha.min,alpha.max]:null,tool:'built-in image_gen',review:'角色与参考一致；人物、鼠的头部、耳朵、肢体、尾巴与道具完整；无正文、价格或品牌文字。',anatomyRepair:id==='revolver'?'初稿灰鼠有第三只手；已用ImageGen局部移除中央多余手和袖管，复查最终恰好两手。':undefined});
+ if(!m.hasAlpha||alpha.min!==0||alpha.max<250)throw Error(id+' does not have expected genuine alpha');
+}
+await sharp({create:{width:1640,height:445,channels:4,background:'#FBFAF7'}}).composite(tiles).png().toFile(path.join(root,'review/illustration-overview-r2.png'));
+await fs.writeFile(path.join(root,'review/illustration-stage-r2.json'),JSON.stringify({stage:'awaiting-illustration-approval',date:'2026-10-01',items},null,2));
+const state=JSON.parse(await fs.readFile(path.join(root,'campaign-state.json'),'utf8'));
+state.previousDelivery={revision:'r1',package:'campaign-r1.zip',viewer:'review/index.html',meaning:'旧盾牌/双人角色成品，保留为历史，不代表当前蜂医灰鼠重绘稿'};
+state.revision='r2-illustration';state.stage='awaiting-illustration-approval';
+state.visualRevision='用户明确要求三版封面和广告均使用技能内男性蜂医与灰鼠重新生成；价格、权益、规则及端手游同价不变。';
+state.approvals.illustration={status:'pending',basis:'已生成三种新情景独立透明插画，需依用户调用技能确认后进入无字底图；角色身份参考技能已确认IP。',items:items.map(x=>x.file)};
+state.approvals.background={status:'not-started',basis:'下一阶段按三玩法各自文案量，制作横版封面和3:4广告共六张手绘无字底图，再经确认矢量填字。'};
+state.pendingArtwork=items;state.visualQA={status:'illustration-checked-final-pages-not-generated',record:'review/illustration-qa-r2.md'};
+state.memorySync={status:'pending',date:'2026-10-01'};
+await fs.writeFile(path.join(root,'campaign-state.json'),JSON.stringify(state,null,2));
+const cards=items.map(p=>`<section><h2>${p.name} · ${p.scene}</h2><a href="../${p.file}"><img src="illustration-${p.id}-r2.png"></a><p><a href="../${p.file}">透明原图 ${p.width}×${p.height}</a></p></section>`).join('');
+await fs.writeFile(path.join(root,'review/stage1-r2.html'),`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>你的护不行 · 蜂医灰鼠插画确认</title><style>body{margin:0;background:#edf2f2;color:#20394a;font:16px/1.7 "Microsoft YaHei UI",sans-serif}main{max-width:1450px;margin:auto;padding:28px}.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}section{background:#fbfaf7;padding:16px;border-radius:20px}img{width:100%;display:block}h2{font-size:20px}a{color:#437d76}@media(max-width:800px){.grid{grid-template-columns:1fr}}</style><main><h1>你的护不行 · 蜂医与灰鼠</h1><p>第一阶段：三种玩法的新插画待确认。计划随后制作三张封面与三张广告；价目与规则沿用当前已确认内容。</p><div class="grid">${cards}</div><p>插画使用内置ImageGen；<a href="../source/prompts/medic-mouse-r2.json">完整提示词</a>。旧版成品保留，当前并未更新为蜂医灰鼠最终海报。</p></main></html>`);
+console.log(JSON.stringify(items,null,2));

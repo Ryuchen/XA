@@ -1,0 +1,4374 @@
+{
+  "campaign": "兴安电竞 · 沙保连连看",
+  "revision": "price-r2-20261009",
+  "requests": [
+    {
+      "id": "t0",
+      "text": "兴安电竞",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t1",
+      "text": "沙",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t2",
+      "text": "保",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t3",
+      "text": "连",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t4",
+      "text": "看",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5",
+      "text": "端游 · 绝密",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t6",
+      "text": "三项缺一不可",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7",
+      "text": "沙色保险",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t8",
+      "text": "摸",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t9",
+      "text": "2",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t10",
+      "text": "个",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t11",
+      "text": "常规大保险",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t12",
+      "text": "4",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t13",
+      "text": "带出物资",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t14",
+      "text": ">",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t15",
+      "text": "788",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t16",
+      "text": "w",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t17",
+      "text": "且",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t18",
+      "text": "同一局三项全满足，且成功撤离才达标",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t19",
+      "text": "完成目标",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t20",
+      "text": "订单价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t21",
+      "text": "累计一次",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t22",
+      "text": "218",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t23",
+      "text": "r",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t24",
+      "text": "累计两次",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t25",
+      "text": "428",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t26",
+      "text": "累计三次",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t27",
+      "text": "628",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t28",
+      "text": "连续两次",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t29",
+      "text": "688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t30",
+      "text": "连续三次",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t31",
+      "text": "1288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t32",
+      "text": "特别奖励",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t33",
+      "text": "下单时许愿（二选一）",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t34",
+      "text": "万金泪冠 / 纵横",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t35",
+      "text": "出了就送",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t36",
+      "text": "1688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t37",
+      "text": "保底",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t38",
+      "text": "下单须知",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t39",
+      "text": "成功撤离",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t40",
+      "text": "，且",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t41",
+      "text": "三项目标同局完成",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t42",
+      "text": "，才算达标。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t43",
+      "text": "成功撤离且带出",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t44",
+      "text": "＜300w",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t45",
+      "text": "：",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t46",
+      "text": "炸单断连，不增保底。",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t47",
+      "text": "激战时，陪玩须",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t48",
+      "text": "询问板板",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t49",
+      "text": "能否代摸两类保险。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t50",
+      "text": "额外赠送保底：陪玩自选",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t51",
+      "text": "绝密地图",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t52",
+      "text": "补打。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t53",
+      "text": "手游 · 绝密",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t54",
+      "text": "108",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t55",
+      "text": "188",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t56",
+      "text": "268",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t57",
+      "text": "388",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t58",
+      "text": "绝密 · 端游 / 手游",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t59",
+      "text": "端游",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t60",
+      "text": "手游",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t61",
+      "text": "端游 / 绝密",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t62",
+      "text": "手游 / 绝密",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t63",
+      "text": "同局三项缺一不可",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t64",
+      "text": "三项全满足，成功撤离才达标",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t65",
+      "text": "下单许愿二选一：",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t66",
+      "text": "出了送",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    }
+  ],
+  "pages": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游绝密价目",
+      "bg": "desktop-absolute.png",
+      "w": 836,
+      "h": 1881,
+      "ew": 3200,
+      "eh": 7200,
+      "platforms": [
+        "desktop"
+      ],
+      "elements": [
+        {
+          "type": "text",
+          "id": "t0",
+          "text": "兴安电竞",
+          "x": 251,
+          "cy": 130,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "art",
+          "text": "沙保连连看",
+          "ids": [
+            "t1",
+            "t2",
+            "t3",
+            "t3",
+            "t4"
+          ],
+          "x": 251,
+          "cy": 192,
+          "size": 72,
+          "fill": "#213f53",
+          "shadow": "#8ba5a8",
+          "outline": "#fff9e8",
+          "outlineWidth": 3.2,
+          "angles": true,
+          "anchor": "middle",
+          "maxWidth": 350,
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t5",
+          "text": "端游 · 绝密",
+          "x": 251,
+          "cy": 260,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t6",
+          "text": "三项缺一不可",
+          "x": 418,
+          "cy": 390,
+          "size": 50,
+          "fill": "#22756b",
+          "anchor": "middle",
+          "semanticGroup": "condition-title"
+        },
+        {
+          "type": "text",
+          "id": "t7",
+          "text": "沙色保险",
+          "x": 169.5,
+          "cy": 487,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 30,
+              "id": "t8"
+            },
+            {
+              "text": "2",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 64,
+              "id": "t9"
+            },
+            {
+              "text": "个",
+              "size": 34,
+              "id": "t10"
+            }
+          ],
+          "x": 169.5,
+          "cy": 557,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line5",
+          "maxWidth": 175,
+          "semanticGroup": "condition-0",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t11",
+          "text": "常规大保险",
+          "x": 416.5,
+          "cy": 487,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 30,
+              "id": "t8"
+            },
+            {
+              "text": "4",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 64,
+              "id": "t12"
+            },
+            {
+              "text": "个",
+              "size": 34,
+              "id": "t10"
+            }
+          ],
+          "x": 416.5,
+          "cy": 557,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line7",
+          "maxWidth": 175,
+          "semanticGroup": "condition-1",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "带出物资",
+          "x": 667.5,
+          "cy": 483,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-2"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": ">",
+              "size": 38,
+              "id": "t14"
+            },
+            {
+              "text": "788",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 58,
+              "id": "t15"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 54.519999999999996,
+              "id": "t16"
+            }
+          ],
+          "x": 667.5,
+          "cy": 557,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line9",
+          "maxWidth": 175,
+          "semanticGroup": "condition-2",
+          "role": "objective"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"294\" cy=\"534\" r=\"22\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 294,
+          "cy": 534,
+          "size": 29,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"543\" cy=\"534\" r=\"22\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 543,
+          "cy": 534,
+          "size": 29,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"128\" y=\"680\" width=\"580\" height=\"56\" rx=\"28\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t18",
+          "text": "同一局三项全满足，且成功撤离才达标",
+          "x": 418,
+          "cy": 708,
+          "size": 31,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "result",
+          "role": "core-condition"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "完成目标",
+          "x": 241,
+          "cy": 806,
+          "size": 32,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "price-heading-0"
+        },
+        {
+          "type": "text",
+          "id": "t20",
+          "text": "订单价格",
+          "x": 609.5,
+          "cy": 806,
+          "size": 32,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "price-heading-1"
+        },
+        {
+          "type": "text",
+          "id": "t21",
+          "text": "累计一次",
+          "x": 241,
+          "cy": 864,
+          "size": 38,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-0"
+        },
+        {
+          "type": "text",
+          "id": "t22",
+          "text": "218",
+          "x": 609.5,
+          "cy": 864,
+          "size": 60,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-0",
+          "lineGroup": "price-desktop-0",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 609.5,
+          "cy": 864,
+          "size": 57,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-0",
+          "lineGroup": "price-desktop-0",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t24",
+          "text": "累计两次",
+          "x": 241,
+          "cy": 928,
+          "size": 38,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-1"
+        },
+        {
+          "type": "text",
+          "id": "t25",
+          "text": "428",
+          "x": 609.5,
+          "cy": 928,
+          "size": 60,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-1",
+          "lineGroup": "price-desktop-1",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 609.5,
+          "cy": 928,
+          "size": 57,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-1",
+          "lineGroup": "price-desktop-1",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t26",
+          "text": "累计三次",
+          "x": 241,
+          "cy": 991.5,
+          "size": 38,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-2"
+        },
+        {
+          "type": "text",
+          "id": "t27",
+          "text": "628",
+          "x": 609.5,
+          "cy": 991.5,
+          "size": 60,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-2",
+          "lineGroup": "price-desktop-2",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 609.5,
+          "cy": 991.5,
+          "size": 57,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-2",
+          "lineGroup": "price-desktop-2",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t28",
+          "text": "连续两次",
+          "x": 241,
+          "cy": 1055,
+          "size": 38,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "price-label-3"
+        },
+        {
+          "type": "text",
+          "id": "t29",
+          "text": "688",
+          "x": 609.5,
+          "cy": 1055,
+          "size": 60,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-3",
+          "lineGroup": "price-desktop-3",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 609.5,
+          "cy": 1055,
+          "size": 57,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-3",
+          "lineGroup": "price-desktop-3",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t30",
+          "text": "连续三次",
+          "x": 241,
+          "cy": 1118.5,
+          "size": 38,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "price-label-4"
+        },
+        {
+          "type": "text",
+          "id": "t31",
+          "text": "1288",
+          "x": 609.5,
+          "cy": 1118.5,
+          "size": 60,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-4",
+          "lineGroup": "price-desktop-4",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 609.5,
+          "cy": 1118.5,
+          "size": 57,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-4",
+          "lineGroup": "price-desktop-4",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t32",
+          "text": "特别奖励",
+          "x": 271,
+          "cy": 1216,
+          "size": 36,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "text",
+          "id": "t33",
+          "text": "下单时许愿（二选一）",
+          "x": 271,
+          "cy": 1258,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "text",
+          "id": "t34",
+          "text": "万金泪冠 / 纵横",
+          "x": 271,
+          "cy": 1306,
+          "size": 34,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "出了就送",
+              "size": 30,
+              "id": "t35"
+            },
+            {
+              "text": "1688",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 56,
+              "fill": "#a16f21",
+              "id": "t36"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 52.64,
+              "fill": "#a16f21",
+              "id": "t16"
+            },
+            {
+              "text": "保底",
+              "size": 30,
+              "id": "t37"
+            }
+          ],
+          "x": 271,
+          "cy": 1360,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line36",
+          "maxWidth": 402,
+          "semanticGroup": "reward",
+          "role": "reward"
+        },
+        {
+          "type": "text",
+          "id": "t38",
+          "text": "下单须知",
+          "x": 65,
+          "cy": 1479,
+          "size": 36,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "notice-heading",
+          "role": "rule-heading"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "成功撤离",
+              "bold": true,
+              "id": "t39"
+            },
+            {
+              "text": "，且",
+              "id": "t40"
+            },
+            {
+              "text": "三项目标同局完成",
+              "bold": true,
+              "id": "t41"
+            },
+            {
+              "text": "，才算达标。",
+              "id": "t42"
+            }
+          ],
+          "x": 65,
+          "cy": 1519,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line38",
+          "semanticGroup": "notice-0",
+          "role": "rule-body",
+          "maxWidth": 700
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "成功撤离且带出",
+              "id": "t43"
+            },
+            {
+              "text": "＜300w",
+              "bold": true,
+              "id": "t44"
+            },
+            {
+              "text": "：",
+              "id": "t45"
+            },
+            {
+              "text": "炸单断连，不增保底。",
+              "bold": true,
+              "id": "t46"
+            }
+          ],
+          "x": 65,
+          "cy": 1584,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line39",
+          "semanticGroup": "notice-1",
+          "role": "rule-body",
+          "maxWidth": 700
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "激战时，陪玩须",
+              "id": "t47"
+            },
+            {
+              "text": "询问板板",
+              "bold": true,
+              "id": "t48"
+            },
+            {
+              "text": "能否代摸两类保险。",
+              "id": "t49"
+            }
+          ],
+          "x": 65,
+          "cy": 1659,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line40",
+          "semanticGroup": "notice-2",
+          "role": "rule-body",
+          "maxWidth": 700
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "额外赠送保底：陪玩自选",
+              "id": "t50"
+            },
+            {
+              "text": "绝密地图",
+              "bold": true,
+              "id": "t51"
+            },
+            {
+              "text": "补打。",
+              "id": "t52"
+            }
+          ],
+          "x": 65,
+          "cy": 1741,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line41",
+          "semanticGroup": "notice-3",
+          "role": "rule-body",
+          "maxWidth": 700
+        }
+      ],
+      "textGroups": [
+        {
+          "id": "header",
+          "safeRect": {
+            "x": 64,
+            "y": 110,
+            "width": 374,
+            "height": 174
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 87,
+            "width": 758,
+            "height": 239
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-title",
+          "safeRect": {
+            "x": 105,
+            "y": 355,
+            "width": 626,
+            "height": 70
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 327,
+            "width": 759,
+            "height": 429
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-0",
+          "safeRect": {
+            "x": 82,
+            "y": 465,
+            "width": 175,
+            "height": 140
+          },
+          "containerRect": {
+            "x": 62,
+            "y": 440,
+            "width": 215,
+            "height": 188
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-1",
+          "safeRect": {
+            "x": 329,
+            "y": 465,
+            "width": 175,
+            "height": 140
+          },
+          "containerRect": {
+            "x": 311,
+            "y": 440,
+            "width": 211,
+            "height": 188
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-2",
+          "safeRect": {
+            "x": 580,
+            "y": 465,
+            "width": 175,
+            "height": 140
+          },
+          "containerRect": {
+            "x": 560,
+            "y": 440,
+            "width": 215,
+            "height": 188
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "result",
+          "safeRect": {
+            "x": 140,
+            "y": 685,
+            "width": 556,
+            "height": 46
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 327,
+            "width": 759,
+            "height": 429
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-heading-0",
+          "safeRect": {
+            "x": 65,
+            "y": 786,
+            "width": 352,
+            "height": 40
+          },
+          "containerRect": {
+            "x": 47,
+            "y": 780,
+            "width": 742,
+            "height": 52
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-heading-1",
+          "safeRect": {
+            "x": 447,
+            "y": 786,
+            "width": 325,
+            "height": 40
+          },
+          "containerRect": {
+            "x": 47,
+            "y": 780,
+            "width": 742,
+            "height": 52
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-label-0",
+          "safeRect": {
+            "x": 65,
+            "y": 837,
+            "width": 352,
+            "height": 54
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-0",
+          "safeRect": {
+            "x": 447,
+            "y": 837,
+            "width": 325,
+            "height": 54
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-1",
+          "safeRect": {
+            "x": 65,
+            "y": 901,
+            "width": 352,
+            "height": 54
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-1",
+          "safeRect": {
+            "x": 447,
+            "y": 901,
+            "width": 325,
+            "height": 54
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-2",
+          "safeRect": {
+            "x": 65,
+            "y": 965,
+            "width": 352,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-2",
+          "safeRect": {
+            "x": 447,
+            "y": 965,
+            "width": 325,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-3",
+          "safeRect": {
+            "x": 65,
+            "y": 1028,
+            "width": 352,
+            "height": 54
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-3",
+          "safeRect": {
+            "x": 447,
+            "y": 1028,
+            "width": 325,
+            "height": 54
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-4",
+          "safeRect": {
+            "x": 65,
+            "y": 1092,
+            "width": 352,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-4",
+          "safeRect": {
+            "x": 447,
+            "y": 1092,
+            "width": 325,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 773,
+            "width": 759,
+            "height": 385
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "reward",
+          "safeRect": {
+            "x": 70,
+            "y": 1200,
+            "width": 402,
+            "height": 195
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 1178,
+            "width": 759,
+            "height": 240
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "notice-heading",
+          "safeRect": {
+            "x": 65,
+            "y": 1458,
+            "width": 700,
+            "height": 42
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 1436,
+            "width": 759,
+            "height": 354
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-0",
+          "safeRect": {
+            "x": 65,
+            "y": 1500,
+            "width": 700,
+            "height": 38
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 1436,
+            "width": 759,
+            "height": 354
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-1",
+          "safeRect": {
+            "x": 65,
+            "y": 1553,
+            "width": 700,
+            "height": 62
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 1436,
+            "width": 759,
+            "height": 354
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-2",
+          "safeRect": {
+            "x": 65,
+            "y": 1629,
+            "width": 700,
+            "height": 60
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 1436,
+            "width": 759,
+            "height": 354
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-3",
+          "safeRect": {
+            "x": 65,
+            "y": 1709,
+            "width": 700,
+            "height": 64
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 1436,
+            "width": 759,
+            "height": 354
+          },
+          "horizontal": "start"
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游绝密价目",
+      "bg": "mobile-absolute.png",
+      "w": 836,
+      "h": 1882,
+      "ew": 3200,
+      "eh": 7200,
+      "platforms": [
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "text",
+          "id": "t0",
+          "text": "兴安电竞",
+          "x": 240.5,
+          "cy": 130,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "art",
+          "text": "沙保连连看",
+          "ids": [
+            "t1",
+            "t2",
+            "t3",
+            "t3",
+            "t4"
+          ],
+          "x": 240.5,
+          "cy": 192,
+          "size": 72,
+          "fill": "#213f53",
+          "shadow": "#8ba5a8",
+          "outline": "#fff9e8",
+          "outlineWidth": 3.2,
+          "angles": true,
+          "anchor": "middle",
+          "maxWidth": 329,
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t53",
+          "text": "手游 · 绝密",
+          "x": 240.5,
+          "cy": 260,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t6",
+          "text": "三项缺一不可",
+          "x": 418,
+          "cy": 376.5,
+          "size": 40,
+          "fill": "#22756b",
+          "anchor": "middle",
+          "semanticGroup": "condition-title"
+        },
+        {
+          "type": "text",
+          "id": "t7",
+          "text": "沙色保险",
+          "x": 164,
+          "cy": 496,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 30,
+              "id": "t8"
+            },
+            {
+              "text": "2",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 64,
+              "id": "t9"
+            },
+            {
+              "text": "个",
+              "size": 34,
+              "id": "t10"
+            }
+          ],
+          "x": 164,
+          "cy": 566,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line5",
+          "maxWidth": 180,
+          "semanticGroup": "condition-0",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t11",
+          "text": "常规大保险",
+          "x": 418,
+          "cy": 496,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 30,
+              "id": "t8"
+            },
+            {
+              "text": "4",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 64,
+              "id": "t12"
+            },
+            {
+              "text": "个",
+              "size": 34,
+              "id": "t10"
+            }
+          ],
+          "x": 418,
+          "cy": 566,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line7",
+          "maxWidth": 180,
+          "semanticGroup": "condition-1",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "带出物资",
+          "x": 672,
+          "cy": 492,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-2"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": ">",
+              "size": 38,
+              "id": "t14"
+            },
+            {
+              "text": "688",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 58,
+              "id": "t29"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 54.519999999999996,
+              "id": "t16"
+            }
+          ],
+          "x": 672,
+          "cy": 566,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line9",
+          "maxWidth": 180,
+          "semanticGroup": "condition-2",
+          "role": "objective"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"291\" cy=\"534\" r=\"22\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 291,
+          "cy": 534,
+          "size": 29,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"546\" cy=\"534\" r=\"22\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 546,
+          "cy": 534,
+          "size": 29,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"129\" y=\"665\" width=\"580\" height=\"56\" rx=\"28\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t18",
+          "text": "同一局三项全满足，且成功撤离才达标",
+          "x": 419,
+          "cy": 693,
+          "size": 31,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "result",
+          "role": "core-condition"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "完成目标",
+          "x": 240,
+          "cy": 792,
+          "size": 32,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "price-heading-0"
+        },
+        {
+          "type": "text",
+          "id": "t20",
+          "text": "订单价格",
+          "x": 612.5,
+          "cy": 792,
+          "size": 32,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "price-heading-1"
+        },
+        {
+          "type": "text",
+          "id": "t21",
+          "text": "累计一次",
+          "x": 240,
+          "cy": 851,
+          "size": 38,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-0"
+        },
+        {
+          "type": "text",
+          "id": "t54",
+          "text": "108",
+          "x": 612.5,
+          "cy": 851,
+          "size": 60,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-0",
+          "lineGroup": "price-mobile-0",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 612.5,
+          "cy": 851,
+          "size": 57,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-0",
+          "lineGroup": "price-mobile-0",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t24",
+          "text": "累计两次",
+          "x": 240,
+          "cy": 917.5,
+          "size": 38,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-1"
+        },
+        {
+          "type": "text",
+          "id": "t55",
+          "text": "188",
+          "x": 612.5,
+          "cy": 917.5,
+          "size": 60,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-1",
+          "lineGroup": "price-mobile-1",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 612.5,
+          "cy": 917.5,
+          "size": 57,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-1",
+          "lineGroup": "price-mobile-1",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t26",
+          "text": "累计三次",
+          "x": 240,
+          "cy": 983.5,
+          "size": 38,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-2"
+        },
+        {
+          "type": "text",
+          "id": "t56",
+          "text": "268",
+          "x": 612.5,
+          "cy": 983.5,
+          "size": 60,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-2",
+          "lineGroup": "price-mobile-2",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 612.5,
+          "cy": 983.5,
+          "size": 57,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-2",
+          "lineGroup": "price-mobile-2",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t28",
+          "text": "连续两次",
+          "x": 240,
+          "cy": 1048.5,
+          "size": 38,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "price-label-3"
+        },
+        {
+          "type": "text",
+          "id": "t57",
+          "text": "388",
+          "x": 612.5,
+          "cy": 1048.5,
+          "size": 60,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-3",
+          "lineGroup": "price-mobile-3",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 612.5,
+          "cy": 1048.5,
+          "size": 57,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-3",
+          "lineGroup": "price-mobile-3",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t30",
+          "text": "连续三次",
+          "x": 240,
+          "cy": 1112.5,
+          "size": 38,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "price-label-4"
+        },
+        {
+          "type": "text",
+          "id": "t29",
+          "text": "688",
+          "x": 612.5,
+          "cy": 1112.5,
+          "size": 60,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-4",
+          "lineGroup": "price-mobile-4",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 612.5,
+          "cy": 1112.5,
+          "size": 57,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-4",
+          "lineGroup": "price-mobile-4",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t32",
+          "text": "特别奖励",
+          "x": 262,
+          "cy": 1211,
+          "size": 32,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "text",
+          "id": "t33",
+          "text": "下单时许愿（二选一）",
+          "x": 262,
+          "cy": 1248,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "text",
+          "id": "t34",
+          "text": "万金泪冠 / 纵横",
+          "x": 262,
+          "cy": 1285,
+          "size": 33,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "出了就送",
+              "size": 30,
+              "id": "t35"
+            },
+            {
+              "text": "1688",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 50,
+              "fill": "#a16f21",
+              "id": "t36"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 47,
+              "fill": "#a16f21",
+              "id": "t16"
+            },
+            {
+              "text": "保底",
+              "size": 30,
+              "id": "t37"
+            }
+          ],
+          "x": 262,
+          "cy": 1330,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line36",
+          "maxWidth": 392,
+          "semanticGroup": "reward",
+          "role": "reward"
+        },
+        {
+          "type": "text",
+          "id": "t38",
+          "text": "下单须知",
+          "x": 124,
+          "cy": 1466.5,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "notice-heading",
+          "role": "rule-heading"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "成功撤离",
+              "bold": true,
+              "id": "t39"
+            },
+            {
+              "text": "，且",
+              "id": "t40"
+            },
+            {
+              "text": "三项目标同局完成",
+              "bold": true,
+              "id": "t41"
+            },
+            {
+              "text": "，才算达标。",
+              "id": "t42"
+            }
+          ],
+          "x": 124,
+          "cy": 1548.5,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line38",
+          "semanticGroup": "notice-0",
+          "role": "rule-body",
+          "maxWidth": 648
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "成功撤离且带出",
+              "id": "t43"
+            },
+            {
+              "text": "＜300w",
+              "bold": true,
+              "id": "t44"
+            },
+            {
+              "text": "：",
+              "id": "t45"
+            },
+            {
+              "text": "炸单断连，不增保底。",
+              "bold": true,
+              "id": "t46"
+            }
+          ],
+          "x": 124,
+          "cy": 1624,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line39",
+          "semanticGroup": "notice-1",
+          "role": "rule-body",
+          "maxWidth": 648
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "激战时，陪玩须",
+              "id": "t47"
+            },
+            {
+              "text": "询问板板",
+              "bold": true,
+              "id": "t48"
+            },
+            {
+              "text": "能否代摸两类保险。",
+              "id": "t49"
+            }
+          ],
+          "x": 124,
+          "cy": 1699,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line40",
+          "semanticGroup": "notice-2",
+          "role": "rule-body",
+          "maxWidth": 648
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "额外赠送保底：陪玩自选",
+              "id": "t50"
+            },
+            {
+              "text": "绝密地图",
+              "bold": true,
+              "id": "t51"
+            },
+            {
+              "text": "补打。",
+              "id": "t52"
+            }
+          ],
+          "x": 124,
+          "cy": 1766.5,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "start",
+          "group": "line41",
+          "semanticGroup": "notice-3",
+          "role": "rule-body",
+          "maxWidth": 578
+        }
+      ],
+      "textGroups": [
+        {
+          "id": "header",
+          "safeRect": {
+            "x": 64,
+            "y": 108,
+            "width": 353,
+            "height": 180
+          },
+          "containerRect": {
+            "x": 39,
+            "y": 84,
+            "width": 759,
+            "height": 233
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-title",
+          "safeRect": {
+            "x": 163,
+            "y": 354,
+            "width": 510,
+            "height": 45
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 349,
+            "width": 775,
+            "height": 386
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-0",
+          "safeRect": {
+            "x": 74,
+            "y": 474,
+            "width": 180,
+            "height": 120
+          },
+          "containerRect": {
+            "x": 54,
+            "y": 450,
+            "width": 220,
+            "height": 168
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-1",
+          "safeRect": {
+            "x": 328,
+            "y": 474,
+            "width": 180,
+            "height": 120
+          },
+          "containerRect": {
+            "x": 308,
+            "y": 450,
+            "width": 220,
+            "height": 168
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-2",
+          "safeRect": {
+            "x": 582,
+            "y": 474,
+            "width": 180,
+            "height": 120
+          },
+          "containerRect": {
+            "x": 562,
+            "y": 450,
+            "width": 220,
+            "height": 168
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "result",
+          "safeRect": {
+            "x": 141,
+            "y": 670,
+            "width": 556,
+            "height": 46
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 349,
+            "width": 775,
+            "height": 386
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-heading-0",
+          "safeRect": {
+            "x": 64,
+            "y": 772,
+            "width": 352,
+            "height": 40
+          },
+          "containerRect": {
+            "x": 43,
+            "y": 766,
+            "width": 750,
+            "height": 52
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-heading-1",
+          "safeRect": {
+            "x": 450,
+            "y": 772,
+            "width": 325,
+            "height": 40
+          },
+          "containerRect": {
+            "x": 43,
+            "y": 766,
+            "width": 750,
+            "height": 52
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-label-0",
+          "safeRect": {
+            "x": 64,
+            "y": 823,
+            "width": 352,
+            "height": 56
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-mobile-0",
+          "safeRect": {
+            "x": 450,
+            "y": 823,
+            "width": 325,
+            "height": 56
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-1",
+          "safeRect": {
+            "x": 64,
+            "y": 889,
+            "width": 352,
+            "height": 57
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-mobile-1",
+          "safeRect": {
+            "x": 450,
+            "y": 889,
+            "width": 325,
+            "height": 57
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-2",
+          "safeRect": {
+            "x": 64,
+            "y": 956,
+            "width": 352,
+            "height": 55
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-mobile-2",
+          "safeRect": {
+            "x": 450,
+            "y": 956,
+            "width": 325,
+            "height": 55
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-3",
+          "safeRect": {
+            "x": 64,
+            "y": 1021,
+            "width": 352,
+            "height": 55
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-mobile-3",
+          "safeRect": {
+            "x": 450,
+            "y": 1021,
+            "width": 325,
+            "height": 55
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-4",
+          "safeRect": {
+            "x": 64,
+            "y": 1086,
+            "width": 352,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-mobile-4",
+          "safeRect": {
+            "x": 450,
+            "y": 1086,
+            "width": 325,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 35,
+            "y": 759,
+            "width": 766,
+            "height": 393
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "reward",
+          "safeRect": {
+            "x": 66,
+            "y": 1195,
+            "width": 392,
+            "height": 165
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 1174,
+            "width": 777,
+            "height": 208
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "notice-heading",
+          "safeRect": {
+            "x": 124,
+            "y": 1440,
+            "width": 648,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 1410,
+            "width": 775,
+            "height": 394
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-0",
+          "safeRect": {
+            "x": 124,
+            "y": 1520,
+            "width": 648,
+            "height": 57
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 1410,
+            "width": 775,
+            "height": 394
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-1",
+          "safeRect": {
+            "x": 124,
+            "y": 1594,
+            "width": 648,
+            "height": 60
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 1410,
+            "width": 775,
+            "height": 394
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-2",
+          "safeRect": {
+            "x": 124,
+            "y": 1669,
+            "width": 648,
+            "height": 60
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 1410,
+            "width": 775,
+            "height": 394
+          },
+          "horizontal": "start"
+        },
+        {
+          "id": "notice-3",
+          "safeRect": {
+            "x": 124,
+            "y": 1743,
+            "width": 578,
+            "height": 47
+          },
+          "containerRect": {
+            "x": 31,
+            "y": 1410,
+            "width": 775,
+            "height": 394
+          },
+          "horizontal": "start"
+        }
+      ]
+    },
+    {
+      "id": "combined-advert",
+      "label": "双平台合并广告",
+      "bg": "combined-advert.png",
+      "w": 1086,
+      "h": 1448,
+      "ew": 2400,
+      "eh": 3200,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "text",
+          "id": "t0",
+          "text": "兴安电竞",
+          "x": 399,
+          "cy": 96,
+          "size": 34,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "art",
+          "text": "沙保连连看",
+          "ids": [
+            "t1",
+            "t2",
+            "t3",
+            "t3",
+            "t4"
+          ],
+          "x": 399,
+          "cy": 166,
+          "size": 86,
+          "fill": "#213f53",
+          "shadow": "#8ba5a8",
+          "outline": "#fff9e8",
+          "outlineWidth": 3.2,
+          "angles": true,
+          "anchor": "middle",
+          "maxWidth": 494,
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t58",
+          "text": "绝密 · 端游 / 手游",
+          "x": 399,
+          "cy": 235,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t6",
+          "text": "三项缺一不可",
+          "x": 543,
+          "cy": 314,
+          "size": 40,
+          "fill": "#22756b",
+          "anchor": "middle",
+          "semanticGroup": "condition-title"
+        },
+        {
+          "type": "text",
+          "id": "t7",
+          "text": "沙色保险",
+          "x": 201,
+          "cy": 436,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 36,
+              "id": "t8"
+            },
+            {
+              "text": "2",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 70,
+              "id": "t9"
+            },
+            {
+              "text": "个",
+              "size": 38,
+              "id": "t10"
+            }
+          ],
+          "x": 201,
+          "cy": 518,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line5",
+          "maxWidth": 232,
+          "semanticGroup": "condition-0",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t11",
+          "text": "常规大保险",
+          "x": 543,
+          "cy": 436,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 36,
+              "id": "t8"
+            },
+            {
+              "text": "4",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 70,
+              "id": "t12"
+            },
+            {
+              "text": "个",
+              "size": 38,
+              "id": "t10"
+            }
+          ],
+          "x": 543,
+          "cy": 518,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line7",
+          "maxWidth": 232,
+          "semanticGroup": "condition-1",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "带出物资",
+          "x": 884,
+          "cy": 432,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-2"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "端游",
+              "size": 32,
+              "id": "t59"
+            },
+            {
+              "text": ">",
+              "size": 34,
+              "id": "t14"
+            },
+            {
+              "text": "788",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 54,
+              "id": "t15"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 50.76,
+              "id": "t16"
+            }
+          ],
+          "x": 884,
+          "cy": 479,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line9",
+          "maxWidth": 232,
+          "semanticGroup": "condition-2",
+          "unitAxis": "loot-threshold",
+          "role": "objective"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "手游",
+              "size": 32,
+              "id": "t60"
+            },
+            {
+              "text": ">",
+              "size": 34,
+              "id": "t14"
+            },
+            {
+              "text": "688",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 54,
+              "id": "t29"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 50.76,
+              "id": "t16"
+            }
+          ],
+          "x": 884,
+          "cy": 532,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line10",
+          "maxWidth": 232,
+          "semanticGroup": "condition-2",
+          "unitAxis": "loot-threshold",
+          "role": "objective"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"372\" cy=\"489\" r=\"28\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 372,
+          "cy": 489,
+          "size": 40,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"713\" cy=\"489\" r=\"28\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 713,
+          "cy": 489,
+          "size": 40,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"161\" y=\"652\" width=\"764\" height=\"60\" rx=\"30\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t18",
+          "text": "同一局三项全满足，且成功撤离才达标",
+          "x": 543,
+          "cy": 682,
+          "size": 40,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "result",
+          "role": "core-condition"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "完成目标",
+          "x": 247.5,
+          "cy": 785.5,
+          "size": 36,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "price-heading-0"
+        },
+        {
+          "type": "text",
+          "id": "t61",
+          "text": "端游 / 绝密",
+          "x": 590,
+          "cy": 785.5,
+          "size": 36,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "price-heading-1"
+        },
+        {
+          "type": "text",
+          "id": "t62",
+          "text": "手游 / 绝密",
+          "x": 884.5,
+          "cy": 785.5,
+          "size": 36,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "price-heading-2"
+        },
+        {
+          "type": "text",
+          "id": "t21",
+          "text": "累计一次",
+          "x": 247.5,
+          "cy": 846.5,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-0"
+        },
+        {
+          "type": "text",
+          "id": "t22",
+          "text": "218",
+          "x": 590,
+          "cy": 846.5,
+          "size": 55,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-0",
+          "lineGroup": "price-desktop-0",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 590,
+          "cy": 846.5,
+          "size": 52,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-0",
+          "lineGroup": "price-desktop-0",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t54",
+          "text": "108",
+          "x": 884.5,
+          "cy": 846.5,
+          "size": 55,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-0",
+          "lineGroup": "price-mobile-0",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 884.5,
+          "cy": 846.5,
+          "size": 52,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-0",
+          "lineGroup": "price-mobile-0",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t24",
+          "text": "累计两次",
+          "x": 247.5,
+          "cy": 911,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-1"
+        },
+        {
+          "type": "text",
+          "id": "t25",
+          "text": "428",
+          "x": 590,
+          "cy": 911,
+          "size": 55,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-1",
+          "lineGroup": "price-desktop-1",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 590,
+          "cy": 911,
+          "size": 52,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-1",
+          "lineGroup": "price-desktop-1",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t55",
+          "text": "188",
+          "x": 884.5,
+          "cy": 911,
+          "size": 55,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-1",
+          "lineGroup": "price-mobile-1",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 884.5,
+          "cy": 911,
+          "size": 52,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-1",
+          "lineGroup": "price-mobile-1",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t26",
+          "text": "累计三次",
+          "x": 247.5,
+          "cy": 978,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "price-label-2"
+        },
+        {
+          "type": "text",
+          "id": "t27",
+          "text": "628",
+          "x": 590,
+          "cy": 978,
+          "size": 55,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-2",
+          "lineGroup": "price-desktop-2",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 590,
+          "cy": 978,
+          "size": 52,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-2",
+          "lineGroup": "price-desktop-2",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t56",
+          "text": "268",
+          "x": 884.5,
+          "cy": 978,
+          "size": 55,
+          "fill": "#213f53",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-2",
+          "lineGroup": "price-mobile-2",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 884.5,
+          "cy": 978,
+          "size": 52,
+          "fill": "#213f53",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-2",
+          "lineGroup": "price-mobile-2",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t28",
+          "text": "连续两次",
+          "x": 247.5,
+          "cy": 1046,
+          "size": 40,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "price-label-3"
+        },
+        {
+          "type": "text",
+          "id": "t29",
+          "text": "688",
+          "x": 590,
+          "cy": 1046,
+          "size": 55,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-3",
+          "lineGroup": "price-desktop-3",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 590,
+          "cy": 1046,
+          "size": 52,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-3",
+          "lineGroup": "price-desktop-3",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t57",
+          "text": "388",
+          "x": 884.5,
+          "cy": 1046,
+          "size": 55,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-3",
+          "lineGroup": "price-mobile-3",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 884.5,
+          "cy": 1046,
+          "size": 52,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-3",
+          "lineGroup": "price-mobile-3",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t30",
+          "text": "连续三次",
+          "x": 247.5,
+          "cy": 1111,
+          "size": 40,
+          "fill": "#a16f21",
+          "anchor": "middle",
+          "semanticGroup": "price-label-4"
+        },
+        {
+          "type": "text",
+          "id": "t31",
+          "text": "1288",
+          "x": 590,
+          "cy": 1111,
+          "size": 55,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-desktop-4",
+          "lineGroup": "price-desktop-4",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 590,
+          "cy": 1111,
+          "size": 52,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-desktop-4",
+          "lineGroup": "price-desktop-4",
+          "priceAxis": "price-axis-desktop",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t29",
+          "text": "688",
+          "x": 884.5,
+          "cy": 1111,
+          "size": 55,
+          "fill": "#a16f21",
+          "anchor": "end",
+          "semanticGroup": "price-mobile-4",
+          "lineGroup": "price-mobile-4",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "number",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "r",
+          "x": 884.5,
+          "cy": 1111,
+          "size": 52,
+          "fill": "#a16f21",
+          "anchor": "start",
+          "semanticGroup": "price-mobile-4",
+          "lineGroup": "price-mobile-4",
+          "priceAxis": "price-axis-mobile",
+          "axisKind": "unit",
+          "axisRect": {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          },
+          "role": "price-unit"
+        },
+        {
+          "type": "text",
+          "id": "t33",
+          "text": "下单时许愿（二选一）",
+          "x": 543,
+          "cy": 1216,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "text",
+          "id": "t34",
+          "text": "万金泪冠 / 纵横",
+          "x": 543,
+          "cy": 1264,
+          "size": 40,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "reward"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "出了就送",
+              "size": 36,
+              "id": "t35"
+            },
+            {
+              "text": "1688",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 58,
+              "fill": "#a16f21",
+              "id": "t36"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 54.519999999999996,
+              "fill": "#a16f21",
+              "id": "t16"
+            },
+            {
+              "text": "保底",
+              "size": 36,
+              "id": "t37"
+            }
+          ],
+          "x": 543,
+          "cy": 1316,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line47",
+          "maxWidth": 474,
+          "semanticGroup": "reward",
+          "role": "reward"
+        }
+      ],
+      "textGroups": [
+        {
+          "id": "header",
+          "safeRect": {
+            "x": 140,
+            "y": 77,
+            "width": 518,
+            "height": 174
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 58,
+            "width": 1000,
+            "height": 207
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-title",
+          "safeRect": {
+            "x": 204,
+            "y": 293,
+            "width": 678,
+            "height": 42
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 282,
+            "width": 1001,
+            "height": 451
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-0",
+          "safeRect": {
+            "x": 85,
+            "y": 414,
+            "width": 232,
+            "height": 148
+          },
+          "containerRect": {
+            "x": 65,
+            "y": 382,
+            "width": 272,
+            "height": 209
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-1",
+          "safeRect": {
+            "x": 427,
+            "y": 414,
+            "width": 232,
+            "height": 148
+          },
+          "containerRect": {
+            "x": 407,
+            "y": 382,
+            "width": 271,
+            "height": 209
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-2",
+          "safeRect": {
+            "x": 768,
+            "y": 414,
+            "width": 232,
+            "height": 148
+          },
+          "containerRect": {
+            "x": 748,
+            "y": 382,
+            "width": 272,
+            "height": 209
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "result",
+          "safeRect": {
+            "x": 173,
+            "y": 657,
+            "width": 740,
+            "height": 50
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 282,
+            "width": 1001,
+            "height": 451
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-heading-0",
+          "safeRect": {
+            "x": 64,
+            "y": 762,
+            "width": 367,
+            "height": 47
+          },
+          "containerRect": {
+            "x": 50,
+            "y": 756,
+            "width": 987,
+            "height": 59
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-heading-1",
+          "safeRect": {
+            "x": 455,
+            "y": 762,
+            "width": 270,
+            "height": 47
+          },
+          "containerRect": {
+            "x": 50,
+            "y": 756,
+            "width": 987,
+            "height": 59
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-heading-2",
+          "safeRect": {
+            "x": 746,
+            "y": 762,
+            "width": 277,
+            "height": 47
+          },
+          "containerRect": {
+            "x": 50,
+            "y": 756,
+            "width": 987,
+            "height": 59
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-label-0",
+          "safeRect": {
+            "x": 64,
+            "y": 820,
+            "width": 367,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-0",
+          "safeRect": {
+            "x": 455,
+            "y": 820,
+            "width": 270,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-mobile-0",
+          "safeRect": {
+            "x": 746,
+            "y": 820,
+            "width": 277,
+            "height": 53
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-1",
+          "safeRect": {
+            "x": 64,
+            "y": 883,
+            "width": 367,
+            "height": 56
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-1",
+          "safeRect": {
+            "x": 455,
+            "y": 883,
+            "width": 270,
+            "height": 56
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-mobile-1",
+          "safeRect": {
+            "x": 746,
+            "y": 883,
+            "width": 277,
+            "height": 56
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-2",
+          "safeRect": {
+            "x": 64,
+            "y": 949,
+            "width": 367,
+            "height": 58
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-2",
+          "safeRect": {
+            "x": 455,
+            "y": 949,
+            "width": 270,
+            "height": 58
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-mobile-2",
+          "safeRect": {
+            "x": 746,
+            "y": 949,
+            "width": 277,
+            "height": 58
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-3",
+          "safeRect": {
+            "x": 64,
+            "y": 1017,
+            "width": 367,
+            "height": 58
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-3",
+          "safeRect": {
+            "x": 455,
+            "y": 1017,
+            "width": 270,
+            "height": 58
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-mobile-3",
+          "safeRect": {
+            "x": 746,
+            "y": 1017,
+            "width": 277,
+            "height": 58
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-label-4",
+          "safeRect": {
+            "x": 64,
+            "y": 1085,
+            "width": 367,
+            "height": 52
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "price-desktop-4",
+          "safeRect": {
+            "x": 455,
+            "y": 1085,
+            "width": 270,
+            "height": 52
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "price-mobile-4",
+          "safeRect": {
+            "x": 746,
+            "y": 1085,
+            "width": 277,
+            "height": 52
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 750,
+            "width": 999,
+            "height": 406
+          },
+          "horizontal": "fixed"
+        },
+        {
+          "id": "reward",
+          "safeRect": {
+            "x": 306,
+            "y": 1194,
+            "width": 474,
+            "height": 150
+          },
+          "containerRect": {
+            "x": 44,
+            "y": 1175,
+            "width": 1000,
+            "height": 199
+          },
+          "horizontal": "center"
+        }
+      ]
+    },
+    {
+      "id": "combined-cover",
+      "label": "16:9共用封面",
+      "bg": "combined-cover.png",
+      "w": 1672,
+      "h": 941,
+      "ew": 3200,
+      "eh": 1800,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "text",
+          "id": "t0",
+          "text": "兴安电竞",
+          "x": 611,
+          "cy": 93,
+          "size": 42,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "art",
+          "text": "沙保连连看",
+          "ids": [
+            "t1",
+            "t2",
+            "t3",
+            "t3",
+            "t4"
+          ],
+          "x": 611,
+          "cy": 174,
+          "size": 112,
+          "fill": "#213f53",
+          "shadow": "#8ba5a8",
+          "outline": "#fff9e8",
+          "outlineWidth": 5,
+          "angles": true,
+          "anchor": "middle",
+          "maxWidth": 678,
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t58",
+          "text": "绝密 · 端游 / 手游",
+          "x": 611,
+          "cy": 263,
+          "size": 34,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "header"
+        },
+        {
+          "type": "text",
+          "id": "t63",
+          "text": "同局三项缺一不可",
+          "x": 539,
+          "cy": 375.5,
+          "size": 62,
+          "fill": "#22756b",
+          "anchor": "middle",
+          "semanticGroup": "condition-title"
+        },
+        {
+          "type": "text",
+          "id": "t7",
+          "text": "沙色保险",
+          "x": 212,
+          "cy": 469,
+          "size": 42,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 38,
+              "id": "t8"
+            },
+            {
+              "text": "2",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 72,
+              "id": "t9"
+            },
+            {
+              "text": "个",
+              "size": 40,
+              "id": "t10"
+            }
+          ],
+          "x": 212,
+          "cy": 551,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line5",
+          "maxWidth": 240,
+          "semanticGroup": "condition-0",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t11",
+          "text": "常规大保险",
+          "x": 538,
+          "cy": 469,
+          "size": 42,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "摸",
+              "size": 38,
+              "id": "t8"
+            },
+            {
+              "text": "4",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 72,
+              "id": "t12"
+            },
+            {
+              "text": "个",
+              "size": 40,
+              "id": "t10"
+            }
+          ],
+          "x": 538,
+          "cy": 551,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line7",
+          "maxWidth": 240,
+          "semanticGroup": "condition-1",
+          "role": "objective"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "带出物资",
+          "x": 869,
+          "cy": 465,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "semanticGroup": "condition-2"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "端游",
+              "size": 30,
+              "id": "t59"
+            },
+            {
+              "text": ">",
+              "size": 40,
+              "id": "t14"
+            },
+            {
+              "text": "788",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 58,
+              "id": "t15"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 54.519999999999996,
+              "id": "t16"
+            }
+          ],
+          "x": 869,
+          "cy": 508,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line9",
+          "maxWidth": 240,
+          "semanticGroup": "condition-2",
+          "unitAxis": "loot-threshold",
+          "role": "objective"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "手游",
+              "size": 30,
+              "id": "t60"
+            },
+            {
+              "text": ">",
+              "size": 40,
+              "id": "t14"
+            },
+            {
+              "text": "688",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 58,
+              "id": "t29"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 54.519999999999996,
+              "id": "t16"
+            }
+          ],
+          "x": 869,
+          "cy": 557,
+          "size": 30,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line10",
+          "maxWidth": 240,
+          "semanticGroup": "condition-2",
+          "unitAxis": "loot-threshold",
+          "role": "objective"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"374\" cy=\"519\" r=\"28\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 374,
+          "cy": 519,
+          "size": 40,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"704\" cy=\"519\" r=\"28\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"3\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "且",
+          "x": 704,
+          "cy": 519,
+          "size": 40,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "role": "conjunction"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"220\" y=\"651\" width=\"638\" height=\"58\" rx=\"29\" fill=\"#22756b\" stroke=\"#fff9e8\" stroke-width=\"2\"/>"
+        },
+        {
+          "type": "text",
+          "id": "t64",
+          "text": "三项全满足，成功撤离才达标",
+          "x": 539,
+          "cy": 680,
+          "size": 36,
+          "fill": "#fff9e8",
+          "anchor": "middle",
+          "semanticGroup": "result",
+          "role": "core-condition"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "下单许愿二选一：",
+              "id": "t65"
+            },
+            {
+              "text": "万金泪冠 / 纵横",
+              "bold": true,
+              "id": "t34"
+            }
+          ],
+          "x": 595.5,
+          "cy": 765,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line17",
+          "maxWidth": 723,
+          "semanticGroup": "reward",
+          "role": "reward"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "出了送",
+              "size": 32,
+              "id": "t66"
+            },
+            {
+              "text": "1688",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 52,
+              "fill": "#a16f21",
+              "id": "t36"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 49,
+              "fill": "#a16f21",
+              "id": "t16"
+            },
+            {
+              "text": "保底",
+              "size": 32,
+              "id": "t37"
+            }
+          ],
+          "x": 595.5,
+          "cy": 811,
+          "size": 32,
+          "fill": "#213f53",
+          "anchor": "middle",
+          "group": "line18",
+          "semanticGroup": "reward",
+          "role": "reward"
+        }
+      ],
+      "textGroups": [
+        {
+          "id": "header",
+          "safeRect": {
+            "x": 260,
+            "y": 72,
+            "width": 702,
+            "height": 212
+          },
+          "containerRect": {
+            "x": 54,
+            "y": 40,
+            "width": 976,
+            "height": 281
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-title",
+          "safeRect": {
+            "x": 113,
+            "y": 344,
+            "width": 852,
+            "height": 63
+          },
+          "containerRect": {
+            "x": 54,
+            "y": 324,
+            "width": 976,
+            "height": 402
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-0",
+          "safeRect": {
+            "x": 92,
+            "y": 447,
+            "width": 240,
+            "height": 138
+          },
+          "containerRect": {
+            "x": 72,
+            "y": 423,
+            "width": 279,
+            "height": 183
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-1",
+          "safeRect": {
+            "x": 418,
+            "y": 447,
+            "width": 240,
+            "height": 138
+          },
+          "containerRect": {
+            "x": 398,
+            "y": 423,
+            "width": 281,
+            "height": 183
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "condition-2",
+          "safeRect": {
+            "x": 749,
+            "y": 447,
+            "width": 240,
+            "height": 138
+          },
+          "containerRect": {
+            "x": 729,
+            "y": 423,
+            "width": 279,
+            "height": 183
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "result",
+          "safeRect": {
+            "x": 232,
+            "y": 656,
+            "width": 614,
+            "height": 48
+          },
+          "containerRect": {
+            "x": 54,
+            "y": 324,
+            "width": 976,
+            "height": 402
+          },
+          "horizontal": "center"
+        },
+        {
+          "id": "reward",
+          "safeRect": {
+            "x": 234,
+            "y": 750,
+            "width": 723,
+            "height": 86
+          },
+          "containerRect": {
+            "x": 54,
+            "y": 739,
+            "width": 976,
+            "height": 112
+          },
+          "horizontal": "center"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 塔主大人",
+  "stage": "delivered",
+  "revision": "tazhu-sand-r2",
+  "contentVerified": true,
+  "contentVerificationBasis": "四档价目、套餐权益、奖励与规则逐项核对；9格红仅加188w，不叠加；三幻神特别奖励整单只计一次已由用户确认。",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "复用已确认兴安电竞奶白、雾蓝、海军蓝及绝密暖金风格",
+      "paletteRevision": {
+        "status": "user-directed",
+        "basis": "用户要求：底图背景颜色应该改成和巴克什的黄沙一致的颜色；按明确修改指令完成环境与底纹配色。"
+      }
+    },
+    "illustration": {
+      "status": "approved-reference",
+      "basis": "复用技能内已确认物资系列蜂医、灰鼠、开箱及撤离背景；本轮未生成新人物",
+      "source": "assets/backgrounds/poster-gold.png"
+    },
+    "redRewards": {
+      "status": "confirmed",
+      "basis": "用户回复：只加188w；同一9格红不叠加6格奖励"
+    },
+    "phantomFrequency": {
+      "status": "confirmed",
+      "question": "整单三幻神合计一次，还是每种各一次？",
+      "basis": "用户明确回复：整单一次"
+    },
+    "background": {
+      "status": "approved",
+      "overview": "review/background-overview.png",
+      "basis": "用户在本轮无字底图展示后回复：确认，继续填字",
+      "paletteRevision": {
+        "status": "user-directed",
+        "basis": "本轮仅调整色彩及环境色调，沿用已确认分区和排版；用户已明确授权此修改。",
+        "overview": "review/background-overview-sand-v1.png"
+      }
+    },
+    "decorativeProps": {
+      "status": "approved",
+      "basis": "用户在新增三幻神与保险箱贴图展示后回复：确认，加入海报",
+      "file": "01-illustrations/tazhu-prop-atlas-v1.png",
+      "overview": "review/prop-overview-v1.png"
+    },
+    "cover": {
+      "status": "approved-reference",
+      "basis": "用户指出缺少封面；直接复用本轮已确认黄沙美术与三幻神/保险贴图，只新增封面矢量排版。"
+    }
+  },
+  "plannedDeliverables": [
+    "塔主大人 · 16:9黄沙封面",
+    "端游 · 绝密完整价目与规则",
+    "手游 · 绝密完整价目与规则",
+    "端游 / 手游 · 3:4 四档价目广告"
+  ],
+  "layoutInvariants": [
+    "仅绝密，不输出机密",
+    "端游688r/988r，手游588r/888r；保底2188w/3288w",
+    "低档1张总裁卡、8次沙色保险、10次普通大保险；高档另含1张地下金库卡、10次沙色保险、20次普通大保险",
+    "累计保底必须成功撤离、击杀≥4人且撤离收益＞588w",
+    "未达标物资白吃但开的卡和保险仍计次数；失败对局不计次数",
+    "红物资成功带出即加保底，与撤离结果无关",
+    "正文常规字重，重点真实粗体；r/w固定单位列",
+    "三幻神特别奖励整单合计只计算一次；同一红物资不叠加6格与9格奖励"
+  ],
+  "nextStep": "已完成：补齐16:9封面；封面、端游、手游及四档广告共四张，正式输出通过复检并重新打包。",
+  "backgrounds": {
+    "poster": "assets/backgrounds/poster-tazhu-sand-v1.png",
+    "social": "assets/backgrounds/social-tazhu-sand-v1.png",
+    "cover": "assets/backgrounds/cover-tazhu-sand-v1.png"
+  },
+  "backgroundMethod": "按用户要求，通过内置image_gen将原雾蓝环境编辑为巴克什黄沙色。保留新编辑原图809×1944，构图归一化为809×1942后裁取页头、边景和页尾，合成809×2740详细页及1086×1448广告背景；正文区用浅沙色矢量卡片。道具作为独立原生透明PNG嵌入SVG，文字按目标尺寸由矢量渲染。",
+  "nativeIllustrationSource": {
+    "width": 809,
+    "height": 1942
+  },
+  "backgroundReview": "review/background-overview-sand-v1.png",
+  "lastRenderedPages": [
+    "cover",
+    "desktop-absolute",
+    "mobile-absolute",
+    "social"
+  ],
+  "typesettingReview": "review/typesetting-overview.png",
+  "visualQA": "review/visual-qa.md",
+  "decorativeIllustration": {
+    "provider": "built-in image_gen",
+    "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0ebce-b56a-7963-bc9e-456cd53ecfc3\\exec-c598c65f-12a9-49b6-978e-6650f0cd8ee1.png",
+    "file": "01-illustrations/tazhu-prop-atlas-v1.png",
+    "nativeWidth": 1536,
+    "nativeHeight": 1024,
+    "hasAlpha": true,
+    "metadata": "01-illustrations/prop-metadata.json",
+    "prompt": "01-illustrations/prompts.md"
+  },
+  "visualQAStatus": "passed",
+  "visualQABasis": "新增封面实际PNG和390px手机预览已检查：品牌、标题、模式与卖点在左侧安全文字区居中，主角色及道具完整，正文没有须知或结算例外；标题与模式条、卖点票签留白修正后重新检查。原三张黄沙海报沿用已通过版本，缩字、文本重叠和文图碰撞均为0。",
+  "finalOverview": "review/final-overview-sand-r2.png",
+  "exportDimensions": {
+    "cover": {
+      "width": 3200,
+      "height": 1800
+    },
+    "detailed": {
+      "width": 3200,
+      "height": 10838
+    },
+    "social": {
+      "width": 2400,
+      "height": 3200
+    }
+  },
+  "sandBackground": {
+    "provider": "built-in image_gen",
+    "file": "01-illustrations/tazhu-sand-background-v1.png",
+    "nativeWidth": 809,
+    "nativeHeight": 1944,
+    "compositionCoordinates": {
+      "width": 809,
+      "height": 1942
+    },
+    "prompt": "01-illustrations/prompts.md",
+    "editTarget": "assets/backgrounds/poster-gold.png"
+  },
+  "cover": {
+    "source": "01-illustrations/tazhu-sand-background-v1.png",
+    "nativeHeroCrop": {
+      "width": 809,
+      "height": 390
+    },
+    "backgroundCanvas": {
+      "width": 1672,
+      "height": 941
+    },
+    "textCenterX": 326,
+    "content": "品牌、玩法、端游/手游、绝密、刷卡开保及累计物资保底"
+  }
+}

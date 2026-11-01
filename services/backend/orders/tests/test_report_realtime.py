@@ -135,7 +135,9 @@ class ReportAuditRealtimeTest(ReportFixtures, APITestCase):
         self.assertEqual(report.status, ProviderReport.Status.APPROVED)
         self.assertIsNone(order.settled_at)
         self.assertFalse(Transaction.objects.filter(order=order, tx_type=Transaction.TxType.INCOME).exists())
-        self.assertCountEqual(self.layer.sent, self.notifications(report, self.account))
+        report_events = [item for item in self.layer.sent if item[1]['type'] == 'report_status_update']
+        self.assertCountEqual(report_events, self.notifications(report, self.account))
+        self.assertTrue(any(event['type'] == 'order_status_update' for _, event in self.layer.sent))
 
     def test_rolled_back_audit_does_not_notify_or_change_status(self):
         for linked in (True, False):
@@ -282,7 +284,9 @@ class ProviderReportWriteRealtimeTest(ReportFixtures, APITestCase):
                 report.refresh_from_db()
                 self.assertEqual(report.status, ProviderReport.Status.PENDING)
                 self.assertIsNotNone(report.submitted_at)
-                self.assertCountEqual(self.layer.sent, self.notifications(report, self.account))
+                report_events = [item for item in self.layer.sent if item[1]['type'] == 'report_status_update']
+                self.assertCountEqual(report_events, self.notifications(report, self.account))
+                self.assertTrue(any(event['type'] == 'order_status_update' for _, event in self.layer.sent))
                 self.layer.sent.clear()
                 with self.captureOnCommitCallbacks(execute=True):
                     repeated = self.client.post(f'/api/wallet/reports/{report.pk}/submit/', {}).data
@@ -427,7 +431,9 @@ class ReportConsumerTest(ReportFixtures, TransactionTestCase):
                 self.assertEqual(await socket.receive_json_from(), {'type': 'pong'})
                 membership.is_active = False
                 await database_sync_to_async(membership.save)(update_fields=['is_active'])
-                await get_channel_layer().group_send('report_reviewers', self.event(report))
+                # The heartbeat removed the revoked subscription; the next
+                # heartbeat still closes the now-inactive account's socket.
+                await socket.send_json_to({'type': 'ping'})
                 self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 4401})
             finally:
                 await socket.disconnect()

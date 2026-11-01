@@ -4,6 +4,7 @@ from .reservation_views import (
     ReservationCancelView,
     ReservationConfirmView,
     ReservationConvertView,
+    ReservationQuoteView,
     ReservationDetailView,
     ReservationListCreateView,
     ReservationRejectView,
@@ -13,8 +14,10 @@ from .views import (
     CancelOrderView,
     CompleteOrderView,
     CreateOrderView,
+    ResolveOrderRequestView,
     EvaluateOrderView,
     FavoriteListView,
+    FavoriteRemoveView,
     FavoriteToggleView,
     GameCategoryListView,
     GiftContextView,
@@ -36,8 +39,9 @@ from .views import (
 )
 
 from .gameplay_views import GameplayListView
+from .gift_receipts import GiftReceiptView
 
-from .applications import ApplicationActionView, SelectApplicationView, TeammateListView
+from .applications import ApplicationActionView, MyApplicationDetailView, MyApplicationListView, SelectApplicationView, TeammateListView
 
 from .traffic_views import TrafficStatusView, NetworkReportView
 
@@ -49,6 +53,8 @@ urlpatterns = [
     path('network-report/', NetworkReportView.as_view()),
     path('orders/<int:order_id>/applications/<int:application_id>/action/', ApplicationActionView.as_view()),
     path('orders/<int:order_id>/applications/<int:application_id>/select/', SelectApplicationView.as_view()),
+    path('orders/<int:order_id>/applications/<int:application_id>/mine/', MyApplicationDetailView.as_view()),
+    path('orders/<int:order_id>/applications/mine/', MyApplicationListView.as_view()),
     path('orders/<int:order_id>/teammates/', TeammateListView.as_view()),
     path('gameplays/', GameplayListView.as_view()),
     path('game-categories/', GameCategoryListView.as_view()),
@@ -57,10 +63,13 @@ urlpatterns = [
     path('services/<int:service_id>/evaluations/', ServiceEvaluationListView.as_view()),
     path('favorites/', FavoriteListView.as_view()),
     path('favorites/toggle/', FavoriteToggleView.as_view()),
+    path('favorites/<int:service_id>/', FavoriteRemoveView.as_view()),
     path('rankings/', RankingView.as_view()),
     path('create/', CreateOrderView.as_view()),
+    path('create/resolve/', ResolveOrderRequestView.as_view()),
     path('quote/', OrderQuoteView.as_view()),
     path('gifts/context/', GiftContextView.as_view()),
+    path('gifts/receipt/', GiftReceiptView.as_view()),
     path('gifts/send/', TipOrderView.as_view()),
     path('orders/', OrderListView.as_view(), name='order-list'),
     path('orders/<int:order_id>/', OrderDetailView.as_view(), name='order-detail'),
@@ -80,6 +89,7 @@ urlpatterns = [
     path('reservations/<int:reservation_id>/reject/', ReservationRejectView.as_view()),
     path('reservations/<int:reservation_id>/cancel/', ReservationCancelView.as_view()),
     path('reservations/<int:reservation_id>/convert/', ReservationConvertView.as_view()),
+    path('reservations/<int:reservation_id>/quote/', ReservationQuoteView.as_view()),
     path('evaluate/', EvaluateOrderView.as_view()),
     path('evaluations/mine/', MyEvaluationListView.as_view()),
     path('evaluations/<int:evaluation_id>/reply/', ReplyEvaluationView.as_view()),

@@ -1,0 +1,16 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+const project=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const state=JSON.parse(await fs.readFile(path.join(project,'campaign-state.json'),'utf8'));
+state.vectorDelivery={...state.vectorDelivery,status:'completed',overview:'review/updated-overview.png',review:'review/index.html',visualQA:'review/visual-qa.md',audit:'review/price-and-layout-audit.json',completedAt:'2026-10-09',rendering:'Typography rendered from vector at final export dimensions over approved raster backgrounds'};
+state.nextStep='三张受影响页面已完成成图验收。后续改价从本项目content.json与适配器继续。';
+state.package='campaign-challenge-mobile-price-r2-20261009.zip';
+await fs.writeFile(path.join(project,'campaign-state.json'),JSON.stringify(state,null,2));
+const manifest=JSON.parse(await fs.readFile(path.join(project,'output/manifest.json'),'utf8'));
+const files=manifest.flatMap(p=>[p.png,p.outlinedSVG,p.editableSVG]);
+const hashes={};
+for(const file of files)hashes[file]=createHash('sha256').update(await fs.readFile(path.join(project,file))).digest('hex');
+await fs.writeFile(path.join(project,'review/verified-delivery-hashes.json'),JSON.stringify(hashes,null,2));
+console.log('Recorded visual approval and '+files.length+' reviewed file hashes.');

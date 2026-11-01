@@ -1,0 +1,45 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "preset": "material-v3-approved-r2",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "2026-10-09：手游采用用户附件表格 J 列新价格与 E 列保底按 F 列模式逐行对应；H 列为旧档位标签，不作为现售价。端游价目、活动、保障与须知按本轮附图沿用。",
+  "deliveryScope": {
+    "pageIds": [
+      "mobile-absolute",
+      "mobile-secret",
+      "social"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户点名更新常规物资单广告页及两张手游价格表；广告含两端四类价目，端游按附图沿用。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "本轮附件 prior-social.png 上方两卡与历史 content.json 逐行一致，按用户仅改手游的范围沿用。",
+    "mobile": "references/new-mobile-prices.png：J列新价格与E列保底、F列模式逐行对应，共12档。"
+  },
+  "approvals": {
+    "illustration": {
+      "status": "approved-reuse",
+      "basis": "用户提供的现有三张成图"
+    },
+    "background": {
+      "status": "approved-reuse",
+      "basis": "只改价目，复用原项目相同底图"
+    }
+  },
+  "revision": "r3-price-update",
+  "date": "2026-10-09",
+  "priorProject": "G:\\Github\\XA\\design\\club-material-campaign-v3-handdrawn",
+  "lastRenderedPages": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ]
+}

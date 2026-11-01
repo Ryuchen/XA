@@ -1,0 +1,13 @@
+{
+  "provider": "built-in image_gen",
+  "approvedHero": "../01-illustrations/bank-medic-mouse-v1.png",
+  "prompts": ["prompts.md", "refinement-prompts.md"],
+  "outputs": {
+    "poster-gold-v1.png": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-33fb1c24-7188-43e1-abe0-895be8483871.png",
+    "poster-gold.png": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-c0a4e4ca-48bc-4f2e-882a-307827ae35da.png",
+    "poster-teal.png": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-47f74b8d-540f-44d7-8a9d-209192825f25.png",
+    "cover.png": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-d1b53a21-c7c1-43c4-b096-9a33346ca85b.png",
+    "social.png": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-89795cb7-efa6-42a3-8893-8133d883119b.png"
+  },
+  "notes": "All selected originals copied to project. Gold-v1 retained as draft. Final resolution metadata is in ../review/export-manifest.json."
+}

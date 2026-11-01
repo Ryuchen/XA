@@ -1,0 +1,58 @@
+{
+  "revision": "excess-secret-maps-r3-20261009",
+  "priceAndOtherRulesPreserved": true,
+  "records": [
+    {
+      "pageId": "desktop-secret",
+      "png": "output/png/desktop-secret.png",
+      "width": 3200,
+      "height": 7200,
+      "container": {
+        "left": 298,
+        "top": 1294,
+        "right": 777,
+        "bottom": 1351
+      },
+      "text": {
+        "left": 298,
+        "top": 1298.72128889,
+        "right": 550.82705104,
+        "bottom": 1346.24501979
+      },
+      "topMargin": 4.721288890000096,
+      "bottomMargin": 4.754980209999985,
+      "centerDelta": 0.016845659999944473,
+      "bodyLines": [
+        "地图：航天 / 巴克什；下单先与客服确认。",
+        "中途换图需协商。航天含核心区金红卡；",
+        "巴克什含塔内和博物馆金红卡。"
+      ]
+    },
+    {
+      "pageId": "mobile-secret",
+      "png": "output/png/mobile-secret.png",
+      "width": 3200,
+      "height": 7200,
+      "container": {
+        "left": 298,
+        "top": 1294,
+        "right": 777,
+        "bottom": 1351
+      },
+      "text": {
+        "left": 298,
+        "top": 1298.72128889,
+        "right": 550.82705104,
+        "bottom": 1346.24501979
+      },
+      "topMargin": 4.721288890000096,
+      "bottomMargin": 4.754980209999985,
+      "centerDelta": 0.016845659999944473,
+      "bodyLines": [
+        "地图：航天 / 巴克什；下单先与客服确认。",
+        "中途换图需协商。航天含核心区金红卡；",
+        "巴克什含塔内和博物馆金红卡。"
+      ]
+    }
+  ]
+}

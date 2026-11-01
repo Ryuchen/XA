@@ -150,7 +150,8 @@ def reverse_refund_benefits(order, refund, operator):
     month = re.compile(rf'^vip-month:{account.pk}:{account.business_cycle}:\d{{4}}-\d{{2}}:(\d+):')
     monthly_count = {0:0,1:0,2:1,3:2,4:4,5:10,6:10}.get(level,0)
     for row in UserCoupon.objects.select_for_update().filter(account=account,business_cycle=account.business_cycle).select_related('coupon'):
-        key = row.coupon.grant_key
+        # Public/admin-created coupons do not have a VIP grant key.
+        key = row.coupon.grant_key or ''
         match, monthly = upgrade.match(key), month.match(key)
         revoke = bool((match and int(match[1]) > level) or (monthly and int(monthly[1]) >= monthly_count))
         revoke |= level == 0 and key.startswith(f'vip-safe:{account.pk}:{account.business_cycle}:')

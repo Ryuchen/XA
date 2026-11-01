@@ -1,6 +1,7 @@
 @use './tokens.scss';
 @use './controls.scss';
 @use './modals.scss';
+@use './ocean.scss';
 
 html,
 body,
@@ -59,7 +60,7 @@ textarea {
 }
 
 /* ===== 将设计 token 映射到 Element Plus 语义变量 ===== */
-:root, html.dark {
+html:root, html:root.dark {
   /* 与三端共享的中国传统蓝色色阶保持一致。 */
   --el-color-primary: var(--primary);
   --el-color-primary-light-3: color-mix(in srgb, var(--primary) 70%, var(--card));
@@ -198,14 +199,14 @@ html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
 }
 
 .el-table th.el-table__cell {
-  height: 46px;
+  height: 36px;
   color: var(--text-500);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-.el-table td.el-table__cell { height: 50px; }
+.el-table td.el-table__cell { height: 40px; }
 .el-table .cell { line-height: 1.6; }
 .el-table td.el-table__cell .cell:has(> .el-button) {
   display: flex;

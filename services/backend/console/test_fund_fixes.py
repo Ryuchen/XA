@@ -60,9 +60,11 @@ class WithdrawTaxAccountingTest(APITestCase):
 
     def _approve(self, withdraw, reference='WX-PAYOUT-001'):
         self.client.force_authenticate(self.admin)
+        claim = self.client.post(f'/api/admin/withdrawals/{withdraw.id}/claim/').data
+        self.assertEqual(claim['code'], 0)
         res = self.client.post(
             f'/api/admin/withdrawals/{withdraw.id}/approve/',
-            {'payout_reference': reference},
+            {'payout_reference': reference, 'expected_claimed_at': claim['data']['claimed_at']},
         )
         self.assertEqual(res.data['code'], 0)
         return res
@@ -138,10 +140,12 @@ class WithdrawTaxAccountingTest(APITestCase):
         msg = Message.objects.filter(
             recipient=self.provider, title='提现审核通过',
         ).latest('id')
-        # 实际到账 1800 兴安币，税前 2000 兴安币
-        self.assertIn('1800', msg.preview)
+        # 实际登记打款 180 元，折合 1800 兴安币；税前 2000 兴安币。
+        self.assertIn('人民币 ¥180.00', msg.preview)
         self.assertIn('1800', msg.detail)
         self.assertIn('代扣税', msg.detail)
+        self.assertIn('已登记打款', msg.detail)
+        self.assertNotIn('将结算', msg.detail)
 
     def test_provider_withdraw_transaction_records_tax_breakdown(self):
         self._set_tax_rate(10)
@@ -160,9 +164,11 @@ class WithdrawTaxAccountingTest(APITestCase):
         platform_before = get_platform_wallet().balance
 
         self.client.force_authenticate(self.admin)
+        claim = self.client.post(f'/api/admin/withdrawals/{withdraw.id}/claim/').data
+        self.assertEqual(claim['code'], 0)
         res = self.client.post(
             f'/api/admin/withdrawals/{withdraw.id}/reject/',
-            {'audit_remark': '收款信息有误'},
+            {'audit_remark': '收款信息有误', 'expected_claimed_at': claim['data']['claimed_at']},
         )
 
         self.assertEqual(res.data['code'], 0)

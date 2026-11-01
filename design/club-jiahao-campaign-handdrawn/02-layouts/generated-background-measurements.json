@@ -1,0 +1,287 @@
+{
+  "status": "visual-estimate-for-next-stage",
+  "note": "Coordinates are native-image pixel estimates from visual inspection, not final text placement. Re-measure against actual backgrounds when typesetting.",
+  "poster": {
+    "goldNative": [
+      836,
+      1881
+    ],
+    "tealNative": [
+      836,
+      1882
+    ],
+    "titleSafe": [
+      55,
+      75,
+      280,
+      183
+    ],
+    "platformPill": [
+      48,
+      269,
+      288,
+      47
+    ],
+    "flowStrip": [
+      48,
+      344,
+      317,
+      54
+    ],
+    "tableHeader": [
+      48,
+      417,
+      741,
+      48
+    ],
+    "tableRowEdges": [
+      465,
+      538,
+      611,
+      685,
+      759
+    ],
+    "tableLeftColumn": [
+      65,
+      375
+    ],
+    "tableRightColumn": [
+      450,
+      758
+    ],
+    "guaranteeTextSafe": [
+      212,
+      790,
+      550,
+      127
+    ],
+    "clearanceHeader": [
+      48,
+      948,
+      741,
+      46
+    ],
+    "clearanceCards": [
+      [
+        48,
+        1002,
+        352,
+        188
+      ],
+      [
+        436,
+        1002,
+        353,
+        188
+      ]
+    ],
+    "standardsHeader": [
+      48,
+      1207,
+      741,
+      44
+    ],
+    "standardsCards": [
+      [
+        48,
+        1262,
+        171,
+        174
+      ],
+      [
+        239,
+        1262,
+        169,
+        174
+      ],
+      [
+        429,
+        1262,
+        169,
+        174
+      ],
+      [
+        618,
+        1262,
+        170,
+        174
+      ]
+    ],
+    "notesHeader": [
+      48,
+      1453,
+      741,
+      44
+    ],
+    "notesRowEdges": [
+      1506,
+      1568,
+      1642,
+      1718
+    ],
+    "notesTextSafeX": [
+      172,
+      764
+    ],
+    "footer": [
+      208,
+      1741,
+      420,
+      39
+    ]
+  },
+  "cover": {
+    "native": [
+      1672,
+      941
+    ],
+    "titleSafe": [
+      120,
+      120,
+      560,
+      440
+    ],
+    "subtitlePill": [
+      48,
+      626,
+      640,
+      68
+    ]
+  },
+  "social": {
+    "native": [
+      1086,
+      1448
+    ],
+    "titleSafe": [
+      70,
+      70,
+      380,
+      170
+    ],
+    "introStrip": [
+      50,
+      323,
+      990,
+      58
+    ],
+    "priceCards": [
+      {
+        "platform": "desktop",
+        "mode": "absolute",
+        "x": 53,
+        "w": 471,
+        "modeHeader": [
+          397,
+          439
+        ],
+        "tableHeader": [
+          439,
+          480
+        ],
+        "rows": [
+          480,
+          539,
+          601,
+          662,
+          725
+        ]
+      },
+      {
+        "platform": "desktop",
+        "mode": "secret",
+        "x": 562,
+        "w": 471,
+        "modeHeader": [
+          397,
+          439
+        ],
+        "tableHeader": [
+          439,
+          480
+        ],
+        "rows": [
+          480,
+          539,
+          601,
+          662,
+          725
+        ]
+      },
+      {
+        "platform": "mobile",
+        "mode": "absolute",
+        "x": 53,
+        "w": 471,
+        "modeHeader": [
+          740,
+          782
+        ],
+        "tableHeader": [
+          782,
+          823
+        ],
+        "rows": [
+          823,
+          884,
+          945,
+          1007,
+          1068
+        ]
+      },
+      {
+        "platform": "mobile",
+        "mode": "secret",
+        "x": 562,
+        "w": 471,
+        "modeHeader": [
+          740,
+          782
+        ],
+        "tableHeader": [
+          782,
+          823
+        ],
+        "rows": [
+          823,
+          884,
+          945,
+          1007,
+          1068
+        ]
+      }
+    ],
+    "guaranteeHeaderSafe": [
+      166,
+      1096,
+      835,
+      47
+    ],
+    "guaranteeChips": [
+      [
+        84,
+        1148,
+        430,
+        67
+      ],
+      [
+        572,
+        1148,
+        430,
+        67
+      ]
+    ],
+    "guaranteeConditionsSafe": [
+      90,
+      1230,
+      911,
+      100
+    ],
+    "footer": [
+      306,
+      1376,
+      475,
+      20
+    ]
+  }
+}

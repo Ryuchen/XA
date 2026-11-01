@@ -1,0 +1,37 @@
+{
+  "checks": [
+    {
+      "id": "brand",
+      "inside": true,
+      "dx": -182.82801386999998,
+      "dy": -0.5
+    },
+    {
+      "id": "headline",
+      "inside": true,
+      "dx": -21.6125496568975,
+      "dy": 1.5
+    },
+    {
+      "id": "subtitle",
+      "inside": true,
+      "dx": -187.0475195,
+      "dy": 0
+    },
+    {
+      "id": "platform",
+      "inside": true,
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "id": "activity",
+      "inside": true,
+      "dx": 0,
+      "dy": -0.9463632169999983
+    }
+  ],
+  "offerBaseline": true,
+  "noNotices": true,
+  "overlaps": 0
+}

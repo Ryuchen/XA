@@ -1,0 +1,47 @@
+/* Ocean / milk product surfaces. All colors come from shared semantic tokens. */
+html { scroll-padding-top: calc(144px + env(safe-area-inset-top, 0px)); }
+body .ap-shell .ap-sidebar { background: var(--card); }
+body .ap-shell .ap-nav-item { transition: background-color var(--xa-motion-fast), color var(--xa-motion-fast), transform var(--xa-motion-fast); }
+body .ap-shell .ap-nav-item[data-active='true'] { box-shadow: var(--xa-shadow-card); }
+body .ap-shell .ap-workspace-nav {
+  position: sticky; top: 76px; z-index: 8; flex-wrap: nowrap; overflow-x: auto;
+  scroll-snap-type: x proximity; scroll-padding-inline: 6px; -webkit-overflow-scrolling: touch;
+  box-shadow: var(--xa-shadow-card); border-radius: var(--xa-radius-card);
+}
+body .ap-shell .ap-workspace-nav a { position: relative; flex-shrink: 0; scroll-snap-align: start; min-height: 44px; }
+body .ap-shell .ap-workspace-nav a::after {
+  content: ''; position: absolute; inset: auto 16px 3px; height: 2px; border-radius: 2px;
+  background: var(--primary); transform: scaleX(0); transition: transform var(--xa-motion-base);
+}
+body .ap-shell .ap-workspace-nav a[data-active='true']::after { transform: scaleX(1); }
+body .ap-card, body .el-card, body .ap-kpi { border-radius: var(--xa-radius-card); box-shadow: var(--xa-shadow-card); }
+body .el-button, body .ap-icon-btn, body .ap-search { transition: background-color var(--xa-motion-fast), border-color var(--xa-motion-fast), transform var(--xa-motion-fast), box-shadow var(--xa-motion-fast); }
+body .el-button:not(.is-disabled):active, body .ap-icon-btn:active { transform: scale(.975); }
+body .el-button--primary:not(.is-link):not(.is-text):not(.is-disabled) { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+body .el-button--primary:not(.is-link):not(.is-text):not(.is-disabled):hover { background: var(--xa-color-primary-hover); }
+body .el-button--primary.is-disabled:not(.is-link):not(.is-text) { background: var(--xa-color-surface-subtle); border-color: var(--border); color: var(--xa-color-text-secondary); }
+body .el-checkbox__inner { border-radius: 4px; transition: background-color var(--xa-motion-fast), border-color var(--xa-motion-fast), box-shadow var(--xa-motion-fast); }
+body .el-checkbox__input.is-checked .el-checkbox__inner { box-shadow: 0 0 0 3px var(--xa-color-primary-soft); }
+body .el-table { --el-table-current-row-bg-color: var(--xa-color-primary-soft); --el-table-row-hover-bg-color: var(--xa-color-surface-subtle); border-radius: var(--xa-radius-control); }
+body .el-table .el-table__body tr.el-table__row.selected-row > td.el-table__cell { background: var(--xa-color-primary-soft); }
+body .el-table .el-table-column--selection .cell { display: flex; justify-content: center; padding: 0; }
+body .el-table .el-table-column--selection .el-checkbox { justify-content: center; width: var(--control-height-sm); min-height: var(--control-height-sm); margin: 0; }
+.table-selection-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px 16px; margin: 12px 0; border: 1px solid var(--border); border-radius: var(--xa-radius-control); background: var(--card); color: var(--muted-foreground); }
+.table-selection-bar > div { display: flex; gap: 8px; }
+body .el-drawer__header { padding: 24px; margin-bottom: 0; border-bottom: 1px solid var(--border); }
+body .el-drawer__body { background: var(--background); padding: 24px; }
+body .el-dialog { border-radius: var(--xa-radius-card); box-shadow: var(--xa-shadow-float); }
+body .el-alert { border-radius: var(--xa-radius-control); line-height: 1.6; }
+body .el-message { border-radius: var(--xa-radius-control); box-shadow: var(--xa-shadow-float); }
+.ocean-page-enter-active { transition: opacity var(--xa-motion-base), transform var(--xa-motion-base); }
+.ocean-page-leave-active { transition: opacity var(--xa-motion-fast); }
+.ocean-page-enter-from { opacity: 0; transform: translateY(8px); }
+.ocean-page-leave-to { opacity: 0; }
+@media (max-width: 720px) {
+  body .ap-shell .ap-workspace-nav { top: calc(76px + env(safe-area-inset-top, 0px)); }
+  .table-selection-bar { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ocean-page-enter-active, .ocean-page-leave-active, body .el-button, body .ap-nav-item, body .ap-workspace-nav a::after { transition: none !important; }
+  .ocean-page-enter-from, body .el-button:not(.is-disabled):active { transform: none; }
+}

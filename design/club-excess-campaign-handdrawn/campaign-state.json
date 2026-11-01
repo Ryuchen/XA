@@ -1,0 +1,201 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 超额累计单",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "用户2026-10-09明确回复“删除核电站及对应房卡说明”，端手游机密版均删除地图列表及房卡条目中的核电站。两端价目继续沿用已核对源数据，手游188/388/588/788r对应188/488/888/1288w。其余已确认机制、条件和补偿继续沿用。",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "沿用既有兴安电竞二次元手绘、男性蜂医与灰鼠角色"
+    },
+    "mechanismAndRules": {
+      "status": "approved",
+      "basis": "用户回复：按此口径沿用，端手游一致"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在插画预览交付后回复：继续",
+      "file": "01-illustrations/excess-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户在六张底图交付后回复：继续，授权进入矢量填字阶段",
+      "overview": "review/background-overview.png",
+      "review": "review/backgrounds.html"
+    },
+    "secretMapRemoval": {
+      "status": "approved",
+      "date": "2026-10-09",
+      "basis": "用户明确选择：删除核电站及对应房卡说明",
+      "pageIds": [
+        "desktop-secret",
+        "mobile-secret"
+      ]
+    }
+  },
+  "plannedDeliverables": [
+    "端游·机密五档价目（删除核电站）",
+    "手游·机密四档价目（删除核电站）"
+  ],
+  "layoutInvariants": [
+    "标题统一更名为超额累计单",
+    "端游5档，手游4档；不能补假行、删档或套用银行四列表格",
+    "主价格表2列：订单价格、超额累计保底",
+    "价目表头整条深蓝，绝密暖金、机密薄荷青",
+    "r/w固定单位列，单位字高约数字65%至75%，每组文案垂直居中",
+    "单局超过门槛的部分计进度；全部带出物资归板板",
+    "成功撤离为计入前提，案例明确标为举例",
+    "不得沿用银行限局、超时追加或加仓机制，也不加入常规物资工作日活动"
+  ],
+  "revision": "excess-secret-maps-r3-20261009",
+  "nextStep": "本轮端手游两张机密版已删除核电站并完成实际PNG、手机总览及规则局部复检；后续继续复用源稿。",
+  "illustration": {
+    "file": "01-illustrations/excess-medic-mouse-v1.png",
+    "prompt": "01-illustrations/prompts.md",
+    "metadata": "01-illustrations/image-metadata.json",
+    "review": "review/illustration-overview.png",
+    "provider": "built-in image_gen"
+  },
+  "backgrounds": {
+    "desktop-absolute": "03-backgrounds/desktop-absolute.png",
+    "desktop-secret": "03-backgrounds/desktop-secret.png",
+    "mobile-absolute": "03-backgrounds/mobile-absolute.png",
+    "mobile-secret": "03-backgrounds/mobile-secret.png",
+    "cover": "03-backgrounds/cover.png",
+    "social": "03-backgrounds/social.png"
+  },
+  "exports": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游 · 绝密 · 五档",
+      "width": 3200,
+      "height": 7200,
+      "rows": 5,
+      "source": "03-backgrounds/desktop-absolute.png",
+      "file": "04-png-export/desktop-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1881,
+      "method": "内置 image_gen；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "desktop-secret",
+      "label": "端游 · 机密 · 五档",
+      "width": 3200,
+      "height": 7200,
+      "rows": 5,
+      "source": "03-backgrounds/desktop-secret.png",
+      "file": "04-png-export/desktop-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置 image_gen；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密 · 四档",
+      "width": 3200,
+      "height": 7200,
+      "rows": 4,
+      "source": "03-backgrounds/mobile-absolute.png",
+      "file": "04-png-export/mobile-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置 image_gen；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密 · 四档",
+      "width": 3200,
+      "height": 7200,
+      "rows": 4,
+      "source": "03-backgrounds/mobile-secret.png",
+      "file": "04-png-export/mobile-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置 image_gen；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "cover",
+      "label": "横版封面 · 16:9",
+      "width": 3200,
+      "height": 1800,
+      "source": "03-backgrounds/cover.png",
+      "file": "04-png-export/cover-background.png",
+      "nativeWidth": 1672,
+      "nativeHeight": 941,
+      "method": "内置 image_gen；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "social",
+      "label": "简洁宣发 · 3:4",
+      "width": 2400,
+      "height": 3200,
+      "source": "03-backgrounds/social.png",
+      "file": "04-png-export/social-background.png",
+      "nativeWidth": 1086,
+      "nativeHeight": 1448,
+      "method": "内置 image_gen；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    }
+  ],
+  "lastRenderedPages": [
+    "desktop-secret",
+    "mobile-secret"
+  ],
+  "vectorDelivery": {
+    "status": "completed",
+    "review": "review/index.html",
+    "overview": "review/maps-r3-overview.png",
+    "visualQA": "review/visual-qa.md",
+    "formats": [
+      "PNG",
+      "editable text SVG",
+      "outlined SVG"
+    ],
+    "pageIds": [
+      "desktop-secret",
+      "mobile-secret"
+    ],
+    "tierCount": 9,
+    "reviewFiles": [
+      "review/visual-qa.md",
+      "review/maps-r3-audit.json",
+      "review/maps-r3-overview.png",
+      "review/phone-390/desktop-secret.png",
+      "review/maps-r3-details/desktop-secret-maps.png",
+      "review/phone-390/mobile-secret.png",
+      "review/maps-r3-details/mobile-secret-maps.png"
+    ]
+  },
+  "revisionHistory": [
+    {
+      "revision": "excess-final-r1",
+      "package": "campaign-excess-final-r1.zip",
+      "basis": "18档价目以本轮文字为准；用户已确认门槛、成功撤离计入方式、物资归属、各模式须知及补偿端手游一致。放大原图后确认原文已写‘未超过门槛不计进度’，已向用户更正初次漏读说明；规则本身无需修改。"
+    },
+    {
+      "revision": "excess-mobile-price-r2-20261009",
+      "package": "campaign-excess-mobile-price-r2-20261009.zip",
+      "basis": "2026-10-09：手游机密与绝密按用户价格截图的新价格列更新为188/388/588/788r，对应超额累计保底188/488/888/1288w。广告中的端游价目沿用用户提供的现有广告和此前已确认源稿。 门槛、机制、补偿与下单须知沿用此前已确认内容。"
+    }
+  ],
+  "deliveryScope": {
+    "pageIds": [
+      "desktop-secret",
+      "mobile-secret"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户点名超额累计单机密版并提供端游、手游两张图，明确确认删除核电站及对应房卡说明，共2页。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "用户本轮广告截图 source-references/social-before-price-update-20261009.png 与此前已确认 content.json；端游价目继续沿用。",
+    "mobile": "用户本轮价格截图 source-references/mobile-price-update-20261009.png 的J列新价格，与E列超额累计保底逐行对应；绝密和机密一致。"
+  },
+  "package": "campaign-excess-secret-maps-r3-20261009.zip"
+}

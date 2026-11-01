@@ -1,3 +1,4 @@
+const { modal: themedModal } = require('../../core/ui');
 const auth = require('../../core/auth');
 const { request } = require('../../core/api');
 const { privatePage } = require('../../core/page');
@@ -21,6 +22,6 @@ Page(privatePage({
   bindWechat() { this.bind(); },
   phone(event) { if (event.detail.code) this.bind(event.detail.code); else toast('未授权手机号，绑定信息保持不变'); },
   support() { go('/pages/support/index'); },
-  logout() { wx.showModal({ title: '退出登录', content: '退出后可使用微信重新登录，钱包和订单仍会保留。', success: result => { if (result.confirm) { auth.clearSession(); wx.switchTab({ url: '/pages/mine/index' }); } } }); },
+  logout() { themedModal({ title: '退出登录', content: '退出后可使用微信重新登录，钱包和订单仍会保留。', success: result => { if (result.confirm) { auth.clearSession(); wx.switchTab({ url: '/pages/mine/index' }); } } }); },
   privacy() { if (wx.openPrivacyContract) wx.openPrivacyContract({ fail: () => toast('隐私保护指引暂未配置') }); },
 }));

@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-04",
+  "revision": "r2-wide",
+  "stage": "delivered",
+  "contentVerified": true,
+  "contentVerificationBasis": "参考价目原图核对后，按用户明确映射改名并逐格减10；已确认以现有兴安赔付优先及第11回合计半局。",
+  "deliveryScope": {
+    "pageIds": [
+      "blacktide"
+    ],
+    "platforms": [
+      "desktop"
+    ],
+    "basis": "用户要求整理为两倍宽的价目表；继续仅一张完整页面，时薪与按把价目并排，赔付、加价、红屏和结算分为两栏。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "用户本轮原图2，基础小时价与每把价各减10；不使用旧版男女价目。"
+  },
+  "approvals": {
+    "illustration": {
+      "status": "reused-existing",
+      "basis": "复用现有兴安黑潮爆破已使用的主题插画"
+    },
+    "background": {
+      "status": "derived-layout",
+      "basis": "现有插画与配色延续，依据本轮表格和规则组织矢量卡片。用户要求直接给出成图。"
+    },
+    "rules": {
+      "status": "user-confirmed",
+      "basis": [
+        "用户明确选择以现有兴安赔付为主，合并不冲突的加价、红屏、结算规则。",
+        "用户明确选择未满11回合不计，11回合及以上计半局。"
+      ]
+    }
+  },
+  "previousProject": "C:/Users/chenh/Documents/ChatGPT/兴安电竞玩法/兴安电竞-黑潮爆破-王者大师纠正-20260929",
+  "lastRenderedPages": [
+    "blacktide"
+  ],
+  "visualQA": "passed r2-wide; final PNG, full preview, native sections and two 390px column views inspected",
+  "finalDimensions": [
+    4800,
+    7622
+  ],
+  "illustrationNativeDimensions": [
+    1536,
+    1024
+  ],
+  "layoutRevision": {
+    "basis": "用户2026-10-04要求两倍宽",
+    "previous": [
+      1080,
+      6360
+    ],
+    "current": [
+      2160,
+      3430
+    ],
+    "outputPrevious": [
+      2400,
+      14133
+    ],
+    "outputCurrent": [
+      4800,
+      7622
+    ],
+    "widthMultiplier": 2,
+    "contentSha256": "cef0d4fc525634b79afc28d75bcad303f8c8da384031b08d9f270eb90f59966d",
+    "illustration": "复用现有1536×1024插画；页面中显示为800×533"
+  }
+}

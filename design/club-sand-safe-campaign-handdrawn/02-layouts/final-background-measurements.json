@@ -1,0 +1,417 @@
+{
+  "basis": "人工查看实际巴克什黄沙v3底图：面板、角色及道具主体位置延续v2；保留文字安全区，价目矢量重绘为两列。",
+  "native": {
+    "width": 836,
+    "height": 1881
+  },
+  "export": {
+    "width": 3200,
+    "height": 7200,
+    "method": "Lanczos3放大无字底图；正式文字将在下一阶段直接以目标尺寸矢量渲染。"
+  },
+  "header": {
+    "container": {
+      "x": 30,
+      "y": 92,
+      "width": 420,
+      "height": 194
+    },
+    "copy": {
+      "x": 55,
+      "y": 112,
+      "width": 344,
+      "height": 150
+    },
+    "illustrationBounds": {
+      "x": 421,
+      "y": 51,
+      "width": 389,
+      "height": 249
+    },
+    "safeGap": 22
+  },
+  "reward": {
+    "container": {
+      "x": 34,
+      "y": 309,
+      "width": 767,
+      "height": 170
+    },
+    "copy": {
+      "x": 60,
+      "y": 327,
+      "width": 528,
+      "height": 133
+    },
+    "reservedAccent": {
+      "x": 610,
+      "y": 310,
+      "width": 177,
+      "height": 168
+    }
+  },
+  "prices": {
+    "container": {
+      "x": 36,
+      "y": 491,
+      "width": 765,
+      "height": 374
+    },
+    "header": {
+      "x": 40,
+      "y": 497,
+      "width": 756,
+      "height": 53
+    },
+    "body": {
+      "x": 51,
+      "y": 555,
+      "width": 735,
+      "height": 300
+    },
+    "rowBounds": [
+      [
+        550,
+        612
+      ],
+      [
+        612,
+        674
+      ],
+      [
+        674,
+        736
+      ],
+      [
+        736,
+        799
+      ],
+      [
+        799,
+        863
+      ]
+    ],
+    "rowCenters": [
+      581,
+      643,
+      705,
+      767.5,
+      831
+    ],
+    "columnBounds": [
+      [
+        52,
+        407
+      ],
+      [
+        436,
+        786
+      ]
+    ],
+    "columns": [
+      {
+        "label": "完成目标",
+        "center": 229
+      },
+      {
+        "label": "订单价格",
+        "center": 611
+      }
+    ],
+    "count": 5
+  },
+  "objectives": {
+    "container": {
+      "x": 36,
+      "y": 878,
+      "width": 764,
+      "height": 371
+    },
+    "title": {
+      "x": 176,
+      "y": 894,
+      "width": 598,
+      "height": 74
+    },
+    "rows": [
+      {
+        "x": 75,
+        "y": 995,
+        "width": 685,
+        "height": 47
+      },
+      {
+        "x": 75,
+        "y": 1073,
+        "width": 685,
+        "height": 48
+      },
+      {
+        "x": 76,
+        "y": 1151,
+        "width": 686,
+        "height": 67
+      }
+    ],
+    "stripBounds": [
+      [
+        983,
+        1052
+      ],
+      [
+        1062,
+        1133
+      ],
+      [
+        1143,
+        1226
+      ]
+    ]
+  },
+  "notices": {
+    "container": {
+      "x": 36,
+      "y": 1262,
+      "width": 764,
+      "height": 408
+    },
+    "title": {
+      "x": 62,
+      "y": 1283,
+      "width": 711,
+      "height": 38
+    },
+    "groups": [
+      {
+        "x": 64,
+        "y": 1330,
+        "width": 710,
+        "height": 70
+      },
+      {
+        "x": 64,
+        "y": 1423,
+        "width": 710,
+        "height": 75
+      },
+      {
+        "x": 64,
+        "y": 1525,
+        "width": 710,
+        "height": 77
+      },
+      {
+        "x": 64,
+        "y": 1626,
+        "width": 710,
+        "height": 35
+      }
+    ],
+    "separatorY": [
+      1408,
+      1510,
+      1617
+    ]
+  },
+  "plannedType": {
+    "body": 31,
+    "bodyLineHeight": 37,
+    "priceNumber": 48,
+    "priceUnit": 42,
+    "rulePhoneEquivalent": 14.46,
+    "pricePhoneEquivalent": 22.39
+  },
+  "layoutCheck": {
+    "priceRows": 5,
+    "priceColumns": 2,
+    "continuousNavyHeader": true,
+    "objectiveStrips": 3,
+    "noticeGroups": 4,
+    "textFree": true,
+    "approvedCharacterStyle": true
+  },
+  "reviewStatus": "remeasured-for-final-typesetting",
+  "version": "bakhsh-sand-v3-split",
+  "decorationBounds": {
+    "reward": {
+      "x": 610,
+      "y": 310,
+      "width": 177,
+      "height": 168
+    },
+    "objectiveSafe": {
+      "x": 28,
+      "y": 894,
+      "width": 136,
+      "height": 86
+    },
+    "footer": {
+      "x": 25,
+      "y": 1704,
+      "width": 810,
+      "height": 175
+    }
+  },
+  "cover": {
+    "background": "cover-standard-horizontal-v2.png",
+    "native": {
+      "width": 1672,
+      "height": 941
+    },
+    "export": {
+      "width": 3200,
+      "height": 1800
+    },
+    "basis": "实际检查新生成横版原图：版本条x92..724/y462..532，左侧标题区无框；右侧人物主体约x782..1455，鼠尾最左约x706/y578，下部道具x1310..1668。文字置于x90..724，奖励右沿不超过724；左侧底景用轻淡的矢量纸面承接文案。",
+    "headerCopy": {
+      "x": 90,
+      "y": 100,
+      "width": 634,
+      "height": 680
+    },
+    "brandBox": {
+      "x": 90,
+      "y": 100,
+      "width": 634,
+      "height": 68
+    },
+    "brandY": 134,
+    "titleBox": {
+      "x": 82,
+      "y": 180,
+      "width": 650,
+      "height": 144
+    },
+    "titleY": 252,
+    "challengeBox": {
+      "x": 90,
+      "y": 330,
+      "width": 634,
+      "height": 66
+    },
+    "modeBox": {
+      "x": 103,
+      "y": 466,
+      "width": 608,
+      "height": 62
+    },
+    "wishBoxes": [
+      {
+        "x": 90,
+        "y": 545,
+        "width": 634,
+        "height": 65
+      },
+      {
+        "x": 90,
+        "y": 613,
+        "width": 634,
+        "height": 66
+      },
+      {
+        "x": 82,
+        "y": 687,
+        "width": 650,
+        "height": 91
+      }
+    ],
+    "type": {
+      "brand": 54,
+      "title": 125,
+      "body": 62,
+      "choices": 62,
+      "reward": 90
+    },
+    "illustrationBounds": {
+      "x": 706,
+      "y": 164,
+      "width": 966,
+      "height": 737
+    },
+    "copySafeRight": 724,
+    "reviewCrops": [
+      [
+        "hero",
+        {
+          "x": 62,
+          "y": 90,
+          "width": 700,
+          "height": 453
+        }
+      ],
+      [
+        "reward",
+        {
+          "x": 62,
+          "y": 538,
+          "width": 700,
+          "height": 263
+        }
+      ]
+    ],
+    "rewardPaper": {
+      "x": 70,
+      "y": 530,
+      "width": 628,
+      "height": 274,
+      "safeGapToMouseTail": 8
+    }
+  },
+  "advert": {
+    "native": {
+      "width": 1086,
+      "height": 1448
+    },
+    "export": {
+      "width": 2400,
+      "height": 3200
+    },
+    "basis": "查看广告v2实测：标题板42..572/y90..377；表格32..1053/y411..823，五行；目标板32..1053/y836..1075；奖励板40..1053/y1088..1344，道具最左约615。",
+    "headerCopy": {
+      "x": 74,
+      "y": 124,
+      "width": 440,
+      "height": 230
+    },
+    "priceRowCenters": [
+      511,
+      579,
+      646.5,
+      713.5,
+      784.5
+    ],
+    "priceHeaderY": 447,
+    "coreRows": [
+      {
+        "x": 70,
+        "y": 866,
+        "width": 946,
+        "height": 54
+      },
+      {
+        "x": 70,
+        "y": 936,
+        "width": 946,
+        "height": 49
+      },
+      {
+        "x": 70,
+        "y": 996,
+        "width": 946,
+        "height": 56
+      }
+    ],
+    "rewardCopy": {
+      "x": 76,
+      "y": 1114,
+      "width": 518,
+      "height": 210
+    },
+    "reservedRewardDecor": {
+      "x": 615,
+      "y": 1108,
+      "width": 439,
+      "height": 285
+    }
+  }
+}

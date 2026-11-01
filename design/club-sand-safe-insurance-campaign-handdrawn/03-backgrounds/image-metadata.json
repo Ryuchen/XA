@@ -1,0 +1,41 @@
+[
+  {
+    "id": "poster",
+    "provider": "built-in image_gen",
+    "nativeWidth": 1024,
+    "nativeHeight": 1536,
+    "hasAlpha": false,
+    "original": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-0275c811-d993-4eac-95ec-73bb678a4fba.png",
+    "selectedSource": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-926281a4-d80c-41f1-8d34-cf8e96850753.png",
+    "file": "03-backgrounds/poster-v2.png",
+    "prompt": "03-backgrounds/prompt-poster.md",
+    "editPrompt": "03-backgrounds/reward-divider-edit-prompts.md",
+    "measurement": "02-layouts/generated-background-measurements.json"
+  },
+  {
+    "id": "cover",
+    "provider": "built-in image_gen",
+    "nativeWidth": 1672,
+    "nativeHeight": 941,
+    "hasAlpha": false,
+    "original": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-27c19267-fb81-4627-8667-cab19aaf74b0.png",
+    "selectedSource": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-27c19267-fb81-4627-8667-cab19aaf74b0.png",
+    "file": "03-backgrounds/cover-v1.png",
+    "prompt": "03-backgrounds/prompt-cover.md",
+    "editPrompt": null,
+    "measurement": "02-layouts/generated-background-measurements.json"
+  },
+  {
+    "id": "social",
+    "provider": "built-in image_gen",
+    "nativeWidth": 1086,
+    "nativeHeight": 1448,
+    "hasAlpha": false,
+    "original": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-1df7c5dc-f85c-4c8b-b727-4009ab5321f4.png",
+    "selectedSource": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-30aba400-d96a-4409-8d39-c85a80cbc96d.png",
+    "file": "03-backgrounds/social-v2.png",
+    "prompt": "03-backgrounds/prompt-social.md",
+    "editPrompt": "03-backgrounds/reward-divider-edit-prompts.md",
+    "measurement": "02-layouts/generated-background-measurements.json"
+  }
+]

@@ -1,0 +1,37 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..');
+const read=f=>JSON.parse(fs.readFileSync(path.join(root,f),'utf8'));
+const write=(f,o)=>fs.writeFileSync(path.join(root,f),JSON.stringify(o,null,2)+'\n');
+const c=read('content.json');
+c.date='2026-10-04';
+c.scope.platforms=['desktop'];
+c.scope.basis='本轮只修订用户所附黄金矿工端游价目海报；现有六档端游价格与其余规则沿用附件。';
+c.platforms=c.platforms.filter(p=>p.id==='desktop');
+for(const t of c.tiers){delete t.mobilePrice;if(['luxury','ultimate'].includes(t.id))t.totalGoldRedSlots=208;}
+c.notices.splice(1,0,{id:'accumulation-excludes-destruction-loss',appliesToTierIds:['standard','advanced','ultimate'],metric:'totalGoldRedSlots',excluded:'炸单战损',text:'标准版、进阶版、终极版在累计金红格数时，不计炸单战损。',shortText:'累计金红格数时，不计炸单战损。',emphasis:'不计炸单战损',basis:'2026-10-04用户本轮明确新增规则。'});
+c.sources.request='2026-10-04用户提供端游现稿，明确格数218降为208，并为标准版、进阶版、终极版新增累计金红格数不计炸单战损；其余价格、规则与美术沿用本轮附件。';
+c.sources.referenceImage='source/references/黄金矿工-本轮用户原图.png';
+c.sources.corrections.push('2026-10-04：本轮用户明确豪华版、终极版由218格修订为208格，覆盖2026-09-30旧决定。','2026-10-04：标准版、进阶版、终极版累计金红格数时，不计炸单战损。');
+write('content.json',c);
+const state=read('campaign-state.json');
+state.revision='r2';state.stage='vector-revision';
+state.contentVerified=true;state.contentVerificationBasis=c.sources.request;
+state.deliveryScope={pageIds:['desktop'],platforms:['desktop'],basis:c.scope.basis};
+state.verifiedPricePlatforms=['desktop'];state.priceSourceByPlatform={desktop:'本轮用户附件端游六档价目388/488/688/988/1188/1688r，保持原价。'};
+state.decisions=state.decisions.filter(s=>!s.includes('218格'));
+state.decisions.push('本轮豪华版、终极版改为208格。','标准版、进阶版、终极版累计金红格数时，不计炸单战损；与带出过程金额不计入总保底共同展示于须知第一项。','本轮只交付用户所附端游价目海报，其他页面未纳入本轮范围。');
+delete state.finalVisualQA;state.lastRenderedPages=[];
+state.revisionHistory=[{revision:'r1',date:'2026-09-30',sourceProject:'黄金矿工-双平台价目广告封面-20260930',description:'用户本轮所附旧稿。'},{revision:'r2',date:'2026-10-04',description:'豪华/终极208格；三档累计金红格数不计炸单战损。'}];
+write('campaign-state.json',state);
+let layout=fs.readFileSync(path.join(root,'layout-adapter.mjs'),'utf8');
+const replace=(a,b)=>{if(!layout.includes(a))throw Error('Missing expected layout segment: '+a.slice(0,70));layout=layout.replace(a,b);};
+replace('  const rules=[',"  const accumulation=c.notices.find(n=>n.id==='accumulation-excludes-destruction-loss');\n  const [before,after]=accumulation.shortText.split(accumulation.emphasis);\n  const rules=[");
+replace("[{text:'带出过程金额'},{text:'不计入总保底',bold:true},{text:'。'}]],","[{text:'带出过程金额'},{text:'不计入总保底',bold:true},{text:'。'}],[{text:before},{text:accumulation.emphasis,bold:true},{text:after}]],");
+replace('const ys=[[1425.5,1461.5],[1510.5],[1559.5,1595.5],[1644.5],[1693.5]];','const ys=[[1425.5,1461.5,1497.5],[1537.5],[1577.5,1613.5],[1653.5],[1693.5]];');
+const splitAt=layout.indexOf(' const s=zones.social;');
+if(splitAt<0)throw Error('Cannot limit layout scope');
+layout=layout.slice(0,splitAt)+" return {schemaVersion:3,revision:'r2',requests,pages};\n}\n";
+fs.writeFileSync(path.join(root,'layout-adapter.mjs'),layout);
+console.log('Updated desktop data and layout for r2.');
+

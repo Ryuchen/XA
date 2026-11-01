@@ -1,0 +1,14 @@
+{
+  "source": "imagegen extraction of the approved 2026-10-08 pink esports girl",
+  "reference": "skills/xingan-gameplay-posters/assets/approved-visuals-20261008/character-trio-prototype-r1.png",
+  "generatedSource": "pink-girl-source.png",
+  "displayFile": "services/backend/engagement/static/miniapp/brand/xingan-girl.b9152bde9a75.webp",
+  "bytes": 181508,
+  "limitBytes": 200000,
+  "dimensions": [
+    640,
+    960
+  ],
+  "transparent": true,
+  "quality": 92
+}

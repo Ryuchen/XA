@@ -1,11 +1,62 @@
 """KOOK card adapter: the payout text is shared with clipboard and WeCom."""
 import json
 import logging
+import re
 from urllib.parse import quote
 from .models import KookDispatchRecord
 from integrations.kook_config import get_kook_config, route_for_order
 
 logger = logging.getLogger(__name__)
+
+
+def summarize_card(card_content):
+    """Describe supported generated card effects without exposing link URLs."""
+    if not card_content:
+        return None
+    try:
+        cards = json.loads(card_content)
+        if not isinstance(cards, list) or len(cards) != 1 or not isinstance(cards[0], dict) or cards[0].get('type') != 'card':
+            return None
+        if set(cards[0]) - {'type', 'theme', 'size', 'modules'}:
+            return None
+        modules = cards[0].get('modules')
+        if not isinstance(modules, list) or not modules:
+            return None
+        role_ids, links = [], 0
+        for module in modules:
+            if not isinstance(module, dict):
+                return None
+            if module.get('type') == 'section':
+                if set(module) - {'type', 'text'}:
+                    return None
+                text = module.get('text')
+                if not isinstance(text, dict) or set(text) - {'type', 'content'} or not isinstance(text.get('content'), str):
+                    return None
+                if text.get('type') == 'plain-text':
+                    continue
+                if text.get('type') != 'kmarkdown' or not re.fullmatch(r'\s*(?:\(rol\)[0-9]{1,64}\(rol\)\s*)+', text['content'], flags=re.ASCII):
+                    return None
+                role_ids.extend(re.findall(r'\(rol\)([0-9]{1,64})\(rol\)', text['content'], flags=re.ASCII))
+            elif module.get('type') == 'action-group':
+                if set(module) - {'type', 'elements'}:
+                    return None
+                elements = module.get('elements')
+                if not isinstance(elements, list):
+                    return None
+                for element in elements:
+                    if not isinstance(element, dict) or element.get('type') != 'button' or element.get('click') != 'link' or not isinstance(element.get('value'), str) or not element['value']:
+                        return None
+                    if set(element) - {'type', 'theme', 'value', 'click', 'text'}:
+                        return None
+                    label = element.get('text')
+                    if not isinstance(label, dict) or set(label) - {'type', 'content'} or label.get('type') != 'plain-text' or not isinstance(label.get('content'), str):
+                        return None
+                    links += 1
+            else:
+                return None
+        return {'mention_role_ids': list(dict.fromkeys(role_ids)), 'link_count': links}
+    except (TypeError, ValueError):
+        return None
 
 
 def build_card(text, *, role_ids=(), provider_order_url='', admin_order_url='', order_no=''):

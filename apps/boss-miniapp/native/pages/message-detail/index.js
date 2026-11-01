@@ -29,7 +29,7 @@ function destination(message) {
     const target = routes[parts[0]];
     return target + (!target.includes('?') && /^[1-9]\d*$/.test(params.id || '') ? '?id=' + params.id : '');
   }
-  const allowed = ['home','catalog','orders','mine','messages','wallet','checkin','coupons','support','favorites','announcements','announcement-detail','service','order-detail'];
+  const allowed = ['home','catalog','orders','mine','messages','wallet','checkin','coupons','support','favorites','announcements','announcement-detail','service','order-detail','reservation-detail'];
   const page = parts[0].replace(/^\/pages\//, '').replace(/\/index$/, '');
   if (!allowed.includes(page)) return '';
   return parts[0] + (/^[1-9]\d*$/.test(params.id || '') ? '?id=' + params.id : '');
@@ -42,7 +42,7 @@ Page(privatePage({
   async fetch() {
     if (!/^[1-9]\d*$/.test(this._id || '')) throw new Error('消息链接无效');
       const item = await api.request('/messages/' + this._id + '/');
-      events.emit('message.changed');
+      events.emit('site-message.changed');
       return { item: Object.assign({}, item, { dateText: ui.date(item.created_at) }), target: destination(item) };
   },
   action() { if (this.data.target) ui.go(this.data.target); }

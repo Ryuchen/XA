@@ -1,0 +1,1 @@
+<view class="expand-region {{expanded ? 'is-open' : ''}}" style="height:{{height}}" aria-hidden="{{!expanded}}"><view class="expand-inner"><slot/></view></view>

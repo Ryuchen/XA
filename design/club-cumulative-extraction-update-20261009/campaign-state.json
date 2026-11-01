@@ -1,0 +1,82 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 累计撤离单",
+  "stage": "delivered",
+  "revision": "cumulative-r2",
+  "contentVerified": true,
+  "deliveryScope": {
+    "pageIds": [
+      "desktop-absolute",
+      "desktop-secret",
+      "mobile-absolute",
+      "mobile-secret",
+      "cover",
+      "social-desktop",
+      "social-mobile"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "修改原套封面、端手游两张广告页和四张完整价格表，沿用原套7张范围。"
+  },
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "mobile": "references/mobile-price-source.png：15行映射至手游18档，绝密巴克什和监狱同价同保底。",
+    "desktop": "本轮用户给定端游价格；保底依据references/regular-material-price-source.json对应模式常规档位线性折算，乘70%，保留百位及更高位后两位改为88；用户已明确选择此算法。"
+  },
+  "contentVerificationBasis": "2026-10-09用户文字和截图；手游新价格来自J列，保底来自E列，旧价格D列不用。端游机密巴克什/航天分别取手游绝密对应地图新价格+20；核电站188/288/388。；2026-10-09 用户追加：端游对应保底为同价常规物资单保底七折，88结尾；手游保底不用改。用户确认：无同价档按相邻档位线性折算；保留百位及更高位，后两位改为88。",
+  "approvals": {
+    "illustration": {
+      "status": "approved-reference",
+      "basis": "用户本轮附原套成图并要求修改，沿用已确认蜂医和灰鼠。"
+    },
+    "background": {
+      "status": "approved-reference",
+      "basis": "复用原背景；通过SVG版面裁窗移除失败说明卡，未生成或重绘美术。"
+    }
+  },
+  "assumptions": [],
+  "visualQA": {
+    "status": "complete",
+    "revision": "cumulative-r2",
+    "record": "review/visual-qa.md",
+    "dataAndGeometryAudit": "review/data-and-geometry-audit.json",
+    "basis": "实际最终PNG、7页手机预览和价目/须知局部已目检；修复缺项补偿右侧安全间距后复查。"
+  },
+  "layoutInvariants": [
+    "正文数字和r/w共用baseline、固定单位列。",
+    "保留有效撤离要求，删除所有连续/连撤/失败重计文案。",
+    "广告各自18档与对应平台完整价目共用数据。",
+    "封面品牌/标题左对齐，胶囊与平台行在左文字区居中。",
+    "价目须知区保持原字号和上下留白，普通说明采用常规字重。"
+  ],
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "desktop-secret",
+    "social-desktop"
+  ],
+  "confirmedCalculationPolicy": {
+    "platform": "desktop",
+    "source": "references/regular-material-price-source.json",
+    "sameModeRequired": true,
+    "useBaseGuaranteeBeforeWeekdayOffer": true,
+    "missingPriceMethod": "linear-interpolation",
+    "discountFactor": 0.7,
+    "suffix": 88,
+    "suffixPolicy": "retain-hundreds-replace-last-two-with-88",
+    "mobile": "unchanged-user-screenshot",
+    "confirmation": "2026-10-09 用户追加：端游对应保底为同价常规物资单保底七折，88结尾；手游保底不用改。用户确认：无同价档按相邻档位线性折算；保留百位及更高位，后两位改为88。"
+  },
+  "finalDeliverables": {
+    "manifest": "output/manifest.json",
+    "completePackage": "campaign-cumulative-r2.zip",
+    "pngPackage": "output/campaign-cumulative-r2-png.zip",
+    "review": "review/index.html",
+    "overview": "review/final-overview.png"
+  },
+  "latestCorrection": "用户说明888是笔误，应仅保留后两位88。算法仍为同模式常规档位线性折算后乘70%，保留百位及更高位，后两位改88；手游不变。"
+}

@@ -1,0 +1,1207 @@
+{
+    "skill":  "xingan-gameplay-posters",
+    "revision":  "price-r2-20261009",
+    "stage":  "delivered",
+    "contentVerified":  true,
+    "contentVerificationBasis":  "已查看本轮高清价格截图：累计1/2/3次108/188/268，连续2/3次388/688。用户指定端游物资788、手游688，保留\u003e；回复确认“机密”为笔误，本次只改绝密四张。端游218/428/628/688/1288r及许愿奖励1688w由本轮附件和旧源稿交叉核对。",
+    "deliveryScope":  {
+                          "pageIds":  [
+                                          "desktop-absolute",
+                                          "mobile-absolute",
+                                          "combined-advert",
+                                          "combined-cover"
+                                      ],
+                          "platforms":  [
+                                            "desktop",
+                                            "mobile"
+                                        ],
+                          "basis":  "用户确认本次只更新绝密四张套图：端游价目、手游价目、合并广告、横版封面。"
+                      },
+    "verifiedPricePlatforms":  [
+                                   "desktop",
+                                   "mobile"
+                               ],
+    "priceSourceByPlatform":  {
+                                  "desktop":  "用户本轮端游附件及合并广告：218/428/628/688/1288r；价格沿用，物资达标门槛按本轮直接指令改为\u003e788w。",
+                                  "mobile":  "references/new-mobile-prices.png 新价格列108/188/268/388/688r；本轮直接指令物资达标门槛\u003e688w。"
+                              },
+    "approvals":  {
+                      "seriesStyle":  {
+                                          "status":  "approved-reference",
+                                          "basis":  "保留本轮附件的已确认二次元手绘风格。"
+                                      },
+                      "illustration":  {
+                                           "status":  "approved-reference",
+                                           "basis":  "复用原四张底图中已确认的人物与道具。",
+                                           "sourceProject":  "../club-sand-safe-redesign-20261003"
+                                       },
+                      "background":  {
+                                         "status":  "approved-reference",
+                                         "basis":  "用户本轮附件对应的四张已确认底图逐字节复用；本轮只改矢量文字。",
+                                         "files":  [
+                                                       "assets/backgrounds/desktop-absolute.png",
+                                                       "assets/backgrounds/mobile-absolute.png",
+                                                       "assets/backgrounds/combined-advert.png",
+                                                       "assets/backgrounds/combined-cover.png"
+                                                   ]
+                                     }
+                  },
+    "reusedVisuals":  {
+                          "sourceProject":  "../club-sand-safe-redesign-20261003",
+                          "basis":  "本轮附件与该已确认四张套图一致；全部复用，无新插画或底图。"
+                      },
+    "clarifications":  [
+                           {
+                               "date":  "2026-10-09",
+                               "question":  "手游机密是否也要更新",
+                               "answer":  "本次只更新绝密四张套图，“机密”为笔误"
+                           }
+                       ],
+    "finalQA":  {
+                    "revision":  "price-r2-20261009",
+                    "date":  "2026-10-09",
+                    "status":  "passed",
+                    "scope":  [
+                                  "desktop-absolute",
+                                  "mobile-absolute",
+                                  "combined-advert",
+                                  "combined-cover"
+                              ],
+                    "sourceChecks":  {
+                                         "mobileScreenshotPrices":  [
+                                                                        108,
+                                                                        188,
+                                                                        268,
+                                                                        388,
+                                                                        688
+                                                                    ],
+                                         "desktopPricesPreserved":  true,
+                                         "loot":  {
+                                                      "desktop":  788,
+                                                      "mobile":  688,
+                                                      "operator":  "\u003e",
+                                                      "unit":  "w",
+                                                      "original":  "2026-10-09用户指定：端游物资保底改成788，手游改成688；沿用既有达标逻辑，单局带出物资严格\u003e端游788w/手游688w。"
+                                                  },
+                                         "wishRewardPreserved":  true,
+                                         "noticesPreserved":  true,
+                                         "backgroundsIdentical":  true
+                                     },
+                    "measured":  {
+                                     "numericPairCount":  30,
+                                     "maxBaselineDelta":  2.2737367544323206E-13,
+                                     "minNumericUnitGap":  5.999999999999929,
+                                     "unitHeightRatio":  {
+                                                             "min":  0.657493239419748,
+                                                             "max":  0.6740902729111712
+                                                         },
+                                     "bodyPhonePx":  [
+                                                         {
+                                                             "id":  "desktop-absolute",
+                                                             "min":  13.995215311004785,
+                                                             "max":  13.995215311004785
+                                                         },
+                                                         {
+                                                             "id":  "mobile-absolute",
+                                                             "min":  13.995215311004785,
+                                                             "max":  13.995215311004785
+                                                         }
+                                                     ]
+                                 },
+                    "visualInspection":  "已打开四张实际output/png成图、四张390px预览拼图、双端条件与价目预览、原生广告价格局部、封面条件局部；逐张核对变动区域和相邻区域。",
+                    "review":  "review/visual-qa.md",
+                    "affectedGroups":  [
+                                           {
+                                               "page":  "desktop-absolute",
+                                               "containerId":  "condition-2",
+                                               "container":  {
+                                                                 "x":  560,
+                                                                 "y":  440,
+                                                                 "width":  215,
+                                                                 "height":  188
+                                                             },
+                                               "safe":  {
+                                                            "x":  580,
+                                                            "y":  465,
+                                                            "width":  175,
+                                                            "height":  140
+                                                        },
+                                               "ink":  {
+                                                           "x":  587.6350391505,
+                                                           "y":  479.66503889999996,
+                                                           "right":  747.3649608495,
+                                                           "bottom":  590.3349611
+                                                       },
+                                               "margins":  {
+                                                               "left":  7.635039150500006,
+                                                               "right":  7.635039150500006,
+                                                               "top":  14.665038899999956,
+                                                               "bottom":  14.665038900000013
+                                                           },
+                                               "verticalCenterDelta":  2.8421709430404007E-14,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "condition-2",
+                                               "container":  {
+                                                                 "x":  562,
+                                                                 "y":  450,
+                                                                 "width":  220,
+                                                                 "height":  168
+                                                             },
+                                               "safe":  {
+                                                            "x":  582,
+                                                            "y":  474,
+                                                            "width":  180,
+                                                            "height":  120
+                                                        },
+                                               "ink":  {
+                                                           "x":  591.851835808,
+                                                           "y":  478.66503889999996,
+                                                           "right":  752.1481641920001,
+                                                           "bottom":  589.3349611
+                                                       },
+                                               "margins":  {
+                                                               "left":  9.851835808000033,
+                                                               "right":  9.851835807999919,
+                                                               "top":  4.665038899999956,
+                                                               "bottom":  4.665038900000013
+                                                           },
+                                               "verticalCenterDelta":  2.8421709430404007E-14,
+                                               "horizontalCenterDelta":  5.6843418860808015E-14
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-heading-0",
+                                               "container":  {
+                                                                 "x":  43,
+                                                                 "y":  766,
+                                                                 "width":  750,
+                                                                 "height":  52
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  772,
+                                                            "width":  352,
+                                                            "height":  40
+                                                        },
+                                               "ink":  {
+                                                           "x":  176.59374992,
+                                                           "y":  776.4218751999999,
+                                                           "right":  303.40625008,
+                                                           "bottom":  807.5781248
+                                                       },
+                                               "margins":  {
+                                                               "left":  112.59374992,
+                                                               "right":  112.59374992,
+                                                               "top":  4.421875199999931,
+                                                               "bottom":  4.421875200000045
+                                                           },
+                                               "verticalCenterDelta":  5.6843418860808015E-14,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-heading-1",
+                                               "container":  {
+                                                                 "x":  43,
+                                                                 "y":  766,
+                                                                 "width":  750,
+                                                                 "height":  52
+                                                             },
+                                               "safe":  {
+                                                            "x":  450,
+                                                            "y":  772,
+                                                            "width":  325,
+                                                            "height":  40
+                                                        },
+                                               "ink":  {
+                                                           "x":  549.04687504,
+                                                           "y":  776.4687504,
+                                                           "right":  675.95312496,
+                                                           "bottom":  807.5312496
+                                                       },
+                                               "margins":  {
+                                                               "left":  99.04687504000003,
+                                                               "right":  99.04687504000003,
+                                                               "top":  4.468750399999976,
+                                                               "bottom":  4.468750399999976
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-label-0",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  823,
+                                                            "width":  352,
+                                                            "height":  56
+                                                        },
+                                               "ink":  {
+                                                           "x":  164.723634,
+                                                           "y":  832.66796875,
+                                                           "right":  315.276366,
+                                                           "bottom":  869.33203125
+                                                       },
+                                               "margins":  {
+                                                               "left":  100.723634,
+                                                               "right":  100.723634,
+                                                               "top":  9.66796875,
+                                                               "bottom":  9.66796875
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-mobile-0",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  450,
+                                                            "y":  823,
+                                                            "width":  325,
+                                                            "height":  56
+                                                        },
+                                               "ink":  {
+                                                           "x":  563.164062575,
+                                                           "y":  829.217774,
+                                                           "right":  674.257812425,
+                                                           "bottom":  872.7822259999999
+                                                       },
+                                               "margins":  {
+                                                               "left":  113.164062575,
+                                                               "right":  100.742187575,
+                                                               "top":  6.217773999999963,
+                                                               "bottom":  6.217774000000077
+                                                           },
+                                               "verticalCenterDelta":  5.6843418860808015E-14,
+                                               "horizontalCenterDelta":  6.2109375
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-label-1",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  889,
+                                                            "width":  352,
+                                                            "height":  57
+                                                        },
+                                               "ink":  {
+                                                           "x":  164.723634,
+                                                           "y":  899.16796875,
+                                                           "right":  315.276366,
+                                                           "bottom":  935.83203125
+                                                       },
+                                               "margins":  {
+                                                               "left":  100.723634,
+                                                               "right":  100.723634,
+                                                               "top":  10.16796875,
+                                                               "bottom":  10.16796875
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-mobile-1",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  450,
+                                                            "y":  889,
+                                                            "width":  325,
+                                                            "height":  57
+                                                        },
+                                               "ink":  {
+                                                           "x":  562.519531175,
+                                                           "y":  895.761718,
+                                                           "right":  674.257812425,
+                                                           "bottom":  939.238282
+                                                       },
+                                               "margins":  {
+                                                               "left":  112.519531175,
+                                                               "right":  100.742187575,
+                                                               "top":  6.7617179999999735,
+                                                               "bottom":  6.7617179999999735
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  5.888671799999997
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-label-2",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  956,
+                                                            "width":  352,
+                                                            "height":  55
+                                                        },
+                                               "ink":  {
+                                                           "x":  164.723634,
+                                                           "y":  965.16796875,
+                                                           "right":  315.276366,
+                                                           "bottom":  1001.83203125
+                                                       },
+                                               "margins":  {
+                                                               "left":  100.723634,
+                                                               "right":  100.723634,
+                                                               "top":  9.16796875,
+                                                               "bottom":  9.16796875
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-mobile-2",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  450,
+                                                            "y":  956,
+                                                            "width":  325,
+                                                            "height":  55
+                                                        },
+                                               "ink":  {
+                                                           "x":  556.777343375,
+                                                           "y":  961.761718,
+                                                           "right":  674.257812425,
+                                                           "bottom":  1005.238282
+                                                       },
+                                               "margins":  {
+                                                               "left":  106.77734337499999,
+                                                               "right":  100.742187575,
+                                                               "top":  5.7617179999999735,
+                                                               "bottom":  5.7617179999999735
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  3.017577899999992
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-label-3",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  1021,
+                                                            "width":  352,
+                                                            "height":  55
+                                                        },
+                                               "ink":  {
+                                                           "x":  164.68652339,
+                                                           "y":  1029.9082036,
+                                                           "right":  315.31347661,
+                                                           "bottom":  1067.0917964
+                                                       },
+                                               "margins":  {
+                                                               "left":  100.68652338999999,
+                                                               "right":  100.68652338999999,
+                                                               "top":  8.908203599999979,
+                                                               "bottom":  8.908203599999979
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-mobile-3",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  450,
+                                                            "y":  1021,
+                                                            "width":  325,
+                                                            "height":  55
+                                                        },
+                                               "ink":  {
+                                                           "x":  550.742187575,
+                                                           "y":  1026.761718,
+                                                           "right":  674.257812425,
+                                                           "bottom":  1070.238282
+                                                       },
+                                               "margins":  {
+                                                               "left":  100.742187575,
+                                                               "right":  100.742187575,
+                                                               "top":  5.7617179999999735,
+                                                               "bottom":  5.7617179999999735
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-label-4",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  1086,
+                                                            "width":  352,
+                                                            "height":  53
+                                                        },
+                                               "ink":  {
+                                                           "x":  164.68652339,
+                                                           "y":  1093.9082036,
+                                                           "right":  315.31347661,
+                                                           "bottom":  1131.0917964
+                                                       },
+                                               "margins":  {
+                                                               "left":  100.68652338999999,
+                                                               "right":  100.68652338999999,
+                                                               "top":  7.908203599999979,
+                                                               "bottom":  7.908203599999979
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "mobile-absolute",
+                                               "containerId":  "price-mobile-4",
+                                               "container":  {
+                                                                 "x":  35,
+                                                                 "y":  759,
+                                                                 "width":  766,
+                                                                 "height":  393
+                                                             },
+                                               "safe":  {
+                                                            "x":  450,
+                                                            "y":  1086,
+                                                            "width":  325,
+                                                            "height":  53
+                                                        },
+                                               "ink":  {
+                                                           "x":  552.558593375,
+                                                           "y":  1090.761718,
+                                                           "right":  674.257812425,
+                                                           "bottom":  1134.238282
+                                                       },
+                                               "margins":  {
+                                                               "left":  102.55859337499999,
+                                                               "right":  100.742187575,
+                                                               "top":  4.7617179999999735,
+                                                               "bottom":  4.7617179999999735
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0.908202899999992
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "condition-2",
+                                               "container":  {
+                                                                 "x":  748,
+                                                                 "y":  382,
+                                                                 "width":  272,
+                                                                 "height":  209
+                                                             },
+                                               "safe":  {
+                                                            "x":  768,
+                                                            "y":  414,
+                                                            "width":  232,
+                                                            "height":  148
+                                                        },
+                                               "ink":  {
+                                                           "x":  775.505507679,
+                                                           "y":  417.48852563929995,
+                                                           "right":  992.4944923209999,
+                                                           "bottom":  558.5114743607
+                                                       },
+                                               "margins":  {
+                                                               "left":  7.5055076789999475,
+                                                               "right":  7.505507679000061,
+                                                               "top":  3.488525639299951,
+                                                               "bottom":  3.488525639299951
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  5.6843418860808015E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-heading-0",
+                                               "container":  {
+                                                                 "x":  50,
+                                                                 "y":  756,
+                                                                 "width":  987,
+                                                                 "height":  59
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  762,
+                                                            "width":  367,
+                                                            "height":  47
+                                                        },
+                                               "ink":  {
+                                                           "x":  176.16796866000004,
+                                                           "y":  767.9746096,
+                                                           "right":  318.83203134000007,
+                                                           "bottom":  803.0253904
+                                                       },
+                                               "margins":  {
+                                                               "left":  112.16796866000004,
+                                                               "right":  112.16796865999993,
+                                                               "top":  5.974609600000008,
+                                                               "bottom":  5.974609600000008
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  5.6843418860808015E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-heading-1",
+                                               "container":  {
+                                                                 "x":  50,
+                                                                 "y":  756,
+                                                                 "width":  987,
+                                                                 "height":  59
+                                                             },
+                                               "safe":  {
+                                                            "x":  455,
+                                                            "y":  762,
+                                                            "width":  270,
+                                                            "height":  47
+                                                        },
+                                               "ink":  {
+                                                           "x":  499.296875,
+                                                           "y":  767.8164058,
+                                                           "right":  680.703125,
+                                                           "bottom":  803.1835942
+                                                       },
+                                               "margins":  {
+                                                               "left":  44.296875,
+                                                               "right":  44.296875,
+                                                               "top":  5.816405799999984,
+                                                               "bottom":  5.816405799999984
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-heading-2",
+                                               "container":  {
+                                                                 "x":  50,
+                                                                 "y":  756,
+                                                                 "width":  987,
+                                                                 "height":  59
+                                                             },
+                                               "safe":  {
+                                                            "x":  746,
+                                                            "y":  762,
+                                                            "width":  277,
+                                                            "height":  47
+                                                        },
+                                               "ink":  {
+                                                           "x":  793.84960942,
+                                                           "y":  767.8164058,
+                                                           "right":  975.15039058,
+                                                           "bottom":  803.1835942
+                                                       },
+                                               "margins":  {
+                                                               "left":  47.84960941999998,
+                                                               "right":  47.84960941999998,
+                                                               "top":  5.816405799999984,
+                                                               "bottom":  5.816405799999984
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-label-0",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  820,
+                                                            "width":  367,
+                                                            "height":  53
+                                                        },
+                                               "ink":  {
+                                                           "x":  168.26172,
+                                                           "y":  827.203125,
+                                                           "right":  326.73828000000003,
+                                                           "bottom":  865.796875
+                                                       },
+                                               "margins":  {
+                                                               "left":  104.26172,
+                                                               "right":  104.26171999999997,
+                                                               "top":  7.203125,
+                                                               "bottom":  7.203125
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  1.4210854715202004E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-desktop-0",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  455,
+                                                            "y":  820,
+                                                            "width":  270,
+                                                            "height":  53
+                                                        },
+                                               "ink":  {
+                                                           "x":  555.7250958,
+                                                           "y":  826.5732415,
+                                                           "right":  655.74951,
+                                                           "bottom":  866.4267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  100.72509579999996,
+                                                               "right":  69.25049000000001,
+                                                               "top":  6.573241499999995,
+                                                               "bottom":  6.573241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  15.737302899999975
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-mobile-0",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  746,
+                                                            "y":  820,
+                                                            "width":  277,
+                                                            "height":  53
+                                                        },
+                                               "ink":  {
+                                                           "x":  838.9458008500001,
+                                                           "y":  826.5329595,
+                                                           "right":  941.4409179,
+                                                           "bottom":  866.4670404999999
+                                                       },
+                                               "margins":  {
+                                                               "left":  92.94580085000007,
+                                                               "right":  81.55908209999996,
+                                                               "top":  6.532959499999947,
+                                                               "bottom":  6.532959500000061
+                                                           },
+                                               "verticalCenterDelta":  5.6843418860808015E-14,
+                                               "horizontalCenterDelta":  5.693359375000057
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-label-1",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  883,
+                                                            "width":  367,
+                                                            "height":  56
+                                                        },
+                                               "ink":  {
+                                                           "x":  168.26172,
+                                                           "y":  891.703125,
+                                                           "right":  326.73828000000003,
+                                                           "bottom":  930.296875
+                                                       },
+                                               "margins":  {
+                                                               "left":  104.26172,
+                                                               "right":  104.26171999999997,
+                                                               "top":  8.703125,
+                                                               "bottom":  8.703125
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  1.4210854715202004E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-desktop-1",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  455,
+                                                            "y":  883,
+                                                            "width":  270,
+                                                            "height":  56
+                                                        },
+                                               "ink":  {
+                                                           "x":  543.264155,
+                                                           "y":  891.0732415,
+                                                           "right":  655.74951,
+                                                           "bottom":  930.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  88.26415499999996,
+                                                               "right":  69.25049000000001,
+                                                               "top":  8.073241499999995,
+                                                               "bottom":  8.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  9.506832499999973
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-mobile-1",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  746,
+                                                            "y":  883,
+                                                            "width":  277,
+                                                            "height":  56
+                                                        },
+                                               "ink":  {
+                                                           "x":  838.3549804,
+                                                           "y":  891.0732415,
+                                                           "right":  941.4409179,
+                                                           "bottom":  930.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  92.35498040000004,
+                                                               "right":  81.55908209999996,
+                                                               "top":  8.073241499999995,
+                                                               "bottom":  8.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  5.397949150000045
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-label-2",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  949,
+                                                            "width":  367,
+                                                            "height":  58
+                                                        },
+                                               "ink":  {
+                                                           "x":  168.26172,
+                                                           "y":  958.703125,
+                                                           "right":  326.73828000000003,
+                                                           "bottom":  997.296875
+                                                       },
+                                               "margins":  {
+                                                               "left":  104.26172,
+                                                               "right":  104.26171999999997,
+                                                               "top":  9.703125,
+                                                               "bottom":  9.703125
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  1.4210854715202004E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-desktop-2",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  455,
+                                                            "y":  949,
+                                                            "width":  270,
+                                                            "height":  58
+                                                        },
+                                               "ink":  {
+                                                           "x":  546.05712705,
+                                                           "y":  958.0732415,
+                                                           "right":  655.74951,
+                                                           "bottom":  997.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  91.05712704999996,
+                                                               "right":  69.25049000000001,
+                                                               "top":  9.073241499999995,
+                                                               "bottom":  9.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  10.903318524999975
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-mobile-2",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  746,
+                                                            "y":  949,
+                                                            "width":  277,
+                                                            "height":  58
+                                                        },
+                                               "ink":  {
+                                                           "x":  833.09130825,
+                                                           "y":  958.0732415,
+                                                           "right":  941.4409179,
+                                                           "bottom":  997.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  87.09130825,
+                                                               "right":  81.55908209999996,
+                                                               "top":  9.073241499999995,
+                                                               "bottom":  9.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  2.766113075000021
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-label-3",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  1017,
+                                                            "width":  367,
+                                                            "height":  58
+                                                        },
+                                               "ink":  {
+                                                           "x":  168.2226562,
+                                                           "y":  1026.429688,
+                                                           "right":  326.77734380000004,
+                                                           "bottom":  1065.5703119999998
+                                                       },
+                                               "margins":  {
+                                                               "left":  104.22265619999999,
+                                                               "right":  104.22265619999996,
+                                                               "top":  9.429687999999942,
+                                                               "bottom":  9.42968800000017
+                                                           },
+                                               "verticalCenterDelta":  1.1368683772161603E-13,
+                                               "horizontalCenterDelta":  1.4210854715202004E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-desktop-3",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  455,
+                                                            "y":  1017,
+                                                            "width":  270,
+                                                            "height":  58
+                                                        },
+                                               "ink":  {
+                                                           "x":  543.5327128499999,
+                                                           "y":  1026.0732415,
+                                                           "right":  655.74951,
+                                                           "bottom":  1065.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  88.53271284999994,
+                                                               "right":  69.25049000000001,
+                                                               "top":  9.073241499999995,
+                                                               "bottom":  9.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  9.641111424999963
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-mobile-3",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  746,
+                                                            "y":  1017,
+                                                            "width":  277,
+                                                            "height":  58
+                                                        },
+                                               "ink":  {
+                                                           "x":  827.5590821000001,
+                                                           "y":  1026.0732415,
+                                                           "right":  941.4409179,
+                                                           "bottom":  1065.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  81.55908210000007,
+                                                               "right":  81.55908209999996,
+                                                               "top":  9.073241499999995,
+                                                               "bottom":  9.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  5.6843418860808015E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-label-4",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  64,
+                                                            "y":  1085,
+                                                            "width":  367,
+                                                            "height":  52
+                                                        },
+                                               "ink":  {
+                                                           "x":  168.2226562,
+                                                           "y":  1091.429688,
+                                                           "right":  326.77734380000004,
+                                                           "bottom":  1130.5703119999998
+                                                       },
+                                               "margins":  {
+                                                               "left":  104.22265619999999,
+                                                               "right":  104.22265619999996,
+                                                               "top":  6.429687999999942,
+                                                               "bottom":  6.429688000000169
+                                                           },
+                                               "verticalCenterDelta":  1.1368683772161603E-13,
+                                               "horizontalCenterDelta":  1.4210854715202004E-14
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-desktop-4",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  455,
+                                                            "y":  1085,
+                                                            "width":  270,
+                                                            "height":  52
+                                                        },
+                                               "ink":  {
+                                                           "x":  524.25049,
+                                                           "y":  1091.0732415,
+                                                           "right":  655.74951,
+                                                           "bottom":  1130.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  69.25049000000001,
+                                                               "right":  69.25049000000001,
+                                                               "top":  6.073241499999995,
+                                                               "bottom":  6.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0
+                                           },
+                                           {
+                                               "page":  "combined-advert",
+                                               "containerId":  "price-mobile-4",
+                                               "container":  {
+                                                                 "x":  44,
+                                                                 "y":  750,
+                                                                 "width":  999,
+                                                                 "height":  406
+                                                             },
+                                               "safe":  {
+                                                            "x":  746,
+                                                            "y":  1085,
+                                                            "width":  277,
+                                                            "height":  52
+                                                        },
+                                               "ink":  {
+                                                           "x":  829.22412075,
+                                                           "y":  1091.0732415,
+                                                           "right":  941.4409179,
+                                                           "bottom":  1130.9267585
+                                                       },
+                                               "margins":  {
+                                                               "left":  83.22412075,
+                                                               "right":  81.55908209999996,
+                                                               "top":  6.073241499999995,
+                                                               "bottom":  6.073241499999995
+                                                           },
+                                               "verticalCenterDelta":  0,
+                                               "horizontalCenterDelta":  0.8325193250000211
+                                           },
+                                           {
+                                               "page":  "combined-cover",
+                                               "containerId":  "condition-2",
+                                               "container":  {
+                                                                 "x":  729,
+                                                                 "y":  423,
+                                                                 "width":  279,
+                                                                 "height":  183
+                                                             },
+                                               "safe":  {
+                                                            "x":  749,
+                                                            "y":  447,
+                                                            "width":  240,
+                                                            "height":  138
+                                                        },
+                                               "ink":  {
+                                                           "x":  755.7234178580001,
+                                                           "y":  450.79345723010005,
+                                                           "right":  982.276582142,
+                                                           "bottom":  581.2065427699
+                                                       },
+                                               "margins":  {
+                                                               "left":  6.723417858000062,
+                                                               "right":  6.723417857999948,
+                                                               "top":  3.7934572301000458,
+                                                               "bottom":  3.793457230099989
+                                                           },
+                                               "verticalCenterDelta":  2.8421709430404007E-14,
+                                               "horizontalCenterDelta":  5.6843418860808015E-14
+                                           }
+                                       ],
+                    "files":  [
+                                  {
+                                      "id":  "desktop-absolute",
+                                      "label":  "端游绝密价目",
+                                      "png":  "output/png/desktop-absolute.png",
+                                      "outlinedSVG":  "output/svg-outlined/desktop-absolute.svg",
+                                      "editableSVG":  "output/svg-editable/desktop-absolute.svg",
+                                      "preview":  "review/desktop-absolute.png",
+                                      "width":  3200,
+                                      "height":  7200,
+                                      "nativeWidth":  836,
+                                      "nativeHeight":  1881,
+                                      "sha256":  "62767eaebe16cfc5c74b163c310da3cc44867c82dfb3d6858b3a4957925cd16d",
+                                      "backgroundSha256":  "197764d60c92bc670d8638150dd928f86a9c4f753e92bdf13599eed626854878"
+                                  },
+                                  {
+                                      "id":  "mobile-absolute",
+                                      "label":  "手游绝密价目",
+                                      "png":  "output/png/mobile-absolute.png",
+                                      "outlinedSVG":  "output/svg-outlined/mobile-absolute.svg",
+                                      "editableSVG":  "output/svg-editable/mobile-absolute.svg",
+                                      "preview":  "review/mobile-absolute.png",
+                                      "width":  3200,
+                                      "height":  7200,
+                                      "nativeWidth":  836,
+                                      "nativeHeight":  1882,
+                                      "sha256":  "3b5e5635ff17833b23144e41b8feebaace1471f3ff74b1e9e3091e635f15c73c",
+                                      "backgroundSha256":  "081900900e4d1795f8031ba2b09cd65e5ce678d577d46442944b6101c489f360"
+                                  },
+                                  {
+                                      "id":  "combined-advert",
+                                      "label":  "双平台合并广告",
+                                      "png":  "output/png/combined-advert.png",
+                                      "outlinedSVG":  "output/svg-outlined/combined-advert.svg",
+                                      "editableSVG":  "output/svg-editable/combined-advert.svg",
+                                      "preview":  "review/combined-advert.png",
+                                      "width":  2400,
+                                      "height":  3200,
+                                      "nativeWidth":  1086,
+                                      "nativeHeight":  1448,
+                                      "sha256":  "9291dda640d9ca184d56e7e04c45fa7af8406f706a6c0e0b7c6459274110a9c2",
+                                      "backgroundSha256":  "e200f5c5c988432ae256c026f226b6c502f23bb7019f22c7516de805e61412f8"
+                                  },
+                                  {
+                                      "id":  "combined-cover",
+                                      "label":  "16:9共用封面",
+                                      "png":  "output/png/combined-cover.png",
+                                      "outlinedSVG":  "output/svg-outlined/combined-cover.svg",
+                                      "editableSVG":  "output/svg-editable/combined-cover.svg",
+                                      "preview":  "review/combined-cover.png",
+                                      "width":  3200,
+                                      "height":  1800,
+                                      "nativeWidth":  1672,
+                                      "nativeHeight":  941,
+                                      "sha256":  "f751768361f98214e67b939659b5e45d020b8c6ed640f8dfc5b699775089f459",
+                                      "backgroundSha256":  "bc55a5202bfabbcb81a672e2d26e3ebb2273d669622e431c070f67bae895c123"
+                                  }
+                              ]
+                },
+    "nextStep":  "本轮四张套图已完成并通过成图验收。",
+    "lastRenderedPages":  [
+                              "desktop-absolute",
+                              "mobile-absolute",
+                              "combined-advert",
+                              "combined-cover"
+                          ],
+    "finalDelivery":  {
+                          "basis":  "插画确认、底图确认、矢量填字及实际PNG复检均已完成；数字单位baseline、间距及固定列已核对。",
+                          "preview":  "review/final-overview.png",
+                          "review":  "review/index.html",
+                          "package":  "output/campaign-sand-safe-price-r2-20261009.zip"
+                      }
+}

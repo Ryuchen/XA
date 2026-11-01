@@ -1,0 +1,222 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 205.86914058,
+    "y": 179.4570308,
+    "width": 143.26171884000001,
+    "height": 35.085938399999996,
+    "cy": 197,
+    "effectiveSize": 36
+  },
+  {
+    "text": "绝密 · 手游",
+    "role": "platform-mode",
+    "x": 157.790527295,
+    "y": 498.84277295,
+    "width": 195.41894541000002,
+    "height": 38.3144541,
+    "cy": 518,
+    "effectiveSize": 39
+  },
+  {
+    "text": "累计一次",
+    "role": "cover-entry-tier",
+    "x": 111.79394727139271,
+    "y": 551.203125,
+    "width": 158.47656,
+    "height": 38.59375,
+    "cy": 570.5,
+    "effectiveSize": 40
+  },
+  {
+    "text": "168",
+    "role": "cover-entry-number",
+    "x": 284.2705072713927,
+    "y": 547.3124992,
+    "width": 84.34374976,
+    "height": 46.3750016,
+    "cy": 570.5,
+    "effectiveSize": 64
+  },
+  {
+    "text": "r",
+    "role": "cover-entry-unit",
+    "x": 375.6142570313927,
+    "y": 553.804999424,
+    "width": 23.59179569721462,
+    "height": 33.390001151999996,
+    "cy": 570.5,
+    "effectiveSize": 64.9409
+  },
+  {
+    "text": "2",
+    "role": "objective-count",
+    "x": 273.93994439399995,
+    "y": 702.633300788,
+    "width": 23.150390652,
+    "height": 38.733398424,
+    "cy": 722,
+    "effectiveSize": 54
+  },
+  {
+    "text": "个沙色保险",
+    "role": "cover-safe-targets",
+    "x": 303.09033504599995,
+    "y": 702.605468,
+    "width": 199.10156,
+    "height": 38.789064,
+    "cy": 722,
+    "effectiveSize": 40
+  },
+  {
+    "text": "·",
+    "role": "cover-safe-targets",
+    "x": 518.1918950459999,
+    "y": 719.5,
+    "width": 5.058593760000001,
+    "height": 5,
+    "cy": 722,
+    "effectiveSize": 40
+  },
+  {
+    "text": "4",
+    "role": "objective-count",
+    "x": 539.2504888059999,
+    "y": 702.8310557,
+    "width": 25.7080068,
+    "height": 38.3378886,
+    "cy": 722,
+    "effectiveSize": 54
+  },
+  {
+    "text": "个常规大保险",
+    "role": "cover-safe-targets",
+    "x": 570.9584956059999,
+    "y": 702.5859379999999,
+    "width": 239.10156000000003,
+    "height": 38.828124,
+    "cy": 722,
+    "effectiveSize": 40
+  },
+  {
+    "text": "同一局成功撤离，三项同时达成",
+    "role": "cover-target-relation",
+    "x": 263.777344,
+    "y": 764.832032,
+    "width": 556.4453120000001,
+    "height": 39.335936000000004,
+    "cy": 784.5,
+    "effectiveSize": 40
+  },
+  {
+    "text": "单局物资保底",
+    "role": "loot-target",
+    "x": 328.41632874952234,
+    "y": 828.328125,
+    "width": 250.76952599999998,
+    "height": 41.34375,
+    "cy": 849,
+    "effectiveSize": 42
+  },
+  {
+    "text": ">",
+    "role": "loot-target",
+    "x": 593.1858547495224,
+    "y": 837.638671875,
+    "width": 20.487304698,
+    "height": 22.72265625,
+    "cy": 849,
+    "effectiveSize": 42
+  },
+  {
+    "text": "688",
+    "role": "loot-mobile-number",
+    "x": 621.6731594475224,
+    "y": 828.7109368,
+    "width": 85.85937528000001,
+    "height": 40.5781264,
+    "cy": 849,
+    "effectiveSize": 56
+  },
+  {
+    "text": "w",
+    "role": "loot-mobile-unit",
+    "x": 713.5325347275224,
+    "y": 834.391874496,
+    "width": 42.05113652295535,
+    "height": 29.216251007999993,
+    "cy": 849,
+    "effectiveSize": 57.6444
+  },
+  {
+    "text": "特别奖励",
+    "role": "wish-heading-and-when",
+    "x": 120.4707032,
+    "y": 970.8125,
+    "width": 157.1875,
+    "height": 39.375,
+    "cy": 990.5,
+    "effectiveSize": 40
+  },
+  {
+    "text": "下单时许愿（二选一）",
+    "role": "wish-heading-and-when",
+    "x": 293.6582032,
+    "y": 970.2949218,
+    "width": 372.8710936,
+    "height": 40.410156400000005,
+    "cy": 990.5,
+    "effectiveSize": 40
+  },
+  {
+    "text": "万金泪冠 / 纵横",
+    "role": "wish-choices",
+    "x": 224.67968744,
+    "y": 1035.7031256,
+    "width": 337.64062512,
+    "height": 46.5937488,
+    "cy": 1059,
+    "effectiveSize": 48
+  },
+  {
+    "text": "如果出了，赠送",
+    "role": "wish-trigger-and-guarantee",
+    "x": 102.12447619656604,
+    "y": 1114.585938,
+    "width": 278.94532,
+    "height": 38.828124,
+    "cy": 1134,
+    "effectiveSize": 40
+  },
+  {
+    "text": "1688",
+    "role": "reward-number",
+    "x": 390.069796196566,
+    "y": 1106.4648428,
+    "width": 142.90820284,
+    "height": 55.070314399999994,
+    "cy": 1134,
+    "effectiveSize": 76
+  },
+  {
+    "text": "w",
+    "role": "reward-unit",
+    "x": 539.977999036566,
+    "y": 1114.174686816,
+    "width": 57.069399566867986,
+    "height": 39.650626368,
+    "cy": 1134,
+    "effectiveSize": 78.2317
+  },
+  {
+    "text": "保底",
+    "role": "wish-trigger-and-guarantee",
+    "x": 606.047398603434,
+    "y": 1114.644532,
+    "width": 78.8281252,
+    "height": 38.710936000000004,
+    "cy": 1134,
+    "effectiveSize": 40
+  }
+]

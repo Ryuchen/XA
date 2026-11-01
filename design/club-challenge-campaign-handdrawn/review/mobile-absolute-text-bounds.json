@@ -1,0 +1,862 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 92.4,
+    "y": 53.304687200000004,
+    "width": 95.50781256,
+    "height": 23.390625599999996,
+    "cy": 65,
+    "effectiveSize": 24
+  },
+  {
+    "text": "手游 · 绝密版",
+    "role": "platform-mode",
+    "x": 116.428222595,
+    "y": 289.965331725,
+    "width": 147.14355481,
+    "height": 24.06933655,
+    "cy": 302,
+    "effectiveSize": 24.5
+  },
+  {
+    "text": "等于目标也未达标 · 不跨局累计",
+    "role": "strict-equality-and-accumulation",
+    "x": 160,
+    "y": 385.990625,
+    "width": 260.52714774000003,
+    "height": 18.018750000000004,
+    "cy": 395,
+    "effectiveSize": 18.6
+  },
+  {
+    "text": "绝密航天",
+    "role": "map-title",
+    "x": 69,
+    "y": 448.525390625,
+    "width": 93.31152049999999,
+    "height": 22.94921875,
+    "cy": 460,
+    "effectiveSize": 23.5
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 247.49736330300001,
+    "y": 451.55488303,
+    "width": 69.00527339399999,
+    "height": 16.89023394,
+    "cy": 460,
+    "effectiveSize": 17.4
+  },
+  {
+    "text": "单局撤离物资",
+    "role": "table-heading",
+    "x": 577.79809568,
+    "y": 450.99389659999997,
+    "width": 110.40380864,
+    "height": 18.0122068,
+    "cy": 460,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 228.00781232,
+    "y": 489.6093744,
+    "width": 73.99218768,
+    "height": 34.78125119999999,
+    "cy": 507,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 495.2257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 507,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 494.708984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 507,
+    "effectiveSize": 56
+  },
+  {
+    "text": "1088",
+    "role": "threshold-number",
+    "x": 594.0527345,
+    "y": 488.848145,
+    "width": 95.9472655,
+    "height": 36.30371,
+    "cy": 507,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 494.89929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 507,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 228.40624976,
+    "y": 540.6093744,
+    "width": 73.59375023999999,
+    "height": 34.78125119999999,
+    "cy": 558,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 546.2257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 558,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 545.708984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 558,
+    "effectiveSize": 56
+  },
+  {
+    "text": "1288",
+    "role": "threshold-number",
+    "x": 595.81055,
+    "y": 539.884765,
+    "width": 94.18945,
+    "height": 36.23047,
+    "cy": 558,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 545.89929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 558,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "988",
+    "role": "price-number",
+    "x": 228.40624976,
+    "y": 591.1093744,
+    "width": 73.59375023999999,
+    "height": 34.78125119999999,
+    "cy": 608.5,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 596.7257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 608.5,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 596.208984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 608.5,
+    "effectiveSize": 56
+  },
+  {
+    "text": "1388",
+    "role": "threshold-number",
+    "x": 595.2001955000001,
+    "y": 590.384765,
+    "width": 94.7998045,
+    "height": 36.23047,
+    "cy": 608.5,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 596.39929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 608.5,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "绝密巴克什",
+    "role": "map-title",
+    "x": 69,
+    "y": 658.082763525,
+    "width": 116.857421875,
+    "height": 22.83447295,
+    "cy": 669.5,
+    "effectiveSize": 23.5
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 247.49736330300001,
+    "y": 661.05488303,
+    "width": 69.00527339399999,
+    "height": 16.89023394,
+    "cy": 669.5,
+    "effectiveSize": 17.4
+  },
+  {
+    "text": "单局撤离物资",
+    "role": "table-heading",
+    "x": 577.79809568,
+    "y": 660.4938966,
+    "width": 110.40380864,
+    "height": 18.0122068,
+    "cy": 669.5,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 228.00781232,
+    "y": 699.1093744,
+    "width": 73.99218768,
+    "height": 34.78125119999999,
+    "cy": 716.5,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 704.7257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 716.5,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 704.208984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 716.5,
+    "effectiveSize": 56
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 611.2402345,
+    "y": 698.384765,
+    "width": 78.7597655,
+    "height": 36.23047,
+    "cy": 716.5,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 704.39929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 716.5,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 228.40624976,
+    "y": 749.6093744,
+    "width": 73.59375023999999,
+    "height": 34.78125119999999,
+    "cy": 767,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 755.2257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 767,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 754.708984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 767,
+    "effectiveSize": 56
+  },
+  {
+    "text": "1088",
+    "role": "threshold-number",
+    "x": 594.0527345,
+    "y": 748.848145,
+    "width": 95.9472655,
+    "height": 36.30371,
+    "cy": 767,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 754.89929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 767,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "988",
+    "role": "price-number",
+    "x": 228.40624976,
+    "y": 800.6093744,
+    "width": 73.59375023999999,
+    "height": 34.78125119999999,
+    "cy": 818,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 806.2257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 818,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 805.708984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 818,
+    "effectiveSize": 56
+  },
+  {
+    "text": "1188",
+    "role": "threshold-number",
+    "x": 605.01465,
+    "y": 799.884765,
+    "width": 84.98535,
+    "height": 36.23047,
+    "cy": 818,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 805.89929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 818,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "绝密监狱",
+    "role": "map-title",
+    "x": 69,
+    "y": 868.513915575,
+    "width": 93.56396478499998,
+    "height": 22.97216885,
+    "cy": 880,
+    "effectiveSize": 23.5
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 247.49736330300001,
+    "y": 871.55488303,
+    "width": 69.00527339399999,
+    "height": 16.89023394,
+    "cy": 880,
+    "effectiveSize": 17.4
+  },
+  {
+    "text": "单局撤离物资",
+    "role": "table-heading",
+    "x": 577.79809568,
+    "y": 870.9938966,
+    "width": 110.40380864,
+    "height": 18.0122068,
+    "cy": 880,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 228.00781232,
+    "y": 909.6093744,
+    "width": 73.99218768,
+    "height": 34.78125119999999,
+    "cy": 927,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 915.2257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 927,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 914.708984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 927,
+    "effectiveSize": 56
+  },
+  {
+    "text": "888",
+    "role": "threshold-number",
+    "x": 611.2402345,
+    "y": 908.884765,
+    "width": 78.7597655,
+    "height": 36.23047,
+    "cy": 927,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 914.89929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 927,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 228.40624976,
+    "y": 961.1093744,
+    "width": 73.59375023999999,
+    "height": 34.78125119999999,
+    "cy": 978.5,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 966.7257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 978.5,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 966.208984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 978.5,
+    "effectiveSize": 56
+  },
+  {
+    "text": "1088",
+    "role": "threshold-number",
+    "x": 594.0527345,
+    "y": 960.348145,
+    "width": 95.9472655,
+    "height": 36.30371,
+    "cy": 978.5,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 966.39929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 978.5,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "988",
+    "role": "price-number",
+    "x": 228.40624976,
+    "y": 1011.6093744,
+    "width": 73.59375023999999,
+    "height": 34.78125119999999,
+    "cy": 1029,
+    "effectiveSize": 48
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 310,
+    "y": 1017.2257324276,
+    "width": 16.63828125,
+    "height": 23.5485351448,
+    "cy": 1029,
+    "effectiveSize": 45.8
+  },
+  {
+    "text": ">",
+    "role": "strict-comparison",
+    "x": 501.3066408,
+    "y": 1016.708984368,
+    "width": 19.386718400000003,
+    "height": 24.582031264,
+    "cy": 1029,
+    "effectiveSize": 56
+  },
+  {
+    "text": "1188",
+    "role": "threshold-number",
+    "x": 605.01465,
+    "y": 1010.884765,
+    "width": 84.98535,
+    "height": 36.23047,
+    "cy": 1029,
+    "effectiveSize": 50
+  },
+  {
+    "text": "w",
+    "role": "threshold-unit",
+    "x": 698,
+    "y": 1016.89929198025,
+    "width": 34.83325255,
+    "height": 24.201416039499996,
+    "cy": 1029,
+    "effectiveSize": 47.75
+  },
+  {
+    "text": "r = 元 / w = 万",
+    "role": "units",
+    "x": 714.2247048,
+    "y": 1060.40800794,
+    "width": 68.7752952,
+    "height": 9.18398412,
+    "cy": 1065,
+    "effectiveSize": 10.2
+  },
+  {
+    "text": "对赌保障",
+    "role": "guarantee-label",
+    "x": 205,
+    "y": 1086.450390625,
+    "width": 61.028515702,
+    "height": 15.09921875,
+    "cy": 1094,
+    "effectiveSize": 15.4
+  },
+  {
+    "text": "单局挑战 · 不跨局累计",
+    "role": "guarantee-condition",
+    "x": 206,
+    "y": 1151.0202638,
+    "width": 205.04003855,
+    "height": 19.9594724,
+    "cy": 1161,
+    "effectiveSize": 20.5
+  },
+  {
+    "text": "物资归属 · 补偿结算 · 存储限制",
+    "role": "section-condition",
+    "x": 536.86367106,
+    "y": 1206.47734375,
+    "width": 228.13632894000003,
+    "height": 16.0453125,
+    "cy": 1214.5,
+    "effectiveSize": 16.3
+  },
+  {
+    "text": "物资归属",
+    "role": "declaration-label",
+    "x": 158,
+    "y": 1261.466796875,
+    "width": 72.78955073499999,
+    "height": 18.06640625,
+    "cy": 1270.5,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "达标前，全部物资归板板",
+    "role": "declaration-body",
+    "x": 307,
+    "y": 1261.67578125,
+    "width": 197.5429692,
+    "height": 17.6484375,
+    "cy": 1270.5,
+    "effectiveSize": 18
+  },
+  {
+    "text": "补偿结算",
+    "role": "declaration-label",
+    "x": 158,
+    "y": 1310.9035648,
+    "width": 73.58447149999999,
+    "height": 18.1928704,
+    "cy": 1320,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "对应炸单保底在满足结单条件后另补",
+    "role": "declaration-body",
+    "x": 307,
+    "y": 1311.1494144,
+    "width": 287.578125,
+    "height": 17.701171199999997,
+    "cy": 1320,
+    "effectiveSize": 18
+  },
+  {
+    "text": "存储限制",
+    "role": "declaration-label",
+    "x": 158,
+    "y": 1363.5029296875,
+    "width": 72.60888676500001,
+    "height": 17.994140625,
+    "cy": 1372.5,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "陪玩不允许自带空白存储洗给板板",
+    "role": "declaration-body",
+    "x": 307,
+    "y": 1363.6933596,
+    "width": 268.7871096,
+    "height": 17.613280800000002,
+    "cy": 1372.5,
+    "effectiveSize": 18
+  },
+  {
+    "text": "地图 · 房卡 · 理包 · 装备",
+    "role": "section-condition",
+    "x": 584.45839803,
+    "y": 1431.041015625,
+    "width": 180.54160197,
+    "height": 15.91796875,
+    "cy": 1439,
+    "effectiveSize": 16.3
+  },
+  {
+    "text": "地图选择",
+    "role": "rule-label",
+    "x": 158,
+    "y": 1490.566162225,
+    "width": 73.43994135999999,
+    "height": 17.86767555,
+    "cy": 1499.5,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "仅限 绝密航天 / 绝密巴克什 / 绝密监狱",
+    "role": "map-restriction",
+    "x": 307,
+    "y": 1480.02509786,
+    "width": 282.27333964,
+    "height": 15.949804280000002,
+    "cy": 1488,
+    "effectiveSize": 16.3
+  },
+  {
+    "text": "默认绝密航天；可选地图按本版价目表。",
+    "role": "map-restriction",
+    "x": 307,
+    "y": 1503.02509786,
+    "width": 281.90722697,
+    "height": 15.949804280000002,
+    "cy": 1511,
+    "effectiveSize": 16.3
+  },
+  {
+    "text": "房卡保障",
+    "role": "rule-label",
+    "x": 158,
+    "y": 1552.966796875,
+    "width": 73.29540899999999,
+    "height": 18.06640625,
+    "cy": 1562,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "含航天核心区金红卡；每少一张补偿：",
+    "role": "included-cards",
+    "x": 307,
+    "y": 1540.02509786,
+    "width": 265.71070100000003,
+    "height": 15.949804280000002,
+    "cy": 1548,
+    "effectiveSize": 16.3
+  },
+  {
+    "text": "金卡",
+    "role": "missing-card",
+    "x": 307,
+    "y": 1570.495703125,
+    "width": 34.846875,
+    "height": 17.00859375,
+    "cy": 1579,
+    "effectiveSize": 17.7
+  },
+  {
+    "text": "+200",
+    "role": "missing-card-compensation-number",
+    "x": 442.84277199999997,
+    "y": 1570.6501467,
+    "width": 46.157228,
+    "height": 16.699706600000003,
+    "cy": 1579,
+    "effectiveSize": 23
+  },
+  {
+    "text": "w",
+    "role": "missing-card-compensation-unit",
+    "x": 494,
+    "y": 1573.424804682,
+    "width": 16.048828399999998,
+    "height": 11.150390636,
+    "cy": 1579,
+    "effectiveSize": 22
+  },
+  {
+    "text": "红卡",
+    "role": "missing-card",
+    "x": 554,
+    "y": 1570.409277565,
+    "width": 34.777734375,
+    "height": 17.18144487,
+    "cy": 1579,
+    "effectiveSize": 17.7
+  },
+  {
+    "text": "+300",
+    "role": "missing-card-compensation-number",
+    "x": 684.562011,
+    "y": 1570.6501467,
+    "width": 46.437989,
+    "height": 16.699706600000003,
+    "cy": 1579,
+    "effectiveSize": 23
+  },
+  {
+    "text": "w",
+    "role": "missing-card-compensation-unit",
+    "x": 736,
+    "y": 1573.424804682,
+    "width": 16.048828399999998,
+    "height": 11.150390636,
+    "cy": 1579,
+    "effectiveSize": 22
+  },
+  {
+    "text": "理包与速撤",
+    "role": "rule-label",
+    "x": 158,
+    "y": 1617.957763325,
+    "width": 92.01220698499999,
+    "height": 18.08447335,
+    "cy": 1627,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "必须由陪玩理包",
+    "role": "packing-quick-extraction",
+    "x": 307,
+    "y": 1606.42343728,
+    "width": 122.59843745600001,
+    "height": 17.15312544,
+    "cy": 1615,
+    "effectiveSize": 17.6
+  },
+  {
+    "text": "达到结单要求后，打手允许速撤",
+    "role": "packing-quick-extraction",
+    "x": 307,
+    "y": 1630.36328136,
+    "width": 245.93593728000002,
+    "height": 17.273437280000003,
+    "cy": 1639,
+    "effectiveSize": 17.6
+  },
+  {
+    "text": "装备例外",
+    "role": "rule-label",
+    "x": 158,
+    "y": 1682.475830425,
+    "width": 73.638671875,
+    "height": 18.04833915,
+    "cy": 1691.5,
+    "effectiveSize": 18.5
+  },
+  {
+    "text": "125以上的六套、龟包、金胸挂，",
+    "role": "equipment-exception",
+    "x": 307,
+    "y": 1671.052734375,
+    "width": 241.46509600000002,
+    "height": 16.89453125,
+    "cy": 1679.5,
+    "effectiveSize": 17.3
+  },
+  {
+    "text": "满红头修/甲修，不算假账。",
+    "role": "equipment-exception",
+    "x": 307,
+    "y": 1695.06962869,
+    "width": 202.91176747000003,
+    "height": 16.86074262,
+    "cy": 1703.5,
+    "effectiveSize": 17.3
+  },
+  {
+    "text": "下单前请确认地图及订单规则",
+    "role": "footer",
+    "x": 319.90507784,
+    "y": 1821.54101572,
+    "width": 196.18984432,
+    "height": 14.91796856,
+    "cy": 1829,
+    "effectiveSize": 15.2
+  }
+]

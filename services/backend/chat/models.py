@@ -9,6 +9,8 @@ class ChatSession(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='chat_session',
+        null=True,
+        blank=True,
         verbose_name='发起用户',
     )
     account = models.OneToOneField(
@@ -79,6 +81,8 @@ class ChatMessage(models.Model):
     )
     content = models.CharField(max_length=1000, blank=True, default='', verbose_name='文本内容')
     image = models.ImageField(upload_to='chat/', blank=True, null=True, verbose_name='图片')
+    client_message_id = models.CharField(max_length=64, null=True, blank=True, editable=False)
+    message_fingerprint = models.CharField(max_length=64, blank=True, default='', editable=False)
     is_read = models.BooleanField(default=False, db_index=True, verbose_name='是否已读')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -92,6 +96,7 @@ class ChatMessage(models.Model):
             ),
         ]
         constraints = [
+            models.UniqueConstraint(fields=['session', 'sender_account', 'client_message_id'], name='chat_message_client_id_uniq'),
             models.CheckConstraint(
                 condition=models.Q(content_type__in=['TEXT', 'IMAGE']),
                 name='chat_message_content_type_valid',

@@ -1,3 +1,4 @@
+import { nativeColors } from '@/styles/nativeColors';
 import React, { useState } from 'react';
 import { View, Text, Input, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
@@ -63,7 +64,7 @@ const LoginPage: React.FC = () => {
   return (
     <View className={`xa-provider-page ${styles.container}`}>
       <View className={`${styles.header} ${otp ? styles.otpHeader : ''}`}>
-        <XaLogo size={otp ? 80 : 120} color="#136398" style={{ marginBottom: otp ? '0' : '16px' }} />
+        <XaLogo size={otp ? 80 : 120} color={nativeColors.primary} style={{ marginBottom: otp ? '0' : '16px' }} />
         <Text className={styles.title}>兴安电竞 · 陪玩端</Text>
         <Text className={styles.subtitle}>报单与提款，尽在掌中</Text>
       </View>

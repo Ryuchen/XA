@@ -1,0 +1,75 @@
+{
+  "brand": "兴安电竞",
+  "title": "沙色保险单",
+  "mode": "绝密",
+  "subtitle": "成功撤离 · 累计摸箱",
+  "sources": {
+    "prices": "2026-09-29 本轮用户文字：端游、手游各三档，共六档；只做绝密",
+    "references": ["references/original-cover.png", "references/original-poster.png"],
+    "rules": "用户确认：按此沿用，端手游一致",
+    "reward": "用户确认：保留，仅计一次，不计入套餐次数",
+    "confirmation": "references/rules-confirmation.md"
+  },
+  "tiers": [
+    {
+      "id": "desktop-absolute",
+      "platform": "端游",
+      "mode": "绝密",
+      "rows": [
+        {"id": "desktop-1", "priceR": 168, "sandSafeCount": 2, "regularLargeSafeCount": 3, "baseGuaranteeW": 688},
+        {"id": "desktop-2", "priceR": 388, "sandSafeCount": 6, "regularLargeSafeCount": 8, "baseGuaranteeW": 1688},
+        {"id": "desktop-3", "priceR": 628, "sandSafeCount": 10, "regularLargeSafeCount": 15, "baseGuaranteeW": 3288}
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "platform": "手游",
+      "mode": "绝密",
+      "rows": [
+        {"id": "mobile-1", "priceR": 128, "sandSafeCount": 2, "regularLargeSafeCount": 3, "baseGuaranteeW": 688},
+        {"id": "mobile-2", "priceR": 288, "sandSafeCount": 6, "regularLargeSafeCount": 8, "baseGuaranteeW": 1688},
+        {"id": "mobile-3", "priceR": 488, "sandSafeCount": 10, "regularLargeSafeCount": 15, "baseGuaranteeW": 3288}
+      ]
+    }
+  ],
+  "mechanism": {
+    "counting": {
+      "scope": "累计",
+      "successfulExtractionRequired": true,
+      "safeTypes": ["沙色保险", "常规大保险"],
+      "copy": "两类保险仅统计成功撤离的局。"
+    },
+    "completion": {
+      "relation": "AND",
+      "requirements": ["累计沙色保险次数达标", "累计常规大保险次数达标", "打满基础累计物资保底"],
+      "copy": "两类保险次数 ＋ 基础保底，三项均达标才结单。"
+    },
+    "lootCounting": {
+      "successfulExtractionRequired": true,
+      "subject": "板板全身带出物资",
+      "operator": ">",
+      "thresholdW": 600,
+      "copy": "成功撤离且板板带出物资＞600w，才计入累计保底。"
+    },
+    "proxyTouch": {
+      "when": "战况激烈时",
+      "permissionRequired": true,
+      "copy": "战况激烈时，陪玩先询问板板能否代摸。"
+    }
+  },
+  "reward": {
+    "title": "三幻神惊喜奖励",
+    "trigger": "对局中出巴克什三幻神之一",
+    "extraGuaranteeW": 800,
+    "gift": {"safeType": "沙色保险", "count": 1, "unit": "次", "countsTowardPackage": false},
+    "maximumTriggersPerOrder": 1,
+    "copy": "出巴克什三幻神之一：额外保底＋800w，赠一次沙色；整单仅一次，赠送不计套餐次数。"
+  },
+  "footerInstruction": "下单前请确认地图及订单规则",
+  "verification": {
+    "prices": "逐项录入本轮六档价目",
+    "rules": "本轮用户已确认，端手游一致",
+    "reward": "本轮用户已确认保留、整单一次、赠送不计套餐次数",
+    "doNotInfer": ["未指定地图限制，不新增", "三幻神具体物品名未提供，沿用集合称谓", "不新增工作日优惠、额外补偿或其他玩法机制", "不混用沙保连连看的单局达标、十档价格或许愿奖励"]
+  }
+}

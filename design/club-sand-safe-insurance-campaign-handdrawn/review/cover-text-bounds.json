@@ -1,0 +1,46 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 361.24294915499996,
+    "y": 117.6474603,
+    "width": 202.95410169000002,
+    "height": 49.705079399999995,
+    "cy": 142.5,
+    "effectiveSize": 51
+  },
+  {
+    "text": "沙色保险单",
+    "role": "art-title",
+    "x": 73.58928966466794,
+    "y": 284.99996849151216,
+    "width": 704.8214206706641,
+    "height": 152.00006301697567,
+    "requestedCenter": [
+      426,
+      361
+    ],
+    "effectiveSize": 138.21784960454633,
+    "includesOutlineAndShadow": true
+  },
+  {
+    "text": "成功撤离 · 累计摸箱",
+    "role": "cover-subtitle",
+    "x": 223.63818,
+    "y": 535.0615243,
+    "width": 404.72364,
+    "height": 44.8769514,
+    "cy": 557.5,
+    "effectiveSize": 46
+  },
+  {
+    "text": "绝密专属 · 端游／手游",
+    "role": "cover-scope",
+    "x": 244.604244,
+    "y": 644.93359375,
+    "width": 362.791512,
+    "height": 36.1328125,
+    "cy": 663,
+    "effectiveSize": 37
+  }
+]

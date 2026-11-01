@@ -19,6 +19,8 @@
  * - 从后端拿到 / 传给后端的金额一律是「内部账务单位」整数。
  * - 仅在给用户看的时候用 formatXaCoin / toCoin 转成兴安币。
  * - 仅在读取用户输入（兴安币）时用 toRawAmount 转回内部账务单位。
+ * - 微信手续费接口另用人民币分；仅用 parseRmbFen / formatRmbFen 处理，
+ *   不通过兴安币或内部账务单位的汇率换算。
  */
 
 /**
@@ -27,6 +29,23 @@
  */
 export const COIN_UNIT = 10;
 export const RMB_TO_COIN_RATE = 10;
+
+/** 人民币元文本 → 人民币分；与兴安币/账务单位的汇率独立，不接受隐式舍入。 */
+export function parseRmbFen(yuan) {
+  const text = String(yuan == null ? '' : yuan);
+  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(text)) return 0;
+  const [whole, fraction = ''] = text.split('.');
+  const fen = Number(whole + fraction.padEnd(2, '0'));
+  return Number.isSafeInteger(fen) ? fen : 0;
+}
+
+/** 人民币分整数 → 人民币元，两位小数；不经过兴安币换算。 */
+export function formatRmbFen(fen) {
+  const value = Number(fen == null ? 0 : fen);
+  if (!Number.isSafeInteger(value)) return '0.00';
+  const digits = String(Math.abs(value)).padStart(3, '0');
+  return (value < 0 ? '-' : '') + digits.slice(0, -2) + '.' + digits.slice(-2);
+}
 
 /** 人民币元 → 内部账务单位；仅用于人工收款确认的输入边界。 */
 export function rmbToRawAmount(yuan) {

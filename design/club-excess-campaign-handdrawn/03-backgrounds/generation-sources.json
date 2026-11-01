@@ -1,0 +1,18 @@
+{
+  "provider": "built-in image_gen",
+  "sources": {
+    "desktop-absolute": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-911b06ae-5355-48c1-940c-da1876b1abe7.png",
+    "desktop-secret": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-42ca89a0-82b5-4cdb-975f-343a93be66c2.png",
+    "mobile-absolute": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-76dc8cf5-165c-47d8-be53-05a06cd70dbd.png",
+    "cover": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-1f981751-c428-4c7b-a280-f01e0a774385.png",
+    "social": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-2529a082-e889-4e4b-990b-7288d76a7675.png",
+    "mobile-secret": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-9fe44ba1-ef3b-40f8-b90d-95a2ae3d8dd8.png"
+  },
+  "rejected": [
+    {
+      "path": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-f0212891-25aa-4bfb-9475-185a4c42a24d.png",
+      "reason": "手游机密误生五行，修正版本另存，未收入交付PNG"
+    }
+  ],
+  "nativeSizes": "../review/export-manifest.json"
+}

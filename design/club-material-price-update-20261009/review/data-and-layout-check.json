@@ -1,0 +1,35 @@
+[
+  {
+    "page": "mobile-absolute",
+    "pricePairs": 6,
+    "baselineAndGap": "pass",
+    "priceCenterTolerance": 3,
+    "output": [
+      3200,
+      7680
+    ],
+    "source": "actual output/png"
+  },
+  {
+    "page": "mobile-secret",
+    "pricePairs": 6,
+    "baselineAndGap": "pass",
+    "priceCenterTolerance": 3,
+    "output": [
+      3200,
+      7680
+    ],
+    "source": "actual output/png"
+  },
+  {
+    "page": "social",
+    "pricePairs": 24,
+    "baselineAndGap": "pass",
+    "priceCenterTolerance": 3,
+    "output": [
+      2400,
+      3200
+    ],
+    "source": "actual output/png"
+  }
+]

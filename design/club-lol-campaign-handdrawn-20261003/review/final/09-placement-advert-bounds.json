@@ -1,0 +1,253 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "container": "09-placement-advert-brandSafe",
+    "x": 64,
+    "y": 58.6093744,
+    "w": 191.01562512,
+    "h": 46.78125119999999,
+    "baseline": 98.664061888,
+    "size": 48
+  },
+  {
+    "text": "单双新赛季",
+    "role": "art-title",
+    "container": "09-placement-advert-titleSafe",
+    "x": 64,
+    "y": 140.77238797247355,
+    "w": 338.99916366626593,
+    "h": 74.45522405505292,
+    "size": 66
+  },
+  {
+    "text": "定位赛",
+    "role": "art-title",
+    "container": "09-placement-advert-titleSafe",
+    "x": 63.99999999999999,
+    "y": 216.8548427755664,
+    "w": 205.8084674585251,
+    "h": 74.29031444886724,
+    "size": 66
+  },
+  {
+    "text": "英雄联盟 · 端游｜单双排定位",
+    "role": "platform",
+    "container": "09-placement-advert-subtitleSafe",
+    "x": 64,
+    "y": 330.43115228,
+    "w": 435.40917820000004,
+    "h": 37.13769544,
+    "baseline": 358.93603488,
+    "size": 34
+  },
+  {
+    "text": "同区可双排的两个号一起下单",
+    "role": "offer-condition",
+    "container": "09-placement-advert-offer",
+    "x": 100,
+    "y": 525.6513669,
+    "w": 594.4511736,
+    "h": 44.6972662,
+    "baseline": 564.126952826,
+    "size": 46
+  },
+  {
+    "text": "88折",
+    "role": "offer-value",
+    "container": "09-placement-advert-offer",
+    "x": 842.27832045,
+    "y": 495.36328124999994,
+    "w": 239.4433591,
+    "h": 105.27343750000001,
+    "baseline": 585.7587890899999,
+    "size": 110
+  },
+  {
+    "text": "铂金以下",
+    "role": "card-heading",
+    "container": "09-placement-advert-core-prices-0",
+    "x": 234.920897,
+    "y": 730.2851577,
+    "w": 182.158206,
+    "h": 44.8769514,
+    "baseline": 768.8505871,
+    "size": 46
+  },
+  {
+    "text": "140",
+    "role": "price-number",
+    "container": "09-placement-advert-core-prices-0",
+    "x": 247.6165625,
+    "y": 803.1621091,
+    "w": 124.703125,
+    "h": 66.79882640000001,
+    "baseline": 869.2871091,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "09-placement-advert-core-prices-0",
+    "x": 380.3196875,
+    "y": 835.22914033344,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 869.2871091,
+    "size": 66.24
+  },
+  {
+    "text": "包5胜",
+    "role": "card-body",
+    "container": "09-placement-advert-core-prices-0",
+    "x": 269.07714852,
+    "y": 897.9609355,
+    "w": 113.84570296,
+    "h": 42.753906799999996,
+    "baseline": 934.720701136,
+    "size": 44
+  },
+  {
+    "text": "铂金",
+    "role": "card-heading",
+    "container": "09-placement-advert-core-prices-1",
+    "x": 828.42675787,
+    "y": 730.2851577,
+    "w": 91.14648426000001,
+    "h": 44.8769514,
+    "baseline": 768.8505871,
+    "size": 46
+  },
+  {
+    "text": "180",
+    "role": "price-number",
+    "container": "09-placement-advert-core-prices-1",
+    "x": 795.90855486,
+    "y": 803.1621091,
+    "w": 124.11914028,
+    "h": 66.79882640000001,
+    "baseline": 869.2871091,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "09-placement-advert-core-prices-1",
+    "x": 928.02769514,
+    "y": 835.22914033344,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 869.2871091,
+    "size": 66.24
+  },
+  {
+    "text": "包5胜",
+    "role": "card-body",
+    "container": "09-placement-advert-core-prices-1",
+    "x": 817.07714852,
+    "y": 897.9609355,
+    "w": 113.84570296,
+    "h": 42.753906799999996,
+    "baseline": 934.720701136,
+    "size": 44
+  },
+  {
+    "text": "0-300分",
+    "role": "card-heading",
+    "container": "09-placement-advert-core-prices-2",
+    "x": 237.279294,
+    "y": 1037.4873047,
+    "w": 177.441412,
+    "h": 44.472657399999996,
+    "baseline": 1075.6933591000002,
+    "size": 46
+  },
+  {
+    "text": "350",
+    "role": "price-number",
+    "container": "09-placement-advert-core-prices-2",
+    "x": 239.7103125,
+    "y": 1109.9599621,
+    "w": 140.515625,
+    "h": 66.79882640000001,
+    "baseline": 1176.0849621,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "09-placement-advert-core-prices-2",
+    "x": 388.2259375,
+    "y": 1142.02699333344,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 1176.0849621,
+    "size": 66.24
+  },
+  {
+    "text": "包4胜",
+    "role": "card-body",
+    "container": "09-placement-advert-core-prices-2",
+    "x": 269.07714852,
+    "y": 1204.7587885000003,
+    "w": 113.84570296,
+    "h": 42.753906799999996,
+    "baseline": 1241.5185541360001,
+    "size": 44
+  },
+  {
+    "text": "新号-大师",
+    "role": "card-heading",
+    "container": "09-placement-advert-core-prices-3",
+    "x": 772.65625,
+    "y": 1037.3076172,
+    "w": 202.6875,
+    "h": 44.832032399999996,
+    "baseline": 1075.7382812740002,
+    "size": 46
+  },
+  {
+    "text": "1000",
+    "role": "price-number",
+    "container": "09-placement-advert-core-prices-3",
+    "x": 772.81871088,
+    "y": 1110.1396496000002,
+    "w": 170.29882824000003,
+    "h": 66.79882640000001,
+    "baseline": 1176.2646496000002,
+    "size": 92
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "container": "09-placement-advert-core-prices-3",
+    "x": 951.1175391200001,
+    "y": 1142.2066808334403,
+    "w": 24.06375,
+    "h": 34.05796873344,
+    "baseline": 1176.2646496000002,
+    "size": 66.24
+  },
+  {
+    "text": "包70%胜率",
+    "role": "card-body",
+    "container": "09-placement-advert-core-prices-3",
+    "x": 761.11035148,
+    "y": 1204.9384760000003,
+    "w": 225.77929704000002,
+    "h": 42.753906799999996,
+    "baseline": 1241.6982416360004,
+    "size": 44
+  },
+  {
+    "text": "按上赛季段位及隐藏分计价。",
+    "role": "core-condition",
+    "container": "09-placement-advert-pricing",
+    "x": 100,
+    "y": 1354.4716794,
+    "w": 565.5664074,
+    "h": 45.0566412,
+    "baseline": 1392.947265326,
+    "size": 46
+  }
+]

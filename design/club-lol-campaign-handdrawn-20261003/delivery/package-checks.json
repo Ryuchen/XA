@@ -1,0 +1,11 @@
+{
+  "revision": "final-r1",
+  "PNG": 30,
+  "editableSVG": 30,
+  "outlinedSVG": 30,
+  "CRC32": "passed",
+  "fullBytes": 347340194,
+  "pngBytes": 217935250,
+  "fullSHA256": "c00456b63419ac778ec11964e37162c27144864b6086f15e159a0a71340dbed5",
+  "pngSHA256": "4d380bfad0ce671dfa2e0841b78ffb049468dc4cf88fc48fb5e820d992d00b93"
+}

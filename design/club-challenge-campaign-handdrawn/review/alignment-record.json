@@ -1,0 +1,1542 @@
+{
+  "fullPosters": [
+    {
+      "id": "desktop-absolute",
+      "rows": 9,
+      "priceUnitColumn": 310,
+      "thresholdUnitColumn": 698,
+      "visibleUnitRatios": {
+        "r": 0.6770468091958695,
+        "w": 0.667985152814744
+      },
+      "verticalCenter": "数字、单位与比较符按可见字形分别居中于同一行中心",
+      "maps": [
+        {
+          "name": "航天",
+          "tiers": [
+            {
+              "priceR": 388,
+              "comparison": ">",
+              "thresholdW": 1288
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 1388
+            },
+            {
+              "priceR": 1088,
+              "comparison": ">",
+              "thresholdW": 1488
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "tiers": [
+            {
+              "priceR": 388,
+              "comparison": ">",
+              "thresholdW": 988
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 1188
+            },
+            {
+              "priceR": 1088,
+              "comparison": ">",
+              "thresholdW": 1288
+            }
+          ]
+        },
+        {
+          "name": "监狱",
+          "tiers": [
+            {
+              "priceR": 388,
+              "comparison": ">",
+              "thresholdW": 888
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 988
+            },
+            {
+              "priceR": 1088,
+              "comparison": ">",
+              "thresholdW": 1088
+            }
+          ]
+        }
+      ],
+      "renderedLabels": [
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 507
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 507
+        },
+        {
+          "role": "threshold-number",
+          "text": "1288",
+          "cy": 507
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 558
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 558
+        },
+        {
+          "role": "threshold-number",
+          "text": "1388",
+          "cy": 558
+        },
+        {
+          "role": "price-number",
+          "text": "1088",
+          "cy": 608.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 608.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "1488",
+          "cy": 608.5
+        },
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 716.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 716.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "988",
+          "cy": 716.5
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 767
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 767
+        },
+        {
+          "role": "threshold-number",
+          "text": "1188",
+          "cy": 767
+        },
+        {
+          "role": "price-number",
+          "text": "1088",
+          "cy": 818
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 818
+        },
+        {
+          "role": "threshold-number",
+          "text": "1288",
+          "cy": 818
+        },
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 927
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 927
+        },
+        {
+          "role": "threshold-number",
+          "text": "888",
+          "cy": 927
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 978.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 978.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "988",
+          "cy": 978.5
+        },
+        {
+          "role": "price-number",
+          "text": "1088",
+          "cy": 1029
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 1029
+        },
+        {
+          "role": "threshold-number",
+          "text": "1088",
+          "cy": 1029
+        }
+      ],
+      "unitRightMargin": 54.16674745,
+      "layout": [
+        {
+          "map": "航天",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "监狱",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "rows": 9,
+      "priceUnitColumn": 310,
+      "thresholdUnitColumn": 698,
+      "visibleUnitRatios": {
+        "r": 0.6770468091958695,
+        "w": 0.667985152814744
+      },
+      "verticalCenter": "数字、单位与比较符按可见字形分别居中于同一行中心",
+      "maps": [
+        {
+          "name": "核电站",
+          "tiers": [
+            {
+              "priceR": 388,
+              "comparison": ">",
+              "thresholdW": 588
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 688
+            },
+            {
+              "priceR": 1088,
+              "comparison": ">",
+              "thresholdW": 788
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "tiers": [
+            {
+              "priceR": 388,
+              "comparison": ">",
+              "thresholdW": 688
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 788
+            },
+            {
+              "priceR": 1088,
+              "comparison": ">",
+              "thresholdW": 888
+            }
+          ]
+        },
+        {
+          "name": "航天",
+          "tiers": [
+            {
+              "priceR": 388,
+              "comparison": ">",
+              "thresholdW": 788
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 888
+            },
+            {
+              "priceR": 1088,
+              "comparison": ">",
+              "thresholdW": 988
+            }
+          ]
+        }
+      ],
+      "renderedLabels": [
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 507
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 507
+        },
+        {
+          "role": "threshold-number",
+          "text": "588",
+          "cy": 507
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 558
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 558
+        },
+        {
+          "role": "threshold-number",
+          "text": "688",
+          "cy": 558
+        },
+        {
+          "role": "price-number",
+          "text": "1088",
+          "cy": 608.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 608.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "788",
+          "cy": 608.5
+        },
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 716.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 716.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "688",
+          "cy": 716.5
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 767
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 767
+        },
+        {
+          "role": "threshold-number",
+          "text": "788",
+          "cy": 767
+        },
+        {
+          "role": "price-number",
+          "text": "1088",
+          "cy": 818
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 818
+        },
+        {
+          "role": "threshold-number",
+          "text": "888",
+          "cy": 818
+        },
+        {
+          "role": "price-number",
+          "text": "388",
+          "cy": 927
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 927
+        },
+        {
+          "role": "threshold-number",
+          "text": "788",
+          "cy": 927
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 978.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 978.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "888",
+          "cy": 978.5
+        },
+        {
+          "role": "price-number",
+          "text": "1088",
+          "cy": 1029
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 1029
+        },
+        {
+          "role": "threshold-number",
+          "text": "988",
+          "cy": 1029
+        }
+      ],
+      "unitRightMargin": 54.16674745,
+      "layout": [
+        {
+          "map": "核电站",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "航天",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "rows": 9,
+      "priceUnitColumn": 310,
+      "thresholdUnitColumn": 698,
+      "visibleUnitRatios": {
+        "r": 0.6770468091958695,
+        "w": 0.6666375430913258
+      },
+      "verticalCenter": "数字、单位与比较符按可见字形分别居中于同一行中心",
+      "maps": [
+        {
+          "name": "航天",
+          "tiers": [
+            {
+              "priceR": 288,
+              "comparison": ">",
+              "thresholdW": 1088
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 1288
+            },
+            {
+              "priceR": 988,
+              "comparison": ">",
+              "thresholdW": 1388
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "tiers": [
+            {
+              "priceR": 288,
+              "comparison": ">",
+              "thresholdW": 888
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 1088
+            },
+            {
+              "priceR": 988,
+              "comparison": ">",
+              "thresholdW": 1188
+            }
+          ]
+        },
+        {
+          "name": "监狱",
+          "tiers": [
+            {
+              "priceR": 288,
+              "comparison": ">",
+              "thresholdW": 888
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 1088
+            },
+            {
+              "priceR": 988,
+              "comparison": ">",
+              "thresholdW": 1188
+            }
+          ]
+        }
+      ],
+      "renderedLabels": [
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 507
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 507
+        },
+        {
+          "role": "threshold-number",
+          "text": "1088",
+          "cy": 507
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 558
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 558
+        },
+        {
+          "role": "threshold-number",
+          "text": "1288",
+          "cy": 558
+        },
+        {
+          "role": "price-number",
+          "text": "988",
+          "cy": 608.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 608.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "1388",
+          "cy": 608.5
+        },
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 716.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 716.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "888",
+          "cy": 716.5
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 767
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 767
+        },
+        {
+          "role": "threshold-number",
+          "text": "1088",
+          "cy": 767
+        },
+        {
+          "role": "price-number",
+          "text": "988",
+          "cy": 818
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 818
+        },
+        {
+          "role": "threshold-number",
+          "text": "1188",
+          "cy": 818
+        },
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 927
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 927
+        },
+        {
+          "role": "threshold-number",
+          "text": "888",
+          "cy": 927
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 978.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 978.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "1088",
+          "cy": 978.5
+        },
+        {
+          "role": "price-number",
+          "text": "988",
+          "cy": 1029
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 1029
+        },
+        {
+          "role": "threshold-number",
+          "text": "1188",
+          "cy": 1029
+        }
+      ],
+      "unitRightMargin": 54.16674745,
+      "layout": [
+        {
+          "map": "航天",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "监狱",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "rows": 9,
+      "priceUnitColumn": 310,
+      "thresholdUnitColumn": 698,
+      "visibleUnitRatios": {
+        "r": 0.6770468091958695,
+        "w": 0.667985152814744
+      },
+      "verticalCenter": "数字、单位与比较符按可见字形分别居中于同一行中心",
+      "maps": [
+        {
+          "name": "核电站",
+          "tiers": [
+            {
+              "priceR": 288,
+              "comparison": ">",
+              "thresholdW": 588
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 688
+            },
+            {
+              "priceR": 988,
+              "comparison": ">",
+              "thresholdW": 788
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "tiers": [
+            {
+              "priceR": 288,
+              "comparison": ">",
+              "thresholdW": 588
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 788
+            },
+            {
+              "priceR": 988,
+              "comparison": ">",
+              "thresholdW": 888
+            }
+          ]
+        },
+        {
+          "name": "航天",
+          "tiers": [
+            {
+              "priceR": 288,
+              "comparison": ">",
+              "thresholdW": 688
+            },
+            {
+              "priceR": 688,
+              "comparison": ">",
+              "thresholdW": 888
+            },
+            {
+              "priceR": 988,
+              "comparison": ">",
+              "thresholdW": 988
+            }
+          ]
+        }
+      ],
+      "renderedLabels": [
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 507
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 507
+        },
+        {
+          "role": "threshold-number",
+          "text": "588",
+          "cy": 507
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 558
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 558
+        },
+        {
+          "role": "threshold-number",
+          "text": "688",
+          "cy": 558
+        },
+        {
+          "role": "price-number",
+          "text": "988",
+          "cy": 608.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 608.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "788",
+          "cy": 608.5
+        },
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 716.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 716.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "588",
+          "cy": 716.5
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 767
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 767
+        },
+        {
+          "role": "threshold-number",
+          "text": "788",
+          "cy": 767
+        },
+        {
+          "role": "price-number",
+          "text": "988",
+          "cy": 818
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 818
+        },
+        {
+          "role": "threshold-number",
+          "text": "888",
+          "cy": 818
+        },
+        {
+          "role": "price-number",
+          "text": "288",
+          "cy": 927
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 927
+        },
+        {
+          "role": "threshold-number",
+          "text": "688",
+          "cy": 927
+        },
+        {
+          "role": "price-number",
+          "text": "688",
+          "cy": 978.5
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 978.5
+        },
+        {
+          "role": "threshold-number",
+          "text": "888",
+          "cy": 978.5
+        },
+        {
+          "role": "price-number",
+          "text": "988",
+          "cy": 1029
+        },
+        {
+          "role": "strict-comparison",
+          "text": ">",
+          "cy": 1029
+        },
+        {
+          "role": "threshold-number",
+          "text": "988",
+          "cy": 1029
+        }
+      ],
+      "unitRightMargin": 54.16674745,
+      "layout": [
+        {
+          "map": "核电站",
+          "rowCenters": [
+            507,
+            558,
+            608.5
+          ],
+          "rowEdges": [
+            481,
+            533,
+            583,
+            634
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "巴克什",
+          "rowCenters": [
+            716.5,
+            767,
+            818
+          ],
+          "rowEdges": [
+            691,
+            742,
+            792,
+            844
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        },
+        {
+          "map": "航天",
+          "rowCenters": [
+            927,
+            978.5,
+            1029
+          ],
+          "rowEdges": [
+            901,
+            953,
+            1004,
+            1054
+          ],
+          "unitColumns": {
+            "priceR": 310,
+            "thresholdW": 698
+          },
+          "comparisonColumn": 511,
+          "numberGap": 8,
+          "vertical": "visible glyph center",
+          "noRightIcons": true
+        }
+      ]
+    }
+  ],
+  "social": [
+    {
+      "id": "desktop-absolute",
+      "priceUnitColumn": 139,
+      "columns": [
+        {
+          "map": "航天",
+          "unitColumn": 247,
+          "rows": [
+            {
+              "cy": 596.5,
+              "number": "1288",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 10.57881064,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 662.5,
+              "number": "1388",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 10.20039085000002,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 730,
+              "number": "1488",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 8.959179679999977,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "巴克什",
+          "unitColumn": 368,
+          "rows": [
+            {
+              "cy": 596.5,
+              "number": "988",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 20.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 662.5,
+              "number": "1188",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 15.285352639999985,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 730,
+              "number": "1288",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 9.578810639999972,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "监狱",
+          "unitColumn": 493,
+          "rows": [
+            {
+              "cy": 596.5,
+              "number": "888",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 23.145215029999974,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 662.5,
+              "number": "988",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 24.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 730,
+              "number": "1088",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6665249544165934,
+              "comparisonToNumberGap": 12.488965029999974,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "priceUnitColumn": 648,
+      "columns": [
+        {
+          "map": "核电站",
+          "unitColumn": 755,
+          "rows": [
+            {
+              "cy": 596.5,
+              "number": "588",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 19.932324249999965,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 662.5,
+              "number": "688",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 20.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 730,
+              "number": "788",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 20.598340029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "巴克什",
+          "unitColumn": 875,
+          "rows": [
+            {
+              "cy": 596.5,
+              "number": "688",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 19.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 662.5,
+              "number": "788",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 19.598340029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 730,
+              "number": "888",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 18.145215029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "航天",
+          "unitColumn": 1001,
+          "rows": [
+            {
+              "cy": 596.5,
+              "number": "788",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 25.598340029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 662.5,
+              "number": "888",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 24.145215029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 730,
+              "number": "988",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 25.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "priceUnitColumn": 139,
+      "columns": [
+        {
+          "map": "航天",
+          "unitColumn": 247,
+          "rows": [
+            {
+              "cy": 899,
+              "number": "1088",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6665249544165934,
+              "comparisonToNumberGap": 9.488965030000003,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 965.5,
+              "number": "1288",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 10.57881064,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 1033.5,
+              "number": "1388",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 10.20039085000002,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "巴克什",
+          "unitColumn": 368,
+          "rows": [
+            {
+              "cy": 899,
+              "number": "888",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 19.145215029999974,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 965.5,
+              "number": "1088",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6665249544165934,
+              "comparisonToNumberGap": 8.488965029999974,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 1033.5,
+              "number": "1188",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 15.285352639999985,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "监狱",
+          "unitColumn": 493,
+          "rows": [
+            {
+              "cy": 899,
+              "number": "888",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 23.145215029999974,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 965.5,
+              "number": "1088",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6665249544165934,
+              "comparisonToNumberGap": 12.488965029999974,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 1033.5,
+              "number": "1188",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 19.285352639999985,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "priceUnitColumn": 648,
+      "columns": [
+        {
+          "map": "核电站",
+          "unitColumn": 755,
+          "rows": [
+            {
+              "cy": 899,
+              "number": "588",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 19.932324249999965,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 965.5,
+              "number": "688",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 20.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 1033.5,
+              "number": "788",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 20.598340029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "巴克什",
+          "unitColumn": 875,
+          "rows": [
+            {
+              "cy": 899,
+              "number": "588",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 18.932324249999965,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 965.5,
+              "number": "788",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 19.598340029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 1033.5,
+              "number": "888",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 18.145215029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        },
+        {
+          "map": "航天",
+          "unitColumn": 1001,
+          "rows": [
+            {
+              "cy": 899,
+              "number": "688",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 25.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 965.5,
+              "number": "888",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 24.145215029999918,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            },
+            {
+              "cy": 1033.5,
+              "number": "988",
+              "comparison": ">",
+              "unitVisibleRatio": 0.6678723365416798,
+              "comparisonToNumberGap": 25.44697260999999,
+              "numberToUnitGap": 3,
+              "unitToBorderGap": 10.40703087999998
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

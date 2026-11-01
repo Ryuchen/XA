@@ -1,0 +1,145 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "project": "兴安电竞体验单完整套图",
+  "revision": "uiux-typography-r4",
+  "stage": "final-review-ready",
+  "deliveryScope": {
+    "pageIds": [
+      "cover",
+      "social",
+      "desktop-experience",
+      "mobile-experience"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "2026-10-09用户明确点名四张：封面、广告页、端游体验单、手游体验单"
+  },
+  "contentVerified": true,
+  "contentVerificationBasis": "逐项核对本轮正文12档；新客统一为新客专享、同一个三角洲UID仅可下一次；手游新客超值券为绝密98r保1314w。其余规则对照本轮两附件保持不变。",
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "2026-10-09用户正文端游价目为准；附件1提供不变的规则",
+    "mobile": "2026-10-09用户正文手游价目为准，覆盖原图新客超值券模式和保底；附件2提供不变的规则"
+  },
+  "approvals": {
+    "characterPrototype": {
+      "status": "approved-reference",
+      "basis": "技能保存的2026-10-08 r1原型确认；本轮按技能沿用，不视作新情景已获确认",
+      "file": "references/approved-character-trio-r1.png"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户2026-10-09回复“继续”，确认上一轮插画并授权进入结构稿与无字底图阶段",
+      "file": "01-illustrations/experience-trio-20261009-r1.png",
+      "nativeDimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "generationTool": "built-in image_gen"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户2026-10-09回复“继续”，确认第二阶段四张结构稿及无字底图，授权进入矢量填字",
+      "files": [
+        "03-backgrounds/cover-r1.png",
+        "03-backgrounds/social-r1.png",
+        "03-backgrounds/desktop-experience-r2.png",
+        "03-backgrounds/mobile-experience-r2.png"
+      ],
+      "review": "review/stage2-review.html",
+      "actualRegions": "02-layouts/actual-background-regions-r2.json",
+      "visualQA": "review/background-qa-r2.md",
+      "socialR3": {
+        "status": "approved",
+        "basis": "用户2026-10-09明确回复“确认”批准广告去票券新底图。",
+        "file": "assets/backgrounds/experience-social-r3.png",
+        "nativeDimensions": {
+          "width": 1086,
+          "height": 1448
+        }
+      }
+    },
+    "finalArtwork": {
+      "audit": "review/visual-qa.md",
+      "basis": "用户2026-10-09明确回复“通过”，确认MiSans成图，并要求进一步校验文字在各区块的对齐情况",
+      "status": "approved",
+      "gallery": "review/index.html",
+      "preview": "review/stage3-misans-preview.png",
+      "currentRevision": {
+        "revision": "uiux-typography-r4",
+        "status": "ready-for-review",
+        "basis": "用户明确授权使用ui-ux-pro-max优化四页文字，本轮按已确认底图完成矢量排版与自检，供确认。",
+        "preview": "review/stage3-misans-preview.png"
+      }
+    }
+  },
+  "intent": {
+    "mood": "超值优惠券",
+    "primary": "保底物资数量",
+    "secondary": "费用",
+    "characters": "沿用已确认r1蜂医、粉发电竞女孩和灰鼠"
+  },
+  "stageGatePolicy": "用户明确要求每一阶段出的图都要确认；插画→确认→结构稿及无字底图→确认→矢量成图→确认",
+  "lastRenderedPages": [
+    "cover",
+    "social",
+    "desktop-experience",
+    "mobile-experience"
+  ],
+  "typography": {
+    "artTitle": "保留已确认的矢量艺术字",
+    "source": "本机已安装MiSansVF.ttf",
+    "basis": "用户2026-10-09要求全部正文使用MiSan，按本机MiSans字体落实",
+    "designSkill": "design-taste-frontend",
+    "scope": "所有非艺术标题文字，包括数字、单位、说明、品牌、模式、条件和页脚",
+    "bodyFont": "MiSans VF",
+    "faces": [
+      "MiSans VF Regular",
+      "MiSans VF Semibold",
+      "MiSans VF Bold"
+    ],
+    "designSkills": [
+      "design-taste-frontend",
+      "ui-ux-pro-max"
+    ],
+    "latestRequest": "优化四张成图中的文案位置、换行、对齐、重点强调与内容区分",
+    "latestReview": "review/uiux-typography-r4.md"
+  },
+  "alignmentVerification": {
+    "status": "passed",
+    "report": "review/uiux-typography-r4.md",
+    "measurements": "review/typography-audit-r4.json",
+    "pages": 4,
+    "blocks": 58,
+    "numberPairs": 52,
+    "checks": 377,
+    "failures": 0,
+    "basis": "实际四页PNG、390px预览、规则局部和前后对照均已查看，价目来源及内部几何检查通过"
+  },
+  "pendingRevision": {
+    "page": "social",
+    "stage": "background",
+    "status": "implemented",
+    "request": "去掉广告页头部艺术标题后的票券底板，艺术标题直接浮在底图上方",
+    "background": "03-backgrounds/social-no-ticket-r3.png",
+    "prompt": "03-backgrounds/social-no-ticket-r3-prompt.txt",
+    "generationTool": "built-in image_gen",
+    "nativeWidth": 1086,
+    "nativeHeight": 1448,
+    "next": "新版广告成图已完成并随四页交付包提供复核。",
+    "approvalBasis": "用户2026-10-09明确回复“确认”，批准去票券底板的广告新底图，授权进入矢量填字与更新交付。"
+  },
+  "delivery": {
+    "package": "campaign-uiux-typography-r4.zip",
+    "gallery": "review/index.html",
+    "pageCount": 4,
+    "pngCount": 4,
+    "editableSvgCount": 4,
+    "outlinedSvgCount": 4
+  }
+}

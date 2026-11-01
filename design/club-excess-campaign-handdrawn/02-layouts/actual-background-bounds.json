@@ -1,0 +1,339 @@
+{
+  "note": "按生成原图视觉边界初步记录；单位为对应referenceSpace内像素。正式填字时再校准，不使用生成前guide坐标。尚未添加正式文案。",
+  "perPageOverrides": {"mobile-secret":{"mobileRowEdges":[550,626,703,780,864]}},
+  "portrait": {
+    "referenceSpace": [
+      836,
+      1882
+    ],
+    "titleSafe": [
+      58,
+      75,
+      280,
+      213
+    ],
+    "platformPill": [
+      53,
+      304,
+      297,
+      42
+    ],
+    "mechanism": [
+      44,
+      410,
+      748,
+      81
+    ],
+    "mechanismTextSafe": [
+      67,
+      422,
+      570,
+      55
+    ],
+    "table": {
+      "bounds": [
+        44,
+        505,
+        748,
+        359
+      ],
+      "header": [
+        44,
+        505,
+        748,
+        45
+      ],
+      "desktopRowEdges": [
+        550,
+        614,
+        677,
+        739,
+        801,
+        864
+      ],
+      "mobileRowEdges": [
+        550,
+        628,
+        708,
+        786,
+        864
+      ],
+      "priceSafeX": [
+        86,
+        375
+      ],
+      "guaranteeSafeX": [
+        465,
+        746
+      ],
+      "centerDecorX": 419,
+      "noRightIcon": true
+    },
+    "example": {
+      "bounds": [
+        44,
+        882,
+        748,
+        196
+      ],
+      "headingSafe": [
+        65,
+        893,
+        708,
+        40
+      ],
+      "tiles": [
+        [
+          71,
+          941,
+          207,
+          94
+        ],
+        [
+          318,
+          941,
+          203,
+          94
+        ],
+        [
+          559,
+          941,
+          206,
+          94
+        ]
+      ],
+      "footerSafe": [
+        66,
+        1040,
+        705,
+        25
+      ]
+    },
+    "ownership": {
+      "bounds": [
+        44,
+        1095,
+        748,
+        130
+      ],
+      "textSafe": [
+        282,
+        1110,
+        488,
+        99
+      ]
+    },
+    "rules": {
+      "header": [
+        44,
+        1240,
+        748,
+        44
+      ],
+      "bounds": [
+        44,
+        1294,
+        748,
+        348
+      ],
+      "iconSafe": [
+        56,
+        1300,
+        104,
+        333
+      ],
+      "textSafeX": [
+        180,
+        778
+      ],
+      "rowEdges": [
+        1294,
+        1351,
+        1406,
+        1464,
+        1519,
+        1582,
+        1642
+      ]
+    },
+    "footerCapsule": [
+      229,
+      1815,
+      378,
+      31
+    ]
+  },
+  "cover": {
+    "referenceSpace": [
+      1672,
+      941
+    ],
+    "titleSafe": [
+      86,
+      109,
+      600,
+      420
+    ],
+    "subtitle": [
+      60,
+      580,
+      652,
+      74
+    ]
+  },
+  "social": {
+    "referenceSpace": [
+      1086,
+      1448
+    ],
+    "titleSafe": [
+      76,
+      92,
+      418,
+      207
+    ],
+    "mechanism": [
+      55,
+      415,
+      978,
+      88
+    ],
+    "mechanismTextSafe": [
+      78,
+      429,
+      767,
+      62
+    ],
+    "cards": [
+      {
+        "id": "desktop-absolute",
+        "mode": [
+          55,
+          519,
+          474,
+          43
+        ],
+        "header": [
+          55,
+          562,
+          474,
+          36
+        ],
+        "rowEdges": [
+          598,
+          648,
+          698,
+          750,
+          801,
+          853
+        ],
+        "priceSafeX": [
+          70,
+          263
+        ],
+        "guaranteeSafeX": [
+          319,
+          516
+        ]
+      },
+      {
+        "id": "desktop-secret",
+        "mode": [
+          557,
+          519,
+          476,
+          43
+        ],
+        "header": [
+          557,
+          562,
+          476,
+          36
+        ],
+        "rowEdges": [
+          598,
+          648,
+          698,
+          750,
+          801,
+          853
+        ],
+        "priceSafeX": [
+          572,
+          765
+        ],
+        "guaranteeSafeX": [
+          821,
+          1020
+        ]
+      },
+      {
+        "id": "mobile-absolute",
+        "mode": [
+          55,
+          872,
+          474,
+          44
+        ],
+        "header": [
+          55,
+          916,
+          474,
+          35
+        ],
+        "rowEdges": [
+          951,
+          1006,
+          1061,
+          1118,
+          1177
+        ],
+        "priceSafeX": [
+          70,
+          263
+        ],
+        "guaranteeSafeX": [
+          319,
+          516
+        ]
+      },
+      {
+        "id": "mobile-secret",
+        "mode": [
+          557,
+          872,
+          476,
+          44
+        ],
+        "header": [
+          557,
+          916,
+          476,
+          35
+        ],
+        "rowEdges": [
+          951,
+          1006,
+          1061,
+          1118,
+          1177
+        ],
+        "priceSafeX": [
+          572,
+          765
+        ],
+        "guaranteeSafeX": [
+          821,
+          1020
+        ]
+      }
+    ],
+    "footer": [
+      118,
+      1226,
+      850,
+      91
+    ],
+    "noOrderNotes": true
+  }
+}

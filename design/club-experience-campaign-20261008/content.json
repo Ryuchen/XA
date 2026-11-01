@@ -1,0 +1,221 @@
+{
+  "campaign": "兴安电竞 · 体验单",
+  "brand": "兴安电竞",
+  "game": "三角洲行动",
+  "sources": [
+    {
+      "id": "desktop-reference",
+      "file": "references/desktop-price-source-20261009.png",
+      "platform": "端游",
+      "basis": "2026-10-09用户正文端游价目为准；附件1提供不变的规则",
+      "originalFilename": "codex-clipboard-9b129649-983b-4fbc-8124-69811bff5ad2.png"
+    },
+    {
+      "id": "mobile-reference",
+      "file": "references/mobile-price-source-20261009.png",
+      "platform": "手游",
+      "basis": "2026-10-09用户正文手游价目为准，覆盖原图新客超值券模式和保底；附件2提供不变的规则",
+      "originalFilename": "codex-clipboard-32722c41-3f9f-4493-a624-c133dc148f3c.png"
+    }
+  ],
+  "units": {
+    "price": "r",
+    "guarantee": "w"
+  },
+  "tiers": [
+    {
+      "id": "desktop-experience",
+      "platform": "端游",
+      "sourceId": "desktop-reference",
+      "sections": [
+        {
+          "id": "new",
+          "title": "新客专享",
+          "limit": "同一个三角洲UID仅可下一次",
+          "offers": [
+            {
+              "id": "new-super",
+              "mode": "机密",
+              "price": 98,
+              "guarantee": 988,
+              "superValue": true
+            },
+            {
+              "id": "new-secret",
+              "mode": "机密",
+              "price": 68,
+              "guarantee": 428,
+              "superValue": false
+            },
+            {
+              "id": "new-absolute",
+              "mode": "绝密",
+              "price": 98,
+              "guarantee": 588,
+              "superValue": false
+            }
+          ]
+        },
+        {
+          "id": "daily",
+          "title": "每日一单",
+          "limit": null,
+          "offers": [
+            {
+              "id": "daily-super",
+              "mode": "绝密",
+              "price": 188,
+              "guarantee": 1188,
+              "superValue": true
+            },
+            {
+              "id": "daily-secret",
+              "mode": "机密",
+              "price": 108,
+              "guarantee": 788,
+              "superValue": false
+            },
+            {
+              "id": "daily-absolute",
+              "mode": "绝密",
+              "price": 138,
+              "guarantee": 788,
+              "superValue": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-experience",
+      "platform": "手游",
+      "sourceId": "mobile-reference",
+      "sections": [
+        {
+          "id": "new",
+          "title": "新客专享",
+          "limit": "同一个三角洲UID仅可下一次",
+          "offers": [
+            {
+              "id": "new-super",
+              "mode": "绝密",
+              "price": 98,
+              "guarantee": 1314,
+              "superValue": true
+            },
+            {
+              "id": "new-secret",
+              "mode": "机密",
+              "price": 68,
+              "guarantee": 788,
+              "superValue": false
+            },
+            {
+              "id": "new-absolute",
+              "mode": "绝密",
+              "price": 88,
+              "guarantee": 788,
+              "superValue": false
+            }
+          ]
+        },
+        {
+          "id": "daily",
+          "title": "每日一单",
+          "limit": null,
+          "offers": [
+            {
+              "id": "daily-super",
+              "mode": "绝密",
+              "price": 188,
+              "guarantee": 1688,
+              "superValue": true
+            },
+            {
+              "id": "daily-secret",
+              "mode": "机密",
+              "price": 108,
+              "guarantee": 1088,
+              "superValue": false
+            },
+            {
+              "id": "daily-absolute",
+              "mode": "绝密",
+              "price": 128,
+              "guarantee": 1088,
+              "superValue": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "rules": {
+    "map": {
+      "note": "体验单打手选图，老板下单时可备注，但需要排队。",
+      "secret": [
+        "核电站",
+        "巴克什",
+        "航天"
+      ],
+      "absolute": [
+        "航天",
+        "巴克什"
+      ]
+    },
+    "equipment": {
+      "roomCard": {
+        "secret": "机密体验单包一张红卡房",
+        "absolute": "绝密体验单按俱乐部规定包金、红卡"
+      },
+      "backpackMinimumSlots": {
+        "secret": 30,
+        "absolute": 40
+      },
+      "revolverMinimumCount": 1
+    },
+    "failedOrderCompensation": {
+      "label": "炸单补偿",
+      "secret": 30,
+      "absolute": 60,
+      "unit": "w",
+      "sourceNotation": "+30w / +60w",
+      "interpretation": "保持原图术语与加号，不增补未提供的赔付条件或现金解释"
+    },
+    "activityRestriction": "体验单不参与任何店铺活动。",
+    "footer": "最终解释权归兴安电竞所有"
+  },
+  "editorial": {
+    "priority": "保底数量优先，费用次级但清楚可读",
+    "cardOrder": "两组各三张优惠票券；超值券采用更大宽度或暖金强调",
+    "guaranteeVisibleHeightToPrice": 2.2,
+    "coverTitle": [
+      "超值",
+      "体验单"
+    ],
+    "coverClaim": "保底物资最高1688w",
+    "coverClaimScope": "手游每日一单绝密超值券；封面同时标端游/手游·机密/绝密，不暗示所有档位都是1688w",
+    "coverVersions": "端游 / 手游 · 机密 / 绝密",
+    "socialSections": [
+      "端游新客",
+      "端游每日",
+      "手游新客",
+      "手游每日"
+    ],
+    "avoidClaims": [
+      "限时优惠",
+      "折扣百分比",
+      "原价对比",
+      "叠加优惠券",
+      "额外活动上浮",
+      "单局保底或累计保底（来源未说明）"
+    ]
+  },
+  "verification": {
+    "checkedDate": "2026-10-09",
+    "checkedOfferCount": 12,
+    "priceAndGuaranteeVerified": true,
+    "basis": "逐项核对本轮正文12档；新客统一为新客专享、同一个三角洲UID仅可下一次；手游新客超值券为绝密98r保1314w。其余规则对照本轮两附件保持不变。",
+    "openBusinessQuestions": []
+  }
+}

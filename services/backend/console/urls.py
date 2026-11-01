@@ -105,10 +105,17 @@ router.register('audit-logs', AuditLogViewSet, basename='admin-audit-log')
 router.register('bans', BanViewSet, basename='admin-ban')
 
 from orders.traffic_views import TrafficConfigView
+from orders.timeout_views import OrderTimeoutConfigView, OrderTimeoutConfigHistoryView
+from orders.payment_fee_policy_views import PaymentFeePolicyView, PaymentFeePolicyHistoryView, PaymentFeePolicyPreviewView
 
 urlpatterns = [
     path('qualification-options/', QualificationOptionsView.as_view()),
     path('order-traffic/', TrafficConfigView.as_view()),
+    path('config/order-timeout/', OrderTimeoutConfigView.as_view()),
+    path('config/order-timeout/history/', OrderTimeoutConfigHistoryView.as_view()),
+    path('config/payment-fee/', PaymentFeePolicyView.as_view()),
+    path('config/payment-fee/history/', PaymentFeePolicyHistoryView.as_view()),
+    path('config/payment-fee/preview/', PaymentFeePolicyPreviewView.as_view()),
     path('kook-points-status/',KookPointsStatusView.as_view()),
     path('config/kook-dispatch/', KookConfigView.as_view()),
     path('config/kook-dispatch/check/', KookChannelCheckView.as_view()),

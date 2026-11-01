@@ -100,6 +100,64 @@ class BusinessClosureTest(APITestCase):
         payload.pop('proof_image')
         self.assertEqual(self.client.post('/api/admin/wallets/recharge/', payload).data['code'], 400)
 
+    @override_settings(REQUIRE_CLIENT_REQUEST_ID=True, REQUIRE_RECHARGE_PROOF=True)
+    def test_recharge_history_wallet_scope_and_receipt_filter(self):
+        self.provider.nickname = self.boss.nickname = '同名充值账户'
+        self.provider.save(update_fields=['nickname'])
+        self.boss.save(update_fields=['nickname'])
+        self.ok(self.client.post('/api/admin/wallets/recharge/', self.recharge_payload(self.provider), format='multipart'))
+        payload = self.recharge_payload(self.boss)
+        payload.update(trade_no='OTHER-RECEIPT', client_request_id='other-topup')
+        self.ok(self.client.post('/api/admin/wallets/recharge/', payload, format='multipart'))
+        wallet = get_wallet(account=self.accounts[self.provider.pk])
+        # Older imported records may not have account or transaction links.
+        old = RechargeRecord.objects.create(user=self.provider, amount=100, trade_no='OLD-RECEIPT')
+        url = '/api/admin/recharge-records/'
+        rows = self.ok(self.client.get(url, {'wallet_id': wallet.pk}))['list']
+        self.assertEqual({row['user'] for row in rows}, {self.provider.pk})
+        self.assertEqual({row['trade_no'] for row in rows}, {'CLOSURE-RECEIPT-001', old.trade_no})
+        rows = self.ok(self.client.get(url, {'wallet_id': wallet.pk, 'trade_no': 'closure-receipt-001'}))['list']
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['user'], self.provider.pk)
+        self.assertEqual(self.ok(self.client.get(url, {'wallet_id': wallet.pk, 'trade_no': 'OTHER-RECEIPT'}))['list'], [])
+        self.assertEqual(self.ok(self.client.get(url, {'wallet_id': wallet.pk, 'trade_no': 'closure'}))['list'], [])
+        self.assertEqual(self.ok(self.client.get(url, {'wallet_id': 999999999}))['list'], [])
+        for invalid in ('-1', 'abc', '999999999999999999999'):
+            self.assertEqual(self.client.get(url, {'wallet_id': invalid}).status_code, 400)
+        role = self.staff.admin_membership.roles.get()
+        role.permissions = ['wallet:view']
+        role.save(update_fields=['permissions'])
+        self.assertEqual(self.client.get(url, {'wallet_id': wallet.pk}).status_code, 403)
+
+    @override_settings(REQUIRE_CLIENT_REQUEST_ID=True)
+    def test_customer_adjustment_keeps_wallet_and_ledger_consistent_on_replay(self):
+        wallet = make_wallet(self.boss, balance=5000)
+        wallet.account = self.accounts[self.boss.pk]
+        wallet.save(update_fields=['account'])
+        url = f'/api/admin/wallets/{wallet.pk}/adjust/'
+        payload = {'amount': -1000, 'remark': '隔离调账核对', 'client_request_id': 'closure-adjust-1'}
+        self.ok(self.client.post(url, payload, format='json'))
+        wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, 4000)
+        self.assertNotEqual(self.client.post(url, payload, format='json').data['code'], 0)
+        wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, 4000)
+        tx = Transaction.objects.filter(wallet=wallet, tx_type=Transaction.TxType.ADJUST)
+        self.assertEqual(tx.count(), 1)
+        self.assertEqual((tx.get().amount, tx.get().balance_before, tx.get().balance_after), (-1000, 5000, 4000))
+        other_wallet = make_wallet(self.provider, balance=3000)
+        Transaction.objects.create(wallet=other_wallet, amount=100, tx_type=Transaction.TxType.ADJUST,
+                                   balance_before=2900, balance_after=3000, remark='其他钱包')
+        rows = self.ok(self.client.get('/api/admin/transactions/', {'wallet_id': wallet.pk}))['list']
+        self.assertEqual([row['wallet'] for row in rows], [wallet.pk])
+        for invalid in ('-1', 'abc', '999999999999999999999'):
+            self.assertEqual(self.client.get('/api/admin/transactions/', {'wallet_id': invalid}).status_code, 400)
+        refused = self.client.post(url, {'amount': -5000, 'remark': '余额不足', 'client_request_id': 'closure-adjust-2'}, format='json')
+        self.assertEqual(refused.data['code'], 400)
+        wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, 4000)
+        self.assertEqual(tx.count(), 1)
+
     def test_provider_wallet_is_not_exposed_as_boss_and_cannot_be_adjusted(self):
         rows = self.ok(self.client.get('/api/admin/wallets/'))['list']
         self.assertFalse(any(row['user'] == self.provider.pk for row in rows))

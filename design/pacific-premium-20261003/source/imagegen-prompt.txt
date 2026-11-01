@@ -1,0 +1,9 @@
+Use case: text-localization.
+Input image 1 is the EDIT TARGET: the attached 809×1942 portrait Chinese club price poster, titled 兴安电竞 / 环太平洋 / 三角洲·趣味玩法.
+Edit this existing poster locally and faithfully. Preserve the entire canvas, composition, character, illustrations, island background, all 5 numbered sections, the three colored tables, all typography and all existing wording except the following SIX cells. Do not redesign or regenerate the content.
+Required exact cell edits (each is the fourth data row labeled 豪华版, NOT 豪华版·全点):
+1. 01 巴克什 table: 售价 “1288r” → “1188r”; 撤离目标 “6个不同出生点” → “5个不同出生点”. Keep 基础保底 “4888w”.
+2. 02 航天基地 table: 售价 “1488r” → “1388r”; 撤离目标 “6个不同出生点” → “5个不同出生点”. Keep 基础保底 “5688w”.
+3. 03 潮汐监狱 table: 售价 “1688r” → “1588r”; 撤离目标 “6个不同出生点” → “5个不同出生点”. Keep 基础保底 “6288w”.
+Preserve the other 12 price rows exactly. Preserve the three 豪华版·全点 rows with “全部出生点” and their prices 2888r / 3288r / 3488r. Preserve all guarantee numbers. Preserve the original fonts, dark navy text, centered cell alignment, size, line spacing, fine dividers and warm/original cell fills without white patch rectangles.
+The 下单须知 line “撤离失败超过6次” MUST REMAIN “6次”: this is a failure-count rule and is not a birth-point target. Keep 预言家 +58r, +100w/+250w, 任意门 160w以上 and all existing rules unchanged. No additional text, version badges or other edits. Output the complete tall poster, no crop.

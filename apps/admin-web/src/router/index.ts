@@ -47,6 +47,18 @@ const routes: RouteRecordRaw[] = [
         meta: { perm: 'order:view' },
       },
       {
+        path: 'reservations',
+        name: 'reservations',
+        component: () => import('@/views/reservation/index.vue'),
+        meta: { perm: 'order:view' },
+      },
+      {
+        path: 'payment-fee',
+        name: 'payment-fee',
+        component: () => import('@/views/payment-fee/index.vue'),
+        meta: { perm: 'payment_fee:view' },
+      },
+      {
         path: 'kook-dispatch',
         name: 'kook-dispatch',
         component: () => import('@/views/kook-dispatch/index.vue'),

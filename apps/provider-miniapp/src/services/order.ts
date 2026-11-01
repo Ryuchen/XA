@@ -12,6 +12,9 @@ export const fetchOrders = (params?: { status?: string; role?: string }) => {
   return request<ApiResponse<ProviderOrder[]>>(`/orders/orders/${qs ? '?' + qs : ''}`, 'GET');
 };
 
+export const fetchOrderDetail = (orderId: number) =>
+  request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/`, 'GET');
+
 export const grabOrder = (orderId: number | string, teamSize: number = 1, partnerId?: number) => {
   return request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/grab/`, 'POST', { team_size: teamSize, ...(partnerId ? { partner_id: partnerId } : {}) });
 };
@@ -42,12 +45,25 @@ export const fetchMyEvaluations = () => {
   return request<ApiResponse<EvaluationListData>>('/orders/evaluations/mine/', 'GET');
 };
 
-export const replyEvaluation = (evaluationId: number | string, replyContent: string) => {
+export const replyEvaluation = (evaluationId: number | string, replyContent: string, replyVersion: number) => {
   return request<ApiResponse<Evaluation>>(`/orders/evaluations/${evaluationId}/reply/`, 'POST', {
     reply_content: replyContent,
+    reply_version: replyVersion,
   });
 };
 
 export interface Teammate { id: number; nickname: string; level: string; pass_tier: string }
 export const fetchTeammates = (orderId: number) => request<ApiResponse<Teammate[]>>(`/orders/orders/${orderId}/teammates/`);
 export const applicationAction = (orderId: number, applicationId: number, action: 'CONFIRM_TEAM' | 'WITHDRAW') => request<ApiResponse<ProviderOrder>>(`/orders/orders/${orderId}/applications/${applicationId}/action/`, 'POST', { action });
+
+export interface MyApplicationDetail {
+  order: ProviderOrder;
+  application: NonNullable<ProviderOrder['my_applications']>[number];
+  can_confirm: boolean;
+  closed_reason?: string;
+  confirm_reason: string;
+}
+export const fetchMyApplication = (orderId: number, applicationId: number) =>
+  request<ApiResponse<MyApplicationDetail>>(`/orders/orders/${orderId}/applications/${applicationId}/mine/`, 'GET');
+export const fetchMyApplications = (orderId: number) =>
+  request<ApiResponse<{ applications: MyApplicationDetail['application'][] }>>(`/orders/orders/${orderId}/applications/mine/`, 'GET');

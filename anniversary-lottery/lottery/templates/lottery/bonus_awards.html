@@ -1,0 +1,19 @@
+{% for bonus in bonuses %}
+<div style="padding:10px 0;border-bottom:1px solid #e0e6ef;margin-bottom:10px">
+  <strong>{{ bonus.label }}</strong><br>
+  {% if bonus.status == 'PENDING' %}
+  <form method="post" class="compact">
+    {% csrf_token %}
+    <input type="hidden" name="room" value="{{ room.code }}">
+    <input type="hidden" name="request_id" value="{{ nonce }}">
+    <input type="hidden" name="action" value="fulfill_bonus">
+    <input type="hidden" name="award" value="{{ bonus.pk }}">
+    <input name="note" required maxlength="255" aria-label="保底奖励交付说明" placeholder="填写保底奖励交付说明">
+    <button class="secondary">记录保底已交付</button>
+  </form>
+  {% else %}
+  <strong>已交付</strong><br>
+  <small>{{ bonus.delivery_note }}<br>{{ bonus.fulfilled_at|date:"m-d H:i" }} · {{ bonus.fulfilled_by.username }}</small>
+  {% endif %}
+</div>
+{% endfor %}

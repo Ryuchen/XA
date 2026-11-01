@@ -1,0 +1,577 @@
+{
+  "brand": "兴安电竞",
+  "title": "物资对赌单",
+  "titleLines": [
+    "物资",
+    "对赌单"
+  ],
+  "subtitle": "单局达标 · 未达继续",
+  "provenance": {
+    "verified": true,
+    "prices": "2026-10-09：手游18档价格以本轮新价格截图为准；保底目标逐项核对截图并与原稿一致。端游18档按本轮广告图沿用。",
+    "rules": "本轮三张海报附件及既有确认规则沿用：严格大于目标，等于未达标，不跨局累计；补偿与须知沿用。",
+    "sourceFiles": [
+      "source-references/new-mobile-prices.png",
+      "source-references/prior-social.png",
+      "source-references/prior-mobile-absolute.png",
+      "source-references/prior-mobile-secret.png"
+    ],
+    "units": {
+      "r": "元",
+      "w": "万"
+    },
+    "priceSourceByPlatform": {
+      "desktop": "本轮附件 prior-social.png 上方端游绝密、机密两卡，18档与此前已确认源数据逐项一致；广告继续沿用。",
+      "mobile": "本轮附件 new-mobile-prices.png：右侧“新价格”列与保底/模式/地图逐行对应。绝密巴克什/监狱三行分别展开为两地图，合计手游18档。"
+    },
+    "priceRevision": {
+      "date": "2026-10-09",
+      "changes": [
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "航天",
+          "tier": 1,
+          "oldPriceR": 288,
+          "newPriceR": 248,
+          "thresholdW": 1088,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "航天",
+          "tier": 2,
+          "oldPriceR": 688,
+          "newPriceR": 428,
+          "thresholdW": 1288,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "航天",
+          "tier": 3,
+          "oldPriceR": 988,
+          "newPriceR": 728,
+          "thresholdW": 1388,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "巴克什",
+          "tier": 1,
+          "oldPriceR": 288,
+          "newPriceR": 228,
+          "thresholdW": 888,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "巴克什",
+          "tier": 2,
+          "oldPriceR": 688,
+          "newPriceR": 388,
+          "thresholdW": 1088,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "巴克什",
+          "tier": 3,
+          "oldPriceR": 988,
+          "newPriceR": 588,
+          "thresholdW": 1188,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "监狱",
+          "tier": 1,
+          "oldPriceR": 288,
+          "newPriceR": 228,
+          "thresholdW": 888,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "监狱",
+          "tier": 2,
+          "oldPriceR": 688,
+          "newPriceR": 388,
+          "thresholdW": 1088,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-absolute",
+          "mode": "绝密",
+          "map": "监狱",
+          "tier": 3,
+          "oldPriceR": 988,
+          "newPriceR": 588,
+          "thresholdW": 1188,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "核电站",
+          "tier": 1,
+          "oldPriceR": 288,
+          "newPriceR": 168,
+          "thresholdW": 588,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "核电站",
+          "tier": 2,
+          "oldPriceR": 688,
+          "newPriceR": 248,
+          "thresholdW": 688,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "核电站",
+          "tier": 3,
+          "oldPriceR": 988,
+          "newPriceR": 388,
+          "thresholdW": 788,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "巴克什",
+          "tier": 1,
+          "oldPriceR": 288,
+          "newPriceR": 188,
+          "thresholdW": 588,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "巴克什",
+          "tier": 2,
+          "oldPriceR": 688,
+          "newPriceR": 298,
+          "thresholdW": 788,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "巴克什",
+          "tier": 3,
+          "oldPriceR": 988,
+          "newPriceR": 428,
+          "thresholdW": 888,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "航天",
+          "tier": 1,
+          "oldPriceR": 288,
+          "newPriceR": 198,
+          "thresholdW": 688,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "航天",
+          "tier": 2,
+          "oldPriceR": 688,
+          "newPriceR": 328,
+          "thresholdW": 888,
+          "comparison": ">"
+        },
+        {
+          "pageId": "mobile-secret",
+          "mode": "机密",
+          "map": "航天",
+          "tier": 3,
+          "oldPriceR": 988,
+          "newPriceR": 468,
+          "thresholdW": 988,
+          "comparison": ">"
+        }
+      ],
+      "advertisingLayout": "手游各地图价格不同，广告下方两卡改为三地图列，每格上行价格、下行严格大于目标。"
+    }
+  },
+  "tiers": [
+    {
+      "id": "desktop-absolute",
+      "platform": "端游",
+      "mode": "绝密",
+      "color": "gold",
+      "maps": [
+        {
+          "name": "航天",
+          "rows": [
+            {
+              "priceR": 388,
+              "thresholdW": 1288,
+              "comparison": ">"
+            },
+            {
+              "priceR": 688,
+              "thresholdW": 1388,
+              "comparison": ">"
+            },
+            {
+              "priceR": 1088,
+              "thresholdW": 1488,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "rows": [
+            {
+              "priceR": 388,
+              "thresholdW": 988,
+              "comparison": ">"
+            },
+            {
+              "priceR": 688,
+              "thresholdW": 1188,
+              "comparison": ">"
+            },
+            {
+              "priceR": 1088,
+              "thresholdW": 1288,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "监狱",
+          "rows": [
+            {
+              "priceR": 388,
+              "thresholdW": 888,
+              "comparison": ">"
+            },
+            {
+              "priceR": 688,
+              "thresholdW": 988,
+              "comparison": ">"
+            },
+            {
+              "priceR": 1088,
+              "thresholdW": 1088,
+              "comparison": ">"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "platform": "端游",
+      "mode": "机密",
+      "color": "teal",
+      "maps": [
+        {
+          "name": "核电站",
+          "rows": [
+            {
+              "priceR": 388,
+              "thresholdW": 588,
+              "comparison": ">"
+            },
+            {
+              "priceR": 688,
+              "thresholdW": 688,
+              "comparison": ">"
+            },
+            {
+              "priceR": 1088,
+              "thresholdW": 788,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "rows": [
+            {
+              "priceR": 388,
+              "thresholdW": 688,
+              "comparison": ">"
+            },
+            {
+              "priceR": 688,
+              "thresholdW": 788,
+              "comparison": ">"
+            },
+            {
+              "priceR": 1088,
+              "thresholdW": 888,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "航天",
+          "rows": [
+            {
+              "priceR": 388,
+              "thresholdW": 788,
+              "comparison": ">"
+            },
+            {
+              "priceR": 688,
+              "thresholdW": 888,
+              "comparison": ">"
+            },
+            {
+              "priceR": 1088,
+              "thresholdW": 988,
+              "comparison": ">"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "platform": "手游",
+      "mode": "绝密",
+      "color": "gold",
+      "maps": [
+        {
+          "name": "航天",
+          "rows": [
+            {
+              "priceR": 248,
+              "thresholdW": 1088,
+              "comparison": ">"
+            },
+            {
+              "priceR": 428,
+              "thresholdW": 1288,
+              "comparison": ">"
+            },
+            {
+              "priceR": 728,
+              "thresholdW": 1388,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "rows": [
+            {
+              "priceR": 228,
+              "thresholdW": 888,
+              "comparison": ">"
+            },
+            {
+              "priceR": 388,
+              "thresholdW": 1088,
+              "comparison": ">"
+            },
+            {
+              "priceR": 588,
+              "thresholdW": 1188,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "监狱",
+          "rows": [
+            {
+              "priceR": 228,
+              "thresholdW": 888,
+              "comparison": ">"
+            },
+            {
+              "priceR": 388,
+              "thresholdW": 1088,
+              "comparison": ">"
+            },
+            {
+              "priceR": 588,
+              "thresholdW": 1188,
+              "comparison": ">"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "platform": "手游",
+      "mode": "机密",
+      "color": "teal",
+      "maps": [
+        {
+          "name": "核电站",
+          "rows": [
+            {
+              "priceR": 168,
+              "thresholdW": 588,
+              "comparison": ">"
+            },
+            {
+              "priceR": 248,
+              "thresholdW": 688,
+              "comparison": ">"
+            },
+            {
+              "priceR": 388,
+              "thresholdW": 788,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "巴克什",
+          "rows": [
+            {
+              "priceR": 188,
+              "thresholdW": 588,
+              "comparison": ">"
+            },
+            {
+              "priceR": 298,
+              "thresholdW": 788,
+              "comparison": ">"
+            },
+            {
+              "priceR": 428,
+              "thresholdW": 888,
+              "comparison": ">"
+            }
+          ]
+        },
+        {
+          "name": "航天",
+          "rows": [
+            {
+              "priceR": 198,
+              "thresholdW": 688,
+              "comparison": ">"
+            },
+            {
+              "priceR": 328,
+              "thresholdW": 888,
+              "comparison": ">"
+            },
+            {
+              "priceR": 468,
+              "thresholdW": 988,
+              "comparison": ">"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "columns": {
+    "price": "订单价格",
+    "loot": "单局撤离物资",
+    "threshold": "结单目标"
+  },
+  "mechanism": {
+    "singleRound": true,
+    "comparison": ">",
+    "condition": "单局撤离物资必须严格大于对应目标",
+    "equalDoesNotComplete": true,
+    "crossRoundAccumulation": false,
+    "unmetAction": "未达标，就继续打",
+    "equalClarification": "等于目标也未达标",
+    "guaranteeTitle": "对赌保障",
+    "ownershipBeforeCompletion": "达标前，全部物资归板板",
+    "failedOrderCompensation": {
+      "condition": "对应炸单保底在满足结单条件后另补",
+      "amountSpecified": false,
+      "amountW": null
+    },
+    "packing": "必须由陪玩理包",
+    "storageRestriction": "陪玩不允许自带空白存储洗给板板",
+    "operatorQuickExtraction": "达到结单要求后，打手允许速撤",
+    "specialEquipmentPolicy": {
+      "sourceText": "本单125以上的六套、龟包、金胸挂、满红头修/甲修，不算假账。",
+      "items": [
+        "125以上的六套",
+        "龟包",
+        "金胸挂",
+        "满红头修/甲修"
+      ],
+      "treatment": "不算假账",
+      "preserveTerminology": true
+    },
+    "platforms": "端游、手游一致",
+    "confirmedByUser": true
+  },
+  "rules": {
+    "绝密": {
+      "maps": [
+        "航天",
+        "巴克什",
+        "监狱"
+      ],
+      "defaultMap": "航天",
+      "cards": {
+        "included": "航天核心区金红卡",
+        "scopeText": "按参考图保留航天核心区金红卡口径，不补充其他地图的未提供房卡条款",
+        "missingPerCard": [
+          {
+            "label": "金卡",
+            "amountW": 200
+          },
+          {
+            "label": "红卡",
+            "amountW": 300
+          }
+        ]
+      }
+    },
+    "机密": {
+      "maps": [
+        "核电站",
+        "巴克什",
+        "航天"
+      ],
+      "defaultMap": "航天",
+      "cards": {
+        "included": "航天核心区金红卡",
+        "scopeText": "按参考图保留航天核心区金红卡口径，不补充其他地图的未提供房卡条款",
+        "missingPerCard": [
+          {
+            "label": "金卡",
+            "amountW": 100
+          },
+          {
+            "label": "红卡",
+            "amountW": 150
+          }
+        ]
+      }
+    }
+  },
+  "footerInstruction": "下单前请确认地图及订单规则",
+  "deliveryPageIds": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ]
+}

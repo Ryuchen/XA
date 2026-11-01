@@ -12,7 +12,7 @@ from integrations.kook import KookClient, KookDeliveryUnknown, KookError, KookMe
 from integrations.kook_config import DEFAULT_TEMPLATE, decrypt_token, encrypt_token, get_kook_config, route_for_order
 from orders.dispatching import deliver_dispatch, dispatch_preview, queue_dispatch
 from orders.kook_dispatch import enqueue_kook_dispatch
-from orders.models import GameCategory, Gameplay, KookDispatchRecord, Order
+from orders.models import GameCategory, Gameplay, KookDispatchRecord, Order, WecomDispatchRecord
 from orders.tests.factories import make_console_user, make_order, make_service, make_user
 from wallet.models import Transaction
 from .models import AdminAuditLog, KookDispatchConfig, KookDispatchProbe
@@ -164,6 +164,150 @@ class KookConfigTest(APITestCase):
         self.assertEqual(route_for_order(get_kook_config(), self.order)['id'], 'game')
         self.order.gameplay_snapshot['id'] = -1
         self.assertEqual(route_for_order(get_kook_config(), self.order)['id'], 'default')
+
+    def test_preview_distinguishes_queued_snapshot_from_current_retry_configuration(self):
+        old_template = '旧频道 {order_no} {provider_income}'
+        new_template = '新频道 {order_no} {provider_income}'
+        self.save(routes=[self.route(template=old_template)])
+        url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
+        key = self.client.get(url).data['data']['channels'][0]['confirmation_key']
+        queued = self.client.post(url, {'channels': ['KOOK'], 'confirmation_keys': {'KOOK': key}}, format='json')
+        self.assertEqual(queued.status_code, 200, queued.data)
+        record = KookDispatchRecord.objects.get(order=self.order)
+        self.assertEqual(record.status, 'PENDING')
+        self.save(revision=1, routes=[self.route(name='新规则', channel_id='999999', template=new_template)])
+        old = self.client.get(url).data['data']['channels'][0]
+        self.assertEqual((old['status'], old['target_id'], old['target_source'], old['route_name']), ('PENDING', '123456', 'recorded', ''))
+        self.assertEqual(old['content_source'], 'recorded')
+        self.assertIn('旧频道', old['content'])
+
+        # Target mismatch is rejected by the real delivery logic before any network call.
+        self.assertEqual(deliver_dispatch('KOOK', record.pk), 'failed:configuration')
+        retry = self.client.get(url).data['data']['channels'][0]
+        self.assertEqual((retry['status'], retry['target_id'], retry['previous_target_id'], retry['route_name']), ('FAILED', '999999', '123456', '新规则'))
+        self.assertEqual(retry['content_source'], 'retry')
+        self.assertIn('新频道', retry['content'])
+
+        # Synthetic historical states exercise display of records when the current channel is disabled.
+        self.save(revision=2, enabled=False, routes=[self.route(name='新规则', channel_id='999999', template=new_template)])
+        for state in ('PENDING', 'SENDING', 'SENT', 'UNKNOWN', 'SKIPPED'):
+            KookDispatchRecord.objects.filter(pk=record.pk).update(status=state)
+            item = self.client.get(url).data['data']['channels'][0]
+            self.assertFalse(item['configured'])
+            self.assertEqual((item['status'], item['target_id'], item['content_source']), (state, '123456', 'recorded'))
+            self.assertIn('旧频道', item['content'])
+        KookDispatchRecord.objects.filter(pk=record.pk).update(content='')
+        item = self.client.get(url).data['data']['channels'][0]
+        self.assertEqual((item['content_source'], item['content']), ('unavailable', ''))
+        KookDispatchRecord.objects.filter(pk=record.pk).update(status='FAILED')
+        self.save(revision=3, enabled=False, routes=[])
+        item = self.client.get(url).data['data']['channels'][0]
+        self.assertEqual((item['configured'], item['target_id'], item['content_source']), (False, '', 'fallback'))
+        self.assertIn(self.order.order_no, item['content'])
+
+    @override_settings(WECOM_DISPATCH_ENABLED=True, WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=isolated-test')
+    def test_stale_multi_channel_confirmation_never_partially_queues(self):
+        self.save(routes=[self.route(template='旧规则 {order_no} {provider_income}')])
+        url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
+        def keys():
+            return {item['channel']: item['confirmation_key'] for item in self.client.get(url).data['data']['channels']}
+        old = keys()
+        self.assertEqual(self.client.post(url, {'channels': ['KOOK']}, format='json').status_code, 400)
+        self.save(revision=1, routes=[self.route(channel_id='999999', template='新规则 {order_no} {provider_income}')])
+        rejected = self.client.post(url, {'channels': ['KOOK', 'WECOM'], 'confirmation_keys': old}, format='json')
+        self.assertEqual((rejected.status_code, rejected.data['errorCode']), (409, 'DISPATCH_PREVIEW_CHANGED'))
+        self.assertFalse(KookDispatchRecord.objects.filter(order=self.order).exists())
+        self.assertFalse(WecomDispatchRecord.objects.filter(order=self.order).exists())
+
+        fresh = keys()
+        accepted = self.client.post(url, {'channels': ['KOOK', 'WECOM'], 'confirmation_keys': fresh}, format='json')
+        self.assertEqual(accepted.status_code, 200, accepted.data)
+        record = KookDispatchRecord.objects.get(order=self.order)
+        self.assertEqual(record.channel_id, '999999')
+        self.assertIn('新规则', record.content)
+        self.assertEqual(WecomDispatchRecord.objects.filter(order=self.order).count(), 1)
+
+    def test_confirmation_detects_new_round_and_changed_channel_state(self):
+        self.save()
+        url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
+        def key():
+            return self.client.get(url).data['data']['channels'][0]['confirmation_key']
+        old = key()
+        Order.objects.filter(pk=self.order.pk).update(reject_count=1)
+        rejected = self.client.post(url, {'channels': ['KOOK'], 'confirmation_keys': {'KOOK': old}}, format='json')
+        self.assertEqual(rejected.status_code, 409)
+        self.assertFalse(KookDispatchRecord.objects.filter(order=self.order).exists())
+        fresh = key()
+        self.order.refresh_from_db()
+        record = queue_dispatch(self.order, 'KOOK')
+        self.assertIsNotNone(record)
+        rejected = self.client.post(url, {'channels': ['KOOK'], 'confirmation_keys': {'KOOK': fresh}}, format='json')
+        self.assertEqual(rejected.status_code, 409)
+        self.assertEqual(KookDispatchRecord.objects.filter(order=self.order).count(), 1)
+
+    def test_confirmation_detects_template_link_and_mention_changes(self):
+        self.save()
+        url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
+        def key():
+            data = self.client.get(url).data['data']
+            self.assertNotIn('test-only-secret', json.dumps(data, default=str))
+            return data['channels'][0]['confirmation_key']
+        changes = [
+            {'routes': [self.route(template='改动 {order_no} {provider_income}')]},
+            {'routes': [self.route(template='改动 {order_no} {provider_income}')], 'provider_order_url': 'https://example.test/new'},
+            {'routes': [self.route(template='改动 {order_no} {provider_income}', mention_role_ids=['456'])], 'provider_order_url': 'https://example.test/new'},
+        ]
+        for revision, change in enumerate(changes, start=1):
+            old = key()
+            self.save(revision=revision, **change)
+            result = self.client.post(url, {'channels': ['KOOK'], 'confirmation_keys': {'KOOK': old}}, format='json')
+            self.assertEqual(result.status_code, 409, result.data)
+            self.assertFalse(KookDispatchRecord.objects.filter(order=self.order).exists())
+
+    def test_prepared_plan_is_queued_unchanged_if_configuration_changes_after_check(self):
+        self.save(routes=[self.route(template='已确认 {order_no} {provider_income}')])
+        _, plans = dispatch_preview(self.order, include_plans=True)
+        self.save(revision=1, routes=[self.route(channel_id='999999', template='后改 {order_no} {provider_income}')])
+        record = queue_dispatch(self.order, 'KOOK', manual=True, prepared=plans['KOOK'])
+        self.assertEqual(record.channel_id, '123456')
+        self.assertIn('已确认', record.content)
+        self.assertIn('已确认', record.card_content)
+        self.assertNotIn('后改', record.card_content)
+        # The real delivery check rejects a now-different target before network access.
+        self.assertEqual(deliver_dispatch('KOOK', record.pk), 'failed:configuration')
+
+    def test_preview_card_effects_follow_actual_current_and_recorded_card(self):
+        self.save(routes=[self.route(mention_role_ids=['123', '456'])], provider_order_url='https://example.test/private-path')
+        url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
+        data = self.client.get(url).data['data']
+        channel = data['channels'][0]
+        self.assertEqual(channel['card_details'], {'mention_role_ids': ['123', '456'], 'link_count': 1})
+        self.assertNotIn('example.test/private-path', json.dumps(data, ensure_ascii=False))
+        response = self.client.post(url, {'channels': ['KOOK'], 'confirmation_keys': {'KOOK': channel['confirmation_key']}}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        record = KookDispatchRecord.objects.get(order=self.order)
+        self.save(revision=1, routes=[self.route(mention_role_ids=['789'])], provider_order_url='')
+        historical = self.client.get(url).data['data']['channels'][0]
+        self.assertEqual(historical['card_details'], {'mention_role_ids': ['123', '456'], 'link_count': 1})
+        KookDispatchRecord.objects.filter(pk=record.pk).update(status='FAILED')
+        retry = self.client.get(url).data['data']['channels'][0]
+        self.assertEqual(retry['card_details'], {'mention_role_ids': ['789'], 'link_count': 0})
+        KookDispatchRecord.objects.filter(pk=record.pk).update(status='PENDING', card_content='')
+        self.assertIsNone(self.client.get(url).data['data']['channels'][0]['card_details'])
+        KookDispatchRecord.objects.filter(pk=record.pk).update(card_content='[{"type":"card","modules":[{"type":"section","text":{"type":"kmarkdown","content":"(met)all(met)"}}]}]')
+        self.assertIsNone(self.client.get(url).data['data']['channels'][0]['card_details'])
+        # KOOK sections may include an accessory button; do not claim there are
+        # no links when the historical card has unsupported extra structure.
+        KookDispatchRecord.objects.filter(pk=record.pk).update(card_content=json.dumps([{
+            'type': 'card', 'modules': [{'type': 'section', 'text': {'type': 'plain-text', 'content': '旧卡片'},
+                'accessory': {'type': 'button', 'click': 'link', 'value': 'https://example.test'}}],
+        }]))
+        self.assertIsNone(self.client.get(url).data['data']['channels'][0]['card_details'])
+
+    def test_preview_card_without_mentions_or_links(self):
+        self.save(routes=[self.route(mention_role_ids=[])], provider_order_url='')
+        item = self.client.get(f'/api/admin/orders/{self.order.pk}/dispatch-message/').data['data']['channels'][0]
+        self.assertEqual(item['card_details'], {'mention_role_ids': [], 'link_count': 0})
 
     @patch('orders.kook_dispatch._send_task_safely')
     @patch('integrations.kook.KookClient.send_channel_message', return_value=KookMessageResult('msg-1'))

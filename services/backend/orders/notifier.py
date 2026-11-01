@@ -20,7 +20,7 @@ def report_provider_account_id(report):
     ).values_list('account_id', flat=True).first()
 
 
-def notify_report_update(report):
+def notify_report_update(report, *, notify_owner=True):
     """Invalidate the owner's list and authorized reviewers after a commit."""
     try:
         channel_layer = get_channel_layer()
@@ -32,8 +32,8 @@ def notify_report_update(report):
             'status': report.status,
         }}
         groups = ['report_reviewers']
-        account_id = report_provider_account_id(report)
-        if account_id:
+        account_id = report_provider_account_id(report) if notify_owner else None
+        if account_id and notify_owner:
             groups.insert(0, f'account_{account_id}')
         for group in groups:
             try:
@@ -119,6 +119,6 @@ def _notify_order_update(order):
     send('operators', rendered())
 
     # 抢单池相关状态广播给全部陪玩：PENDING 加入/退回，GRABBED/CANCELLED 移除。
-    if order.status in (order.Status.PENDING, order.Status.GRABBED, order.Status.CANCELLED):
+    if order.dispatch_route == order.DispatchRoute.PUBLIC and order.payment_status != order.PaymentStatus.UNPAID and order.status in (order.Status.PENDING, order.Status.GRABBED, order.Status.CANCELLED):
         # 公共分组只通知刷新，详细订单必须经带通行证/档位过滤的 HTTP 接口读取。
         send('providers', {'id': order.pk, 'status': order.status})

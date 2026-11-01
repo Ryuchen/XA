@@ -1,0 +1,299 @@
+{
+    "nextStep":  "本轮四张套图已完成并通过成图验收。",
+    "contentVerified":  true,
+    "revision":  "redesign-r1",
+    "approvals":  {
+                      "seriesStyle":  {
+                                          "basis":  "已确认男性蜂医、灰鼠、二次元手绘与巴克什暖沙配色；本轮资产重新生成。",
+                                          "status":  "approved-reference"
+                                      },
+                      "background":  {
+                                         "review":  "review/backgrounds.html",
+                                         "basis":  "2026-10-03用户在第二步四张无字底图、实际文字位置稿和确认包交付后回复：继续。",
+                                         "status":  "approved",
+                                         "revision":  "background-r1"
+                                     },
+                      "illustration":  {
+                                           "status":  "approved",
+                                           "basis":  "2026-10-03 用户在本轮新独立插画确认稿后回复：继续。",
+                                           "file":  "01-illustrations/sand-safe-medic-mouse-redesign-r1.png"
+                                       }
+                  },
+    "plannedDeliverables":  [
+                                "端游绝密价目海报",
+                                "手游绝密价目海报",
+                                "合并端手游绝密广告页",
+                                "共用16:9横版封面",
+                                "高清PNG、可改文字SVG、转曲SVG、成品包、查看页"
+                            ],
+    "stage":  "delivered",
+    "skill":  "xingan-gameplay-posters",
+    "contentVerificationBasis":  "旧项目已核对累计价目、规则和奖励；本轮用户指令明确端游连续688/1288，用户回复明确手游连续588/888及门槛788w；比较符仍为严格大于。",
+    "verifiedPricePlatforms":  [
+                                   "desktop",
+                                   "mobile"
+                               ],
+    "designIntent":  {
+                         "conditions":  [
+                                            "摸2个沙色保险",
+                                            "摸4个常规大保险",
+                                            "带出物资严格大于端游888w/手游788w"
+                                        ],
+                         "priceHeaders":  "全幅海军蓝表头",
+                         "visual":  "三张等权条件卡+醒目的且连接符+汇合到唯一达标结果；三项缺一不可为主句。",
+                         "primary":  "同一局三个条件全部满足，且成功撤离才达标。",
+                         "cover":  "仅品牌、玩法、核心卖点、平台模式和奖励主信息，不写下单须知或补偿例外。"
+                     },
+    "campaign":  "兴安电竞 · 沙保连连看 · 全新套图",
+    "priceSourceByPlatform":  {
+                                  "desktop":  "旧项目content.json累计价目，本轮2026-10-03用户直接指令连续两次688、三次1288。",
+                                  "mobile":  "旧项目content.json累计价目，本轮用户回复：手游改为588和888，保底改为788w。"
+                              },
+    "deliveryScope":  {
+                          "pageIds":  [
+                                          "desktop-absolute",
+                                          "mobile-absolute",
+                                          "combined-advert",
+                                          "combined-cover"
+                                      ],
+                          "basis":  "用户要求沙保连连看现有套图全新生成；沿用最近已确认四张范围。",
+                          "platforms":  [
+                                            "desktop",
+                                            "mobile"
+                                        ]
+                      },
+    "illustration":  {
+                         "provider":  "built-in image_gen",
+                         "source":  "C:/Users/chenh/.codex/generated_images/01a100c5-2566-7302-9896-ceb05845e9bf/exec-757bb785-6566-4dd7-b51b-4c0200436601.png",
+                         "file":  "01-illustrations/sand-safe-medic-mouse-redesign-r1.png",
+                         "width":  1536,
+                         "height":  1024,
+                         "format":  "png",
+                         "hasAlpha":  true,
+                         "alpha":  {
+                                       "min":  0,
+                                       "max":  254,
+                                       "transparentPixels":  639456,
+                                       "nearOpaquePixels":  829973,
+                                       "totalPixels":  1572864,
+                                       "corners":  [
+                                                       0,
+                                                       0,
+                                                       0,
+                                                       0
+                                                   ]
+                                   },
+                         "opaqueBounds":  {
+                                              "left":  34,
+                                              "top":  40,
+                                              "right":  1508,
+                                              "bottom":  956
+                                          },
+                         "prompt":  "01-illustrations/prompt.txt",
+                         "review":  "review/illustration.html",
+                         "reusedPriorRaster":  false
+                     },
+    "illustrationQA":  {
+                           "revision":  "redesign-r1",
+                           "previews":  [
+                                            "review/illustration-ivory-preview.png",
+                                            "review/illustration-phone.png"
+                                        ],
+                           "record":  "review/illustration-qa.md",
+                           "status":  "passed-and-user-approved",
+                           "basis":  "已打开实际整图与390px预览，角色轮廓、两类保险、三枚相连勾选及统一手绘画风检查通过。"
+                       },
+    "layout":  {
+                   "zones":  "02-layouts/layout-zones.json",
+                   "guideCount":  4,
+                   "guidePageIds":  [
+                                        "desktop-absolute",
+                                        "mobile-absolute",
+                                        "combined-advert",
+                                        "combined-cover"
+                                    ],
+                   "phoneBodyPx":  13.995215311004785
+               },
+    "backgrounds":  {
+                        "provider":  "built-in image_gen",
+                        "revision":  "background-r1",
+                        "pages":  [
+                                      {
+                                          "id":  "desktop-absolute",
+                                          "label":  "端游绝密价目",
+                                          "file":  "assets/backgrounds/desktop-absolute.png",
+                                          "generatedFile":  "03-backgrounds/desktop-absolute-background-r1.png",
+                                          "source":  "C:/Users/chenh/.codex/generated_images/01a100c5-2566-7302-9896-ceb05845e9bf/exec-58f4790e-901e-4373-a98a-bee3b0013573.png",
+                                          "native":  {
+                                                         "width":  836,
+                                                         "height":  1881
+                                                     },
+                                          "export":  {
+                                                         "file":  "04-png-export/desktop-absolute-background.png",
+                                                         "width":  3200,
+                                                         "height":  7200
+                                                     },
+                                          "upscaleMethod":  "Lanczos3; background enlarged from preserved native raster, not native 4K drawing",
+                                          "prompt":  "03-backgrounds/desktop-absolute-prompt.txt",
+                                          "correctionPrompt":  null
+                                      },
+                                      {
+                                          "id":  "mobile-absolute",
+                                          "label":  "手游绝密价目",
+                                          "file":  "assets/backgrounds/mobile-absolute.png",
+                                          "generatedFile":  "03-backgrounds/mobile-absolute-background-r2.png",
+                                          "source":  "C:/Users/chenh/.codex/generated_images/01a100c5-2566-7302-9896-ceb05845e9bf/exec-b8653170-a8f7-4d40-8fbd-37026a8414b1.png",
+                                          "native":  {
+                                                         "width":  836,
+                                                         "height":  1882
+                                                     },
+                                          "export":  {
+                                                         "file":  "04-png-export/mobile-absolute-background.png",
+                                                         "width":  3200,
+                                                         "height":  7200
+                                                     },
+                                          "upscaleMethod":  "Lanczos3; background enlarged from preserved native raster, not native 4K drawing",
+                                          "prompt":  "03-backgrounds/mobile-absolute-prompt.txt",
+                                          "correctionPrompt":  "03-backgrounds/mobile-absolute-correction-prompt.txt"
+                                      },
+                                      {
+                                          "id":  "combined-advert",
+                                          "label":  "双平台合并广告",
+                                          "file":  "assets/backgrounds/combined-advert.png",
+                                          "generatedFile":  "03-backgrounds/combined-advert-background-r2.png",
+                                          "source":  "C:/Users/chenh/.codex/generated_images/01a100c5-2566-7302-9896-ceb05845e9bf/exec-b6ef1f66-513e-4015-a6a1-af0ea084f7a0.png",
+                                          "native":  {
+                                                         "width":  1086,
+                                                         "height":  1448
+                                                     },
+                                          "export":  {
+                                                         "file":  "04-png-export/combined-advert-background.png",
+                                                         "width":  2400,
+                                                         "height":  3200
+                                                     },
+                                          "upscaleMethod":  "Lanczos3; background enlarged from preserved native raster, not native 4K drawing",
+                                          "prompt":  "03-backgrounds/combined-advert-prompt.txt",
+                                          "correctionPrompt":  "03-backgrounds/combined-advert-correction-prompt.txt"
+                                      },
+                                      {
+                                          "id":  "combined-cover",
+                                          "label":  "16:9共用封面",
+                                          "file":  "assets/backgrounds/combined-cover.png",
+                                          "generatedFile":  "03-backgrounds/combined-cover-background-r1.png",
+                                          "source":  "C:/Users/chenh/.codex/generated_images/01a100c5-2566-7302-9896-ceb05845e9bf/exec-96ad3df7-dce2-4779-a613-fbb3c93df645.png",
+                                          "native":  {
+                                                         "width":  1672,
+                                                         "height":  941
+                                                     },
+                                          "export":  {
+                                                         "file":  "04-png-export/combined-cover-background.png",
+                                                         "width":  3200,
+                                                         "height":  1800
+                                                     },
+                                          "upscaleMethod":  "Lanczos3; background enlarged from preserved native raster, not native 4K drawing",
+                                          "prompt":  "03-backgrounds/combined-cover-prompt.txt",
+                                          "correctionPrompt":  null
+                                      }
+                                  ],
+                        "measurements":  "02-layouts/generated-background-measurements.json",
+                        "overview":  "review/background-overview.png",
+                        "positionOverview":  "review/position-overview.png",
+                        "review":  "review/backgrounds.html",
+                        "package":  "output/campaign-sand-safe-redesign-backgrounds-r1.zip"
+                    },
+    "backgroundQA":  {
+                         "basis":  "已查看四张实际底图、价目/须知局部、实际位置稿总览及逐张390px预览；校正手游和广告的保险图标顺序。",
+                         "revision":  "background-r1",
+                         "finalTypesettingQA":  "passed",
+                         "record":  "review/visual-qa.md",
+                         "status":  "passed-and-user-approved"
+                     },
+    "lastRenderedPages":  [
+                              "desktop-absolute",
+                              "mobile-absolute",
+                              "combined-advert",
+                              "combined-cover"
+                          ],
+    "finalQA":  {
+                    "revision":  "redesign-r1",
+                    "status":  "passed",
+                    "date":  "2026-10-03",
+                    "scope":  [
+                                  "desktop-absolute",
+                                  "mobile-absolute",
+                                  "combined-advert",
+                                  "combined-cover"
+                              ],
+                    "numericPairCount":  30,
+                    "maxBaselineDelta":  2.2737367544323206E-13,
+                    "minVisibleNumericUnitGap":  5.999999999999929,
+                    "unitVisibleHeightRatio":  {
+                                                   "min":  0.657493239419748,
+                                                   "max":  0.6740902729111712
+                                               },
+                    "fontBodyPhonePx":  13.995215311004785,
+                    "record":  "review/visual-qa.md",
+                    "metrics":  "review/final-metric-audit.json",
+                    "visualInspection":  "All 4 actual PNG-derived 390px views; full-page images; native header, conditions, reward, prices, notices crops.",
+                    "files":  [
+                                  {
+                                      "id":  "desktop-absolute",
+                                      "label":  "端游绝密价目",
+                                      "png":  "output/png/desktop-absolute.png",
+                                      "outlinedSVG":  "output/svg-outlined/desktop-absolute.svg",
+                                      "editableSVG":  "output/svg-editable/desktop-absolute.svg",
+                                      "preview":  "review/desktop-absolute.png",
+                                      "width":  3200,
+                                      "height":  7200,
+                                      "nativeWidth":  836,
+                                      "nativeHeight":  1881,
+                                      "sha256":  "788b73e6a9ca4b8961742de1c82df99215e353cad17faf45276e9b4f92e337fc"
+                                  },
+                                  {
+                                      "id":  "mobile-absolute",
+                                      "label":  "手游绝密价目",
+                                      "png":  "output/png/mobile-absolute.png",
+                                      "outlinedSVG":  "output/svg-outlined/mobile-absolute.svg",
+                                      "editableSVG":  "output/svg-editable/mobile-absolute.svg",
+                                      "preview":  "review/mobile-absolute.png",
+                                      "width":  3200,
+                                      "height":  7200,
+                                      "nativeWidth":  836,
+                                      "nativeHeight":  1882,
+                                      "sha256":  "df6ebcf2477aca8004f37cb351119b970da5237a03121eb1956e81143e0a6444"
+                                  },
+                                  {
+                                      "id":  "combined-advert",
+                                      "label":  "双平台合并广告",
+                                      "png":  "output/png/combined-advert.png",
+                                      "outlinedSVG":  "output/svg-outlined/combined-advert.svg",
+                                      "editableSVG":  "output/svg-editable/combined-advert.svg",
+                                      "preview":  "review/combined-advert.png",
+                                      "width":  2400,
+                                      "height":  3200,
+                                      "nativeWidth":  1086,
+                                      "nativeHeight":  1448,
+                                      "sha256":  "854eb7dd97c9a7063573c022bbf92c4b4867305868380fadb25444487f16f074"
+                                  },
+                                  {
+                                      "id":  "combined-cover",
+                                      "label":  "16:9共用封面",
+                                      "png":  "output/png/combined-cover.png",
+                                      "outlinedSVG":  "output/svg-outlined/combined-cover.svg",
+                                      "editableSVG":  "output/svg-editable/combined-cover.svg",
+                                      "preview":  "review/combined-cover.png",
+                                      "width":  3200,
+                                      "height":  1800,
+                                      "nativeWidth":  1672,
+                                      "nativeHeight":  941,
+                                      "sha256":  "0e7bcbb0e6783d8691bef839fbb47b601176a4f44c213c1708d5efae1bb9303c"
+                                  }
+                              ]
+                },
+    "finalDelivery":  {
+                          "basis":  "插画确认、底图确认、矢量填字及实际PNG复检均已完成；数字单位baseline、间距及固定列已核对。",
+                          "preview":  "review/final-overview.png",
+                          "review":  "review/index.html",
+                          "package":  "output/campaign-sand-safe-redesign-r1.zip"
+                      }
+}

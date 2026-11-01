@@ -1,0 +1,50 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "project": "兴安电竞体验单完整套图",
+  "revision": "r1-draft",
+  "stage": "illustration",
+  "deliveryScope": {
+    "pageIds": [
+      "cover",
+      "social",
+      "desktop-experience",
+      "mobile-experience"
+    ],
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "basis": "用户点名封面、广告页、端游和手游价目；按本轮两张原图，每平台价目页合并机密/绝密，共4张"
+  },
+  "contentVerified": true,
+  "contentVerificationBasis": "本轮两张清晰原图；对比12档价格、保底、超值标记和两端须知。保留包红卡房、按俱乐部规定、炸单补偿等原义。",
+  "verifiedPricePlatforms": [
+    "desktop",
+    "mobile"
+  ],
+  "priceSourceByPlatform": {
+    "desktop": "附件1端游体验单原图，已逐项核对6档价格和保底；references/desktop-price-source.png",
+    "mobile": "附件2手游体验单原图，已逐项核对6档价格和保底；references/mobile-price-source.png"
+  },
+  "approvals": {
+    "characterPrototype": {
+      "status": "approved-reference",
+      "basis": "用户本会话已明确选择三角色r1，技能已保存确认",
+      "file": "references/approved-character-trio-r1.png"
+    },
+    "illustration": {
+      "status": "pending-new-scene",
+      "basis": "优惠券主题新情景；按技能先制作独立插画并确认"
+    },
+    "background": {
+      "status": "not-started",
+      "basis": "独立插画确认后生成结构稿/无字底图，新底图确认后填字"
+    }
+  },
+  "intent": {
+    "mood": "超值优惠券",
+    "primary": "保底物资数量",
+    "secondary": "费用",
+    "characters": "沿用已确认r1蜂医、粉发电竞女孩和灰鼠"
+  }
+}

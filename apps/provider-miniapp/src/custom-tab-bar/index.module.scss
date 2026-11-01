@@ -37,6 +37,7 @@
 }
 
 .iconWrap {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,6 +46,7 @@
   border-radius: 7PX;
   transition: background $transition-fast, transform $transition-fast;
 }
+.unread { position:absolute; top:-4PX; right:-10PX; min-width:16PX; padding:0 4PX; border-radius:9PX; text-align:center; color:var(--xa-color-surface-card); background:var(--xa-color-danger); font-size:10PX; line-height:16PX; }
 
 .tabText {
   font-size: 11PX;

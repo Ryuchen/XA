@@ -12,7 +12,7 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 
 function setup(kind, permissions) {
   const scope = vue.effectScope(), mounted = [], unmounted = [], timers = new Map(), handlers = new Map();
-  const calls = { table: 0, reload: 0, details: [], actions: [], prompts: [], close: 0, connect: 0, success: [], packages: [] };
+  const calls = { table: 0, reload: 0, details: [], actions: [], prompts: [], close: 0, connect: 0, success: [], errors: [], packages: [] };
   const tablePending = [], detailPending = [], actionPending = [], packagePending = [];
   let timerId = 0, activeTable = 0, maxActiveTable = 0;
   const auth = vue.reactive({ token: 'first', sessionRevision: 1, permissions: permissions || (kind === 'withdraw' ? ['withdraw:view', 'withdraw:audit'] : ['wallet:view', 'wallet:adjust', 'wallet:recharge']),
@@ -20,15 +20,16 @@ function setup(kind, permissions) {
   const api = {
     async list() { return { data: { list: [] } }; },
     async retrieve(id) { calls.details.push({ id }); return detailPending.length ? detailPending.shift().promise : { data: { id, status: 'APPROVED', status_display: '已通过', amount: 2000 } }; },
-    async action(...args) { calls.actions.push(args); return actionPending.length ? actionPending.shift().promise : { data: {} }; },
+    async action(...args) { calls.actions.push(args); return actionPending.length ? actionPending.shift().promise : { data: { id: args[0], status: args[1] === 'approve' ? 'APPROVED' : 'REJECTED' } }; },
     async collectionAction(...args) { calls.actions.push(args); return { data: {} }; },
   };
   const adminWs = { on(type, fn) { if (!handlers.has(type)) handlers.set(type, new Set()); handlers.get(type).add(fn); return () => handlers.get(type).delete(fn); }, connect() { calls.connect++; } };
-  const message = { success: text => calls.success.push(text), warning() {} };
+  const message = { success: text => calls.success.push(text), error: text => calls.errors.push(text), warning() {} };
   const messageBox = { prompt(...args) { const pending = deferred(); calls.prompts.push({ args, pending }); return pending.promise; }, close() { calls.close++; } };
   const mocks = {
     vue: { ...vue, onMounted: fn => mounted.push(fn), onBeforeUnmount: fn => unmounted.push(fn) },
     'element-plus': { ElMessage: message, ElMessageBox: messageBox },
+    'vue-router': { useRouter: () => ({ push: async () => {} }), onBeforeRouteLeave: () => {} },
     '@element-plus/icons-vue': { Search: {} }, '@/components/CrudTable.vue': {},
     '@/api/modules': { withdrawApi: api, walletApi: api, withdrawConfigApi: { get: async () => ({ data: { min_amount: 1000, tax_rate: 5 } }), update: async () => ({ data: {} }) } },
     '@/utils/dict': { WITHDRAW_STATUS: {}, PAYEE_METHOD: {} },
@@ -43,7 +44,7 @@ function setup(kind, permissions) {
   const file = path.resolve('apps/admin-web/src/views/' + kind + '/index.vue');
   const source = fs.readFileSync(file, 'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1];
   const exposed = kind === 'withdraw'
-    ? 'query,tableRef,current,detailVisible,detailLoading,detailFailed,auditBusy,onDetail,onApprove,onReject,refreshCurrentWithdrawal'
+    ? 'query,tableRef,current,detailVisible,detailLoading,detailFailed,auditBusy,auditReview,auditReviewError,onDetail,onApprove,onReject,checkAuditReview,finishAuditReview,refreshCurrentWithdrawal'
     : 'query,tableRef,current,adjustVisible,rechargeVisible,adjustCoin,adjustRemark,rechargeYuan,rechargeRemark,tradeNo,onAdjust,onAdjustSave,onRecharge,onRechargeSave,rechargePackages';
   const code = ts.transpileModule(source + '\nglobalThis.page = {' + exposed + '};', { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const context = { exports: {}, require(name) { assert.ok(Object.hasOwn(mocks, name), 'unexpected import: ' + name); return mocks[name]; },
@@ -151,9 +152,36 @@ test('withdraw a final-state push blocks auditing an old pending row before the 
   assert.equal(s.calls.prompts.length, 0); assert.equal(s.calls.actions.length, 0); s.dispose();
 });
 
+test('withdraw reconnect keeps a submitted audit locked until its response settles', async () => {
+  const s = setup('withdraw'), pending = deferred(); s.actionPending.push(pending);
+  const approval = s.page.onApprove(pendingRow(9));
+  s.calls.prompts[0].pending.resolve({ value: 'LOCAL-PAYOUT' }); await tick();
+  assert.equal(s.calls.actions.length, 1); assert.equal(s.page.auditBusy.value, true);
+  s.emit('connected'); await s.page.onReject(pendingRow(10));
+  assert.equal(s.page.auditBusy.value, true); assert.equal(s.calls.actions.length, 1); assert.equal(s.calls.prompts.length, 1);
+  pending.resolve({ data: { id: 9, status: 'APPROVED' } }); await approval;
+  assert.equal(s.page.auditBusy.value, false); s.dispose();
+});
+
+test('withdraw unknown audit result blocks another audit until actual status is checked', async () => {
+  const s = setup('withdraw'), pending = deferred(); s.actionPending.push(pending);
+  const approval = s.page.onApprove(pendingRow(9)); s.calls.prompts[0].pending.resolve({ value: 'LOCAL-PAYOUT' }); await tick();
+  pending.reject(new Error('network')); await approval;
+  assert.equal(s.page.auditReview.value.id, 9); await s.page.onReject(pendingRow(10)); assert.equal(s.calls.prompts.length, 1);
+  await s.page.checkAuditReview(); assert.equal(s.page.auditReview.value.checked.status, 'APPROVED');
+  await s.page.finishAuditReview(); assert.equal(s.page.auditReview.value, null); s.dispose();
+});
+
+test('withdraw explicit rejection is shown without treating it as an unknown outcome', async () => {
+  const s = setup('withdraw'), pending = deferred(); s.actionPending.push(pending);
+  const rejection = s.page.onReject(pendingRow(9)); s.calls.prompts[0].pending.resolve({ value: '本地核对' }); await tick();
+  pending.reject({ code: 400, msg: '该提现已审核，无法重复操作' }); await rejection;
+  assert.equal(s.page.auditReview.value, null); assert.equal(s.calls.errors[0], '该提现已审核，无法重复操作'); s.dispose();
+});
+
 test('wallet updates reconcile list and the current provider balance without replacing recharge drafts', async () => {
   const s = setup('wallet'); s.page.query.value.account_type = 'PROVIDER'; s.page.query.value.nickname = 'local';
-  await s.page.onRecharge({ id: 7, account_id: 42, user_role: 'PROVIDER', balance: 1000, frozen_amount: 500 });
+  await s.page.onRecharge({ id: 7, account_id: 42, user_role: 'PROVIDER', is_active: true, balance: 1000, frozen_amount: 500 });
   s.page.rechargeYuan.value = 188; s.page.rechargeRemark.value = '保留草稿';
   for (let i = 0; i < 4; i++) s.emit('wallet_update', { account_id: 42 }); await s.flush();
   assert.equal(s.calls.table, 1); assert.equal(s.calls.reload, 0); assert.equal(s.calls.details.length, 1);
@@ -184,7 +212,7 @@ test('wallet session changes and revocation close drafts, ignore old replies and
 
 test('wallet late package replies do not refill a closed or switched-account recharge draft', async () => {
   const s = setup('wallet'), packages = deferred(); s.packagePending.push(packages);
-  const opening = s.page.onRecharge({ id: 7, account_id: 42, user_role: 'CUSTOMER', balance: 1000 });
+  const opening = s.page.onRecharge({ id: 7, account_id: 42, user_role: 'CUSTOMER', is_active: true, balance: 1000 });
   s.auth.sessionRevision++; packages.resolve({ data: [{ id: 1, amount: 10000 }] }); await opening;
   assert.equal(s.page.rechargeVisible.value, false); assert.equal(s.page.rechargePackages.value.length, 0); assert.equal(s.page.current.value, null);
   await s.page.onAdjustSave(); await s.page.onRechargeSave(); assert.equal(s.calls.actions.length, 0); s.dispose();

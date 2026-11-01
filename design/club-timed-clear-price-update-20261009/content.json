@@ -1,0 +1,479 @@
+{
+  "brand": "兴安电竞",
+  "title": "限时清图单",
+  "titleLines": [
+    "限时",
+    "清图单"
+  ],
+  "subtitle": "航天清图 · 挑战时限",
+  "sources": {
+    "price": "手游采用2026-10-09新价格列；端游沿用本轮广告参考图。",
+    "modeNaming": "用户明确：机密改为机密航天",
+    "secretRules": "用户2026-09-29补充的完整机密规则，原文见references/secret-rules-user.md",
+    "absoluteRules": "本轮绝密参考图，沿用未被本轮修改的规则",
+    "referenceFiles": [
+      "source-references/new-mobile-prices.png",
+      "source-references/prior-social.png",
+      "source-references/prior-mobile-absolute.png",
+      "source-references/prior-mobile-secret.png"
+    ],
+    "mobilePrice": {
+      "date": "2026-10-09",
+      "file": "source-references/new-mobile-prices.png",
+      "column": "新价格",
+      "rowOrder": [
+        "常规清图",
+        16,
+        14,
+        12,
+        10,
+        8
+      ],
+      "guarantee": "未列固定物资保底；不是新的固定物资承诺。清图最低要求及其他规则沿用用户本轮附图。"
+    },
+    "desktopPrice": "本轮prior-social.png上方端游两卡与已确认源数据逐行一致，继续沿用。"
+  },
+  "tiers": [
+    {
+      "id": "desktop-absolute",
+      "platform": "端游",
+      "mode": "绝密",
+      "map": "航天",
+      "mapLabel": "绝密航天",
+      "color": "gold",
+      "rows": [
+        {
+          "priceR": 168,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "regular",
+          "deadlineMinutes": null,
+          "requirement": "常规清图一把",
+          "repeatUntilSuccess": false
+        },
+        {
+          "priceR": 388,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 16,
+          "requirement": "必须在16分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 488,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 14,
+          "requirement": "必须在14分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 688,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 12,
+          "requirement": "必须在12分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 988,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 10,
+          "requirement": "必须在10分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 1688,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 8,
+          "requirement": "必须在8分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        }
+      ]
+    },
+    {
+      "id": "desktop-secret",
+      "platform": "端游",
+      "mode": "机密",
+      "map": "航天",
+      "mapLabel": "机密航天",
+      "color": "teal",
+      "rows": [
+        {
+          "priceR": 108,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "regular",
+          "deadlineMinutes": null,
+          "requirement": "常规清图一把",
+          "repeatUntilSuccess": false
+        },
+        {
+          "priceR": 288,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 16,
+          "requirement": "必须在16分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 388,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 14,
+          "requirement": "必须在14分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 588,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 12,
+          "requirement": "必须在12分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 888,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 10,
+          "requirement": "必须在10分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        },
+        {
+          "priceR": 1488,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 8,
+          "requirement": "必须在8分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true
+        }
+      ]
+    },
+    {
+      "id": "mobile-absolute",
+      "platform": "手游",
+      "mode": "绝密",
+      "map": "航天",
+      "mapLabel": "绝密航天",
+      "color": "gold",
+      "rows": [
+        {
+          "priceR": 108,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "regular",
+          "deadlineMinutes": null,
+          "requirement": "常规清图一把",
+          "repeatUntilSuccess": false,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 188,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 16,
+          "requirement": "必须在16分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 328,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 14,
+          "requirement": "必须在14分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 468,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 12,
+          "requirement": "必须在12分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 668,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 10,
+          "requirement": "必须在10分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 888,
+          "service": "绝密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 8,
+          "requirement": "必须在8分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mobile-secret",
+      "platform": "手游",
+      "mode": "机密",
+      "map": "航天",
+      "mapLabel": "机密航天",
+      "color": "teal",
+      "rows": [
+        {
+          "priceR": 88,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "regular",
+          "deadlineMinutes": null,
+          "requirement": "常规清图一把",
+          "repeatUntilSuccess": false,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 128,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 16,
+          "requirement": "必须在16分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 188,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 14,
+          "requirement": "必须在14分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 288,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 12,
+          "requirement": "必须在12分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 468,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 10,
+          "requirement": "必须在10分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        },
+        {
+          "priceR": 688,
+          "service": "机密航天清图一把",
+          "rounds": 1,
+          "tierType": "timed",
+          "deadlineMinutes": 8,
+          "requirement": "必须在8分钟内完成清图，否则一直打",
+          "repeatUntilSuccess": true,
+          "materialGuarantee": {
+            "specified": false,
+            "sourceCopy": "未列固定物资保底"
+          }
+        }
+      ]
+    }
+  ],
+  "mechanism": {
+    "regular": {
+      "title": "常规清图",
+      "deadlineMinutes": null,
+      "note": "常规档不额外添加分钟限制"
+    },
+    "timed": {
+      "title": "限时清图",
+      "deadlinesMinutes": [
+        16,
+        14,
+        12,
+        10,
+        8
+      ],
+      "successCondition": "在所选档位规定时限内完成清图",
+      "otherwise": "否则一直打",
+      "copy": "超时未清图，继续打"
+    },
+    "clearStandard": {
+      "operator": "or",
+      "title": "清图方式 · 满足其一",
+      "methods": [
+        {
+          "type": "lever",
+          "title": "拉闸清图",
+          "conditions": [
+            "陪玩拉绝户闸撤离",
+            "同时航天无人走飞升",
+            "仅丢包可以有人撤离"
+          ],
+          "conditionOperator": "and",
+          "preserveTerminology": true
+        },
+        {
+          "type": "kills",
+          "title": "击杀清图",
+          "actor": "陪玩",
+          "kills": 8,
+          "comparison": ">=",
+          "withinDeadline": true,
+          "copy": "规定时限内陪玩击杀人头数≥8个"
+        }
+      ]
+    },
+    "minimumRequirement": {
+      "on": "撤离成功时",
+      "failureOperator": "or",
+      "killsLessThan": 4,
+      "successKillsAtLeast": 4,
+      "copyTemplate": "陪玩击杀人头数＜4或撤离金额＜{minimumW}w，不算清图成功",
+      "logicDisplay": "击杀≥4人 且 物资≥{minimumW}w"
+    },
+    "lootBeforeCompletion": {
+      "condition": "成功达标前",
+      "copy": "成功达标前，成功撤离带出物资计入累计物资"
+    },
+    "failedOrderCompensation": {
+      "condition": "对应的炸单保底如果大于累计物资保底，则在打满结单条件后需要再补保底",
+      "amountW": null,
+      "amountSpecified": false
+    },
+    "cardTiming": {
+      "copy": "因清图时间紧迫，房卡在清图后开启；清图后未开房卡仍按俱乐部规定补偿"
+    },
+    "quickExtraction": {
+      "withinDeadline": true,
+      "killsRequirementCopy": "满足击杀人头数",
+      "materialComparison": ">",
+      "copyTemplate": "打手在规定时限内满足击杀人头数，且物资金额大于{quickW}w，允许速撤",
+      "preserveOriginalKillsWording": true
+    }
+  },
+  "rules": {
+    "绝密": {
+      "map": "绝密航天",
+      "minimumLootW": 600,
+      "quickExtractionLootW": 900,
+      "cards": {
+        "included": "航天核心区金红卡",
+        "missingPerCard": [
+          {
+            "label": "金卡",
+            "amountW": 200
+          },
+          {
+            "label": "红卡",
+            "amountW": 300
+          }
+        ]
+      },
+      "source": "本轮绝密参考图；原图内容沿用",
+      "platforms": [
+        "端游",
+        "手游"
+      ]
+    },
+    "机密": {
+      "map": "机密航天",
+      "minimumLootW": 300,
+      "quickExtractionLootW": 500,
+      "cards": {
+        "included": "航天核心区金红卡",
+        "missingPerCard": [
+          {
+            "label": "金卡",
+            "amountW": 100
+          },
+          {
+            "label": "红卡",
+            "amountW": 150
+          }
+        ]
+      },
+      "source": "用户补充完整机密规则",
+      "platforms": [
+        "端游",
+        "手游"
+      ]
+    }
+  },
+  "footerInstruction": "下单前请确认地图及订单规则",
+  "contentNotes": [
+    "旧参考图价格及7分钟档不采用；本轮最高档为8分钟",
+    "机密价目中的绝航已按用户修正为机密航天",
+    "最低要求否定条件为或，改成正向展示时为且",
+    "速撤物资门槛严格大于，不改为大于等于",
+    "不新增未给出的炸单保底金额或常规分钟限制",
+    "机密新规则原文存档；绝密规则来源为参考图",
+    "2026-10-09仅更新手游限时档价格：绝密188/328/468/668/888，机密128/188/288/468/688；常规档108/88不变。",
+    "本轮未提供新的固定物资保底数额；附图清图最低要求、房卡补偿、速撤与清图条件沿用。"
+  ],
+  "deliveryPageIds": [
+    "mobile-absolute",
+    "mobile-secret",
+    "social"
+  ]
+}

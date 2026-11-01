@@ -110,7 +110,8 @@ class TeamRefundFixtures:
 
     def reject_withdraw(self, account):
         row = WithdrawRequest.objects.get(account=account, status='PENDING')
-        self.ok(self.admin.post(f'/api/admin/withdrawals/{row.pk}/reject/', {'audit_remark': '隔离测试退回'}, format='json'))
+        claim = self.ok(self.admin.post(f'/api/admin/withdrawals/{row.pk}/claim/'))
+        self.ok(self.admin.post(f'/api/admin/withdrawals/{row.pk}/reject/', {'audit_remark': '隔离测试退回', 'expected_claimed_at': claim['claimed_at']}, format='json'))
 
 
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', LEGACY_FORCE_AUTH_COMPAT=False,

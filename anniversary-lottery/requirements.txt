@@ -1,0 +1,7 @@
+Django>=6.0.4,<6.1
+djangorestframework>=3.16,<3.19
+PyMySQL>=1.1,<2
+cryptography>=45
+whitenoise>=6.9,<7
+daphne>=4.2,<5
+redis>=5,<6

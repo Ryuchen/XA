@@ -1,0 +1,36 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const sharp=createRequire(import.meta.url)(path.join(process.argv[2],'sharp'));
+const read=async name=>JSON.parse((await fs.readFile(path.join(root,name),'utf8')).replace(/^\uFEFF/,''));
+const plan=await read('layout.json'),content=await read('content.json'),before=await read('review/before-secret-maps-r3/content.json');
+if(JSON.stringify(content.tiers)!==JSON.stringify(before.tiers))throw Error('Prices or guarantees changed during map revision.');
+if(JSON.stringify(content.mechanism)!==JSON.stringify(before.mechanism))throw Error('Mechanism changed during map revision.');
+if(JSON.stringify(content.rules['绝密'])!==JSON.stringify(before.rules['绝密']))throw Error('Absolute rules changed during secret map revision.');
+const withoutMapFields=r=>Object.fromEntries(Object.entries(r).filter(([k])=>!['maps','cards'].includes(k)));
+if(JSON.stringify(withoutMapFields(content.rules['机密']))!==JSON.stringify(withoutMapFields(before.rules['机密'])))throw Error('Other secret rules changed.');
+await fs.mkdir(path.join(root,'review/phone-390'),{recursive:true});
+await fs.mkdir(path.join(root,'review/maps-r3-details'),{recursive:true});
+const panels=[],records=[];
+for(const page of plan.pages){
+ const png=path.join(root,'output/png',page.id+'.png'),meta=await sharp(png).metadata();
+ const bounds=await read('review/'+page.id+'-text-bounds.json');
+ const mapRows=bounds.filter(b=>b.role==='rule-body'&&b.y>=1294&&b.y+b.height<=1351);
+ if(mapRows.length!==3||mapRows.some(r=>r.text.includes('核电站'))||page.elements.some(e=>e.text?.includes('核电站')))throw Error('Map deletion did not reach the rendered page.');
+ const top=Math.min(...mapRows.map(r=>r.y)),bottom=Math.max(...mapRows.map(r=>r.y+r.height)),left=Math.min(...mapRows.map(r=>r.x)),right=Math.max(...mapRows.map(r=>r.x+r.width));
+ const geometry={container:{left:298,top:1294,right:777,bottom:1351},text:{left,top,right,bottom},topMargin:top-1294,bottomMargin:1351-bottom,centerDelta:Math.abs((top+bottom)/2-1322.5),bodyLines:mapRows.map(r=>r.text)};
+ if(left<298||right>777||geometry.topMargin<4||geometry.bottomMargin<4||geometry.centerDelta>.5)throw Error('Map rules are outside their existing row or off center.');
+ const svg=await fs.readFile(path.join(root,'output/svg-editable',page.id+'.svg'),'utf8');
+ if(svg.includes('核电站')||!svg.includes('地图：航天 / 巴克什'))throw Error('Editable SVG map content is incorrect.');
+ const phone=await sharp(png).resize({width:390}).png().toBuffer();
+ await fs.writeFile(path.join(root,'review/phone-390',page.id+'.png'),phone);
+ panels.push({input:phone,left:20+panels.length*410,top:20});
+ const sx=meta.width/page.w,sy=meta.height/page.h;
+ await sharp(png).extract({left:Math.round(44*sx),top:Math.round(1240*sy),width:Math.round(748*sx),height:Math.round(180*sy)}).resize({width:1200}).png().toFile(path.join(root,'review/maps-r3-details',page.id+'-maps.png'));
+ records.push({pageId:page.id,png:'output/png/'+page.id+'.png',width:meta.width,height:meta.height,...geometry});
+}
+await sharp({create:{width:840,height:918,channels:4,background:'#f8f7f0'}}).composite(panels).png().toFile(path.join(root,'review/maps-r3-overview.png'));
+await fs.writeFile(path.join(root,'review/maps-r3-audit.json'),JSON.stringify({revision:'excess-secret-maps-r3-20261009',priceAndOtherRulesPreserved:true,records},null,2)+'\n');
+console.log(JSON.stringify(records));

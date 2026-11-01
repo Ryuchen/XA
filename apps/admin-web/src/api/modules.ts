@@ -3,23 +3,23 @@ import { request, type ApiResult, type PageResult } from './request'
 /** 通用 CRUD 工厂：对应后端 DRF ViewSet 的 RESTful 路由。 */
 export function createCrudApi<T = any>(resource: string) {
   const base = `/${resource}/`
-  const list = (params?: Record<string, any>) => request<PageResult<T>>({ url: base, method: 'get', params })
-  const options = (params?: Record<string, any>) => request<PageResult<T>>({ url: `/options/${resource}/`, params })
+  const list = (params?: Record<string, any>, silent = false) => request<PageResult<T>>({ url: base, method: 'get', params, silent })
+  const options = (params?: Record<string, any>, silent = false) => request<PageResult<T>>({ url: `/options/${resource}/`, params, silent })
   return {
     list,
     options,
     all: (params?: Record<string, any>) => fetchAllPages(list, params),
-    allOptions: (params?: Record<string, any>) => fetchAllPages(options, params),
-    retrieve: (id: number | string) =>
-      request<T>({ url: `${base}${id}/`, method: 'get' }),
-    create: (data: Partial<T> | FormData) =>
-      request<T>({ url: base, method: 'post', data }),
-    update: (id: number | string, data: Partial<T> | FormData) =>
-      request<T>({ url: `${base}${id}/`, method: 'patch', data }),
-    remove: (id: number | string) =>
-      request<ApiResult>({ url: `${base}${id}/`, method: 'delete' }),
-    action: (id: number | string, name: string, data?: any) =>
-      request<T>({ url: `${base}${id}/${name}/`, method: 'post', data }),
+    allOptions: (params?: Record<string, any>, silent = false) => fetchAllPages(p => options(p, silent), params),
+    retrieve: (id: number | string, silent = false) =>
+      request<T>({ url: `${base}${id}/`, method: 'get', silent }),
+    create: (data: Partial<T> | FormData, silent = false) =>
+      request<T>({ url: base, method: 'post', data, silent }),
+    update: (id: number | string, data: Partial<T> | FormData, silent = false) =>
+      request<T>({ url: `${base}${id}/`, method: 'patch', data, silent }),
+    remove: (id: number | string, silent = false) =>
+      request<ApiResult>({ url: `${base}${id}/`, method: 'delete', silent }),
+    action: (id: number | string, name: string, data?: any, silent = false) =>
+      request<T>({ url: `${base}${id}/${name}/`, method: 'post', data, silent }),
     collectionAction: (name: string, data?: any) =>
       request({ url: `${base}${name}/`, method: 'post', data }),
   }
@@ -44,7 +44,11 @@ export const qualificationOptionsApi = { get: () => request<any>({ url: '/qualif
 export const escortApi = createCrudApi('escorts')
 export const orderApi = createCrudApi('orders')
 export const aftersaleApi = createCrudApi('aftersales')
-export const evaluationApi = createCrudApi('evaluations')
+export const evaluationApi = {
+  ...createCrudApi('evaluations'),
+  deleteAtVersion: (id: number | string, replyVersion: number) =>
+    request({ url: `/evaluations/${id}/`, method: 'delete', data: { reply_version: replyVersion }, silent: true }),
+}
 export const reportApi = createCrudApi('reports')
 export const withdrawApi = createCrudApi('withdrawals')
 export const walletApi = createCrudApi('wallets')
@@ -76,7 +80,10 @@ export const serviceItemApi = createCrudApi('service-items')
 export const gameCategoryApi = createCrudApi('game-categories')
 export const serviceCategoryApi = createCrudApi('service-categories')
 export const bossTypeApi = createCrudApi('boss-types')
-export const escortLevelApi = createCrudApi('escort-levels')
+export const escortLevelApi = {
+  ...createCrudApi('escort-levels'),
+  deletionImpact: (id: number | string) => request<{ id: number; name: string; providers: number; services: number; registrations: number }>({ url: `/escort-levels/${id}/deletion-impact/`, method: 'get', silent: true }),
+}
 export const promotionApi = createCrudApi('promotions')
 export const rechargeRecordApi = createCrudApi('recharge-records')
 export const disposeRecordApi = createCrudApi('dispose-records')
@@ -90,12 +97,12 @@ export const adminApi = createCrudApi('admins')
 export const auditApi = createCrudApi('audit-logs')
 
 export const dashboardApi = {
-  stats: () => request({ url: '/dashboard/stats', method: 'get' }),
+  stats: (silent = false) => request({ url: '/dashboard/stats', method: 'get', silent }),
 }
 
 export const playerDashboardApi = {
-  stats: (params?: Record<string, any>) =>
-    request({ url: '/dashboard/player', method: 'get', params }),
+  stats: (params?: Record<string, any>, silent = false) =>
+    request({ url: '/dashboard/player', method: 'get', params, silent }),
 }
 
 export const permissionApi = {
@@ -108,9 +115,9 @@ export const commissionApi = {
 }
 
 export const withdrawConfigApi = {
-  get: () => request<{ min_amount: number; tax_rate: number }>({ url: '/config/withdraw', method: 'get' }),
-  update: (min_amount: number, tax_rate: number) =>
-    request<{ min_amount: number; tax_rate: number }>({ url: '/config/withdraw', method: 'put', data: { min_amount, tax_rate } }),
+  get: (silent = false) => request<{ min_amount: number; tax_rate: number }>({ url: '/config/withdraw', method: 'get', silent }),
+  update: (min_amount: number, tax_rate: number, silent = false) =>
+    request<{ min_amount: number; tax_rate: number }>({ url: '/config/withdraw', method: 'put', data: { min_amount, tax_rate }, silent }),
 }
 
 export const checkinConfigApi = {
@@ -121,16 +128,20 @@ export const checkinConfigApi = {
 export const chatApi = {
   list: (params?: Record<string, any>) =>
     request<PageResult>({ url: '/chat-sessions/', method: 'get', params }),
-  messages: (id: number | string) =>
-    request<{ list: any[]; total: number }>({ url: `/chat-sessions/${id}/messages/`, method: 'get' }),
+  messages: (id: number | string, params?: { cursor: 1; before_id?: number }) =>
+    request<{ list: any[]; total: number; has_more?: boolean; next_before_id?: number | null }>({ url: `/chat-sessions/${id}/messages/`, method: 'get', params }),
   reply: (id: number | string, data: FormData) =>
-    request({ url: `/chat-sessions/${id}/reply/`, method: 'post', data }),
-  read: (id: number | string) =>
-    request({ url: `/chat-sessions/${id}/read/`, method: 'post' }),
+    request({ url: `/chat-sessions/${id}/reply/`, method: 'post', data, silent: true }),
+  messageStatus: (id: number | string, clientMessageId: string) =>
+    request<{ status: 'FOUND' | 'UNKNOWN'; message: any }>({ url: `/chat-sessions/${id}/message-status/`, method: 'get', params: { client_message_id: clientMessageId }, silent: true }),
+  read: (id: number | string, throughId: number) =>
+    request<{ unread_support: number }>({ url: `/chat-sessions/${id}/read/`, method: 'post', data: { through_id: throughId } }),
+  readIds: (id: number | string, messageIds: number[]) =>
+    request<{ unread_support: number }>({ url: `/chat-sessions/${id}/read/`, method: 'post', data: { message_ids: messageIds } }),
 }
 
-export interface DepositRules { cash_target:number; earnings_target:number; earnings_multiplier:number; deposit_percent:number; settlement_percent:number; hold_hours:number }
+export interface DepositRules { cash_target:number; earnings_target:number; earnings_multiplier:number; deposit_percent:number; settlement_percent:number; hold_hours:number; conditional_write_supported?: boolean }
 export const depositRulesApi = {
-  get: () => request<DepositRules>({ url: '/config/deposit-rules', method: 'get' }),
-  update: (deposit_percent:number) => request<DepositRules>({ url: '/config/deposit-rules', method: 'put', data: { deposit_percent } }),
+  get: (silent = false) => request<DepositRules>({ url: '/config/deposit-rules', method: 'get', silent }),
+  update: (deposit_percent:number, expected_deposit_percent?:number, silent = false) => request<DepositRules>({ url: '/config/deposit-rules', method: 'put', data: { deposit_percent, expected_deposit_percent }, silent }),
 }

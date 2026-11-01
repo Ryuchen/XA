@@ -15,7 +15,11 @@ from club_accounts.services import (
 
 # 权限点分组定义：用于前端权限分配树展示与后端校验。
 PERMISSION_GROUPS = [
+    {'group': 'payment_fee', 'label': '微信支付费率', 'permissions': [
+        ('payment_fee:view', '查看支付费率配置'), ('payment_fee:edit', '修改支付费率配置'),
+    ]},
     {'group': 'order_traffic', 'label': '订单峰谷限流', 'permissions': [('order:traffic', '配置限流与自主下单开关')]},
+    {'group': 'order_timeout', 'label': '待接单时限', 'permissions': [('order:timeout', '配置待接单时限')]},
     {'group': 'deposit_rule', 'label': '押金与结款规则', 'permissions': [
         ('deposit_rule:view', '查看结款比例'), ('deposit_rule:edit', '配置结款比例'),
     ]},
@@ -109,6 +113,7 @@ PERMISSION_GROUPS = [
         'permissions': [
             ('withdraw:view', '查看提现'),
             ('withdraw:audit', '提现审核'),
+            ('withdraw:release', '释放提现领取'),
         ],
     },
     {
@@ -208,6 +213,8 @@ PERMISSION_GROUPS = [
         'permissions': [
             ('audition:view', '查看试音链接'),
             ('audition:edit', '编辑试音链接'),
+            ('audition:bind_boss', '管理老板试音登录入口'),
+            ('audition:bind_provider', '管理陪玩试音登录入口'),
             ('audition:delete', '删除试音链接'),
             ('audition:signup_view', '查看试音报名'),
             ('audition:signup_audit', '审核试音报名'),

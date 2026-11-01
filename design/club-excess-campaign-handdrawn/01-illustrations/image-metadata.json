@@ -1,0 +1,19 @@
+{
+  "size": [
+    1536,
+    1024
+  ],
+  "mode": "RGBA",
+  "alphaExtrema": [
+    0,
+    254
+  ],
+  "corner": [
+    1,
+    1,
+    1,
+    0
+  ],
+  "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-85e4786e-3443-4bb9-a868-10a02a0e6667.png",
+  "provider": "built-in image_gen"
+}

@@ -4,19 +4,25 @@ export interface OrderRefundRecord {
   created_at: string;
   reason: string;
   client_request_id?: string;
-  recovered_amount?: number;
+  recovered_amount?: number | null;
+  referral_recovered_amount?: number | null;
 }
 export interface OrderRefundSummary {
   amount: number;
   original_amount?: number;
   remaining_amount?: number;
   refund_count?: number;
-  recovered_amount?: number;
-  net_income?: number;
+  recovered_amount?: number | null;
+  net_income?: number | null;
+  referral_recovered_amount?: number | null;
+  referral_net_income?: number | null;
+  income_breakdown_unavailable?: boolean;
   remaining_frozen_amount?: number;
   records?: OrderRefundRecord[];
 }
 export interface ProviderOrder {
+  reservation_origin?: { id: number; reservation_no: string; start_time: string; end_time: string; can_open: boolean } | null;
+  dispatch_route?: 'PUBLIC' | 'STAFF';
   provider_requirement?: {game_category_id:number;provider_kind:string;platform:string;security_level:string;grade:string;label:string};
   dispatch_notification_enabled?:boolean;
   requires_boss_selection?: boolean;
@@ -25,15 +31,21 @@ export interface ProviderOrder {
   can_team_apply?: boolean;
   escort_mode?: 'SINGLE' | 'DOUBLE';
   participants?: Array<{ id: number; nickname: string }>;
+  team_progress?: { stage: 'ENTRY' | 'COMPLETION'; submitted_count: number; total_count: number; members: Array<{ id: number; nickname: string; submitted: boolean }> } | null;
+  /** Whether this provider's own assignment has been handed off. */
+  my_assignment_released?: boolean | null;
   my_applications?: Array<{ id: number; team_size: number; status: string; ready: boolean; is_partner: boolean; partner_confirmed: boolean; members: Array<{ id: number; nickname: string; level: string }> }>;
   id: number;
   order_no: string;
   status: 'PENDING' | 'GRABBED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED';
   payment_status: string;
+  aftersale_status?: 'OPEN' | 'RESOLVED' | 'REFUNDED' | 'PARTIALLY_REFUNDED' | '';
+  cancel_reason?: string;
   refund_summary?: OrderRefundSummary | null;
   settled_at?: string | null;
+  settlement_status?: 'REVIEW' | 'WAITING' | 'SETTLED';
   amount: number;
-  expected_income: number;
+  expected_income: number | null;
   commission_rate: number;
   provider_gender?: 'ANY' | 'MALE' | 'FEMALE';
   game_rounds: number;
@@ -45,6 +57,10 @@ export interface ProviderOrder {
   remark: string;
   fulfillment?: string;
   source_order?: number | null;
+  /** Service/gift type frozen when the order was placed. */
+  is_gift_snapshot?: boolean;
+  /** Name saved when the customer placed the order. */
+  service_name_snapshot?: string;
   service?: { id: number; name: string; is_gift?: boolean };
   customer?: {
     id: number;
@@ -56,8 +72,18 @@ export interface ProviderOrder {
   can_operate?: boolean;
   can_reject?: boolean;
   allowed_actions?: Array<'GRAB' | 'START' | 'COMPLETE' | 'REJECT'>;
+  /** The server's current eligibility for creating or opening this order's report. */
+  report_entry?: { available: boolean; reason: string } | null;
   created_at: string;
 }
+
+/** Older orders may not have a saved name. */
+export const orderServiceName = (order: ProviderOrder): string =>
+  order.service_name_snapshot || order.service?.name || '陪玩服务';
+
+/** Older API versions do not return the sale-time snapshot. */
+export const isGiftOrder = (order: ProviderOrder): boolean =>
+  Boolean(order.source_order || (order.is_gift_snapshot ?? order.service?.is_gift));
 
 export interface ProviderStats {
   today_orders: number;
@@ -85,6 +111,7 @@ export interface Evaluation {
   service_name: string;
   reply_content: string;
   replied_at: string | null;
+  reply_version: number;
   created_at: string;
 }
 

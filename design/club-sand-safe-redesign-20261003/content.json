@@ -1,0 +1,342 @@
+{
+  "campaign": "兴安电竞 · 沙保连连看",
+  "title": "沙保连连看",
+  "brand": "兴安电竞",
+  "mode": "绝密",
+  "source": {
+    "type": "user-message",
+    "date": "2026-09-29",
+    "basis": "本轮用户直接提供的十档价格、玩法说明和四项下单须知；不沿用其他玩法价格或规则。",
+    "redesign": {
+      "priorVerifiedSource": "G:/Github/XA/design/club-sand-safe-campaign-handdrawn/content.json",
+      "basis": "用户要求沙保连连看四张套图完全重新生成，强化同一局三个条件全部满足；端游连续两次688、三次1288；手游连续两次588、三次888，物资门槛改为严格大于788w。",
+      "date": "2026-10-03"
+    }
+  },
+  "prices": [
+    {
+      "id": "cumulative-1",
+      "type": "累计",
+      "count": 1,
+      "label": "累计一次",
+      "desktop": 218,
+      "mobile": 168,
+      "unit": "r"
+    },
+    {
+      "id": "cumulative-2",
+      "type": "累计",
+      "count": 2,
+      "label": "累计两次",
+      "desktop": 428,
+      "mobile": 328,
+      "unit": "r"
+    },
+    {
+      "id": "cumulative-3",
+      "type": "累计",
+      "count": 3,
+      "label": "累计三次",
+      "desktop": 628,
+      "mobile": 488,
+      "unit": "r"
+    },
+    {
+      "id": "consecutive-2",
+      "type": "连续",
+      "count": 2,
+      "label": "连续两次",
+      "desktop": 688,
+      "mobile": 588,
+      "unit": "r"
+    },
+    {
+      "id": "consecutive-3",
+      "type": "连续",
+      "count": 3,
+      "label": "连续三次",
+      "desktop": 1288,
+      "mobile": 888,
+      "unit": "r"
+    }
+  ],
+  "wishReward": {
+    "label": "特别奖励",
+    "when": "板板下单时",
+    "choices": [
+      "万金泪冠",
+      "纵横"
+    ],
+    "choiceCount": 1,
+    "triggerOriginal": "如果出了则赠送1688w保底！",
+    "guarantee": 1688,
+    "unit": "w",
+    "original": "板板下单时可以许愿万金泪冠和纵横其中一个，如果出了则赠送1688w保底！"
+  },
+  "objectives": {
+    "scope": "单局",
+    "extraction": "成功撤离",
+    "relation": "三项目标同时完成",
+    "sandSafes": {
+      "count": 2,
+      "verb": "摸",
+      "name": "沙色保险",
+      "original": "单局摸 2个 沙色保险"
+    },
+    "regularSafes": {
+      "count": 4,
+      "verb": "摸",
+      "name": "常规大保险",
+      "original": "单局摸 4个 常规大保险"
+    },
+    "loot": {
+      "desktop": 888,
+      "mobile": 788,
+      "operator": ">",
+      "unit": "w",
+      "original": "单局带出超过端游888w / 手游788w；手游值经2026-10-03用户回复修订"
+    },
+    "operator": "AND",
+    "singleRoundRequired": true,
+    "successfulExtractionRequired": true
+  },
+  "notices": [
+    {
+      "id": "completion",
+      "original": "撤离成功且三项目标都同时完成才算完成目标；",
+      "display": "成功撤离，且三项目标同时完成，才算达标。"
+    },
+    {
+      "id": "broken-order",
+      "extraction": "成功撤离",
+      "operator": "<",
+      "loot": 300,
+      "unit": "w",
+      "interruptConsecutive": true,
+      "increaseGuarantee": false,
+      "original": "撤离成功时且带出的物资低于300w算炸单，中断连续计数但不增加保底；",
+      "display": "成功撤离但带出物资低于300w，算炸单；中断连续计数，不增加保底。"
+    },
+    {
+      "id": "safe-interaction",
+      "appliesTo": [
+        "沙色保险",
+        "常规大保险"
+      ],
+      "condition": "战斗激烈情况下",
+      "permission": "陪玩询问板板是否可以由陪玩摸",
+      "original": "沙色和常规大保险说明：战斗激烈情况下，陪玩询问板板是否可以由陪玩摸；",
+      "display": "沙色及常规大保险：战斗激烈时，陪玩会询问板板是否可以由陪玩摸。"
+    },
+    {
+      "id": "extra-guarantee-map",
+      "mapMode": "绝密",
+      "chooser": "陪玩",
+      "original": "额外赠送的保底由陪玩自行选择绝密地图进行补打；",
+      "display": "额外赠送的保底，由陪玩自选绝密地图补打。"
+    }
+  ],
+  "verification": {
+    "status": "checked-against-prior-confirmed-content-and-2026-10-03-user-reply",
+    "tierCount": 10,
+    "preserve": [
+      "万金泪冠",
+      "纵横",
+      "严格超过端游888w/手游788w",
+      "低于300w",
+      "同一局三项全满足且成功撤离",
+      "战斗激烈时须询问板板",
+      "陪玩自选绝密地图补打"
+    ],
+    "doNotInfer": [
+      "未提供撤离失败时的计数规则",
+      "未提供普通下单保底",
+      "未提供地图限制",
+      "未提供工作日优惠",
+      "只展示绝密模式"
+    ],
+    "typesetEquivalence": [
+      "三项缺一不可 + 且连接 + 同局成功撤离结果条，完整表达AND关系。",
+      "炸单断连，不增保底等义对应中断连续计数、不增加保底；仅在成功撤离且带出低于300w时触发。",
+      "激战时对应战斗激烈时；两类保险指目标卡中的沙色保险与常规大保险；须询问板板能否代摸，保留许可前提。"
+    ]
+  },
+  "display": {
+    "platformMode": "绝密 · 端游 / 手游",
+    "priceColumnLabels": [
+      "完成目标",
+      "订单价格"
+    ],
+    "rewardHeading": "特别奖励",
+    "wishWhen": "下单时许愿（二选一）",
+    "wishTrigger": "如果出了，赠送",
+    "wishGuaranteeLabel": "保底",
+    "objectiveHeading": "三项缺一不可",
+    "objectiveRelation": "同一局 · 三项全部满足 · 成功撤离才达标",
+    "lootObjectivePrefix": "单局带出物资",
+    "noticeHeading": "下单须知",
+    "noticeCompletion": [
+      [
+        {
+          "text": "成功撤离",
+          "bold": true
+        },
+        {
+          "text": "，且"
+        },
+        {
+          "text": "三项目标同局完成，",
+          "bold": true
+        }
+      ],
+      [
+        {
+          "text": "才算完成目标。"
+        }
+      ]
+    ],
+    "noticeBrokenOrderPrefix": "成功撤离且带出物资低于",
+    "noticeBrokenOrderSuffix": "，算炸单；",
+    "noticeBrokenOrderResult": [
+      {
+        "text": "中断连续计数，",
+        "bold": true
+      },
+      {
+        "text": "不增加保底。",
+        "bold": true
+      }
+    ],
+    "noticeSafeInteraction": [
+      [
+        {
+          "text": "战斗激烈时，陪玩会"
+        },
+        {
+          "text": "询问板板，",
+          "bold": true
+        }
+      ],
+      [
+        {
+          "text": "是否可以由陪玩摸沙色及常规大保险。"
+        }
+      ]
+    ],
+    "noticeExtraGuarantee": [
+      {
+        "text": "额外赠送保底：陪玩自选"
+      },
+      {
+        "text": "绝密地图",
+        "bold": true
+      },
+      {
+        "text": "补打。"
+      }
+    ],
+    "wishTriggerShort": "出了就送",
+    "noticeAlignment": "left",
+    "combinedLootPrefix": "带出物资",
+    "typeset": {
+      "objectiveHeadingCover": "同局三项缺一不可",
+      "objectiveResultFull": "同一局三项全满足，且成功撤离才达标",
+      "objectiveResultCover": "三项全满足，成功撤离才达标",
+      "noticeCompletion": [
+        {
+          "text": "成功撤离",
+          "bold": true
+        },
+        {
+          "text": "，且"
+        },
+        {
+          "text": "三项目标同局完成",
+          "bold": true
+        },
+        {
+          "text": "，才算达标。"
+        }
+      ],
+      "noticeBrokenOrderPrefix": "成功撤离且带出",
+      "noticeBrokenOrderSeparator": "：",
+      "noticeBrokenOrderResult": [
+        {
+          "text": "炸单断连，不增保底。",
+          "bold": true
+        }
+      ],
+      "noticeSafeInteraction": [
+        {
+          "text": "激战时，陪玩须"
+        },
+        {
+          "text": "询问板板",
+          "bold": true
+        },
+        {
+          "text": "能否代摸两类保险。"
+        }
+      ],
+      "coverWishWhen": "下单许愿二选一："
+    }
+  },
+  "decoration": {
+    "requestedByUser": true,
+    "objects": [
+      "沙色保险",
+      "万金泪冠",
+      "纵横",
+      "天圆地方"
+    ],
+    "purpose": "仅装饰；许愿对象仍为万金泪冠与纵横二选一",
+    "references": "references/decor-references.md"
+  },
+  "delivery": {
+    "platformsSeparated": true,
+    "priceRowsPerPoster": 5,
+    "platformSpecificLootThreshold": true,
+    "basis": "2026-10-03要求完全重新生成现有四张套图，沿用最近已确认四张范围",
+    "coversIncluded": true,
+    "coversPlatformSeparate": false,
+    "wordingBasis": "本轮强化三项且关系，物资门槛仍为严格大于；手游改为788w",
+    "advertsIncluded": true,
+    "noticeTypographyBasis": "用户要求下单须知左对齐，并注意整体字体排版。标题、四项正文及续行共用一条左边线，保持普通字重和重点真实粗体。",
+    "pricePostersSeparated": true,
+    "advertsMerged": true,
+    "pageCount": 4,
+    "pageIds": [
+      "desktop-absolute",
+      "mobile-absolute",
+      "combined-advert",
+      "combined-cover"
+    ],
+    "coverRedesignBasis": "用户要求封面完全重新生成，参考技能标准与历史成图；改为16:9横版左文右图，封面集中展示品牌、玩法、累计/连续、平台/模式和许愿奖励。"
+  },
+  "visual": {
+    "palette": "奶白、巴克什暖沙金、雾蓝、海军蓝，薄荷青用于三项勾选",
+    "basis": "本轮全新生成插画和四页无字底图，不复用旧海报画面"
+  },
+  "cover": {
+    "entryTierId": "cumulative-1",
+    "titleLines": [
+      "沙保连连看"
+    ],
+    "showNotices": false,
+    "coreRelation": "同一局成功撤离，三项同时达成",
+    "combinedPlatforms": true,
+    "showEntryPrice": false,
+    "format": "16:9",
+    "standardReference": "skill material-v3 horizontal cover and historical material/timed-clear covers",
+    "showCoreTargets": true,
+    "showWishReward": true,
+    "wishTriggerShort": "出了送"
+  },
+  "advert": {
+    "showNotices": false,
+    "showAllFivePrices": true,
+    "coreRelation": "同一局成功撤离，三项同时达成",
+    "combinedPlatforms": true
+  },
+  "revision": "redesign-r1"
+}

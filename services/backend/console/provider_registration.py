@@ -1,4 +1,5 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.decorators import action
@@ -90,7 +91,18 @@ class ProviderRegistrationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     ordering_fields = ['submitted_at', 'id']
 
     def get_queryset(self):
-        return ProviderRegistration.objects.select_related('reviewer', 'level', 'account')
+        queryset = ProviderRegistration.objects.select_related('reviewer', 'level', 'account').order_by('-submitted_at', '-id')
+        if self.action == 'list':
+            status = (self.request.query_params.get('status') or '').strip()
+            search = (self.request.query_params.get('search') or '').strip()
+            if status:
+                if status not in ProviderRegistration.Status.values:
+                    raise serializers.ValidationError({'status': '无效的审核状态'})
+                queryset = queryset.filter(status=status)
+            if search:
+                queryset = queryset.filter(Q(username__icontains=search) | Q(phone__icontains=search)
+                                           | Q(real_name__icontains=search) | Q(display_name__icontains=search))
+        return queryset
 
     def _review(self, request, approve):
         serializer = RegistrationApproveInput(data=request.data) if approve else RegistrationRejectInput(data=request.data)

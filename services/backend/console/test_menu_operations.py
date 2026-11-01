@@ -102,6 +102,8 @@ class MenuOperationsTest(APITestCase):
         wallet.refresh_from_db()
         self.assertEqual(wallet.balance, 1200)
         self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type='ADJUST').count(), 1)
+        adjustment = Transaction.objects.get(wallet=wallet, tx_type='ADJUST')
+        self.assertIsNone(self.ok(self.client.get(f'/api/admin/transactions/{adjustment.pk}/'))['order_no'])
         self.assertEqual(self.client.post(url, {'amount': 200}, format='json').status_code, 400)
         from orders.tests.factories import make_provider
         provider_wallet, _ = Wallet.objects.get_or_create(user=make_provider())
@@ -121,6 +123,10 @@ class MenuOperationsTest(APITestCase):
         records = list(Transaction.objects.filter(order_id=order['id']).order_by('id'))
         self.assertEqual([row.tx_type for row in records], ['PAY', 'REFUND'])
         self.assertTrue(all(row.operator_account_id == self.staff.pk for row in records))
+        for row in records:
+            self.assertEqual(self.ok(self.client.get(f'/api/admin/transactions/{row.pk}/'))['order_no'], order['order_no'])
+        listed = self.ok(self.client.get('/api/admin/transactions/', {'wallet_id': wallet.pk}))
+        self.assertEqual({row['order_no'] for row in listed['list']}, {order['order_no']})
         wallet.refresh_from_db()
         self.assertEqual(wallet.balance, 10000)
 

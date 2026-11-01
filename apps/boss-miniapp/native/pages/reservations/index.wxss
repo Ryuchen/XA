@@ -1,0 +1,5 @@
+.reservations-page { padding-bottom: 150rpx; }
+.reservation-card { width: 100%; text-align: left; margin-bottom: 18rpx; }
+.line { display: flex; justify-content: space-between; gap: 20rpx; }
+.state { color: var(--primary); font-size: 24rpx; }
+.reservation-card .small { display: block; margin-top: 10rpx; }

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "poster": {
+    "width": 1600,
+    "height": 3600,
+    "header": {
+      "x": 90,
+      "y": 70,
+      "w": 1420,
+      "h": 550
+    },
+    "mechanism": {
+      "x": 90,
+      "y": 665,
+      "w": 1420,
+      "h": 185
+    },
+    "table": {
+      "x": 90,
+      "y": 895,
+      "w": 1420,
+      "headerHeight": 95,
+      "rowTop": 990,
+      "rowHeight": 174,
+      "rows": 5,
+      "columns": [
+        90,
+        420,
+        805,
+        1040,
+        1510
+      ]
+    },
+    "topUp": {
+      "x": 90,
+      "y": 1915,
+      "w": 1420,
+      "h": 310
+    },
+    "features": {
+      "x": 90,
+      "y": 2260,
+      "w": 1420,
+      "h": 135
+    },
+    "rules": {
+      "x": 90,
+      "y": 2510,
+      "w": 1420,
+      "rowHeights": [
+        190,
+        115,
+        140,
+        120,
+        155,
+        130
+      ]
+    },
+    "unitAnchors": {
+      "priceR": 352,
+      "lootW": 725,
+      "lateBonusW": 1425
+    }
+  },
+  "cover": {
+    "width": 2560,
+    "height": 1440
+  },
+  "social": {
+    "width": 2400,
+    "height": 3200,
+    "cards": 4,
+    "rowsPerCard": 5,
+    "columnsPerCard": 4
+  },
+  "note": "坐标为生成前结构规划；填字阶段应以实际生成底图重新测量。"
+}

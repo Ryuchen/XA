@@ -1,0 +1,962 @@
+[
+  {
+    "text": "兴安电竞",
+    "role": "brand",
+    "x": 78.4,
+    "y": 51.304687200000004,
+    "width": 95.50781256,
+    "height": 23.390625599999996,
+    "cy": 63,
+    "effectiveSize": 24
+  },
+  {
+    "text": "端游 · 绝密版",
+    "role": "platform-mode",
+    "x": 107.89892649999999,
+    "y": 293.70214815,
+    "width": 138.20214700000002,
+    "height": 22.595703699999998,
+    "cy": 305,
+    "effectiveSize": 23
+  },
+  {
+    "text": "限定局数 · 超时加保底",
+    "role": "copy",
+    "x": 48,
+    "y": 345.7241212,
+    "width": 169.46875,
+    "height": 16.551757600000002,
+    "cy": 354,
+    "effectiveSize": 17
+  },
+  {
+    "text": "未按表内局数完成，追加对应档位保底",
+    "role": "late-condition",
+    "x": 70,
+    "y": 445.234375,
+    "width": 339.41406200000006,
+    "height": 19.53125,
+    "cy": 455,
+    "effectiveSize": 20
+  },
+  {
+    "text": "超时保底整单只增加一次 · 全部保底打满结单",
+    "role": "late-frequency",
+    "x": 70,
+    "y": 475.3620608,
+    "width": 267.25122045,
+    "height": 13.2758784,
+    "cy": 482,
+    "effectiveSize": 13.5
+  },
+  {
+    "text": "订单价格",
+    "role": "table-heading",
+    "x": 100.3332519775,
+    "y": 528.535644775,
+    "width": 77.333496045,
+    "height": 18.92871045,
+    "cy": 538,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "带出物资",
+    "role": "table-heading",
+    "x": 285.32372925,
+    "y": 528.535644775,
+    "width": 77.3525415,
+    "height": 18.92871045,
+    "cy": 538,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "限局完成",
+    "role": "table-heading",
+    "x": 441.609375,
+    "y": 528.5070802,
+    "width": 76.78125,
+    "height": 18.985839600000002,
+    "cy": 538,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "超时追加保底",
+    "role": "table-heading",
+    "x": 611.75707825,
+    "y": 528.49755835,
+    "width": 116.4858435,
+    "height": 19.0048833,
+    "cy": 538,
+    "effectiveSize": 19.5
+  },
+  {
+    "text": "288",
+    "role": "price-number",
+    "x": 125.63232405,
+    "y": 586.6962885,
+    "width": 69.36767595,
+    "height": 32.607423,
+    "cy": 603,
+    "effectiveSize": 45
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 202,
+    "y": 591.945556646,
+    "width": 15.62109375,
+    "height": 22.108886708,
+    "cy": 603,
+    "effectiveSize": 43
+  },
+  {
+    "text": "1188",
+    "role": "loot-number",
+    "x": 288.81347800000003,
+    "y": 586.3339838,
+    "width": 78.186522,
+    "height": 33.332032399999996,
+    "cy": 603,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 374,
+    "y": 591.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 603,
+    "effectiveSize": 44
+  },
+  {
+    "text": "3",
+    "role": "rounds-number",
+    "x": 470.430664072,
+    "y": 589.2324214,
+    "width": 16.569335928,
+    "height": 27.535157199999997,
+    "cy": 603,
+    "effectiveSize": 38
+  },
+  {
+    "text": "把",
+    "role": "rounds-unit",
+    "x": 494,
+    "y": 591.5390628,
+    "width": 23.3671872,
+    "height": 22.9218744,
+    "cy": 603,
+    "effectiveSize": 24
+  },
+  {
+    "text": "+488",
+    "role": "late-bonus-number",
+    "x": 638.05859352,
+    "y": 586.3339838,
+    "width": 96.94140648,
+    "height": 33.332032399999996,
+    "cy": 603,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "late-bonus-unit",
+    "x": 742,
+    "y": 591.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 603,
+    "effectiveSize": 44
+  },
+  {
+    "text": "488",
+    "role": "price-number",
+    "x": 123.72070289999999,
+    "y": 665.6962885,
+    "width": 71.27929710000001,
+    "height": 32.607423,
+    "cy": 682,
+    "effectiveSize": 45
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 202,
+    "y": 670.945556646,
+    "width": 15.62109375,
+    "height": 22.108886708,
+    "cy": 682,
+    "effectiveSize": 43
+  },
+  {
+    "text": "2188",
+    "role": "loot-number",
+    "x": 280.79492175999997,
+    "y": 665.3339838,
+    "width": 86.20507824,
+    "height": 33.332032399999996,
+    "cy": 682,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 374,
+    "y": 670.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 682,
+    "effectiveSize": 44
+  },
+  {
+    "text": "6",
+    "role": "rounds-number",
+    "x": 471.209960928,
+    "y": 668.371582036,
+    "width": 15.790039071999999,
+    "height": 27.256835927999997,
+    "cy": 682,
+    "effectiveSize": 38
+  },
+  {
+    "text": "把",
+    "role": "rounds-unit",
+    "x": 494,
+    "y": 670.5390628,
+    "width": 23.3671872,
+    "height": 22.9218744,
+    "cy": 682,
+    "effectiveSize": 24
+  },
+  {
+    "text": "+1288",
+    "role": "late-bonus-number",
+    "x": 625.16601574,
+    "y": 665.3339838,
+    "width": 109.83398426000001,
+    "height": 33.332032399999996,
+    "cy": 682,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "late-bonus-unit",
+    "x": 742,
+    "y": 670.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 682,
+    "effectiveSize": 44
+  },
+  {
+    "text": "688",
+    "role": "price-number",
+    "x": 126.00585914999999,
+    "y": 743.6962885,
+    "width": 68.99414085000001,
+    "height": 32.607423,
+    "cy": 760,
+    "effectiveSize": 45
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 202,
+    "y": 748.945556646,
+    "width": 15.62109375,
+    "height": 22.108886708,
+    "cy": 760,
+    "effectiveSize": 43
+  },
+  {
+    "text": "3188",
+    "role": "loot-number",
+    "x": 279.78417986,
+    "y": 743.3339838,
+    "width": 87.21582013999999,
+    "height": 33.332032399999996,
+    "cy": 760,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 374,
+    "y": 748.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 760,
+    "effectiveSize": 44
+  },
+  {
+    "text": "9",
+    "role": "rounds-number",
+    "x": 471.209960928,
+    "y": 746.371582036,
+    "width": 15.790039071999999,
+    "height": 27.256835927999997,
+    "cy": 760,
+    "effectiveSize": 38
+  },
+  {
+    "text": "把",
+    "role": "rounds-unit",
+    "x": 494,
+    "y": 748.5390628,
+    "width": 23.3671872,
+    "height": 22.9218744,
+    "cy": 760,
+    "effectiveSize": 24
+  },
+  {
+    "text": "+2088",
+    "role": "late-bonus-number",
+    "x": 615.08105486,
+    "y": 743.3002934,
+    "width": 119.91894514,
+    "height": 33.399413200000005,
+    "cy": 760,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "late-bonus-unit",
+    "x": 742,
+    "y": 748.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 760,
+    "effectiveSize": 44
+  },
+  {
+    "text": "888",
+    "role": "price-number",
+    "x": 124.11621105,
+    "y": 821.6962885,
+    "width": 70.88378895,
+    "height": 32.607423,
+    "cy": 838,
+    "effectiveSize": 45
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 202,
+    "y": 826.945556646,
+    "width": 15.62109375,
+    "height": 22.108886708,
+    "cy": 838,
+    "effectiveSize": 43
+  },
+  {
+    "text": "4188",
+    "role": "loot-number",
+    "x": 279.96386736,
+    "y": 821.3339838,
+    "width": 87.03613263999999,
+    "height": 33.332032399999996,
+    "cy": 838,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 374,
+    "y": 826.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 838,
+    "effectiveSize": 44
+  },
+  {
+    "text": "12",
+    "role": "rounds-number",
+    "x": 457.7021482,
+    "y": 824.371582036,
+    "width": 29.2978518,
+    "height": 27.256835927999997,
+    "cy": 838,
+    "effectiveSize": 38
+  },
+  {
+    "text": "把",
+    "role": "rounds-unit",
+    "x": 494,
+    "y": 826.5390628,
+    "width": 23.3671872,
+    "height": 22.9218744,
+    "cy": 838,
+    "effectiveSize": 24
+  },
+  {
+    "text": "+2888",
+    "role": "late-bonus-number",
+    "x": 614.58691412,
+    "y": 821.3339838,
+    "width": 120.41308588000001,
+    "height": 33.332032399999996,
+    "cy": 838,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "late-bonus-unit",
+    "x": 742,
+    "y": 826.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 838,
+    "effectiveSize": 44
+  },
+  {
+    "text": "1688",
+    "role": "price-number",
+    "x": 110.38330095,
+    "y": 901.6962885,
+    "width": 84.61669905,
+    "height": 32.607423,
+    "cy": 918,
+    "effectiveSize": 45
+  },
+  {
+    "text": "r",
+    "role": "price-unit",
+    "x": 202,
+    "y": 906.945556646,
+    "width": 15.62109375,
+    "height": 22.108886708,
+    "cy": 918,
+    "effectiveSize": 43
+  },
+  {
+    "text": "8188",
+    "role": "loot-number",
+    "x": 279.24511736,
+    "y": 901.3339838,
+    "width": 87.75488263999999,
+    "height": 33.332032399999996,
+    "cy": 918,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "loot-unit",
+    "x": 374,
+    "y": 906.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 918,
+    "effectiveSize": 44
+  },
+  {
+    "text": "24",
+    "role": "rounds-number",
+    "x": 450.020509,
+    "y": 904.3623054,
+    "width": 36.979490999999996,
+    "height": 27.2753892,
+    "cy": 918,
+    "effectiveSize": 38
+  },
+  {
+    "text": "把",
+    "role": "rounds-unit",
+    "x": 494,
+    "y": 906.5390628,
+    "width": 23.3671872,
+    "height": 22.9218744,
+    "cy": 918,
+    "effectiveSize": 24
+  },
+  {
+    "text": "+6088",
+    "role": "late-bonus-number",
+    "x": 615.23828102,
+    "y": 901.3002934,
+    "width": 119.76171898,
+    "height": 33.399413200000005,
+    "cy": 918,
+    "effectiveSize": 46
+  },
+  {
+    "text": "w",
+    "role": "late-bonus-unit",
+    "x": 742,
+    "y": 906.849609364,
+    "width": 32.097656799999996,
+    "height": 22.300781272,
+    "cy": 918,
+    "effectiveSize": 44
+  },
+  {
+    "text": "表内物资为基础保底，超时按右列追加",
+    "role": "table-note",
+    "x": 49,
+    "y": 961.83203125,
+    "width": 177.76171875,
+    "height": 10.3359375,
+    "cy": 967,
+    "effectiveSize": 10.5
+  },
+  {
+    "text": "r = 元 / w = 万",
+    "role": "units",
+    "x": 715.201902,
+    "y": 962.27294935,
+    "width": 70.798098,
+    "height": 9.4541013,
+    "cy": 967,
+    "effectiveSize": 10.5
+  },
+  {
+    "text": "自愿加仓",
+    "role": "copy",
+    "x": 81,
+    "y": 1018.65869165,
+    "width": 50.52734375,
+    "height": 12.6826167,
+    "cy": 1025,
+    "effectiveSize": 13
+  },
+  {
+    "text": "追加保底",
+    "role": "copy",
+    "x": 256,
+    "y": 1018.6650389,
+    "width": 51.606445279999996,
+    "height": 12.6699222,
+    "cy": 1025,
+    "effectiveSize": 13
+  },
+  {
+    "text": "128",
+    "role": "topup-price-number",
+    "x": 104.43359600000001,
+    "y": 1044.9570308,
+    "width": 47.56640399999999,
+    "height": 26.085938399999996,
+    "cy": 1058,
+    "effectiveSize": 36
+  },
+  {
+    "text": "r",
+    "role": "topup-price-unit",
+    "x": 159,
+    "y": 1049.259277348,
+    "width": 12.3515625,
+    "height": 17.481445304,
+    "cy": 1058,
+    "effectiveSize": 34
+  },
+  {
+    "text": "+1388",
+    "role": "topup-loot-number",
+    "x": 246.80371108,
+    "y": 1044.2324214,
+    "width": 91.19628892,
+    "height": 27.535157199999997,
+    "cy": 1058,
+    "effectiveSize": 38
+  },
+  {
+    "text": "w",
+    "role": "topup-loot-unit",
+    "x": 345,
+    "y": 1048.876953116,
+    "width": 26.261719199999998,
+    "height": 18.246093767999998,
+    "cy": 1058,
+    "effectiveSize": 36
+  },
+  {
+    "text": "超出规定局数后，每次撤离失败",
+    "role": "topup-condition",
+    "x": 407,
+    "y": 1027.7984375,
+    "width": 176.06777328,
+    "height": 12.403125,
+    "cy": 1034,
+    "effectiveSize": 12.6
+  },
+  {
+    "text": "可自愿加仓一次。加仓不延长",
+    "role": "topup-condition",
+    "x": 407,
+    "y": 1045.896875,
+    "width": 163.41855515999998,
+    "height": 12.20625,
+    "cy": 1052,
+    "effectiveSize": 12.6
+  },
+  {
+    "text": "或重置原定总局数。",
+    "role": "topup-condition",
+    "x": 407,
+    "y": 1063.81689461,
+    "width": 104.47909920000001,
+    "height": 12.366210780000001,
+    "cy": 1070,
+    "effectiveSize": 12.6
+  },
+  {
+    "text": "物资归属 · 装备权益 · 补偿结算",
+    "role": "copy",
+    "x": 560.2880865,
+    "y": 1136.63183575,
+    "width": 204.7119135,
+    "height": 14.736328499999999,
+    "cy": 1144,
+    "effectiveSize": 15
+  },
+  {
+    "text": "地图和房卡",
+    "role": "rule-label",
+    "x": 185,
+    "y": 1220.69921875,
+    "width": 84.35253800000001,
+    "height": 16.6015625,
+    "cy": 1229,
+    "effectiveSize": 17
+  },
+  {
+    "text": "下单先与客服确认地图；中途换图需协商。",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1200.073925605,
+    "width": 257.79316371,
+    "height": 13.852148789999998,
+    "cy": 1207,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "航天：核心区金红卡；巴克什：塔内、博物馆金红卡；",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1222.0876953125,
+    "width": 328.56167001,
+    "height": 13.824609374999998,
+    "cy": 1229,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "监狱：金红卡 + 一级监狱卡。",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1244.149658115,
+    "width": 177.96430619999998,
+    "height": 13.700683769999998,
+    "cy": 1251,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "随行装备",
+    "role": "rule-label",
+    "x": 185,
+    "y": 1292.232421875,
+    "width": 66.821288,
+    "height": 16.53515625,
+    "cy": 1300.5,
+    "effectiveSize": 17
+  },
+  {
+    "text": "默认40格以上背包 + 一把左轮；进图前核对。",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1282.615234375,
+    "width": 279.197907,
+    "height": 13.769531249999998,
+    "cy": 1289.5,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "板板主动免带除外。",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1304.608349345,
+    "width": 116.98593749999999,
+    "height": 13.783301309999999,
+    "cy": 1311.5,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "缺项补偿",
+    "role": "rule-label",
+    "x": 185,
+    "y": 1360.64941385,
+    "width": 67.51855473,
+    "height": 16.7011723,
+    "cy": 1369,
+    "effectiveSize": 17
+  },
+  {
+    "text": "应带未带",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1350.78193368,
+    "width": 54.849609444,
+    "height": 13.436132640000002,
+    "cy": 1357.5,
+    "effectiveSize": 13.8
+  },
+  {
+    "text": "金卡",
+    "role": "rule-body",
+    "x": 435,
+    "y": 1350.7734375,
+    "width": 27.562500000000004,
+    "height": 13.453125000000002,
+    "cy": 1357.5,
+    "effectiveSize": 14
+  },
+  {
+    "text": "+200",
+    "role": "compensation-number",
+    "x": 532.883788,
+    "y": 1351.3283693,
+    "width": 34.116212000000004,
+    "height": 12.343261400000001,
+    "cy": 1357.5,
+    "effectiveSize": 17
+  },
+  {
+    "text": "w",
+    "role": "compensation-unit",
+    "x": 571,
+    "y": 1353.445312496,
+    "width": 11.6718752,
+    "height": 8.109375007999999,
+    "cy": 1357.5,
+    "effectiveSize": 16
+  },
+  {
+    "text": "红卡",
+    "role": "rule-body",
+    "x": 626,
+    "y": 1350.7050783,
+    "width": 27.507812500000004,
+    "height": 13.589843400000003,
+    "cy": 1357.5,
+    "effectiveSize": 14
+  },
+  {
+    "text": "+300",
+    "role": "compensation-number",
+    "x": 711.676269,
+    "y": 1351.3283693,
+    "width": 34.323731,
+    "height": 12.343261400000001,
+    "cy": 1357.5,
+    "effectiveSize": 17
+  },
+  {
+    "text": "w",
+    "role": "compensation-unit",
+    "x": 750,
+    "y": 1353.445312496,
+    "width": 11.6718752,
+    "height": 8.109375007999999,
+    "cy": 1357.5,
+    "effectiveSize": 16
+  },
+  {
+    "text": "未经同意未带",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1373.77519514,
+    "width": 82.328320278,
+    "height": 13.44960972,
+    "cy": 1380.5,
+    "effectiveSize": 13.8
+  },
+  {
+    "text": "背包",
+    "role": "rule-body",
+    "x": 435,
+    "y": 1373.7529296,
+    "width": 27.521484340000004,
+    "height": 13.4941408,
+    "cy": 1380.5,
+    "effectiveSize": 14
+  },
+  {
+    "text": "+300",
+    "role": "compensation-number",
+    "x": 532.676269,
+    "y": 1374.3283693,
+    "width": 34.323731,
+    "height": 12.343261400000001,
+    "cy": 1380.5,
+    "effectiveSize": 17
+  },
+  {
+    "text": "w",
+    "role": "compensation-unit",
+    "x": 571,
+    "y": 1376.445312496,
+    "width": 11.6718752,
+    "height": 8.109375007999999,
+    "cy": 1380.5,
+    "effectiveSize": 16
+  },
+  {
+    "text": "左轮",
+    "role": "rule-body",
+    "x": 626,
+    "y": 1373.7324217,
+    "width": 27.480468820000002,
+    "height": 13.5351566,
+    "cy": 1380.5,
+    "effectiveSize": 14
+  },
+  {
+    "text": "+200",
+    "role": "compensation-number",
+    "x": 711.883788,
+    "y": 1374.3283693,
+    "width": 34.116212000000004,
+    "height": 12.343261400000001,
+    "cy": 1380.5,
+    "effectiveSize": 17
+  },
+  {
+    "text": "w",
+    "role": "compensation-unit",
+    "x": 750,
+    "y": 1376.445312496,
+    "width": 11.6718752,
+    "height": 8.109375007999999,
+    "cy": 1380.5,
+    "effectiveSize": 16
+  },
+  {
+    "text": "炸单补偿",
+    "role": "rule-label",
+    "x": 185,
+    "y": 1431.64941385,
+    "width": 67.55175777,
+    "height": 16.7011723,
+    "cy": 1440,
+    "effectiveSize": 17
+  },
+  {
+    "text": "符合俱乐部下单须知的炸单条件：",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1422.10146502,
+    "width": 201.64790699999998,
+    "height": 13.79706996,
+    "cy": 1429,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "航天 / 巴克什 +60w；监狱 +80w。",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1444.10146502,
+    "width": 215.95444379999998,
+    "height": 13.79706996,
+    "cy": 1451,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "结算口径",
+    "role": "rule-label",
+    "x": 185,
+    "y": 1508.1826174,
+    "width": 67.71777348,
+    "height": 16.634765200000004,
+    "cy": 1516.5,
+    "effectiveSize": 17
+  },
+  {
+    "text": "符合俱乐部炸单标准时，安全箱带出物资均不计入；",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1487.5876953125,
+    "width": 314.447907,
+    "height": 13.824609374999998,
+    "cy": 1494.5,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "安全箱物资 >100w 无需补战损，否则按炸单标准",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1509.5876953125,
+    "width": 308.03129873999995,
+    "height": 13.824609374999998,
+    "cy": 1516.5,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "增加累计保底。",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1531.56704128,
+    "width": 88.772168004,
+    "height": 13.865917439999999,
+    "cy": 1538.5,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "物资与售后",
+    "role": "rule-label",
+    "x": 185,
+    "y": 1588.666015625,
+    "width": 84.21972652,
+    "height": 16.66796875,
+    "cy": 1597,
+    "effectiveSize": 17
+  },
+  {
+    "text": "对局产出默认归板板；假账须提前征得板板同意，",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1579.06704128,
+    "width": 300.17578124999994,
+    "height": 13.865917439999999,
+    "cy": 1586,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "按约定价值计入。全程录屏，争议交给客服核实。",
+    "role": "rule-body",
+    "x": 310,
+    "y": 1601.073925605,
+    "width": 300.25839878999994,
+    "height": 13.852148789999998,
+    "cy": 1608,
+    "effectiveSize": 14.1
+  },
+  {
+    "text": "打得够强，或撤得够稳",
+    "role": "feature",
+    "x": 313.215334,
+    "y": 1657.73583945,
+    "width": 209.569332,
+    "height": 20.5283211,
+    "cy": 1668,
+    "effectiveSize": 21
+  },
+  {
+    "text": "护航有没有实力，战绩说了算",
+    "role": "feature",
+    "x": 255.890625,
+    "y": 1688.71972625,
+    "width": 324.21875,
+    "height": 24.5605475,
+    "cy": 1701,
+    "effectiveSize": 25
+  },
+  {
+    "text": "下单前请确认地图及订单规则",
+    "role": "footer",
+    "x": 334.1030271,
+    "y": 1745.62060555,
+    "width": 167.7939458,
+    "height": 12.7587889,
+    "cy": 1752,
+    "effectiveSize": 13
+  }
+]

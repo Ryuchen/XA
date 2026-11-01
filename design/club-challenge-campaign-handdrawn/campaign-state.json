@@ -1,0 +1,162 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 物资对赌单",
+  "stage": "delivered",
+  "revision": "challenge-final-r1",
+  "contentVerified": true,
+  "contentVerificationBasis": "36档来自本轮用户文字；用户确认原参考规则全部沿用，端手游一致；严格大于且不跨局累计，地图排除大坝。",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "延续已确认的兴安电竞二次元手绘男性蜂医与灰鼠角色"
+    },
+    "mechanismAndRules": {
+      "status": "approved",
+      "basis": "用户回复：全部沿用，端手游一致"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在物资对赌单主题插画交付后回复：继续",
+      "file": "01-illustrations/challenge-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户于2026-09-29在本轮六张无字底图交付后回复：继续",
+      "overview": "review/background-overview.png",
+      "review": "review/backgrounds.html"
+    }
+  },
+  "plannedDeliverables": [
+    "端游·绝密三地图各三档价目",
+    "端游·机密三地图各三档价目",
+    "手游·绝密三地图各三档价目",
+    "手游·机密三地图各三档价目",
+    "物资对赌单横版封面",
+    "简洁社交广告"
+  ],
+  "layoutInvariants": [
+    "每张价目三地图×三档，共9档；四张合计36档",
+    "严格大于 >，不能写成≥；等于仍未达标",
+    "不跨局累计；未达标继续打",
+    "机密仅核电站、巴克什、航天；不包含大坝",
+    "r/w固定单位列，数字右对齐，单位可见字高65%–75%，组内垂直居中",
+    "表头整条海军蓝，绝密暖金，机密薄荷青",
+    "达标前物资归板板；补偿达标后另补；不编造炸单补偿金额",
+    "本玩法不引入20分钟清图、击杀8人、累计门槛、超时加息、工作日优惠"
+  ],
+  "nextStep": "本轮六张成品已完成；后续改价或修改文案时复用已确认底图和矢量布局",
+  "illustration": {
+    "provider": "built-in image_gen",
+    "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-6041fb9c-8518-4c84-bf84-4dfb8528e838.png",
+    "file": "01-illustrations/challenge-medic-mouse-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "channels": 4,
+    "hasAlpha": true,
+    "alpha": {
+      "min": 0,
+      "max": 254
+    },
+    "prompt": "01-illustrations/prompts.md",
+    "review": "review/illustration-overview.png",
+    "reviewPage": "review/illustration.html"
+  },
+  "backgrounds": {
+    "gold": "03-backgrounds/poster-gold.png",
+    "teal": "03-backgrounds/poster-teal.png",
+    "cover": "03-backgrounds/cover.png",
+    "social": "03-backgrounds/social.png"
+  },
+  "exports": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/desktop-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1881,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "desktop-secret",
+      "label": "端游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/desktop-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/mobile-absolute-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1881,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7200,
+      "file": "04-png-export/mobile-secret-background.png",
+      "nativeWidth": 836,
+      "nativeHeight": 1882,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "cover",
+      "label": "横版封面",
+      "src": "cover.png",
+      "width": 3200,
+      "height": 1800,
+      "file": "04-png-export/cover-background.png",
+      "nativeWidth": 1672,
+      "nativeHeight": 941,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "social",
+      "label": "简洁广告海报",
+      "src": "social.png",
+      "width": 2400,
+      "height": 3200,
+      "file": "04-png-export/social-background.png",
+      "nativeWidth": 1086,
+      "nativeHeight": 1448,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    }
+  ],
+  "backgroundPackage": "campaign-challenge-backgrounds-v1.zip",
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "desktop-secret",
+    "mobile-absolute",
+    "mobile-secret",
+    "cover",
+    "social"
+  ],
+  "vectorDelivery": {
+    "status": "completed",
+    "overview": "review/final-overview.png",
+    "review": "review/index.html",
+    "notes": "review/final-notes.md",
+    "formats": [
+      "PNG",
+      "editable text SVG",
+      "outlined SVG"
+    ],
+    "rendering": "Final-size vector typography over approved raster backgrounds",
+    "tierCount": 36,
+    "completedAt": "2026-09-29"
+  },
+  "package": "campaign-challenge-final-r1.zip"
+}

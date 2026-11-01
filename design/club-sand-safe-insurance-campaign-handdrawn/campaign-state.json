@@ -1,0 +1,116 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 沙色保险单",
+  "stage": "delivered",
+  "revision": "sand-safe-insurance-v1",
+  "contentVerified": true,
+  "contentVerificationBasis": "本轮端手游六档逐项录入；成功撤离计次、严格＞600w计保底、三项均达标结单及三幻神奖励口径已由用户确认",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "沿用二次元手绘男性蜂医、灰鼠与奶白雾蓝海军蓝暖金配色"
+    },
+    "mechanismAndRules": {
+      "status": "approved",
+      "basis": "用户回答：按此沿用，端手游一致；奖励保留，仅计一次，不计入套餐次数"
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在本轮插画确认稿交付后回复：继续",
+      "file": "01-illustrations/sand-safe-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户在四张无字底图、布局位置稿及查看页交付后回复：继续",
+      "review": "review/backgrounds.html"
+    }
+  },
+  "plannedDeliverables": [
+    "端游绝密完整价目海报，三档及完整规则",
+    "手游绝密完整价目海报，三档及完整规则",
+    "横版封面",
+    "双平台简洁宣发海报，六档，不加完整下单须知",
+    "高清PNG、可改文字SVG、转曲SVG与查看页"
+  ],
+  "layoutInvariants": [
+    "仅绝密，无机密版",
+    "价格r固定列、物资w固定列；按可见字形垂直居中，保持上下留白",
+    "沙色与常规大保险用不同图标和次数配对展示",
+    "三类指标同时达标才结单，不混入单局达标或连撤计数",
+    "三幻神奖励单独展示触发、＋800w与赠一次沙色；整单仅一次，赠送不计套餐次数",
+    "普通说明常规字重，重点数值与决定性条件选择性加粗",
+    "按内容量分配版面，减少换行，保持二次元手绘风格"
+  ],
+  "nextStep": "后续改价或文字复用当前美术、真实字体轮廓和布局，只重渲染受影响页面与宣发；每次检查实际改动成图。",
+  "illustration": {
+    "provider": "built-in image_gen (existing illustration reused; no new generation this turn)",
+    "sourceProject": "../club-sand-safe-campaign-handdrawn",
+    "source": "C:\\Users\\chenh\\.codex\\generated_images\\01a0ebcb-df5a-79a3-8de8-18f6993ec3d9\\exec-0e4ae0d7-5edb-4b79-93d6-2c889d81f9ee.png",
+    "file": "01-illustrations/sand-safe-medic-mouse-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "hasAlpha": true,
+    "alpha": {
+      "min": 0,
+      "max": 254,
+      "transparentPixels": 533768,
+      "nearOpaquePixels": 995485,
+      "totalPixels": 1572864,
+      "corners": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "prompt": "01-illustrations/source-prompt.md",
+    "review": "review/illustration-overview.png",
+    "basis": "现有蜂医、灰鼠与两类保险开箱插画适合本轮主题；插画道具数量不承担档位数据，正式次数以content.json为准。"
+  },
+  "backgrounds": {
+    "metadata": "03-backgrounds/image-metadata.json",
+    "measurements": "02-layouts/generated-background-measurements.json",
+    "proofs": [
+      "02-layouts/poster-actual-layout.png",
+      "02-layouts/cover-actual-layout.png",
+      "02-layouts/social-actual-layout.png"
+    ],
+    "exports": [
+      "04-png-export/desktop-absolute-background.png",
+      "04-png-export/mobile-absolute-background.png",
+      "04-png-export/cover-background.png",
+      "04-png-export/social-background.png"
+    ],
+    "visualReview": "review/visual-qa.md"
+  },
+  "typographyPreference": {
+    "basis": "用户要求第三步先理解文案，重点选择性加粗，PPT式组织权益与条件，减少换行，保留上下间距",
+    "bodyFont": "Microsoft YaHei UI Regular",
+    "keyFont": "Microsoft YaHei UI Bold",
+    "alignment": "真实字形及多行组居中，独立r/w轴，单位可见字高70%"
+  },
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "mobile-absolute"
+  ],
+  "finalDeliverables": {
+    "manifest": "output/manifest.json",
+    "pngPackage": "output/campaign-sand-safe-insurance-v1-png.zip",
+    "sourcePackage": "output/campaign-sand-safe-insurance-v1-source.zip",
+    "review": "review/index.html",
+    "overview": "review/final-overview.png",
+    "pages": [
+      "desktop-absolute",
+      "mobile-absolute",
+      "cover",
+      "social"
+    ]
+  },
+  "visualQA": {
+    "status": "complete",
+    "revision": "sand-safe-insurance-v1",
+    "record": "review/visual-qa.md",
+    "dataAndGeometryAudit": "review/typesetting-audit.json",
+    "basis": "逐张查看实际PNG、准确390px预览和价目、奖励、规则局部；最新累计规则改为明确物资主体后复查两张完整页。"
+  }
+}

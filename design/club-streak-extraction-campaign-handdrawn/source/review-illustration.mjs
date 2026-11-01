@@ -1,0 +1,20 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const sharp=createRequire(path.resolve(path.dirname(process.execPath),'..','runtime.cjs'))('sharp');
+const file='01-illustrations/streak-medic-mouse-v1.png',source='C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-05931e5e-251a-4231-901a-c9c74a41cf08.png';
+const input=await fs.readFile(path.join(root,file)),meta=await sharp(input).metadata();
+const {data,info}=await sharp(input).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+let min=255,max=0,transparent=0,solid=0;for(let p=3;p<data.length;p+=4){min=Math.min(min,data[p]);max=Math.max(max,data[p]);if(data[p]===0)transparent++;if(data[p]>250)solid++;}
+const alpha={min,max,transparentPixels:transparent,nearOpaquePixels:solid,totalPixels:info.width*info.height,corners:[data[3],data[(info.width-1)*4+3],data[((info.height-1)*info.width)*4+3],data[data.length-1]]};
+await fs.writeFile(path.join(root,'01-illustrations/image-metadata.json'),JSON.stringify({provider:'built-in image_gen',source,file,width:meta.width,height:meta.height,channels:meta.channels,hasAlpha:meta.hasAlpha,alpha,prompt:'01-illustrations/prompts.md'},null,2));
+const title=(x,y,s,size=30,fill='#203F53')=>`<text x="${x}" y="${y}" font-family="Microsoft YaHei UI" font-size="${size}" font-weight="700" fill="${fill}">${s}</text>`;
+const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200"><rect width="1600" height="1200" fill="#F9F7EF"/>${title(45,62,'兴安电竞 · 连续撤离单 · 主题插画',37)}${title(45,108,'二次元手绘蜂医与灰鼠 ｜ 连续通过检查点，携带满载物资撤离',24,'#6B8593')}<image href="data:image/png;base64,${input.toString('base64')}" x="45" y="140" width="1510" height="1006.667"/>${title(45,1180,'本阶段只确认插画；标题、连撤把数和价格将以矢量另行添加。',22,'#6B8593')}</svg>`;
+await sharp(Buffer.from(svg)).png().toFile(path.join(root,'review/illustration-overview.png'));
+const html='<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>连续撤离单 · 插画确认</title><style>body{margin:0;background:#F9F7EF;color:#203F53;font:18px/1.7 "Microsoft YaHei UI",sans-serif}main{max-width:1300px;margin:auto;padding:30px}img{width:100%;height:auto}a{color:#117D72}</style><main><h1>连续撤离单 · 第一阶段主题插画</h1><p>男性蜂医与灰鼠穿过三个检查点，携带满载补给走向撤离门。延续已确认二次元手绘角色与配色。</p><img src="illustration-overview.png" alt="连续撤离主题插画"><p><a href="../01-illustrations/streak-medic-mouse-v1.png" download>下载原始插画PNG</a> · <a href="../01-illustrations/prompts.md">生成提示词</a> · <a href="../content.json">本轮36档价目与规则</a></p><p>已确认规则端手游一致，速撤按击杀要求与严格物资门槛执行，保留其他撤离点加价25%。</p><p>当前确认新插画；随后生成按三地图各三档与清晰粗体规则预留空间的无字底图，底图确认后填入矢量艺术字和文案。</p></main></html>';
+await fs.writeFile(path.join(root,'review/illustration.html'),html);await fs.writeFile(path.join(root,'review/index.html'),html);
+const state=JSON.parse(await fs.readFile(path.join(root,'campaign-state.json'),'utf8'));state.stage='illustration-review';state.illustration={provider:'built-in image_gen',source,file,width:meta.width,height:meta.height,hasAlpha:meta.hasAlpha,alpha,prompt:'01-illustrations/prompts.md',review:'review/illustration-overview.png',reviewPage:'review/illustration.html'};state.nextStep='等待用户确认连续撤离主题插画；确认后生成三地图各三档、粗体规则留白充足的无字底图';await fs.writeFile(path.join(root,'campaign-state.json'),JSON.stringify(state,null,2));
+await fs.writeFile(path.join(root,'review/visual-qa.md'),`# 连续撤离单 · 插画阶段检查\n\n版本：streak-illustration-v1。实际文件：${file}；检查图：review/illustration-overview.png。\n\n- 男性蜂医与灰鼠造型延续既有系列；手绘角色、补给车、检查点和撤离门风格一致。\n- 三个检查点可独立辨认，完整人物和补给物资表现“连续撤离＋物资保底”；无正式文字和价格。\n- 原生插画${meta.width}×${meta.height}，RGBA透明通道；alpha信息见01-illustrations/image-metadata.json。\n- 待用户确认本情景；无字底图、矢量文案、约390px手机尺寸复检尚未开始。\n`);
+console.log(JSON.stringify({file,width:meta.width,height:meta.height,alpha,review:'review/illustration-overview.png',stage:state.stage}));

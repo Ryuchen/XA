@@ -50,7 +50,8 @@ function go(url) {
     }
     if (match[1] === 'orders') {
       const status = ['pending', 'grabbed', 'in_progress', 'completed', 'cancelled'].includes(params.status) ? params.status : '';
-      wx.setStorageSync('xa:native:orders-intent', { status });
+      const type = params.type === 'gift' ? 'gift' : '';
+      wx.setStorageSync('xa:native:orders-intent', { status, type });
     }
     if (match[1] === 'catalog') wx.navigateTo({ url, fail });
     else wx.switchTab({ url: url.split('?')[0], fail });
@@ -69,4 +70,5 @@ function richText(value) {
   return String(value || '').replace(/(<img\b[^>]*\bsrc=["'])(\/media\/club-catalog\/[^"']*)(["'])/gi,
     (_, before, path, after) => before + image(path) + after);
 }
-module.exports = { money, date, toast, go, image, list, richText };
+function modal(options) { return wx.showModal({ confirmColor: require('./theme').primary, ...options }); }
+module.exports = { money, date, toast, go, image, list, richText, modal };

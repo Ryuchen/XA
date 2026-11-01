@@ -133,6 +133,19 @@ test('native: wallet invalidation is owner-scoped and reconnect announces a reco
   socket.message({ type: 'wallet_update', data: { account_id: 10 } }); assert.equal(updates.length, 2);
   s.service.disconnect();
 });
+
+test('native: site-message invalidation is distinct from chat and reconciles on reconnect', async () => {
+  const s = setup('native'); let notices = 0, chat = 0;
+  s.events.set('site-message.changed', () => notices++);
+  s.events.set('message.changed', () => chat++);
+  s.service.connect(); await tick(); const socket = s.sockets[0]; socket.emit('open');
+  assert.equal(notices, 1); assert.equal(chat, 1);
+  socket.message({ type: 'site_message_update', data: {} });
+  assert.equal(notices, 2); assert.equal(chat, 1);
+  socket.message({ type: 'chat_message', data: {} });
+  assert.equal(notices, 2); assert.equal(chat, 2);
+  s.service.disconnect();
+});
 test('native: a missing pong recovers the connection; a hidden app never reconnects', async () => {
   const s = setup('native'); s.service.connect(); await tick(); const old = s.sockets[0]; old.emit('open');
   await s.advance(15000); assert.equal(old.closed, true); assert.equal(s.sockets.length, 2);

@@ -1,0 +1,769 @@
+{
+  "revision": "background-r1",
+  "coordinateBasis": "逐张查看本轮实际生成底图，记录各原生尺寸面板、人物、图标与净文字区；不沿用1024/1200/1600结构稿坐标。",
+  "meaning": "位置稿仅为区域说明；正式价格、目标数值、单位基线和规则正文将在底图确认后测量并矢量排版。",
+  "pages": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游绝密价目",
+      "version": "r1",
+      "w": 836,
+      "h": 1881,
+      "ew": 3200,
+      "eh": 7200,
+      "platforms": [
+        "desktop"
+      ],
+      "source": "exec-58f4790e-901e-4373-a98a-bee3b0013573.png",
+      "header": {
+        "container": {
+          "x": 39,
+          "y": 87,
+          "width": 758,
+          "height": 239
+        },
+        "copy": {
+          "x": 64,
+          "y": 110,
+          "width": 374,
+          "height": 174
+        },
+        "hero": {
+          "x": 466,
+          "y": 92,
+          "width": 327,
+          "height": 208
+        }
+      },
+      "conditions": {
+        "container": {
+          "x": 39,
+          "y": 327,
+          "width": 759,
+          "height": 429
+        },
+        "heading": {
+          "x": 105,
+          "y": 355,
+          "width": 626,
+          "height": 70
+        },
+        "cards": [
+          {
+            "x": 62,
+            "y": 440,
+            "width": 215,
+            "height": 188
+          },
+          {
+            "x": 311,
+            "y": 440,
+            "width": 211,
+            "height": 188
+          },
+          {
+            "x": 560,
+            "y": 440,
+            "width": 215,
+            "height": 188
+          }
+        ],
+        "copy": [
+          {
+            "x": 82,
+            "y": 465,
+            "width": 175,
+            "height": 140
+          },
+          {
+            "x": 329,
+            "y": 465,
+            "width": 175,
+            "height": 140
+          },
+          {
+            "x": 580,
+            "y": 465,
+            "width": 175,
+            "height": 140
+          }
+        ],
+        "conjunctions": [
+          {
+            "cx": 294,
+            "cy": 534
+          },
+          {
+            "cx": 543,
+            "cy": 534
+          }
+        ],
+        "result": {
+          "x": 185,
+          "y": 682,
+          "width": 470,
+          "height": 50
+        },
+        "resultCopy": {
+          "x": 200,
+          "y": 693,
+          "width": 440,
+          "height": 29
+        }
+      },
+      "prices": {
+        "container": {
+          "x": 39,
+          "y": 773,
+          "width": 759,
+          "height": 385
+        },
+        "header": {
+          "x": 47,
+          "y": 780,
+          "width": 742,
+          "height": 52
+        },
+        "columns": [
+          {
+            "x": 65,
+            "y": 780,
+            "width": 352,
+            "height": 52
+          },
+          {
+            "x": 447,
+            "y": 780,
+            "width": 325,
+            "height": 52
+          }
+        ],
+        "rowEdges": [
+          832,
+          896,
+          960,
+          1023,
+          1087,
+          1150
+        ]
+      },
+      "reward": {
+        "container": {
+          "x": 39,
+          "y": 1178,
+          "width": 759,
+          "height": 240
+        },
+        "copy": {
+          "x": 70,
+          "y": 1200,
+          "width": 402,
+          "height": 195
+        },
+        "exclude": {
+          "x": 496,
+          "y": 1191,
+          "width": 301,
+          "height": 227
+        }
+      },
+      "notices": {
+        "container": {
+          "x": 39,
+          "y": 1436,
+          "width": 759,
+          "height": 354
+        },
+        "heading": {
+          "x": 65,
+          "y": 1458,
+          "width": 700,
+          "height": 42
+        },
+        "groups": [
+          {
+            "x": 65,
+            "y": 1500,
+            "width": 700,
+            "height": 38
+          },
+          {
+            "x": 65,
+            "y": 1553,
+            "width": 700,
+            "height": 62
+          },
+          {
+            "x": 65,
+            "y": 1629,
+            "width": 700,
+            "height": 60
+          },
+          {
+            "x": 65,
+            "y": 1709,
+            "width": 700,
+            "height": 64
+          }
+        ],
+        "dividerY": [
+          1547,
+          1622,
+          1696
+        ],
+        "bodyFont": 30,
+        "lineHeight": 32,
+        "phoneBodyPx": 14
+      },
+      "native": {
+        "width": 836,
+        "height": 1881
+      },
+      "background": "assets/backgrounds/desktop-absolute.png",
+      "highResolution": "04-png-export/desktop-absolute-background.png",
+      "upscaleMethod": "Lanczos3; background enlarged from preserved native raster, not native 4K drawing"
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游绝密价目",
+      "version": "r2",
+      "w": 836,
+      "h": 1882,
+      "ew": 3200,
+      "eh": 7200,
+      "platforms": [
+        "mobile"
+      ],
+      "source": "exec-b8653170-a8f7-4d40-8fbd-37026a8414b1.png",
+      "header": {
+        "container": {
+          "x": 39,
+          "y": 84,
+          "width": 759,
+          "height": 233
+        },
+        "copy": {
+          "x": 64,
+          "y": 108,
+          "width": 353,
+          "height": 180
+        },
+        "hero": {
+          "x": 442,
+          "y": 67,
+          "width": 356,
+          "height": 246
+        }
+      },
+      "conditions": {
+        "container": {
+          "x": 31,
+          "y": 349,
+          "width": 775,
+          "height": 386
+        },
+        "heading": {
+          "x": 163,
+          "y": 354,
+          "width": 510,
+          "height": 45
+        },
+        "cards": [
+          {
+            "x": 54,
+            "y": 450,
+            "width": 220,
+            "height": 168
+          },
+          {
+            "x": 308,
+            "y": 450,
+            "width": 220,
+            "height": 168
+          },
+          {
+            "x": 562,
+            "y": 450,
+            "width": 220,
+            "height": 168
+          }
+        ],
+        "copy": [
+          {
+            "x": 74,
+            "y": 474,
+            "width": 180,
+            "height": 120
+          },
+          {
+            "x": 328,
+            "y": 474,
+            "width": 180,
+            "height": 120
+          },
+          {
+            "x": 582,
+            "y": 474,
+            "width": 180,
+            "height": 120
+          }
+        ],
+        "conjunctions": [
+          {
+            "cx": 291,
+            "cy": 534
+          },
+          {
+            "cx": 546,
+            "cy": 534
+          }
+        ],
+        "result": {
+          "x": 182,
+          "y": 666,
+          "width": 474,
+          "height": 53
+        },
+        "resultCopy": {
+          "x": 196,
+          "y": 677,
+          "width": 446,
+          "height": 31
+        }
+      },
+      "prices": {
+        "container": {
+          "x": 35,
+          "y": 759,
+          "width": 766,
+          "height": 393
+        },
+        "header": {
+          "x": 43,
+          "y": 766,
+          "width": 750,
+          "height": 52
+        },
+        "columns": [
+          {
+            "x": 64,
+            "y": 766,
+            "width": 352,
+            "height": 52
+          },
+          {
+            "x": 450,
+            "y": 766,
+            "width": 325,
+            "height": 52
+          }
+        ],
+        "rowEdges": [
+          818,
+          884,
+          951,
+          1016,
+          1081,
+          1144
+        ]
+      },
+      "reward": {
+        "container": {
+          "x": 31,
+          "y": 1174,
+          "width": 777,
+          "height": 208
+        },
+        "copy": {
+          "x": 66,
+          "y": 1195,
+          "width": 392,
+          "height": 165
+        },
+        "exclude": {
+          "x": 492,
+          "y": 1194,
+          "width": 314,
+          "height": 188
+        }
+      },
+      "notices": {
+        "container": {
+          "x": 31,
+          "y": 1410,
+          "width": 775,
+          "height": 394
+        },
+        "heading": {
+          "x": 62,
+          "y": 1440,
+          "width": 710,
+          "height": 53
+        },
+        "groups": [
+          {
+            "x": 62,
+            "y": 1520,
+            "width": 710,
+            "height": 57
+          },
+          {
+            "x": 62,
+            "y": 1594,
+            "width": 710,
+            "height": 60
+          },
+          {
+            "x": 62,
+            "y": 1669,
+            "width": 710,
+            "height": 60
+          },
+          {
+            "x": 70,
+            "y": 1743,
+            "width": 632,
+            "height": 47
+          }
+        ],
+        "dividerY": [
+          1509,
+          1588,
+          1661,
+          1735
+        ],
+        "bodyFont": 30,
+        "lineHeight": 32,
+        "phoneBodyPx": 14
+      },
+      "native": {
+        "width": 836,
+        "height": 1882
+      },
+      "background": "assets/backgrounds/mobile-absolute.png",
+      "highResolution": "04-png-export/mobile-absolute-background.png",
+      "upscaleMethod": "Lanczos3; background enlarged from preserved native raster, not native 4K drawing"
+    },
+    {
+      "id": "combined-advert",
+      "label": "双平台合并广告",
+      "version": "r2",
+      "w": 1086,
+      "h": 1448,
+      "ew": 2400,
+      "eh": 3200,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "source": "exec-b6ef1f66-513e-4015-a6a1-af0ea084f7a0.png",
+      "header": {
+        "container": {
+          "x": 44,
+          "y": 58,
+          "width": 1000,
+          "height": 207
+        },
+        "copy": {
+          "x": 140,
+          "y": 77,
+          "width": 518,
+          "height": 174
+        },
+        "hero": {
+          "x": 693,
+          "y": 35,
+          "width": 353,
+          "height": 220
+        }
+      },
+      "conditions": {
+        "container": {
+          "x": 44,
+          "y": 282,
+          "width": 1001,
+          "height": 451
+        },
+        "heading": {
+          "x": 204,
+          "y": 293,
+          "width": 678,
+          "height": 42
+        },
+        "cards": [
+          {
+            "x": 65,
+            "y": 382,
+            "width": 272,
+            "height": 209
+          },
+          {
+            "x": 407,
+            "y": 382,
+            "width": 271,
+            "height": 209
+          },
+          {
+            "x": 748,
+            "y": 382,
+            "width": 272,
+            "height": 209
+          }
+        ],
+        "copy": [
+          {
+            "x": 85,
+            "y": 414,
+            "width": 232,
+            "height": 148
+          },
+          {
+            "x": 427,
+            "y": 414,
+            "width": 232,
+            "height": 148
+          },
+          {
+            "x": 768,
+            "y": 414,
+            "width": 232,
+            "height": 148
+          }
+        ],
+        "conjunctions": [
+          {
+            "cx": 372,
+            "cy": 489
+          },
+          {
+            "cx": 713,
+            "cy": 489
+          }
+        ],
+        "result": {
+          "x": 239,
+          "y": 654,
+          "width": 609,
+          "height": 58
+        },
+        "resultCopy": {
+          "x": 258,
+          "y": 665,
+          "width": 570,
+          "height": 36
+        }
+      },
+      "prices": {
+        "container": {
+          "x": 44,
+          "y": 750,
+          "width": 999,
+          "height": 406
+        },
+        "header": {
+          "x": 50,
+          "y": 756,
+          "width": 987,
+          "height": 59
+        },
+        "columns": [
+          {
+            "x": 64,
+            "y": 756,
+            "width": 367,
+            "height": 59
+          },
+          {
+            "x": 455,
+            "y": 756,
+            "width": 270,
+            "height": 59
+          },
+          {
+            "x": 746,
+            "y": 756,
+            "width": 277,
+            "height": 59
+          }
+        ],
+        "rowEdges": [
+          815,
+          878,
+          944,
+          1012,
+          1080,
+          1142
+        ]
+      },
+      "reward": {
+        "container": {
+          "x": 44,
+          "y": 1175,
+          "width": 1000,
+          "height": 199
+        },
+        "copy": {
+          "x": 306,
+          "y": 1194,
+          "width": 474,
+          "height": 150
+        },
+        "exclude": [
+          {
+            "x": 31,
+            "y": 1181,
+            "width": 263,
+            "height": 237
+          },
+          {
+            "x": 800,
+            "y": 1194,
+            "width": 286,
+            "height": 254
+          }
+        ]
+      },
+      "showNotices": false,
+      "native": {
+        "width": 1086,
+        "height": 1448
+      },
+      "background": "assets/backgrounds/combined-advert.png",
+      "highResolution": "04-png-export/combined-advert-background.png",
+      "upscaleMethod": "Lanczos3; background enlarged from preserved native raster, not native 4K drawing"
+    },
+    {
+      "id": "combined-cover",
+      "label": "16:9共用封面",
+      "version": "r1",
+      "w": 1672,
+      "h": 941,
+      "ew": 3200,
+      "eh": 1800,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "source": "exec-96ad3df7-dce2-4779-a613-fbb3c93df645.png",
+      "header": {
+        "container": {
+          "x": 54,
+          "y": 40,
+          "width": 976,
+          "height": 281
+        },
+        "copy": {
+          "x": 260,
+          "y": 72,
+          "width": 702,
+          "height": 212
+        },
+        "hero": {
+          "x": 1029,
+          "y": 210,
+          "width": 611,
+          "height": 492
+        }
+      },
+      "conditions": {
+        "container": {
+          "x": 54,
+          "y": 324,
+          "width": 976,
+          "height": 402
+        },
+        "heading": {
+          "x": 113,
+          "y": 344,
+          "width": 852,
+          "height": 63
+        },
+        "cards": [
+          {
+            "x": 72,
+            "y": 423,
+            "width": 279,
+            "height": 183
+          },
+          {
+            "x": 398,
+            "y": 423,
+            "width": 281,
+            "height": 183
+          },
+          {
+            "x": 729,
+            "y": 423,
+            "width": 279,
+            "height": 183
+          }
+        ],
+        "copy": [
+          {
+            "x": 92,
+            "y": 447,
+            "width": 240,
+            "height": 138
+          },
+          {
+            "x": 418,
+            "y": 447,
+            "width": 240,
+            "height": 138
+          },
+          {
+            "x": 749,
+            "y": 447,
+            "width": 240,
+            "height": 138
+          }
+        ],
+        "conjunctions": [
+          {
+            "cx": 374,
+            "cy": 519
+          },
+          {
+            "cx": 704,
+            "cy": 519
+          }
+        ],
+        "result": {
+          "x": 238,
+          "y": 658,
+          "width": 600,
+          "height": 44
+        },
+        "resultCopy": {
+          "x": 257,
+          "y": 665,
+          "width": 562,
+          "height": 30
+        }
+      },
+      "reward": {
+        "container": {
+          "x": 54,
+          "y": 739,
+          "width": 976,
+          "height": 112
+        },
+        "copy": {
+          "x": 234,
+          "y": 750,
+          "width": 723,
+          "height": 86
+        }
+      },
+      "showNotices": false,
+      "showEntryPrice": false,
+      "native": {
+        "width": 1672,
+        "height": 941
+      },
+      "background": "assets/backgrounds/combined-cover.png",
+      "highResolution": "04-png-export/combined-cover-background.png",
+      "upscaleMethod": "Lanczos3; background enlarged from preserved native raster, not native 4K drawing"
+    }
+  ]
+}

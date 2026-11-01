@@ -1,0 +1,192 @@
+{
+  "skill": "xingan-gameplay-posters",
+  "campaign": "兴安电竞 · 限时清图单",
+  "stage": "delivered",
+  "revision": "timed-clear-final-r2",
+  "contentVerified": true,
+  "contentVerificationBasis": "24档价格及时限来自本轮用户文字，最高限时档8分钟；机密航天命名明确确认；机密规则按用户补充原文，绝密沿用本轮原参考图。",
+  "approvals": {
+    "seriesStyle": {
+      "status": "approved-reference",
+      "basis": "沿用既有二次元手绘男性蜂医、开心灰鼠及奶白雾蓝海军蓝配色"
+    },
+    "modeNaming": {
+      "status": "approved",
+      "basis": "用户回复：机密改为机密航天，其他规则需要调整"
+    },
+    "mechanismAndRules": {
+      "status": "ready-from-user-sources",
+      "secret": {
+        "status": "provided",
+        "basis": "用户本轮补充完整机密规则，端手游共用"
+      },
+      "absolute": {
+        "status": "reference-carried-forward",
+        "basis": "采用本轮绝密附件的规则；已向用户说明600w最低门槛、>900w速撤及对应房卡补偿"
+      }
+    },
+    "illustration": {
+      "status": "approved",
+      "basis": "用户在限时清图单主题插画交付后回复：继续",
+      "file": "01-illustrations/timed-clear-medic-mouse-v1.png"
+    },
+    "background": {
+      "status": "approved",
+      "basis": "用户在本轮无字底图及布局交付后回复：继续",
+      "overview": "review/background-overview.png",
+      "review": "review/backgrounds.html"
+    }
+  },
+  "plannedDeliverables": [
+    "端游绝密六档价目",
+    "端游机密六档价目",
+    "手游绝密六档价目",
+    "手游机密六档价目",
+    "横版封面",
+    "简洁社交宣发图"
+  ],
+  "layoutInvariants": [
+    "价目24档，以本轮文字为准；限时16/14/12/10/8分钟，常规档不新增分钟限制",
+    "绝密仅绝密航天；机密统一写机密航天",
+    "表头整条海军蓝，不做半绿色；绝密暖金、机密薄荷青",
+    "r及分钟分列定位；涉及物资的w分列定位，字形垂直居中",
+    "本轮文字明确限时内完成，否则一直打；机密规则以用户补充文本为准，绝密沿用对应参考图",
+    "不混入其他玩法的物资目标、20分钟清图、超额累计或加仓规则"
+  ],
+  "nextStep": "本轮六张成品已完成；后续按需改价或调整文字，继续复用已确认底图与矢量布局",
+  "illustration": {
+    "provider": "built-in image_gen",
+    "source": "C:/Users/chenh/.codex/generated_images/01a0e71e-3e4a-7e03-838f-9134499c5526/exec-73bed972-7195-4cdb-8ea5-ccf933367f5a.png",
+    "file": "01-illustrations/timed-clear-medic-mouse-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "channels": 4,
+    "hasAlpha": true,
+    "alpha": {
+      "min": 0,
+      "max": 254
+    },
+    "prompt": "01-illustrations/prompts.md",
+    "review": "review/illustration-overview.png",
+    "reviewPage": "review/index.html"
+  },
+  "backgrounds": {
+    "gold": "03-backgrounds/poster-gold.png",
+    "teal": "03-backgrounds/poster-teal.png",
+    "cover": "03-backgrounds/cover.png",
+    "social": "03-backgrounds/social.png"
+  },
+  "exports": [
+    {
+      "id": "desktop-absolute",
+      "label": "端游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7600,
+      "file": "04-png-export/desktop-absolute-background.png",
+      "nativeWidth": 814,
+      "nativeHeight": 1933,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "desktop-secret",
+      "label": "端游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7600,
+      "file": "04-png-export/desktop-secret-background.png",
+      "nativeWidth": 814,
+      "nativeHeight": 1932,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密",
+      "src": "poster-gold.png",
+      "width": 3200,
+      "height": 7600,
+      "file": "04-png-export/mobile-absolute-background.png",
+      "nativeWidth": 814,
+      "nativeHeight": 1933,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密",
+      "src": "poster-teal.png",
+      "width": 3200,
+      "height": 7600,
+      "file": "04-png-export/mobile-secret-background.png",
+      "nativeWidth": 814,
+      "nativeHeight": 1932,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "cover",
+      "label": "横版封面",
+      "src": "cover.png",
+      "width": 3200,
+      "height": 1800,
+      "file": "04-png-export/cover-background.png",
+      "nativeWidth": 1672,
+      "nativeHeight": 941,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    },
+    {
+      "id": "social",
+      "label": "简洁宣发海报",
+      "src": "social.png",
+      "width": 2400,
+      "height": 3200,
+      "file": "04-png-export/social-background.png",
+      "nativeWidth": 1086,
+      "nativeHeight": 1448,
+      "method": "内置图像生成；按目标尺寸 Lanczos3 放大导出；无正式文案"
+    }
+  ],
+  "backgroundPackage": "campaign-timed-clear-backgrounds-v1.zip",
+  "lastRenderedPages": [
+    "desktop-absolute",
+    "desktop-secret",
+    "mobile-absolute",
+    "mobile-secret",
+    "cover",
+    "social"
+  ],
+  "vectorDelivery": {
+    "status": "completed",
+    "overview": "review/final-overview.png",
+    "review": "review/index.html",
+    "notes": "review/final-notes.md",
+    "formats": [
+      "PNG",
+      "editable text SVG",
+      "outlined SVG"
+    ],
+    "tierCount": 24,
+    "rendering": "Final-size vector typography over approved raster backgrounds"
+  },
+  "package": "campaign-timed-clear-final-r2.zip",
+  "textPlacementRefinement": {
+    "revision": "timed-clear-final-r2",
+    "basis": "用户要求注意文字在底图上位置，并指出清图标准、房卡保障与打手保障展示效果需改善",
+    "record": "review/placement-record.json",
+    "detailPreview": "review/revised-sections.png",
+    "changes": [
+      "四张主标题与版本条保持约12.8px间距，艺术字两行留白约6.1px",
+      "清图两种方式在卡片内分组居中，击杀目标独立突出",
+      "房卡说明与金卡/红卡补偿条分组，金额和标签紧密关联",
+      "速撤击杀条件置于上方，物资门槛与允许速撤放入同一信息条",
+      "封面版本说明避开前景箱子",
+      "保留固定r/w列与数字、单位的可见字形垂直居中"
+    ],
+    "reviewedPages": [
+      "desktop-absolute",
+      "desktop-secret",
+      "mobile-absolute",
+      "mobile-secret",
+      "cover",
+      "social"
+    ]
+  }
+}

@@ -1,0 +1,4831 @@
+{
+  "schemaVersion": 3,
+  "revision": "r4",
+  "requests": [
+    {
+      "id": "t0",
+      "text": "兴安电竞",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t1",
+      "text": "黄",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t2",
+      "text": "金",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t3",
+      "text": "矿",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t4",
+      "text": "工",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5",
+      "text": "摸金摸红 · 累积保底",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t6",
+      "text": "端游 · 六档挖矿套餐",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t7",
+      "text": "版本",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t8",
+      "text": "价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t9",
+      "text": "金红总格数",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t10",
+      "text": "带出过程",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t11",
+      "text": "体验版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t12",
+      "text": "388",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t13",
+      "text": "r",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t14",
+      "text": "50",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t15",
+      "text": "格",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t16",
+      "text": "计入",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t17",
+      "text": "标准版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t18",
+      "text": "488",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t19",
+      "text": "不计入",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t20",
+      "text": "基础版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t21",
+      "text": "688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t22",
+      "text": "108",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t23",
+      "text": "进阶版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t24",
+      "text": "988",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t25",
+      "text": "豪华版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t26",
+      "text": "1188",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t27",
+      "text": "208",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t28",
+      "text": "终极版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t29",
+      "text": "1688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t30",
+      "text": "玩法规则",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t31",
+      "text": "摸到1格红",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t32",
+      "text": "基础保底 ",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t33",
+      "text": "+80",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t34",
+      "text": "w",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t35",
+      "text": "摸到1格金",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t36",
+      "text": "+20",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t37",
+      "text": "格数满后，保底不再叠加",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t38",
+      "text": "计入档示例",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t39",
+      "text": "10格金×20w＋10格红×80w＝",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t40",
+      "text": "1000w",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t41",
+      "text": "本局收获800w，打手还差",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t42",
+      "text": "200w",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t43",
+      "text": "注意事项",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t44",
+      "text": "1",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t45",
+      "text": "标准版、进阶版、终极版：",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t46",
+      "text": "带出过程金额",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t47",
+      "text": "不计入总保底",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t48",
+      "text": "。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t49",
+      "text": "累计金红格数时，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t50",
+      "text": "不计炸单战损",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t51",
+      "text": "2",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t52",
+      "text": "仅计算",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t53",
+      "text": "撤离成功",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t54",
+      "text": "，失败不计算。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t55",
+      "text": "3",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t56",
+      "text": "按撤离成功后老板的",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t57",
+      "text": "行动收获截图",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t58",
+      "text": "计算；",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t59",
+      "text": "吃不下的金和红，打手帮带也计入。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t60",
+      "text": "4",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t61",
+      "text": "打手负责理包，优先整理",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t62",
+      "text": "高价值物品",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t63",
+      "text": "5",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t64",
+      "text": "最后一把金红超过格数时，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t65",
+      "text": "优先计算红",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t66",
+      "text": "手游 · 六档挖矿套餐",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t67",
+      "text": "288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t68",
+      "text": "588",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t69",
+      "text": "788",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t70",
+      "text": "1088",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t71",
+      "text": "1488",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t72",
+      "text": "端游 / 手游 · 六档任选",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t73",
+      "text": "金红格数",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t74",
+      "text": "端游价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t75",
+      "text": "手游价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t76",
+      "text": "红每格 +80w",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t77",
+      "text": "   ·   ",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t78",
+      "text": "金每格 +20w",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    }
+  ],
+  "pages": [
+    {
+      "id": "desktop",
+      "label": "兴安电竞 · 黄金矿工 · 端游价目",
+      "bg": "poster-r1.png",
+      "platforms": [
+        "desktop"
+      ],
+      "w": 836,
+      "h": 1880,
+      "ew": 3200,
+      "eh": 7196,
+      "elements": [
+        {
+          "type": "text",
+          "id": "t0",
+          "text": "兴安电竞",
+          "x": 203,
+          "cy": 88,
+          "size": 32,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "brand",
+          "group": "hero-copy-brand",
+          "lineGroup": "hero-copy-brand"
+        },
+        {
+          "type": "art",
+          "ids": [
+            "t1",
+            "t2",
+            "t3",
+            "t4"
+          ],
+          "text": "黄金矿工",
+          "x": 203,
+          "cy": 162,
+          "size": 82,
+          "maxWidth": 299,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "shadow": "#A2BBC9",
+          "outline": "#FFFCF4",
+          "outlineWidth": 2.2,
+          "angles": true,
+          "group": "hero-copy-title"
+        },
+        {
+          "type": "text",
+          "id": "t5",
+          "text": "摸金摸红 · 累积保底",
+          "x": 203,
+          "cy": 234,
+          "size": 25,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tagline",
+          "group": "hero-copy-subtitle",
+          "lineGroup": "hero-copy-subtitle"
+        },
+        {
+          "type": "text",
+          "id": "t6",
+          "text": "端游 · 六档挖矿套餐",
+          "x": 205.5,
+          "cy": 317.5,
+          "size": 26,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "platform",
+          "group": "platform",
+          "lineGroup": "platform"
+        },
+        {
+          "type": "text",
+          "id": "t7",
+          "text": "版本",
+          "x": 110,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-0",
+          "lineGroup": "table-header-0"
+        },
+        {
+          "type": "text",
+          "id": "t8",
+          "text": "价格",
+          "x": 281,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-1",
+          "lineGroup": "table-header-1"
+        },
+        {
+          "type": "text",
+          "id": "t9",
+          "text": "金红总格数",
+          "x": 485.5,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-2",
+          "lineGroup": "table-header-2"
+        },
+        {
+          "type": "text",
+          "id": "t10",
+          "text": "带出过程",
+          "x": 702,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-3",
+          "lineGroup": "table-header-3"
+        },
+        {
+          "type": "text",
+          "id": "t11",
+          "text": "体验版",
+          "x": 110,
+          "cy": 456.5,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-0-name",
+          "lineGroup": "tier-0-name"
+        },
+        {
+          "type": "text",
+          "id": "t12",
+          "text": "388",
+          "x": 318,
+          "cy": 456.5,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-0-price",
+          "lineGroup": "tier-0-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 456.5,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-0-price",
+          "lineGroup": "tier-0-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "50",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t14",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 456.5,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-0-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 702,
+          "cy": 456.5,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-0-process",
+          "lineGroup": "tier-0-process"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "标准版",
+          "x": 110,
+          "cy": 539.5,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-1-name",
+          "lineGroup": "tier-1-name"
+        },
+        {
+          "type": "text",
+          "id": "t18",
+          "text": "488",
+          "x": 318,
+          "cy": 539.5,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-1-price",
+          "lineGroup": "tier-1-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 539.5,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-1-price",
+          "lineGroup": "tier-1-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "50",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t14",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 539.5,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-1-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 702,
+          "cy": 539.5,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-1-process",
+          "lineGroup": "tier-1-process"
+        },
+        {
+          "type": "text",
+          "id": "t20",
+          "text": "基础版",
+          "x": 110,
+          "cy": 624,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-2-name",
+          "lineGroup": "tier-2-name"
+        },
+        {
+          "type": "text",
+          "id": "t21",
+          "text": "688",
+          "x": 318,
+          "cy": 624,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-2-price",
+          "lineGroup": "tier-2-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 624,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-2-price",
+          "lineGroup": "tier-2-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "108",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t22",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 624,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-2-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 702,
+          "cy": 624,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-2-process",
+          "lineGroup": "tier-2-process"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "进阶版",
+          "x": 110,
+          "cy": 708,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-3-name",
+          "lineGroup": "tier-3-name"
+        },
+        {
+          "type": "text",
+          "id": "t24",
+          "text": "988",
+          "x": 318,
+          "cy": 708,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-3-price",
+          "lineGroup": "tier-3-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 708,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-3-price",
+          "lineGroup": "tier-3-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "108",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t22",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 708,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-3-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 702,
+          "cy": 708,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-3-process",
+          "lineGroup": "tier-3-process"
+        },
+        {
+          "type": "text",
+          "id": "t25",
+          "text": "豪华版",
+          "x": 110,
+          "cy": 792.5,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-4-name",
+          "lineGroup": "tier-4-name"
+        },
+        {
+          "type": "text",
+          "id": "t26",
+          "text": "1188",
+          "x": 318,
+          "cy": 792.5,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-4-price",
+          "lineGroup": "tier-4-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 792.5,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-4-price",
+          "lineGroup": "tier-4-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "208",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t27",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 792.5,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-4-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 702,
+          "cy": 792.5,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-4-process",
+          "lineGroup": "tier-4-process"
+        },
+        {
+          "type": "text",
+          "id": "t28",
+          "text": "终极版",
+          "x": 110,
+          "cy": 877,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-5-name",
+          "lineGroup": "tier-5-name"
+        },
+        {
+          "type": "text",
+          "id": "t29",
+          "text": "1688",
+          "x": 318,
+          "cy": 877,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-5-price",
+          "lineGroup": "tier-5-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 877,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-5-price",
+          "lineGroup": "tier-5-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "208",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t27",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 877,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-5-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 702,
+          "cy": 877,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-5-process",
+          "lineGroup": "tier-5-process"
+        },
+        {
+          "type": "text",
+          "id": "t30",
+          "text": "玩法规则",
+          "x": 418,
+          "cy": 955,
+          "size": 33,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "section-heading",
+          "group": "rules-heading",
+          "lineGroup": "rules-heading"
+        },
+        {
+          "type": "text",
+          "id": "t31",
+          "text": "摸到1格红",
+          "x": 232.5,
+          "cy": 1029,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "benefit-label",
+          "group": "benefit-red-label",
+          "lineGroup": "benefit-red-label"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "基础保底 ",
+              "size": 29,
+              "id": "t32",
+              "fill": "#213F53"
+            },
+            {
+              "text": "+80",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 40,
+              "fill": "#AC4C47",
+              "id": "t33"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 38.4,
+              "fill": "#AC4C47",
+              "gap": 5,
+              "id": "t34"
+            }
+          ],
+          "x": 232.5,
+          "cy": 1071,
+          "size": 29,
+          "anchor": "middle",
+          "role": "benefit-value",
+          "group": "benefit-red-value"
+        },
+        {
+          "type": "text",
+          "id": "t35",
+          "text": "摸到1格金",
+          "x": 630,
+          "cy": 1029,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "benefit-label",
+          "group": "benefit-gold-label",
+          "lineGroup": "benefit-gold-label"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "基础保底 ",
+              "size": 29,
+              "id": "t32",
+              "fill": "#213F53"
+            },
+            {
+              "text": "+20",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 40,
+              "fill": "#9F6828",
+              "id": "t36"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 38.4,
+              "fill": "#9F6828",
+              "gap": 5,
+              "id": "t34"
+            }
+          ],
+          "x": 630,
+          "cy": 1071,
+          "size": 29,
+          "anchor": "middle",
+          "role": "benefit-value",
+          "group": "benefit-gold-value"
+        },
+        {
+          "type": "text",
+          "id": "t37",
+          "text": "格数满后，保底不再叠加",
+          "x": 418.5,
+          "cy": 1137.5,
+          "size": 30,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "cap-rule",
+          "group": "cap-rule",
+          "lineGroup": "cap-rule"
+        },
+        {
+          "type": "text",
+          "id": "t38",
+          "text": "计入档示例",
+          "x": 419.5,
+          "cy": 1203.398926,
+          "size": 28,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "example-heading",
+          "group": "example-heading",
+          "lineGroup": "example-heading"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "10格金×20w＋10格红×80w＝",
+              "id": "t39",
+              "size": 30,
+              "fill": "#213F53"
+            },
+            {
+              "text": "1000w",
+              "bold": true,
+              "id": "t40",
+              "size": 30,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 419.5,
+          "cy": 1238.398926,
+          "size": 30,
+          "anchor": "middle",
+          "role": "example",
+          "group": "example-formula"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "本局收获800w，打手还差",
+              "id": "t41",
+              "size": 30,
+              "fill": "#213F53"
+            },
+            {
+              "text": "200w",
+              "bold": true,
+              "fill": "#AC4C47",
+              "id": "t42",
+              "size": 30
+            }
+          ],
+          "x": 419.5,
+          "cy": 1274.398926,
+          "size": 30,
+          "anchor": "middle",
+          "role": "example",
+          "group": "example-result"
+        },
+        {
+          "type": "text",
+          "id": "t43",
+          "text": "注意事项",
+          "x": 418,
+          "cy": 1339.5,
+          "size": 27.5,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "section-heading",
+          "group": "notice-heading",
+          "lineGroup": "notice-heading"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1461.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-0"
+        },
+        {
+          "type": "text",
+          "id": "t44",
+          "text": "1",
+          "x": 132.465597,
+          "cy": 1461.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-0",
+          "lineGroup": "notices-number-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "标准版、进阶版、终极版：",
+              "bold": true,
+              "id": "t45",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1425.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-0-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "带出过程金额",
+              "id": "t46",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "不计入总保底",
+              "bold": true,
+              "id": "t47",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1461.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-0-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "累计金红格数时，",
+              "id": "t49",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "不计炸单战损",
+              "bold": true,
+              "id": "t50",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1497.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-0-2"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1537.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-1"
+        },
+        {
+          "type": "text",
+          "id": "t51",
+          "text": "2",
+          "x": 132.465597,
+          "cy": 1537.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-1",
+          "lineGroup": "notices-number-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "仅计算",
+              "id": "t52",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "撤离成功",
+              "bold": true,
+              "id": "t53",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "，失败不计算。",
+              "id": "t54",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1537.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-1-0"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1595.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-2"
+        },
+        {
+          "type": "text",
+          "id": "t55",
+          "text": "3",
+          "x": 132.465597,
+          "cy": 1595.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-2",
+          "lineGroup": "notices-number-2"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "按撤离成功后老板的",
+              "id": "t56",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "行动收获截图",
+              "bold": true,
+              "id": "t57",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "计算；",
+              "id": "t58",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1577.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-2-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "吃不下的金和红，打手帮带也计入。",
+              "id": "t59",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1613.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-2-1"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1653.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-3"
+        },
+        {
+          "type": "text",
+          "id": "t60",
+          "text": "4",
+          "x": 132.465597,
+          "cy": 1653.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-3",
+          "lineGroup": "notices-number-3"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "打手负责理包，优先整理",
+              "id": "t61",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "高价值物品",
+              "bold": true,
+              "id": "t62",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1653.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-3-0"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1693.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-4"
+        },
+        {
+          "type": "text",
+          "id": "t63",
+          "text": "5",
+          "x": 132.465597,
+          "cy": 1693.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-4",
+          "lineGroup": "notices-number-4"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "最后一把金红超过格数时，",
+              "id": "t64",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "优先计算红",
+              "bold": true,
+              "id": "t65",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1693.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-4-0"
+        }
+      ],
+      "auditGroups": [
+        {
+          "name": "第1档name",
+          "prefix": "tier-0-name",
+          "rect": [
+            42,
+            427.5,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第1档price",
+          "prefix": "tier-0-price",
+          "rect": [
+            202,
+            427.5,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第1档slots",
+          "prefix": "tier-0-slots",
+          "rect": [
+            384,
+            427.5,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第1档process",
+          "prefix": "tier-0-process",
+          "rect": [
+            611,
+            427.5,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第2档name",
+          "prefix": "tier-1-name",
+          "rect": [
+            42,
+            510.5,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第2档price",
+          "prefix": "tier-1-price",
+          "rect": [
+            202,
+            510.5,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第2档slots",
+          "prefix": "tier-1-slots",
+          "rect": [
+            384,
+            510.5,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第2档process",
+          "prefix": "tier-1-process",
+          "rect": [
+            611,
+            510.5,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第3档name",
+          "prefix": "tier-2-name",
+          "rect": [
+            42,
+            595,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第3档price",
+          "prefix": "tier-2-price",
+          "rect": [
+            202,
+            595,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第3档slots",
+          "prefix": "tier-2-slots",
+          "rect": [
+            384,
+            595,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第3档process",
+          "prefix": "tier-2-process",
+          "rect": [
+            611,
+            595,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第4档name",
+          "prefix": "tier-3-name",
+          "rect": [
+            42,
+            679,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第4档price",
+          "prefix": "tier-3-price",
+          "rect": [
+            202,
+            679,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第4档slots",
+          "prefix": "tier-3-slots",
+          "rect": [
+            384,
+            679,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第4档process",
+          "prefix": "tier-3-process",
+          "rect": [
+            611,
+            679,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第5档name",
+          "prefix": "tier-4-name",
+          "rect": [
+            42,
+            763.5,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第5档price",
+          "prefix": "tier-4-price",
+          "rect": [
+            202,
+            763.5,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第5档slots",
+          "prefix": "tier-4-slots",
+          "rect": [
+            384,
+            763.5,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第5档process",
+          "prefix": "tier-4-process",
+          "rect": [
+            611,
+            763.5,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第6档name",
+          "prefix": "tier-5-name",
+          "rect": [
+            42,
+            848,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第6档price",
+          "prefix": "tier-5-price",
+          "rect": [
+            202,
+            848,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第6档slots",
+          "prefix": "tier-5-slots",
+          "rect": [
+            384,
+            848,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第6档process",
+          "prefix": "tier-5-process",
+          "rect": [
+            611,
+            848,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "benefit-red",
+          "prefix": "benefit-red",
+          "rect": [
+            76,
+            1014,
+            313,
+            74
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "benefit-gold",
+          "prefix": "benefit-gold",
+          "rect": [
+            474,
+            1014,
+            312,
+            74
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "标题组",
+          "prefix": "hero-copy",
+          "rect": [
+            44,
+            49,
+            318,
+            220
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "平台条",
+          "prefix": "platform",
+          "rect": [
+            56,
+            302,
+            299,
+            31
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "表头",
+          "prefix": "table-header",
+          "rect": [
+            44,
+            365,
+            746,
+            40
+          ],
+          "centerY": true
+        },
+        {
+          "name": "玩法规则标题",
+          "prefix": "rules-heading",
+          "rect": [
+            46,
+            939,
+            741,
+            32
+          ],
+          "centerY": true
+        },
+        {
+          "name": "格满停止",
+          "prefix": "cap-rule",
+          "rect": [
+            66,
+            1121,
+            705,
+            33
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "计入档示例",
+          "prefix": "example",
+          "rect": [
+            56,
+            1189,
+            727,
+            101
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "须知标题",
+          "prefix": "notice-heading",
+          "rect": [
+            46,
+            1326,
+            742,
+            27
+          ],
+          "centerY": true
+        },
+        {
+          "name": "五项须知",
+          "prefix": "notices-",
+          "rect": [
+            59,
+            1403,
+            714,
+            313
+          ],
+          "centerX": true,
+          "centerY": true
+        }
+      ],
+      "audit": {
+        "ordinaryBodySize": 31.5,
+        "phoneBodySize": 14.694976076555024,
+        "ruleSourceIds": [
+          "process-excluded-tiers",
+          "accumulation-excludes-destruction-loss",
+          "successful-only",
+          "screenshot-and-carried-loot",
+          "sorting",
+          "final-overcap"
+        ],
+        "prices": [
+          388,
+          488,
+          688,
+          988,
+          1188,
+          1688
+        ],
+        "slots": [
+          50,
+          50,
+          108,
+          108,
+          208,
+          208
+        ]
+      }
+    },
+    {
+      "id": "mobile",
+      "label": "兴安电竞 · 黄金矿工 · 手游价目",
+      "bg": "poster-r1.png",
+      "platforms": [
+        "mobile"
+      ],
+      "w": 836,
+      "h": 1880,
+      "ew": 3200,
+      "eh": 7196,
+      "elements": [
+        {
+          "type": "text",
+          "id": "t0",
+          "text": "兴安电竞",
+          "x": 203,
+          "cy": 88,
+          "size": 32,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "brand",
+          "group": "hero-copy-brand",
+          "lineGroup": "hero-copy-brand"
+        },
+        {
+          "type": "art",
+          "ids": [
+            "t1",
+            "t2",
+            "t3",
+            "t4"
+          ],
+          "text": "黄金矿工",
+          "x": 203,
+          "cy": 162,
+          "size": 82,
+          "maxWidth": 299,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "shadow": "#A2BBC9",
+          "outline": "#FFFCF4",
+          "outlineWidth": 2.2,
+          "angles": true,
+          "group": "hero-copy-title"
+        },
+        {
+          "type": "text",
+          "id": "t5",
+          "text": "摸金摸红 · 累积保底",
+          "x": 203,
+          "cy": 234,
+          "size": 25,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tagline",
+          "group": "hero-copy-subtitle",
+          "lineGroup": "hero-copy-subtitle"
+        },
+        {
+          "type": "text",
+          "id": "t66",
+          "text": "手游 · 六档挖矿套餐",
+          "x": 205.5,
+          "cy": 317.5,
+          "size": 26,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "platform",
+          "group": "platform",
+          "lineGroup": "platform"
+        },
+        {
+          "type": "text",
+          "id": "t7",
+          "text": "版本",
+          "x": 110,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-0",
+          "lineGroup": "table-header-0"
+        },
+        {
+          "type": "text",
+          "id": "t8",
+          "text": "价格",
+          "x": 281,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-1",
+          "lineGroup": "table-header-1"
+        },
+        {
+          "type": "text",
+          "id": "t9",
+          "text": "金红总格数",
+          "x": 485.5,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-2",
+          "lineGroup": "table-header-2"
+        },
+        {
+          "type": "text",
+          "id": "t10",
+          "text": "带出过程",
+          "x": 702,
+          "cy": 385,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-3",
+          "lineGroup": "table-header-3"
+        },
+        {
+          "type": "text",
+          "id": "t11",
+          "text": "体验版",
+          "x": 110,
+          "cy": 456.5,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-0-name",
+          "lineGroup": "tier-0-name"
+        },
+        {
+          "type": "text",
+          "id": "t67",
+          "text": "288",
+          "x": 318,
+          "cy": 456.5,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-0-price",
+          "lineGroup": "tier-0-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 456.5,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-0-price",
+          "lineGroup": "tier-0-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "50",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t14",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 456.5,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-0-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 702,
+          "cy": 456.5,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-0-process",
+          "lineGroup": "tier-0-process"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "标准版",
+          "x": 110,
+          "cy": 539.5,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-1-name",
+          "lineGroup": "tier-1-name"
+        },
+        {
+          "type": "text",
+          "id": "t12",
+          "text": "388",
+          "x": 318,
+          "cy": 539.5,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-1-price",
+          "lineGroup": "tier-1-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 539.5,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-1-price",
+          "lineGroup": "tier-1-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "50",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t14",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 539.5,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-1-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 702,
+          "cy": 539.5,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-1-process",
+          "lineGroup": "tier-1-process"
+        },
+        {
+          "type": "text",
+          "id": "t20",
+          "text": "基础版",
+          "x": 110,
+          "cy": 624,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-2-name",
+          "lineGroup": "tier-2-name"
+        },
+        {
+          "type": "text",
+          "id": "t68",
+          "text": "588",
+          "x": 318,
+          "cy": 624,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-2-price",
+          "lineGroup": "tier-2-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 624,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-2-price",
+          "lineGroup": "tier-2-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "108",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t22",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 624,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-2-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 702,
+          "cy": 624,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-2-process",
+          "lineGroup": "tier-2-process"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "进阶版",
+          "x": 110,
+          "cy": 708,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-3-name",
+          "lineGroup": "tier-3-name"
+        },
+        {
+          "type": "text",
+          "id": "t69",
+          "text": "788",
+          "x": 318,
+          "cy": 708,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-3-price",
+          "lineGroup": "tier-3-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 708,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-3-price",
+          "lineGroup": "tier-3-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "108",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t22",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 708,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-3-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 702,
+          "cy": 708,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-3-process",
+          "lineGroup": "tier-3-process"
+        },
+        {
+          "type": "text",
+          "id": "t25",
+          "text": "豪华版",
+          "x": 110,
+          "cy": 792.5,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-4-name",
+          "lineGroup": "tier-4-name"
+        },
+        {
+          "type": "text",
+          "id": "t70",
+          "text": "1088",
+          "x": 318,
+          "cy": 792.5,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-4-price",
+          "lineGroup": "tier-4-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 792.5,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-4-price",
+          "lineGroup": "tier-4-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "208",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t27",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 792.5,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-4-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 702,
+          "cy": 792.5,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-4-process",
+          "lineGroup": "tier-4-process"
+        },
+        {
+          "type": "text",
+          "id": "t28",
+          "text": "终极版",
+          "x": 110,
+          "cy": 877,
+          "size": 36,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-5-name",
+          "lineGroup": "tier-5-name"
+        },
+        {
+          "type": "text",
+          "id": "t71",
+          "text": "1488",
+          "x": 318,
+          "cy": 877,
+          "size": 52,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-5-price",
+          "lineGroup": "tier-5-price"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 325,
+          "cy": 877,
+          "size": 49.92,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-5-price",
+          "lineGroup": "tier-5-price"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "208",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 46,
+              "id": "t27",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 33.12,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 485.5,
+          "cy": 877,
+          "size": 46,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-5-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 702,
+          "cy": 877,
+          "size": 34,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-5-process",
+          "lineGroup": "tier-5-process"
+        },
+        {
+          "type": "text",
+          "id": "t30",
+          "text": "玩法规则",
+          "x": 418,
+          "cy": 955,
+          "size": 33,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "section-heading",
+          "group": "rules-heading",
+          "lineGroup": "rules-heading"
+        },
+        {
+          "type": "text",
+          "id": "t31",
+          "text": "摸到1格红",
+          "x": 232.5,
+          "cy": 1029,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "benefit-label",
+          "group": "benefit-red-label",
+          "lineGroup": "benefit-red-label"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "基础保底 ",
+              "size": 29,
+              "id": "t32",
+              "fill": "#213F53"
+            },
+            {
+              "text": "+80",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 40,
+              "fill": "#AC4C47",
+              "id": "t33"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 38.4,
+              "fill": "#AC4C47",
+              "gap": 5,
+              "id": "t34"
+            }
+          ],
+          "x": 232.5,
+          "cy": 1071,
+          "size": 29,
+          "anchor": "middle",
+          "role": "benefit-value",
+          "group": "benefit-red-value"
+        },
+        {
+          "type": "text",
+          "id": "t35",
+          "text": "摸到1格金",
+          "x": 630,
+          "cy": 1029,
+          "size": 31,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "benefit-label",
+          "group": "benefit-gold-label",
+          "lineGroup": "benefit-gold-label"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "基础保底 ",
+              "size": 29,
+              "id": "t32",
+              "fill": "#213F53"
+            },
+            {
+              "text": "+20",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 40,
+              "fill": "#9F6828",
+              "id": "t36"
+            },
+            {
+              "text": "w",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 38.4,
+              "fill": "#9F6828",
+              "gap": 5,
+              "id": "t34"
+            }
+          ],
+          "x": 630,
+          "cy": 1071,
+          "size": 29,
+          "anchor": "middle",
+          "role": "benefit-value",
+          "group": "benefit-gold-value"
+        },
+        {
+          "type": "text",
+          "id": "t37",
+          "text": "格数满后，保底不再叠加",
+          "x": 418.5,
+          "cy": 1137.5,
+          "size": 30,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "cap-rule",
+          "group": "cap-rule",
+          "lineGroup": "cap-rule"
+        },
+        {
+          "type": "text",
+          "id": "t38",
+          "text": "计入档示例",
+          "x": 419.5,
+          "cy": 1203.398926,
+          "size": 28,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "example-heading",
+          "group": "example-heading",
+          "lineGroup": "example-heading"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "10格金×20w＋10格红×80w＝",
+              "id": "t39",
+              "size": 30,
+              "fill": "#213F53"
+            },
+            {
+              "text": "1000w",
+              "bold": true,
+              "id": "t40",
+              "size": 30,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 419.5,
+          "cy": 1238.398926,
+          "size": 30,
+          "anchor": "middle",
+          "role": "example",
+          "group": "example-formula"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "本局收获800w，打手还差",
+              "id": "t41",
+              "size": 30,
+              "fill": "#213F53"
+            },
+            {
+              "text": "200w",
+              "bold": true,
+              "fill": "#AC4C47",
+              "id": "t42",
+              "size": 30
+            }
+          ],
+          "x": 419.5,
+          "cy": 1274.398926,
+          "size": 30,
+          "anchor": "middle",
+          "role": "example",
+          "group": "example-result"
+        },
+        {
+          "type": "text",
+          "id": "t43",
+          "text": "注意事项",
+          "x": 418,
+          "cy": 1339.5,
+          "size": 27.5,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "section-heading",
+          "group": "notice-heading",
+          "lineGroup": "notice-heading"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1461.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-0"
+        },
+        {
+          "type": "text",
+          "id": "t44",
+          "text": "1",
+          "x": 132.465597,
+          "cy": 1461.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-0",
+          "lineGroup": "notices-number-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "标准版、进阶版、终极版：",
+              "bold": true,
+              "id": "t45",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1425.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-0-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "带出过程金额",
+              "id": "t46",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "不计入总保底",
+              "bold": true,
+              "id": "t47",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1461.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-0-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "累计金红格数时，",
+              "id": "t49",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "不计炸单战损",
+              "bold": true,
+              "id": "t50",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1497.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-0-2"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1537.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-1"
+        },
+        {
+          "type": "text",
+          "id": "t51",
+          "text": "2",
+          "x": 132.465597,
+          "cy": 1537.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-1",
+          "lineGroup": "notices-number-1"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "仅计算",
+              "id": "t52",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "撤离成功",
+              "bold": true,
+              "id": "t53",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "，失败不计算。",
+              "id": "t54",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1537.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-1-0"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1595.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-2"
+        },
+        {
+          "type": "text",
+          "id": "t55",
+          "text": "3",
+          "x": 132.465597,
+          "cy": 1595.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-2",
+          "lineGroup": "notices-number-2"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "按撤离成功后老板的",
+              "id": "t56",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "行动收获截图",
+              "bold": true,
+              "id": "t57",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "计算；",
+              "id": "t58",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1577.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-2-0"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "吃不下的金和红，打手帮带也计入。",
+              "id": "t59",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1613.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-2-1"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1653.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-3"
+        },
+        {
+          "type": "text",
+          "id": "t60",
+          "text": "4",
+          "x": 132.465597,
+          "cy": 1653.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-3",
+          "lineGroup": "notices-number-3"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "打手负责理包，优先整理",
+              "id": "t61",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "高价值物品",
+              "bold": true,
+              "id": "t62",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1653.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-3-0"
+        },
+        {
+          "type": "raw",
+          "markup": "<circle cx=\"132.465597\" cy=\"1693.5\" r=\"13\" fill=\"#638276\"/>",
+          "group": "notice-number-4"
+        },
+        {
+          "type": "text",
+          "id": "t63",
+          "text": "5",
+          "x": 132.465597,
+          "cy": 1693.5,
+          "size": 20,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "notice-number",
+          "group": "notices-number-4",
+          "lineGroup": "notices-number-4"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "最后一把金红超过格数时，",
+              "id": "t64",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "优先计算红",
+              "bold": true,
+              "id": "t65",
+              "size": 31.5,
+              "fill": "#213F53"
+            },
+            {
+              "text": "。",
+              "id": "t48",
+              "size": 31.5,
+              "fill": "#213F53"
+            }
+          ],
+          "x": 157.465597,
+          "cy": 1693.5,
+          "size": 31.5,
+          "anchor": "start",
+          "role": "rule-body",
+          "group": "notices-4-0"
+        }
+      ],
+      "auditGroups": [
+        {
+          "name": "第1档name",
+          "prefix": "tier-0-name",
+          "rect": [
+            42,
+            427.5,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第1档price",
+          "prefix": "tier-0-price",
+          "rect": [
+            202,
+            427.5,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第1档slots",
+          "prefix": "tier-0-slots",
+          "rect": [
+            384,
+            427.5,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第1档process",
+          "prefix": "tier-0-process",
+          "rect": [
+            611,
+            427.5,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第2档name",
+          "prefix": "tier-1-name",
+          "rect": [
+            42,
+            510.5,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第2档price",
+          "prefix": "tier-1-price",
+          "rect": [
+            202,
+            510.5,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第2档slots",
+          "prefix": "tier-1-slots",
+          "rect": [
+            384,
+            510.5,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第2档process",
+          "prefix": "tier-1-process",
+          "rect": [
+            611,
+            510.5,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第3档name",
+          "prefix": "tier-2-name",
+          "rect": [
+            42,
+            595,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第3档price",
+          "prefix": "tier-2-price",
+          "rect": [
+            202,
+            595,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第3档slots",
+          "prefix": "tier-2-slots",
+          "rect": [
+            384,
+            595,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第3档process",
+          "prefix": "tier-2-process",
+          "rect": [
+            611,
+            595,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第4档name",
+          "prefix": "tier-3-name",
+          "rect": [
+            42,
+            679,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第4档price",
+          "prefix": "tier-3-price",
+          "rect": [
+            202,
+            679,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第4档slots",
+          "prefix": "tier-3-slots",
+          "rect": [
+            384,
+            679,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第4档process",
+          "prefix": "tier-3-process",
+          "rect": [
+            611,
+            679,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第5档name",
+          "prefix": "tier-4-name",
+          "rect": [
+            42,
+            763.5,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第5档price",
+          "prefix": "tier-4-price",
+          "rect": [
+            202,
+            763.5,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第5档slots",
+          "prefix": "tier-4-slots",
+          "rect": [
+            384,
+            763.5,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第5档process",
+          "prefix": "tier-4-process",
+          "rect": [
+            611,
+            763.5,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第6档name",
+          "prefix": "tier-5-name",
+          "rect": [
+            42,
+            848,
+            136,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第6档price",
+          "prefix": "tier-5-price",
+          "rect": [
+            202,
+            848,
+            158,
+            58
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 15
+        },
+        {
+          "name": "第6档slots",
+          "prefix": "tier-5-slots",
+          "rect": [
+            384,
+            848,
+            203,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "第6档process",
+          "prefix": "tier-5-process",
+          "rect": [
+            611,
+            848,
+            182,
+            58
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 2
+        },
+        {
+          "name": "benefit-red",
+          "prefix": "benefit-red",
+          "rect": [
+            76,
+            1014,
+            313,
+            74
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "benefit-gold",
+          "prefix": "benefit-gold",
+          "rect": [
+            474,
+            1014,
+            312,
+            74
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "标题组",
+          "prefix": "hero-copy",
+          "rect": [
+            44,
+            49,
+            318,
+            220
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "平台条",
+          "prefix": "platform",
+          "rect": [
+            56,
+            302,
+            299,
+            31
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "表头",
+          "prefix": "table-header",
+          "rect": [
+            44,
+            365,
+            746,
+            40
+          ],
+          "centerY": true
+        },
+        {
+          "name": "玩法规则标题",
+          "prefix": "rules-heading",
+          "rect": [
+            46,
+            939,
+            741,
+            32
+          ],
+          "centerY": true
+        },
+        {
+          "name": "格满停止",
+          "prefix": "cap-rule",
+          "rect": [
+            66,
+            1121,
+            705,
+            33
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "计入档示例",
+          "prefix": "example",
+          "rect": [
+            56,
+            1189,
+            727,
+            101
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "须知标题",
+          "prefix": "notice-heading",
+          "rect": [
+            46,
+            1326,
+            742,
+            27
+          ],
+          "centerY": true
+        },
+        {
+          "name": "五项须知",
+          "prefix": "notices-",
+          "rect": [
+            59,
+            1403,
+            714,
+            313
+          ],
+          "centerX": true,
+          "centerY": true
+        }
+      ],
+      "audit": {
+        "ordinaryBodySize": 31.5,
+        "phoneBodySize": 14.694976076555024,
+        "ruleSourceIds": [
+          "process-excluded-tiers",
+          "accumulation-excludes-destruction-loss",
+          "successful-only",
+          "screenshot-and-carried-loot",
+          "sorting",
+          "final-overcap"
+        ],
+        "prices": [
+          288,
+          388,
+          588,
+          788,
+          1088,
+          1488
+        ],
+        "slots": [
+          50,
+          50,
+          108,
+          108,
+          208,
+          208
+        ]
+      }
+    },
+    {
+      "id": "social",
+      "label": "兴安电竞 · 黄金矿工 · 双端价格封面",
+      "bg": "social-r2.png",
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "w": 1086,
+      "h": 1448,
+      "ew": 3000,
+      "eh": 4000,
+      "elements": [
+        {
+          "type": "text",
+          "id": "t0",
+          "text": "兴安电竞",
+          "x": 264,
+          "cy": 74.14795,
+          "size": 37,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "brand",
+          "group": "hero-copy-brand",
+          "lineGroup": "hero-copy-brand"
+        },
+        {
+          "type": "art",
+          "ids": [
+            "t1",
+            "t2",
+            "t3",
+            "t4"
+          ],
+          "text": "黄金矿工",
+          "x": 264,
+          "cy": 160.14795,
+          "size": 110,
+          "maxWidth": 411,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "shadow": "#A2BBC9",
+          "outline": "#FFFCF4",
+          "outlineWidth": 2.2,
+          "angles": true,
+          "group": "hero-copy-title"
+        },
+        {
+          "type": "text",
+          "id": "t5",
+          "text": "摸金摸红 · 累积保底",
+          "x": 264,
+          "cy": 255.14795,
+          "size": 32,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tagline",
+          "group": "hero-copy-subtitle",
+          "lineGroup": "hero-copy-subtitle"
+        },
+        {
+          "type": "text",
+          "id": "t72",
+          "text": "端游 / 手游 · 六档任选",
+          "x": 252,
+          "cy": 339.5,
+          "size": 30,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "platform",
+          "group": "platform",
+          "lineGroup": "platform"
+        },
+        {
+          "type": "text",
+          "id": "t7",
+          "text": "版本",
+          "x": 135,
+          "cy": 459,
+          "size": 31.5,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-0",
+          "lineGroup": "table-header-0"
+        },
+        {
+          "type": "text",
+          "id": "t73",
+          "text": "金红格数",
+          "x": 296,
+          "cy": 459,
+          "size": 31.5,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-1",
+          "lineGroup": "table-header-1"
+        },
+        {
+          "type": "text",
+          "id": "t10",
+          "text": "带出过程",
+          "x": 456.5,
+          "cy": 459,
+          "size": 31.5,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-2",
+          "lineGroup": "table-header-2"
+        },
+        {
+          "type": "text",
+          "id": "t74",
+          "text": "端游价格",
+          "x": 666,
+          "cy": 459,
+          "size": 31.5,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-3",
+          "lineGroup": "table-header-3"
+        },
+        {
+          "type": "text",
+          "id": "t75",
+          "text": "手游价格",
+          "x": 914,
+          "cy": 459,
+          "size": 31.5,
+          "anchor": "middle",
+          "fill": "#FFFCF4",
+          "role": "table-heading",
+          "group": "table-header-4",
+          "lineGroup": "table-header-4"
+        },
+        {
+          "type": "text",
+          "id": "t11",
+          "text": "体验版",
+          "x": 135,
+          "cy": 564,
+          "size": 40,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-0-name",
+          "lineGroup": "tier-0-name"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "50",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 45,
+              "id": "t14",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 32.4,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 296,
+          "cy": 564,
+          "size": 45,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-0-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 456.5,
+          "cy": 564,
+          "size": 39,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-0-process",
+          "lineGroup": "tier-0-process"
+        },
+        {
+          "type": "text",
+          "id": "t12",
+          "text": "388",
+          "x": 711,
+          "cy": 564,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-0-desktop",
+          "lineGroup": "tier-0-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 719,
+          "cy": 564,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-0-desktop",
+          "lineGroup": "tier-0-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t67",
+          "text": "288",
+          "x": 959,
+          "cy": 564,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-0-mobile",
+          "lineGroup": "tier-0-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 967,
+          "cy": 564,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-0-mobile",
+          "lineGroup": "tier-0-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t17",
+          "text": "标准版",
+          "x": 135,
+          "cy": 679,
+          "size": 40,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-1-name",
+          "lineGroup": "tier-1-name"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "50",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 45,
+              "id": "t14",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 32.4,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 296,
+          "cy": 679,
+          "size": 45,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-1-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 456.5,
+          "cy": 679,
+          "size": 39,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-1-process",
+          "lineGroup": "tier-1-process"
+        },
+        {
+          "type": "text",
+          "id": "t18",
+          "text": "488",
+          "x": 711,
+          "cy": 679,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-1-desktop",
+          "lineGroup": "tier-1-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 719,
+          "cy": 679,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-1-desktop",
+          "lineGroup": "tier-1-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t12",
+          "text": "388",
+          "x": 959,
+          "cy": 679,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-1-mobile",
+          "lineGroup": "tier-1-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 967,
+          "cy": 679,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-1-mobile",
+          "lineGroup": "tier-1-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t20",
+          "text": "基础版",
+          "x": 135,
+          "cy": 793.5,
+          "size": 40,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-2-name",
+          "lineGroup": "tier-2-name"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "108",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 45,
+              "id": "t22",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 32.4,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 296,
+          "cy": 793.5,
+          "size": 45,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-2-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 456.5,
+          "cy": 793.5,
+          "size": 39,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-2-process",
+          "lineGroup": "tier-2-process"
+        },
+        {
+          "type": "text",
+          "id": "t21",
+          "text": "688",
+          "x": 711,
+          "cy": 793.5,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-2-desktop",
+          "lineGroup": "tier-2-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 719,
+          "cy": 793.5,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-2-desktop",
+          "lineGroup": "tier-2-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t68",
+          "text": "588",
+          "x": 959,
+          "cy": 793.5,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-2-mobile",
+          "lineGroup": "tier-2-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 967,
+          "cy": 793.5,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-2-mobile",
+          "lineGroup": "tier-2-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t23",
+          "text": "进阶版",
+          "x": 135,
+          "cy": 907,
+          "size": 40,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-3-name",
+          "lineGroup": "tier-3-name"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "108",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 45,
+              "id": "t22",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 32.4,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 296,
+          "cy": 907,
+          "size": 45,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-3-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 456.5,
+          "cy": 907,
+          "size": 39,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-3-process",
+          "lineGroup": "tier-3-process"
+        },
+        {
+          "type": "text",
+          "id": "t24",
+          "text": "988",
+          "x": 711,
+          "cy": 907,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-3-desktop",
+          "lineGroup": "tier-3-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 719,
+          "cy": 907,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-3-desktop",
+          "lineGroup": "tier-3-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t69",
+          "text": "788",
+          "x": 959,
+          "cy": 907,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-3-mobile",
+          "lineGroup": "tier-3-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 967,
+          "cy": 907,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-3-mobile",
+          "lineGroup": "tier-3-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t25",
+          "text": "豪华版",
+          "x": 135,
+          "cy": 1022,
+          "size": 40,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-4-name",
+          "lineGroup": "tier-4-name"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "208",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 45,
+              "id": "t27",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 32.4,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 296,
+          "cy": 1022,
+          "size": 45,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-4-slots"
+        },
+        {
+          "type": "text",
+          "id": "t16",
+          "text": "计入",
+          "x": 456.5,
+          "cy": 1022,
+          "size": 39,
+          "anchor": "middle",
+          "fill": "#52765F",
+          "role": "process",
+          "group": "tier-4-process",
+          "lineGroup": "tier-4-process"
+        },
+        {
+          "type": "text",
+          "id": "t26",
+          "text": "1188",
+          "x": 711,
+          "cy": 1022,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-4-desktop",
+          "lineGroup": "tier-4-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 719,
+          "cy": 1022,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-4-desktop",
+          "lineGroup": "tier-4-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t70",
+          "text": "1088",
+          "x": 959,
+          "cy": 1022,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-4-mobile",
+          "lineGroup": "tier-4-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 967,
+          "cy": 1022,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-4-mobile",
+          "lineGroup": "tier-4-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t28",
+          "text": "终极版",
+          "x": 135,
+          "cy": 1133,
+          "size": 40,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "tier-name",
+          "group": "tier-5-name",
+          "lineGroup": "tier-5-name"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "208",
+              "font": "Bahnschrift",
+              "bold": true,
+              "size": 45,
+              "id": "t27",
+              "fill": "#213F53"
+            },
+            {
+              "text": "格",
+              "size": 32.4,
+              "gap": 7,
+              "id": "t15",
+              "fill": "#213F53"
+            }
+          ],
+          "x": 296,
+          "cy": 1133,
+          "size": 45,
+          "anchor": "middle",
+          "role": "slot-count",
+          "group": "tier-5-slots"
+        },
+        {
+          "type": "text",
+          "id": "t19",
+          "text": "不计入",
+          "x": 456.5,
+          "cy": 1133,
+          "size": 39,
+          "anchor": "middle",
+          "fill": "#213F53",
+          "role": "process",
+          "group": "tier-5-process",
+          "lineGroup": "tier-5-process"
+        },
+        {
+          "type": "text",
+          "id": "t29",
+          "text": "1688",
+          "x": 711,
+          "cy": 1133,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-5-desktop",
+          "lineGroup": "tier-5-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 719,
+          "cy": 1133,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-5-desktop",
+          "lineGroup": "tier-5-desktop"
+        },
+        {
+          "type": "text",
+          "id": "t71",
+          "text": "1488",
+          "x": 959,
+          "cy": 1133,
+          "size": 63,
+          "anchor": "end",
+          "fill": "#9F6828",
+          "role": "price-number",
+          "group": "tier-5-mobile",
+          "lineGroup": "tier-5-mobile"
+        },
+        {
+          "type": "text",
+          "id": "t13",
+          "text": "r",
+          "x": 967,
+          "cy": 1133,
+          "size": 60.48,
+          "anchor": "start",
+          "fill": "#9F6828",
+          "role": "price-unit",
+          "group": "tier-5-mobile",
+          "lineGroup": "tier-5-mobile"
+        },
+        {
+          "type": "rich",
+          "runs": [
+            {
+              "text": "红每格 +80w",
+              "bold": true,
+              "fill": "#AC4C47",
+              "id": "t76",
+              "size": 39
+            },
+            {
+              "text": "   ·   ",
+              "id": "t77",
+              "size": 39,
+              "fill": "#213F53"
+            },
+            {
+              "text": "金每格 +20w",
+              "bold": true,
+              "fill": "#9F6828",
+              "id": "t78",
+              "size": 39
+            }
+          ],
+          "x": 543,
+          "cy": 1262.5,
+          "size": 39,
+          "anchor": "middle",
+          "role": "selling-point",
+          "group": "feature"
+        }
+      ],
+      "auditGroups": [
+        {
+          "name": "对照第1档name",
+          "prefix": "tier-0-name",
+          "rect": [
+            59,
+            528,
+            152,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第1档slots",
+          "prefix": "tier-0-slots",
+          "rect": [
+            231,
+            528,
+            130,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第1档process",
+          "prefix": "tier-0-process",
+          "rect": [
+            381,
+            528,
+            151,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第1档desktop",
+          "prefix": "tier-0-desktop",
+          "rect": [
+            552,
+            528,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第1档mobile",
+          "prefix": "tier-0-mobile",
+          "rect": [
+            800,
+            528,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第2档name",
+          "prefix": "tier-1-name",
+          "rect": [
+            59,
+            643,
+            152,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第2档slots",
+          "prefix": "tier-1-slots",
+          "rect": [
+            231,
+            643,
+            130,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第2档process",
+          "prefix": "tier-1-process",
+          "rect": [
+            381,
+            643,
+            151,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第2档desktop",
+          "prefix": "tier-1-desktop",
+          "rect": [
+            552,
+            643,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第2档mobile",
+          "prefix": "tier-1-mobile",
+          "rect": [
+            800,
+            643,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第3档name",
+          "prefix": "tier-2-name",
+          "rect": [
+            59,
+            757.5,
+            152,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第3档slots",
+          "prefix": "tier-2-slots",
+          "rect": [
+            231,
+            757.5,
+            130,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第3档process",
+          "prefix": "tier-2-process",
+          "rect": [
+            381,
+            757.5,
+            151,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第3档desktop",
+          "prefix": "tier-2-desktop",
+          "rect": [
+            552,
+            757.5,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第3档mobile",
+          "prefix": "tier-2-mobile",
+          "rect": [
+            800,
+            757.5,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第4档name",
+          "prefix": "tier-3-name",
+          "rect": [
+            59,
+            871,
+            152,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第4档slots",
+          "prefix": "tier-3-slots",
+          "rect": [
+            231,
+            871,
+            130,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第4档process",
+          "prefix": "tier-3-process",
+          "rect": [
+            381,
+            871,
+            151,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第4档desktop",
+          "prefix": "tier-3-desktop",
+          "rect": [
+            552,
+            871,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第4档mobile",
+          "prefix": "tier-3-mobile",
+          "rect": [
+            800,
+            871,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第5档name",
+          "prefix": "tier-4-name",
+          "rect": [
+            59,
+            986,
+            152,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第5档slots",
+          "prefix": "tier-4-slots",
+          "rect": [
+            231,
+            986,
+            130,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第5档process",
+          "prefix": "tier-4-process",
+          "rect": [
+            381,
+            986,
+            151,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第5档desktop",
+          "prefix": "tier-4-desktop",
+          "rect": [
+            552,
+            986,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第5档mobile",
+          "prefix": "tier-4-mobile",
+          "rect": [
+            800,
+            986,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第6档name",
+          "prefix": "tier-5-name",
+          "rect": [
+            59,
+            1097,
+            152,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第6档slots",
+          "prefix": "tier-5-slots",
+          "rect": [
+            231,
+            1097,
+            130,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第6档process",
+          "prefix": "tier-5-process",
+          "rect": [
+            381,
+            1097,
+            151,
+            72
+          ],
+          "centerY": true,
+          "centerX": true,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第6档desktop",
+          "prefix": "tier-5-desktop",
+          "rect": [
+            552,
+            1097,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "对照第6档mobile",
+          "prefix": "tier-5-mobile",
+          "rect": [
+            800,
+            1097,
+            228,
+            72
+          ],
+          "centerY": true,
+          "centerX": false,
+          "toleranceX": 18
+        },
+        {
+          "name": "广告标题",
+          "prefix": "hero-copy",
+          "rect": [
+            49,
+            47,
+            430,
+            233
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "广告平台条",
+          "prefix": "platform",
+          "rect": [
+            62,
+            324,
+            380,
+            31
+          ],
+          "centerX": true,
+          "centerY": true
+        },
+        {
+          "name": "对照表头",
+          "prefix": "table-header",
+          "rect": [
+            68,
+            437,
+            950,
+            44
+          ],
+          "centerY": true
+        },
+        {
+          "name": "核心保底",
+          "prefix": "feature",
+          "rect": [
+            186,
+            1242,
+            714,
+            41
+          ],
+          "centerX": true,
+          "centerY": true
+        }
+      ],
+      "audit": {
+        "noNotices": true,
+        "sourceTierIds": [
+          "trial",
+          "standard",
+          "basic",
+          "advanced",
+          "luxury",
+          "ultimate"
+        ]
+      }
+    }
+  ]
+}

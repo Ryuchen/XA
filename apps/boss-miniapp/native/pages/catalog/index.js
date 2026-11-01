@@ -5,7 +5,7 @@ const { on } = require('../../core/events');
 const { familyKey, groupServices, serviceTabs, serviceTabForGameplay } = require('../../core/catalog');
 
 Page({
-  data: { loading: false, error: '', logged: false, total: 0, displayed: [], displayLimit: 20, serviceTabs, tab: 'experience', categories: [], platforms: [], levels: [], category: '', platform: '', level: '', gameplay: '', gameplayName: '', keyword: '', sort: 'price', filtersExpanded: false, providerId: 0, providerName: '', couponServiceIds: null, couponName: '' },
+  data: { activeFilters: [], loading: false, error: '', logged: false, total: 0, displayed: [], displayLimit: 20, serviceTabs, tab: 'experience', categories: [], platforms: [], levels: [], category: '', platform: '', level: '', gameplay: '', gameplayName: '', keyword: '', sort: 'price', filtersExpanded: false, providerId: 0, providerName: '', couponServiceIds: null, couponName: '' },
   onLoad(options) {
     this._alive = true;
     this._requestedGameplay = options.gameplay ? String(options.gameplay) : '';
@@ -33,12 +33,13 @@ Page({
     this.setData({ logged, loading: logged, error: '' });
     if (!logged) { this._services = []; this._filtered = []; this.setData({ total: 0, displayed: [] }); return; }
     try {
-      const results = await Promise.all([request('/orders/services/'), request('/orders/gameplays/'), request('/orders/game-categories/'), this.data.providerId ? request('/users/escorts/') : Promise.resolve([])]);
+      const results = await Promise.all([request('/orders/services/'), request('/orders/gameplays/'), request('/orders/game-categories/'), this.data.providerId ? request('/users/escorts/' + this.data.providerId + '/?eligible_catalog=1') : Promise.resolve(null)]);
       if (!this._alive || seq !== this._seq) return;
-      const provider = list(results[3]).find(item => item.id === this.data.providerId);
+      const provider = results[3];
       if (this.data.providerId && !provider) throw new Error('该陪玩当前不可接单，请重新选择陪玩');
+      if (provider && !provider.can_order) throw new Error(provider.order_unavailable_reason || '该陪玩当前不可接单，请重新选择陪玩');
       const gameplays = new Map(list(results[1]).map(item => [String(item.id), item]));
-      const services = list(results[0]).filter(item => !item.is_gift && (!this.data.couponServiceIds || this.data.couponServiceIds.includes(item.id)) && (!provider || list(provider.service_item_ids).includes(item.id))).map(item => {
+      const services = list(results[0]).filter(item => !item.is_gift && (!this.data.couponServiceIds || this.data.couponServiceIds.includes(item.id)) && (!provider || list(provider.eligible_service_item_ids).includes(item.id))).map(item => {
         const row = {};
         for (const key of ['id', 'name', 'description', 'price', 'price_unit', 'purchase_mode', 'is_addon', 'catalog_family', 'catalog_variant', 'gameplay', 'gameplay_name', 'game_category', 'game_category_name', 'platform', 'platform_name', 'security_level', 'security_level_name']) row[key] = item[key];
         return { ...row, serviceTab: serviceTabForGameplay(gameplays.get(String(item.gameplay)), item), cover: image(item.cover_url || item.gameplay_cover_url), displayPrice: money(item.price) };
@@ -57,7 +58,8 @@ Page({
     } catch (error) { if (this._alive && seq === this._seq) { this._services = []; this._filtered = []; this.setData({ loading: false, error: error.message, total: 0, displayed: [] }); } }
   },
   filter(patch = {}) {
-    let { tab, category, platform, level, keyword, sort, categories, gameplay } = { ...this.data, ...patch };
+    const next = { ...this.data, ...patch };
+    let { tab, category, platform, level, keyword, sort, categories, gameplay } = next;
     const services = this._services || [];
     const gameName = (categories.find(item => item.id === category) || {}).name || '';
     const availableTabs = /瓦罗兰特|英雄联盟/.test(gameName) ? serviceTabs.filter(item => item.id === 'companion') : serviceTabs;
@@ -67,8 +69,14 @@ Page({
     const matches = new Set(candidates.filter(item => !query || [item.name, item.description, item.catalog_family, item.catalog_variant, item.gameplay_name, item.game_category_name].join(' ').toLowerCase().includes(query)).map(familyKey));
     const visible = groupServices(candidates.filter(item => matches.has(familyKey(item))));
     if (sort === 'price') visible.sort((a, b) => Number(a.price) - Number(b.price));
+    const activeFilters = [
+      category && { field: 'category', label: gameName || '已选游戏' },
+      platform && { field: 'platform', label: (next.platforms.find(item => item.id === platform) || {}).name || platform },
+      level && { field: 'level', label: (next.levels.find(item => item.id === level) || {}).name || level },
+      query && { field: 'keyword', label: '搜索：' + keyword.trim() },
+    ].filter(Boolean);
     this._filtered = visible;
-    this.setData({ ...patch, tab, serviceTabs: availableTabs, total: visible.length, displayed: visible.slice(0, 20), displayLimit: 20 });
+    this.setData({ ...patch, tab, serviceTabs: availableTabs, activeFilters, total: visible.length, displayed: visible.slice(0, 20), displayLimit: 20 });
   },
   onReachBottom() { this.more(); },
   more() {
@@ -79,6 +87,21 @@ Page({
     this.setData(patch);
   },
   toggleFilters() { this.setData({ filtersExpanded: !this.data.filtersExpanded }); },
+  clearFilter(event) {
+    const field = event.currentTarget.dataset.field;
+    if (!['category', 'platform', 'level', 'keyword'].includes(field)) return;
+    this.filter({ [field]: '', ...(field === 'category' ? { platform: '', level: '' } : {}) });
+  },
+  coverFailed(event) {
+    const id = Number(event.currentTarget.dataset.id);
+    const clear = rows => (rows || []).map(item => Number(item.id) === id ? { ...item, cover: '' } : item);
+    this._services = clear(this._services); this._filtered = clear(this._filtered);
+    this.setData({ displayed: clear(this.data.displayed) });
+  },
+  iconFailed(event) {
+    const id = String(event.currentTarget.dataset.id);
+    this.setData({ categories: this.data.categories.map(item => String(item.id) === id ? { ...item, iconUrl: '/assets/icons/headphones.png' } : item) });
+  },
   chooseTab(event) { const id = event.currentTarget.dataset.id; if (!serviceTabs.some(item => item.id === id)) return; this._requestedGameplay = ''; this.filter({ tab: id, gameplay: '', gameplayName: '', keyword: '' }); },
   choose(event) { const { field, id } = event.currentTarget.dataset; if (!['category', 'platform', 'level', 'sort'].includes(field)) return; const value = field === 'category' && this.data.category === id ? '' : id || ''; this.filter({ [field]: value, ...(field === 'category' ? { platform: '', level: '' } : {}) }); },
   search(event) { this.setData({ keyword: event.detail.value }); this.filter(); },

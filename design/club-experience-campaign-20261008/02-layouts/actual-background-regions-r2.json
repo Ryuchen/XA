@@ -1,0 +1,520 @@
+[
+  {
+    "id": "cover",
+    "file": "03-backgrounds/cover-r1.png",
+    "nativeWidth": 1672,
+    "nativeHeight": 941,
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "copySafeZones": [
+      {
+        "containerId": "品牌",
+        "safeBounds": [
+          80,
+          125,
+          485,
+          70
+        ]
+      },
+      {
+        "containerId": "艺术主标题",
+        "safeBounds": [
+          80,
+          220,
+          500,
+          365
+        ]
+      },
+      {
+        "containerId": "核心卖点",
+        "safeBounds": [
+          90,
+          707,
+          555,
+          63
+        ]
+      },
+      {
+        "containerId": "平台 / 模式",
+        "safeBounds": [
+          100,
+          802,
+          535,
+          35
+        ]
+      }
+    ],
+    "notes": "按实际底图坐标测量，不沿用结构草图坐标。"
+  },
+  {
+    "id": "social",
+    "file": "03-backgrounds/social-r1.png",
+    "nativeWidth": 1086,
+    "nativeHeight": 1448,
+    "platforms": [
+      "desktop",
+      "mobile"
+    ],
+    "copySafeZones": [
+      {
+        "containerId": "品牌 / 体验单标题",
+        "safeBounds": [
+          70,
+          100,
+          400,
+          205
+        ]
+      },
+      {
+        "containerId": "新客专享条件",
+        "safeBounds": [
+          90,
+          425,
+          900,
+          28
+        ]
+      },
+      {
+        "containerId": "端游 · 新客专享",
+        "safeBounds": [
+          65,
+          500,
+          445,
+          45
+        ]
+      },
+      {
+        "containerId": "手游 · 新客专享",
+        "safeBounds": [
+          580,
+          500,
+          435,
+          45
+        ]
+      },
+      {
+        "containerId": "端游 · 每日一单",
+        "safeBounds": [
+          65,
+          900,
+          445,
+          45
+        ]
+      },
+      {
+        "containerId": "手游 · 每日一单",
+        "safeBounds": [
+          580,
+          900,
+          435,
+          45
+        ]
+      },
+      {
+        "containerId": "档位 1",
+        "safeBounds": [
+          80,
+          579,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 2",
+        "safeBounds": [
+          80,
+          677,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 3",
+        "safeBounds": [
+          80,
+          771,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 1",
+        "safeBounds": [
+          590,
+          579,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 2",
+        "safeBounds": [
+          590,
+          677,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 3",
+        "safeBounds": [
+          590,
+          771,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 1",
+        "safeBounds": [
+          80,
+          978,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 2",
+        "safeBounds": [
+          80,
+          1073,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 3",
+        "safeBounds": [
+          80,
+          1164,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 1",
+        "safeBounds": [
+          590,
+          978,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 2",
+        "safeBounds": [
+          590,
+          1073,
+          417,
+          51
+        ]
+      },
+      {
+        "containerId": "档位 3",
+        "safeBounds": [
+          590,
+          1164,
+          417,
+          51
+        ]
+      }
+    ],
+    "notes": "按实际底图坐标测量，不沿用结构草图坐标。"
+  },
+  {
+    "id": "desktop-experience",
+    "file": "03-backgrounds/desktop-experience-r2.png",
+    "nativeWidth": 887,
+    "nativeHeight": 1774,
+    "platforms": [
+      "desktop"
+    ],
+    "copySafeZones": [
+      {
+        "containerId": "品牌 / 体验单 / 平台",
+        "safeBounds": [
+          60,
+          80,
+          313,
+          157
+        ]
+      },
+      {
+        "containerId": "新客专享 + UID限制",
+        "safeBounds": [
+          65,
+          395,
+          755,
+          36
+        ]
+      },
+      {
+        "containerId": "新客 · 超值券",
+        "safeBounds": [
+          73,
+          470,
+          283,
+          177
+        ]
+      },
+      {
+        "containerId": "新客 · 机密",
+        "safeBounds": [
+          423,
+          470,
+          160,
+          177
+        ]
+      },
+      {
+        "containerId": "新客 · 绝密",
+        "safeBounds": [
+          645,
+          470,
+          173,
+          177
+        ]
+      },
+      {
+        "containerId": "每日 · 超值券",
+        "safeBounds": [
+          73,
+          785,
+          283,
+          177
+        ]
+      },
+      {
+        "containerId": "每日 · 机密",
+        "safeBounds": [
+          423,
+          785,
+          160,
+          177
+        ]
+      },
+      {
+        "containerId": "每日 · 绝密",
+        "safeBounds": [
+          645,
+          785,
+          173,
+          177
+        ]
+      },
+      {
+        "containerId": "每日一单",
+        "safeBounds": [
+          65,
+          713,
+          755,
+          34
+        ]
+      },
+      {
+        "containerId": "下单须知",
+        "safeBounds": [
+          65,
+          1035,
+          755,
+          29
+        ]
+      },
+      {
+        "containerId": "地图说明",
+        "safeBounds": [
+          65,
+          1120,
+          345,
+          270
+        ]
+      },
+      {
+        "containerId": "装备规范",
+        "safeBounds": [
+          475,
+          1120,
+          344,
+          270
+        ]
+      },
+      {
+        "containerId": "炸单补偿",
+        "safeBounds": [
+          65,
+          1460,
+          345,
+          108
+        ]
+      },
+      {
+        "containerId": "活动限制",
+        "safeBounds": [
+          475,
+          1460,
+          344,
+          108
+        ]
+      },
+      {
+        "containerId": "解释权",
+        "safeBounds": [
+          220,
+          1675,
+          425,
+          27
+        ]
+      }
+    ],
+    "notes": "端游与手游共用已修正版式；超值券模式来自各自content.json，不以底色推断。"
+  },
+  {
+    "id": "mobile-experience",
+    "file": "03-backgrounds/mobile-experience-r2.png",
+    "nativeWidth": 887,
+    "nativeHeight": 1774,
+    "platforms": [
+      "mobile"
+    ],
+    "copySafeZones": [
+      {
+        "containerId": "品牌 / 体验单 / 平台",
+        "safeBounds": [
+          60,
+          80,
+          313,
+          157
+        ]
+      },
+      {
+        "containerId": "新客专享 + UID限制",
+        "safeBounds": [
+          65,
+          395,
+          755,
+          36
+        ]
+      },
+      {
+        "containerId": "新客 · 超值券",
+        "safeBounds": [
+          73,
+          470,
+          283,
+          177
+        ]
+      },
+      {
+        "containerId": "新客 · 机密",
+        "safeBounds": [
+          423,
+          470,
+          160,
+          177
+        ]
+      },
+      {
+        "containerId": "新客 · 绝密",
+        "safeBounds": [
+          645,
+          470,
+          173,
+          177
+        ]
+      },
+      {
+        "containerId": "每日 · 超值券",
+        "safeBounds": [
+          73,
+          785,
+          283,
+          177
+        ]
+      },
+      {
+        "containerId": "每日 · 机密",
+        "safeBounds": [
+          423,
+          785,
+          160,
+          177
+        ]
+      },
+      {
+        "containerId": "每日 · 绝密",
+        "safeBounds": [
+          645,
+          785,
+          173,
+          177
+        ]
+      },
+      {
+        "containerId": "每日一单",
+        "safeBounds": [
+          65,
+          713,
+          755,
+          34
+        ]
+      },
+      {
+        "containerId": "下单须知",
+        "safeBounds": [
+          65,
+          1035,
+          755,
+          29
+        ]
+      },
+      {
+        "containerId": "地图说明",
+        "safeBounds": [
+          65,
+          1120,
+          345,
+          270
+        ]
+      },
+      {
+        "containerId": "装备规范",
+        "safeBounds": [
+          475,
+          1120,
+          344,
+          270
+        ]
+      },
+      {
+        "containerId": "炸单补偿",
+        "safeBounds": [
+          65,
+          1460,
+          345,
+          108
+        ]
+      },
+      {
+        "containerId": "活动限制",
+        "safeBounds": [
+          475,
+          1460,
+          344,
+          108
+        ]
+      },
+      {
+        "containerId": "解释权",
+        "safeBounds": [
+          220,
+          1675,
+          425,
+          27
+        ]
+      }
+    ],
+    "notes": "端游与手游共用已修正版式；超值券模式来自各自content.json，不以底色推断。"
+  }
+]

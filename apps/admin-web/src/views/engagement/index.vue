@@ -161,7 +161,7 @@ onMounted(load)
 .operations-sections .is-active strong { color: var(--primary); }
 .operations-sections span { display: block; margin-top: 5px; color: var(--muted-foreground); font-size: 12px; }
 .operations-workspace { padding: 8px 24px 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); min-width: 0; }
-.operations-workspace :deep(.el-tabs__item) { height: 52px; }
+.operations-workspace :deep(.el-tabs__item) { height: var(--control-height-sm); }
 .operations-workspace :deep(.el-tabs__nav-wrap::after) { height: 1px; }
 .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 22px 0 18px; }
 .toolbar-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }

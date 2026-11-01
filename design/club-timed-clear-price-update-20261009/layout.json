@@ -1,0 +1,4229 @@
+{
+  "version": "timed-clear-mobile-price-r3",
+  "requests": [
+    {
+      "id": "t8ba94919758a81ff6c74",
+      "text": "兴安电竞",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta303226d5b9734805fbc",
+      "text": "限",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t624704a1187c0ac66248",
+      "text": "时",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t893c5f5d70aed3f65082",
+      "text": "清",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "tff112f35285c3ce870a0",
+      "text": "图",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5987677ea6a76fadffef",
+      "text": "单",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t65f0a7d2574ff41adcd2",
+      "text": "手游 · 绝密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t04957b7d9e8be1f7a54b",
+      "text": "绝密航天清图一把",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te8c600f4bb599445f9bf",
+      "text": "订单价格",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6d90b1b37e4b0dc5dee5",
+      "text": "清图时限",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6a151e707c72f2183a37",
+      "text": "108",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t93c49a055a02db78a142",
+      "text": "r",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t0c39938d7682bc9a042c",
+      "text": "常规清图",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t17de5238e28af7b51017",
+      "text": "188",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tcd328d83a54154b5ec0d",
+      "text": "16",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tb3c1a9f0db438b00213d",
+      "text": "分钟内",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td45f8ad478129323e37a",
+      "text": "328",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t8c2126e41cbf5f948962",
+      "text": "14",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t84a0b486e71f6103e735",
+      "text": "468",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tb2280d2ea2a5dec26072",
+      "text": "12",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t2f4fffb8daf4206071f7",
+      "text": "668",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t304bbc48bf26f07dd4c1",
+      "text": "10",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t840f84cf7d266acc0500",
+      "text": "888",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tfae761d22cbf02b7f764",
+      "text": "8",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tc116142e08eac06578b6",
+      "text": "r = 元 / w = 万",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t71b3af22d99ed530dd41",
+      "text": "限时档保障",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tad45987044e80da3e0d8",
+      "text": "超",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "te2da0773263b81feaee8",
+      "text": "未",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t97ec823fe69ad9383d61",
+      "text": "继",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t38970ed6f54c4475b3ac",
+      "text": "续",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t196df8cfe6aeaec3d9ba",
+      "text": "打",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t0bd37118714d42e3b9c9",
+      "text": "在所选档位规定时限内完成清图",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t52221f014e33a06b0c14",
+      "text": "标",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t9838d4b0c65e4dd81b4a",
+      "text": "准",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t46d2d10fa7f7de5dcb2f",
+      "text": "满足其一即可",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t69fa1ce260bff044aea8",
+      "text": "拉闸清图",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t5d276f717fb67265e866",
+      "text": "陪玩拉绝户闸撤离",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t38079b9d4c8595ae28c9",
+      "text": "同时航天无人走飞升",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t477940cd7cf140099db5",
+      "text": "仅丢包可以有人撤离",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t61e720590237d9c51230",
+      "text": "或",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t20e7a70e0aa920c358dd",
+      "text": "击杀清图",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t64051acadee424a8a558",
+      "text": "规定时限内陪玩击杀",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t345abdb53b484f7eec00",
+      "text": "≥",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tb0086ec1704b0291e46e",
+      "text": "人",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t96ce7f5f79c215bde05b",
+      "text": "最低要求 · 成功撤离时",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t9dd29662cfebc47277fc",
+      "text": "缺一不算清图成功",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t2d8ceee4bc9b3bc0a017",
+      "text": "陪玩击杀≥4人",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t53d965ac2e8b58f5755d",
+      "text": "且",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t2a0b942a92c643124c2f",
+      "text": "撤离物资",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "te0c0a3d6d53ef340d0f0",
+      "text": "600",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t802de43ed41324b456d5",
+      "text": "w",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t6cd1b5177299692db846",
+      "text": "下",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t332e117e415daa41281a",
+      "text": "须",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t81b948f69304c94dedc7",
+      "text": "知",
+      "font": "Noto Sans SC Black",
+      "style": 0
+    },
+    {
+      "id": "t5a9308815ee2644acce9",
+      "text": "地图 · 物资 · 房卡 · 速撤",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tbe865225f6201e69b658",
+      "text": "地图选择",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tc8fbcaaa629e1eaaa713",
+      "text": "物资说明",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t6ce47b03f3686245b1f8",
+      "text": "房卡保障",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "tbd90d62a42c0a282a1b7",
+      "text": "打手保障",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t23fbcb6bf8904ef534f5",
+      "text": "本单仅限绝密航天",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "ta202a10826ca4f5431d7",
+      "text": "成功达标前，成功撤离带出物资计入累计物资；",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t4cd8ffe704f390b94d05",
+      "text": "若对应炸单保底大于累计物资保底，",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t486ced206ccfd8f7faba",
+      "text": "则在打满结单条件后，再补保底。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t4b119c21b7aae5283b15",
+      "text": "清图后开卡；未开仍按俱乐部规定补偿。",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t68247f2e777260079fc7",
+      "text": "含航天核心区金红卡，每少一张补偿：",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t2e36c55601a4db7d30ea",
+      "text": "金卡",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t41b1212004a81a286da4",
+      "text": "+200",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t476ccefab8a39a96227e",
+      "text": "红卡",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t88a27db54aec1fa147b6",
+      "text": "+300",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tfafbeb0837f264317386",
+      "text": "规定时限内，打手满足击杀人头数",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0914e0358c2039f98e79",
+      "text": "且物资",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td479cd85dacf97533c5d",
+      "text": ">",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t5ef72ad7026b005ddf11",
+      "text": "900",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t36daf0d896b3e800680f",
+      "text": "→",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t95bdbd724e7e1360f750",
+      "text": "允许速撤",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t0b91a48e2322a181b27d",
+      "text": "下单前请确认地图及订单规则",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td7abb62b1fc096eee161",
+      "text": "手游 · 机密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t39e44146fcac1faa944a",
+      "text": "机密航天清图一把",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t5a3bc000bb7752fd223b",
+      "text": "88",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tcb35f17b0e93830ac617",
+      "text": "128",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t272e357232fbf8252754",
+      "text": "288",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t4dbf6970c3952f41f571",
+      "text": "688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t157149f2c1a7f823b260",
+      "text": "300",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t79c17e7fad4cead78605",
+      "text": "本单仅限机密航天",
+      "font": "Microsoft YaHei UI",
+      "style": 0
+    },
+    {
+      "id": "t0d0ba474d499af9ff868",
+      "text": "+100",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t22ccecf1b4c69f678ccf",
+      "text": "+150",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t43d817007f20884a134f",
+      "text": "500",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t069b092d3beaf49ca60b",
+      "text": "航天清图一把 · 常规 / 限时档",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "ta4eb280cc99ce1280e97",
+      "text": "端游 · 绝密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t65b027a020a7a383b470",
+      "text": "168",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t79023ff0afad36e3dd1d",
+      "text": "388",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "td83b826a28f137bacc2a",
+      "text": "488",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t516fb4ff2600f7c0fc7e",
+      "text": "988",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tb44dab754382164a5fe2",
+      "text": "1688",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "tcb2aabfb6865c77766a2",
+      "text": "端游 · 机密版",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "td96358e6936c615695c7",
+      "text": "588",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t15fac4c013b9602cdeb7",
+      "text": "1488",
+      "font": "Bahnschrift",
+      "style": 1
+    },
+    {
+      "id": "t76325bc8ce1ce0a9fee7",
+      "text": "拉闸清图 或 规定时限内陪玩击杀≥8人",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t4819fa5ff7c3a2fd6532",
+      "text": "成功撤离仍需：陪玩击杀≥4人 且 物资达标",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t943c77b434fbfee50071",
+      "text": "绝密 ≥",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    },
+    {
+      "id": "t9120c25dad2258b83654",
+      "text": "机密 ≥",
+      "font": "Microsoft YaHei UI",
+      "style": 1
+    }
+  ],
+  "pages": [
+    {
+      "id": "mobile-absolute",
+      "label": "手游 · 绝密版 · 限时清图单",
+      "bg": "poster-gold.png",
+      "w": 814,
+      "h": 1933,
+      "ew": 3200,
+      "eh": 7600,
+      "platforms": [
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(58 49.56) scale(0.7857142857142857)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#FFFDF5\" stroke-width=\"7\"/><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 87.7,
+          "cy": 61,
+          "size": 22,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "限时",
+          "x": 60,
+          "cy": 128,
+          "size": 78,
+          "maxWidth": 235,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "ta303226d5b9734805fbc",
+            "t624704a1187c0ac66248"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "清图单",
+          "x": 51,
+          "cy": 216,
+          "size": 74,
+          "maxWidth": 255,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t65f0a7d2574ff41adcd2",
+          "text": "手游 · 绝密版",
+          "x": 190,
+          "cy": 293,
+          "size": 24.3,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 264,
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "t04957b7d9e8be1f7a54b",
+          "text": "绝密航天清图一把",
+          "x": 222,
+          "cy": 362,
+          "size": 18.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 193,
+          "role": "service"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 260,
+          "cy": 423.5,
+          "size": 21.3,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6d90b1b37e4b0dc5dee5",
+          "text": "清图时限",
+          "x": 631,
+          "cy": 423.5,
+          "size": 21.3,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6a151e707c72f2183a37",
+          "text": "108",
+          "x": 297,
+          "cy": 475,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:475"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 475,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:475"
+        },
+        {
+          "type": "text",
+          "id": "t0c39938d7682bc9a042c",
+          "text": "常规清图",
+          "x": 631,
+          "cy": 475,
+          "size": 28.5,
+          "fill": "#55788B",
+          "anchor": "middle",
+          "role": "regular-tier"
+        },
+        {
+          "type": "text",
+          "id": "t17de5238e28af7b51017",
+          "text": "188",
+          "x": 297,
+          "cy": 531,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:531"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 531,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:531"
+        },
+        {
+          "type": "text",
+          "id": "tcd328d83a54154b5ec0d",
+          "text": "16",
+          "x": 612,
+          "cy": 531,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:531"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 531,
+          "size": 23.5,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:531"
+        },
+        {
+          "type": "text",
+          "id": "td45f8ad478129323e37a",
+          "text": "328",
+          "x": 297,
+          "cy": 587,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:587"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 587,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:587"
+        },
+        {
+          "type": "text",
+          "id": "t8c2126e41cbf5f948962",
+          "text": "14",
+          "x": 612,
+          "cy": 587,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:587"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 587,
+          "size": 23.5,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:587"
+        },
+        {
+          "type": "text",
+          "id": "t84a0b486e71f6103e735",
+          "text": "468",
+          "x": 297,
+          "cy": 642.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:642.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 642.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:642.5"
+        },
+        {
+          "type": "text",
+          "id": "tb2280d2ea2a5dec26072",
+          "text": "12",
+          "x": 612,
+          "cy": 642.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:642.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 642.5,
+          "size": 23.5,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:642.5"
+        },
+        {
+          "type": "text",
+          "id": "t2f4fffb8daf4206071f7",
+          "text": "668",
+          "x": 297,
+          "cy": 698.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:698.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 698.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:698.5"
+        },
+        {
+          "type": "text",
+          "id": "t304bbc48bf26f07dd4c1",
+          "text": "10",
+          "x": 612,
+          "cy": 698.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:698.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 698.5,
+          "size": 23.5,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:698.5"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 297,
+          "cy": 754.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:754.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 754.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:754.5"
+        },
+        {
+          "type": "text",
+          "id": "tfae761d22cbf02b7f764",
+          "text": "8",
+          "x": 612,
+          "cy": 754.5,
+          "size": 50,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:754.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 754.5,
+          "size": 23.5,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:754.5"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 759,
+          "cy": 791,
+          "size": 9.8,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "text",
+          "id": "t71b3af22d99ed530dd41",
+          "text": "限时档保障",
+          "x": 161,
+          "cy": 816,
+          "size": 13.8,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "guarantee-scope"
+        },
+        {
+          "type": "art",
+          "text": "超时未清图继续打",
+          "x": 160,
+          "cy": 846,
+          "size": 36,
+          "maxWidth": 581,
+          "fill": "#A8651B",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.6,
+          "angles": false,
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "t624704a1187c0ac66248",
+            "te2da0773263b81feaee8",
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t0bd37118714d42e3b9c9",
+          "text": "在所选档位规定时限内完成清图",
+          "x": 161,
+          "cy": 878,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 580,
+          "role": "guarantee-condition"
+        },
+        {
+          "type": "art",
+          "text": "清图标准",
+          "x": 67,
+          "cy": 934,
+          "size": 25,
+          "maxWidth": 210,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t52221f014e33a06b0c14",
+            "t9838d4b0c65e4dd81b4a"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t46d2d10fa7f7de5dcb2f",
+          "text": "满足其一即可",
+          "x": 747,
+          "cy": 934,
+          "size": 17.2,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 420,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "t69fa1ce260bff044aea8",
+          "text": "拉闸清图",
+          "x": 145,
+          "cy": 1013,
+          "size": 25,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 224,
+          "role": "method-title"
+        },
+        {
+          "type": "text",
+          "id": "t5d276f717fb67265e866",
+          "text": "陪玩拉绝户闸撤离",
+          "x": 222,
+          "cy": 1075,
+          "size": 19.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 300,
+          "role": "lever-conditions"
+        },
+        {
+          "type": "text",
+          "id": "t38079b9d4c8595ae28c9",
+          "text": "同时航天无人走飞升",
+          "x": 222,
+          "cy": 1101,
+          "size": 19.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 300,
+          "role": "lever-conditions"
+        },
+        {
+          "type": "text",
+          "id": "t477940cd7cf140099db5",
+          "text": "仅丢包可以有人撤离",
+          "x": 222,
+          "cy": 1127,
+          "size": 19.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 300,
+          "role": "lever-conditions"
+        },
+        {
+          "type": "text",
+          "id": "t61e720590237d9c51230",
+          "text": "或",
+          "x": 407,
+          "cy": 1076,
+          "size": 24.5,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "method-operator"
+        },
+        {
+          "type": "text",
+          "id": "t20e7a70e0aa920c358dd",
+          "text": "击杀清图",
+          "x": 507,
+          "cy": 1013,
+          "size": 25,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 235,
+          "role": "method-title"
+        },
+        {
+          "type": "text",
+          "id": "t64051acadee424a8a558",
+          "text": "规定时限内陪玩击杀",
+          "x": 592,
+          "cy": 1059,
+          "size": 18.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 290,
+          "role": "kill-deadline"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"469\" y=\"1080\" width=\"246\" height=\"64\" rx=\"9\" fill=\"#A8651B\" fill-opacity=\"0.07\" stroke=\"#A8651B\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 592,
+          "cy": 1112,
+          "anchor": "middle",
+          "size": 20,
+          "role": "kill-goal",
+          "group": "kill-goal:592:1112",
+          "runs": [
+            {
+              "text": "≥",
+              "id": "t345abdb53b484f7eec00",
+              "size": 30,
+              "fill": "#A8651B",
+              "gap": 8,
+              "role": "kill-comparison"
+            },
+            {
+              "text": "8",
+              "id": "tfae761d22cbf02b7f764",
+              "size": 53,
+              "fill": "#A8651B",
+              "gap": 10,
+              "role": "kill-target-number"
+            },
+            {
+              "text": "人",
+              "id": "tb0086ec1704b0291e46e",
+              "size": 28,
+              "fill": "#A8651B",
+              "gap": 8,
+              "role": "kill-target-unit"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t96ce7f5f79c215bde05b",
+          "text": "最低要求 · 成功撤离时",
+          "x": 155,
+          "cy": 1192,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "minimum-scope"
+        },
+        {
+          "type": "text",
+          "id": "t9dd29662cfebc47277fc",
+          "text": "缺一不算清图成功",
+          "x": 747,
+          "cy": 1192,
+          "size": 13.8,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "minimum-failure"
+        },
+        {
+          "type": "rich",
+          "x": 654,
+          "cy": 1225,
+          "anchor": "end",
+          "maxWidth": 592,
+          "size": 20,
+          "role": "minimum-requirements",
+          "group": "minimum-requirements:654:1225",
+          "runs": [
+            {
+              "text": "陪玩击杀≥4人",
+              "id": "t2d8ceee4bc9b3bc0a017",
+              "size": 23,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "minimum-kills"
+            },
+            {
+              "text": "且",
+              "id": "t53d965ac2e8b58f5755d",
+              "size": 22,
+              "fill": "#A8651B",
+              "gap": 22,
+              "role": "minimum-operator"
+            },
+            {
+              "text": "撤离物资",
+              "id": "t2a0b942a92c643124c2f",
+              "size": 21,
+              "fill": "#203F53",
+              "gap": 22,
+              "role": "minimum-loot-label"
+            },
+            {
+              "text": "≥",
+              "id": "t345abdb53b484f7eec00",
+              "size": 26,
+              "fill": "#A8651B",
+              "gap": 9,
+              "role": "minimum-loot-comparison"
+            },
+            {
+              "text": "600",
+              "id": "te0c0a3d6d53ef340d0f0",
+              "size": 34,
+              "fill": "#A8651B",
+              "gap": 8,
+              "role": "minimum-loot-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 32.45,
+              "fill": "#A8651B",
+              "gap": 7,
+              "role": "minimum-loot-unit"
+            }
+          ]
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 67,
+          "cy": 1288,
+          "size": 25,
+          "maxWidth": 210,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t5a9308815ee2644acce9",
+          "text": "地图 · 物资 · 房卡 · 速撤",
+          "x": 747,
+          "cy": 1288,
+          "size": 17.2,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 420,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "tbe865225f6201e69b658",
+          "text": "地图选择",
+          "x": 171,
+          "cy": 1358.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tc8fbcaaa629e1eaaa713",
+          "text": "物资说明",
+          "x": 171,
+          "cy": 1450.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t6ce47b03f3686245b1f8",
+          "text": "房卡保障",
+          "x": 171,
+          "cy": 1572.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tbd90d62a42c0a282a1b7",
+          "text": "打手保障",
+          "x": 171,
+          "cy": 1702.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t23fbcb6bf8904ef534f5",
+          "text": "本单仅限绝密航天",
+          "x": 293,
+          "cy": 1358.5,
+          "size": 21,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "ta202a10826ca4f5431d7",
+          "text": "成功达标前，成功撤离带出物资计入累计物资；",
+          "x": 293,
+          "cy": 1424.5,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "loot-compensation"
+        },
+        {
+          "type": "text",
+          "id": "t4cd8ffe704f390b94d05",
+          "text": "若对应炸单保底大于累计物资保底，",
+          "x": 293,
+          "cy": 1450.5,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "loot-compensation"
+        },
+        {
+          "type": "text",
+          "id": "t486ced206ccfd8f7faba",
+          "text": "则在打满结单条件后，再补保底。",
+          "x": 293,
+          "cy": 1476.5,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "loot-compensation"
+        },
+        {
+          "type": "text",
+          "id": "t4b119c21b7aae5283b15",
+          "text": "清图后开卡；未开仍按俱乐部规定补偿。",
+          "x": 293,
+          "cy": 1532,
+          "size": 17.4,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "card-timing"
+        },
+        {
+          "type": "text",
+          "id": "t68247f2e777260079fc7",
+          "text": "含航天核心区金红卡，每少一张补偿：",
+          "x": 293,
+          "cy": 1558,
+          "size": 17.4,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "included-cards"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"293\" y=\"1580\" width=\"218\" height=\"43\" rx=\"9\" fill=\"#A8651B\" fill-opacity=\"0.07\" stroke=\"#A8651B\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 471,
+          "cy": 1601.5,
+          "anchor": "end",
+          "maxWidth": 196,
+          "size": 20,
+          "role": "card-compensation",
+          "group": "card-compensation:471:1601.5",
+          "runs": [
+            {
+              "text": "金卡",
+              "id": "t2e36c55601a4db7d30ea",
+              "size": 20,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "missing-card"
+            },
+            {
+              "text": "+200",
+              "id": "t41b1212004a81a286da4",
+              "size": 28.8,
+              "fill": "#A8651B",
+              "gap": 14,
+              "role": "missing-card-compensation-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 27.5,
+              "fill": "#A8651B",
+              "gap": 6,
+              "role": "missing-card-compensation-unit"
+            }
+          ]
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"529\" y=\"1580\" width=\"218\" height=\"43\" rx=\"9\" fill=\"#A8651B\" fill-opacity=\"0.07\" stroke=\"#A8651B\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 707,
+          "cy": 1601.5,
+          "anchor": "end",
+          "maxWidth": 196,
+          "size": 20,
+          "role": "card-compensation",
+          "group": "card-compensation:707:1601.5",
+          "runs": [
+            {
+              "text": "红卡",
+              "id": "t476ccefab8a39a96227e",
+              "size": 20,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "missing-card"
+            },
+            {
+              "text": "+300",
+              "id": "t88a27db54aec1fa147b6",
+              "size": 28.8,
+              "fill": "#A8651B",
+              "gap": 14,
+              "role": "missing-card-compensation-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 27.5,
+              "fill": "#A8651B",
+              "gap": 6,
+              "role": "missing-card-compensation-unit"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "tfafbeb0837f264317386",
+          "text": "规定时限内，打手满足击杀人头数",
+          "x": 520,
+          "cy": 1670,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 454,
+          "role": "quick-extraction-condition"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"293\" y=\"1693\" width=\"454\" height=\"48\" rx=\"9\" fill=\"#A8651B\" fill-opacity=\"0.07\" stroke=\"#A8651B\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 677,
+          "cy": 1717,
+          "anchor": "end",
+          "maxWidth": 422,
+          "size": 20,
+          "role": "quick-extraction-summary",
+          "group": "quick-extraction-summary:677:1717",
+          "runs": [
+            {
+              "text": "且物资",
+              "id": "t0914e0358c2039f98e79",
+              "size": 21,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "quick-extraction-and"
+            },
+            {
+              "text": ">",
+              "id": "td479cd85dacf97533c5d",
+              "size": 27,
+              "fill": "#A8651B",
+              "gap": 10,
+              "role": "quick-extraction-comparison"
+            },
+            {
+              "text": "900",
+              "id": "t5ef72ad7026b005ddf11",
+              "size": 32,
+              "fill": "#A8651B",
+              "gap": 8,
+              "role": "quick-extraction-loot-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 30.55,
+              "fill": "#A8651B",
+              "gap": 6,
+              "role": "quick-extraction-loot-unit"
+            },
+            {
+              "text": "→",
+              "id": "t36daf0d896b3e800680f",
+              "size": 22,
+              "fill": "#A8651B",
+              "gap": 16,
+              "role": "quick-extraction-summary"
+            },
+            {
+              "text": "允许速撤",
+              "id": "t95bdbd724e7e1360f750",
+              "size": 23,
+              "fill": "#A8651B",
+              "gap": 16,
+              "role": "quick-extraction-result"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 407,
+          "cy": 1808,
+          "size": 14.5,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 385,
+          "role": "footer"
+        }
+      ],
+      "alignment": {
+        "rowEdges": [
+          447,
+          503,
+          559,
+          615,
+          670,
+          727,
+          782
+        ],
+        "rowCenters": [
+          475,
+          531,
+          587,
+          642.5,
+          698.5,
+          754.5
+        ],
+        "priceUnitColumn": 305,
+        "deadlineUnitColumn": 621,
+        "priceGap": 8,
+        "deadlineGap": 9,
+        "vertical": "visible glyph center",
+        "rightIcons": false
+      }
+    },
+    {
+      "id": "mobile-secret",
+      "label": "手游 · 机密版 · 限时清图单",
+      "bg": "poster-teal.png",
+      "w": 814,
+      "h": 1932,
+      "ew": 3200,
+      "eh": 7600,
+      "platforms": [
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(58 49.56) scale(0.7857142857142857)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#FFFDF5\" stroke-width=\"7\"/><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 87.7,
+          "cy": 61,
+          "size": 22,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "限时",
+          "x": 60,
+          "cy": 128,
+          "size": 78,
+          "maxWidth": 235,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "ta303226d5b9734805fbc",
+            "t624704a1187c0ac66248"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "清图单",
+          "x": 51,
+          "cy": 216,
+          "size": 74,
+          "maxWidth": 255,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 3.8,
+          "angles": true,
+          "ids": [
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "td7abb62b1fc096eee161",
+          "text": "手游 · 机密版",
+          "x": 190,
+          "cy": 293,
+          "size": 24.3,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "maxWidth": 264,
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "t39e44146fcac1faa944a",
+          "text": "机密航天清图一把",
+          "x": 222,
+          "cy": 362,
+          "size": 18.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 193,
+          "role": "service"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 260,
+          "cy": 423.5,
+          "size": 21.3,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6d90b1b37e4b0dc5dee5",
+          "text": "清图时限",
+          "x": 631,
+          "cy": 423.5,
+          "size": 21.3,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t5a3bc000bb7752fd223b",
+          "text": "88",
+          "x": 297,
+          "cy": 475,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:475"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 475,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:475"
+        },
+        {
+          "type": "text",
+          "id": "t0c39938d7682bc9a042c",
+          "text": "常规清图",
+          "x": 631,
+          "cy": 475,
+          "size": 28.5,
+          "fill": "#55788B",
+          "anchor": "middle",
+          "role": "regular-tier"
+        },
+        {
+          "type": "text",
+          "id": "tcb35f17b0e93830ac617",
+          "text": "128",
+          "x": 297,
+          "cy": 531,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:531"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 531,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:531"
+        },
+        {
+          "type": "text",
+          "id": "tcd328d83a54154b5ec0d",
+          "text": "16",
+          "x": 612,
+          "cy": 531,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:531"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 531,
+          "size": 23.5,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:531"
+        },
+        {
+          "type": "text",
+          "id": "t17de5238e28af7b51017",
+          "text": "188",
+          "x": 297,
+          "cy": 587,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:587"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 587,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:587"
+        },
+        {
+          "type": "text",
+          "id": "t8c2126e41cbf5f948962",
+          "text": "14",
+          "x": 612,
+          "cy": 587,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:587"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 587,
+          "size": 23.5,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:587"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 297,
+          "cy": 642.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:642.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 642.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:642.5"
+        },
+        {
+          "type": "text",
+          "id": "tb2280d2ea2a5dec26072",
+          "text": "12",
+          "x": 612,
+          "cy": 642.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:642.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 642.5,
+          "size": 23.5,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:642.5"
+        },
+        {
+          "type": "text",
+          "id": "t84a0b486e71f6103e735",
+          "text": "468",
+          "x": 297,
+          "cy": 698.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:698.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 698.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:698.5"
+        },
+        {
+          "type": "text",
+          "id": "t304bbc48bf26f07dd4c1",
+          "text": "10",
+          "x": 612,
+          "cy": 698.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:698.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 698.5,
+          "size": 23.5,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:698.5"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 297,
+          "cy": 754.5,
+          "size": 48,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:305:754.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 305,
+          "cy": 754.5,
+          "size": 45.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:305:754.5"
+        },
+        {
+          "type": "text",
+          "id": "tfae761d22cbf02b7f764",
+          "text": "8",
+          "x": 612,
+          "cy": 754.5,
+          "size": 50,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:621:754.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 621,
+          "cy": 754.5,
+          "size": 23.5,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:621:754.5"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 759,
+          "cy": 791,
+          "size": 9.8,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "units"
+        },
+        {
+          "type": "text",
+          "id": "t71b3af22d99ed530dd41",
+          "text": "限时档保障",
+          "x": 161,
+          "cy": 816,
+          "size": 13.8,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "guarantee-scope"
+        },
+        {
+          "type": "art",
+          "text": "超时未清图继续打",
+          "x": 160,
+          "cy": 846,
+          "size": 36,
+          "maxWidth": 581,
+          "fill": "#117D72",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.6,
+          "angles": false,
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "t624704a1187c0ac66248",
+            "te2da0773263b81feaee8",
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t0bd37118714d42e3b9c9",
+          "text": "在所选档位规定时限内完成清图",
+          "x": 161,
+          "cy": 878,
+          "size": 15.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 580,
+          "role": "guarantee-condition"
+        },
+        {
+          "type": "art",
+          "text": "清图标准",
+          "x": 67,
+          "cy": 934,
+          "size": 25,
+          "maxWidth": 210,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t52221f014e33a06b0c14",
+            "t9838d4b0c65e4dd81b4a"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t46d2d10fa7f7de5dcb2f",
+          "text": "满足其一即可",
+          "x": 747,
+          "cy": 934,
+          "size": 17.2,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 420,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "t69fa1ce260bff044aea8",
+          "text": "拉闸清图",
+          "x": 145,
+          "cy": 1013,
+          "size": 25,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 224,
+          "role": "method-title"
+        },
+        {
+          "type": "text",
+          "id": "t5d276f717fb67265e866",
+          "text": "陪玩拉绝户闸撤离",
+          "x": 222,
+          "cy": 1075,
+          "size": 19.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 300,
+          "role": "lever-conditions"
+        },
+        {
+          "type": "text",
+          "id": "t38079b9d4c8595ae28c9",
+          "text": "同时航天无人走飞升",
+          "x": 222,
+          "cy": 1101,
+          "size": 19.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 300,
+          "role": "lever-conditions"
+        },
+        {
+          "type": "text",
+          "id": "t477940cd7cf140099db5",
+          "text": "仅丢包可以有人撤离",
+          "x": 222,
+          "cy": 1127,
+          "size": 19.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 300,
+          "role": "lever-conditions"
+        },
+        {
+          "type": "text",
+          "id": "t61e720590237d9c51230",
+          "text": "或",
+          "x": 407,
+          "cy": 1076,
+          "size": 24.5,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "method-operator"
+        },
+        {
+          "type": "text",
+          "id": "t20e7a70e0aa920c358dd",
+          "text": "击杀清图",
+          "x": 507,
+          "cy": 1013,
+          "size": 25,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 235,
+          "role": "method-title"
+        },
+        {
+          "type": "text",
+          "id": "t64051acadee424a8a558",
+          "text": "规定时限内陪玩击杀",
+          "x": 592,
+          "cy": 1059,
+          "size": 18.8,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 290,
+          "role": "kill-deadline"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"469\" y=\"1080\" width=\"246\" height=\"64\" rx=\"9\" fill=\"#117D72\" fill-opacity=\"0.07\" stroke=\"#117D72\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 592,
+          "cy": 1112,
+          "anchor": "middle",
+          "size": 20,
+          "role": "kill-goal",
+          "group": "kill-goal:592:1112",
+          "runs": [
+            {
+              "text": "≥",
+              "id": "t345abdb53b484f7eec00",
+              "size": 30,
+              "fill": "#117D72",
+              "gap": 8,
+              "role": "kill-comparison"
+            },
+            {
+              "text": "8",
+              "id": "tfae761d22cbf02b7f764",
+              "size": 53,
+              "fill": "#117D72",
+              "gap": 10,
+              "role": "kill-target-number"
+            },
+            {
+              "text": "人",
+              "id": "tb0086ec1704b0291e46e",
+              "size": 28,
+              "fill": "#117D72",
+              "gap": 8,
+              "role": "kill-target-unit"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t96ce7f5f79c215bde05b",
+          "text": "最低要求 · 成功撤离时",
+          "x": 155,
+          "cy": 1192,
+          "size": 13.8,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "minimum-scope"
+        },
+        {
+          "type": "text",
+          "id": "t9dd29662cfebc47277fc",
+          "text": "缺一不算清图成功",
+          "x": 747,
+          "cy": 1192,
+          "size": 13.8,
+          "fill": "#55788B",
+          "anchor": "end",
+          "role": "minimum-failure"
+        },
+        {
+          "type": "rich",
+          "x": 654,
+          "cy": 1225,
+          "anchor": "end",
+          "maxWidth": 592,
+          "size": 20,
+          "role": "minimum-requirements",
+          "group": "minimum-requirements:654:1225",
+          "runs": [
+            {
+              "text": "陪玩击杀≥4人",
+              "id": "t2d8ceee4bc9b3bc0a017",
+              "size": 23,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "minimum-kills"
+            },
+            {
+              "text": "且",
+              "id": "t53d965ac2e8b58f5755d",
+              "size": 22,
+              "fill": "#117D72",
+              "gap": 22,
+              "role": "minimum-operator"
+            },
+            {
+              "text": "撤离物资",
+              "id": "t2a0b942a92c643124c2f",
+              "size": 21,
+              "fill": "#203F53",
+              "gap": 22,
+              "role": "minimum-loot-label"
+            },
+            {
+              "text": "≥",
+              "id": "t345abdb53b484f7eec00",
+              "size": 26,
+              "fill": "#117D72",
+              "gap": 9,
+              "role": "minimum-loot-comparison"
+            },
+            {
+              "text": "300",
+              "id": "t157149f2c1a7f823b260",
+              "size": 34,
+              "fill": "#117D72",
+              "gap": 8,
+              "role": "minimum-loot-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 32.45,
+              "fill": "#117D72",
+              "gap": 7,
+              "role": "minimum-loot-unit"
+            }
+          ]
+        },
+        {
+          "type": "art",
+          "text": "下单须知",
+          "x": 67,
+          "cy": 1288,
+          "size": 25,
+          "maxWidth": 210,
+          "fill": "#FFFDF5",
+          "shadow": "#142E42",
+          "outline": "#203F53",
+          "outlineWidth": 0.6,
+          "angles": false,
+          "ids": [
+            "t6cd1b5177299692db846",
+            "t5987677ea6a76fadffef",
+            "t332e117e415daa41281a",
+            "t81b948f69304c94dedc7"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t5a9308815ee2644acce9",
+          "text": "地图 · 物资 · 房卡 · 速撤",
+          "x": 747,
+          "cy": 1288,
+          "size": 17.2,
+          "fill": "#E5F0F5",
+          "anchor": "end",
+          "maxWidth": 420,
+          "role": "section-condition"
+        },
+        {
+          "type": "text",
+          "id": "tbe865225f6201e69b658",
+          "text": "地图选择",
+          "x": 171,
+          "cy": 1358.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tc8fbcaaa629e1eaaa713",
+          "text": "物资说明",
+          "x": 171,
+          "cy": 1450.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t6ce47b03f3686245b1f8",
+          "text": "房卡保障",
+          "x": 171,
+          "cy": 1572.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "tbd90d62a42c0a282a1b7",
+          "text": "打手保障",
+          "x": 171,
+          "cy": 1702.5,
+          "size": 18.7,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 110,
+          "role": "rule-label"
+        },
+        {
+          "type": "text",
+          "id": "t79c17e7fad4cead78605",
+          "text": "本单仅限机密航天",
+          "x": 293,
+          "cy": 1358.5,
+          "size": 21,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "map-restriction"
+        },
+        {
+          "type": "text",
+          "id": "ta202a10826ca4f5431d7",
+          "text": "成功达标前，成功撤离带出物资计入累计物资；",
+          "x": 293,
+          "cy": 1424.5,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "loot-compensation"
+        },
+        {
+          "type": "text",
+          "id": "t4cd8ffe704f390b94d05",
+          "text": "若对应炸单保底大于累计物资保底，",
+          "x": 293,
+          "cy": 1450.5,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "loot-compensation"
+        },
+        {
+          "type": "text",
+          "id": "t486ced206ccfd8f7faba",
+          "text": "则在打满结单条件后，再补保底。",
+          "x": 293,
+          "cy": 1476.5,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "loot-compensation"
+        },
+        {
+          "type": "text",
+          "id": "t4b119c21b7aae5283b15",
+          "text": "清图后开卡；未开仍按俱乐部规定补偿。",
+          "x": 293,
+          "cy": 1532,
+          "size": 17.4,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "card-timing"
+        },
+        {
+          "type": "text",
+          "id": "t68247f2e777260079fc7",
+          "text": "含航天核心区金红卡，每少一张补偿：",
+          "x": 293,
+          "cy": 1558,
+          "size": 17.4,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 454,
+          "role": "included-cards"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"293\" y=\"1580\" width=\"218\" height=\"43\" rx=\"9\" fill=\"#117D72\" fill-opacity=\"0.07\" stroke=\"#117D72\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 471,
+          "cy": 1601.5,
+          "anchor": "end",
+          "maxWidth": 196,
+          "size": 20,
+          "role": "card-compensation",
+          "group": "card-compensation:471:1601.5",
+          "runs": [
+            {
+              "text": "金卡",
+              "id": "t2e36c55601a4db7d30ea",
+              "size": 20,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "missing-card"
+            },
+            {
+              "text": "+100",
+              "id": "t0d0ba474d499af9ff868",
+              "size": 28.8,
+              "fill": "#117D72",
+              "gap": 14,
+              "role": "missing-card-compensation-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 27.5,
+              "fill": "#117D72",
+              "gap": 6,
+              "role": "missing-card-compensation-unit"
+            }
+          ]
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"529\" y=\"1580\" width=\"218\" height=\"43\" rx=\"9\" fill=\"#117D72\" fill-opacity=\"0.07\" stroke=\"#117D72\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 707,
+          "cy": 1601.5,
+          "anchor": "end",
+          "maxWidth": 196,
+          "size": 20,
+          "role": "card-compensation",
+          "group": "card-compensation:707:1601.5",
+          "runs": [
+            {
+              "text": "红卡",
+              "id": "t476ccefab8a39a96227e",
+              "size": 20,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "missing-card"
+            },
+            {
+              "text": "+150",
+              "id": "t22ccecf1b4c69f678ccf",
+              "size": 28.8,
+              "fill": "#117D72",
+              "gap": 14,
+              "role": "missing-card-compensation-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 27.5,
+              "fill": "#117D72",
+              "gap": 6,
+              "role": "missing-card-compensation-unit"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "tfafbeb0837f264317386",
+          "text": "规定时限内，打手满足击杀人头数",
+          "x": 520,
+          "cy": 1670,
+          "size": 18.2,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 454,
+          "role": "quick-extraction-condition"
+        },
+        {
+          "type": "raw",
+          "markup": "<rect x=\"293\" y=\"1693\" width=\"454\" height=\"48\" rx=\"9\" fill=\"#117D72\" fill-opacity=\"0.07\" stroke=\"#117D72\" stroke-opacity=\"0.14\" stroke-width=\"0.8\"/>"
+        },
+        {
+          "type": "rich",
+          "x": 677,
+          "cy": 1717,
+          "anchor": "end",
+          "maxWidth": 422,
+          "size": 20,
+          "role": "quick-extraction-summary",
+          "group": "quick-extraction-summary:677:1717",
+          "runs": [
+            {
+              "text": "且物资",
+              "id": "t0914e0358c2039f98e79",
+              "size": 21,
+              "fill": "#203F53",
+              "gap": 8,
+              "role": "quick-extraction-and"
+            },
+            {
+              "text": ">",
+              "id": "td479cd85dacf97533c5d",
+              "size": 27,
+              "fill": "#117D72",
+              "gap": 10,
+              "role": "quick-extraction-comparison"
+            },
+            {
+              "text": "500",
+              "id": "t43d817007f20884a134f",
+              "size": 32,
+              "fill": "#117D72",
+              "gap": 8,
+              "role": "quick-extraction-loot-number"
+            },
+            {
+              "text": "w",
+              "id": "t802de43ed41324b456d5",
+              "size": 30.55,
+              "fill": "#117D72",
+              "gap": 6,
+              "role": "quick-extraction-loot-unit"
+            },
+            {
+              "text": "→",
+              "id": "t36daf0d896b3e800680f",
+              "size": 22,
+              "fill": "#117D72",
+              "gap": 16,
+              "role": "quick-extraction-summary"
+            },
+            {
+              "text": "允许速撤",
+              "id": "t95bdbd724e7e1360f750",
+              "size": 23,
+              "fill": "#117D72",
+              "gap": 16,
+              "role": "quick-extraction-result"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t0b91a48e2322a181b27d",
+          "text": "下单前请确认地图及订单规则",
+          "x": 407,
+          "cy": 1808,
+          "size": 14.5,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 385,
+          "role": "footer"
+        }
+      ],
+      "alignment": {
+        "rowEdges": [
+          447,
+          503,
+          559,
+          615,
+          670,
+          727,
+          782
+        ],
+        "rowCenters": [
+          475,
+          531,
+          587,
+          642.5,
+          698.5,
+          754.5
+        ],
+        "priceUnitColumn": 305,
+        "deadlineUnitColumn": 621,
+        "priceGap": 8,
+        "deadlineGap": 9,
+        "vertical": "visible glyph center",
+        "rightIcons": false
+      }
+    },
+    {
+      "id": "social",
+      "label": "限时清图单 · 简洁宣发海报",
+      "bg": "social.png",
+      "w": 1086,
+      "h": 1448,
+      "ew": 2400,
+      "eh": 3200,
+      "platforms": [
+        "desktop",
+        "mobile"
+      ],
+      "elements": [
+        {
+          "type": "raw",
+          "markup": "<g transform=\"translate(62 50.96) scale(0.9642857142857143)\" fill=\"none\" stroke-linejoin=\"round\"><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#FFFDF5\" stroke-width=\"7\"/><path d=\"M0 27L15 0L31 27Z M8 22L15 10L23 22Z\" stroke=\"#203F53\" stroke-width=\"2.1\"/></g>"
+        },
+        {
+          "type": "text",
+          "id": "t8ba94919758a81ff6c74",
+          "text": "兴安电竞",
+          "x": 98.45,
+          "cy": 65,
+          "size": 27,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "brand",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 3
+        },
+        {
+          "type": "art",
+          "text": "限时",
+          "x": 68,
+          "cy": 166,
+          "size": 101,
+          "maxWidth": 320,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 4,
+          "angles": true,
+          "ids": [
+            "ta303226d5b9734805fbc",
+            "t624704a1187c0ac66248"
+          ]
+        },
+        {
+          "type": "art",
+          "text": "清图单",
+          "x": 53,
+          "cy": 277,
+          "size": 101,
+          "maxWidth": 348,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 4.3,
+          "angles": true,
+          "ids": [
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t5987677ea6a76fadffef"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t069b092d3beaf49ca60b",
+          "text": "航天清图一把 · 常规 / 限时档",
+          "x": 156,
+          "cy": 387,
+          "size": 26,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 846,
+          "role": "service"
+        },
+        {
+          "type": "text",
+          "id": "ta4eb280cc99ce1280e97",
+          "text": "端游 · 绝密版",
+          "x": 291.5,
+          "cy": 451.5,
+          "size": 22.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 179,
+          "cy": 489,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6d90b1b37e4b0dc5dee5",
+          "text": "清图时限",
+          "x": 397,
+          "cy": 489,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t65b027a020a7a383b470",
+          "text": "168",
+          "x": 201,
+          "cy": 532,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:532"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 532,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:532"
+        },
+        {
+          "type": "text",
+          "id": "t0c39938d7682bc9a042c",
+          "text": "常规清图",
+          "x": 397,
+          "cy": 532,
+          "size": 24,
+          "fill": "#55788B",
+          "anchor": "middle",
+          "role": "regular-tier"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 201,
+          "cy": 577,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:577"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 577,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:577"
+        },
+        {
+          "type": "text",
+          "id": "tcd328d83a54154b5ec0d",
+          "text": "16",
+          "x": 387,
+          "cy": 577,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:577"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 577,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:577"
+        },
+        {
+          "type": "text",
+          "id": "td83b826a28f137bacc2a",
+          "text": "488",
+          "x": 201,
+          "cy": 622.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:622.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 622.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:622.5"
+        },
+        {
+          "type": "text",
+          "id": "t8c2126e41cbf5f948962",
+          "text": "14",
+          "x": 387,
+          "cy": 622.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:622.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 622.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:622.5"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 201,
+          "cy": 667.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:667.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 667.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:667.5"
+        },
+        {
+          "type": "text",
+          "id": "tb2280d2ea2a5dec26072",
+          "text": "12",
+          "x": 387,
+          "cy": 667.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:667.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 667.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:667.5"
+        },
+        {
+          "type": "text",
+          "id": "t516fb4ff2600f7c0fc7e",
+          "text": "988",
+          "x": 201,
+          "cy": 712.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:712.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 712.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:712.5"
+        },
+        {
+          "type": "text",
+          "id": "t304bbc48bf26f07dd4c1",
+          "text": "10",
+          "x": 387,
+          "cy": 712.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:712.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 712.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:712.5"
+        },
+        {
+          "type": "text",
+          "id": "tb44dab754382164a5fe2",
+          "text": "1688",
+          "x": 201,
+          "cy": 757.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:757.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 757.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:757.5"
+        },
+        {
+          "type": "text",
+          "id": "tfae761d22cbf02b7f764",
+          "text": "8",
+          "x": 387,
+          "cy": 757.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:757.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 757.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:757.5"
+        },
+        {
+          "type": "text",
+          "id": "tcb2aabfb6865c77766a2",
+          "text": "端游 · 机密版",
+          "x": 794.5,
+          "cy": 451.5,
+          "size": 22.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 682,
+          "cy": 489,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6d90b1b37e4b0dc5dee5",
+          "text": "清图时限",
+          "x": 897.5,
+          "cy": 489,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6a151e707c72f2183a37",
+          "text": "108",
+          "x": 704,
+          "cy": 532,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:532"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 532,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:532"
+        },
+        {
+          "type": "text",
+          "id": "t0c39938d7682bc9a042c",
+          "text": "常规清图",
+          "x": 897.5,
+          "cy": 532,
+          "size": 24,
+          "fill": "#55788B",
+          "anchor": "middle",
+          "role": "regular-tier"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 704,
+          "cy": 577,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:577"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 577,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:577"
+        },
+        {
+          "type": "text",
+          "id": "tcd328d83a54154b5ec0d",
+          "text": "16",
+          "x": 885,
+          "cy": 577,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:577"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 577,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:577"
+        },
+        {
+          "type": "text",
+          "id": "t79023ff0afad36e3dd1d",
+          "text": "388",
+          "x": 704,
+          "cy": 622.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:622.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 622.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:622.5"
+        },
+        {
+          "type": "text",
+          "id": "t8c2126e41cbf5f948962",
+          "text": "14",
+          "x": 885,
+          "cy": 622.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:622.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 622.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:622.5"
+        },
+        {
+          "type": "text",
+          "id": "td96358e6936c615695c7",
+          "text": "588",
+          "x": 704,
+          "cy": 667.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:667.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 667.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:667.5"
+        },
+        {
+          "type": "text",
+          "id": "tb2280d2ea2a5dec26072",
+          "text": "12",
+          "x": 885,
+          "cy": 667.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:667.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 667.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:667.5"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 704,
+          "cy": 712.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:712.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 712.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:712.5"
+        },
+        {
+          "type": "text",
+          "id": "t304bbc48bf26f07dd4c1",
+          "text": "10",
+          "x": 885,
+          "cy": 712.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:712.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 712.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:712.5"
+        },
+        {
+          "type": "text",
+          "id": "t15fac4c013b9602cdeb7",
+          "text": "1488",
+          "x": 704,
+          "cy": 757.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:757.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 757.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:757.5"
+        },
+        {
+          "type": "text",
+          "id": "tfae761d22cbf02b7f764",
+          "text": "8",
+          "x": 885,
+          "cy": 757.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:757.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 757.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:757.5"
+        },
+        {
+          "type": "text",
+          "id": "t65f0a7d2574ff41adcd2",
+          "text": "手游 · 绝密版",
+          "x": 291.5,
+          "cy": 813,
+          "size": 22.8,
+          "fill": "#A8651B",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 179,
+          "cy": 850,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6d90b1b37e4b0dc5dee5",
+          "text": "清图时限",
+          "x": 397,
+          "cy": 850,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6a151e707c72f2183a37",
+          "text": "108",
+          "x": 201,
+          "cy": 893,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:893"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 893,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:893"
+        },
+        {
+          "type": "text",
+          "id": "t0c39938d7682bc9a042c",
+          "text": "常规清图",
+          "x": 397,
+          "cy": 893,
+          "size": 24,
+          "fill": "#55788B",
+          "anchor": "middle",
+          "role": "regular-tier"
+        },
+        {
+          "type": "text",
+          "id": "t17de5238e28af7b51017",
+          "text": "188",
+          "x": 201,
+          "cy": 938.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:938.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 938.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:938.5"
+        },
+        {
+          "type": "text",
+          "id": "tcd328d83a54154b5ec0d",
+          "text": "16",
+          "x": 387,
+          "cy": 938.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:938.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 938.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:938.5"
+        },
+        {
+          "type": "text",
+          "id": "td45f8ad478129323e37a",
+          "text": "328",
+          "x": 201,
+          "cy": 983.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:983.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 983.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:983.5"
+        },
+        {
+          "type": "text",
+          "id": "t8c2126e41cbf5f948962",
+          "text": "14",
+          "x": 387,
+          "cy": 983.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:983.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 983.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:983.5"
+        },
+        {
+          "type": "text",
+          "id": "t84a0b486e71f6103e735",
+          "text": "468",
+          "x": 201,
+          "cy": 1028.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 1028.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "tb2280d2ea2a5dec26072",
+          "text": "12",
+          "x": 387,
+          "cy": 1028.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 1028.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "t2f4fffb8daf4206071f7",
+          "text": "668",
+          "x": 201,
+          "cy": 1073.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 1073.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "t304bbc48bf26f07dd4c1",
+          "text": "10",
+          "x": 387,
+          "cy": 1073.5,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 1073.5,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "t840f84cf7d266acc0500",
+          "text": "888",
+          "x": 201,
+          "cy": 1119,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:207:1119"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 207,
+          "cy": 1119,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:207:1119"
+        },
+        {
+          "type": "text",
+          "id": "tfae761d22cbf02b7f764",
+          "text": "8",
+          "x": 387,
+          "cy": 1119,
+          "size": 39,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:394:1119"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 394,
+          "cy": 1119,
+          "size": 21,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:394:1119"
+        },
+        {
+          "type": "text",
+          "id": "td7abb62b1fc096eee161",
+          "text": "手游 · 机密版",
+          "x": 794.5,
+          "cy": 813,
+          "size": 22.8,
+          "fill": "#117D72",
+          "anchor": "middle",
+          "role": "platform-mode"
+        },
+        {
+          "type": "text",
+          "id": "te8c600f4bb599445f9bf",
+          "text": "订单价格",
+          "x": 682,
+          "cy": 850,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t6d90b1b37e4b0dc5dee5",
+          "text": "清图时限",
+          "x": 897.5,
+          "cy": 850,
+          "size": 19.5,
+          "fill": "#FFFDF5",
+          "anchor": "middle",
+          "role": "table-heading"
+        },
+        {
+          "type": "text",
+          "id": "t5a3bc000bb7752fd223b",
+          "text": "88",
+          "x": 704,
+          "cy": 893,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:893"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 893,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:893"
+        },
+        {
+          "type": "text",
+          "id": "t0c39938d7682bc9a042c",
+          "text": "常规清图",
+          "x": 897.5,
+          "cy": 893,
+          "size": 24,
+          "fill": "#55788B",
+          "anchor": "middle",
+          "role": "regular-tier"
+        },
+        {
+          "type": "text",
+          "id": "tcb35f17b0e93830ac617",
+          "text": "128",
+          "x": 704,
+          "cy": 938.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:938.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 938.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:938.5"
+        },
+        {
+          "type": "text",
+          "id": "tcd328d83a54154b5ec0d",
+          "text": "16",
+          "x": 885,
+          "cy": 938.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:938.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 938.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:938.5"
+        },
+        {
+          "type": "text",
+          "id": "t17de5238e28af7b51017",
+          "text": "188",
+          "x": 704,
+          "cy": 983.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:983.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 983.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:983.5"
+        },
+        {
+          "type": "text",
+          "id": "t8c2126e41cbf5f948962",
+          "text": "14",
+          "x": 885,
+          "cy": 983.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:983.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 983.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:983.5"
+        },
+        {
+          "type": "text",
+          "id": "t272e357232fbf8252754",
+          "text": "288",
+          "x": 704,
+          "cy": 1028.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 1028.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "tb2280d2ea2a5dec26072",
+          "text": "12",
+          "x": 885,
+          "cy": 1028.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 1028.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:1028.5"
+        },
+        {
+          "type": "text",
+          "id": "t84a0b486e71f6103e735",
+          "text": "468",
+          "x": 704,
+          "cy": 1073.5,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 1073.5,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "t304bbc48bf26f07dd4c1",
+          "text": "10",
+          "x": 885,
+          "cy": 1073.5,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 1073.5,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:1073.5"
+        },
+        {
+          "type": "text",
+          "id": "t4dbf6970c3952f41f571",
+          "text": "688",
+          "x": 704,
+          "cy": 1119,
+          "size": 36.8,
+          "fill": "#203F53",
+          "anchor": "end",
+          "role": "price-number",
+          "lineGroup": "price:710:1119"
+        },
+        {
+          "type": "text",
+          "id": "t93c49a055a02db78a142",
+          "text": "r",
+          "x": 710,
+          "cy": 1119,
+          "size": 35.15,
+          "fill": "#203F53",
+          "anchor": "start",
+          "role": "price-unit",
+          "lineGroup": "price:710:1119"
+        },
+        {
+          "type": "text",
+          "id": "tfae761d22cbf02b7f764",
+          "text": "8",
+          "x": 885,
+          "cy": 1119,
+          "size": 39,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "deadline-number",
+          "lineGroup": "deadline:892:1119"
+        },
+        {
+          "type": "text",
+          "id": "tb3c1a9f0db438b00213d",
+          "text": "分钟内",
+          "x": 892,
+          "cy": 1119,
+          "size": 21,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "deadline-unit",
+          "lineGroup": "deadline:892:1119"
+        },
+        {
+          "type": "text",
+          "id": "t71b3af22d99ed530dd41",
+          "text": "限时档保障",
+          "x": 232,
+          "cy": 1179,
+          "size": 15.2,
+          "fill": "#55788B",
+          "anchor": "start",
+          "role": "guarantee-scope"
+        },
+        {
+          "type": "art",
+          "text": "超时未清图继续打",
+          "x": 231,
+          "cy": 1220,
+          "size": 40,
+          "maxWidth": 774,
+          "fill": "#203F53",
+          "shadow": "#A5BDD1",
+          "outline": "#FFFDF5",
+          "outlineWidth": 1.6,
+          "angles": false,
+          "ids": [
+            "tad45987044e80da3e0d8",
+            "t624704a1187c0ac66248",
+            "te2da0773263b81feaee8",
+            "t893c5f5d70aed3f65082",
+            "tff112f35285c3ce870a0",
+            "t97ec823fe69ad9383d61",
+            "t38970ed6f54c4475b3ac",
+            "t196df8cfe6aeaec3d9ba"
+          ]
+        },
+        {
+          "type": "text",
+          "id": "t76325bc8ce1ce0a9fee7",
+          "text": "拉闸清图 或 规定时限内陪玩击杀≥8人",
+          "x": 232,
+          "cy": 1270,
+          "size": 21.5,
+          "fill": "#203F53",
+          "anchor": "start",
+          "maxWidth": 774,
+          "role": "method-summary"
+        },
+        {
+          "type": "text",
+          "id": "t4819fa5ff7c3a2fd6532",
+          "text": "成功撤离仍需：陪玩击杀≥4人 且 物资达标",
+          "x": 543,
+          "cy": 1311,
+          "size": 21.5,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "maxWidth": 915,
+          "role": "minimum-condition"
+        },
+        {
+          "type": "text",
+          "id": "t943c77b434fbfee50071",
+          "text": "绝密 ≥",
+          "x": 216,
+          "cy": 1347,
+          "size": 22.5,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "minimum-mode"
+        },
+        {
+          "type": "text",
+          "id": "te0c0a3d6d53ef340d0f0",
+          "text": "600",
+          "x": 348,
+          "cy": 1347,
+          "size": 29,
+          "fill": "#A8651B",
+          "anchor": "end",
+          "role": "minimum-loot-number",
+          "lineGroup": "minimum-loot:354:1347"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 354,
+          "cy": 1347,
+          "size": 27.7,
+          "fill": "#A8651B",
+          "anchor": "start",
+          "role": "minimum-loot-unit",
+          "lineGroup": "minimum-loot:354:1347"
+        },
+        {
+          "type": "text",
+          "id": "t9120c25dad2258b83654",
+          "text": "机密 ≥",
+          "x": 719,
+          "cy": 1347,
+          "size": 22.5,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "minimum-mode"
+        },
+        {
+          "type": "text",
+          "id": "t157149f2c1a7f823b260",
+          "text": "300",
+          "x": 851,
+          "cy": 1347,
+          "size": 29,
+          "fill": "#117D72",
+          "anchor": "end",
+          "role": "minimum-loot-number",
+          "lineGroup": "minimum-loot:857:1347"
+        },
+        {
+          "type": "text",
+          "id": "t802de43ed41324b456d5",
+          "text": "w",
+          "x": 857,
+          "cy": 1347,
+          "size": 27.7,
+          "fill": "#117D72",
+          "anchor": "start",
+          "role": "minimum-loot-unit",
+          "lineGroup": "minimum-loot:857:1347"
+        },
+        {
+          "type": "text",
+          "id": "tc116142e08eac06578b6",
+          "text": "r = 元 / w = 万",
+          "x": 543,
+          "cy": 1407,
+          "size": 12.5,
+          "fill": "#203F53",
+          "anchor": "middle",
+          "role": "units",
+          "stroke": "#FFFDF5",
+          "strokeWidth": 2.5
+        }
+      ],
+      "alignment": [
+        {
+          "id": "desktop-absolute",
+          "rowEdges": [
+            510,
+            554,
+            600,
+            645,
+            690,
+            735,
+            780
+          ],
+          "rowCenters": [
+            532,
+            577,
+            622.5,
+            667.5,
+            712.5,
+            757.5
+          ],
+          "colEdges": [
+            56,
+            267,
+            527
+          ],
+          "priceUnitColumn": 207,
+          "deadlineUnitColumn": 394,
+          "priceGap": 6,
+          "deadlineGap": 7
+        },
+        {
+          "id": "desktop-secret",
+          "rowEdges": [
+            510,
+            554,
+            600,
+            645,
+            690,
+            735,
+            780
+          ],
+          "rowCenters": [
+            532,
+            577,
+            622.5,
+            667.5,
+            712.5,
+            757.5
+          ],
+          "colEdges": [
+            559,
+            765,
+            1030
+          ],
+          "priceUnitColumn": 710,
+          "deadlineUnitColumn": 892,
+          "priceGap": 6,
+          "deadlineGap": 7
+        },
+        {
+          "id": "mobile-absolute",
+          "rowEdges": [
+            870,
+            916,
+            961,
+            1006,
+            1051,
+            1096,
+            1142
+          ],
+          "rowCenters": [
+            893,
+            938.5,
+            983.5,
+            1028.5,
+            1073.5,
+            1119
+          ],
+          "colEdges": [
+            56,
+            267,
+            527
+          ],
+          "priceUnitColumn": 207,
+          "deadlineUnitColumn": 394,
+          "priceGap": 6,
+          "deadlineGap": 7
+        },
+        {
+          "id": "mobile-secret",
+          "rowEdges": [
+            870,
+            916,
+            961,
+            1006,
+            1051,
+            1096,
+            1142
+          ],
+          "rowCenters": [
+            893,
+            938.5,
+            983.5,
+            1028.5,
+            1073.5,
+            1119
+          ],
+          "colEdges": [
+            559,
+            765,
+            1030
+          ],
+          "priceUnitColumn": 710,
+          "deadlineUnitColumn": 892,
+          "priceGap": 6,
+          "deadlineGap": 7
+        }
+      ]
+    }
+  ]
+}

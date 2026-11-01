@@ -1,0 +1,6 @@
+.reservation-page { padding-bottom: 150rpx; }
+.panel { margin-bottom: 20rpx; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 24rpx; padding: 20rpx 0; border-bottom: 1rpx solid var(--border); }
+.row input { flex: 1; min-width: 0; text-align: right; }
+.picker { color: var(--primary); padding: 8rpx; }
+.panel .button, .panel .button-secondary { margin-top: 20rpx; }

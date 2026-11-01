@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
-from orders.models import Order, OrderProvider, OrderRefund
+from orders.models import GameCategory, Order, OrderProvider, OrderRefund
 from orders.tests.factories import make_order, make_provider, make_service, make_service_category, make_user
 from users.companion_picker import companion_service_amounts, recent_service_amounts
 from users.models import EscortLevel, EscortProfile, EscortSchedule
@@ -134,11 +134,13 @@ class CompanionPickerTest(APITestCase):
         self.assertEqual([row['id'] for row in self.rows()], [high.account_id, low.account_id])
 
     def test_eligibility_gender_capacity_schedule_and_service_are_applied_before_ranking(self):
+        self.service.game_category = GameCategory.objects.create(name='资格排序测试游戏')
+        self.service.save(update_fields=['game_category'])
         good = self.provider(level=self.high, gender='FEMALE')
         self.order(good, 100)
         offline = self.provider(recommendation_slot=1, status='OFFLINE', gender='FEMALE')
         wrong_gender = self.provider(recommendation_slot=2, gender='MALE')
-        unskilled = self.provider(recommendation_slot=3, gender='FEMALE')
+        unskilled = self.provider(recommendation_slot=3, gender='FEMALE', level=self.high)
         unskilled.service_items.clear()
         low = self.provider(recommendation_slot=4, gender='FEMALE', level=self.low)
         full = self.provider(gender='FEMALE', level=self.high)
@@ -154,6 +156,8 @@ class CompanionPickerTest(APITestCase):
         self.assertEqual([row['id'] for row in self.rows(gender='FEMALE')], [good.account_id])
 
     def test_next_request_reads_changed_recommendations_orders_and_service_membership(self):
+        self.service.game_category = GameCategory.objects.create(name='技能变更测试游戏')
+        self.service.save(update_fields=['game_category'])
         first, second = self.provider(), self.provider()
         self.order(first, 100)
         self.assertEqual(self.rows()[0]['id'], first.account_id)

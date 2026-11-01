@@ -1,0 +1,272 @@
+[
+  {
+    "id": "01-solo-duo-price",
+    "width": 3200,
+    "height": 8864,
+    "pngBytes": 8739012,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "41b80341a69a25ff63bbc6866930e8ea62452cf2d968a1c503efe0727611c878"
+  },
+  {
+    "id": "01-solo-duo-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5265021,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "92f1093447e77d7a7c07047d9949b0e109a055e9458db962090cbb6e3de9fe0d"
+  },
+  {
+    "id": "01-solo-duo-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7259236,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "39f523ddc39cf15475624a58dd0ea9472ace37474532ae823aeeb2e19c074a3f"
+  },
+  {
+    "id": "02-flex-price",
+    "width": 3200,
+    "height": 6115,
+    "pngBytes": 8438438,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "81391c662ab1fae2bd3d9516ccdaf72e4f0ff3c2d3f0d064976379b6bf3240ea"
+  },
+  {
+    "id": "02-flex-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 4964499,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "099d31c054544f5a79d8f6c1153e1a43297197a842d4cc35a2f6e42ec78b23c7"
+  },
+  {
+    "id": "02-flex-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7247551,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "7c02e0bf2949c61e594fadf54d7deb04f2ef6c75d26e3806938e27a428e0ee98"
+  },
+  {
+    "id": "03-arena-price",
+    "width": 3200,
+    "height": 8061,
+    "pngBytes": 9229883,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "789203b92e49b04582fd874ea96008262e556d178680cb36ab81e8459d78e58d"
+  },
+  {
+    "id": "03-arena-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5585924,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "04fd2930cf32f32416716b86e39c903a910f0b989774319e21de0c6b884e4b6f"
+  },
+  {
+    "id": "03-arena-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 8131175,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "93b18b5d005515c02d1eff10001374d02f688a946adb40f378a2bff11d2359b9"
+  },
+  {
+    "id": "04-boost-price",
+    "width": 3200,
+    "height": 11080,
+    "pngBytes": 9188663,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "c333683d8a13f5b89bf98457dbf7a5929a55a93b7ef43335066e6124f9d52a21"
+  },
+  {
+    "id": "04-boost-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5126757,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "e0df67d3436f787676d2dec6ad922b9c70b65307521ecb2d96f4fbc9fc6a920a"
+  },
+  {
+    "id": "04-boost-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7433349,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "85380927285facadd12913a6db2eb971713d6ec6f9359e903bb2c0bcf97c6a2e"
+  },
+  {
+    "id": "05-lp-price",
+    "width": 3200,
+    "height": 9664,
+    "pngBytes": 9013251,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "3e97e7470e1738c3a74ae33b488ba269b1ef5550d5d50e4d36f61c25939e435e"
+  },
+  {
+    "id": "05-lp-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5207868,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "870036c75fe55004f1bc1b66011fe83f7959a3cf5e34d10e2ec006ea286ec7e8"
+  },
+  {
+    "id": "05-lp-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7402051,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "ff4a2ba144f75d704142fccce3cdbf0d9076cf9719d57513447a46e6f5f8549f"
+  },
+  {
+    "id": "06-overseas-price",
+    "width": 3200,
+    "height": 10949,
+    "pngBytes": 9193173,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "16e558e7fd68292b976ec4a055c2cc80f97eec286a1b29a466298a486ab1b035"
+  },
+  {
+    "id": "06-overseas-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5274076,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "ed9d49fe2ee8aad000452032c22b234ac58f9e22fcd131c924255dfb53edfd81"
+  },
+  {
+    "id": "06-overseas-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7431941,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "a4540f4d67abb1787befbb7ea79d9da9bffa257e8c5663e29d4d2af9f82f0e41"
+  },
+  {
+    "id": "07-day-price",
+    "width": 3200,
+    "height": 10168,
+    "pngBytes": 8990121,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "6d3aa29a2e8e2b23c45674037bd0f1a48520341d530fba8ef1fad3d890661169"
+  },
+  {
+    "id": "07-day-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5225251,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "c8ac624b820d4ff7ad3a50c5e71cfef0ea635a9ec73d2e4c1bb575ac8e64df64"
+  },
+  {
+    "id": "07-day-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7414281,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "2467e7ab6fdf304bbd994ab317782840472aa9e25ee282df8908dcc88f61f752"
+  },
+  {
+    "id": "08-haidou-price",
+    "width": 3200,
+    "height": 6627,
+    "pngBytes": 9008029,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "d053eb787ef69a43573e6f00c730257df4210a4815c921d4530daa776d18587a"
+  },
+  {
+    "id": "08-haidou-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5595474,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "35d8a0c5d64389e4b2973620b62d1acfa98f4c93178c0542a52ad48a86d45d1f"
+  },
+  {
+    "id": "08-haidou-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 8119636,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "e9f30181e0214fe3f0be9dc6949c87ef38f44d984cf41fc9de7edb848034c916"
+  },
+  {
+    "id": "09-placement-price",
+    "width": 3200,
+    "height": 9643,
+    "pngBytes": 8956279,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "0480cee4f3f397b6607e58633d695327d74aca81dcf72c01e3758453605995a3"
+  },
+  {
+    "id": "09-placement-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 4910128,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "20425f030e5fd2812f907aaa822d7d08abc4f2cb203e7b4f52a83fa20c4f7367"
+  },
+  {
+    "id": "09-placement-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7435960,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "4c46e8b3aab41c75a814e489c73a4bbb0a6b11e9754744af43b39e7cf1c883a0"
+  },
+  {
+    "id": "10-maintenance-price",
+    "width": 3200,
+    "height": 10261,
+    "pngBytes": 9082667,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "0b509b68cf5399cb3f3b9d0b17450b555e69a85df7f8e23fa7d6c241a5820ff1"
+  },
+  {
+    "id": "10-maintenance-advert",
+    "width": 2400,
+    "height": 3200,
+    "pngBytes": 5310880,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "c8331c76f799808f9d4e53defb9f853d483eb9e8e62872862f6df22dde9c7acd"
+  },
+  {
+    "id": "10-maintenance-cover",
+    "width": 3200,
+    "height": 1800,
+    "pngBytes": 7430514,
+    "outlinedTextPaths": true,
+    "editableTextObjects": true,
+    "hash": "35fa1f1222c32f61d6ac1e42d7d3375f2e845697a2de159a84f9c0c06581f0b2"
+  }
+]

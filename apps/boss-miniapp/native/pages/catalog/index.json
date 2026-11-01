@@ -1,1 +1,7 @@
-{"navigationBarTitleText":"服务目录","enablePullDownRefresh":true}
+{
+  "navigationBarTitleText": "服务目录",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "expand-region": "/components/expand-region/index"
+  }
+}

@@ -24,7 +24,7 @@ Page({
     this.setData({ loading: logged && !this.data.service, refreshing: logged && !!this.data.service, logged, error: '', variantError: '', favoriteMotion: '' });
     if (!logged) return;
     if (!this._id) { this.setData({ loading: false, error: '缺少服务编号，请从服务目录重新进入' }); return; }
-    const [detail, reviews, providers] = await Promise.allSettled([request('/orders/services/' + this._id + '/'), request('/orders/services/' + this._id + '/evaluations/'), this.data.providerId ? request('/users/escorts/') : Promise.resolve([])]);
+    const [detail, reviews, providers] = await Promise.allSettled([request('/orders/services/' + this._id + '/'), request('/orders/services/' + this._id + '/evaluations/'), this.data.providerId ? request('/users/escorts/' + this.data.providerId + '/?service_item=' + this._id) : Promise.resolve(null)]);
     if (!this._alive || seq !== this._seq) return;
     const fail = message => this.setData({ loading: false, refreshing: false, pendingVariantId: 0,
       ...(this.data.service ? { variantError: message } : { error: message, service: null }) });
@@ -32,9 +32,9 @@ Page({
     const service = detail.value;
     let variants = list(service.variants).length ? list(service.variants) : [service];
     if (this.data.providerId) {
-      const provider = providers.status === 'fulfilled' && list(providers.value).find(item => item.id === this.data.providerId);
-      const allowed = provider && list(provider.service_item_ids);
-      if (!allowed || !allowed.includes(service.id)) { fail('该陪玩暂不支持此套餐，请返回目录重新选择'); return; }
+      const provider = providers.status === 'fulfilled' && providers.value;
+      const allowed = provider && list(provider.eligible_service_item_ids);
+      if (!provider || !allowed.includes(service.id)) { fail((provider && provider.order_unavailable_reason) || '该陪玩暂不支持此套餐，请返回目录重新选择'); return; }
       variants = variants.filter(item => allowed.includes(item.id));
     }
     this._variants = variants;

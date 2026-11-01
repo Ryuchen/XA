@@ -28,6 +28,7 @@ const MinePage: React.FC = () => {
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [replying, setReplying] = useState<Evaluation | null>(null);
   const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyConflict, setReplyConflict] = useState(false);
 
   const loadData = async () => {
     setUser(getStoredUser());
@@ -122,14 +123,15 @@ const MinePage: React.FC = () => {
   };
 
   const handleReplyEvaluation = async (text: string) => {
-    if (!replying) return;
+    if (!replying || replySubmitting || replyConflict) return;
     const item = replying;
     setReplySubmitting(true);
     try {
-      const res = await replyEvaluation(item.id, text);
-      if (res.code === 0) {
+      const res = await replyEvaluation(item.id, text, item.reply_version);
+      if (res.errorCode === 'EVALUATION_REPLY_CONFLICT') { setReplyConflict(true); return; }
+      if (res.code === 0 && res.data) {
         setEvaluations(prev =>
-          prev.map(e => (e.id === item.id ? { ...e, reply_content: text } : e)),
+          prev.map(e => (e.id === item.id ? res.data! : e)),
         );
         setReplying(null);
         Taro.showToast({ title: '回复成功', icon: 'success' });
@@ -235,7 +237,7 @@ const MinePage: React.FC = () => {
               {item.reply_content ? (
                 <Text className={styles.evalReply}>我的回复：{item.reply_content}</Text>
               ) : (
-                <Button className={styles.evalReplyBtn} onClick={() => setReplying(item)}>
+                <Button className={styles.evalReplyBtn} onClick={() => { setReplyConflict(false); setReplying(item); }}>
                   回复
                 </Button>
               )}
@@ -283,7 +285,9 @@ const MinePage: React.FC = () => {
         initialValue={replying?.reply_content || ''}
         placeholder='感谢老板的认可，也可以说明本次服务情况…'
         submitting={replySubmitting}
-        onClose={() => setReplying(null)}
+        blocked={replyConflict}
+        hint={replyConflict ? '回复已变化，草稿仍在此处。关闭后将刷新评价，请核对最新回复。' : undefined}
+        onClose={() => { setReplying(null); if (replyConflict) void loadData(); setReplyConflict(false); }}
         onSubmit={handleReplyEvaluation}
       />
     </View></PlatformLayout>

@@ -13,6 +13,7 @@
 .navIcon { @include flex-center; flex:none; width:32PX; height:32PX; border-radius:8PX; background:var(--xa-color-surface-subtle); }
 .navActive .navIcon { background:$color-primary; }
 .navCopy { min-width:0; }.navLabel { font-size:14PX; font-weight:600; }.navCaption { margin-top:3PX; font-size:12PX; color:$color-text-secondary; }
+.unread { margin-left:auto; min-width:20PX; padding:2PX 5PX; border-radius:10PX; text-align:center; color:var(--xa-color-surface-card); background:var(--xa-color-danger); font-size:11PX; line-height:16PX; }
 .sidebarFoot { margin-top:auto; padding:28PX 8PX 0; font-size:12PX; color:$color-text-tertiary; }
 .desktopMain { min-height:100dvh; margin-left:224PX; padding:32PX 32PX 48PX; }
 .desktopContent { width:100%; max-width:1280PX; min-width:0; margin:0 auto; }

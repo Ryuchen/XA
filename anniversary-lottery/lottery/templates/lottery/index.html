@@ -1,0 +1,91 @@
+{% load static %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff6f8">
+  <meta name="api-base" content="{{ api_base }}">
+  <meta name="room-code" content="{{ room_code }}">
+  <meta name="description" content="兴安电竞半周年店庆，三重红色奖池，掷出属于你的幸运。">
+  <title>半周年店庆 · 兴安电竞</title>
+  <link rel="stylesheet" href="{% static 'lottery/app.css' %}">
+  <script src="{% static 'lottery/app.js' %}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="{% if room_code %}#prize-pools{% else %}#room-entry{% endif %}">跳到活动内容</a>
+  <div class="page-grain" aria-hidden="true"></div>
+  <header class="site-header page-width">
+    <a class="brand" href="#" aria-label="兴安电竞店庆首页"><span class="brand-mark" aria-hidden="true">XA<span></span></span><span class="brand-name">兴安电竞<small>XINGAN ESPORTS</small></span></a>
+    <nav class="desktop-nav" aria-label="页面导航"><a href="#prize-pools">店庆奖池</a><a href="#activity-rules">活动规则</a><a href="#my-history">我的记录</a></nav>
+    <button class="account-button" id="account-button" type="button"{% if not room_code %} hidden{% endif %}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20v-2a6.5 6.5 0 0 1 13 0v2"/></svg><span id="account-label">登录参与</span></button>
+  </header>
+  <main class="page-width">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy"><span class="eyebrow"><span class="little-star" aria-hidden="true">✦</span> HALF-YEAR ANNIVERSARY</span><h1 id="hero-title">半周年，<br>一起<span class="title-pink">掷出好礼</span><span class="title-dot">。</span></h1><p class="hero-description">把陪伴攒成幸运，<br class="mobile-only">每一份心意，都藏在红色奖池里。</p><div class="hero-date">{% if remaining_only %}<span>活动续开</span><strong>剩余次数补抽</strong>{% else %}<span>店庆限定</span><strong>10.16 <i>—</i> 10.25</strong><small>2026</small>{% endif %}</div><a class="hero-link" href="{% if room_code %}#prize-pools{% else %}#room-entry{% endif %}">看看这次有什么惊喜 <span aria-hidden="true">↘</span></a></div>
+      <div class="hero-art"><div class="art-frame"><img src="{% static 'lottery/poster.png' %}" alt="兴安电竞半周年店庆原版海报，粉蓝色背景与粉发动漫角色" width="1080" height="2619" fetchpriority="high"></div><div class="anniversary-stamp" aria-hidden="true"><span>THANK YOU FOR</span><strong>½</strong><span>BEING WITH US</span></div><div class="art-caption"><span class="little-star" aria-hidden="true">✦</span> 半年有你，幸运加满 <span class="caption-line" aria-hidden="true"></span></div></div>
+    </section>
+    <div class="celebration-line" aria-hidden="true"><span>LET GOOD THINGS HAPPEN</span><i></i><span>把好运，掷给你</span><i></i><span>LET GOOD THINGS HAPPEN</span></div>
+    {% if not room_code %}
+    <section class="room-entry" id="room-entry" aria-labelledby="room-entry-title"><div><span class="eyebrow">YOUR ROOM, YOUR LUCK</span><h2 id="room-entry-title">你的幸运房间，已准备就绪</h2><p>{% if remaining_only %}使用原房间号和个人参与码，继续使用历史剩余次数。{% else %}输入管理员提供的房间号，进入活动奖池。{% endif %}</p></div><form id="room-form"><label class="sr-only" for="room-code-input">活动房间号</label><input id="room-code-input" name="room" type="text" required maxlength="32" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="输入活动房间号"><button class="primary-button" type="submit">进入房间 <span aria-hidden="true">↗</span></button><p id="room-entry-error" class="field-error" role="alert" hidden></p></form></section>
+    {% endif %}
+    <section class="lottery-section" id="prize-pools" aria-labelledby="section-title"{% if not room_code %} hidden{% endif %}>
+      <div class="section-heading"><div><span class="eyebrow" id="room-badge">YOUR LUCKY MOMENT</span><h2 id="section-title">选一池心动，开一份惊喜</h2></div><span class="section-number" aria-hidden="true">01 / LUCKY POOLS</span></div><p class="room-window" id="room-window" hidden></p>
+      <div id="catalog-error" class="message error-message" hidden><p id="catalog-error-text"></p><button class="text-button" type="button" id="reload-catalog">重新加载奖池 <span aria-hidden="true">↻</span></button></div>
+      <div class="lottery-layout">
+        <div class="pool-column"><div class="pool-tabs" id="pool-tabs" role="tablist" aria-label="选择抽奖奖池">
+          <button class="pool-tab is-active" id="tab-small" type="button" role="tab" aria-selected="true" aria-controls="pool-panel" data-pool="small"><span class="tab-index">01</span><span>小红奖池<small>A LITTLE LUCK</small></span><span class="tab-spark" aria-hidden="true">✦</span></button>
+          <button class="pool-tab" id="tab-red" type="button" role="tab" aria-selected="false" aria-controls="pool-panel" tabindex="-1" data-pool="red"><span class="tab-index">02</span><span>大红奖池<small>A BIG SURPRISE</small></span><span class="tab-spark" aria-hidden="true">✦</span></button>
+          <button class="pool-tab" id="tab-grand" type="button" role="tab" aria-selected="false" aria-controls="pool-panel" tabindex="-1" data-pool="grand"><span class="tab-index">03</span><span>大大红奖池<small>GRAND MOMENT</small></span><span class="tab-spark" aria-hidden="true">✦</span></button>
+        </div><div class="pool-card" id="pool-panel" role="tabpanel" aria-labelledby="tab-small" aria-busy="true">
+          <div class="pool-card-heading"><div><span class="mini-label">本次心动之选</span><h3 id="pool-name">小红奖池</h3></div><span class="status-pill" id="pool-status">正在加载</span></div><p class="matrix-guide"><span><i class="color-dot pink-dot" aria-hidden="true"></i>红骰看行</span><span><i class="color-dot blue-dot" aria-hidden="true"></i>蓝骰看列</span><small>点击奖格查看奖项</small></p>
+          <div class="matrix-loading" id="matrix-loading" aria-label="正在加载奖池"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <table class="prize-matrix" id="prize-matrix" hidden><caption class="sr-only">红骰点数对应行，蓝骰点数对应列。点击奖格查看奖项。</caption><colgroup><col class="axis-col"><col span="6"></colgroup><thead><tr><th scope="col"><span class="axis-corner" aria-label="行和列">↘</span></th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th><th scope="col">4</th><th scope="col">5</th><th scope="col">6</th></tr></thead><tbody id="matrix-body"></tbody></table>
+          <div class="cell-detail" id="cell-detail" aria-live="polite"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7.3"/><path d="M10 9v5M10 6v.5"/></svg><p id="cell-detail-text">点数组合由服务端生成，抽奖结果自动记录。</p></div>
+        </div></div>
+        <aside class="draw-card" aria-labelledby="draw-title">
+          <div class="draw-card-top"><span class="eyebrow">ROLL YOUR LUCK</span><span class="outline-star" aria-hidden="true">✧</span></div>
+          <h3 id="draw-title">好礼，就等你开场</h3><p class="draw-intro" id="draw-intro">登录后查看你的专属抽奖次数</p>
+          <div class="dice-stage" id="dice-stage" aria-label="两枚骰子等待抽奖">
+            <span class="orbit orbit-one" aria-hidden="true"></span><span class="orbit orbit-two" aria-hidden="true"></span><span class="stage-star star-one" aria-hidden="true">✦</span><span class="stage-star star-two" aria-hidden="true">✧</span><span class="dice-shadow shadow-pink" aria-hidden="true"></span><span class="dice-shadow shadow-blue" aria-hidden="true"></span>
+            <div class="die die-pink" id="die-row" data-value="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>?</span><b class="die-depth depth-left"></b><b class="die-depth depth-right"></b><b class="die-depth depth-top"></b><b class="die-depth depth-bottom"></b><b class="die-depth depth-back"></b></div>
+            <div class="die die-blue" id="die-column" data-value="0" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span>?</span><b class="die-depth depth-left"></b><b class="die-depth depth-right"></b><b class="die-depth depth-top"></b><b class="die-depth depth-bottom"></b><b class="die-depth depth-back"></b></div>
+          </div>
+          <div class="entry-count"><span>本奖池剩余次数</span><strong id="entry-count">—<small> 次</small></strong></div>
+          <div class="pity-card" aria-labelledby="pity-title"><div class="pity-heading"><h4 id="pity-title">本奖池累计</h4><span><strong id="pity-total">—</strong> 次</span></div><div class="pity-row"><span id="pity-label-lower">30次店铺余额保底</span><strong id="pity-next-lower">登录后查看</strong></div><div class="pity-track" aria-hidden="true"><span id="pity-progress-lower"></span></div><div class="pity-row"><span id="pity-label-upper">50次店铺余额保底</span><strong id="pity-next-upper">登录后查看</strong></div><div class="pity-track track-blue" aria-hidden="true"><span id="pity-progress-upper"></span></div><p class="pity-note"><span id="pity-cash-rule">每30次与每50次额外获得本奖池余额保底</span><br>各奖池独立累计，普通中奖不重置</p></div>
+          <div id="pending-note" class="pending-note" hidden>上次抽奖结果尚未确认，请先查询。重复查询不会再次扣减次数。</div>
+          <button class="primary-button draw-button" id="draw-button" type="button" disabled><span id="draw-button-label">正在加载奖池</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+          <p class="draw-help" id="draw-help">凭管理员提供的参与码登录</p>
+          <button class="secondary-button batch-draw-button" id="batch-draw-button" type="button" disabled aria-describedby="batch-draw-help"><span id="batch-draw-label">十连抽 · 一次开启10份惊喜</span><span aria-hidden="true">×10</span></button><p class="batch-draw-help" id="batch-draw-help">登录后查看十连抽资格</p>
+          <p class="draw-message" id="draw-message" role="status" hidden></p><a class="history-link" href="#my-history">查看我的抽奖记录 <span aria-hidden="true">↗</span></a>
+        </aside>
+      </div>
+    </section>
+    <section class="rules-section" id="activity-rules" aria-labelledby="rules-title"{% if not room_code %} hidden{% endif %}><div class="rules-title"><span class="eyebrow">A FEW THINGS TO KNOW</span><h2 id="rules-title">好运开始前的小约定</h2><p>认真对待每一次参与。</p></div><div class="rules-content"><div class="steps"><div class="step"><span>1</span><div><h3>{% if remaining_only %}使用原参与码{% else %}领取个人参与码{% endif %}</h3><p>{% if remaining_only %}使用原个人参与码登录；遗失可联系管理员重置。{% else %}向房间管理员领取个人参与码，登录你的活动账号。{% endif %}</p></div></div><div class="step"><span>2</span><div><h3>选择奖池 · 掷出好礼</h3><p>{% if remaining_only %}使用本奖池历史剩余次数，每次扣减1次；不再添加次数。{% else %}使用管理员发放的本奖池次数，每次抽取扣减 1 次机会。{% endif %}</p></div></div><div class="step"><span>3</span><div><h3>记录留存 · 按奖领取</h3><p>中奖结果自动记录，联系房间管理员核对并兑奖。</p></div></div></div><details class="rules-details"><summary>活动时间与兑奖说明 <span aria-hidden="true">+</span></summary><div class="rules-body"><ul id="server-rules"><li>{% if remaining_only %}历史剩余次数可继续使用，不受原结束时间限制；房间须已开始且未暂停，账号须已启用。{% else %}活动时间与参与资格以本房间管理员公布的规则为准。{% endif %}</li><li>点数组合由服务端生成，抽奖结果自动记录，页面动画用于展示结果。</li><li>每30次和每50次额外获得余额保底，各奖池金额以当前奖池公示为准；每个奖池独立累计，不因普通中奖重置，第150次同时发放两项。</li><li>积分、店铺余额、优惠券、冠名、TAG 等所有奖品，均须联系本房间管理员兑奖。</li></ul><p>{% if remaining_only %}仅限历史剩余次数补抽，不再新增资格或发放次数；本页面不提供购买次数或付费抽奖。{% else %}抽奖次数由管理员发放；本页面不提供购买次数或付费抽奖。{% endif %}</p></div></details></div></section>
+    <section class="history-section" id="my-history" aria-labelledby="history-title"{% if not room_code %} hidden{% endif %}>
+      <div class="section-heading"><div><span class="eyebrow">YOUR LITTLE COLLECTION</span><h2 id="history-title">我在本房间的抽奖记录</h2></div><button class="text-button" id="refresh-history" type="button" hidden>刷新记录 <span aria-hidden="true">↻</span></button></div>
+      <p class="history-load-status" id="history-load-status" role="status" hidden></p>
+      <div class="history-empty" id="history-empty"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M10 22h28v20H10zM7 15h34v7H7zM24 15v27"/><path d="M24 15c-13 0-16-10-9-10 6 0 9 10 9 10Zm0 0c13 0 16-10 9-10-6 0-9 10-9 10Z"/></svg><h3 id="history-empty-title">你的幸运收藏，等你开启</h3><p id="history-empty-text">登录本房间后，仅展示你自己的抽奖结果与奖品兑奖状态。</p><button class="secondary-button" id="history-login" type="button">登录查看记录 <span aria-hidden="true">↗</span></button></div>
+      <div class="history-list" id="history-list" hidden aria-busy="false"></div>
+      <nav class="history-pagination" id="history-pagination" aria-label="抽奖记录翻页" hidden><button class="secondary-button" id="history-previous" type="button" disabled><span aria-hidden="true">←</span>上一页</button><span class="history-page-info" id="history-page-info">第1 / 1页 · 共0条</span><button class="secondary-button" id="history-next" type="button" disabled>下一页<span aria-hidden="true">→</span></button><form class="history-jump-form" id="history-jump-form" novalidate><label class="sr-only" for="history-page-input">跳转到记录页码</label><input id="history-page-input" type="number" min="1" max="1" step="1" inputmode="numeric" value="1" required aria-describedby="history-jump-error"><button class="secondary-button" id="history-jump-button" type="submit">跳转</button><p class="history-jump-error" id="history-jump-error" role="alert" hidden></p></form></nav>
+      <div class="history-error-row" id="history-error-row" hidden><p id="history-error" class="message error-message" role="status"></p><button class="text-button" id="history-retry" type="button">重试加载 <span aria-hidden="true">↻</span></button></div>
+      <p class="history-caption" id="history-caption" hidden>全部记录按时间倒序，每页10条。仅你在本房间可见，记录时间为北京时间。</p>
+    </section>
+  </main>
+  <footer class="site-footer page-width"><span class="brand-footer">兴安电竞 <i>×</i> 半周年店庆</span><span>因为有你，每次相遇都值得庆祝。</span><span class="footer-year">2026 / ½ ANNIVERSARY</span></footer><div class="live-status sr-only" id="live-status" role="status" aria-live="polite"></div>
+  <dialog class="modal login-modal" id="login-dialog" aria-labelledby="login-title"><button class="modal-close" type="button" data-close="login-dialog" aria-label="关闭登录窗口">×</button><div class="modal-eyebrow">WELCOME TO THE PARTY</div><h2 id="login-title">这份幸运，<br>属于你的账号。</h2><p class="modal-description">输入房间管理员提供的个人参与码，<br>查看你的抽奖次数和奖品记录。</p><form id="login-form"><label for="participation-code">个人参与码</label><input id="participation-code" name="code" type="text" required maxlength="128" autocomplete="one-time-code" autocapitalize="none" spellcheck="false" placeholder="粘贴你的个人参与码" aria-describedby="login-help login-error"><p class="field-help" id="login-help">个人参与码是你的登录凭证，请妥善保管。</p><p class="field-error" id="login-error" role="alert" hidden></p><button class="primary-button" id="login-submit" type="submit">登录，开启幸运 <span aria-hidden="true">↗</span></button></form></dialog>
+  <dialog class="modal result-modal" id="result-dialog" aria-labelledby="result-title">
+    <button class="modal-close" type="button" data-close="result-dialog" aria-label="关闭抽奖结果">×</button><span class="result-symbol" id="result-symbol" aria-hidden="true">✦</span><div class="modal-eyebrow" id="result-eyebrow">A LITTLE GOOD FORTUNE</div><h2 id="result-title"></h2><p class="result-pool" id="result-pool"></p>
+    <div class="result-coordinates"><span><i class="color-dot pink-dot" aria-hidden="true"></i>红骰 <b id="result-row"></b></span><span><i class="color-dot blue-dot" aria-hidden="true"></i>蓝骰 <b id="result-column"></b></span></div><p class="result-description" id="result-description"></p>
+    <section class="result-bonuses" id="result-bonuses" aria-labelledby="result-bonus-title" hidden><span class="bonus-eyebrow">A LITTLE EXTRA FOR YOU</span><h3 id="result-bonus-title">累计保底，额外惊喜</h3><div id="result-bonus-list"></div><p>保底奖品单独记录，请联系房间管理员兑奖。</p></section>
+    <p class="result-reference" id="result-reference"></p><button class="primary-button" id="result-done" type="button">收下这份心意 <span aria-hidden="true">✓</span></button><button class="text-button result-history" id="result-history" type="button">查看抽奖记录 <span aria-hidden="true">↗</span></button>
+  </dialog>
+  <dialog class="modal batch-modal" id="batch-dialog" aria-labelledby="batch-title">
+    <button class="modal-close" type="button" data-close="batch-dialog" aria-label="关闭十连抽结果">×</button><div class="modal-eyebrow">TEN LITTLE LUCKY MOMENTS</div><h2 id="batch-title">十份惊喜，逐一揭晓</h2><p class="batch-pool" id="batch-pool"></p>
+    <div class="batch-summary" id="batch-summary" aria-label="十连抽汇总"></div><div class="batch-results" id="batch-results" tabindex="0" aria-label="十次抽奖的完整结果"></div><p class="batch-delivery-note">所有奖品与额外保底已单独记录，请联系房间管理员兑奖。</p>
+    <div class="batch-actions"><button class="primary-button" id="batch-done" type="button">收好这十份心意 <span aria-hidden="true">✓</span></button><button class="text-button" id="batch-history" type="button">查看本房间记录 <span aria-hidden="true">↗</span></button></div>
+  </dialog>
+  <dialog class="modal account-modal" id="account-dialog" aria-labelledby="account-title"><button class="modal-close" type="button" data-close="account-dialog" aria-label="关闭账号窗口">×</button><div class="modal-eyebrow">MY ANNIVERSARY</div><h2 id="account-title">你好，<span id="account-nickname">店庆伙伴</span></h2><p class="modal-description" id="account-room">你的抽奖次数与中奖记录已关联本房间的个人账号。</p><div class="account-points"><span>可用抽奖次数（全部奖池）</span><strong id="account-total-entries">—</strong></div><p class="field-help">{% if remaining_only %}不同奖池的历史剩余次数独立使用，补抽期间不再添加次数。{% else %}不同奖池的次数独立计算。需要增加次数，请联系房间管理员。{% endif %}</p><button class="secondary-button" id="logout-button" type="button">退出当前活动账号</button></dialog>
+  <noscript><div class="noscript-note">请启用浏览器 JavaScript 以加载真实奖池、登录和参与抽奖。</div></noscript>
+</body>
+</html>
