@@ -60,10 +60,10 @@
     <view wx:if="{{order.canEvaluate}}" class="panel evaluation-panel">
       <view class="section-heading"><text class="section-title">评价本次服务</text><text class="status-tag">{{score}} 分</text></view>
       <text class="field-label">满意度</text>
-      <slider class="score-slider" min="1" max="5" step="1" value="{{score}}" activeColor="#0b6472" bindchange="score" disabled="{{busy}}" aria-label="服务满意度"/>
+      <slider class="score-slider" min="1" max="5" step="1" value="{{score}}" activeColor="#2563eb" bindchange="score" disabled="{{busy}}" aria-label="服务满意度"/>
       <label class="field-label" for="order-evaluation">服务评价</label>
       <textarea id="order-evaluation" class="input" value="{{content}}" maxlength="500" bindinput="content" placeholder="分享你的真实体验（选填）" disabled="{{busy}}" cursor-spacing="200" aria-label="服务评价"/>
-      <view class="anonymous-control"><label for="order-anonymous">匿名评价</label><switch id="order-anonymous" checked="{{anonymous}}" bindchange="anonymous" color="#0b6472" disabled="{{busy}}"/></view>
+      <view class="anonymous-control"><label for="order-anonymous">匿名评价</label><switch id="order-anonymous" checked="{{anonymous}}" bindchange="anonymous" color="#2563eb" disabled="{{busy}}"/></view>
       <button class="xa-button button evaluate-order" bindtap="evaluate" loading="{{busy}}" disabled="{{busy}}" hover-class="xa-button-hover">提交评价</button>
     </view>
 

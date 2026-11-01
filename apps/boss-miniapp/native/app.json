@@ -60,8 +60,8 @@
     "enablePullDownRefresh": true
   },
   "tabBar": {
-    "color": "#4d696d",
-    "selectedColor": "#0b6472",
+    "color": "#475569",
+    "selectedColor": "#2563eb",
     "backgroundColor": "#fffefa",
     "borderStyle": "white",
     "list": [

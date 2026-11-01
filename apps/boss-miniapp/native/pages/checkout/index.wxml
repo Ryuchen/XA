@@ -125,7 +125,7 @@
       </info-sheet>
       <text class="section-title">优惠与支付</text>
       <picker class="coupon-picker" range="{{coupons}}" range-key="name" value="{{couponIndex}}" bindchange="coupon" disabled="{{submitting}}">
-        <view class="setting-row"><text class="row-label">{{service.experience_kind ? '套餐资格' : '优惠券'}}</text><view class="row-value"><text>{{coupons[couponIndex].name || '暂无可用资格券'}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
+        <view class="setting-row"><text class="row-label">{{service.experience_kind ? '套餐资格' : '优惠券'}}</text><view class="row-value"><text>{{!service.experience_kind && coupons.length > 1 && !coupons[couponIndex].id ? '查看 ' + (coupons.length - 1) + ' 张优惠券' : (coupons[couponIndex].name || '暂无可用资格券')}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
       </picker>
       <text wx:if="{{quoting}}" class="quote-loading">正在获取最新报价…</text>
       <block wx:if="{{quote}}">

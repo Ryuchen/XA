@@ -13,6 +13,7 @@ import { useStaffDispatchQueue } from '@/stores/staffDispatchQueue'
 import { adminWs } from '@/utils/ws'
 import { request, type PageResult } from '@/api/request'
 import { createStaffDispatchNotice } from '@/utils/staffDispatchNotice'
+import { staffNoticeSound } from '@/utils/staffNoticeSound'
 
 const auth = useAuthStore()
 const staffQueue = useStaffDispatchQueue()
@@ -30,6 +31,7 @@ const staffDispatchNotice = createStaffDispatchNotice({
   })).data,
   queue: (status, count) => staffQueue.update(status, count),
   show: (open, closed) => {
+    staffNoticeSound.play()
     const notification = ElNotification({
       title: '客服待派订单',
       message: '有订单需要客服指派，点击查看待派列表。',
@@ -53,6 +55,7 @@ watch([() => auth.sessionRevision, () => auth.hasPerm('order:view'), () => auth.
 }, { flush: 'sync', immediate: true })
 let overlayObserver: MutationObserver | undefined
 onMounted(() => {
+  staffNoticeSound.prepare()
   let blocked = hasActiveOverlay()
   overlayObserver = new MutationObserver(() => {
     const current = hasActiveOverlay()
@@ -61,5 +64,5 @@ onMounted(() => {
   overlayObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'aria-hidden'] })
   staffDispatchNotice.modalChanged()
 })
-onUnmounted(() => { overlayObserver?.disconnect(); offOrderNotice(); offConnected(); staffDispatchNotice.reset(); adminWs.disconnect() })
+onUnmounted(() => { overlayObserver?.disconnect(); offOrderNotice(); offConnected(); staffDispatchNotice.reset(); staffNoticeSound.dispose(); adminWs.disconnect() })
 </script>

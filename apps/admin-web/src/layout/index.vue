@@ -22,6 +22,9 @@
             title="数量在订单变化时及约每分钟更新，详情以待派列表为准" @click="openStaffQueue">
             <span role="status" aria-atomic="true">{{ staffQueueLabel }}</span>
           </button>
+          <button v-if="canDispatch" class="ap-sound-toggle" type="button" :aria-pressed="staffNoticeSound.enabled.value"
+            :aria-label="staffNoticeSound.enabled.value ? '关闭客服待派提示音' : '开启客服待派提示音'"
+            @click="staffNoticeSound.toggle()">{{ staffNoticeSound.enabled.value ? '提示音 开' : '提示音 关' }}</button>
 
           <el-dropdown v-if="notificationItems.length" trigger="click" @command="onNavCommand">
             <button class="ap-icon-btn" type="button" aria-label="通知消息">
@@ -96,7 +99,7 @@
       <button ref="mobileNavSearch" class="ap-nav-search" type="button" @click="openSearch">
         <el-icon><Search /></el-icon><span>搜索功能</span><kbd>⌘ / Ctrl K</kbd>
       </button>
-      <el-tooltip v-if="canDispatch" content="快捷派单" placement="left" :trigger="['hover', 'focus']" :disabled="mobileOpen">
+      <el-tooltip v-if="canDispatch" content="快捷派单" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen">
         <button class="ap-rail-quick" type="button" aria-label="快捷派单" @click="openQuickDispatch">
           <el-icon><Plus /></el-icon><span>快捷派单</span>
         </button>
@@ -106,7 +109,7 @@
           :aria-labelledby="'nav-group-' + group.id">
           <h2 :id="'nav-group-' + group.id" class="ap-nav-group-label">{{ group.title }}</h2>
           <div class="ap-nav-links">
-            <el-tooltip v-for="item in group.centers" :key="item.id" :content="item.title" placement="left" :trigger="['hover', 'focus']" :disabled="mobileOpen">
+            <el-tooltip v-for="item in group.centers" :key="item.id" :content="item.title" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen">
               <router-link
                 class="ap-nav-item"
                 :to="activeCenter?.id === item.id ? route.fullPath : '/' + item.features[0].path"
@@ -124,11 +127,11 @@
       </nav>
 
       <div class="ap-sidebar-bottom">
-        <el-tooltip :content="isDark ? '浅色模式' : '深色模式'" placement="left" :trigger="['hover', 'focus']" :disabled="mobileOpen"><a class="ap-nav-item" href="#" :aria-label="isDark ? '浅色模式' : '深色模式'" @click.prevent="toggleTheme">
+        <el-tooltip :content="isDark ? '浅色模式' : '深色模式'" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen"><a class="ap-nav-item" href="#" :aria-label="isDark ? '浅色模式' : '深色模式'" @click.prevent="toggleTheme">
           <el-icon><component :is="isDark ? 'Sunny' : 'Moon'" /></el-icon>
           <span class="ap-nav-label">{{ isDark ? '浅色模式' : '深色模式' }}</span>
         </a></el-tooltip>
-        <el-tooltip content="退出登录" placement="left" :trigger="['hover', 'focus']" :disabled="mobileOpen"><a class="ap-nav-item" href="#" aria-label="退出登录" @click.prevent="onLogout">
+        <el-tooltip content="退出登录" placement="right" :trigger="['hover', 'focus']" :disabled="mobileOpen"><a class="ap-nav-item" href="#" aria-label="退出登录" @click.prevent="onLogout">
           <el-icon><SwitchButton /></el-icon>
           <span class="ap-nav-label">退出登录</span>
         </a></el-tooltip>
@@ -157,6 +160,7 @@ import { ElMessageBox, type InputInstance } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStaffDispatchQueue } from '@/stores/staffDispatchQueue'
+import { staffNoticeSound } from '@/utils/staffNoticeSound'
 import { buildNavigation, flattenNavigation, searchNavigation } from '@/router/navigation'
 
 const auth = useAuthStore()
@@ -361,6 +365,7 @@ function onLogout() {
 
 /* ---- Sidebar ---- */
 .ap-sidebar {
+  order: -1;
   position: sticky;
   top: 0;
   align-self: flex-start;
@@ -370,7 +375,7 @@ function onLogout() {
   display: flex;
   flex-direction: column;
   background: var(--sidebar);
-  border-left: 1px solid var(--sidebar-border);
+  border-right: 1px solid var(--sidebar-border);
   overflow: hidden;
 }
 .ap-brand {
@@ -444,7 +449,7 @@ function onLogout() {
 }
 .ap-nav-links {
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
 .ap-nav-item:focus-visible,
 .ap-workspace-nav a:focus-visible,
@@ -459,10 +464,10 @@ function onLogout() {
   align-items: center;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   min-height: 40px;
   margin: 0;
-  padding: 5px 4px;
+  padding: 4px;
   border-radius: calc(var(--radius) * 0.6);
   color: var(--sidebar-foreground);
   opacity: 0.82;
@@ -764,6 +769,8 @@ function onLogout() {
 .ap-scrim {
   display: none;
 }
+.ap-sound-toggle { min-height: 32px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--control-radius); background: var(--card); color: var(--muted-foreground); font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.ap-sound-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ---- 响应式 ---- */
 @media (max-width: 1180px) {
@@ -785,9 +792,9 @@ function onLogout() {
   .ap-nav-item {
     flex-direction: row;
     justify-content: flex-start;
-    gap: 10px;
+    gap: 12px;
     min-height: 44px;
-    padding: 0 14px;
+    padding: 0 12px;
     font-size: 14px;
   }
   .ap-nav-label { max-height: 2em; opacity: 1; }
@@ -807,11 +814,11 @@ function onLogout() {
   .ap-sidebar {
     position: fixed;
     top: 0;
-    left: auto;
-    right: 0;
+    left: 0;
+    right: auto;
     width: min(82vw, 300px);
     z-index: 40;
-    transform: translateX(100%);
+    transform: translateX(-100%);
     transition: transform 0.24s ease;
     box-shadow: var(--shadow-xl);
   }

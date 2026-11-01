@@ -150,6 +150,7 @@ test('actual app notification opens the review list and rechecks permissions', (
     'vue-router': { useRouter: () => ({ push: target => { navigations.push(target) } }) },
     '@/stores/auth': { useAuthStore: () => auth }, '@/stores/staffDispatchQueue': { useStaffDispatchQueue: () => queue },
     '@/utils/ws': { adminWs: { on: () => () => {}, connect() {}, disconnect() {} } },
+    '@/utils/staffNoticeSound': { staffNoticeSound: { prepare() {}, play() {}, dispose() {} } },
     '@/api/request': { request() {} },
     '@/utils/staffDispatchNotice': { createStaffDispatchNotice: deps => { captured = deps; return { receive() {}, reconcile() {}, reset() {} } } },
   }

@@ -113,7 +113,7 @@ input[type='file']::file-selector-button:hover { border-color: var(--primary); }
 }
 .el-button.is-link, .el-button.is-text {
   min-width: 0;
-  padding-inline: 6px;
+  padding-inline: 8px;
 }
 .el-button.is-circle, .el-button.el-button:has(> .el-icon:only-child) {
   width: var(--ap-control-height);
