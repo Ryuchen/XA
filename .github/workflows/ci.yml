@@ -49,7 +49,11 @@ jobs:
           python-version: '3.13'
       - run: pip install -r requirements.txt
       - run: python manage.py check
-      - run: python manage.py test --settings=config.test_settings --noinput
+      # LiveServerTestCase shares an in-memory SQLite connection across threads;
+      # use a runner-local database so concurrent HTTP requests get separate connections.
+      - run: python manage.py test --settings=config.ci_test_settings --noinput
+        env:
+          XA_CI_SQLITE_TEST_DB: ${{ runner.temp }}/xa-ci-backend-test.sqlite3
       - run: python manage.py test support orders.tests.test_release_flow orders.tests.test_release_websocket console.test_bootstrap --settings=config.migration_test_settings --noinput
       - run: python manage.py makemigrations --check --dry-run --settings=config.migration_test_settings
 
