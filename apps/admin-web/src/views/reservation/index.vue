@@ -25,9 +25,9 @@
     <el-dialog v-model="createOpen" title="代老板预约" width="520px" class="reservation-dialog" destroy-on-close>
       <el-alert v-if="createUncertain" type="warning" :closable="false" show-icon title="预约结果未确认，请先在预约列表核对，避免重复预约。" />
       <el-form label-position="top" size="small" @submit.prevent>
-        <el-form-item label="老板" required><el-select v-model="form.customer_account_id" filterable remote reserve-keyword :remote-method="searchBoss" :loading="optionLoading" placeholder="搜索编号、昵称或账号"><el-option v-for="row in bosses" :key="row.id" :value="row.id" :label="`${row.nickname || row.username} · ${row.boss_no}`"/></el-select></el-form-item>
-        <el-form-item label="服务" required><el-select v-model="form.service_id" filterable remote reserve-keyword :remote-method="searchService" :loading="optionLoading" placeholder="搜索服务"><el-option v-for="row in services" :key="row.id" :value="row.id" :disabled="row.billing_provider_count !== 1" :label="`${row.name} · ${amountToXaCoin(row.price)}币${row.billing_provider_count !== 1 ? '（双陪暂不支持）' : ''}`"/></el-select></el-form-item>
-        <el-form-item label="陪玩" required><el-select v-model="form.provider_account_id" filterable remote reserve-keyword :remote-method="searchProvider" :loading="optionLoading" placeholder="搜索编号或昵称"><el-option v-for="row in providers" :key="row.user" :value="row.user" :label="`${row.display_name || row.username} · ${row.escort_no}`"/></el-select></el-form-item>
+        <el-form-item label="老板" required><el-select v-model="form.customer_account_id" filterable remote reserve-keyword :remote-method="searchBoss" :loading="optionLoading.boss" placeholder="搜索编号、昵称或账号"><el-option v-for="row in bosses" :key="row.id" :value="row.id" :label="`${row.nickname || row.username} · ${row.boss_no}`"/></el-select></el-form-item>
+        <el-form-item label="服务" required><el-select v-model="form.service_id" filterable remote reserve-keyword :remote-method="searchService" :loading="optionLoading.service" placeholder="搜索服务"><el-option v-for="row in services" :key="row.id" :value="row.id" :disabled="row.billing_provider_count !== 1" :label="`${row.name} · ${amountToXaCoin(row.price)}币${row.billing_provider_count !== 1 ? '（双陪暂不支持）' : ''}`"/></el-select></el-form-item>
+        <el-form-item label="陪玩" required><el-select v-model="form.provider_account_id" filterable remote reserve-keyword :remote-method="searchProvider" :loading="optionLoading.provider" placeholder="搜索编号或昵称"><el-option v-for="row in providers" :key="row.user" :value="row.user" :label="`${row.display_name || row.username} · ${row.escort_no}`"/></el-select></el-form-item>
         <div class="form-grid"><el-form-item label="开始时间" required><el-date-picker v-model="form.start_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="选择开始时间" :disabled-minutes="disabledMinutes" :disabled-seconds="disabledSeconds" /></el-form-item><el-form-item label="结束时间" required><el-date-picker v-model="form.end_time" type="datetime" value-format="YYYY-MM-DD HH:mm" placeholder="选择结束时间" :disabled-minutes="disabledMinutes" :disabled-seconds="disabledSeconds" /></el-form-item></div>
         <p class="hint">北京时间，按 15 分钟刻度选择；预约创建不扣款。</p>
         <el-form-item label="购买数量"><el-input-number v-model="form.game_rounds" :min="1" :max="999" controls-position="right" /></el-form-item>
@@ -76,13 +76,16 @@ function routeStatus(value: unknown): string {
 }
 const rows = ref<any[]>([]), total = ref(0), page = ref(1), pageSize = 20, status = ref(routeStatus(route.query.status)), loading = ref(false), error = ref('')
 const detailOpen = ref(false), detail = ref<any>(null), detailLoading = ref(false), createOpen = ref(false), createUncertain = ref(false), busy = ref(false)
-const bosses = ref<any[]>([]), providers = ref<any[]>([]), services = ref<any[]>([]), optionLoading = ref(false)
+const bosses = ref<any[]>([]), providers = ref<any[]>([]), services = ref<any[]>([])
+type OptionType = 'boss' | 'provider' | 'service'
+const optionLoading = reactive<Record<OptionType, boolean>>({ boss: false, provider: false, service: false })
+const optionSeq: Record<OptionType, number> = { boss: 0, provider: 0, service: 0 }
 const form = reactive<any>({ customer_account_id: null, provider_account_id: null, service_id: null, start_time: null, end_time: null, game_rounds: 1, game_region: '', game_nickname: '', game_uid: '', remark: '' })
 const disabledMinutes = () => Array.from({ length: 60 }, (_, minute) => minute).filter(minute => minute % 15 !== 0)
 const disabledSeconds = () => Array.from({ length: 59 }, (_, index) => index + 1)
 const drawerSize = ref(window.innerWidth <= 600 ? '100%' : '520px')
 const onResize = () => { drawerSize.value = window.innerWidth <= 600 ? '100%' : '520px' }
-let sequence = 0, detailSeq = 0, optionSeq = 0
+let sequence = 0, detailSeq = 0
 let mounted = false, refreshing = false, pendingRefresh = false
 let periodicTimer: ReturnType<typeof setInterval> | null = null
 let unsubscribe: Array<() => void> = []
@@ -92,9 +95,10 @@ async function load() { const seq = ++sequence; loading.value = true; error.valu
 function changeStatus() { page.value = 1; const query = { ...route.query }; if (status.value) query.status = status.value; else delete query.status; void router.replace({ query }); void load() }
 function changePage(p: number) { page.value = p; void load() }
 async function view(id: number) { detailOpen.value = true; detail.value = null; detailRefreshError.value = ''; detailLoading.value = true; const seq = ++detailSeq; try { const res = await api(`${id}/`); if (seq === detailSeq) detail.value = res.data } catch (e) { ElMessage.error(message(e)) } finally { if (seq === detailSeq) detailLoading.value = false } }
-async function search(type: 'boss' | 'provider' | 'service', keyword = '') { const seq = ++optionSeq; optionLoading.value = true; try { const fn = type === 'boss' ? userApi : type === 'provider' ? escortApi : serviceItemApi; const res = await fn.options({ keyword, page_size: 50, ...(type === 'service' ? { is_active: true } : {}) }, true); if (seq !== optionSeq) return; const list = res.data.list; if (type === 'boss') bosses.value = list; else if (type === 'provider') providers.value = list; else services.value = list } catch (e) { if (seq === optionSeq) ElMessage.error(message(e)) } finally { if (seq === optionSeq) optionLoading.value = false } }
+function invalidateOptions() { for (const type of ['boss', 'provider', 'service'] as const) { ++optionSeq[type]; optionLoading[type] = false } }
+async function search(type: OptionType, keyword = '') { const seq = ++optionSeq[type]; optionLoading[type] = true; try { const fn = type === 'boss' ? userApi : type === 'provider' ? escortApi : serviceItemApi; const res = await fn.options({ keyword, page_size: 50, ...(type === 'service' ? { is_active: true } : {}) }, true); if (seq !== optionSeq[type]) return; const list = res.data.list; if (type === 'boss') bosses.value = list; else if (type === 'provider') providers.value = list; else services.value = list } catch (e) { if (seq === optionSeq[type]) ElMessage.error(message(e)) } finally { if (seq === optionSeq[type]) optionLoading[type] = false } }
 const searchBoss = (keyword: string) => search('boss', keyword), searchProvider = (keyword: string) => search('provider', keyword), searchService = (keyword: string) => search('service', keyword)
-async function openCreate() { if (!canDispatch.value) return; createUncertain.value = false; Object.assign(form, { customer_account_id: null, provider_account_id: null, service_id: null, start_time: null, end_time: null, game_rounds: 1, game_region: '', game_nickname: '', game_uid: '', remark: '' }); createOpen.value = true; await search('boss'); await search('service'); await search('provider') }
+async function openCreate() { if (!canDispatch.value) return; createUncertain.value = false; Object.assign(form, { customer_account_id: null, provider_account_id: null, service_id: null, start_time: null, end_time: null, game_rounds: 1, game_region: '', game_nickname: '', game_uid: '', remark: '' }); createOpen.value = true; await Promise.all([search('boss'), search('service'), search('provider')]) }
 function reviewCreated() { createOpen.value = false; status.value = ''; changeStatus() }
 async function create() {
   if (busy.value || createUncertain.value || !canDispatch.value) return
@@ -158,9 +162,9 @@ watch(() => route.query.find_reservation, value => {
   void router.replace({ query })
 }, { immediate: true })
 watch([busy, createOpen, detailLoading], () => { if (pendingRefresh && !busy.value && !createOpen.value && !detailLoading.value) void requestRefresh() }, { flush: 'sync' })
-watch(() => auth.sessionRevision, () => { ++sequence; ++detailSeq; ++optionSeq; pendingRefresh = false; rows.value = []; detail.value = null; detailRefreshError.value = ''; detailOpen.value = false; createOpen.value = false; if (auth.hasPerm('order:view')) void requestRefresh() })
+watch(() => auth.sessionRevision, () => { ++sequence; ++detailSeq; invalidateOptions(); pendingRefresh = false; rows.value = []; detail.value = null; detailRefreshError.value = ''; detailOpen.value = false; createOpen.value = false; if (auth.hasPerm('order:view')) void requestRefresh() })
 onMounted(() => { mounted = true; unsubscribe = [adminWs.on('reservation_status_update', () => void requestRefresh()), adminWs.on('connected', () => void requestRefresh())]; window.addEventListener('resize', onResize); document.addEventListener('visibilitychange', onVisibilityChange); periodicTimer = setInterval(() => { if (!document.hidden) void requestRefresh() }, 60000); void requestRefresh(); adminWs.connect() })
-onUnmounted(() => { mounted = false; ++sequence; ++detailSeq; ++optionSeq; unsubscribe.forEach(off => off()); if (periodicTimer) clearInterval(periodicTimer); document.removeEventListener('visibilitychange', onVisibilityChange); window.removeEventListener('resize', onResize) })
+onUnmounted(() => { mounted = false; ++sequence; ++detailSeq; invalidateOptions(); unsubscribe.forEach(off => off()); if (periodicTimer) clearInterval(periodicTimer); document.removeEventListener('visibilitychange', onVisibilityChange); window.removeEventListener('resize', onResize) })
 </script>
 
 <style scoped>

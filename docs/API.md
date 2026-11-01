@@ -469,6 +469,7 @@
 | 接口 | 方法/路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | 会话+历史 | `GET /api/chat/session/` | 登录（OPERATOR 拒绝，走后台工作台） | 自动创建会话并返回最近 50 条消息；响应含 `session`、按时间正序排列的 `messages[]`、`has_more`、`next_before_id`。加载更早记录传 `before_id=next_before_id`；游标只属于当前账号的会话。 |
+| 客服回复未读数 | `GET /api/chat/unread/` | 登录（客服账号除外） | 返回 `unread`；仅读取现有会话，不创建空会话。 |
 | 发送 | `POST /api/chat/send/` | 登录（OPERATOR 拒绝） | body `content`（最多 1000 字）或 `image`（multipart），至少其一；`unread_support+1` 并 WS 推送。无旧用户映射的业务账号也可创建会话；未绑定的历史会话会按已认证旧身份关联。 |
 | 标记已读 | `POST /api/chat/read/` | 登录 | `through_id` 为已展示的最后消息 ID；仅标记该 ID 及之前的客服消息，返回剩余 `unread_user`。旧客户端省略时沿用全部标记已读。 |
 

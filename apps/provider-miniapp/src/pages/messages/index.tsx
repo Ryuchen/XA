@@ -121,7 +121,8 @@ const MessagesPage: React.FC = () => {
   };
   return (
     <PlatformLayout active='messages'><View className={`xa-provider-page ${styles.page}`}>
-      <PageHeading title='消息中心' hint={!loaded ? '正在读取消息' : error ? '消息暂时无法更新' : unread ? `${unread} 条消息等待查看` : '所有消息均已阅读'} action={unread > 0 && <Button className={styles.readAll} onClick={readAll}>全部已读</Button>} />
+      <PageHeading title='消息中心' hint={!loaded ? '正在读取消息' : error ? '消息暂时无法更新' : unread ? `${unread} 条平台通知等待查看` : '平台通知均已阅读'} action={unread > 0 && <Button className={styles.readAll} onClick={readAll}>全部已读</Button>} />
+      <Button className={styles.loadMore} onClick={() => Taro.navigateTo({ url: '/pages/support-chat/index' })}>平台客服对话</Button>
       {!!error && !!items.length && <View className={styles.emptyCard}><Empty title='消息暂未更新' desc={error}><Button onClick={load}>重新加载</Button></Empty></View>}
       <View className={styles.messageList}>
       {!loaded ? <Text className={styles.empty}>加载中…</Text> : error && !items.length ? <View className={styles.emptyCard}><Empty title='消息暂未加载' desc={error}><Button onClick={load}>重新加载</Button></Empty></View> : items.length === 0 ? <View className={styles.emptyCard}><Empty title='暂无消息' desc='平台通知和订单动态会出现在这里' /></View> : items.map(item => {

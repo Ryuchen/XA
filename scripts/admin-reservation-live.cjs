@@ -8,6 +8,7 @@ const vue = adminRequire('vue'), ts = adminRequire('typescript')
 const input = JSON.parse(fs.readFileSync(0, 'utf8'))
 let activeToken = input.staffToken
 let detailGate = null
+let optionGate = null
 let dropCreateResponse = false
 // Django's in-memory LiveServer shares one SQLite connection across threads.
 // Finish each real HTTP response before issuing the next request on that connection.
@@ -31,6 +32,9 @@ async function http(config) {
     throw Object.assign(new Error('response lost'), { code: 'ERR_NETWORK' })
   }
   if (result.code !== 0) throw result
+  if (optionGate && url.pathname === optionGate.path) {
+    const gate = optionGate; optionGate = null; gate.arrived(); await gate.release
+  }
   if (detailGate && url.pathname === detailGate.path && (config.method || 'get') === 'get') {
     const gate = detailGate; detailGate = null; gate.arrived(); await gate.release
   }
@@ -52,7 +56,7 @@ const modules = { vue: { ...vue, onMounted: fn => mounted.push(fn), onUnmounted:
   '@/utils/ws': { adminWs: { on: (name, fn) => { socketEvents.set(name, fn); return () => socketEvents.delete(name) }, connect() {} } } }
 let source = fs.readFileSync('apps/admin-web/src/views/reservation/index.vue', 'utf8').match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1]
 source = source.replace("(import.meta.env.VITE_API_BASE || '/api/admin')", "'/api/admin'")
-const code = ts.transpileModule(source + '\nglobalThis.page = { form, create, view, convert, action, rows, detail, openCreate, createOpen, createUncertain, reviewCreated, reservationDate, status, changeStatus };', { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
+const code = ts.transpileModule(source + '\nglobalThis.page = { form, create, view, convert, action, rows, detail, openCreate, createOpen, createUncertain, reviewCreated, reservationDate, status, changeStatus, searchBoss, searchService, bosses, services, optionLoading };', { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
 const context = { exports: {}, require: name => { assert.ok(modules[name], name); return modules[name] },
   window: { innerWidth: 375, addEventListener() {}, removeEventListener() {} }, document,
   setInterval: fn => { intervalCallback = fn; return 1 }, clearInterval: () => { intervalCallback = null },
@@ -72,6 +76,33 @@ const scope = vue.effectScope(); scope.run(() => vm.runInNewContext(code, contex
   await settle(() => !route.query.status && calls.filter(row => row.path === '/api/orders/reservations/' && row.method === 'get').length >= 3)
   assert.equal(page.status.value, '')
   await page.openCreate()
+  // Hold a real boss-options response while a different field finishes searching.
+  // The two independent controls must both retain their own results.
+  let releaseOptions, optionsArrived
+  const optionsReady = new Promise(resolve => { optionsArrived = resolve })
+  optionGate = { path: '/api/admin/options/users/', arrived: optionsArrived, release: new Promise(resolve => { releaseOptions = resolve }) }
+  page.bosses.value = []; page.services.value = []
+  const bossSearch = page.searchBoss('')
+  await optionsReady
+  assert.equal(page.optionLoading.boss, true)
+  await page.searchService('')
+  assert.ok(page.services.value.some(row => row.id === input.serviceId), 'service options come from the real API')
+  assert.equal(page.optionLoading.boss, true, 'another field must not clear the pending boss loading state')
+  assert.equal(page.optionLoading.service, false)
+  releaseOptions()
+  await bossSearch
+  assert.ok(page.bosses.value.some(row => row.id === input.bossId), 'a service search must not discard the boss search')
+  assert.equal(page.optionLoading.boss, false)
+  const olderReady = new Promise(resolve => { optionsArrived = resolve })
+  optionGate = { path: '/api/admin/options/users/', arrived: optionsArrived, release: new Promise(resolve => { releaseOptions = resolve }) }
+  const olderSearch = page.searchBoss('')
+  await olderReady
+  await page.searchBoss('no-such-boss-qa-7391')
+  assert.equal(page.bosses.value.length, 0)
+  releaseOptions()
+  await olderSearch
+  assert.equal(page.bosses.value.length, 0, 'an older response must not overwrite the latest query in the same field')
+  await page.searchBoss('')
   Object.assign(page.form, { customer_account_id: input.bossId, provider_account_id: input.providerId,
     service_id: input.serviceId, start_time: page.reservationDate(input.start), end_time: page.reservationDate(input.end), game_rounds: 1 })
   await page.create()

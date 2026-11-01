@@ -16,6 +16,7 @@ export default defineAppConfig({
     'pages/profile/index',
     'pages/skills/index',
     'pages/support/index',
+    'pages/support-chat/index',
     'pages/audition/index',
     'pages/points/index'
   ],

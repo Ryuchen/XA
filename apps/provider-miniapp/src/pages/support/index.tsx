@@ -35,6 +35,7 @@ export default function SupportPage() {
     <View className={styles.card}>
       <Text className={styles.title}>客服充值与钱包咨询</Text>
       <Text className={styles.description}>先与客服确认收款方式和金额，付款后由客服凭收款流水在后台充值。1 元人民币兑换 10 兴安币，到账后可缴押金或购买通行证。</Text>
+      <Button onClick={() => Taro.navigateTo({ url: '/pages/support-chat/index' })}>站内咨询客服</Button>
       {loading ? <Text>正在加载客服信息…</Text> : error ? <><Text>{error}</Text><Button onClick={load}>重试</Button></> : card ? <>
         <Text className={styles.label}>接待客服：{card.name}</Text>
         <Text className={styles.label} selectable>打手编号：{card.customer_reference}</Text>

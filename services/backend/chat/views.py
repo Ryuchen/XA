@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 
 from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated
-from .models import ChatMessage
+from .models import ChatMessage, ChatSession
 from .notifier import notify_chat_message
 from .serializers import ChatMessageSerializer, ChatSessionSerializer, ChatReadSerializer
 from .read_state import mark_read_through
@@ -18,6 +18,19 @@ from .sessions import account_chat_session
 
 MESSAGE_PAGE_SIZE = 50
 CLIENT_MESSAGE_ID = re.compile(r'^[a-zA-Z0-9_-]{8,64}$')
+
+
+class ChatUnreadView(APIView):
+    """Read the existing conversation count without creating empty sessions."""
+    permission_classes = [IsClubAccountAuthenticated]
+
+    def get(self, request):
+        if request.account.account_type == ClubAccount.AccountType.STAFF:
+            return Response({'code': 403, 'msg': '客服请使用后台工作台'}, status=403)
+        session = ChatSession.objects.filter(account=request.account).only('unread_user').first()
+        if session is None and request.legacy_user is not None:
+            session = ChatSession.objects.filter(account__isnull=True, user=request.legacy_user).only('unread_user').first()
+        return Response({'code': 0, 'data': {'unread': session.unread_user if session else 0}})
 
 
 class ChatSessionView(APIView):
