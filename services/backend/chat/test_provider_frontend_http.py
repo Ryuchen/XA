@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 from asgiref.sync import async_to_sync
@@ -57,12 +58,25 @@ class ProviderChatFrontendHTTPTest(LiveServerTestCase):
         self.assertEqual(ChatSession.objects.get(pk=session_id).unread_user, 0)
         self.assertEqual(client.get('/api/chat/unread/').data['data']['unread'], 0)
         if os.environ.get('XA_PROVIDER_CHAT_375') == '1':
-            browser = subprocess.run([node, str(repo / 'scripts/provider-chat-mobile-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'providerToken': issue_account_tokens(provider_account)[0],
-                                  'providerId': provider_account.pk, 'staffToken': issue_account_tokens(staff_account)[0],
-                                  'sessionId': session_id}), text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
+            with tempfile.TemporaryDirectory(prefix='xa-provider-chat-images-') as media_root, override_settings(MEDIA_ROOT=media_root):
+                from chat.test_image_upload_http import broken_png_crc
+                broken_file = Path(media_root) / 'corrupt.png'
+                broken_file.write_bytes(broken_png_crc())
+                browser = subprocess.run([node, str(repo / 'scripts/provider-chat-mobile-375-live.cjs')],
+                    input=json.dumps({'base': self.live_server_url, 'providerToken': issue_account_tokens(provider_account)[0],
+                                      'providerId': provider_account.pk, 'staffToken': issue_account_tokens(staff_account)[0],
+                                      'sessionId': session_id, 'brokenImage': str(broken_file)}), text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
+                self.assertEqual(browser.returncode, 0, browser.stderr + browser.stdout)
+                admin_browser = subprocess.run([node, str(repo / 'scripts/admin-provider-chat-image-live.cjs')],
+                    input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
+                                      'name': provider_account.nickname or provider_account.username}),
+                    text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
+                self.assertEqual(admin_browser.returncode, 0, admin_browser.stderr + admin_browser.stdout)
             self.assertEqual(browser.returncode, 0, browser.stderr + browser.stdout)
             self.assertEqual(ChatMessage.objects.filter(session_id=session_id, content='小屏验收咨询').count(), 1)
+            self.assertEqual(ChatMessage.objects.filter(session_id=session_id, content_type='IMAGE', is_from_support=False).count(), 2)
+            self.assertTrue(ChatMessage.objects.filter(session_id=session_id, content_type='IMAGE', content='排班截图，麻烦核对').exists())
+            self.assertEqual(ChatMessage.objects.filter(session_id=session_id, content_type='IMAGE', content='网络中断后的截图').count(), 1)
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,

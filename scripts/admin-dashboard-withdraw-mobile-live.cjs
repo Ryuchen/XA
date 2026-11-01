@@ -83,6 +83,25 @@ async function main() {
     await dialog.getByRole('button', { name: '确认释放' }).click();
     await dialog.waitFor({ state: 'hidden' });
     await cards.first().waitFor({ state: 'hidden' });
+    const nextContext = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    await nextContext.addInitScript(token => localStorage.setItem('xa_admin_token', token), input.reclaimerToken);
+    const nextPage = await nextContext.newPage();
+    nextPage.on('pageerror', error => errors.push(error.message));
+    await nextPage.route('**/*', route => origins.has(new URL(route.request().url()).origin) ? route.continue() : route.abort());
+    await nextPage.goto(`${base}/withdrawals?status=PENDING&claim_scope=unclaimed`, { waitUntil: 'domcontentloaded' });
+    const nextCard = nextPage.locator('.wd-mobile-card').filter({ hasText: `申请 #${input.claimedId} ` });
+    await nextCard.waitFor({ timeout: 30000 });
+    await nextCard.getByRole('button', { name: '领取', exact: true }).click();
+    await nextCard.waitFor({ state: 'hidden' });
+    await nextPage.goto(`${base}/withdrawals?status=PENDING&claim_scope=mine`, { waitUntil: 'domcontentloaded' });
+    const myCard = nextPage.locator('.wd-mobile-card').filter({ hasText: `申请 #${input.claimedId} ` });
+    await myCard.waitFor({ timeout: 30000 });
+    await myCard.getByRole('button', { name: '通过', exact: true }).click();
+    const payout = nextPage.getByRole('dialog', { name: '提现审核' });
+    await payout.getByPlaceholder('打款流水号/凭证编号（必填）').fill('ISOLATED-QA-TRANSFER');
+    await payout.getByRole('button', { name: '确认已打款' }).click();
+    await payout.waitFor({ state: 'hidden' });
+    await myCard.waitFor({ state: 'hidden' });
     assert.deepEqual(errors, []);
     console.log('Real withdrawal dashboard drilldown verified at 375px.');
   } finally {

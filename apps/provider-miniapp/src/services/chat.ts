@@ -1,4 +1,4 @@
-import { ApiResponse, request } from '@/utils/request';
+import { ApiResponse, request, uploadFile } from '@/utils/request';
 
 export interface ChatMessage {
   id: number; content: string; content_type: 'TEXT' | 'IMAGE'; image_url: string;
@@ -12,6 +12,8 @@ export const fetchChat = (before?: number) => request<ApiResponse<ChatHistory>>(
 export const fetchChatUnread = () => request<ApiResponse<{ unread: number }>>('/chat/unread/');
 export const sendChatText = (content: string, client_message_id: string) =>
   request<ApiResponse<ChatMessage>>('/chat/send/', 'POST', { content, client_message_id });
+export const sendChatImage = (path: string, client_message_id: string, content: string) =>
+  uploadFile<ApiResponse<ChatMessage>>('/chat/send/', path, { client_message_id, content }, 'image');
 export const checkChatMessage = (id: string) =>
   request<ApiResponse<{ status: 'FOUND' | 'UNKNOWN'; message: ChatMessage | null }>>(`/chat/message-status/?client_message_id=${encodeURIComponent(id)}`);
 export const readChatMessages = (ids: number[]) => request<ApiResponse<{ unread_user: number }>>('/chat/read/', 'POST', { message_ids: ids });

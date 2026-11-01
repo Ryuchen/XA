@@ -4,13 +4,13 @@ import Taro, { useDidHide, useDidShow } from '@tarojs/taro';
 import PageNav from '@/components/PageNav';
 import PlatformLayout from '@/components/PlatformLayout';
 import PrivateImage from '@/components/PrivateImage';
-import { ChatMessage, checkChatMessage, fetchChat, readChatMessages, sendChatText } from '@/services/chat';
+import { ChatMessage, checkChatMessage, fetchChat, readChatMessages, sendChatImage, sendChatText } from '@/services/chat';
 import { wsService } from '@/services/websocket';
 import { getSessionRevision, getStoredUser } from '@/utils/auth';
 import { previewPrivateImages } from '@/utils/privateMedia';
 import styles from './index.module.scss';
 
-type Pending = { id: string; content: string };
+type Pending = { id: string; content: string; kind?: 'text' | 'image' };
 const merge = (a: ChatMessage[], b: ChatMessage[]) => [...new Map([...a, ...b].map(row => [row.id, row])).values()]
   .sort((x, y) => x.created_at.localeCompare(y.created_at) || x.id - y.id);
 const keyFor = () => `xa:provider:chat-pending:${getStoredUser()?.id || ''}`;
@@ -31,6 +31,7 @@ const SupportChat: React.FC = () => {
   const [scrollTarget, setScrollTarget] = useState('');
   const rows = useRef<ChatMessage[]>([]), seq = useRef(0), visible = useRef(true), locked = useRef(false), operation = useRef(0);
   const browsingRef = useRef(false), session = useRef(getSessionRevision());
+  const imagePath = useRef('');
   const scrollTop = useRef<number | null>(null), programmaticScrollUntil = useRef(0);
   const replace = (next: ChatMessage[]) => { rows.current = next; setItems(next); };
   // Taro's H5 scroll watcher can run before newly inserted message nodes exist.
@@ -77,7 +78,7 @@ const SupportChat: React.FC = () => {
     const offChat = wsService.on('chat_message', update), offConnect = wsService.on('connected', update);
     const changed = () => {
       if (session.current === getSessionRevision()) return;
-      session.current = getSessionRevision(); ++seq.current; ++operation.current; locked.current = false; setBusy(false); replace([]); setInput(readDraft()); setPending(readPending()); setPendingStored(true);
+      session.current = getSessionRevision(); ++seq.current; ++operation.current; locked.current = false; imagePath.current = ''; setBusy(false); replace([]); setInput(readDraft()); setPending(readPending()); setPendingStored(true);
       setBefore(null); setError(''); browsingRef.current = false; setBrowsing(false); setScrollTo(''); setScrollTarget(''); scrollTop.current = null;
       refreshRef.current();
     };
@@ -89,11 +90,11 @@ const SupportChat: React.FC = () => {
   const finish = async (message: ChatMessage, item: Pending, revision: number) => {
     if (revision !== getSessionRevision() || message.client_message_id !== item.id) return;
     try { if (readPending()?.id === item.id) Taro.removeStorageSync(keyFor()); } catch { /* Message remains visible in history. */ }
-    setPending(null); if (readDraft().trim() === item.content) saveDraft('');
-    setInput(value => value.trim() === item.content ? '' : value);
+    setPending(null); imagePath.current = '';
+    if (item.content) { if (readDraft().trim() === item.content) saveDraft(''); setInput(value => value.trim() === item.content ? '' : value); }
     browsingRef.current = false; setBrowsing(false); await load();
   };
-  const submit = async (existing?: Pending) => {
+  const submit = async (existing?: Pending, retry = false) => {
     if (locked.current) return;
     const content = input.trim();
     const item = existing || (content ? { id: `chat-${Date.now()}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`, content } : null);
@@ -101,12 +102,30 @@ const SupportChat: React.FC = () => {
     const revision = getSessionRevision(), op = ++operation.current; locked.current = true; setBusy(true); setPending(item);
     try { Taro.setStorageSync(keyFor(), item); setPendingStored(true); } catch { setPendingStored(false); }
     try {
-      const result = await sendChatText(item.content, item.id);
+      const result = item.kind === 'image' ? await sendChatImage(imagePath.current, item.id, item.content) : await sendChatText(item.content, item.id);
       if (revision !== getSessionRevision()) return;
+      if (!retry && result.code === 400) {
+        try { if (readPending()?.id === item.id) Taro.removeStorageSync(keyFor()); } catch { /* Current page can still retain the draft. */ }
+        setPending(null); imagePath.current = '';
+        Taro.showToast({ title: result.msg || '发送失败，请检查内容', icon: 'none' });
+        return;
+      }
       if (result.code !== 0 || !result.data) throw new Error(result.msg || '发送结果未确认');
       await finish(result.data, item, revision);
     } catch { if (revision === getSessionRevision()) Taro.showToast({ title: '发送结果未确认，请先核对', icon: 'none' }); }
     finally { if (op === operation.current) { locked.current = false; if (revision === getSessionRevision()) setBusy(false); } }
+  };
+  const chooseImage = async () => {
+    if (locked.current || pending || busy) return;
+    const revision = getSessionRevision();
+    try {
+      const result = await Taro.chooseImage({ count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'] });
+      if (revision !== getSessionRevision() || !result.tempFilePaths[0]) return;
+      const file = result.tempFiles?.[0];
+      if (file && file.size > 5 * 1024 * 1024) { Taro.showToast({ title: '图片大小不能超过 5MB', icon: 'none' }); return; }
+      imagePath.current = result.tempFilePaths[0];
+      await submit({ id: `chat-${Date.now()}-${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`, kind: 'image', content: input.trim() });
+    } catch { /* User cancelled the picker. */ }
   };
   const check = async () => {
     if (!pending || locked.current) return;
@@ -115,7 +134,7 @@ const SupportChat: React.FC = () => {
       const result = await checkChatMessage(item.id);
       if (revision !== getSessionRevision()) return;
       if (result.code === 0 && result.data?.status === 'FOUND' && result.data.message) await finish(result.data.message, item, revision);
-      else Taro.showToast({ title: '暂未查到，可重试原消息', icon: 'none' });
+      else Taro.showToast({ title: item.kind === 'image' && !imagePath.current ? '暂未查到，请稍后再核对' : '暂未查到，可重试原消息', icon: 'none' });
     } catch { if (revision === getSessionRevision()) Taro.showToast({ title: '暂时无法核对，请稍后重试', icon: 'none' }); }
     finally { if (op === operation.current) { locked.current = false; if (revision === getSessionRevision()) setBusy(false); } }
   };
@@ -126,7 +145,8 @@ const SupportChat: React.FC = () => {
     const answer = await Taro.showModal({ title: '放弃核对？', content: '消息可能已经送达，请先查看聊天记录。', confirmText: '放弃核对' });
     if (!answer.confirm || revision !== getSessionRevision()) return;
     try { if (readPending()?.id === item.id) Taro.removeStorageSync(keyFor()); } catch { /* The current page still keeps the text. */ }
-    setInput(value => { const restored = value || item.content; saveDraft(restored); return restored; }); setPending(null);
+    if (item.kind !== 'image') setInput(value => { const restored = value || item.content; saveDraft(restored); return restored; });
+    imagePath.current = ''; setPending(null);
   };
   return <PlatformLayout active='messages'><View className={`xa-provider-page ${styles.page}`}>
     <PageNav title='平台客服' fallbackUrl='/pages/messages/index' />
@@ -148,9 +168,9 @@ const SupportChat: React.FC = () => {
         </View>)}
       </ScrollView>
       {browsing && <Button className={styles.secondary} onClick={latest}>回到最新消息</Button>}
-      {pending && <View className={styles.pending}><Text>上条消息结果未确认，请先核对。</Text>{!pendingStored && <Text>设备未能保存核对编号，请保持此页面。</Text>}<Text className={styles.pendingContent}>{pending.content}</Text><View className={styles.actions}><Button className={styles.secondary} disabled={busy} onClick={check}>核对结果</Button><Button className={styles.secondary} disabled={busy} onClick={() => submit(pending)}>重试原消息</Button><Button className={styles.secondary} disabled={busy} onClick={abandon}>放弃核对</Button></View></View>}
-      <Textarea className={styles.input} value={input} maxlength={1000} disabled={!!pending || busy} placeholder='输入咨询内容' onInput={event => { setInput(event.detail.value); saveDraft(event.detail.value); }} />
-      <Button className={styles.send} disabled={busy || !!pending || !input.trim()} loading={busy} onClick={() => submit()}>发送</Button>
+      {pending && <View className={styles.pending}><Text>上条消息结果未确认，请先核对。</Text>{!pendingStored && <Text>设备未能保存核对编号，请保持此页面。</Text>}{pending.kind === 'image' && !imagePath.current && <Text>原图片已不可用，请先核对发送结果。</Text>}<Text className={styles.pendingContent}>{pending.kind === 'image' ? `图片消息${pending.content ? '：' + pending.content : ''}` : pending.content}</Text><View className={styles.actions}><Button className={styles.secondary} disabled={busy} onClick={check}>核对结果</Button>{(pending.kind !== 'image' || !!imagePath.current) && <Button className={styles.secondary} disabled={busy} onClick={() => submit(pending, true)}>重试原消息</Button>}<Button className={styles.secondary} disabled={busy} onClick={abandon}>放弃核对</Button></View></View>}
+      <Textarea className={styles.input} value={input} maxlength={1000} disabled={!!pending || busy} placeholder='输入咨询内容，也可作为图片说明' onInput={event => { setInput(event.detail.value); saveDraft(event.detail.value); }} />
+      <View className={styles.actions}><Button className={styles.secondary} disabled={busy || !!pending} onClick={chooseImage}>发送图片</Button><Button className={styles.send} disabled={busy || !!pending || !input.trim()} loading={busy} onClick={() => submit()}>发送</Button></View>
     </View>
   </View></PlatformLayout>;
 };

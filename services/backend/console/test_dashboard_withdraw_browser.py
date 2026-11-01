@@ -39,12 +39,28 @@ class DashboardWithdrawalBrowserTest(LiveServerTestCase):
         other_account = get_or_create_account_for_legacy_user(other)
         other.admin_membership.account = other_account
         other.admin_membership.save(update_fields=['account'])
+        reclaimer = make_console_user(['withdraw:view', 'withdraw:audit'])
+        reclaimer_account = get_or_create_account_for_legacy_user(reclaimer)
+        reclaimer.admin_membership.account = reclaimer_account
+        reclaimer.admin_membership.save(update_fields=['account'])
         payee = self.bind('browser-test-1234')
         ids = [self.ok(self.provider_client.post('/api/wallet/withdraw/', self.payload(payee, f'mobile-withdraw-{n}'), format='json'))['data']['request']['id'] for n in range(2)]
         self.ok(self.client_for(other_account).post(f'/api/admin/withdrawals/{ids[0]}/claim/'))
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run([node, str(repo / 'scripts/admin-dashboard-withdraw-mobile-live.cjs')],
-            input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(self.admin.admin_membership.account)[0], 'claimedId': ids[0], 'unclaimedId': ids[1]}),
+            input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(self.admin.admin_membership.account)[0], 'reclaimerToken': issue_account_tokens(reclaimer_account)[0], 'claimedId': ids[0], 'unclaimedId': ids[1]}),
             text=True, encoding='utf-8', capture_output=True, timeout=90, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIsNone(WithdrawRequest.objects.get(pk=ids[0]).claimed_by_account_id)
+        record = WithdrawRequest.objects.get(pk=ids[0])
+        self.assertEqual((record.claimed_by_account_id, record.status, record.payout_reference),
+                         (reclaimer_account.pk, 'APPROVED', 'ISOLATED-QA-TRANSFER'))
+        history = self.ok(self.provider_client.get('/api/wallet/withdraw/'))['data']['requests']
+        receipt = next(row for row in history if row['id'] == ids[0])
+        self.assertEqual((receipt['status'], receipt['actual_amount'], receipt['payout_reference']),
+                         ('APPROVED', 19600, 'ISOLATED-QA-TRANSFER'))
+        messages = self.ok(self.provider_client.get('/api/messages/'))['data']['messages']
+        self.assertTrue(any(message['title'] == '提现审核通过' and '¥196.00' in message['preview'] for message in messages), messages)
+        provider = subprocess.run([node, str(repo / 'scripts/provider-withdraw-mobile-live.cjs')],
+            input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(self.account)[0], 'id': self.account.pk}),
+            text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
+        self.assertEqual(provider.returncode, 0, provider.stdout + provider.stderr)

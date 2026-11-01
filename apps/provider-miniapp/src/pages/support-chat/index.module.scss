@@ -17,4 +17,4 @@
 .input { display: block; box-sizing: border-box; width: 100%; min-height: 80PX; padding: 10PX; margin: 12PX 0; border: 1PX solid $color-border; border-radius: $radius-md; background: $color-bg-page; }
 .secondary, .send { @include button-reset; min-height: 44PX; padding: 10PX 14PX; border-radius: $radius-md; font-size: $font-size-sm; }
 .secondary { background: $color-bg-page; color: $color-primary; }
-.send { width: 100%; background: $color-primary; color: #fff; }
+.send { flex: 1; min-width: 120PX; background: $color-primary; color: #fff; }
