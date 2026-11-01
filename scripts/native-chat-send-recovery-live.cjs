@@ -64,7 +64,7 @@ process.stdin.on('end', () => { (async () => {
     const firstId = page._pending.id;
     assert.ok(page.data.items.some(row => row.client_message_id === firstId));
     const saved = storage.get('xa:native:chat-pending:' + fixture.sessions[0].user.id);
-    assert.deepEqual(saved, {id:firstId, kind:'text'}, 'only the identifier and type are retained');
+    assert.deepEqual(saved, {id:firstId, kind:'text', draftScope:'general'}, 'only the identifier, type and draft scope are retained');
     page.onUnload(); page = makePage();
     assert.equal(page.data.pendingRestored, true);
     assert.equal(page._pending.id, firstId);
@@ -98,7 +98,7 @@ process.stdin.on('end', () => { (async () => {
 
     dropImage = true; await page.sendImage({tempFilePath:imagePath, size:fs.statSync(imagePath).size});
     const restoredImageId = page._pending.id;
-    assert.deepEqual(storage.get('xa:native:chat-pending:' + fixture.sessions[0].user.id), {id:restoredImageId, kind:'image'});
+    assert.deepEqual(storage.get('xa:native:chat-pending:' + fixture.sessions[0].user.id), {id:restoredImageId, kind:'image', draftScope:undefined});
     page.onUnload(); page = makePage();
     assert.equal(page.data.pendingRestored, true);
     await page.checkPending();

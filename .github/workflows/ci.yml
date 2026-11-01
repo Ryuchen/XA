@@ -36,6 +36,14 @@ jobs:
         working-directory: services/backend
     steps:
       - uses: actions/checkout@v6
+      # Backend integration tests execute the real frontend test drivers.
+      - uses: pnpm/action-setup@v4.4.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
@@ -69,6 +77,14 @@ jobs:
         working-directory: services/backend
     steps:
       - uses: actions/checkout@v6
+      # MySQL integration tests also invoke frontend drivers over real HTTP.
+      - uses: pnpm/action-setup@v4.4.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        working-directory: .
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'

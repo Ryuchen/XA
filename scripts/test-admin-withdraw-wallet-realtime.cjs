@@ -14,12 +14,12 @@ function setup(kind, permissions) {
   const scope = vue.effectScope(), mounted = [], unmounted = [], timers = new Map(), handlers = new Map();
   const calls = { table: 0, reload: 0, details: [], actions: [], prompts: [], close: 0, connect: 0, success: [], errors: [], packages: [] };
   const tablePending = [], detailPending = [], actionPending = [], packagePending = [];
-  let timerId = 0, activeTable = 0, maxActiveTable = 0;
+  let timerId = 0, activeTable = 0, maxActiveTable = 0, page;
   const auth = vue.reactive({ token: 'first', sessionRevision: 1, permissions: permissions || (kind === 'withdraw' ? ['withdraw:view', 'withdraw:audit'] : ['wallet:view', 'wallet:adjust', 'wallet:recharge']),
     hasPerm(code) { return this.permissions.includes(code); } });
   const api = {
     async list() { return { data: { list: [] } }; },
-    async retrieve(id) { calls.details.push({ id }); return detailPending.length ? detailPending.shift().promise : { data: { id, status: 'APPROVED', status_display: '已通过', amount: 2000 } }; },
+    async retrieve(id) { calls.details.push({ id }); return detailPending.length ? detailPending.shift().promise : { data: page?.auditBusy.value ? pendingRow(id) : { id, status: 'APPROVED', status_display: '已通过', amount: 2000 } }; },
     async action(...args) { calls.actions.push(args); return actionPending.length ? actionPending.shift().promise : { data: { id: args[0], status: args[1] === 'approve' ? 'APPROVED' : 'REJECTED' } }; },
     async collectionAction(...args) { calls.actions.push(args); return { data: {} }; },
   };
@@ -29,7 +29,7 @@ function setup(kind, permissions) {
   const mocks = {
     vue: { ...vue, onMounted: fn => mounted.push(fn), onBeforeUnmount: fn => unmounted.push(fn) },
     'element-plus': { ElMessage: message, ElMessageBox: messageBox },
-    'vue-router': { useRouter: () => ({ push: async () => {} }), onBeforeRouteLeave: () => {} },
+    'vue-router': { useRouter: () => ({ push: async () => {} }), useRoute: () => vue.reactive({ query: {} }), onBeforeRouteLeave: () => {} },
     '@element-plus/icons-vue': { Search: {} }, '@/components/CrudTable.vue': {},
     '@/api/modules': { withdrawApi: api, walletApi: api, withdrawConfigApi: { get: async () => ({ data: { min_amount: 1000, tax_rate: 5 } }), update: async () => ({ data: {} }) } },
     '@/utils/dict': { WITHDRAW_STATUS: {}, PAYEE_METHOD: {} },
@@ -52,7 +52,7 @@ function setup(kind, permissions) {
     crypto: { randomUUID: () => 'local-test-request' }, URL: { createObjectURL: () => 'blob:test' }, FormData,
   };
   scope.run(() => vm.runInNewContext(code, context, { filename: file }));
-  const page = context.page;
+  page = context.page;
   page.tableRef.value = { async load() { calls.table++; activeTable++; maxActiveTable = Math.max(maxActiveTable, activeTable); try { if (tablePending.length) await tablePending.shift().promise; } finally { activeTable--; } }, reload() { calls.reload++; } };
   mounted.forEach(fn => fn());
   return { page, auth, calls, timers, handlers, tablePending, detailPending, actionPending, packagePending,
@@ -64,7 +64,7 @@ function setup(kind, permissions) {
   };
 }
 const event = (id = 9, status = 'APPROVED') => ({ withdraw_id: id, account_id: 42, status });
-const pendingRow = id => ({ id, status: 'PENDING', user_name: '本地陪玩', actual_amount: 1900, tax_amount: 100, payee_name: '测试收款人', payee_method_display: '微信', payee_account: 'LOCAL' });
+const pendingRow = id => ({ id, status: 'PENDING', claimed_by_account: 7, claim_is_mine: true, claimed_at: '2026-10-20T00:00:00Z', user_name: '本地陪玩', actual_amount: 1900, tax_amount: 100, payee_name: '测试收款人', payee_method_display: '微信', payee_account: 'LOCAL' });
 
 test('withdraw pushes coalesce without resetting filters/pages and refresh only the opened matching detail', async () => {
   const s = setup('withdraw'); await tick();
@@ -114,7 +114,7 @@ test('withdraw session changes, permission loss and unmount stop queues and disc
 });
 
 test('withdraw audits require pending state and current audit permission, then reconcile through the queue', async () => {
-  const s = setup('withdraw'); const approval = s.page.onApprove(pendingRow(9));
+  const s = setup('withdraw'); const approval = s.page.onApprove(pendingRow(9)); await tick();
   await s.page.onApprove(pendingRow(9)); assert.equal(s.calls.prompts.length, 1);
   s.calls.prompts[0].pending.resolve({ value: ' LOCAL-PAYOUT ' }); await approval;
   assert.equal(s.calls.actions[0][0], 9); assert.equal(s.calls.actions[0][1], 'approve'); assert.equal(s.calls.actions[0][2].payout_reference, 'LOCAL-PAYOUT');
@@ -125,7 +125,7 @@ test('withdraw audits require pending state and current audit permission, then r
 
 for (const reason of ['same-withdrawal push', 'reconnect', 'session change', 'audit permission loss', 'unmount']) {
   test('withdraw pending confirmation cannot submit after ' + reason, async () => {
-    const s = setup('withdraw'), approval = s.page.onApprove(pendingRow(9));
+    const s = setup('withdraw'), approval = s.page.onApprove(pendingRow(9)); await tick();
     if (reason === 'same-withdrawal push') s.emit('withdraw_status_update', event());
     if (reason === 'reconnect') s.emit('connected');
     if (reason === 'session change') s.auth.sessionRevision++;
@@ -138,7 +138,7 @@ for (const reason of ['same-withdrawal push', 'reconnect', 'session change', 'au
 }
 
 test('withdraw unrelated pushes keep a pending rejection usable and invalid payloads do not refresh', async () => {
-  const s = setup('withdraw'), rejection = s.page.onReject(pendingRow(9));
+  const s = setup('withdraw'), rejection = s.page.onReject(pendingRow(9)); await tick();
   s.emit('withdraw_status_update', event(10)); s.calls.prompts[0].pending.resolve({ value: '本地核验不符' }); await rejection;
   assert.equal(s.calls.actions[0][1], 'reject'); await s.flush(); const count = s.calls.table;
   for (const data of [{}, event('9'), { ...event(), account_id: -1 }, event(9, 'UNKNOWN')]) s.emit('withdraw_status_update', data);
@@ -154,7 +154,7 @@ test('withdraw a final-state push blocks auditing an old pending row before the 
 
 test('withdraw reconnect keeps a submitted audit locked until its response settles', async () => {
   const s = setup('withdraw'), pending = deferred(); s.actionPending.push(pending);
-  const approval = s.page.onApprove(pendingRow(9));
+  const approval = s.page.onApprove(pendingRow(9)); await tick();
   s.calls.prompts[0].pending.resolve({ value: 'LOCAL-PAYOUT' }); await tick();
   assert.equal(s.calls.actions.length, 1); assert.equal(s.page.auditBusy.value, true);
   s.emit('connected'); await s.page.onReject(pendingRow(10));
@@ -165,7 +165,7 @@ test('withdraw reconnect keeps a submitted audit locked until its response settl
 
 test('withdraw unknown audit result blocks another audit until actual status is checked', async () => {
   const s = setup('withdraw'), pending = deferred(); s.actionPending.push(pending);
-  const approval = s.page.onApprove(pendingRow(9)); s.calls.prompts[0].pending.resolve({ value: 'LOCAL-PAYOUT' }); await tick();
+  const approval = s.page.onApprove(pendingRow(9)); await tick(); s.calls.prompts[0].pending.resolve({ value: 'LOCAL-PAYOUT' }); await tick();
   pending.reject(new Error('network')); await approval;
   assert.equal(s.page.auditReview.value.id, 9); await s.page.onReject(pendingRow(10)); assert.equal(s.calls.prompts.length, 1);
   await s.page.checkAuditReview(); assert.equal(s.page.auditReview.value.checked.status, 'APPROVED');
@@ -174,7 +174,7 @@ test('withdraw unknown audit result blocks another audit until actual status is 
 
 test('withdraw explicit rejection is shown without treating it as an unknown outcome', async () => {
   const s = setup('withdraw'), pending = deferred(); s.actionPending.push(pending);
-  const rejection = s.page.onReject(pendingRow(9)); s.calls.prompts[0].pending.resolve({ value: '本地核对' }); await tick();
+  const rejection = s.page.onReject(pendingRow(9)); await tick(); s.calls.prompts[0].pending.resolve({ value: '本地核对' }); await tick();
   pending.reject({ code: 400, msg: '该提现已审核，无法重复操作' }); await rejection;
   assert.equal(s.page.auditReview.value, null); assert.equal(s.calls.errors[0], '该提现已审核，无法重复操作'); s.dispose();
 });

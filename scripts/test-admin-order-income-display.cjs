@@ -7,24 +7,34 @@ const adminRequire = createRequire(path.resolve('apps/admin-web/package.json'));
 const vue = adminRequire('vue');
 const vueRequire = createRequire(adminRequire.resolve('vue/package.json'));
 const { renderToString } = vueRequire('@vue/server-renderer');
+const ts = adminRequire('typescript');
+const vm = require('node:vm');
 
 // Render the actual financial bindings from the order drawer, without API calls.
 const source = fs.readFileSync(path.resolve('apps/admin-web/src/views/order/index.vue'), 'utf8');
 const lines = source.split(/\r?\n/).filter(line => line.includes('原预计陪玩收益')
-  || line.includes('原预计店铺留存') || line.includes('订单已退款，不再结算以上预计收益'));
+  || line.includes('店铺留存快照') || line.includes('订单已退款，不再结算以上预计收益'));
 assert.equal(lines.length, 3, 'The drawer must expose both financial labels and the refund explanation');
 const recoveryStart = source.indexOf('<section v-if="current.refund_summary"');
-const recoverySection = source.slice(recoveryStart, source.indexOf('<div v-for="ticket in aftersales"', recoveryStart));
+const recoveryEnd = source.indexOf('<h3 class="od-detail-heading">售后</h3>', recoveryStart);
+assert.ok(recoveryStart >= 0 && recoveryEnd > recoveryStart, 'refund section boundaries must exist');
+const recoverySection = source.slice(recoveryStart, recoveryEnd);
 const render = vue.compile('<div>' + lines.join('\n') + recoverySection + '</div>');
 const Description = vue.defineComponent({ props: ['label'], setup: (props, { slots }) => () =>
   vue.h('div', [vue.h('span', props.label), ...(slots.default?.() || [])]) });
 const Alert = vue.defineComponent({ props: ['title'], setup: props => () => vue.h('p', props.title) });
+const script = source.match(/<script setup[^>]*>([\s\S]*?)<\/script>/)[1];
+const ast = ts.createSourceFile('order.ts', script, ts.ScriptTarget.Latest, true);
+const historicalFn = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'historicalSettlementRecorded');
+assert.ok(historicalFn, 'financial labels use the real historical-settlement check');
+const helpers = { exports: {} };
+vm.runInNewContext(ts.transpileModule(`${historicalFn.getText(ast)}\nmodule.exports = { historicalSettlementRecorded }`, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { module: helpers, exports: helpers.exports });
 
 async function renderFinancials(current) {
   const before = JSON.stringify(current);
   const html = await renderToString(vue.createSSRApp({
     components: { ElDescriptionsItem: Description, ElAlert: Alert, ElDescriptions: { setup: (_, { slots }) => () => vue.h('div', slots.default?.()) } },
-    setup: () => ({ current, amountToXaCoin: amount => String(amount / 10), formatDateTime: String, TX_TYPE: {}, refundSourceLabel: String }), render,
+    setup: () => ({ current, historicalSettlementRecorded: helpers.exports.historicalSettlementRecorded, amountToXaCoin: amount => String(amount / 10), formatDateTime: String, TX_TYPE: {}, refundSourceLabel: String }), render,
   }));
   assert.equal(JSON.stringify(current), before, 'Display formatting must not modify financial snapshots');
   assert.match(html, /800 币/); assert.match(html, /200 币/);
@@ -33,19 +43,19 @@ async function renderFinancials(current) {
 
 test('refunded orders label original forecast amounts and explain they will not settle', async () => {
   const html = await renderFinancials(Object.freeze({ payment_status: 'REFUNDED', settled_at: null, provider_income: 8000, shop_income: 2000 }));
-  assert.match(html, /原预计陪玩收益/); assert.match(html, /原预计店铺留存/);
+  assert.match(html, /原预计陪玩收益/); assert.match(html, /原店铺留存快照/);
   assert.match(html, /订单已退款，不再结算以上预计收益/);
 });
 
 test('unsettled paid orders label their income as forecasts', async () => {
   const html = await renderFinancials(Object.freeze({ payment_status: 'PAID', settled_at: null, provider_income: 8000, shop_income: 2000 }));
-  assert.match(html, />预计陪玩收益</); assert.match(html, />预计店铺留存</);
+  assert.match(html, />预计陪玩收益</); assert.match(html, />店铺留存快照</);
   assert.doesNotMatch(html, /原预计|订单已退款/);
 });
 
 test('settled orders keep their existing actual-income labels', async () => {
-  const html = await renderFinancials(Object.freeze({ payment_status: 'PAID', settled_at: '2026-10-20T00:00:00+08:00', provider_income: 8000, shop_income: 2000 }));
-  assert.match(html, />陪玩实得</); assert.match(html, />店铺留存</);
+  const html = await renderFinancials(Object.freeze({ payment_status: 'PAID', settlement_status: 'SETTLED', settled_at: '2026-10-20T00:00:00+08:00', provider_income: 8000, shop_income: 2000 }));
+  assert.match(html, />陪玩实得</); assert.match(html, />店铺留存快照</);
   assert.doesNotMatch(html, /预计|订单已退款/);
 });
 
@@ -57,7 +67,7 @@ test('settled refunded orders retain original settlement and show actual linked 
     ], benefit_effects: { confirmation_reversed: true, net_consumption: 30000, previous_boss_type_id: 2, boss_type_id: 1,
       expired_coupon_ids: [71, 72], cancelled_claim_ids: [81], deactivated_tag_ids: [91], consumed_coupon_ids: [73], delivered_claim_ids: [82],
       consumed_benefits_policy: '已用券和已完成交付保留原历史并列明；不向其他订单追债' } } }));
-  assert.match(html, /原结算陪玩收益/); assert.match(html, /原结算店铺留存/); assert.doesNotMatch(html, /预计|不再结算/);
+  assert.match(html, /原结算陪玩收益/); assert.match(html, /原店铺留存快照/); assert.doesNotMatch(html, /预计|不再结算/);
   assert.match(html, /实际追回收益/); assert.match(html, /1000 币/); assert.match(html, /INCOME -800 币/); assert.match(html, /SHOP_INCOME -200 币/);
   assert.match(html, /原流水 #51 → 冲正流水 #61/); assert.match(html, /平台账户/);
   assert.match(html, /该单实销确认已冲回/); assert.match(html, /净实销：3000 币/); assert.match(html, /会员档位：#2 → #1/);

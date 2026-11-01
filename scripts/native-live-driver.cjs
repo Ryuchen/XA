@@ -167,7 +167,7 @@ async function main() {
   await fulfilled.load(); assert.equal(fulfilled.data.order.status, 'COMPLETED'); assert.equal(fulfilled.data.order.canEvaluate, true);
   fulfilled._visible = true;
   fulfilled.setData({ content: '真实联动验收评价', score: 5 }); loseNextEvaluation = true; await fulfilled.evaluate();
-  assert.ok(toasts.includes('评价结果未确认，请查看订单状态'), 'lost evaluation response needs a clear next step');
+  assert.ok(toasts.includes('评价结果未确认，请查看订单评价'), 'lost evaluation response needs a clear next step');
   assert.equal(fulfilled.data.order.canEvaluate, false);
   assert.equal(fulfilled.data.order.evaluation.content, '真实联动验收评价');
   const chat = await load('chat'); chat.setData({ content: '原生页面真实 HTTP 联动测试' }); await chat.send();
