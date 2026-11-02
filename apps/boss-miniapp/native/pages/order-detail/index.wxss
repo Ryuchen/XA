@@ -1,14 +1,14 @@
 .order-detail-page { padding-bottom: 80px; }
 .order-detail-page .panel { padding: 24rpx; margin: 0 0 24rpx; border-radius: 24rpx; }
-.order-detail-page .panel > .section-title, .order-detail-page .section-heading { margin: 0 0 20rpx; padding-bottom: 16rpx; border-bottom: 1rpx solid var(--xa-color-border); }
-.order-detail-page .section-title { font-size: 16px; line-height: 1.5; }
+.order-detail-page .panel > .section-title, .order-detail-page .section-heading { margin: 0 0 20rpx; padding-bottom: 16rpx; border-bottom: 1rpx solid var(--xa-hairline); }
+.order-detail-page .section-title { font-size:15px; line-height: 1.5; }
 .section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8rpx 16rpx; }
 .order-detail-page .section-heading .section-title { margin: 0; }
 .order-summary .eyebrow { margin: 0 0 6rpx; font-size: var(--xa-control-small-font); }
 .order-summary .status-title { color: var(--xa-color-primary); font-size: 24px; line-height: 1.4; letter-spacing: 0; }
 .summary-cancelled .status-title { color: var(--xa-color-muted); }
 .status-description { display: block; margin-top: 10rpx; color: var(--xa-color-muted); font-size: var(--xa-control-font); line-height: 1.6; overflow-wrap: anywhere; }
-.order-number-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding-top: 18rpx; margin-top: 20rpx; border-top: 1rpx solid var(--xa-color-border); }
+.order-number-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding-top: 18rpx; margin-top: 20rpx; border-top: 1rpx solid var(--xa-hairline); }
 .order-number { flex: 1; min-width: 0; }
 .meta-label { display: block; margin-bottom: 4rpx; color: var(--xa-color-muted); font-size: var(--xa-control-small-font); }
 .order-number-value { display: block; font-size: var(--xa-control-small-font); line-height: 1.5; overflow-wrap: anywhere; }
@@ -18,10 +18,10 @@
 .service-name { display: block; font-size: var(--xa-control-font); font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
 .amount-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12rpx 20rpx; margin-top: 20rpx; padding: 18rpx 0; font-size: var(--xa-control-font); }
 .amount-value { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 6rpx; min-width: 0; margin-left: auto; }
-.order-detail-page .amount-value .price { font-size: 22px; line-height: 1.2; }
+.order-detail-page .amount-value .price { font-size:20px; line-height: 1.2; }
 .amount-unit { color: var(--xa-color-muted); font-size: var(--xa-control-small-font); }
 .detail-row { display: flex; align-items: baseline; justify-content: space-between; gap: 20rpx; padding: 16rpx 0; font-size: var(--xa-control-font); line-height: 1.5; }
-.detail-row + .detail-row { border-top: 1rpx solid var(--xa-color-border); }
+.detail-row + .detail-row { border-top: 1rpx solid var(--xa-hairline); }
 .detail-row > text:first-child { flex-shrink: 0; }
 .detail-row > text:last-child { min-width: 0; max-width: 70%; text-align: right; overflow-wrap: anywhere; }
 .detail-row:last-child { padding-bottom: 0; }
@@ -33,7 +33,7 @@
 .result-name { display: block; margin-bottom: 6rpx; color: var(--xa-color-primary); font-weight: 600; }
 .status-tag { display: inline-flex; align-items: center; justify-content: center; max-width: 100%; padding: 4rpx 12rpx; border-radius: 8rpx; background: var(--xa-color-primary-soft); color: var(--xa-color-primary); font-size: var(--xa-control-small-font); font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
 .empty-hint { display: block; margin-top: 18rpx; padding: 16rpx; border-radius: 12rpx; background: var(--xa-color-surface-subtle); color: var(--xa-color-muted); font-size: var(--xa-control-small-font); line-height: 1.6; }
-.application { margin-top: 20rpx; padding: 18rpx; border: 1rpx solid var(--xa-color-border); border-radius: 16rpx; background: var(--xa-color-surface-subtle); }
+.application { margin-top: 20rpx; padding: 18rpx; border: 1rpx solid var(--xa-hairline); border-radius: 16rpx; background: var(--xa-color-surface-subtle); }
 .application-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8rpx 12rpx; }
 .application-title { font-size: var(--xa-control-font); font-weight: 600; }
 .application-member { gap: 12rpx; }
@@ -53,9 +53,9 @@
 .anonymous-control switch { flex-shrink: 0; transform: scale(.72); transform-origin: right center; }
 .review-content { display: block; font-size: var(--xa-control-font); line-height: 1.6; overflow-wrap: anywhere; }
 .evaluation-target-list { display: flex; flex-wrap: wrap; gap: 8rpx; }
-.order-detail-page .xa-button.evaluation-target { min-height: 36px; margin: 0; padding: 8rpx 16rpx; border: 1rpx solid var(--xa-color-border); border-radius: 12rpx; background: var(--xa-color-surface); color: var(--xa-color-text); font-size: var(--xa-control-small-font); }
+.order-detail-page .xa-button.evaluation-target { min-height: 36px; margin: 0; padding: 8rpx 16rpx; border: 1rpx solid var(--xa-hairline); border-radius: 12rpx; background: var(--xa-color-surface); color: var(--xa-color-text); font-size: var(--xa-control-small-font); }
 .order-detail-page .xa-button.evaluation-target-selected { border-color: var(--xa-color-primary); background: var(--xa-color-primary-soft); color: var(--xa-color-primary); }
-.evaluation-entry { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid var(--xa-color-border); }
+.evaluation-entry { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid var(--xa-hairline); }
 .aftersale-note { display: block; margin-top: 18rpx; padding: 14rpx 16rpx; border-radius: 12rpx; background: var(--xa-color-primary-soft); color: var(--xa-color-primary); font-size: var(--xa-control-small-font); line-height: 1.5; }
 .aftersale-history { margin-top: 18rpx; }
 .order-detail-page .xa-button.button, .order-detail-page .xa-button.button-secondary { min-height: 44px; padding: 10rpx 20rpx; border-radius: 16rpx; font-size: var(--xa-control-font); line-height: 1.5; }

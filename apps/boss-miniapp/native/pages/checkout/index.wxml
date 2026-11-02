@@ -118,11 +118,7 @@
     </view>
 
     <view class="panel payment-panel">
-      <info-sheet label="费用与下单说明" title="确认订单前，请核对" bind:visibilitychange="helpVisibility">
-        <view class="help-section"><text class="help-label">金额与优惠</text><text>应付金额以本页最新报价为准。切换套餐、陪玩、数量或优惠券后，请等待报价完成再提交。</text></view>
-        <view class="help-section"><text class="help-label">单陪与双陪</text><text>双陪套餐需选齐两位陪玩，或清空指定后由平台安排。所选人数与待提交状态会同步显示。</text></view>
-        <view class="help-section"><text class="help-label">提交结果待核对时</text><text>先查看上次订单结果及钱包记录。结果未明确前，请使用页面提供的核对或重试入口。</text></view>
-      </info-sheet>
+
       <text class="section-title">优惠与支付</text>
       <picker class="coupon-picker" range="{{coupons}}" range-key="name" value="{{couponIndex}}" bindchange="coupon" disabled="{{submitting}}">
         <view class="setting-row"><text class="row-label">{{service.experience_kind ? '套餐资格' : '优惠券'}}</text><view class="row-value"><text>{{!service.experience_kind && coupons.length > 1 && !coupons[couponIndex].id ? '查看 ' + (coupons.length - 1) + ' 张优惠券' : (coupons[couponIndex].name || '暂无可用资格券')}}</text><image class="row-chevron" src="/assets/icons/chevron.png" aria-hidden="true"/></view></view>
@@ -143,6 +139,11 @@
       <view wx:if="{{quoteError && selectionComplete}}" class="quote-recovery"><text class="error quote-error">{{quoteError}}</text><button wx:if="{{coupons[0].id === 0 && coupons[couponIndex].id}}" class="xa-button button-secondary" bindtap="clearCoupon" disabled="{{submitting}}" hover-class="xa-button-hover">不使用优惠券</button><button class="xa-button button-secondary" bindtap="refreshAvailability" disabled="{{submitting}}" hover-class="xa-button-hover">刷新报价</button></view>
     </view>
 
+    <info-sheet label="费用与下单说明" title="确认订单前，请核对" bind:visibilitychange="helpVisibility">
+        <view class="help-section"><text class="help-label">金额与优惠</text><text>应付金额以本页最新报价为准。切换套餐、陪玩、数量或优惠券后，请等待报价完成再提交。</text></view>
+        <view class="help-section"><text class="help-label">单陪与双陪</text><text>双陪套餐需选齐两位陪玩，或清空指定后由平台安排。所选人数与待提交状态会同步显示。</text></view>
+        <view class="help-section"><text class="help-label">提交结果待核对时</text><text>先查看上次订单结果及钱包记录。结果未明确前，请使用页面提供的核对或重试入口。</text></view>
+      </info-sheet>
     <view class="bottom-bar checkout-payment">
       <view class="payment-actions">
         <view class="payable-summary">

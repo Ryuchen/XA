@@ -1,6 +1,13 @@
 :host { display:block; }
 .xa-button::after { border:none; }
-.xa-button.help-trigger { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:44px; padding:12rpx 0; margin:0; font-size:26rpx; line-height:1.6; text-align:left; color:var(--xa-color-primary); background:transparent; }
+.xa-button.help-trigger {
+  display: flex; align-items: center; justify-content: flex-start; gap: 8rpx;
+  width: 100%; min-height: 44px; margin: 0; padding: var(--xa-s-3) 0 0;
+  border-top: 1rpx solid var(--xa-hairline);
+  font-size: var(--xa-fs-cap); line-height: 1.5; text-align: left;
+  color: var(--xa-color-muted); background: transparent;
+}
+.xa-button.help-trigger:active { opacity: .7; }
 .help-pressed { opacity:.72; }
 .sheet-root { position:fixed; inset:0; z-index:2000; }
 .sheet-mask { position:absolute; inset:0; opacity:0; background:var(--xa-color-overlay); transition:opacity var(--xa-motion-base); }

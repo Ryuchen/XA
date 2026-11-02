@@ -1,4 +1,4 @@
-.reward-claim-page .page-heading,.reward-claim-page .panel,.reward-claim-page .section-surface { padding:24rpx; margin-bottom:16rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; background:var(--xa-color-surface); }
+.reward-claim-page .page-heading,.reward-claim-page .panel,.reward-claim-page .section-surface { padding:24rpx; margin-bottom:16rpx; border:1rpx solid var(--xa-hairline); border-radius:20rpx; background:var(--xa-color-surface); }
 .reward-claim-page .title { font-size:20px; letter-spacing:0; }
 .reward-claim-page .eyebrow { margin-bottom:8rpx; font-size:var(--xa-control-small-font); overflow-wrap:anywhere; }
 .claim-heading>.tag { max-width:100%; margin-top:12rpx; padding:3rpx 10rpx; font-size:var(--xa-control-small-font); white-space:normal; overflow-wrap:anywhere; }

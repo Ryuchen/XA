@@ -4,8 +4,23 @@ const auth = require('../../core/auth');
 const ui = require('../../core/ui');
 const events = require('../../core/events');
 const { privatePage } = require('../../core/page');
-Page(privatePage({
+const page = privatePage({
   data: { loading: false, error: '', calendar: null, cells: [], rewards: [], submitting: false, weekdays: ['日','一','二','三','四','五','六'] },
+  init() {
+    const refresh = () => {
+      if (!this._alive || !this._visible || !auth.getSession()) return;
+      ++this._seq;
+      if (this.data.submitting) { this._checkinPending = true; return; }
+      if (!this._checkinTimer) this._checkinTimer = setTimeout(() => {
+        this._checkinTimer = null;
+        if (!this._alive || !this._visible) return;
+        if (this.data.submitting) this._checkinPending = true;
+        else this.load();
+      }, 300);
+    };
+    this._checkinOff = [events.on('order.changed', refresh), events.on('checkin-config.changed', refresh),
+      events.on('session.changed', () => { clearTimeout(this._checkinTimer); this._checkinTimer = null; this._checkinPending = false; })];
+  },
   async fetch() {
       const calendar = await api.request('/users/checkin/');
       const checked = ui.list(calendar.checked_days);
@@ -30,15 +45,22 @@ Page(privatePage({
     const calendar = this.data.calendar;
     if (!calendar || !day || this.data.submitting || this.data.loading || !ui.list(calendar.makeup_available_days).includes(day)) return;
     if (!calendar.makeup_cards) { ui.toast('暂无补签卡，消费达标后可获得'); return; }
+    const revision = auth.revision();
     this.setData({ submitting: true });
     try {
       const choice = await new Promise((resolve, reject) => themedModal({ title: '补签 ' + calendar.month + ' 月 ' + day + ' 日', content: '将消耗 1 张补签卡，当前共有 ' + calendar.makeup_cards + ' 张。', confirmText: '确认补签', success: resolve, fail: reject }));
-      if (choice.confirm) await this.submit(day, true);
-    } catch (error) { ui.toast(error); }
-    finally { this.setData({ submitting: false }); }
+      if (choice.confirm && this._alive && this._visible && auth.revision() === revision) await this.submit(day, true);
+    } catch (error) { if (auth.revision() === revision) ui.toast(error); }
+    finally {
+      if (auth.revision() === revision) {
+        this.setData({ submitting: false });
+        if (this._alive && this._visible && this._checkinPending) { this._checkinPending = false; this.load(); }
+      }
+    }
   },
   async submit(day, alreadyLocked) {
     if ((!alreadyLocked && this.data.submitting) || !auth.ensure()) return;
+    const revision = auth.revision();
     this.setData({ submitting: true });
     try {
       const result = await api.request('/users/checkin/', 'POST', day ? { day } : {});
@@ -46,7 +68,20 @@ Page(privatePage({
       ui.toast((day ? '补签成功' : '签到成功') + reward);
       events.emit('wallet.changed');
       if (result.full_attendance_awarded) themedModal({ title: '本月全勤达成', content: this.data.calendar.full_attendance_reward.name || '已获得全勤奖励', showCancel: false });
-    } catch (error) { ui.toast(error); }
-    finally { await this.load(); this.setData({ submitting: false }); }
+    } catch (error) { if (auth.revision() === revision) ui.toast(error); }
+    finally {
+      if (auth.revision() === revision) {
+        await this.load();
+        if (auth.revision() === revision) {
+          this.setData({ submitting: false });
+          if (this._alive && this._visible && this._checkinPending) { this._checkinPending = false; this.load(); }
+        }
+      }
+    }
   }
-}));
+});
+const hide = page.onHide, unload = page.onUnload;
+Page({ ...page,
+  onHide() { hide.call(this); ++this._seq; clearTimeout(this._checkinTimer); this._checkinTimer = null; },
+  onUnload() { this._checkinOff.forEach(off => off()); clearTimeout(this._checkinTimer); unload.call(this); },
+});

@@ -1,4 +1,5 @@
 <view class="page mine">
+  <view class="mine-heading"><text class="title">我的</text><text class="subtitle">账号、钱包与服务记录</text></view>
   <view wx:if="{{!logged}}" class="section-surface guest"><view class="guest-main"><view class="guest-copy"><text class="title">你的游戏生活</text><text class="subtitle">登录后管理钱包、订单与账号资料</text></view><image class="guest-art" src="{{companionshipArt}}" mode="aspectFit" aria-hidden="true"/></view><button class="xa-button button guest-login" bindtap="login" hover-class="xa-button-hover">微信快捷登录</button></view>
   <state-view wx:else loading="{{loading}}" error="{{error}}" bind:retry="load"/>
 

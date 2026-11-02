@@ -2,8 +2,8 @@
 .profile-page .title { font-size:20px; letter-spacing:0; }
 .profile-page .subtitle { margin-top:8rpx; font-size:var(--xa-control-small-font); line-height:1.5; }
 .profile-page .section-title { margin:0 0 16rpx; font-size:var(--xa-control-font); line-height:1.5; }
-.profile-page .xa-button.avatar-button { display:flex; align-items:center; gap:16rpx; width:100%; min-height:44px; padding:0 0 16rpx; border-bottom:1rpx solid var(--xa-color-border); border-radius:0; background:transparent; text-align:left; font-size:var(--xa-control-font); }
-.avatar-button .avatar { width:44px; height:44px; flex-shrink:0; font-size:18px; }
+.profile-page .xa-button.avatar-button { display:flex; align-items:center; gap:16rpx; width:100%; min-height:44px; padding:0 0 16rpx; border-bottom:1rpx solid var(--xa-hairline); border-radius:0; background:transparent; text-align:left; font-size:var(--xa-control-font); }
+.avatar-button .avatar { width:44px; height:44px; flex-shrink:0; font-size:17px; }
 .avatar-copy { flex:1; min-width:0; }
 .avatar-hint, .field-note { display:block; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); font-weight:400; line-height:1.5; overflow-wrap:anywhere; }
 .avatar-hint { margin-top:4rpx; }
@@ -13,7 +13,7 @@
 .profile-page .label { display:block; margin-bottom:8rpx; font-size:var(--xa-control-font); line-height:1.5; }
 .profile-page .input { min-height:40px; border-radius:10rpx; font-size:var(--xa-control-font); }
 .profile-page input.input { height:40px; padding:0 12px; }
-.phone-row { display:flex; align-items:center; gap:16rpx; padding-top:12rpx; border-top:1rpx solid var(--xa-color-border); }
+.phone-row { display:flex; align-items:center; gap:16rpx; padding-top:12rpx; border-top:1rpx solid var(--xa-hairline); }
 .phone-copy { flex:1; min-width:0; }
 .phone-value { display:block; margin-top:4rpx; font-size:var(--xa-control-font); line-height:1.5; overflow-wrap:anywhere; }
 .profile-page .xa-button.verify-button { width:88px; min-height:36px; margin:0; padding:6px; flex-shrink:0; border-radius:10rpx; font-size:var(--xa-control-small-font); }

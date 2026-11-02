@@ -80,6 +80,7 @@ async function connect(recover = false) {
       if (message.type === 'wallet_update' && message.data?.account_id != null
           && String(message.data.account_id) === String(auth.getSession()?.user?.id)) events.emit('wallet.changed', message.data);
       if (message.type === 'club_feed_update') events.emit('feed.changed');
+      if (message.type === 'checkin_config_update') events.emit('checkin-config.changed');
       if (message.type === 'site_message_update') events.emit('site-message.changed');
       if (message.type === 'reservation_status_update') events.emit('reservation.changed', message.data);
       if (['chat_message', 'chat_session_update'].includes(message.type)) events.emit('message.changed', message.data);

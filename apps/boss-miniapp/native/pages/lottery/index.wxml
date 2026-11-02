@@ -6,12 +6,6 @@
   </view>
   <state-view wx:if="{{loading || error}}" loading="{{loading}}" error="{{error}}" bind:retry="load"/>
   <block wx:if="{{campaign && !loading && !error}}">
-    <view wx:if="{{campaign.pity.enabled}}" class="section-surface pity-section">
-      <view class="between"><text class="pity-label">{{campaign.pity.target_name || '68 体验单'}}保底</text><text class="pity-counter">{{campaign.pity.count}} / {{campaign.pity.limit}}</text></view>
-      <view class="pity-track"><view class="pity-fill" style="width:{{campaign.pity.percent}}%"></view></view>
-      <view class="between pity-caption"><text>最多再 <text class="pity-remaining">{{campaign.pity.remaining}}</text> 抽获得</text><text>本活动单抽、十连共享进度</text></view>
-      <text class="small muted pity-note">连续 {{campaign.pity.limit}} 抽必得；提前获得后重新累计。</text>
-    </view>
     <view class="section-surface wheel-section {{phase === 'summon' ? 'is-summoning' : ''}} rarity-{{focusRarity}}">
       <view class="between section-top"><text class="section-title">每一抽，都有好礼</text><text class="small muted">十连至少 1 份非积分奖</text></view>
       <view class="wheel-wrap" style="width:{{size}}px;height:{{size}}px">
@@ -28,6 +22,12 @@
       <text wx:if="{{campaign.daily_remaining !== null}}" class="muted centered">今日剩余 {{campaign.daily_remaining}} 次 · 十连消耗 10 次机会</text>
       <text wx:if="{{phase === 'request'}}" class="centered request-status">正在确认{{drawCount === 10 ? '十连' : '单抽'}}结果，请勿重复操作…</text>
       <view class="motion-options"><label class="motion-toggle"><switch checked="{{simpleMotion}}" bindchange="toggleMotion" color="#2563eb"/><text>简化动画</text></label><button wx:if="{{phase === 'summon' || phase === 'reveal'}}" class="xa-button skip-button" bindtap="skipAnimation" hover-class="xa-button-hover">跳过动画 ›</button></view>
+    </view>
+    <view wx:if="{{campaign.pity.enabled}}" class="section-surface pity-section">
+      <view class="between"><text class="pity-label">{{campaign.pity.target_name || '68 体验单'}}保底</text><text class="pity-counter">{{campaign.pity.count}} / {{campaign.pity.limit}}</text></view>
+      <view class="pity-track"><view class="pity-fill" style="width:{{campaign.pity.percent}}%"></view></view>
+      <view class="between pity-caption"><text>最多再 <text class="pity-remaining">{{campaign.pity.remaining}}</text> 抽获得</text><text>本活动单抽、十连共享进度</text></view>
+      <text class="small muted pity-note">连续 {{campaign.pity.limit}} 抽必得；提前获得后重新累计。</text>
     </view>
     <view wx:if="{{drawError}}" class="section-surface draw-error"><text>{{drawError}}</text><view class="error-actions"><button wx:if="{{credentialError}}" class="xa-button button-secondary" bindtap="reloadCredential" hover-class="xa-button-hover">重新读取凭证</button><button wx:elif="{{retryPending}}" class="xa-button button-secondary" bindtap="retryDraw" disabled="{{busy}}" hover-class="xa-button-hover">重试同一{{retryCount === 10 ? '十连' : '单抽'}}</button><button class="xa-button button-quiet" bindtap="records" hover-class="xa-button-hover">查看中奖记录 ›</button></view></view>
     <view wx:if="{{resultCount && phase !== 'summon'}}" id="lottery-results" class="section-surface result-section {{resultRare ? 'has-ssr' : ''}}">

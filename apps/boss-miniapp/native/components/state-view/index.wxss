@@ -16,7 +16,7 @@
 }
 .state-symbol {
   width:64rpx; height:64rpx; line-height:64rpx; border-radius:50%; margin:0 auto 12rpx;
-  background:rgba(37,99,235,.08); color:var(--xa-color-primary); font-size:32rpx; font-weight:600;
+  background:rgba(37,99,235,.08); color:var(--xa-color-primary); font-size:30rpx; font-weight:600;
 }
 
 /* 骨架屏：冷调微光扫过，加载结束后不留重影。 */

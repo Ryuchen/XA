@@ -1,64 +1,188 @@
-.catalog { --service-cover-height:135rpx; background: var(--xa-color-page); }
-.catalog-heading { margin: 0 0 24rpx; }
-.catalog-heading .title { font-size: 38rpx; line-height: 1.35; }
-.catalog-heading .eyebrow { margin-bottom: 8rpx; font-size: 24rpx; letter-spacing: 0; }
-.catalog-heading .subtitle { margin-top: 10rpx; font-size: 25rpx; }
-.login-panel { margin-top: 28rpx; }
-.catalog-controls { padding: 24rpx; background: var(--xa-color-surface); border: 1rpx solid var(--xa-color-border); border-radius: 24rpx; }
-.search-field { display: flex; align-items: center; gap: 14rpx; padding: 0 20rpx; background: var(--xa-color-page); border: 1rpx solid var(--xa-color-surface-subtle); border-radius: 16rpx; }
-.search-icon { width:var(--xa-icon-small); height:var(--xa-icon-small); flex-shrink: 0; opacity: .7; }
-.catalog .input.search { flex: 1; min-width: 0; height: var(--xa-input-height); min-height: var(--xa-input-height); padding: 0; margin: 0; background: transparent; border: 0; border-radius: 0; font-size:var(--xa-control-font); }
-.game-selector { padding-top: 24rpx; }
-.game-selector > .label { margin-bottom: 14rpx; font-size: 26rpx; }
-.filter-scroll { width: 100%; white-space: nowrap; }
-.filter-scroll .chips { display: inline-flex; flex-wrap: nowrap; gap: 12rpx; margin: 0; padding-bottom: 4rpx; }
-.catalog .game-selector .xa-button.chip { min-height: var(--xa-control-compact); padding: 6rpx 18rpx; gap: 10rpx; flex-shrink: 0; border-radius: 16rpx; font-size:var(--xa-control-small-font); background: var(--xa-color-page); border-color: transparent; }
-.game-selector .game-icon { width: var(--xa-icon-medium); height: var(--xa-icon-medium); flex-shrink: 0; border-radius: 8rpx; }
-.catalog .game-selector .xa-button.chip-active { color: var(--xa-color-primary); background: var(--xa-color-primary-soft); border-color: var(--xa-color-primary-soft); }
-.catalog .filters { margin: 22rpx 0 0; padding: 16rpx 0 0; background: transparent; border: 0; border-top: 1rpx solid var(--xa-color-border); border-radius: 0; }
-.filter-heading { display: flex; align-items: center; min-height: 64rpx; gap: 12rpx; margin-bottom: 10rpx; }
-.filter-heading .label { margin: 0; font-size: 26rpx; }
-.catalog .filter-heading .xa-button.button-quiet { display: flex; align-items: center; width: auto; min-height: var(--xa-control-compact); margin: 0; padding: 6rpx 0 6rpx 12rpx; gap: 8rpx; font-size: var(--xa-control-small-font); }
-.filter-icon { width:var(--xa-icon-small); height:var(--xa-icon-small); flex-shrink: 0; }
-.service-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8rpx; }
-.catalog .xa-button.service-tab { display: flex; align-items: center; justify-content: center; min-width: 0; width: 100%; margin: 0; padding: 6rpx 2rpx; min-height: var(--xa-control-compact); border: 1rpx solid var(--xa-color-surface-subtle); border-radius: 16rpx; font-size:var(--xa-control-small-font); font-weight: 500; line-height: 1.4; color: var(--xa-color-muted); background: var(--xa-color-surface); white-space: nowrap; }
-.catalog .xa-button.service-tab.active { color: var(--xa-color-surface); background: var(--xa-color-primary); border-color: var(--xa-color-primary); font-weight: 600; }
-.filter-line { padding-top: 22rpx; margin-top: 22rpx; border-top: 1rpx solid var(--xa-color-border); }
-.filters .filter-line .label { font-size: 24rpx; color: var(--xa-color-muted); }
-.filters .filter-line .chips { margin: 10rpx 0 0; }
-.catalog .filter-line .xa-button.chip { min-height: var(--xa-control-compact); padding: 6rpx 18rpx; border-radius: 16rpx; font-size:var(--xa-control-small-font); }
-.results-head { margin: 24rpx 0; min-height: 72rpx; flex-wrap: wrap; }
-.results-head .section-title { margin: 0; font-size: 30rpx; }
-.results-head .row { gap: 0; }
-.catalog .results-head .xa-button.button-quiet { width: auto; margin: 0; padding: 6rpx 12rpx; min-height: var(--xa-control-compact); font-size: var(--xa-control-small-font); }
-.catalog .results-head .xa-button.selected { color: var(--xa-color-primary); font-weight: 600; }
-.provider-banner { padding: 16rpx 22rpx; background: var(--xa-color-primary-soft); color: var(--xa-color-primary); border-radius: 16rpx; font-size: 26rpx; margin-bottom: 24rpx; }
-.catalog .provider-banner .xa-button.button-quiet { min-height: var(--xa-control-compact); padding: 6rpx 8rpx; font-size: var(--xa-control-small-font); }
-.catalog .xa-button.service-card { text-align: left; padding: 16rpx; display: flex; align-items: center; gap: 16rpx; width: 100%; margin-bottom: 16rpx; border: 1rpx solid var(--xa-color-border); border-radius: 24rpx; background: var(--xa-color-surface); line-height: 1.5; font-weight: 400; }
-.service-cover,.service-placeholder { width: 240rpx; height: var(--service-cover-height); flex-shrink: 0; border-radius: 12rpx; }
-.service-placeholder { background: var(--xa-color-surface-subtle); display: flex; align-items: center; justify-content: center; }
-.service-placeholder .ui-icon { width: 56rpx; height: 56rpx; opacity: .7; }
-.service-body { display:flex; flex:1; flex-direction:column; justify-content:space-between; min-width:0; height:var(--service-cover-height); overflow:hidden; }
-.service-title-row { min-width:0; gap:8rpx; }
-.service-body .section-title { flex:1; min-width:0; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--xa-control-font); line-height:1.3; }
-.service-body .chips { flex-wrap:nowrap; gap:6rpx; min-width:0; margin:0; overflow:hidden; }
-.service-body .tag { display:block; flex-shrink:1; min-width:0; padding:0 6rpx; border-radius:6rpx; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--xa-control-small-font); line-height:1.2; }
-.service-body .consult-tag { flex-shrink:0; }
-.service-price { display:flex; align-items:baseline; gap:4rpx; min-width:0; margin-top:0; font-size:max(28rpx,16px); line-height:1.25; white-space:nowrap; }
-.service-amount { flex-shrink:0; }
-.service-price .small { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--xa-control-small-font); }
-.arrow { color:var(--xa-color-muted); flex-shrink:0; font-size:var(--xa-icon-small); line-height:1; }
-.coupon-context { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding: 22rpx; background: var(--xa-color-primary-soft); border-radius: 16rpx; margin-bottom: 24rpx; }
-.catalog-controls > .coupon-context { margin-top: 20rpx; margin-bottom: 0; }
-.catalog > .coupon-context,.catalog .provider-banner { background: var(--xa-color-surface); border: 1rpx solid var(--xa-color-border); border-radius: 24rpx; }
-.coupon-context > view { flex: 1; min-width: 0; }
-.coupon-context .section-title { font-size: 26rpx; margin: 0 0 6rpx; }
-.coupon-context .small { display: block; font-size: 24rpx; }
-.catalog .coupon-context .xa-button.button-quiet { width: auto; flex-shrink: 0; min-height: var(--xa-control-compact); margin: 0; padding: 6rpx 0; font-size: var(--xa-control-small-font); }
+/* 服务目录 —— 一屏之内只有一块「控制面板」，其余全是内容 */
+.catalog { --service-cover-height: 168rpx; background: var(--xa-color-page); }
+.catalog-heading { margin: 0 0 var(--xa-s-4); }
 
-.service-cover { background:var(--xa-color-surface-subtle); }
-.active-filter-summary { padding:20rpx 4rpx 4rpx; }
-.active-filter-summary .chips { margin:12rpx 0; gap:12rpx; }
-.active-filter-summary .chip { max-width:100%; gap:12rpx; text-align:left; white-space:normal; }
-.active-filter-summary .chip > text:first-child { min-width:0; overflow-wrap:anywhere; }
-.filter-remove { flex:none; font-size:30rpx; line-height:1; }
+/* 页内大标题不做卡片：留白本身就是层级，卡片留给可交互的东西 */
+.catalog .page-heading {
+  padding: 0; margin-bottom: var(--xa-s-4);
+  background: transparent; border: 0; box-shadow: none;
+}
+.catalog-heading .eyebrow { margin-bottom: var(--xa-s-2); font-size: var(--xa-fs-cap); letter-spacing: 0; }
+.catalog-heading .title { font-size: var(--xa-fs-display); line-height: 1.16; letter-spacing: -1.4rpx; }
+.catalog-heading .subtitle { margin-top: var(--xa-s-2); font-size: var(--xa-fs-body); }
+
+.login-panel { margin-top: var(--xa-s-4); }
+
+/* 搜索、游戏、分类收进同一块面板，内部只用细线分隔 */
+.catalog-controls {
+  padding: var(--xa-s-4); border-radius: var(--xa-r-xl);
+  border: 1rpx solid var(--xa-hairline); background: var(--xa-color-surface-card);
+  box-shadow: var(--xa-elev-1);
+}
+.search-field {
+  display: flex; align-items: center; gap: var(--xa-s-2);
+  padding: 0 var(--xa-s-3); background: var(--xa-color-page);
+  border: 1rpx solid transparent; border-radius: var(--xa-radius-control);
+}
+.search-icon { width: var(--xa-icon-small); height: var(--xa-icon-small); flex-shrink: 0; opacity: .55; }
+.catalog .input.search {
+  flex: 1; min-width: 0; height: var(--xa-input-height); min-height: var(--xa-input-height);
+  padding: 0; margin: 0; background: transparent; border: 0; border-radius: 0;
+  font-size: var(--xa-fs-body);
+}
+
+.game-selector { padding-top: var(--xa-s-4); }
+.game-selector > .label { margin-bottom: var(--xa-s-2); font-size: var(--xa-fs-sub); color: var(--xa-color-muted); }
+.filter-scroll { width: 100%; white-space: nowrap; }
+/* 右侧渐隐，暗示这一行可以横向滑 */
+.game-selector { position: relative; }
+.game-selector::after {
+  content: ''; position: absolute; top: 46rpx; right: calc(var(--xa-s-4) * -1); bottom: 0; width: 48rpx;
+  background: linear-gradient(to right, rgba(255, 254, 250, 0), var(--xa-color-surface-card) 88%);
+  pointer-events: none;
+}
+.filter-scroll .chips { display: inline-flex; flex-wrap: nowrap; gap: var(--xa-s-2); margin: 0; padding-bottom: 2rpx; }
+.catalog .game-selector .xa-button.chip {
+  min-height: var(--xa-control-compact); padding: 6rpx 20rpx; gap: var(--xa-s-1); flex-shrink: 0;
+  border-radius: var(--xa-r-pill); font-size: var(--xa-fs-sub);
+  background: var(--xa-color-page); border: 1rpx solid transparent; color: var(--xa-color-text-secondary);
+}
+.catalog .game-selector .xa-button.chip-active {
+  color: #fff; background: var(--xa-color-primary); border-color: var(--xa-color-primary);
+}
+.game-selector .game-icon { width: var(--xa-icon-medium); height: var(--xa-icon-medium); flex-shrink: 0; border-radius: 6rpx; }
+
+.catalog .filters {
+  margin: var(--xa-s-4) 0 0; padding: var(--xa-s-4) 0 0;
+  background: transparent; border: 0; border-top: 1rpx solid var(--xa-hairline); border-radius: 0;
+}
+.filter-heading { display: flex; align-items: center; min-height: 64rpx; gap: var(--xa-s-2); margin-bottom: var(--xa-s-2); }
+.filter-heading .label { margin: 0; font-size: var(--xa-fs-sub); color: var(--xa-color-muted); }
+.catalog .filter-heading .xa-button.button-quiet {
+  display: flex; align-items: center; width: auto; min-height: var(--xa-control-compact);
+  margin: 0; padding: 6rpx 0 6rpx var(--xa-s-2); gap: var(--xa-s-1);
+  font-size: var(--xa-fs-sub); font-weight: 500; color: var(--xa-color-primary);
+}
+.filter-icon { width: var(--xa-icon-small); height: var(--xa-icon-small); flex-shrink: 0; }
+
+/* 分段控件：底槽 + 白色滑块，和外面的胶囊筛选是两个层级 */
+.service-tabs {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6rpx;
+  padding: 6rpx; border-radius: var(--xa-radius-control); background: var(--xa-color-page);
+}
+.catalog .xa-button.service-tab {
+  display: flex; align-items: center; justify-content: center; min-width: 0; width: 100%;
+  margin: 0; padding: 6rpx 2rpx; min-height: var(--xa-control-compact);
+  border: 0; border-radius: var(--xa-r-xs); font-size: var(--xa-fs-sub); font-weight: 500;
+  line-height: 1.4; color: var(--xa-color-muted); background: transparent; white-space: nowrap;
+}
+.catalog .xa-button.service-tab.active {
+  color: var(--xa-color-text-primary); background: var(--xa-color-surface-card);
+  font-weight: 600; box-shadow: var(--xa-elev-1);
+}
+
+.filter-line { padding-top: var(--xa-s-4); margin-top: var(--xa-s-4); border-top: 1rpx solid var(--xa-hairline); }
+.filters .filter-line .label { font-size: var(--xa-fs-cap); color: var(--xa-color-muted); }
+.filters .filter-line .chips { margin: var(--xa-s-2) 0 0; }
+.catalog .filter-line .xa-button.chip { min-height: var(--xa-control-compact); padding: 6rpx 20rpx; border-radius: var(--xa-r-pill); font-size: var(--xa-fs-sub); }
+
+/* 结果行：一行文字加一组排序，不需要再套一层卡片 */
+.catalog .results-head {
+  margin: var(--xa-s-5) 0 var(--xa-s-3); padding: 0; min-height: 0; flex-wrap: wrap;
+  background: transparent; border: 0; box-shadow: none;
+}
+.results-head .section-title { margin: 0; font-size: var(--xa-fs-strong); font-weight: 600; }
+.results-head .row { gap: 4rpx; }
+.catalog .results-head .xa-button.button-quiet {
+  width: auto; margin: 0; padding: 6rpx var(--xa-s-2); min-height: var(--xa-control-compact);
+  font-size: var(--xa-fs-sub); color: var(--xa-color-muted);
+}
+.catalog .results-head .xa-button.selected {
+  color: var(--xa-color-primary); font-weight: 600;
+  background: var(--xa-color-primary-soft); border-radius: var(--xa-r-pill);
+}
+
+.provider-banner {
+  padding: var(--xa-s-3) var(--xa-s-4); margin-bottom: var(--xa-s-4);
+  background: var(--xa-color-primary-soft); color: var(--xa-color-primary);
+  border-radius: var(--xa-r-md); font-size: var(--xa-fs-sub);
+}
+.catalog .provider-banner .xa-button.button-quiet {
+  min-height: var(--xa-control-compact); padding: 6rpx var(--xa-s-1); font-size: var(--xa-fs-sub);
+}
+
+/* 服务卡：封面通栏贴左边，内容区自己撑开，不再压成 135rpx 高 */
+.catalog .xa-button.service-card {
+  display: flex; align-items: stretch; gap: 0; width: 100%;
+  margin-bottom: var(--xa-s-3); padding: 0; text-align: left; line-height: 1.5; font-weight: 400;
+  border: 1rpx solid var(--xa-hairline); border-radius: var(--xa-r-lg);
+  background: var(--xa-color-surface-card); box-shadow: var(--xa-elev-1); overflow: hidden;
+}
+.service-cover,
+.service-placeholder {
+  width: 200rpx; height: auto; min-height: var(--service-cover-height);
+  flex-shrink: 0; border-radius: 0; align-self: stretch;
+}
+.service-cover { background: var(--xa-color-surface-subtle); }
+.service-placeholder {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(150deg, #eef4ff, #dbe7f9);
+}
+.service-placeholder .ui-icon { width: 44rpx; height: 44rpx; opacity: .5; }
+.service-body {
+  display: flex; flex: 1; flex-direction: column; justify-content: center; gap: var(--xa-s-1);
+  min-width: 0; height: auto; padding: var(--xa-s-3) var(--xa-s-4); overflow: hidden;
+}
+.service-title-row { min-width: 0; gap: var(--xa-s-2); }
+.service-body .section-title {
+  flex: 1; min-width: 0; margin: 0; font-size: var(--xa-fs-strong); font-weight: 600; line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 标签只保留两枚：再多就会挤成省略号，信息反而更少 */
+.service-body .chips { flex-wrap: nowrap; gap: 6rpx; min-width: 0; margin: 0; overflow: hidden; }
+.service-body .chips .tag:nth-child(n + 3) { display: none; }
+.service-body .tag {
+  display: block; flex-shrink: 1; min-width: 0; padding: 2rpx 10rpx;
+  border: 1rpx solid var(--xa-hairline); border-radius: var(--xa-r-xs);
+  background: var(--xa-color-page); color: var(--xa-color-text-secondary);
+  font-size: var(--xa-fs-cap); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.service-body .consult-tag {
+  flex-shrink: 0; border-color: transparent; background: var(--xa-color-primary-soft);
+  color: var(--xa-color-primary); font-weight: 600;
+}
+.service-price {
+  display: flex; align-items: baseline; gap: 6rpx; min-width: 0; margin-top: var(--xa-s-1);
+  line-height: 1.2; white-space: nowrap;
+}
+.service-amount {
+  flex-shrink: 0; font-size: var(--xa-fs-title); font-weight: 700; color: var(--xa-color-primary);
+  letter-spacing: var(--xa-ls-tight); font-variant-numeric: tabular-nums;
+}
+.service-price .small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--xa-fs-cap); }
+.arrow { color: var(--xa-color-muted); flex-shrink: 0; font-size: var(--xa-icon-small); line-height: 1; opacity: .6; }
+
+/* 券 / 指定陪玩的上下文条：同一形态，别各自发明 */
+.coupon-context {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--xa-s-3);
+  padding: var(--xa-s-3) var(--xa-s-4); margin-bottom: var(--xa-s-4);
+  background: var(--xa-color-primary-soft); border-radius: var(--xa-r-md);
+}
+.catalog-controls > .coupon-context { margin-top: var(--xa-s-3); margin-bottom: 0; }
+.catalog > .coupon-context, .catalog .provider-banner {
+  background: var(--xa-color-surface-card); border: 1rpx solid var(--xa-hairline);
+  border-radius: var(--xa-r-md); box-shadow: var(--xa-elev-1);
+}
+.coupon-context > view { flex: 1; min-width: 0; }
+.coupon-context .section-title { margin: 0 0 2rpx; font-size: var(--xa-fs-sub); }
+.coupon-context .small { display: block; font-size: var(--xa-fs-cap); }
+.catalog .coupon-context .xa-button.button-quiet {
+  width: auto; flex-shrink: 0; min-height: var(--xa-control-compact); margin: 0;
+  padding: 6rpx 0; font-size: var(--xa-fs-sub); color: var(--xa-color-primary);
+}
+
+.active-filter-summary { padding: var(--xa-s-3) 0 0; }
+.active-filter-summary .chips { margin: var(--xa-s-2) 0; gap: var(--xa-s-2); }
+.active-filter-summary .chip { max-width: 100%; gap: var(--xa-s-2); text-align: left; white-space: normal; }
+.active-filter-summary .chip > text:first-child { min-width: 0; overflow-wrap: anywhere; }
+.filter-remove { flex: none; font-size: var(--xa-fs-body); line-height: 1; opacity: .7; }

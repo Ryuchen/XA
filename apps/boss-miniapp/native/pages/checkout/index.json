@@ -1,6 +1,1 @@
-{
-  "navigationBarTitleText": "确认订单",
-  "usingComponents": {
-    "info-sheet": "/components/info-sheet/index"
-  }
-}
+{"navigationBarTitleText":"","usingComponents":{"info-sheet":"/components/info-sheet/index"}}
