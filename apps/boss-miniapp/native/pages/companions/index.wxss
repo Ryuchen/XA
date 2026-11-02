@@ -40,3 +40,6 @@
 .service-context .section-title { margin: 8rpx 0 20rpx; }
 .companion-guest .guest-icon { width: 44rpx; height: 44rpx; margin-bottom: 14rpx; }
 .companion-guest .muted { font-size: 26rpx; line-height: 1.7; }
+.companion-tags { display:flex; flex-wrap:wrap; gap:8rpx; width:100%; margin-top:8rpx; }
+.companion-tag { max-width:100%; padding:4rpx 8rpx; border-radius:8rpx; background:var(--xa-color-surface-subtle); color:var(--xa-color-text-secondary); font-size:var(--xa-control-small-font); overflow-wrap:anywhere; }
+.companion-tag-highlighted { background:var(--xa-color-primary-soft); color:var(--xa-color-primary); }

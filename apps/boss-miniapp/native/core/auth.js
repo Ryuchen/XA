@@ -1,4 +1,5 @@
 const events = require('./events');
+const { runtime } = require('./runtime');
 const KEY = 'xa:native:session:v1';
 let session;
 let revision = 0;
@@ -54,10 +55,47 @@ function ensure() {
   return false;
 }
 function loginCode() {
-  return new Promise((resolve, reject) => wx.login({
-    timeout: 10000,
-    success: result => result.code ? resolve(result.code) : reject(new Error('微信未返回登录凭证，请重试')),
-    fail: () => reject(new Error('微信登录失败，请检查网络后重试')),
-  }));
+  const current = runtime();
+  if (current.platform === 'unknown' || !current.envVersion) return Promise.reject(new Error('无法确认登录环境，请重新进入后重试'));
+  const app = current.platform === 'app';
+  const getCode = app ? wx.getMiniProgramCode : wx.login;
+  if (typeof getCode !== 'function' || (app && typeof wx.weixinMiniProgramLogin !== 'function')) {
+    return Promise.reject(new Error(app
+      ? '当前应用尚未配置小程序登录服务，请使用微信小程序登录或联系客服'
+      : '微信登录暂不可用，请重新进入后重试'));
+  }
+  return new Promise((resolve, reject) => {
+    let settled = false, collecting = false;
+    const failed = error => {
+      if (settled) return;
+      settled = true;
+      const cancelled = /cancel|取消/i.test(error && (error.errMsg || error.message) || '');
+      reject(Object.assign(new Error(cancelled ? '已取消登录' : app
+        ? '应用登录未完成，请稍后重试，或使用微信小程序登录'
+        : '微信登录失败，请检查网络后重试'), { cancelled }));
+    };
+    const collect = () => {
+      if (settled || collecting) return;
+      collecting = true;
+      try { getCode.call(wx, {
+        timeout: 10000,
+        success: result => {
+          if (settled) return;
+          settled = true;
+          if (result && typeof result.code === 'string' && result.code.trim()) resolve(result.code);
+          else reject(new Error('微信未返回登录凭证，请重试'));
+        },
+        fail: failed,
+      }); } catch (error) { failed(error); }
+    };
+    // Official custom App login sequence: authorize first, then obtain a compatible code.
+    // Ignore weixinMiniProgramLogin's identity-service credential (code2Verifyinfo);
+    // only getMiniProgramCode's mini-program credential goes to existing code2session.
+    if (app) {
+      try { wx.weixinMiniProgramLogin({ success: () => collect(), fail: failed }); }
+      catch (error) { failed(error); }
+    } else collect();
+  });
 }
+
 module.exports = { getSession, setSession, updateToken, updateUser, clearSession, ensure, loginCode, revision: () => revision };

@@ -38,12 +38,15 @@
   },
   "compileType": "miniprogram",
   "simulatorType": "wechat",
-  "simulatorPluginLibVersion": {},
+  "simulatorPluginLibVersion": {
+    "wxext14566970e7e9f62": "2.27.3"
+  },
   "condition": {},
   "packOptions": {
     "ignore": [],
     "include": []
   },
   "editorSetting": {},
-  "libVersion": "3.15.2"
+  "libVersion": "3.15.2",
+  "projectArchitecture": "multiPlatform"
 }

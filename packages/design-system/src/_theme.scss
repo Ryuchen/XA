@@ -7,30 +7,29 @@
 }
 
 @mixin light {
-  // Reference: user-provided Chinese traditional blue swatches (2026-10-13).
-  // Light surfaces are white tints of Yuan Tian blue; red/amber/green remain semantic.
+  // Blue Planet palette and warm milk surfaces, shared by all three clients.
   color-scheme: light;
-  --xa-brand-50: #edf3f6;
-  --xa-brand-100: #cfdde4;
-  --xa-brand-200: #acd0e1;
-  --xa-brand-300: #88bccf;
-  --xa-brand-400: #2684b6;
-  --xa-brand-500: #136398;
-  --xa-brand-600: #003b72;
-  --xa-brand-700: #1f3d7c;
-  --xa-brand-800: #1d296e;
-  --xa-brand-900: #050d3f;
+  --xa-brand-50: #eff6ff;
+  --xa-brand-100: #dbeafe;
+  --xa-brand-200: #bfdbfe;
+  --xa-brand-300: #7dd3fc;
+  --xa-brand-400: #38bdf8;
+  --xa-brand-500: #2563eb;
+  --xa-brand-600: #1e3a8a;
+  --xa-brand-700: #1e3a8a;
+  --xa-brand-800: #0f172a;
+  --xa-brand-900: #020617;
   --xa-neutral-0: #ffffff;
-  --xa-neutral-50: #f5f8fa;
-  --xa-neutral-100: #edf3f6;
-  --xa-neutral-200: #cfdde4;
-  --xa-neutral-300: #b9c9d6;
-  --xa-neutral-400: #92b5d0;
-  --xa-neutral-500: #4f7da2;
-  --xa-neutral-600: #336b9a;
-  --xa-neutral-700: #1f3d7c;
-  --xa-neutral-800: #050d3f;
-  --xa-neutral-900: #030820;
+  --xa-neutral-50: #f5f4ee;
+  --xa-neutral-100: #eeeee7;
+  --xa-neutral-200: #dce4ed;
+  --xa-neutral-300: #cbd5e1;
+  --xa-neutral-400: #94a3b8;
+  --xa-neutral-500: #64748b;
+  --xa-neutral-600: #475569;
+  --xa-neutral-700: #334155;
+  --xa-neutral-800: #0f172a;
+  --xa-neutral-900: #020617;
   --xa-color-primary: var(--xa-brand-500);
   --xa-color-primary-hover: var(--xa-brand-600);
   --xa-color-primary-soft: var(--xa-brand-50);
@@ -43,11 +42,11 @@
   --xa-color-info: var(--xa-color-primary);
   --xa-color-price: var(--xa-color-primary);
   --xa-color-price-soft: var(--xa-brand-600);
-  --xa-color-surface-page: #f1f6f9;
-  --xa-color-surface-card: var(--xa-neutral-0);
+  --xa-color-surface-page: #f8f7f1;
+  --xa-color-surface-card: #fffefa;
   --xa-color-surface-subtle: var(--xa-neutral-50);
   --xa-color-surface-hover: var(--xa-brand-50);
-  --xa-color-surface-elevated: var(--xa-neutral-0);
+  --xa-color-surface-elevated: #fffefa;
   --xa-color-text-primary: var(--xa-neutral-800);
   --xa-color-text-secondary: var(--xa-neutral-600);
   --xa-color-text-tertiary: var(--xa-neutral-600);
@@ -55,63 +54,76 @@
   --xa-color-text-inverse: var(--xa-neutral-0);
   --xa-color-border: var(--xa-neutral-200);
   --xa-color-divider: var(--xa-brand-50);
-  --xa-color-overlay: rgba(5, 13, 63, .38);
-  --xa-color-focus-ring: rgba(19, 99, 152, .24);
-  --xa-gradient-primary: linear-gradient(135deg, #136398, #003b72);
-  --xa-gradient-dark: linear-gradient(135deg, #1f3d7c, #050d3f);
+  --xa-color-overlay: rgba(2, 6, 23, .4);
+  --xa-color-focus-ring: rgba(37, 99, 235, .38);
+  --xa-gradient-primary: linear-gradient(135deg, #1e3a8a, #2563eb);
+  --xa-gradient-dark: linear-gradient(135deg, #020617, #1e3a8a);
+  --xa-gradient-emphasis: linear-gradient(135deg, #1e3a8a, #2563eb 62%, #38bdf8);
   --xa-gradient-header: var(--xa-gradient-primary);
-  --xa-primary-rgb: 19, 99, 152;
-  --xa-surface-card-rgb: 255, 255, 255;
+  --xa-primary-rgb: 37, 99, 235;
+  --xa-surface-card-rgb: 255, 254, 250;
   --xa-success-rgb: 34, 116, 93;
   --xa-warning-rgb: 152, 99, 29;
   --xa-danger-rgb: 180, 35, 53;
-  --xa-price-rgb: 19, 99, 152;
+  --xa-price-rgb: 37, 99, 235;
   --xa-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   --xa-font-mono: 'SFMono-Regular', 'JetBrains Mono', Consolas, monospace;
-  --xa-motion-fast: 150ms ease;
-  --xa-motion-base: 250ms ease;
-  --xa-motion-slow: 350ms ease;
+  --xa-ease-out: cubic-bezier(.2, .8, .2, 1);
+  --xa-motion-fast: 150ms cubic-bezier(.2, .8, .2, 1);
+  --xa-motion-base: 250ms cubic-bezier(.2, .8, .2, 1);
+  --xa-motion-slow: 350ms cubic-bezier(.2, .8, .2, 1);
+  --xa-shadow-card: 0 4px 20px rgba(15, 23, 42, .045);
+  --xa-shadow-float: 0 12px 36px rgba(15, 23, 42, .12);
+  --xa-radius-card: 16px;
+  --xa-radius-control: 8px;
+  --xa-space-1: 4px;
+  --xa-space-2: 8px;
+  --xa-space-3: 12px;
+  --xa-space-4: 16px;
+  --xa-space-6: 24px;
+  --xa-space-8: 32px;
 }
 
 @mixin dark {
-  --xa-color-primary: #88bccf;
-  --xa-color-primary-hover: #acd0e1;
-  --xa-color-primary-soft: rgba(136, 188, 207, .16);
-  --xa-color-on-primary: #050d3f;
+  --xa-color-primary: #7dd3fc;
+  --xa-color-primary-hover: #38bdf8;
+  --xa-color-primary-soft: rgba(125, 211, 252, .16);
+  --xa-color-on-primary: #020617;
   --xa-color-success: #88c9b0;
   --xa-color-warning: #e4bc80;
   --xa-color-danger: #f29caa;
   --xa-color-favorite: #ff8faa;
   --xa-color-favorite-soft: rgba(255, 143, 170, .18);
-  --xa-color-info: #88bccf;
-  --xa-color-price: #acd0e1;
-  --xa-color-price-soft: #acd0e1;
+  --xa-color-info: #7dd3fc;
+  --xa-color-price: #7dd3fc;
+  --xa-color-price-soft: #7dd3fc;
 
   --xa-color-surface-page: var(--xa-neutral-900);
-  --xa-color-surface-card: #101a3f;
-  --xa-color-surface-subtle: #16224b;
-  --xa-color-surface-hover: #1f3d7c;
-  --xa-color-surface-elevated: #1f3d7c;
-  --xa-color-text-primary: #edf3f6;
-  --xa-color-text-secondary: #cfdde4;
-  --xa-color-text-tertiary: #b9c9d6;
-  --xa-color-text-disabled: #4f7da2;
+  --xa-color-surface-card: #0f172a;
+  --xa-color-surface-subtle: #172554;
+  --xa-color-surface-hover: #1e3a8a;
+  --xa-color-surface-elevated: #172554;
+  --xa-color-text-primary: #f8f7f1;
+  --xa-color-text-secondary: #cbd5e1;
+  --xa-color-text-tertiary: #bfdbfe;
+  --xa-color-text-disabled: #64748b;
   --xa-color-text-inverse: var(--xa-neutral-0);
-  --xa-color-border: #336b9a;
-  --xa-color-divider: #1f3d7c;
+  --xa-color-border: #475569;
+  --xa-color-divider: #1e3a8a;
   --xa-color-overlay: rgba(0, 0, 0, 0.58);
-  --xa-color-focus-ring: rgba(136, 188, 207, .3);
+  --xa-color-focus-ring: rgba(125, 211, 252, .5);
 
-  --xa-gradient-primary: linear-gradient(135deg, #acd0e1, #88bccf);
-  --xa-gradient-dark: linear-gradient(135deg, #1f3d7c 0%, #101a3f 100%);
+  --xa-gradient-primary: linear-gradient(135deg, #7dd3fc, #38bdf8);
+  --xa-gradient-dark: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  --xa-gradient-emphasis: linear-gradient(135deg, #1e3a8a, #2563eb 62%, #38bdf8);
   --xa-gradient-header: var(--xa-gradient-primary);
 
-  --xa-primary-rgb: 136, 188, 207;
-  --xa-surface-card-rgb: 16, 26, 63;
+  --xa-primary-rgb: 125, 211, 252;
+  --xa-surface-card-rgb: 15, 23, 42;
   --xa-success-rgb: 136, 201, 176;
   --xa-warning-rgb: 228, 188, 128;
   --xa-danger-rgb: 242, 156, 170;
-  --xa-price-rgb: 172, 208, 225;
+  --xa-price-rgb: 125, 211, 252;
 }
 
 // 旧变量作为迁移适配层保留，禁止业务代码新增 --c-*。

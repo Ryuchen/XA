@@ -1,12 +1,27 @@
 """Reverse refundable order benefits without erasing already-consumed history."""
 import re
 from django.db.models import Q, Sum
+from django.db import transaction
 from django.utils import timezone
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from coupons.models import Coupon, UserCoupon
 from users.models import CustomUser, EscortProfile
 from .models import ConsumptionConfirmation, MemberBenefitGrant, MemberTag, RewardClaim, RewardItem, VipTier, GiftNamingGrant, ProviderNaming, GiftBenefitRule
 from .services import completed_consumption
+
+
+def notify_claim_changes(account_id, count, *, restored=False):
+    if not account_id or not count:
+        return
+    recipient_id = LegacyAccountMap.objects.filter(account_id=account_id).values_list('legacy_user_id', flat=True).first()
+    if not recipient_id:
+        return
+    from orders.services import push_message_safe
+    title = '权益已恢复' if restored else '权益状态已调整'
+    preview = (f'重新达标，{count} 项未交付权益已恢复，可在权益记录中查看。' if restored
+               else f'退款后，{count} 项未交付权益已撤销，可在权益记录中查看。')
+    transaction.on_commit(lambda: push_message_safe(recipient_id=recipient_id, recipient_account_id=account_id,
+        title=title, preview=preview, msg_type='SYSTEM', action_url='/pages/points/index?tab=claims'))
 
 
 def _locked_refund_claims(order, *, include_vip):
@@ -63,7 +78,7 @@ def _locked_refund_claims(order, *, include_vip):
 
 def reverse_refund_benefits(order, refund, operator):
     now = timezone.now()
-    effects = {'confirmation_reversed':False,'expired_coupon_ids':[], 'cancelled_claim_ids':[],
+    effects = {'confirmation_reversed':False,'expired_coupon_ids':[], 'cancelled_claim_ids':[], 'gift_claim_results':[],
                'consumed_coupon_ids':[],'delivered_claim_ids':[],'deactivated_tag_ids':[],
                'consumed_benefits_policy':'已用券和已完成交付保留原历史并列明；不向其他订单追债'}
     confirmation = ConsumptionConfirmation.objects.select_for_update().filter(order=order).first()
@@ -92,13 +107,19 @@ def reverse_refund_benefits(order, refund, operator):
         if claim.status in ('PENDING','FULFILLING'):
             claim.status,claim.operator,claim.delivery_note = 'CANCELLED',operator,'赠礼退款，未交付权益已撤销'
             effects['cancelled_claim_ids'].append(claim.pk)
+            effects['gift_claim_results'].append({'id': claim.pk, 'name': claim.name_snapshot, 'outcome': 'CANCELLED'})
         elif claim.status == 'COMPLETED':
             effects['delivered_claim_ids'].append(claim.pk)
+            effects['gift_claim_results'].append({'id': claim.pk, 'name': claim.name_snapshot, 'outcome': 'DELIVERED'})
         claim.save(update_fields=['details','status','operator','delivery_note'])
         if claim.kind_snapshot == 'TAG':
             tags = MemberTag.objects.filter(event_key=f'claim:{claim.pk}:tag',is_active=True)
             effects['deactivated_tag_ids'] += list(tags.values_list('pk',flat=True))
             tags.update(is_active=False)
+    if effects['cancelled_claim_ids'] or effects['delivered_claim_ids']:
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
+    notify_claim_changes(order.customer_account_id, len(effects['cancelled_claim_ids']))
     naming_grant = GiftNamingGrant.objects.filter(order=order).first()
     if naming_grant:
         from datetime import timedelta
@@ -150,7 +171,8 @@ def reverse_refund_benefits(order, refund, operator):
     month = re.compile(rf'^vip-month:{account.pk}:{account.business_cycle}:\d{{4}}-\d{{2}}:(\d+):')
     monthly_count = {0:0,1:0,2:1,3:2,4:4,5:10,6:10}.get(level,0)
     for row in UserCoupon.objects.select_for_update().filter(account=account,business_cycle=account.business_cycle).select_related('coupon'):
-        key = row.coupon.grant_key
+        # Public/admin-created coupons do not have a VIP grant key.
+        key = row.coupon.grant_key or ''
         match, monthly = upgrade.match(key), month.match(key)
         revoke = bool((match and int(match[1]) > level) or (monthly and int(monthly[1]) >= monthly_count))
         revoke |= level == 0 and key.startswith(f'vip-safe:{account.pk}:{account.business_cycle}:')
@@ -183,6 +205,7 @@ def reverse_refund_benefits(order, refund, operator):
             if family not in quotas:
                 targets[family] = bundle['quantity']
     prefix = f'vip-quota:{account.pk}:{account.business_cycle}:'
+    vip_claims_changed = False
     for claim in claims:
         if claim.source != 'VIP':
             continue
@@ -199,6 +222,7 @@ def reverse_refund_benefits(order, refund, operator):
             claim.status, claim.operator = 'CANCELLED', operator
             claim.delivery_note = '订单退款，未交付权益已撤销'
             effects['cancelled_claim_ids'].append(claim.pk)
+            vip_claims_changed = True
         elif claim.status == 'COMPLETED':
             effects['delivered_claim_ids'].append(claim.pk)
         claim.save(update_fields=['details','status','operator','delivery_note'])
@@ -206,6 +230,10 @@ def reverse_refund_benefits(order, refund, operator):
             tags = MemberTag.objects.filter(event_key=f'claim:{claim.pk}:tag',is_active=True)
             effects['deactivated_tag_ids'] += list(tags.values_list('pk',flat=True))
             tags.update(is_active=False)
+    if vip_claims_changed:
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
+        notify_claim_changes(account.pk, sum(1 for claim in claims if claim.source == 'VIP' and claim.pk in effects['cancelled_claim_ids']))
     return effects
 
 
@@ -238,6 +266,7 @@ def restore_requalified_benefits(account, top):
             if family not in targets:
                 targets[family] = bundle['quantity']
     claim_ids = {pk for item in effects for pk in item.get('cancelled_claim_ids',[])}
+    restored_claims = 0
     for claim in RewardClaim.objects.select_for_update().filter(pk__in=claim_ids,account=account,status='CANCELLED',source='VIP',source_order__isnull=True):
         quota = re.match(r'^vip-quota:'+re.escape(prefix)+r'([^:]+):(\d+)$',claim.event_key)
         eligible = bool(quota and int(quota[2]) < targets.get(quota[1],0))
@@ -247,6 +276,11 @@ def restore_requalified_benefits(account, top):
             claim.delivery_note = '重新达标，恢复原未交付权益'
             claim.details = {**claim.details,'refund_rights_restored_at':now.isoformat()}
             claim.save(update_fields=['status','operator','delivery_note','details'])
+            restored_claims += 1
+    if restored_claims:
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
+        notify_claim_changes(account.pk, restored_claims, restored=True)
     tag_ids = {pk for item in effects for pk in item.get('deactivated_tag_ids',[])}
     for tag in MemberTag.objects.select_for_update().filter(pk__in=tag_ids,account=account,is_active=False):
         match = re.match(r'^vip:'+re.escape(prefix)+r'(\d+):tag$',tag.event_key)

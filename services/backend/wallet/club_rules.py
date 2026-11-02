@@ -21,13 +21,17 @@ def deposit_target(mode):
     return cash * 2 if mode == 'EARNINGS' else cash
 
 
-def deposit_income_percent():
-    raw = SystemConfig.objects.filter(key=DEPOSIT_PERCENT_KEY).values_list('value', flat=True).first()
+def parse_deposit_income_percent(raw):
     try:
         value = int(raw)
         return value if 0 <= value <= 100 else 60
     except (ValueError, TypeError):
         return 60
+
+
+def deposit_income_percent():
+    raw = SystemConfig.objects.filter(key=DEPOSIT_PERCENT_KEY).values_list('value', flat=True).first()
+    return parse_deposit_income_percent(raw)
 
 
 def deposit_rules():

@@ -132,7 +132,10 @@ class ApplicationTest(APITestCase):
         self.action(row,self.accounts[1],'WITHDRAW')
         self.assertEqual(self.select(row).data['code'],400)
         self.apply(team_size=2,partner_id=self.accounts[1].pk);row.refresh_from_db()
-        self.assertFalse(row.partner_confirmed)
+        self.assertEqual(row.status, 'WITHDRAWN')
+        current = OrderApplication.objects.get(order=self.order, applicant=self.accounts[0], status='PENDING')
+        self.assertNotEqual(current.pk, row.pk)
+        self.assertFalse(current.partner_confirmed)
         self.assertEqual(self.apply().data['code'],400)
 
     def test_disabled_partner_or_full_capacity_at_selection_roll_back_everything(self):

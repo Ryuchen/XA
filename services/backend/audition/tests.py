@@ -5,6 +5,9 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APITestCase
+from club_accounts.models import ClubAccount
+from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
+from club_accounts.tokens import issue_account_tokens
 
 from .models import AuditionLink, AuditionSignup
 
@@ -14,6 +17,13 @@ SIGNUP_URL = '/api/audition/signup'
 MY_SIGNUP_URL = '/api/audition/my-signups'
 
 User = get_user_model()
+
+
+def authenticate_account(client, user):
+    account = get_or_create_account_for_legacy_user(user)
+    link_legacy_relations(user, account)
+    client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+    return account
 
 
 class AuditionPublicViewTest(APITestCase):
@@ -94,14 +104,14 @@ class AuditionExchangeViewTest(APITestCase):
         self.assertEqual(res.data['code'], 0)
         data = res.data['data']
         self.assertTrue(data['token'])
-        self.assertEqual(data['userInfo']['id'], str(self.boss.id))
+        self.assertEqual(data['userInfo']['id'], str(get_or_create_account_for_legacy_user(self.boss).id))
         self.assertEqual(data['userInfo']['role'], 'customer')
-        self.assertEqual(data['userInfo']['backendRole'], User.Role.CUSTOMER)
+        self.assertEqual(data['userInfo']['backendRole'], ClubAccount.AccountType.BOSS)
 
     def test_provider_token_exchanges_jwt_for_bound_user(self):
         res = self.client.post(EXCHANGE_URL, {'token': self.link.provider_token, 'role': 'provider'})
         self.assertEqual(res.data['code'], 0)
-        self.assertEqual(res.data['data']['userInfo']['id'], str(self.provider.id))
+        self.assertEqual(res.data['data']['userInfo']['id'], str(get_or_create_account_for_legacy_user(self.provider).id))
         self.assertEqual(res.data['data']['userInfo']['role'], 'provider')
 
     def test_unbound_entry_returns_409(self):
@@ -160,7 +170,7 @@ class AuditionSignupViewTest(APITestCase):
         return data
 
     def test_provider_signup_success(self):
-        self.client.force_authenticate(self.provider)
+        authenticate_account(self.client, self.provider)
         res = self.client.post(SIGNUP_URL, self._payload())
         self.assertEqual(res.data['code'], 0)
         signup = AuditionSignup.objects.get(link=self.link, applicant=self.provider)
@@ -173,13 +183,13 @@ class AuditionSignupViewTest(APITestCase):
         self.assertEqual(res.status_code, 401)
 
     def test_non_provider_rejected_403(self):
-        self.client.force_authenticate(self.customer)
+        authenticate_account(self.client, self.customer)
         res = self.client.post(SIGNUP_URL, self._payload())
         self.assertEqual(res.data['code'], 403)
         self.assertFalse(AuditionSignup.objects.filter(applicant=self.customer).exists())
 
     def test_duplicate_signup_returns_409(self):
-        self.client.force_authenticate(self.provider)
+        authenticate_account(self.client, self.provider)
         first = self.client.post(SIGNUP_URL, self._payload())
         self.assertEqual(first.data['code'], 0)
         second = self.client.post(SIGNUP_URL, self._payload(contact='另一个'))
@@ -187,26 +197,26 @@ class AuditionSignupViewTest(APITestCase):
         self.assertEqual(AuditionSignup.objects.filter(link=self.link, applicant=self.provider).count(), 1)
 
     def test_unknown_token_returns_404(self):
-        self.client.force_authenticate(self.provider)
+        authenticate_account(self.client, self.provider)
         res = self.client.post(SIGNUP_URL, self._payload(token='nope'))
         self.assertEqual(res.data['code'], 404)
 
     def test_missing_token_returns_400(self):
-        self.client.force_authenticate(self.provider)
+        authenticate_account(self.client, self.provider)
         res = self.client.post(SIGNUP_URL, self._payload(token=''))
         self.assertEqual(res.data['code'], 400)
 
     def test_inactive_link_returns_410(self):
         self.link.is_active = False
         self.link.save(update_fields=['is_active'])
-        self.client.force_authenticate(self.provider)
+        authenticate_account(self.client, self.provider)
         res = self.client.post(SIGNUP_URL, self._payload())
         self.assertEqual(res.data['code'], 410)
 
     def test_expired_link_returns_410(self):
         self.link.expire_at = timezone.now() - timedelta(hours=1)
         self.link.save(update_fields=['expire_at'])
-        self.client.force_authenticate(self.provider)
+        authenticate_account(self.client, self.provider)
         res = self.client.post(SIGNUP_URL, self._payload())
         self.assertEqual(res.data['code'], 410)
 
@@ -226,9 +236,10 @@ class MyAuditionSignupViewTest(APITestCase):
         self.assertEqual(res.status_code, 401)
 
     def test_returns_only_own_signups(self):
-        AuditionSignup.objects.create(link=self.link, applicant=self.provider, contact='我的')
-        AuditionSignup.objects.create(link=self.link, applicant=self.other, contact='别人的')
-        self.client.force_authenticate(self.provider)
+        account = authenticate_account(self.client, self.provider)
+        other_account = get_or_create_account_for_legacy_user(self.other)
+        AuditionSignup.objects.create(link=self.link, applicant=self.provider, applicant_account=account, contact='我的')
+        AuditionSignup.objects.create(link=self.link, applicant=self.other, applicant_account=other_account, contact='别人的')
         res = self.client.get(MY_SIGNUP_URL)
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(len(res.data['data']), 1)
@@ -239,17 +250,17 @@ class MyAuditionSignupViewTest(APITestCase):
         self.assertEqual(item['status_display'], '待审核')
 
     def test_empty_when_no_signup(self):
-        self.client.force_authenticate(self.provider)
+        authenticate_account(self.client, self.provider)
         res = self.client.get(MY_SIGNUP_URL)
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data'], [])
 
     def test_reflects_audit_result(self):
+        account = authenticate_account(self.client, self.provider)
         signup = AuditionSignup.objects.create(
-            link=self.link, applicant=self.provider, contact='我的',
+            link=self.link, applicant=self.provider, applicant_account=account, contact='我的',
             status=AuditionSignup.Status.REJECTED, audit_remark='资料不全',
         )
-        self.client.force_authenticate(self.provider)
         res = self.client.get(MY_SIGNUP_URL)
         item = res.data['data'][0]
         self.assertEqual(item['id'], signup.id)

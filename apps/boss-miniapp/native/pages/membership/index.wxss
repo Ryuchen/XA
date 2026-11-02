@@ -25,7 +25,7 @@
 .membership-page .xa-button.button,.membership-page .xa-button.button-secondary { min-height:40px; padding:6px 12px; border-radius:12rpx; font-size:var(--xa-control-font); }
 .membership-page .xa-button.button-secondary { min-height:36px; font-size:var(--xa-control-small-font); }
 .membership-page .panel>.xa-button.button-secondary { margin-top:16rpx; }
-.membership-page .menu-row { gap:12rpx; min-height:40px; padding:10rpx 0; font-size:var(--xa-control-font); line-height:1.5; }
+.membership-page .menu-row { gap:12rpx; min-height:44px; padding:10rpx 0; font-size:var(--xa-control-font); line-height:1.5; }
 .membership-page .menu-row>text:first-child { flex:1; min-width:0; flex-shrink:1; overflow-wrap:anywhere; }
-.membership-page .menu-row switch { flex-shrink:0; transform:scale(.82); transform-origin:right center; }
+.membership-page .menu-row switch { flex-shrink:0; transform:scale(.72); transform-origin:right center; }
 .birthday-picker { flex-shrink:0; max-width:60%; }

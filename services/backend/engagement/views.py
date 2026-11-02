@@ -14,7 +14,7 @@ from wallet.models import RechargeRecord
 from .models import (Broadcast, ClubContent, LotteryCampaign, LotteryDraw, MemberProfile,
     MemberTag, PointLedger, RechargePackage, RewardClaim, RewardItem, VipTier)
 from .serializers import (CampaignSerializer, ClaimDetailsSerializer, ClaimSerializer, ContentSerializer,
-    MemberEditSerializer, RewardSerializer, TierSerializer, lottery_daily_remaining)
+    MemberEditSerializer, RewardSerializer, TierSerializer, lottery_daily_remaining, with_claim_return_status)
 from .services import draw_batch, lottery_batch_draws, lottery_rarity, lottery_ten_guarantee, locked_profile, redeem, completed_consumption
 
 
@@ -32,7 +32,9 @@ class IsPointsMember(IsClubAccountAuthenticated):
 def available_tags(account):
     tags = [{'key': f'tag:{tag.pk}', 'title': tag.title, 'priority': tag.priority,
         'highlighted': tag.highlighted, 'expires_at': tag.expires_at}
-        for tag in MemberTag.objects.filter(account=account, is_active=True).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))]
+        for tag in MemberTag.objects.filter(account=account, is_active=True)
+        .filter(~Q(event_key__startswith='claim:') | Q(reviewed_at__isnull=False, suspended_at__isnull=True))
+        .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))]
     from orders.refunds import with_net_amount
     stats = with_net_amount(Order.objects.filter(customer_account=account,business_cycle=account.business_cycle,is_gift_snapshot=False,
         consumption_confirmed_at__isnull=False,status='COMPLETED',payment_status__in=['PAID','PARTIALLY_REFUNDED'])).aggregate(amount=Sum('_net_paid_amount'),count=Count('id'))
@@ -49,7 +51,9 @@ def member_data(account):
     from orders.refunds import with_net_amount
     profile, _ = MemberProfile.objects.get_or_create(account=account)
     tags = available_tags(account)
-    preferred = [tag for key in profile.selected_tags for tag in tags if tag['key'] == key]
+    valid_keys = {tag['key'] for tag in tags}
+    selected = [key for key in profile.selected_tags if key in valid_keys]
+    preferred = [tag for key in selected for tag in tags if tag['key'] == key]
     recharge = RechargeRecord.objects.filter(account=account).aggregate(amount=Sum('amount'))['amount'] or 0
     consumption = completed_consumption(account)
     tiers = VipTier.objects.select_related('boss_type').filter(active=True, boss_type__is_active=True).order_by('level')
@@ -57,7 +61,7 @@ def member_data(account):
     upcoming = next((tier for tier in tiers if tier.level > (current.level if current else 0) and tier.recharge_threshold > consumption), None)
     boss_type = account.boss_type
     return {'points': profile.points_balance / 100, 'birthday': profile.birthday,
-        'birthday_public': profile.birthday_public, 'selected_tags': profile.selected_tags,
+        'birthday_public': profile.birthday_public, 'selected_tags': selected,
         'tags': tags, 'display_tags': preferred or tags[:3], 'recharge_amount': recharge,
         'consumption_amount': consumption, 'upgrade_basis':'CONFIRMED_CONSUMPTION',
         'business_cycle': account.business_cycle,
@@ -174,19 +178,53 @@ class ClaimsView(APIView):
     permission_classes = [IsPointsMember]
     def get(self, request, pk=None):
         if pk:
-            claim = get_object_or_404(RewardClaim, pk=pk, account=request.account)
+            claim = get_object_or_404(with_claim_return_status(RewardClaim.objects.all()), pk=pk, account=request.account)
             return Response({'code': 0, 'data': ClaimSerializer(claim).data})
-        rows = RewardClaim.objects.filter(account=request.account).select_related('account')[:100]
-        return Response({'code': 0, 'data': ClaimSerializer(rows, many=True).data})
+        rows = with_claim_return_status(RewardClaim.objects.filter(account=request.account).select_related('account')).order_by('-id')
+        if 'page_size' not in request.query_params:
+            return Response({'code': 0, 'data': ClaimSerializer(rows[:100], many=True).data})
+        try:
+            size = max(1, min(100, int(request.query_params['page_size'])))
+            before = request.query_params.get('before')
+            if before:
+                before = int(before)
+                if before < 1:
+                    raise ValueError
+                rows = rows.filter(id__lt=before)
+        except (TypeError, ValueError):
+            return Response({'code': 400, 'msg': '权益记录页码无效'}, status=400)
+        window = list(rows[:size + 1])
+        page = window[:size]
+        return Response({'code': 0, 'data': {'items': ClaimSerializer(page, many=True).data,
+                                             'next': page[-1].pk if len(window) > size else None}})
     @transaction.atomic
     def patch(self, request, pk):
         claim = get_object_or_404(RewardClaim.objects.select_for_update(), pk=pk, account=request.account)
-        if claim.status != 'PENDING':
-            raise serializers.ValidationError('交付已开始，修改资料请联系客服')
+        suspended_tag = None
+        if claim.status == 'COMPLETED' and claim.kind_snapshot == 'TAG':
+            suspended_tag = MemberTag.objects.select_for_update().filter(account=claim.account,
+                event_key=f'claim:{claim.pk}:tag', is_active=True, suspended_at__isnull=False).first()
+            if suspended_tag and suspended_tag.expires_at and suspended_tag.expires_at <= timezone.now():
+                suspended_tag = None
+        if claim.status != 'PENDING' and not suspended_tag:
+            return Response({'code': 409, 'errorCode': 'CLAIM_NOT_EDITABLE',
+                'msg': '权益状态已变化或标签已到期，资料未保存，请联系客服'}, status=409)
         details = ClaimDetailsSerializer(data=request.data.get('details', {}))
         details.is_valid(raise_exception=True)
-        claim.details = details.validated_data
-        claim.save(update_fields=['details'])
+        if suspended_tag:
+            title = details.validated_data.get('tag', '').strip()
+            if not title:
+                raise serializers.ValidationError('请填写需要重新审核的 TAG')
+            # 保留已发放内容和到期时间；新内容仅在客服审核通过后应用。
+            claim.details = {**claim.details, 'tag': title}
+        else:
+            old_tag = str(claim.details.get('tag', '')).strip()
+            claim.details = details.validated_data
+            if claim.kind_snapshot == 'TAG' and str(claim.details.get('tag', '')).strip() != old_tag:
+                claim.tag_revision_required = False
+        claim.save(update_fields=['details', 'tag_revision_required'])
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
         return Response({'code': 0, 'data': ClaimSerializer(claim).data})
 
 

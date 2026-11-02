@@ -15,8 +15,8 @@ class OrderApplication(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['order','applicant'], name='uniq_order_application'),
             models.CheckConstraint(condition=models.Q(status__in=['PENDING','SELECTED','NOT_SELECTED','WITHDRAWN']), name='application_status_valid'),
             models.CheckConstraint(condition=models.Q(partner__isnull=True) | ~models.Q(partner=models.F('applicant')), name='application_partner_distinct'),
         ]
+        indexes = [models.Index(fields=['order', 'applicant'], name='application_order_actor_idx')]
         ordering = ['created_at','id']

@@ -174,3 +174,16 @@ class UserCoupon(models.Model):
     @property
     def valid_to(self):
         return self.expires_at or self.coupon.valid_to
+
+    @property
+    def availability_status(self):
+        """Display the same current availability enforced during purchase."""
+        if self.status != self.Status.UNUSED:
+            return self.status
+        if self.valid_to and self.valid_to <= timezone.now():
+            return 'EXPIRED'
+        if not self.coupon.is_active:
+            return 'DISABLED'
+        if self.account_id and self.business_cycle != self.account.business_cycle:
+            return 'PREVIOUS_CYCLE'
+        return self.Status.UNUSED

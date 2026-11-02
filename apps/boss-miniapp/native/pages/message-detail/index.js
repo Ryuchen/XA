@@ -15,6 +15,7 @@ function destination(message) {
     try { params[split[0]] = decodeURIComponent(split.slice(1).join('=')); } catch (_) {}
   });
   const orderId = params.orderId || params.id;
+  if (parts[0] === '/pages/points/index' && params.tab === 'claims') return '/pages/points/index?tab=claims';
   if (parts[0] === '/pages/orderList/index' && /^[1-9]\d*$/.test(orderId || '')) return '/pages/order-detail/index?id=' + orderId;
   const routes = {
     '/pages/orderList/index': '/pages/orders/index', '/pages/customer/checkin/index': '/pages/checkin/index',
@@ -29,7 +30,7 @@ function destination(message) {
     const target = routes[parts[0]];
     return target + (!target.includes('?') && /^[1-9]\d*$/.test(params.id || '') ? '?id=' + params.id : '');
   }
-  const allowed = ['home','catalog','orders','mine','messages','wallet','checkin','coupons','support','favorites','announcements','announcement-detail','service','order-detail'];
+  const allowed = ['home','catalog','orders','mine','messages','wallet','checkin','coupons','support','favorites','announcements','announcement-detail','service','order-detail','reservation-detail','reward-claim'];
   const page = parts[0].replace(/^\/pages\//, '').replace(/\/index$/, '');
   if (!allowed.includes(page)) return '';
   return parts[0] + (/^[1-9]\d*$/.test(params.id || '') ? '?id=' + params.id : '');
@@ -42,8 +43,10 @@ Page(privatePage({
   async fetch() {
     if (!/^[1-9]\d*$/.test(this._id || '')) throw new Error('消息链接无效');
       const item = await api.request('/messages/' + this._id + '/');
-      events.emit('message.changed');
-      return { item: Object.assign({}, item, { dateText: ui.date(item.created_at) }), target: destination(item) };
+      events.emit('site-message.changed');
+      const target = destination(item);
+      return { item: Object.assign({}, item, { dateText: ui.date(item.created_at) }), target,
+        actionText: item.related_order_id ? '查看关联订单' : target.startsWith('/pages/reward-claim/index') ? '查看权益详情' : target.startsWith('/pages/points/index?tab=claims') ? '查看权益记录' : '查看相关内容' };
   },
   action() { if (this.data.target) ui.go(this.data.target); }
 }));

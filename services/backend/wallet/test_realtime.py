@@ -113,10 +113,14 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
             with self.subTest(action=action):
                 with self.captureOnCommitCallbacks(execute=True):
                     row = self.create(action)
+                with self.captureOnCommitCallbacks(execute=True):
+                    claim = self.admin.post(f'/api/admin/withdrawals/{row.pk}/claim/').data
+                    self.assertEqual(claim['code'], 0)
                 self.wallet.refresh_from_db()
                 before = self.wallet.balance
                 self.layer.sent.clear()
                 data = {'payout_reference': 'LOCAL_SIMULATED_PAYOUT'} if action == 'approve' else {'audit_remark': '本地驳回回归'}
+                data['expected_claimed_at'] = claim['data']['claimed_at']
                 with self.captureOnCommitCallbacks(execute=True):
                     response = self.admin.post(f'/api/admin/withdrawals/{row.pk}/{action}/', data, format='json')
                     self.assertEqual(response.data['code'], 0, response.data)
@@ -151,11 +155,14 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
     def test_audit_rollback_does_not_publish_or_change_frozen_funds(self):
         with self.captureOnCommitCallbacks(execute=True):
             row = self.create()
+        with self.captureOnCommitCallbacks(execute=True):
+            claim = self.admin.post(f'/api/admin/withdrawals/{row.pk}/claim/').data
+            self.assertEqual(claim['code'], 0)
         self.layer.sent.clear()
         with self.captureOnCommitCallbacks(execute=True):
             with self.assertRaisesRegex(RuntimeError, 'rollback audit'):
                 with transaction.atomic():
-                    response = self.admin.post(f'/api/admin/withdrawals/{row.pk}/approve/', {'payout_reference': 'LOCAL_TEST'}, format='json')
+                    response = self.admin.post(f'/api/admin/withdrawals/{row.pk}/approve/', {'payout_reference': 'LOCAL_TEST', 'expected_claimed_at': claim['data']['claimed_at']}, format='json')
                     self.assertEqual(response.data['code'], 0)
                     raise RuntimeError('rollback audit')
         self.assertEqual(self.layer.sent, [])

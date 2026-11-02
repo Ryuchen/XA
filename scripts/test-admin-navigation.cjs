@@ -43,7 +43,7 @@ test('every business URL belongs to exactly one center, with its original permis
   const { nav, routes } = loadNavigation();
   const business = routes.filter(route => route.path !== '403');
   const paths = nav.navigationDomains.flatMap(domain => domain.centers.flatMap(center => center.features.map(feature => feature.path)));
-  assert.equal(paths.length, 35);
+  assert.equal(paths.length, 37);
   assert.equal(new Set(paths).size, paths.length);
   assert.deepEqual([...paths].sort(), [...business.map(route => route.path)].sort());
   for (const route of business) {
@@ -54,12 +54,12 @@ test('every business URL belongs to exactly one center, with its original permis
   assert.equal(routes.find(route => route.path === 'provider-registrations').meta.perm, 'registration:view');
 });
 
-test('full access produces 7 categories, 15 centers and 35 reachable features', () => {
+test('full access produces 7 categories, 15 centers and 37 reachable features', () => {
   const { nav, routes } = loadNavigation();
   const result = nav.buildNavigation(routes, () => true);
   assert.equal(result.length, 7);
   assert.equal(result.flatMap(domain => domain.centers).length, 15);
-  assert.equal(nav.flattenNavigation(result).length, 35);
+  assert.equal(nav.flattenNavigation(result).length, 37);
 });
 
 test('each individual permission reveals only authorized pages, including search results', () => {
@@ -116,11 +116,11 @@ test('old names and operational keywords find renamed features, with exact match
   const { nav, routes } = loadNavigation();
   const domains = nav.buildNavigation(routes, () => true);
   for (const [query, target] of [['声卡', 'audition-links'], ['账目记录', 'recharge-records'],
-    ['职位权限管理', 'roles'], ['单抵', 'deposit-rules'], ['KOOK 派单', 'kook-dispatch'], ['注册审核', 'provider-registrations']]) {
+    ['职位权限管理', 'roles'], ['单抵', 'deposit-rules'], ['KOOK 派单', 'kook-dispatch'], ['注册审核', 'provider-registrations'], ['手续费', 'payment-fee'], ['预约管理', 'reservations']]) {
     assert.equal(nav.searchNavigation(domains, query)[0]?.path, target, query);
   }
   assert.equal(nav.searchNavigation(domains, '不存在的功能').length, 0);
-  assert.equal(nav.searchNavigation(domains, '   ').length, 35);
+  assert.equal(nav.searchNavigation(domains, '   ').length, 37);
 });
 
 test('a hidden feature cannot leak into navigation or search', () => {

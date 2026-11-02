@@ -3,6 +3,7 @@
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from .models import IncomeHold, Transaction, Wallet, get_platform_wallet
@@ -62,10 +63,26 @@ def hold_provider_income(income_tx, *, profile, hold_hours):
     return hold
 
 
+def _due_income_candidates(now, limit):
+    # Direct-payment settlement and trustworthy channel-clearing evidence are
+    # not implemented. Exclude all such holds before the limit so they cannot
+    # starve ordinary balance-funded or orderless historical income.
+    return list(IncomeHold.objects.filter(
+        Q(income_transaction__order__isnull=True)
+        | Q(income_transaction__order__direct_payment__isnull=True),
+        released_at__isnull=True, cancelled_at__isnull=True, release_at__lte=now,
+    ).order_by('wallet_id', 'pk').values_list('pk', 'wallet_id', 'income_transaction__order_id')[:limit])
+
+
+def _direct_income_blocked(order_id):
+    # Caller has already locked the order. Intent is next in the lock order.
+    from orders.direct_payment_models import DirectPaymentIntent
+    return DirectPaymentIntent.objects.select_for_update().filter(order_id=order_id).exists()
+
+
 def release_due_income(*, now=None, limit=500):
     now = now or timezone.now()
-    due = list(IncomeHold.objects.filter(released_at__isnull=True, cancelled_at__isnull=True, release_at__lte=now)
-               .order_by('wallet_id', 'pk').values_list('pk', 'wallet_id','income_transaction__order_id')[:limit])
+    due = _due_income_candidates(now, limit)
     released = 0
     for hold_id, wallet_id, order_id in due:
         with transaction.atomic():
@@ -75,6 +92,12 @@ def release_due_income(*, now=None, limit=500):
             if order_id is not None:
                 from orders.models import Order
                 Order.objects.select_for_update().get(pk=order_id)
+                # The candidate list is only a hint. Recheck under the order
+                # lock before taking the wallet/hold locks. Until real channel
+                # settlement exists, even a PAID test intent is not evidence
+                # that income may be released.
+                if _direct_income_blocked(order_id):
+                    continue
             wallet = Wallet.objects.select_for_update().get(pk=wallet_id)
             hold = IncomeHold.objects.select_for_update().get(pk=hold_id)
             if hold.released_at or hold.cancelled_at or hold.release_at > now:

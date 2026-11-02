@@ -95,6 +95,35 @@ class DepositRatioTests(APITestCase):
             self.assertEqual(self.client.put(url,{'deposit_percent':value},format='json').status_code,400)
         self.assertFalse(SystemConfig.objects.filter(key=DEPOSIT_PERCENT_KEY).exists())
 
+    def test_conditional_update_rejects_stale_value_and_preserves_new_setting(self):
+        self.admin(['deposit_rule:view', 'deposit_rule:edit'])
+        url = '/api/admin/config/deposit-rules'
+        initial = self.client.get(url).data['data']
+        self.assertTrue(initial['conditional_write_supported'])
+        self.assertEqual(initial['deposit_percent'], 60)
+        self.assertEqual(self.client.put(url, {'deposit_percent': 25, 'expected_deposit_percent': 60}, format='json').status_code, 200)
+        stale = self.client.put(url, {'deposit_percent': 80, 'expected_deposit_percent': 60}, format='json')
+        self.assertEqual(stale.status_code, 409)
+        self.assertEqual(deposit_rules()['deposit_percent'], 25)
+        self.assertEqual(self.client.put(url, {'deposit_percent': 0, 'expected_deposit_percent': 25}, format='json').status_code, 200)
+        self.assertEqual(deposit_rules()['deposit_percent'], 0)
+
+    def test_conditional_update_handles_invalid_legacy_value_using_effective_default(self):
+        SystemConfig.objects.create(key=DEPOSIT_PERCENT_KEY, value='invalid')
+        self.admin(['deposit_rule:view', 'deposit_rule:edit'])
+        response = self.client.put('/api/admin/config/deposit-rules', {'deposit_percent': 80, 'expected_deposit_percent': 60}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(deposit_rules()['deposit_percent'], 80)
+
+    def test_zero_hold_hours_does_not_deduct_deposit(self):
+        with transaction.atomic():
+            self.wallet.balance = 10000
+            self.wallet.save(update_fields=['balance'])
+            income = Transaction.objects.create(wallet=self.wallet, amount=10000, tx_type='INCOME', balance_before=0, balance_after=10000)
+            self.assertIsNone(hold_provider_income(income, profile=self.profile, hold_hours=0))
+        self.wallet.refresh_from_db(); self.profile.refresh_from_db()
+        self.assertEqual((self.wallet.balance, self.wallet.frozen_amount, self.profile.deposit_paid), (10000, 0, 0))
+
     def test_public_rules_and_corrupt_config_fall_back_safely(self):
         SystemConfig.objects.create(key=DEPOSIT_PERCENT_KEY,value='not-a-ratio')
         response=self.client.get('/api/provider-registration/rules/')

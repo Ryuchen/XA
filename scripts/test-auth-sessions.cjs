@@ -34,7 +34,7 @@ function environment(kind) {
       if (name === 'axios') return axios;
       if (name === 'pinia') return pinia;
       if (name === 'vue-router') return { createRouter: () => router, createWebHistory: () => ({}) };
-      if (name === 'element-plus') return { ElMessage: { error: message => notices.push(message) } };
+      if (name === '@/utils/notice') return { showNotice: message => notices.push(message) };
       if (name === '@/router') return router;
       if (name === './env') return { BASE_URL: '/api' };
       if (name.startsWith('@/')) return load(path.join(root, name.slice(2) + '.ts'));

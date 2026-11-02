@@ -15,11 +15,12 @@ class CouponListView(APIView):
 
     def get(self, request):
         from django.db.models import Q
-        from .claims import already_claimed
+        from .claims import claimed_coupon_ids, used_qualification_ids
         coupons = list(Coupon.objects.filter(is_active=True, is_public=True).filter(
             Q(valid_to__isnull=True) | Q(valid_to__gt=timezone.now())))
-        claimed_ids = {row.pk for row in coupons if already_claimed(request.account, row)}
-        serializer = CouponSerializer(coupons, many=True, context={'claimed_ids': claimed_ids})
+        claimed_ids = claimed_coupon_ids(request.account, coupons)
+        serializer = CouponSerializer(coupons, many=True, context={'claimed_ids': claimed_ids,
+            'used_qualification_ids': used_qualification_ids(request.account, coupons)})
         return Response({'code': 0, 'data': serializer.data})
 
 
@@ -45,12 +46,12 @@ class MyCouponListView(APIView):
     def get(self, request):
         from .benefits import grant_periodic, applies_to
         grant_periodic(request.account)
-        qs = UserCoupon.objects.filter(account=request.account, business_cycle=request.account.business_cycle).select_related('coupon')
+        qs = UserCoupon.objects.filter(account=request.account, business_cycle=request.account.business_cycle).select_related('coupon', 'account')
 
         usable = request.query_params.get('usable')
         if usable in ('1', 'true', 'True'):
             from orders.purchase_benefits import usable_coupons
-            qs = usable_coupons(request.account)
+            qs = usable_coupons(request.account).select_related('account')
             amount = request.query_params.get('amount')
             if amount is not None:
                 try:

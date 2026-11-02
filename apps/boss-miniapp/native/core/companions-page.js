@@ -14,11 +14,13 @@ module.exports = (options = {}) => ({
   onLoad(options) {
     this._alive = true;
     this._openerRevision = auth.revision();
+    const couponId = Number(options.coupon_id);
+    this._couponId = Number.isSafeInteger(couponId) && couponId > 0 ? couponId : 0;
     const selectedProviderIds = normalizeProviderIds(options.selected_provider_ids || options.provider_ids || options.provider_id);
     this.setData({ serviceId: Number(options.service_id) || 0, fromCheckout: options.from_checkout === '1', genderIndex: Math.max(0, ['ANY', 'MALE', 'FEMALE'].indexOf(options.provider_gender || 'ANY')) });
     if (this.data.isPicker && this.data.serviceId) this.updateSelection(selectedProviderIds.map(id => ({ id, nickname: '陪玩' + id, can_order: false, _selectionUnavailable: true })));
     this._off = on('session.changed', () => {
-      this.stopVoice(); this._seq = (this._seq || 0) + 1; this._confirming = false;
+      this.stopVoice(); this._seq = (this._seq || 0) + 1; this._confirming = false; this._couponId = 0;
       this.setData({ escorts: [], visible: [], validating: false }); this.updateSelection([]);
       if (this._visible) this.load();
     });
@@ -133,7 +135,7 @@ module.exports = (options = {}) => ({
         wx.navigateBack({ fail: () => { this._selectionCommitted = false; toast('返回订单失败，请返回后重新选择'); } });
       } else {
         wx.navigateTo({ url: '/pages/checkout/index?service_id=' + serviceId + '&provider_gender=' + gender
-          + (providers.length ? '&provider_ids=' + normalizeProviderIds(providers).join(',') : ''),
+          + (providers.length ? '&provider_ids=' + normalizeProviderIds(providers).join(',') : '') + (this._couponId ? '&coupon_id=' + this._couponId : ''),
         fail: () => { this._selectionCommitted = false; toast('订单页面打开失败，请稍后重试'); } });
       }
     } catch (error) { if (this._alive && revision === auth.revision()) { this._selectionCommitted = false; toast(error); } }
@@ -199,7 +201,7 @@ module.exports = (options = {}) => ({
   platform() {
     if (this.data.isPicker && this.data.serviceId) { if (!this.selectionAllowed()) return; this.updateSelection([]); return this.confirmSelection(); }
     if (this.data.fromCheckout) { if (this._openerRevision !== auth.revision()) return; this.getOpenerEventChannel().emit('providerSelected', null); wx.navigateBack(); }
-    else if (this.data.serviceId) go('/pages/checkout/index?service_id=' + this.data.serviceId + '&provider_gender=' + ['ANY', 'MALE', 'FEMALE'][this.data.genderIndex]);
+    else if (this.data.serviceId) go('/pages/checkout/index?service_id=' + this.data.serviceId + '&provider_gender=' + ['ANY', 'MALE', 'FEMALE'][this.data.genderIndex] + (this._couponId ? '&coupon_id=' + this._couponId : ''));
   },
   gift(event) { if (!auth.ensure()) return; this.stopVoice(); go('/pages/gifts/index?provider_id=' + Number(event.currentTarget.dataset.id)); },
   login() { auth.ensure(); }

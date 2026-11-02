@@ -10,6 +10,7 @@ interface ReplyDialogProps {
   placeholder?: string;
   maxLength?: number;
   submitting?: boolean;
+  blocked?: boolean;
   hint?: string;
   submitText?: string;
   onClose: () => void;
@@ -23,6 +24,7 @@ const ReplyDialog: React.FC<ReplyDialogProps> = ({
   placeholder = '请输入回复内容',
   maxLength = 1000,
   submitting = false,
+  blocked = false,
   hint = '回复发布后老板可见',
   submitText = '发布回复',
   onClose,
@@ -38,12 +40,12 @@ const ReplyDialog: React.FC<ReplyDialogProps> = ({
 
   const submit = () => {
     const content = draft.trim();
-    if (content && !submitting) onSubmit(content);
+    if (content && !submitting && !blocked) onSubmit(content);
   };
 
   return (
     <SurfaceDialog open={open} title={title} busy={submitting} onClose={onClose} footer={
-      <Button className={`xa-button-primary ${styles.submit}`} loading={submitting} disabled={submitting || !draft.trim()} onClick={submit}>{submitText}</Button>
+      <Button className={`xa-button-primary ${styles.submit}`} loading={submitting} disabled={submitting || blocked || !draft.trim()} onClick={submit}>{submitText}</Button>
     }>
         <Textarea
           className={styles.textarea}

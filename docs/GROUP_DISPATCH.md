@@ -34,6 +34,10 @@ WECOM_DISPATCH_REJECTED_ORDERS=false
 
 自动与人工发单共用同一轮次的投递记录，重复点击不会重复发群。渠道未配置时，页面仍可复制文案。复制和群消息只发布订单信息，真正接单仍由打手端或管理后台完成。
 
+人工提交先读取对应订单的 `GET /api/admin/orders/{id}/dispatch-message/` 预览。每个渠道返回 `confirmation_key`；`POST` 必须同时传 `channels` 和所选渠道对应的 `confirmation_keys`。订单轮次、渠道状态、目标或文案变化时返回 409，需重新读取并由操作员确认，旧调用方缺少校验值会收到 400。预览校验不代表消息已送达；入队后的渠道状态仍需分别查看。部署时应同步升级管理端和后端，避免旧管理端无法提交。
+
+KOOK 卡片摘要从待入队卡片或已保存的卡片快照提取身份组 ID 和链接数量，不显示链接地址。记录缺失或卡片结构无法完整识别时显示未知；当前待发卡片无法识别时管理端禁止提交。摘要不表示消息送达、成员收到提醒或点击了链接。
+
 ## 状态与失败处理
 
 - 只发送已支付、未指定打手、未过期的待接单单陪订单；发送任务执行前再次检查订单状态和轮次。
@@ -41,5 +45,6 @@ WECOM_DISPATCH_REJECTED_ORDERS=false
 - 明确拒绝或任务入队失败可人工重试。网络超时、响应无法确认时不自动重发，需先核对群内消息。进程在发送中异常退出时可能保留「发送中」，同样应先核对，不能直接当作未发送。
 - Webhook 和 KOOK 均不能提供端到端恰好一次投递保证；KOOK 的 `nonce` 只回传，不是上游去重键。群消息具有时效性，请以系统接单状态为准。
 - 已发送文案保存在发送记录的 `content` 中。正式 Web 和 worker 应使用同一套渠道配置和数据库；本地未配置真实机器人时不会发送真实群消息。
+- 新企微记录使用入队时保存的文案；历史记录缺少文案快照时，仍按订单当前信息生成回退内容。
 
 协议参考：[KOOK 频道消息接口](https://developer.kookapp.cn/doc/http/message)、[腾讯云 CloudBase 企微群机器人示例](https://docs.cloudbase.net/recipes/connect-wecom-webhook-cloud-function)、[企微群机器人说明](https://developer.work.weixin.qq.com/document/path/91770)。

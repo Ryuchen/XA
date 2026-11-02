@@ -1,5 +1,5 @@
 import axios, { type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios'
-import { ElMessage } from 'element-plus'
+import { showNotice } from '@/utils/notice'
 import router from '@/router'
 import { sessionChangedError, useAuthStore } from '@/stores/auth'
 
@@ -7,7 +7,7 @@ const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api/admin',
   timeout: 15000,
 })
-type SessionConfig = { _retry?: boolean; _sessionRevision?: number; _accessToken?: string }
+type SessionConfig = { _retry?: boolean; _sessionRevision?: number; _accessToken?: string; silent?: boolean }
 type RetryableConfig = InternalAxiosRequestConfig & SessionConfig
 let refreshing: { revision: number; operation: Promise<string> } | null = null
 const isAuthEndpoint = (config?: RetryableConfig) => /^\/auth\/(login|refresh)\/?$/.test(config?.url || '')
@@ -16,7 +16,7 @@ const assertSession = (config?: SessionConfig) => {
     throw sessionChangedError()
   }
 }
-const reportError = (error: any) => ElMessage.error(error?.response?.data?.msg || error.message || '网络错误')
+const reportError = (error: any) => showNotice(error?.response?.data?.msg || error.message || '网络错误')
 
 service.interceptors.request.use((config: RetryableConfig) => {
   const auth = useAuthStore()
@@ -41,7 +41,7 @@ service.interceptors.response.use(
       return body
     }
     // 业务错误
-    ElMessage.error(body.msg || '请求失败')
+    if (!(response.config as RetryableConfig).silent) showNotice(body.msg || '请求失败')
     return Promise.reject(body)
   },
   async (error) => {
@@ -73,11 +73,11 @@ service.interceptors.response.use(
         } catch (refreshError: any) {
           assertSession(config)
           if (refreshError?.response?.status !== 401) {
-            reportError(refreshError)
+            if (!config.silent) reportError(refreshError)
             throw refreshError
           }
           auth.clear()
-          ElMessage.error('登录已过期，请重新登录')
+          showNotice('登录已过期，请重新登录')
           void router.replace('/login')
           throw refreshError
         }
@@ -86,11 +86,11 @@ service.interceptors.response.use(
         return service(config)
       }
       auth.clear()
-      ElMessage.error('登录已过期，请重新登录')
+      showNotice('登录已过期，请重新登录')
       void router.replace('/login')
       return Promise.reject(error)
     }
-    reportError(error)
+    if (!config?.silent) reportError(error)
     return Promise.reject(error)
   },
 )
@@ -108,7 +108,7 @@ export interface PageResult<T = any> {
   page_size: number
 }
 
-export function request<T = any>(config: AxiosRequestConfig): Promise<ApiResult<T>> {
+export function request<T = any>(config: AxiosRequestConfig & { silent?: boolean }): Promise<ApiResult<T>> {
   // Capture before Axios schedules interceptors, not after an account switch.
   const scoped: AxiosRequestConfig & SessionConfig = { ...config, _sessionRevision: useAuthStore().sessionRevision }
   return service(scoped) as unknown as Promise<ApiResult<T>>

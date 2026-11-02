@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -14,8 +15,8 @@ from .models import (Broadcast, BroadcastRule, ClubContent, LotteryCampaign, Lot
     MemberProfile, PointLedger, RechargePackage, RewardClaim, RewardItem, VipTier, GiftBenefitRule)
 from .serializers import (BroadcastSerializer, BroadcastRuleSerializer, CampaignSerializer,
     ClaimSerializer, ConfigSerializer, ContentSerializer, PackageSerializer, RewardSerializer,
-    TierSerializer, GiftBenefitSerializer)
-from .services import config, process_claim, record_external_points, validate_campaign
+    TierSerializer, GiftBenefitSerializer, with_claim_return_status)
+from .services import ClaimDetailsChanged, ClaimStatusChanged, ClaimTermsChanged, config, process_claim, record_external_points, validate_campaign
 
 
 class RewardViewSet(EnvelopeViewSetMixin, ModelViewSet):
@@ -42,16 +43,113 @@ class ClaimViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     serializer_class = ClaimSerializer
     default_perm = 'engagement:fulfill'
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = with_claim_return_status(super().get_queryset())
         if self.request.query_params.get('status'):
             qs = qs.filter(status=self.request.query_params['status'])
+        if self.request.query_params.get('source'):
+            qs = qs.filter(source=self.request.query_params['source'])
+        kind = self.request.query_params.get('kind')
+        if kind:
+            kind = serializers.ChoiceField(choices=RewardItem.Kind.choices).run_validation(kind)
+            qs = qs.filter(kind_snapshot=kind)
+        account_type = self.request.query_params.get('account_type')
+        if account_type:
+            account_type = serializers.ChoiceField(choices=['BOSS', 'PROVIDER']).run_validation(account_type)
+            qs = qs.filter(account__account_type=account_type)
+        if self.request.query_params.get('tag_ready_for_review') == '1':
+            from .queries import tags_ready_for_review
+            qs = tags_ready_for_review(qs)
+        if self.request.query_params.get('needs_tag_review') == '1':
+            qs = qs.filter(kind_snapshot='TAG', status='COMPLETED', tag_needs_review=True)
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            condition = (Q(name_snapshot__icontains=search) | Q(account__nickname__icontains=search) |
+                Q(account__username__icontains=search) | Q(kind_snapshot='TAG', details__tag__icontains=search))
+            if search.isdigit():
+                condition |= Q(pk=int(search)) | Q(account_id=int(search)) | Q(source_order_id=int(search))
+            qs = qs.filter(condition)
         return qs
     @action(detail=True, methods=['post'])
     def process(self, request, pk=None):
         get_object_or_404(self.get_queryset(), pk=pk)
         state = serializers.ChoiceField(choices=RewardClaim.Status.choices).run_validation(request.data.get('status'))
         note = serializers.CharField(max_length=255).run_validation(request.data.get('note'))
-        claim = process_claim(pk, state, note, request.account)
+        expected = request.data.get('expected_details')
+        if expected is not None and not isinstance(expected, dict):
+            raise serializers.ValidationError('交付资料格式无效')
+        expected_status = request.data.get('expected_status')
+        if expected_status is not None:
+            expected_status = serializers.ChoiceField(choices=RewardClaim.Status.choices).run_validation(expected_status)
+        expected_terms = request.data.get('expected_terms')
+        if expected_terms is not None and not isinstance(expected_terms, dict):
+            raise serializers.ValidationError('权益规格格式无效')
+        try:
+            claim = process_claim(pk, state, note, request.account, expected_details=expected, expected_status=expected_status, expected_terms=expected_terms, tag_reviewed=request.data.get('tag_reviewed') is True)
+        except ClaimDetailsChanged:
+            return Response({'code': 409, 'errorCode': 'CLAIM_DETAILS_CHANGED',
+                'msg': '交付资料已更新，请核对最新内容后重新提交'}, status=409)
+        except ClaimStatusChanged:
+            return Response({'code': 409, 'errorCode': 'CLAIM_STATUS_CHANGED',
+                'msg': '交付状态已变化，请核对最新处理结果'}, status=409)
+        except ClaimTermsChanged:
+            return Response({'code': 409, 'errorCode': 'CLAIM_TERMS_CHANGED',
+                'msg': '权益规格已变化，请核对最新时长和类型'}, status=409)
+        return Response({'code': 0, 'data': ClaimSerializer(claim).data})
+
+    @action(detail=True, methods=['post'], url_path='review-tag')
+    @transaction.atomic
+    def review_tag(self, request, pk=None):
+        from .models import MemberTag
+        claim = get_object_or_404(RewardClaim.objects.select_for_update(), pk=pk, kind_snapshot='TAG', status='COMPLETED')
+        tag = get_object_or_404(MemberTag.objects.select_for_update(), account=claim.account, event_key=f'claim:{claim.pk}:tag')
+        if request.data.get('tag_reviewed') is not True:
+            raise serializers.ValidationError('请先确认已审核 TAG 内容符合要求')
+        candidate = str(claim.details.get('tag', '')).strip() if tag.suspended_at else tag.title
+        candidate = candidate or tag.title
+        if request.data.get('expected_tag') != candidate:
+            return Response({'code': 409, 'msg': '标签内容已变化，请重新打开后审核'}, status=409)
+        if not tag.reviewed_at or tag.suspended_at:
+            tag.title = candidate
+            tag.reviewed_at, tag.reviewed_by = timezone.now(), request.account
+            tag.suspended_at, tag.suspended_by, tag.suspension_reason = None, None, ''
+            tag.save(update_fields=['title', 'reviewed_at', 'reviewed_by', 'suspended_at', 'suspended_by', 'suspension_reason'])
+            from .notifier import notify_claims_after_commit
+            notify_claims_after_commit()
+            from club_accounts.models import LegacyAccountMap
+            recipient_id = LegacyAccountMap.objects.filter(account_id=claim.account_id).values_list('legacy_user_id', flat=True).first()
+            if recipient_id:
+                from orders.services import push_message_safe
+                transaction.on_commit(lambda: push_message_safe(recipient_id=recipient_id, recipient_account_id=claim.account_id,
+                    title='标签审核通过', preview=f'「{tag.title}」已通过审核，可在权益记录查看。',
+                    msg_type='SYSTEM', action_url=f'/pages/reward-claim/index?id={claim.pk}'))
+        return Response({'code': 0, 'data': ClaimSerializer(claim).data})
+
+    @action(detail=True, methods=['post'], url_path='suspend-tag')
+    @transaction.atomic
+    def suspend_tag(self, request, pk=None):
+        from .models import MemberTag
+        claim = get_object_or_404(RewardClaim.objects.select_for_update(), pk=pk, kind_snapshot='TAG', status='COMPLETED')
+        tag = get_object_or_404(MemberTag.objects.select_for_update(), account=claim.account, event_key=f'claim:{claim.pk}:tag')
+        reason = serializers.CharField(min_length=2, max_length=255, trim_whitespace=True).run_validation(request.data.get('reason'))
+        if request.data.get('expected_tag') != tag.title:
+            return Response({'code': 409, 'msg': '标签内容已变化，请重新打开后处理'}, status=409)
+        if tag.suspended_at:
+            if tag.suspension_reason != reason:
+                return Response({'code': 409, 'msg': '标签已暂停展示，请刷新后核对处理说明'}, status=409)
+            return Response({'code': 0, 'data': ClaimSerializer(claim).data})
+        if not tag.reviewed_at:
+            raise serializers.ValidationError('标签尚未审核，无需暂停展示')
+        tag.suspended_at, tag.suspended_by, tag.suspension_reason = timezone.now(), request.account, reason
+        tag.save(update_fields=['suspended_at', 'suspended_by', 'suspension_reason'])
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
+        from club_accounts.models import LegacyAccountMap
+        recipient_id = LegacyAccountMap.objects.filter(account_id=claim.account_id).values_list('legacy_user_id', flat=True).first()
+        if recipient_id:
+            from orders.services import push_message_safe
+            transaction.on_commit(lambda: push_message_safe(recipient_id=recipient_id, recipient_account_id=claim.account_id,
+                title='标签暂停展示', preview=f'「{tag.title}」暂不展示，请查看说明或联系客服。',
+                msg_type='SYSTEM', action_url=f'/pages/reward-claim/index?id={claim.pk}'))
         return Response({'code': 0, 'data': ClaimSerializer(claim).data})
 
 

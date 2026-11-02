@@ -1,0 +1,72 @@
+const fs = require('node:fs'), http = require('node:http'), path = require('node:path'), assert = require('node:assert/strict');
+const { chromium } = require('../.tools/club-source-20261003/node_modules/playwright');
+const input = JSON.parse(fs.readFileSync(0, 'utf8')), target = new URL(input.base), root = path.resolve(input.root);
+const server = http.createServer((req, res) => {
+  if (req.url.startsWith('/api/')) {
+    const proxy = http.request({hostname:target.hostname,port:target.port,path:req.url,method:req.method,headers:{...req.headers,host:target.host}}, response => {res.writeHead(response.statusCode,response.headers);response.pipe(res);});
+    proxy.on('error',()=>res.writeHead(502).end());req.pipe(proxy);return;
+  }
+  const name = decodeURIComponent(new URL(req.url, 'http://localhost').pathname).replace(/^\/+/, '');
+  const file = path.resolve(root, name.startsWith('assets/') ? name : 'index.html');
+  if (!file.startsWith(root + path.sep)) return res.writeHead(404).end();
+  const type = {'.html':'text/html','.css':'text/css','.js':'text/javascript','.svg':'image/svg+xml'}[path.extname(file)] || 'application/octet-stream';
+  fs.readFile(file,(error,data)=>error?res.writeHead(404).end():res.writeHead(200,{'Content-Type':type}).end(data));
+});
+(async () => {
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  let browser;
+  try {
+    browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+    const context=await browser.newContext({viewport:{width:375,height:812}});
+    await context.addInitScript(token=>localStorage.setItem('xa_admin_token',token),input.token);
+    const page=await context.newPage();
+    await page.goto(`http://127.0.0.1:${server.address().port}/dashboard`);
+    await page.waitForURL('**/club-operations',{timeout:20000});
+    await page.getByRole('tab',{name:'奖品交付'}).click();
+    const selector=page.locator('.claim-filters .el-select').first();
+    await selector.click();await page.getByRole('option',{name:'老板',exact:true}).click();
+    let card=page.locator('.claim-mobile-card').filter({hasText:`记录 #${input.bossId}`});
+    await card.getByText(/老板 ·/).waitFor({timeout:20000});
+    assert.equal(await page.locator('.claim-mobile-card').filter({hasText:'陪玩兑换权益'}).count(),0);
+    await card.getByRole('button',{name:'处理交付'}).click();
+    let dialog=page.locator('.el-dialog:visible');
+    await dialog.getByText(/老板 ·/).waitFor();
+    await dialog.locator('.el-dialog__headerbtn').click();
+    await selector.click();await page.getByRole('option',{name:'陪玩',exact:true}).click();
+    card=page.locator('.claim-mobile-card').filter({hasText:`记录 #${input.providerId}`});
+    await card.getByText(/陪玩 ·/).waitFor({timeout:20000});
+    assert.equal(await page.locator('.claim-mobile-card').filter({hasText:'老板兑换权益'}).count(),0);
+    await card.getByRole('button',{name:'处理交付'}).click();
+    dialog=page.locator('.el-dialog:visible');await dialog.getByText(/陪玩 ·/).waitFor();
+    await dialog.locator('textarea').fill('客服正在核对资料');
+    await dialog.getByRole('button',{name:'保存',exact:true}).click();
+    await card.getByText('交付中',{exact:true}).waitFor({timeout:20000});
+    await card.getByRole('button',{name:'处理交付'}).click();
+    dialog=page.locator('.el-dialog:visible');
+    await dialog.locator('.el-select').click();
+    await page.getByRole('option',{name:'退回补充资料'}).click();
+    await dialog.locator('textarea').fill('请补充游戏UID');
+    await dialog.getByRole('button',{name:'保存',exact:true}).click();
+    await card.getByText('待处理',{exact:true}).waitFor({timeout:20000});
+    await card.getByRole('button',{name:'处理交付'}).click();
+    dialog=page.locator('.el-dialog:visible');
+    await dialog.locator('.el-select').click();
+    await page.getByRole('option',{name:'取消并退回积分'}).click();
+    await dialog.getByText('取消后退回 1 积分，并恢复商品库存。',{exact:true}).waitFor();
+    const feedback=dialog.locator('.claim-feedback');
+    assert.match(await feedback.evaluate(node=>getComputedStyle(node).animationName),/claim-feedback-enter/);
+    await page.emulateMedia({reducedMotion:'reduce'});
+    assert.equal(await feedback.evaluate(node=>getComputedStyle(node).animationName),'none');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    await page.waitForTimeout(240);
+    await page.screenshot({path:'G:/Github/XA/.tools/stageshow-admin-feedback-375.png'});
+    await dialog.locator('textarea').fill('库存损坏，退回积分');
+    await dialog.getByRole('button',{name:'保存',exact:true}).click();
+    const confirmation=page.locator('.el-message-box:visible');
+    await confirmation.getByText(/取消后将退回 1 积分/).waitFor();
+    await confirmation.getByRole('button',{name:'确认取消'}).click();
+    await card.getByText('已取消',{exact:true}).waitFor({timeout:20000});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+    await context.close();
+  } finally {if(browser)await browser.close();server.closeAllConnections();server.close();}
+})().catch(error=>{console.error(error.stack||error);process.exitCode=1;});

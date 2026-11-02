@@ -16,13 +16,17 @@ from .models import IdempotencyKey
 from .services import DERIVED_KEY_PREFIX, normalize_request_id
 
 
-def _fingerprint(request):
-    payload = {key: value for key, value in request.data.items() if key != 'client_request_id'}
+def fingerprint_for(path, data):
+    payload = {key: value for key, value in data.items() if key != 'client_request_id'}
     raw = json.dumps(
-        {'path': request.path, 'payload': payload},
+        {'path': path, 'payload': payload},
         sort_keys=True, separators=(',', ':'), ensure_ascii=False, cls=DjangoJSONEncoder,
     )
     return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+
+def _fingerprint(request):
+    return fingerprint_for(request.path, request.data)
 
 
 def _replay(request, scope):
@@ -32,6 +36,12 @@ def _replay(request, scope):
     receipt = IdempotencyKey.objects.filter(account=request.account, request_id=request_id).first()
     if receipt is None:
         return None
+    if scope == 'order.create' and receipt.scope == 'order.create.sealed':
+        if receipt.request_fingerprint != _fingerprint(request):
+            return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT',
+                             'msg': '交易编号已用于其他操作，请核对原交易记录'})
+        return Response({'code': 409, 'errorCode': 'FUND_REQUEST_SEALED',
+                         'msg': '该下单请求已封止，不能再次扣款'})
     if receipt.scope != scope or (
         receipt.request_fingerprint and receipt.request_fingerprint != _fingerprint(request)
     ):

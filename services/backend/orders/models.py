@@ -10,6 +10,28 @@ def default_settlement_mode():
     return getattr(settings, 'ORDER_SETTLEMENT_MODE', 'REPORT_APPROVAL')
 
 
+class OrderTimeoutConfig(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    minutes = models.PositiveSmallIntegerField(default=30, validators=[MinValueValidator(1), MaxValueValidator(1440)])
+    revision = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(id=1), name='order_timeout_config_singleton'),
+            models.CheckConstraint(condition=models.Q(minutes__range=(1, 1440)), name='order_timeout_config_range'),
+        ]
+
+
+class OrderTimeoutConfigHistory(models.Model):
+    operator_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.SET_NULL, null=True, related_name='+')
+    operator_name = models.CharField(max_length=150, blank=True, default='')
+    previous_minutes = models.PositiveSmallIntegerField()
+    minutes = models.PositiveSmallIntegerField()
+    revision = models.PositiveIntegerField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class ProviderDispatchLock(models.Model):
     """每名打手一个派单互斥行，生命周期与业务账号一致。"""
 
@@ -278,6 +300,10 @@ class Order(models.Model):
         SINGLE = 'SINGLE', '单陪'
         DOUBLE = 'DOUBLE', '双陪'
 
+    class DispatchRoute(models.TextChoices):
+        PUBLIC = 'PUBLIC', '公开接单'
+        STAFF = 'STAFF', '客服派单'
+
     # 终态：进入后不可再转换
     TERMINAL_STATUSES = {Status.COMPLETED, Status.CANCELLED}
 
@@ -331,6 +357,7 @@ class Order(models.Model):
     amount = models.PositiveIntegerField()
     game_rounds = models.PositiveIntegerField(default=1)
     customer_phone_snapshot = models.CharField(max_length=20, blank=True, default='')
+    dispatch_route = models.CharField(max_length=6, choices=DispatchRoute.choices, default=DispatchRoute.PUBLIC, db_default=DispatchRoute.PUBLIC, editable=False)
     requires_boss_selection = models.BooleanField(default=False)
     provider_name_snapshot = models.CharField(max_length=50, blank=True, default='')
     provider_requirement_snapshot = models.JSONField(default=dict, db_default={}, blank=True)
@@ -394,6 +421,9 @@ class Order(models.Model):
     refunded_at = models.DateTimeField(blank=True, null=True)
     cancel_reason = models.CharField(max_length=255, blank=True, default='')
     auto_cancel_at = models.DateTimeField(blank=True, null=True, db_index=True)  # 超时自动取消时间
+    pool_entered_at = models.DateTimeField(blank=True, null=True, editable=False)
+    pending_timeout_minutes = models.PositiveSmallIntegerField(null=True, blank=True, editable=False,
+        validators=[MinValueValidator(1), MaxValueValidator(1440)])
     reject_count = models.PositiveIntegerField(default=0)  # 累计被拒单次数
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -419,6 +449,8 @@ class Order(models.Model):
             ),
         ]
         constraints = [
+            models.CheckConstraint(condition=models.Q(dispatch_route__in=['PUBLIC', 'STAFF']), name='order_dispatch_route_valid'),
+            models.CheckConstraint(condition=models.Q(pending_timeout_minutes__isnull=True) | models.Q(pending_timeout_minutes__range=(1, 1440)), name='order_pending_timeout_range'),
             models.CheckConstraint(
                 condition=models.Q(game_rounds__gte=1),
                 name='order_rounds_positive',
@@ -458,6 +490,9 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.service_id:
+            if self.pending_timeout_minutes is None:
+                from .timeout import current_timeout_config
+                self.pending_timeout_minutes = current_timeout_config().minutes
             if self.required_provider_count is None:
                 self.required_provider_count = self.service.billing_provider_count
             from .gameplay import make_order_snapshot
@@ -631,6 +666,7 @@ class OrderProvider(models.Model):
     provider_income = models.PositiveIntegerField(default=0)  # 该打手实得（内部账务单位）
     settled_at = models.DateTimeField(blank=True, null=True)  # 入账时间，空表示未结算
     released_at = models.DateTimeField(blank=True, null=True)  # 转出时间，与财务结算时间分开
+    team_completion_pending = models.BooleanField(default=False, editable=False)  # 转回双陪后需重新提交本轮结单截图
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -675,6 +711,7 @@ class OrderStatusLog(models.Model):
         REFUND = 'REFUND', '退款'
         TRANSFER = 'TRANSFER', '转单'
         AUTO_CANCEL = 'AUTO_CANCEL', '超时自动取消'
+        TEAM_WORKFLOW = 'TEAM_WORKFLOW', '启用双人凭证流程'
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='status_logs')
     action = models.CharField(max_length=20, choices=Action.choices, db_index=True)
@@ -708,7 +745,7 @@ class OrderStatusLog(models.Model):
 
 
 class Evaluation(models.Model):
-    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='evaluation')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='evaluations')
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='given_evaluations')
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_evaluations')
     customer_account = models.ForeignKey(
@@ -738,7 +775,12 @@ class Evaluation(models.Model):
     content = models.TextField(blank=True, default='')
     is_anonymous = models.BooleanField(default=False)
     reply_content = models.TextField(blank=True, default='')
+    # Older replies have no reliable author evidence; do not infer one.
+    reply_author = models.CharField(max_length=12, blank=True, default='', choices=[
+        ('', '来源未知'), ('PROVIDER', '陪玩'), ('STAFF', '客服'),
+    ])
     replied_at = models.DateTimeField(blank=True, null=True)
+    reply_version = models.PositiveBigIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -751,6 +793,7 @@ class Evaluation(models.Model):
             ),
         ]
         constraints = [
+            models.UniqueConstraint(fields=['order', 'provider'], name='evaluation_order_provider_unique'),
             models.CheckConstraint(
                 condition=models.Q(score__range=(1, 5)),
                 name='evaluation_score_valid',
@@ -1028,6 +1071,7 @@ class OrderRefund(models.Model):
     plan_fingerprint = models.CharField(max_length=64, blank=True)
     client_request_id = models.CharField(max_length=64, null=True, blank=True)
     request_fingerprint = models.CharField(max_length=64, blank=True)
+    negotiated_allocation = models.JSONField(default=list, blank=True)
     benefit_effects = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -1049,3 +1093,14 @@ class RefundRecoveryLine(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['refund','original_transaction'],name='unique_refund_original_transaction')]
+
+
+from .direct_payment_models import DirectPaymentIntent  # noqa: E402,F401
+from .direct_payment_quote_models import DirectPaymentQuote  # noqa: E402,F401
+from .direct_payment_delivery_models import DirectPaymentInbox, DirectPaymentInboxConflict, DirectPaymentInboxObservation, DirectPaymentOutbox  # noqa: E402,F401
+from .direct_refund_models import DirectPaymentRefund  # noqa: E402,F401
+from .direct_refund_delivery_models import DirectRefundInbox, DirectRefundInboxConflict, DirectRefundInboxObservation  # noqa: E402,F401
+from .direct_payment_session_models import DirectPaymentSession, DirectPaymentSessionObservation, DirectPaymentTestQuery, DirectPaymentTestClose  # noqa: E402,F401
+from .direct_callback_models import DirectCallbackQuarantine, DirectCallbackQuarantineObservation, DirectCallbackEnvelope, DirectCallbackEnvelopeBody  # noqa: E402,F401
+from .direct_clearing_models import DirectClearingBatch, DirectClearingLine  # noqa: E402,F401
+from .payment_fee_policy_models import PaymentFeePolicy, PaymentFeePolicyHistory  # noqa: E402,F401

@@ -39,8 +39,11 @@ def retire(account, operator, reason):
     profile.save(update_fields=['selected_tags','updated_at'])
     UserCoupon.objects.filter(account=account, business_cycle=cycle, status='UNUSED').update(status='EXPIRED')
     MemberTag.objects.filter(account=account, is_active=True).update(is_active=False)
-    RewardClaim.objects.filter(account=account, status__in=['PENDING','FULFILLING']).update(
+    changed_claims = RewardClaim.objects.filter(account=account, status__in=['PENDING','FULFILLING']).update(
         status='CANCELLED', delivery_note='退店清空：未交付业务权益已回收', operator=operator)
+    if changed_claims:
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
     ProviderNaming.objects.filter(sponsor=account, is_visible=True).update(is_visible=False, expires_at=timezone.now())
     PointFundingLot.objects.filter(account=account).update(remaining=0)
     ClubAccount.objects.filter(pk=account.pk).update(business_cycle=cycle+1, boss_type=None)

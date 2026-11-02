@@ -53,6 +53,7 @@ class NativeBossFlowTest(APITestCase):
         self.assertEqual(Order.objects.filter(customer_account=self.account).count(), 1)
         cancelled = self.client.post(f'/api/orders/orders/{order_id}/cancel/', {'reason': '变更计划'}, format='json')
         self.assertEqual(cancelled.data['code'], 0, cancelled.data)
+        self.assertEqual(cancelled.data['msg'], '订单已取消，款项已退回兴安币余额')
         self.wallet.refresh_from_db()
         self.assertEqual(self.wallet.balance, 10000)
         detail = self.client.get(f'/api/orders/orders/{order_id}/').data['data']
@@ -61,6 +62,15 @@ class NativeBossFlowTest(APITestCase):
         ledger = self.client.get('/api/wallet/transactions/').data['data']
         self.assertEqual(ledger['balance'], 10000)
         self.assertEqual(sum(row['amount'] for row in ledger['transactions']), 0)
+
+    def test_unpaid_legacy_cancellation_does_not_claim_a_refund(self):
+        order = make_order(self.user, self.service, customer_account=self.account,
+                           status=Order.Status.PENDING, payment_status=Order.PaymentStatus.UNPAID)
+        cancelled = self.client.post(f'/api/orders/orders/{order.id}/cancel/', {}, format='json')
+        self.assertEqual(cancelled.data['code'], 0, cancelled.data)
+        self.assertEqual(cancelled.data['msg'], '订单已取消')
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 10000)
 
     def test_changed_quote_cannot_charge_a_different_amount(self):
         response = self.create(expected_amount=2000)

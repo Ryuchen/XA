@@ -4,9 +4,18 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as echarts from 'echarts'
+import * as echarts from 'echarts/core'
+import type { EChartsOption } from 'echarts'
+import { BarChart, PieChart } from 'echarts/charts'
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
+import { LabelLayout } from 'echarts/features'
+import { CanvasRenderer } from 'echarts/renderers'
 
-const props = withDefaults(defineProps<{ option: echarts.EChartsOption; height?: string }>(), {
+// The workbench currently uses bar and pie charts; register only their
+// dependencies so mobile users do not download unused chart types.
+echarts.use([BarChart, PieChart, GridComponent, LegendComponent, TooltipComponent, LabelLayout, CanvasRenderer])
+
+const props = withDefaults(defineProps<{ option: EChartsOption; height?: string }>(), {
   height: '300px',
 })
 

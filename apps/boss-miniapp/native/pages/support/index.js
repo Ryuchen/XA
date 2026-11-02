@@ -1,9 +1,10 @@
+const { runtime } = require('../../core/runtime');
 const { request } = require('../../core/api');
 const auth = require('../../core/auth');
 const { image, go, toast } = require('../../core/ui');
 Page({
   data: { loading: true, error: '', contactError: '', contactDetail: '', diagnostic: false, card: null, opening: false, orderId: 0, scene: '' },
-  onLoad(options) { this._alive = true; this._cardId = Number(options.card_id) || 0; let diagnostic = false; try { diagnostic = wx.getAccountInfoSync().miniProgram.envVersion === 'develop'; } catch (_) {} this.setData({ diagnostic, orderId: Number(options.order_id) || 0, scene: options.scene === 'recharge' ? 'recharge' : '' }); },
+  onLoad(options) { this._alive = true; this._cardId = Number(options.card_id) || 0; const diagnostic = runtime().envVersion === 'develop'; this.setData({ diagnostic, orderId: Number(options.order_id) || 0, scene: options.scene === 'recharge' ? 'recharge' : '' }); },
   onShow() { return this.load({ preserveContactError: this._cardRevision === auth.revision() }); },
   onUnload() { this._alive = false; },
   onPullDownRefresh() { return this.load().finally(() => wx.stopPullDownRefresh()); },

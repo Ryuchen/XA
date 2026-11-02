@@ -13,9 +13,15 @@
       <text class="small muted receipt-no">{{receipt.orderNo}}</text>
       <view wx:if="{{receipt.namingDays}}" class="naming-success">冠名时长已累计增加 {{receipt.namingDays}} 天</view>
       <view class="receipt-actions"><button class="xa-button button-secondary" bindtap="again" hover-class="xa-button-hover">再送一份</button><button class="xa-button button" bindtap="viewReceipt" hover-class="xa-button-hover">查看礼物单</button></view>
+      <button class="xa-button button-quiet receipt-benefits" bindtap="viewBenefits" hover-class="xa-button-hover">查看权益记录 ›</button>
     </view>
   </block>
   <block wx:else>
+    <view wx:if="{{logged && pendingGift}}" class="panel">
+      <view class="section-title">上次赠送待核对</view>
+      <view class="small muted">{{pendingBlocked ? '请查询结果或联系客服核对。' : '可先查询结果；查不到时可重试原请求。'}}</view>
+      <view class="receipt-actions"><button class="xa-button button" bindtap="checkPending" loading="{{busy}}" disabled="{{busy}}" hover-class="xa-button-hover">查询赠送结果</button><button wx:if="{{!pendingBlocked}}" class="xa-button button-secondary" bindtap="recoverPending" disabled="{{busy}}" hover-class="xa-button-hover">重试原请求</button><button class="xa-button button-secondary" bindtap="viewGiftOrders" disabled="{{busy}}" hover-class="xa-button-hover">查看礼物单</button><button wx:if="{{pendingBlocked}}" class="xa-button button-secondary" bindtap="support" hover-class="xa-button-hover">联系客服</button></view>
+    </view>
     <state-view loading="{{loading}}" error="{{error}}" bind:retry="load"/>
     <block wx:if="{{logged && !error}}">
       <view class="panel recipient-panel">
@@ -24,7 +30,10 @@
           <image src="/assets/icons/search.png" mode="aspectFit" aria-hidden="true"/>
           <input class="input" value="{{recipientSearch}}" bindconfirm="searchRecipient" confirm-type="search" aria-label="搜索收礼陪玩昵称" placeholder="搜索陪玩昵称" disabled="{{busy}}"/>
         </view>
-        <picker range="{{recipients}}" range-key="nickname" value="{{recipientIndex < 0 ? 0 : recipientIndex}}" bindchange="recipient" disabled="{{busy || !recipients.length || loading}}">
+        <view wx:if="{{sourceOrder && recipients.length > 1}}" class="recipient-options">
+          <button wx:for="{{recipients}}" wx:key="id" class="xa-button recipient-option {{recipientIndex === index ? 'recipient-option-selected' : ''}}" data-index="{{index}}" bindtap="chooseRecipient" disabled="{{busy || loading}}" aria-pressed="{{recipientIndex === index}}" hover-class="xa-button-hover">{{item.nickname}}</button>
+        </view>
+        <picker wx:else range="{{pickerRecipients}}" range-key="nickname" value="{{browse ? recipientIndex + 1 : (recipientIndex < 0 ? 0 : recipientIndex)}}" bindchange="recipient" disabled="{{busy || !recipients.length || loading}}">
           <view class="recipient-choice">
             <image class="recipient-icon" src="/assets/icons/headphones.png" mode="aspectFit" aria-hidden="true"/>
             <text class="recipient-name {{!recipientName ? 'recipient-placeholder' : ''}}">{{recipientName || (recipients.length ? '请选择收礼陪玩' : '暂无符合条件的陪玩')}}</text>
@@ -76,6 +85,6 @@
 </view>
 <view wx:if="{{logged && !receipt && !error && gifts.length}}" class="gift-footer">
   <view class="gift-total"><text class="small muted">已选 {{selectedCount}} 件 · 合计</text><view class="price">{{totalText}}<text class="small"> 兴安币</text></view></view>
-  <button class="xa-button button" bindtap="send" loading="{{busy}}" disabled="{{busy || loading || !enough || (namingDays && !namingTitle)}}" hover-class="xa-button-hover">送给 TA</button>
+  <button class="xa-button button" bindtap="send" loading="{{busy}}" disabled="{{busy || loading || pendingGift || !enough || (namingDays && !namingTitle)}}" hover-class="xa-button-hover">送给 TA</button>
 </view>
 <bottom-navigation/>

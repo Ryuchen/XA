@@ -16,7 +16,7 @@ from console.models import AdminRole, AdminMembership, AdminAuditLog
 from banners.models import Banner
 from chat.models import ChatSession, ChatMessage
 from audition.models import AuditionLink, AuditionSignup
-from orders.tests.factories import make_console_user, make_user, make_service, make_order, make_coupon
+from orders.tests.factories import make_console_user, make_user, make_service, make_service_category, make_order, make_coupon
 from coupons.models import Coupon, UserCoupon
 from site_messages.models import Message
 from wallet.models import Wallet, Transaction
@@ -102,6 +102,8 @@ class MenuOperationsTest(APITestCase):
         wallet.refresh_from_db()
         self.assertEqual(wallet.balance, 1200)
         self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type='ADJUST').count(), 1)
+        adjustment = Transaction.objects.get(wallet=wallet, tx_type='ADJUST')
+        self.assertIsNone(self.ok(self.client.get(f'/api/admin/transactions/{adjustment.pk}/'))['order_no'])
         self.assertEqual(self.client.post(url, {'amount': 200}, format='json').status_code, 400)
         from orders.tests.factories import make_provider
         provider_wallet, _ = Wallet.objects.get_or_create(user=make_provider())
@@ -121,6 +123,10 @@ class MenuOperationsTest(APITestCase):
         records = list(Transaction.objects.filter(order_id=order['id']).order_by('id'))
         self.assertEqual([row.tx_type for row in records], ['PAY', 'REFUND'])
         self.assertTrue(all(row.operator_account_id == self.staff.pk for row in records))
+        for row in records:
+            self.assertEqual(self.ok(self.client.get(f'/api/admin/transactions/{row.pk}/'))['order_no'], order['order_no'])
+        listed = self.ok(self.client.get('/api/admin/transactions/', {'wallet_id': wallet.pk}))
+        self.assertEqual({row['order_no'] for row in listed['list']}, {order['order_no']})
         wallet.refresh_from_db()
         self.assertEqual(wallet.balance, 10000)
 
@@ -224,6 +230,100 @@ class MenuOperationsTest(APITestCase):
             self.assertNotIn(banner['id'], [row['id'] for row in self.ok(self.client.get('/api/banners/'))])
             self.ok(self.client.delete(url))
             self.assertFalse(Banner.objects.filter(pk=banner['id']).exists())
+
+    def test_banner_destination_tracks_real_service_visibility_for_boss(self):
+        import json
+        import shutil
+        import subprocess
+        from pathlib import Path
+        from django.conf import settings
+        def image_file():
+            output = BytesIO()
+            Image.new('RGB', (750, 320), '#224466').save(output, format='PNG')
+            return SimpleUploadedFile('banner.png', output.getvalue(), content_type='image/png')
+        with TemporaryDirectory(prefix='xa-banner-') as media, override_settings(MEDIA_ROOT=media):
+            service = make_service(service_category=make_service_category())
+            banner = self.ok(self.client.post('/api/admin/banners/', {'image': image_file(), 'title': '商品轮播',
+                'is_active': 'true', 'link_type': 'PRODUCT', 'link_value': str(service.pk)}, format='multipart'))
+            staff_token = issue_account_tokens(self.staff)[0]
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            available = self.ok(self.client.get('/api/banners/'))
+            self.assertTrue(next(row for row in available if row['id'] == banner['id'])['link_available'])
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            self.ok(self.client.patch(f'/api/admin/service-items/{service.pk}/', {'is_active': False}, format='json'))
+            admin_rows = self.ok(self.client.get('/api/admin/banners/'))['list']
+            self.assertFalse(next(row for row in admin_rows if row['id'] == banner['id'])['link_available'])
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            unavailable = self.ok(self.client.get('/api/banners/'))
+            self.assertFalse(next(row for row in unavailable if row['id'] == banner['id'])['link_available'])
+            self.assertNotEqual(self.client.get(f'/api/orders/services/{service.pk}/').data['code'], 0)
+            node = shutil.which('node')
+            self.assertTrue(node)
+            repo = Path(settings.BASE_DIR).parent.parent
+            result = subprocess.run([node, str(repo / 'scripts/native-banner-destination-check.cjs')],
+                input=json.dumps({'available': available, 'unavailable': unavailable, 'bannerId': banner['id'], 'serviceId': service.pk}),
+                cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            self.ok(self.client.patch(f'/api/admin/service-items/{service.pk}/', {'is_active': True}, format='json'))
+            admin_rows = self.ok(self.client.get('/api/admin/banners/'))['list']
+            self.assertTrue(next(row for row in admin_rows if row['id'] == banner['id'])['link_available'])
+            category = service.service_category
+            self.ok(self.client.patch(f'/api/admin/service-categories/{category.pk}/', {'is_active': False}, format='json'))
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            rows = self.ok(self.client.get('/api/banners/'))
+            self.assertFalse(next(row for row in rows if row['id'] == banner['id'])['link_available'])
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            announcement = self.ok(self.client.post('/api/admin/announcements/', {'title': '隔离公告', 'content': '公告正文', 'is_active': True}, format='json'))
+            announcement_banner = self.ok(self.client.post('/api/admin/banners/', {'image': image_file(), 'title': '公告轮播',
+                'is_active': 'true', 'link_type': 'ANNOUNCEMENT', 'link_value': str(announcement['id'])}, format='multipart'))
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            rows = self.ok(self.client.get('/api/banners/'))
+            self.assertTrue(next(row for row in rows if row['id'] == announcement_banner['id'])['link_available'])
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            self.ok(self.client.patch(f"/api/admin/announcements/{announcement['id']}/", {'is_active': False}, format='json'))
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            rows = self.ok(self.client.get('/api/banners/'))
+            self.assertFalse(next(row for row in rows if row['id'] == announcement_banner['id'])['link_available'])
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            gameplay = self.ok(self.client.post('/api/admin/gameplays/', {'name': '隔离玩法', 'code': 'isolated-banner-game'}, format='json'))
+            game_banner = self.ok(self.client.post('/api/admin/banners/', {'image': image_file(), 'title': '玩法轮播',
+                'is_active': 'true', 'link_type': 'GAMEPLAY', 'link_value': str(gameplay['id'])}, format='multipart'))
+            content = self.ok(self.client.post('/api/admin/club-content/', {'code': 'isolated-banner-content', 'title': '隔离权益',
+                'kind': 'RIGHTS', 'content': '权益内容', 'is_active': True}, format='json'))
+            content_banner = self.ok(self.client.post('/api/admin/banners/', {'image': image_file(), 'title': '权益轮播',
+                'is_active': 'true', 'link_type': 'CONTENT', 'link_value': str(content['id'])}, format='multipart'))
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            rows = {row['id']: row for row in self.ok(self.client.get('/api/banners/'))}
+            self.assertTrue(rows[game_banner['id']]['link_available'])
+            self.assertTrue(rows[content_banner['id']]['link_available'])
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            self.ok(self.client.patch(f"/api/admin/gameplays/{gameplay['id']}/", {'is_active': False}, format='json'))
+            self.ok(self.client.patch(f"/api/admin/club-content/{content['id']}/", {'ends_at': (timezone.now() - timedelta(days=1)).isoformat()}, format='json'))
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            rows = {row['id']: row for row in self.ok(self.client.get('/api/banners/'))}
+            self.assertFalse(rows[game_banner['id']]['link_available'])
+            self.assertFalse(rows[content_banner['id']]['link_available'])
+            # Published HOT activities remain readable in the activity archive after expiry.
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            self.ok(self.client.patch(f"/api/admin/club-content/{content['id']}/", {'kind': 'HOT'}, format='json'))
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+            rows = {row['id']: row for row in self.ok(self.client.get('/api/banners/'))}
+            self.assertTrue(rows[content_banner['id']]['link_available'])
+            self.assertEqual(self.client.get(f"/api/club/content/{content['id']}/").data['code'], 0)
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+            self.ok(self.client.patch(f"/api/admin/gameplays/{gameplay['id']}/", {'is_active': True}, format='json'))
+            for role in self.staff.admin_membership.roles.all():
+                role.permissions = ['banner:view', 'banner:edit']
+                role.save(update_fields=['permissions'])
+            game_options = self.ok(self.client.get('/api/admin/options/gameplays/', {'is_active': 'true'}))['list']
+            content_options = self.ok(self.client.get('/api/admin/options/club-content/', {'is_active': 'true'}))['list']
+            self.assertIn(gameplay['id'], [row['id'] for row in game_options])
+            selected_content = next(row for row in content_options if row['id'] == content['id'])
+            self.assertNotIn('content', selected_content)
+            restricted_banner = self.ok(self.client.post('/api/admin/banners/', {'image': image_file(), 'title': '仅轮播权限',
+                'is_active': 'true', 'link_type': 'CONTENT', 'link_value': str(content['id'])}, format='multipart'))
+            self.assertEqual(restricted_banner['link_value'], str(content['id']))
 
     def test_chat_pagination_reply_and_read_permission(self):
         for index in range(21):

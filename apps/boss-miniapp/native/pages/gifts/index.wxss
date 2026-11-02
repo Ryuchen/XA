@@ -15,6 +15,9 @@ page { background:var(--xa-color-page); }
 .recipient-search>image { width:var(--xa-icon-small);height:var(--xa-icon-small);flex-shrink:0; }
 .gifts-page .recipient-search .input { flex:1;min-width:0; height: var(--xa-input-height);padding:0;border:0;background:transparent;font-size:var(--xa-control-font); }
 .recipient-choice { display:flex;align-items:center;gap:12rpx;min-height:40px;padding:12rpx 0 0; }
+.recipient-options { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px; }
+.gifts-page .xa-button.recipient-option { display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 12px;border:1px solid var(--xa-color-border);border-radius:8px;background:var(--xa-color-page);color:var(--xa-color-text);font-size:var(--xa-control-small-font);line-height:1.4; }
+.gifts-page .xa-button.recipient-option-selected { border-color:var(--xa-color-primary);background:var(--xa-color-primary-soft);color:var(--xa-color-primary); }
 .recipient-icon { width:var(--xa-icon-medium);height:var(--xa-icon-medium);flex-shrink:0; }
 .recipient-name { flex:1;min-width:0;font-size:var(--xa-control-font);font-weight:600;line-height:1.5;overflow-wrap:anywhere; }
 .recipient-placeholder { font-size:var(--xa-control-font);font-weight:400; }

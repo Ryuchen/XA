@@ -39,6 +39,7 @@
 .detail-page .review-empty { margin: 0; }
 .detail-page .pool-note { font-size: 24rpx; }
 .detail-page .review .small { font-size: 24rpx; }
+  .detail-page .review-provider { margin-top: 8rpx; overflow-wrap: anywhere; }
 .service-actions { align-items: center; gap: 12rpx; }
 .service-actions .xa-button.button { min-height:var(--xa-control-height); border-radius: 16rpx; }
 .service-actions .xa-button.button-secondary { min-height:var(--xa-control-secondary); border-radius: 16rpx; font-weight: 500; }
@@ -108,3 +109,5 @@
 @keyframes favorite-heart-added { 0% { transform:scale(.65) rotate(-12deg); opacity:.4; } 55% { transform:scale(1.2) rotate(4deg); opacity:1; } 100% { transform:scale(1) rotate(0); opacity:1; } }
 @keyframes favorite-heart-removed { 0% { transform:scale(1.12); opacity:1; } 100% { transform:scale(1); opacity:.75; } }
 @media (prefers-reduced-motion:reduce) { .service-actions .xa-button.action-favorite { transition:none; } .action-favorite .favorite-heart { animation:none; } }
+.coupon-scope { display:flex; align-items:center; justify-content:space-between; gap:16rpx; padding:16rpx; }
+.detail-page .coupon-scope .xa-button { flex-shrink:0; width:auto; min-height:var(--xa-control-compact); margin:0; padding:8rpx 16rpx; font-size:var(--xa-control-small-font); }

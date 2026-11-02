@@ -8,6 +8,10 @@
 /** 1 兴安币对应的内部账务单位数量。 */
 export declare const COIN_UNIT: number;
 export declare const RMB_TO_COIN_RATE: number;
+/** 人民币元文本转人民币分；仅接受非负、最多两位小数，非法或不安全整数返回 0。 */
+export declare function parseRmbFen(yuan: number | string | null | undefined): number;
+/** 人民币分整数显示为两位小数的元；不使用兴安币汇率。 */
+export declare function formatRmbFen(fen: number | null | undefined): string;
 export declare function rmbToRawAmount(yuan: number | string | null | undefined): number;
 export declare function formatRmb(amount: number | null | undefined): string;
 

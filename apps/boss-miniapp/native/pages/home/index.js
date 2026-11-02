@@ -1,3 +1,4 @@
+const { modal: themedModal } = require('../../core/ui');
 const { request } = require('../../core/api');
 const auth = require('../../core/auth');
 const { money, image, list, go, toast } = require('../../core/ui');
@@ -82,9 +83,37 @@ Page({
   rankings() { go('/pages/rankings/index'); },
   coupons() { go('/pages/coupons/index'); },
   announcement(event) { go('/pages/announcement-detail/index?id=' + event.currentTarget.dataset.id); },
-  banner(event) {
-    const item = this.data.banners.find(entry => entry.id === Number(event.currentTarget.dataset.id));
+  async banner(event) {
+    let item = this.data.banners.find(entry => entry.id === Number(event.currentTarget.dataset.id));
     if (!item) return;
+    if (item.link_type !== 'NONE') {
+      if (this._bannerBusy) return;
+      const revision = auth.revision(), id = item.id, previousType = item.link_type, previousValue = item.link_value;
+      this._bannerBusy = true;
+      try {
+        const rows = await request('/banners/');
+        if (!this._alive || !this._visible || auth.revision() !== revision) return;
+        item = list(rows).find(entry => entry.id === id);
+        if (!item) { toast('活动暂不可用，请浏览其他服务'); return; }
+        if (item.link_type !== previousType || item.link_value !== previousValue) {
+          this.setData({ banners: list(rows).map(entry => ({ ...entry, image: image(entry.image_url) })).filter(entry => entry.image) });
+          toast('活动已更新，请重新查看');
+          return;
+        }
+      } catch (_) {
+        if (this._alive && this._visible && auth.revision() === revision) toast('活动状态未能更新，请稍后重试');
+        return;
+      } finally { this._bannerBusy = false; }
+    }
+    if (item.link_available === false) {
+      if (item.link_unavailable_reason === 'QUALIFICATION_REQUIRED') {
+        const revision = auth.revision();
+        themedModal({ title: '需要套餐资格', content: '请先前往领券中心查看是否有适用的资格券。', confirmText: '查看领券',
+          success: result => { if (result.confirm && this._alive && this._visible && auth.revision() === revision) go('/pages/coupons/index'); } });
+      } else if (item.link_unavailable_reason === 'QUALIFICATION_USED') toast('该项资格或今日额度已使用');
+      else toast('活动暂不可用，请浏览其他服务');
+      return;
+    }
     if (item.link_type === 'PRODUCT' && /^[1-9]\d*$/.test(item.link_value)) go('/pages/service/index?id=' + item.link_value);
     else if (item.link_type === 'GAMEPLAY' && /^[1-9]\d*$/.test(item.link_value)) go('/pages/catalog/index?gameplay=' + item.link_value);
     else if (item.link_type === 'CONTENT' && /^[1-9]\d*$/.test(item.link_value)) go('/pages/club-content/index?id=' + item.link_value);
@@ -93,7 +122,7 @@ Page({
       go('/pages/' + item.link_value + '/index');
     }
     else if (item.link_type === 'ANNOUNCEMENT' && /^[1-9]\d*$/.test(item.link_value)) go('/pages/announcement-detail/index?id=' + item.link_value);
-    else if (item.link_type === 'URL' && /^https:\/\//.test(item.link_value)) wx.showModal({ title: '查看活动链接', content: '此活动需要在浏览器查看，是否复制活动链接？', confirmText: '复制链接', success: result => { if (result.confirm) wx.setClipboardData({ data: item.link_value }); } });
+    else if (item.link_type === 'URL' && /^https:\/\//.test(item.link_value)) themedModal({ title: '查看活动链接', content: '此活动需要在浏览器查看，是否复制活动链接？', confirmText: '复制链接', success: result => { if (result.confirm) wx.setClipboardData({ data: item.link_value }); } });
     else if (item.link_type !== 'NONE') toast('活动入口暂不可用');
   },
   onShareAppMessage() { return { title: '兴安电竞 · 找到适合你的游戏服务', path: '/pages/home/index' }; }

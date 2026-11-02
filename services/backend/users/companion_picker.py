@@ -25,9 +25,7 @@ def _service_amounts(profiles, periods):
     until = max(end for _, end in periods.values())
     orders = Order.objects.filter(
         payment_status__in=[Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED], source_order__isnull=True,
-    ).exclude(status=Order.Status.CANCELLED).exclude(
-        Q(is_gift_snapshot=True) | Q(service__service_category__is_gift=True),
-    )
+    ).exclude(status=Order.Status.CANCELLED).exclude(is_gift_snapshot=True)
     shares = OrderProvider.objects.filter(order__in=orders, created_at__gte=since, created_at__lte=until).filter(
         Q(provider_account_id__in=account_ids)
         | Q(provider_account__isnull=True, provider_id__in=user_ids),

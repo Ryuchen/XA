@@ -16,3 +16,6 @@
 @media(min-width:960px) { .container { display:grid; grid-template-columns:minmax(0,1fr) minmax(280PX,.8fr); align-items:start; gap:20PX; padding:0; }.container > :first-child,.header { grid-column:1/-1; }.header { padding:28PX; }.avatar { width:76PX; height:76PX; }.statsCard,.card,.menuCard { margin:0; }.statsCard,.card { grid-column:1; }.menuCard { grid-column:2; grid-row:3/span 3; } }
 @media(min-width:960px) and (max-width:1100px) { .container { grid-template-columns:minmax(0,1fr); }.menuCard { grid-column:1; grid-row:auto; } }
 @media(max-width:380px) { .header { align-items:flex-start; gap:12PX; padding:20PX 16PX; }.avatar { width:52PX; height:52PX; }.nickname { font-size:21PX; }.badgeRow { gap:6PX; }.statsCard { padding:20PX 8PX; }.card { padding:16PX; }.menuCard { padding:4PX 16PX; } }
+.tagRow { display:flex; flex-wrap:wrap; gap:4PX; margin-top:8PX; }
+.profileTag { padding:4PX 8PX; border-radius:8PX; background:var(--xa-color-surface-subtle); color:var(--xa-color-text-secondary); font-size:12PX; overflow-wrap:anywhere; }
+.profileTagHighlighted { background:var(--xa-color-primary-soft); color:var(--xa-color-primary); }

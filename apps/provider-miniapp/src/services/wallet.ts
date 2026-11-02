@@ -14,6 +14,8 @@ export interface TransactionRecord {
   created_at: string;
   reversal_of?: number | null;
   is_reversal?: boolean;
+  is_referral_income?: boolean;
+  gift_source?: 'ORDER_GIFT' | 'RECHARGE_GIFT' | null;
 }
 
 export interface TransactionsResponse {
@@ -50,6 +52,7 @@ export interface WithdrawRecord {
   payee_account: string;
   payee_name: string;
   status: WithdrawStatus;
+  processing?: boolean;
   status_display: string;
   remark: string;
   audit_remark: string;
@@ -151,6 +154,7 @@ export interface DisposeRecord {
 export interface GiftRecord {
   id: number;
   order_no: string;
+  source_order_no?: string;
   service_name: string;
   customer_name: string;
   amount: number;

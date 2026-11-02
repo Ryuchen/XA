@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 
+from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
+from club_accounts.tokens import issue_account_tokens
 from console.serializers import AdminSupportCardSerializer
 
 from .models import SupportContactCard
@@ -12,7 +14,9 @@ User = get_user_model()
 class SupportContactCardApiTest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='support-customer', password='pass1234')
-        self.client.force_authenticate(self.user)
+        account = get_or_create_account_for_legacy_user(self.user)
+        link_legacy_relations(self.user, account)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
 
     def test_contact_card_returns_wecom_configuration(self):
         SupportContactCard.objects.create(

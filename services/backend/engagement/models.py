@@ -173,6 +173,7 @@ class RewardClaim(models.Model):
     balance_amount = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     details = models.JSONField(default=dict, blank=True)  # 本人及有权限客服可读，绝不进入广播
+    tag_revision_required = models.BooleanField(default=False)
     delivery_note = models.CharField(max_length=255, blank=True, default='')
     operator = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -306,6 +307,11 @@ class MemberTag(models.Model):
     highlighted = models.BooleanField(default=False)
     expires_at = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    suspended_at = models.DateTimeField(null=True, blank=True)
+    suspended_by = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    suspension_reason = models.CharField(max_length=255, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
 

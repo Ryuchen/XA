@@ -2,6 +2,8 @@ from html import escape
 from html.parser import HTMLParser
 from urllib.parse import urlsplit
 from django.utils import timezone
+from django.db.models import CharField, Exists, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Cast, Concat
 from rest_framework import serializers
 from .models import (Broadcast, BroadcastRule, ClubContent, ClubOperationConfig, LotteryCampaign,
     LotteryPrize, MemberProfile, MemberTag, PointLedger, RechargePackage, RewardClaim, RewardItem, VipTier, GiftBenefitRule, ProviderNaming)
@@ -94,14 +96,73 @@ class RewardSerializer(serializers.ModelSerializer):
         return attrs
 
 
+def with_claim_return_status(queryset):
+    key = Concat(Value('claim:'), Cast(OuterRef('pk'), output_field=CharField()), Value(':return'))
+    tag_key = Concat(Value('claim:'), Cast(OuterRef('pk'), output_field=CharField()), Value(':tag'))
+    return queryset.annotate(points_were_returned=Exists(PointLedger.objects.filter(
+        account_id=OuterRef('account_id'), event_key=key, kind='RETURN')),
+        tag_was_reviewed=Exists(MemberTag.objects.filter(account_id=OuterRef('account_id'), event_key=tag_key, reviewed_at__isnull=False, suspended_at__isnull=True)),
+        tag_needs_review=Exists(MemberTag.objects.filter(account_id=OuterRef('account_id'), event_key=tag_key,
+            is_active=True).filter(Q(reviewed_at__isnull=True) | Q(suspended_at__isnull=False))
+            .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))),
+        tag_is_editable=Exists(MemberTag.objects.filter(account_id=OuterRef('account_id'), event_key=tag_key,
+            is_active=True, suspended_at__isnull=False).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))),
+        tag_original_title=Subquery(MemberTag.objects.filter(account_id=OuterRef('account_id'), event_key=tag_key,
+            suspended_at__isnull=False).values('title')[:1]),
+        tag_reason_value=Subquery(MemberTag.objects.filter(account_id=OuterRef('account_id'), event_key=tag_key,
+            suspended_at__isnull=False).values('suspension_reason')[:1]))
+
+
 class ClaimSerializer(serializers.ModelSerializer):
     status_label = serializers.CharField(source='get_status_display', read_only=True)
     account_name = serializers.CharField(source='account.nickname', read_only=True)
+    account_type = serializers.CharField(source='account.account_type', read_only=True)
+    points_returned = serializers.SerializerMethodField()
+    tag_reviewed = serializers.SerializerMethodField()
+    tag_suspension_reason = serializers.SerializerMethodField()
+    tag_editable = serializers.SerializerMethodField()
+    tag_revision_submitted = serializers.SerializerMethodField()
+    def get_tag_revision_submitted(self, claim):
+        if not self.get_tag_editable(claim):
+            return False
+        if hasattr(claim, 'tag_original_title'):
+            original = claim.tag_original_title
+        else:
+            original = MemberTag.objects.filter(account_id=claim.account_id, event_key=f'claim:{claim.pk}:tag',
+                suspended_at__isnull=False).values_list('title', flat=True).first()
+        candidate = str(claim.details.get('tag', '')).strip()
+        return bool(original and candidate and candidate != original)
+    def get_tag_editable(self, claim):
+        if claim.kind_snapshot != 'TAG' or claim.status != 'COMPLETED':
+            return False
+        if hasattr(claim, 'tag_is_editable'):
+            return claim.tag_is_editable
+        return MemberTag.objects.filter(account_id=claim.account_id, event_key=f'claim:{claim.pk}:tag',
+            is_active=True, suspended_at__isnull=False).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).exists()
+    def get_tag_suspension_reason(self, claim):
+        if claim.kind_snapshot != 'TAG' or claim.status != 'COMPLETED':
+            return ''
+        if hasattr(claim, 'tag_reason_value'):
+            return claim.tag_reason_value or ''
+        return MemberTag.objects.filter(account_id=claim.account_id, event_key=f'claim:{claim.pk}:tag',
+            suspended_at__isnull=False).values_list('suspension_reason', flat=True).first() or ''
+    def get_tag_reviewed(self, claim):
+        if claim.kind_snapshot != 'TAG' or claim.status != 'COMPLETED':
+            return None
+        annotated = getattr(claim, 'tag_was_reviewed', None)
+        return annotated if annotated is not None else MemberTag.objects.filter(
+            account_id=claim.account_id, event_key=f'claim:{claim.pk}:tag', reviewed_at__isnull=False, suspended_at__isnull=True).exists()
+    def get_points_returned(self, claim):
+        if claim.source != 'REDEMPTION' or claim.status != 'CANCELLED':
+            return False
+        annotated = getattr(claim, 'points_were_returned', None)
+        return annotated if annotated is not None else PointLedger.objects.filter(
+            account_id=claim.account_id, event_key=f'claim:{claim.pk}:return', kind='RETURN').exists()
     class Meta:
         model = RewardClaim
-        fields = ['id', 'account', 'account_name', 'reward', 'source', 'source_order', 'name_snapshot', 'kind_snapshot',
-            'duration_days', 'duration_months', 'highlighted', 'expires_at', 'points_spent', 'balance_amount', 'status', 'status_label', 'details',
-            'delivery_note', 'created_at', 'completed_at']
+        fields = ['id', 'account', 'account_name', 'account_type', 'reward', 'source', 'source_order', 'name_snapshot', 'kind_snapshot',
+            'duration_days', 'duration_months', 'highlighted', 'expires_at', 'points_spent', 'points_returned', 'balance_amount', 'status', 'status_label', 'details',
+            'delivery_note', 'created_at', 'completed_at', 'tag_reviewed', 'tag_suspension_reason', 'tag_revision_required', 'tag_editable', 'tag_revision_submitted']
         read_only_fields = fields
 
 

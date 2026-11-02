@@ -22,6 +22,7 @@
 .detail-bio { font-size:var(--xa-control-font); line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
 .detail-tags { display:flex; flex-wrap:wrap; gap:10rpx; margin-top:16rpx; }
 .detail-tags .tag { max-width:100%; padding:3px 8px; font-size:var(--xa-control-small-font); line-height:1.4; overflow-wrap:anywhere; }
+.detail-tags .detail-tag-highlighted { background:var(--xa-color-primary-soft); color:var(--xa-color-primary); }
 .detail-qualification { padding:10rpx 0; font-size:var(--xa-control-font); line-height:1.5; overflow-wrap:anywhere; }
 .detail-qualification + .detail-qualification { border-top:1rpx solid var(--xa-color-border); }
 .detail-reference { margin-top:12rpx; overflow-wrap:anywhere; }

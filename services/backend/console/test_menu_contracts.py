@@ -67,6 +67,39 @@ class MenuContractTest(APITestCase):
         self.assertEqual(response.data['code'], 0)
         self.assertEqual([row['id'] for row in response.data['data']['list']], [account.pk])
 
+    def test_boss_profile_options_search_and_vip_rules_match_real_updates(self):
+        from engagement.models import VipTier
+        from users.models import BossType
+        normal = BossType.objects.create(name='普通验收分级', discount_rate=100)
+        vip = BossType.objects.create(name='停用规则对应VIP', discount_rate=90)
+        VipTier.objects.create(boss_type=vip, level=1, recharge_threshold=100, active=False)
+        account = self.accounts[self.boss.pk]
+        account.boss_type = normal
+        account.save(update_fields=['boss_type'])
+        other = make_user(nickname='筛选老板')
+        inviter = get_or_create_account_for_legacy_user(other)
+        link_legacy_relations(other, inviter)
+        options = self.client.get('/api/admin/options/boss-types/').data['data']['list']
+        self.assertFalse(next(row for row in options if row['id'] == normal.pk)['vip_managed'])
+        self.assertTrue(next(row for row in options if row['id'] == vip.pk)['vip_managed'])
+        for keyword in (inviter.username, inviter.account_no):
+            found = self.client.get('/api/admin/users/', {'keyword': keyword}).data['data']['list']
+            self.assertIn(inviter.pk, [row['id'] for row in found])
+        url = f'/api/admin/users/{account.pk}/'
+        response = self.client.patch(url, {'inviter': inviter.pk, 'inviter_commission_rate': 15}, format='json')
+        self.assertEqual(response.data['code'], 0)
+        account.refresh_from_db()
+        self.assertEqual((account.inviter_id, account.inviter_commission_rate), (inviter.pk, 15))
+        response = self.client.patch(url, {'inviter': None, 'inviter_commission_rate': 15}, format='json')
+        self.assertEqual(response.data['code'], 0)
+        account.refresh_from_db()
+        self.assertEqual((account.inviter_id, account.inviter_commission_rate), (None, 15))
+        self.assertEqual(self.client.patch(url, {'boss_type': vip.pk}, format='json').status_code, 400)
+        account.boss_type = vip
+        account.save(update_fields=['boss_type'])
+        self.assertEqual(self.client.patch(url, {'boss_type': normal.pk}, format='json').status_code, 400)
+        self.assertEqual(self.client.patch(url, {'nickname': '更新VIP昵称'}, format='json').data['code'], 0)
+
     def test_wallet_and_recharge_use_same_boss_number_as_user_menu(self):
         from wallet.models import RechargeRecord
         from wallet.services import get_wallet

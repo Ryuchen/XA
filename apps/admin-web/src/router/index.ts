@@ -9,7 +9,7 @@ import { applyNavigationMeta, buildNavigation, flattenNavigation, type MenuPermi
 /**
  * meta:
  *  - title: 菜单/页签标题
- *  - icon:  Element Plus 图标组件名
+ *  - icon:  导航图标映射名称
  *  - perm:  访问所需权限点（超管自动放行）
  *  - group / center / title: 由 navigation.ts 按业务中心统一生成
  *  - hidden: 不在菜单中展示
@@ -45,6 +45,18 @@ const routes: RouteRecordRaw[] = [
         name: 'orders',
         component: () => import('@/views/order/index.vue'),
         meta: { perm: 'order:view' },
+      },
+      {
+        path: 'reservations',
+        name: 'reservations',
+        component: () => import('@/views/reservation/index.vue'),
+        meta: { perm: 'order:view' },
+      },
+      {
+        path: 'payment-fee',
+        name: 'payment-fee',
+        component: () => import('@/views/payment-fee/index.vue'),
+        meta: { perm: 'payment_fee:view' },
       },
       {
         path: 'kook-dispatch',
@@ -179,7 +191,7 @@ const routes: RouteRecordRaw[] = [
         path: 'club-operations',
         name: 'club-operations',
         component: () => import('@/views/engagement/index.vue'),
-        meta: { perm: 'engagement:view' },
+        meta: { perm: ['engagement:view', 'engagement:fulfill', 'engagement:points'] },
       },
       {
         path: 'achievements',

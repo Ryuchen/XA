@@ -3,10 +3,25 @@ import bellUrl from '@/assets/new-order-bell.wav';
 
 /** One short bell strike. Unlock web audio during normal user interaction. */
 class OrderAlertSound {
+  private enabled: boolean | null = null;
   private webAudio: AudioContext | null = null;
   private nativeAudio: Taro.InnerAudioContext | null = null;
   private listening = false;
   private tones = new Set<OscillatorNode>();
+
+  isEnabled() {
+    if (this.enabled === null) {
+      try { this.enabled = Taro.getStorageSync('xa_provider_order_sound') !== 'off'; }
+      catch { this.enabled = true; }
+    }
+    return this.enabled;
+  }
+
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    try { Taro.setStorageSync('xa_provider_order_sound', enabled ? 'on' : 'off'); } catch { /* Remains in effect for this session. */ }
+    if (!enabled) this.stop();
+  }
 
   private unlock = () => {
     try {
@@ -24,6 +39,7 @@ class OrderAlertSound {
   }
 
   play() {
+    if (!this.isEnabled()) return;
     try {
       if (process.env.TARO_ENV === 'h5') {
         // Do not queue an old alert to play after a later user gesture.

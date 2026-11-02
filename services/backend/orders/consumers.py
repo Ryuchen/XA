@@ -94,6 +94,21 @@ def current_wallet_payload(account, data):
 
 
 @database_sync_to_async
+def current_reservation_payload(account, data):
+    from .models import Reservation
+    reservation_id = data.get('reservation_id') if isinstance(data, dict) else None
+    reservation = Reservation.objects.filter(pk=reservation_id).first() if type(reservation_id) is int and reservation_id > 0 else None
+    if reservation is None:
+        return None
+    if account.account_type == ClubAccount.AccountType.STAFF:
+        if not is_console_account(account) or 'order:view' not in get_account_permissions(account):
+            return None
+    elif account.pk not in (reservation.customer_account_id, reservation.provider_account_id):
+        return None
+    return {'reservation_id': reservation.pk}
+
+
+@database_sync_to_async
 def current_withdraw_payload(account, data):
     from wallet.models import WithdrawRequest
     from wallet.notifier import owner_account_id
@@ -124,22 +139,33 @@ class OrderConsumer(AsyncWebsocketConsumer):
         self.account = account
         self.account_group = f'account_{account.id}'
         self.operator_group = 'operators'
+        self.reviewer_groups = set()
 
         await self.channel_layer.group_add(self.account_group, self.channel_name)
         if account.account_type == ClubAccount.AccountType.STAFF:
             await self.channel_layer.group_add(self.operator_group, self.channel_name)
-            permissions = await database_sync_to_async(get_account_permissions)(account)
-            for permission, group in (('report:view', 'report_reviewers'), ('withdraw:view', 'withdraw_reviewers')):
-                if permission in permissions:
-                    await self.channel_layer.group_add(group, self.channel_name)
-            if {'wallet:view', 'transaction:view'}.intersection(permissions):
-                await self.channel_layer.group_add('wallet_reviewers', self.channel_name)
+            await self.sync_reviewer_groups(account)
         if account.account_type == ClubAccount.AccountType.PROVIDER:
             await self.channel_layer.group_add('providers', self.channel_name)
         if account.account_type == ClubAccount.AccountType.BOSS:
             await self.channel_layer.group_add('club_bosses', self.channel_name)
 
         await self.accept()
+
+    async def sync_reviewer_groups(self, account):
+        """Keep an open staff connection useful after its role changes."""
+        permissions = await database_sync_to_async(get_account_permissions)(account)
+        desired = {group for permission, group in (
+            ('report:view', 'report_reviewers'), ('withdraw:view', 'withdraw_reviewers'),
+            ('evaluation:view', 'evaluation_reviewers'),
+        ) if permission in permissions}
+        if {'wallet:view', 'transaction:view'}.intersection(permissions):
+            desired.add('wallet_reviewers')
+        for group in desired - self.reviewer_groups:
+            await self.channel_layer.group_add(group, self.channel_name)
+        for group in self.reviewer_groups - desired:
+            await self.channel_layer.group_discard(group, self.channel_name)
+        self.reviewer_groups = desired
 
     async def disconnect(self, close_code):
         # 匿名连接在 connect 中被拒后未设置分组，跳过清理避免 AttributeError
@@ -152,6 +178,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard('report_reviewers', self.channel_name)
         await self.channel_layer.group_discard('wallet_reviewers', self.channel_name)
         await self.channel_layer.group_discard('withdraw_reviewers', self.channel_name)
+        await self.channel_layer.group_discard('evaluation_reviewers', self.channel_name)
 
     async def club_feed_update(self, event):
         account = await self.active_account()
@@ -176,8 +203,12 @@ class OrderConsumer(AsyncWebsocketConsumer):
             return
         try:
             data = json.loads(text_data)
-            if isinstance(data, dict) and data.get('type') == 'ping' and await self.active_account():
-                await self.send(text_data=json.dumps({'type': 'pong'}))
+            if isinstance(data, dict) and data.get('type') == 'ping':
+                account = await self.active_account()
+                if account is not None:
+                    if account.account_type == ClubAccount.AccountType.STAFF:
+                        await self.sync_reviewer_groups(account)
+                    await self.send(text_data=json.dumps({'type': 'pong'}))
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -188,6 +219,8 @@ class OrderConsumer(AsyncWebsocketConsumer):
         if account.account_type == ClubAccount.AccountType.STAFF:
             permissions = await database_sync_to_async(get_account_permissions)(account)
             if 'order:view' not in permissions:
+                if 'dashboard:view' in permissions:
+                    await self.send(text_data=json.dumps({'type': 'dashboard_order_update', 'data': {}}))
                 return
         await self.send(text_data=json.dumps({
             'type': 'order_status_update',
@@ -201,6 +234,37 @@ class OrderConsumer(AsyncWebsocketConsumer):
         payload = await current_report_payload(account, event['data'])
         if payload is not None:
             await self.send(text_data=json.dumps({'type': 'report_status_update', 'data': payload}))
+
+    async def evaluation_status_update(self, event):
+        account = await self.active_account()
+        if account is not None and account.account_type == ClubAccount.AccountType.STAFF:
+            permissions = await database_sync_to_async(get_account_permissions)(account)
+            if 'evaluation:view' in permissions:
+                await self.send(text_data=json.dumps({'type': 'evaluation_status_update', 'data': {}}))
+
+    async def claim_queue_update(self, event):
+        account = await self.active_account()
+        if account is not None and account.account_type == ClubAccount.AccountType.STAFF:
+            permissions = await database_sync_to_async(get_account_permissions)(account)
+            if 'engagement:fulfill' in permissions:
+                await self.send(text_data=json.dumps({'type': 'claim_queue_update', 'data': {}}))
+
+    async def site_message_update(self, event):
+        account = await self.active_account()
+        data = event.get('data') or {}
+        if account is not None and data.get('account_id') == account.pk:
+            payload = {}
+            if account.account_type == ClubAccount.AccountType.PROVIDER and data.get('assignment_message_id'):
+                payload['assignment_message_id'] = data['assignment_message_id']
+            await self.send(text_data=json.dumps({'type': 'site_message_update', 'data': payload}))
+
+    async def reservation_status_update(self, event):
+        account = await self.active_account()
+        if account is None:
+            return
+        payload = await current_reservation_payload(account, event.get('data'))
+        if payload is not None:
+            await self.send(text_data=json.dumps({'type': 'reservation_status_update', 'data': payload}))
 
     async def wallet_update(self, event):
         account = await self.active_account()

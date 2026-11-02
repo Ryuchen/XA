@@ -24,9 +24,13 @@
 .passActive .passPill { color:$color-primary; background:var(--xa-color-primary-soft); }
 .passMeta { display:block; margin-top:4PX; font-size:12PX; color:$color-text-secondary; line-height:1.5; }
 .passAction { flex:none; margin-left:12PX; font-size:13PX; font-weight:600; color:$color-primary; }
-.tabs { position:sticky; top:0; z-index:10; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4PX; margin:24PX 0 16PX; padding:5PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-page; }
+.tabs { position:sticky; top:0; z-index:10; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4PX; margin:24PX 0 16PX; padding:5PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-page; }
 .tabItem { @include button-reset; --provider-button-color:var(--xa-color-text-secondary); display:flex; align-items:center; justify-content:center; min-height:44PX; margin:0; padding:8PX 4PX; border:0; border-radius:8PX; background:transparent; cursor:pointer; transition:background 150ms ease; }
 .tabItemActive { background:$color-bg-card; box-shadow:$shadow-card; }
+.tabItem { position:relative; }
+.tabItem::after { content:''; position:absolute; bottom:3PX; left:20%; right:20%; height:2PX; border-radius:2PX; background:var(--xa-color-primary); transform:scaleX(0); transition:transform var(--xa-motion-base); }
+.tabItemActive::after { transform:scaleX(1); }
+.tabs { box-shadow:var(--xa-shadow-card); }
 .tabText { font-size:14PX; color:$color-text-secondary; }
 .tabItemActive .tabText { color:$color-primary; font-weight:650; }
 .listSummary { display:flex; justify-content:space-between; align-items:center; padding:4PX 2PX 14PX; font-size:14PX; font-weight:600; }
@@ -34,7 +38,7 @@
 .list { display:grid; grid-template-columns:minmax(0,1fr); gap:16PX; }
 .emptyPanel { grid-column:1/-1; border:1PX solid $color-border; border-radius:16PX; background:$color-bg-card; }
 .loadError { display:flex; align-items:center; justify-content:space-between; gap:12PX; margin-bottom:16PX; padding:16PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-card; font-size:14PX; }
-.orderCard { min-width:0; padding:20PX; border:1PX solid $color-border; border-radius:16PX; background:$color-bg-card; }
+.orderCard { min-width:0; padding:20PX; border:1PX solid $color-border; border-radius:18PX; background:$color-bg-card; box-shadow:var(--xa-shadow-card); }
 .vipRow { display:flex; align-items:center; gap:8PX; margin-bottom:14PX; }
 .vipBadge { flex:none; padding:3PX 8PX; border-radius:5PX; font-size:11PX; font-weight:600; color:var(--xa-color-on-primary); background:$color-primary; }
 .bossName { @include text-ellipsis; flex:1; font-size:13PX; font-weight:600; }
@@ -107,6 +111,16 @@
 .networkHint { color: $color-text-secondary; font-size: 12PX; line-height: 1.6; }
 .attendance { display:flex; align-items:center; justify-content:space-between; gap:16PX; margin:20PX 0; padding:14PX 16PX; border:1PX solid $color-border; border-radius:10PX; background:var(--xa-color-surface-subtle); color:$color-text-secondary; font-size:14PX; }
 
-.scopeBar { margin:16PX 0; padding:0 16PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-card; font-size:14PX; line-height:1.6; }
-.scopeBar :global(taro-picker-core),.scopeBar > picker { min-height:48PX; cursor:pointer; }.scopeBar :global(taro-picker-core) > :first-child { display:flex; align-items:center; min-height:48PX; padding:10PX 0; overflow-wrap:anywhere; }
+.scopeBar { margin:16PX 0; padding:12PX 16PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-card; }
+.scopeTitle { display:block; margin-bottom:8PX; color:$color-text-secondary; font-size:12PX; font-weight:600; }
+.scopeHeader { display:flex; justify-content:space-between; align-items:center; gap:8PX; margin-bottom:8PX; }
+.scopeHeader .scopeTitle { margin:0; }
+.soundToggle { @include button-reset; width:auto; min-height:44PX; margin:0; padding:4PX 8PX; border:1PX solid $color-border; border-radius:8PX; color:$color-primary; background:var(--xa-color-surface-subtle); font-size:12PX; }
+.scopeScroller { width:100%; white-space:nowrap; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
+.scopeOptions { display:inline-flex; gap:8PX; padding-bottom:2PX; }
+.scopeChoice { @include button-reset; flex:none; width:auto; min-height:44PX; margin:0; padding:8PX 12PX; border:1PX solid $color-border; border-radius:10PX; background:var(--xa-color-surface-subtle); color:var(--xa-color-text-secondary); font-size:13PX; white-space:nowrap; scroll-snap-align:start; cursor:pointer; }
+.scopeChoiceActive { border-color:var(--xa-color-primary); background:var(--xa-color-primary-soft); color:var(--xa-color-primary); font-weight:650; }
 .orderScope { display:block; margin:6PX 0; color:$color-text-secondary; font-size:12PX; line-height:1.7; overflow-wrap:anywhere; }
+.focusNotice { display:flex; align-items:center; justify-content:space-between; gap:12PX; margin:12PX 0; padding:10PX 12PX; border:1PX solid var(--xa-color-primary-soft); border-radius:8PX; color:var(--xa-color-primary); background:var(--xa-color-primary-soft); font-size:13PX; }
+.teamProgress { display:grid; gap:5PX; margin-top:10PX; padding:10PX 12PX; border-radius:8PX; background:var(--xa-color-primary-soft); font-size:12PX; }
+.teamProgressTitle { font-weight:600; color:var(--xa-color-primary); }.teamProgressMember { color:var(--xa-color-text-secondary); }

@@ -1,86 +1,73 @@
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <div class="brand">
-        <h1>兴安电竞</h1>
-        <p>后台管理系统</p>
+  <main class="login-page">
+    <Card class="login-card">
+      <header class="brand">
+        <Badge variant="secondary">兴安电竞 · 运营后台</Badge>
+        <h1>{{ recovery ? '保存备用恢复码' : otp?.requiresOTPSetup ? '绑定验证器' : otp ? '验证身份' : '后台登录' }}</h1>
+        <p v-if="!otp && !recovery">使用已开通后台权限的账号登录。</p>
+      </header>
+
+      <div v-if="recovery" class="recovery-panel">
+        <p>验证器已绑定。以下 {{ recovery.data.recoveryCodes?.length }} 个备用恢复码只显示一次，请安全保存。每个恢复码只能使用一次。</p>
+        <ul class="recovery-codes" aria-label="备用恢复码">
+          <li v-for="(code,index) in recovery.data.recoveryCodes" :key="index"><code>{{ code }}</code></li>
+        </ul>
+        <Button size="xs" class="login-submit" @click="finishRecovery">已保存，进入系统</Button>
       </div>
-      <div v-if="recovery">
-        <p>验证器绑定成功。以下8个备用恢复码仅显示一次，请安全保存；每个恢复码只能使用一次。</p>
-        <pre class="recovery-codes">{{ recovery.data.recoveryCodes?.join('\n') }}</pre>
-        <el-button type="primary" class="login-submit" @click="finishRecovery">已保存，进入系统</el-button>
-      </div>
-      <el-form v-else ref="formRef" class="login-form" :model="form" :rules="rules" label-position="top" @submit.prevent>
-        <el-form-item v-show="!otp" label="账号" prop="username">
-          <el-input
-            v-model="form.username"
-            :disabled="loading || !!otp"
-            placeholder="请输入账号"
-            autocomplete="username"
-            :prefix-icon="User"
-          />
-        </el-form-item>
-        <el-form-item v-show="!otp" label="密码" prop="password">
-          <el-input
-            v-model="form.password"
-            :disabled="loading || !!otp"
-            type="password"
-            placeholder="请输入密码"
-            autocomplete="current-password"
-            show-password
-            :prefix-icon="Lock"
-            @keyup.enter="onSubmit"
-          />
-        </el-form-item>
+      <form v-else class="login-form" @submit.prevent="onSubmit">
+        <div v-show="!otp" class="login-field">
+          <label for="login-username">账号</label>
+          <Input id="login-username" v-model="form.username" :disabled="loading || !!otp" placeholder="请输入账号" autocomplete="username" :aria-invalid="!!fieldErrors.username" :aria-describedby="fieldErrors.username ? 'username-error' : undefined" />
+          <span v-if="fieldErrors.username" id="username-error" class="field-error">{{ fieldErrors.username }}</span>
+        </div>
+        <div v-show="!otp" class="login-field">
+          <label for="login-password">密码</label>
+          <Input id="login-password" v-model="form.password" :disabled="loading || !!otp" type="password" placeholder="请输入密码" autocomplete="current-password" :aria-invalid="!!fieldErrors.password" :aria-describedby="fieldErrors.password ? 'password-error' : undefined" />
+          <span v-if="fieldErrors.password" id="password-error" class="field-error">{{ fieldErrors.password }}</span>
+        </div>
+
         <div v-if="otp" class="otp-panel">
           <div class="account-summary"><span>当前账号</span><strong>{{ form.username }}</strong></div>
           <template v-if="otp.requiresOTPSetup">
-            <h3>绑定动态验证码 App</h3>
-            <p>使用支持 TOTP 的验证器扫码，或手动输入绑定密钥，再输入 App 的6位动态码。</p>
+            <p>使用支持 TOTP 的验证器扫描二维码，或手动输入绑定密钥。</p>
             <img :src="otp.otpQr" alt="验证器绑定二维码" class="otp-qr" />
-            <code class="otp-secret">{{ otp.otpSecret }}</code>
+            <div class="manual-secret"><span>手动绑定密钥</span><code class="otp-secret">{{ otp.otpSecret }}</code></div>
           </template>
-          <p v-else>输入验证器 App 的6位动态码，也可使用一个备用恢复码。</p>
-          <div class="otp-field">
+          <p v-else>输入验证器中的 6 位动态码，也可使用一个备用恢复码。</p>
+          <div class="login-field">
             <label for="login-otp">{{ otp.requiresOTPSetup ? '动态验证码' : '动态验证码 / 备用恢复码' }}</label>
-            <el-input id="login-otp" v-model="otpCode" :placeholder="otp.requiresOTPSetup ? '请输入6位动态码' : '动态验证码 / 备用恢复码'" :maxlength="20" :disabled="loading" autocomplete="one-time-code" @keyup.enter="onSubmit" />
+            <Input id="login-otp" v-model="otpCode" :placeholder="otp.requiresOTPSetup ? '请输入6位动态码' : '动态验证码 / 备用恢复码'" :inputmode="otp.requiresOTPSetup ? 'numeric' : 'text'" :maxlength="20" :disabled="loading" autocomplete="one-time-code" />
           </div>
         </div>
         <div class="login-actions">
-          <el-button
-            type="primary"
-            class="login-submit"
-            :loading="loading"
-            :disabled="loading || (!!otp && !otpCode)"
-            @click="onSubmit"
-          >
-            {{ otp ? (otp.requiresOTPSetup ? '确认绑定并登录' : '验证并登录') : '下一步' }}
-          </el-button>
-          <el-button v-if="otp" class="login-back" :disabled="loading" @click="otp = null; otpCode = ''">返回账号密码</el-button>
+          <Button size="xs" type="submit" class="login-submit" :disabled="loading || (!!otp && !otpCode)">{{ loading ? '登录中…' : otp ? (otp.requiresOTPSetup ? '确认绑定并登录' : '验证并登录') : '下一步' }}</Button>
+          <Button v-if="otp" size="xs" variant="outline" :disabled="loading" @click="otp = null; otpCode = ''">返回账号密码</Button>
         </div>
-      </el-form>
-    </div>
-  </div>
+      </form>
+    </Card>
+  </main>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, type FormInstance } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { showNotice } from '@/utils/notice'
+import { Button } from '@xa/shadcn-vue/button'
+import { Badge } from '@xa/shadcn-vue/badge'
+import { Card } from '@xa/shadcn-vue/card'
+import { Input } from '@xa/shadcn-vue/input'
 import { useAuthStore } from '@/stores/auth'
 import { OtpLoginStep, type LoginResult } from '@/api/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
-const formRef = ref<FormInstance>()
 const loading = ref(false)
 const otp = ref<LoginResult | null>(null)
 const otpCode = ref('')
 const recovery = shallowRef<OtpLoginStep | null>(null)
 function enterHome() {
-  ElMessage.success('登录成功')
+  showNotice('登录成功', 'success')
   const redirect = (route.query.redirect as string) || '/dashboard'
   router.replace(redirect)
 }
@@ -92,85 +79,50 @@ function finishRecovery() {
 }
 
 const form = reactive({ username: '', password: '' })
-const rules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-}
+const fieldErrors = reactive({ username: '', password: '' })
 
 async function onSubmit() {
-  await formRef.value?.validate(async (valid) => {
-    if (!valid) return
-    loading.value = true
-    try {
-      await auth.login(form.username, form.password, otp.value?.otpChallenge, otpCode.value.trim())
-      enterHome()
-    } catch (error) {
-      if (error instanceof OtpLoginStep) {
-        if (error.data.requiresOTP) { otp.value = error.data; otpCode.value = '' }
-        else { recovery.value = error; otp.value = null; otpCode.value = '' }
-      }
-    } finally {
-      loading.value = false
+  if (loading.value) return
+  fieldErrors.username = form.username.trim() ? '' : '请输入账号'
+  fieldErrors.password = form.password ? '' : '请输入密码'
+  if (fieldErrors.username || fieldErrors.password || (otp.value && !otpCode.value.trim())) return
+  loading.value = true
+  try {
+    await auth.login(form.username, form.password, otp.value?.otpChallenge, otpCode.value.trim())
+    enterHome()
+  } catch (error) {
+    if (error instanceof OtpLoginStep) {
+      if (error.data.requiresOTP) { otp.value = error.data; otpCode.value = '' }
+      else { recovery.value = error; otp.value = null; otpCode.value = '' }
     }
-  })
+  } finally { loading.value = false }
 }
 </script>
 
-<style scoped lang="scss">
-:global(body:has(.login-page)) { min-width: 0; }
+<style scoped>
+:global(body:has(.login-page)) { min-width:0; }
 .login-page {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
-  background: linear-gradient(145deg, var(--xa-color-surface-page), var(--xa-color-primary-soft));
+  display:grid; grid-template-columns:minmax(0,1fr); place-items:center; min-height:100vh; min-height:100dvh;
+  padding:max(16px,env(safe-area-inset-top)) 12px max(16px,env(safe-area-inset-bottom));
+  background:linear-gradient(145deg,var(--background) 36%,var(--secondary));
 }
-.login-card {
-  --ap-control-height: var(--control-height-sm);
-  --ap-control-font-size: 13px;
-  width: min(420px, 100%);
-  padding: 36px 32px;
-  border: 1px solid var(--border);
-  border-top: 4px solid var(--primary);
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-xl);
-}
-
-.brand {
-  text-align: center;
-  margin-bottom: 28px;
-}
-.brand h1 {
-  margin: 0;
-  font-size: 26px;
-  color: var(--primary);
-}
-.brand p {
-  margin: 6px 0 0;
-  color: var(--muted-foreground);
-  font-size: 14px;
-}
-.login-card :deep(.el-input), .login-card :deep(.el-button) { --ap-control-height: var(--control-height-sm); --ap-control-font-size: 13px; }
-.login-form :deep(.el-form-item__label) { height: auto; min-height: 0; margin-bottom: 8px; padding: 0; line-height: 20px; }
-.login-actions { display: grid; gap: 12px; margin-top: 20px; }
-.login-submit, .login-actions .el-button { width: 100%; margin: 0; white-space: nowrap; }
-.login-back { color: var(--primary); border-color: var(--border); background: var(--card); }
-.otp-panel { margin: 0; }
-.account-summary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
-.account-summary span { color: var(--muted-foreground); }
-.account-summary strong { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
-.otp-panel h3 { margin: 0; font-size: 18px; line-height: 1.5; }
-.otp-panel p { margin: 8px 0 16px; color: var(--muted-foreground); font-size: 13px; line-height: 1.6; }
-.otp-qr { display: block; width: 176px; height: 176px; max-width: 100%; margin: 16px auto; background: white; }
-.otp-secret, .recovery-codes { display: block; margin: 16px 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--control-radius); background: var(--muted); font-family: monospace; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; word-break: break-all; white-space: pre-wrap; user-select: text; }
-.otp-field { margin-top: 20px; }
-.otp-field label { display: block; margin-bottom: 8px; font-size: 14px; line-height: 20px; }
-@media (max-width: 480px) {
-  .login-card { padding: 32px 22px; }
-  .brand { margin-bottom: 22px; }
-  .brand h1 { font-size: 23px; }
-}
+.login-card { width:min(100%,400px); min-width:0; gap:16px; padding:24px; }
+.brand,.login-form,.otp-panel,.recovery-panel { display:grid; gap:12px; min-width:0; }
+.brand { gap:8px; justify-items:start; padding-bottom:12px; border-bottom:1px solid var(--border); }
+.brand h1 { margin:0; color:var(--foreground); font-size:24px; font-weight:600; line-height:1.3; letter-spacing:-.4px; }
+.brand p,.otp-panel>p,.recovery-panel>p { margin:0; font-size:13px; line-height:1.55; color:var(--muted-foreground); }
+.login-field,.manual-secret { display:grid; gap:4px; min-width:0; }
+.login-field label,.manual-secret>span,.account-summary>span { font-size:12px; color:var(--muted-foreground); }
+.login-field :deep(input) { width:100%; min-height:28px; height:28px; padding-block:4px; font-size:13px; }
+.field-error { color:var(--destructive); font-size:12px; }
+.login-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.account-summary { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.account-summary strong { font-size:13px; overflow-wrap:anywhere; }
+.otp-qr { display:block; width:176px; height:176px; max-width:100%; justify-self:center; background:white; }
+.otp-secret,.recovery-codes { min-width:0; overflow-wrap:anywhere; background:var(--secondary); border:1px solid var(--border); border-radius:8px; padding:8px; }
+.otp-secret,.recovery-codes code { font-family:var(--font-mono,monospace); font-size:13px; user-select:text; }
+.recovery-codes { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; list-style:none; margin:0; padding:12px; }
+.recovery-panel>.login-submit { justify-self:start; }
+@media(max-width:480px) { .login-card { padding:16px; } }
+@media(pointer:coarse) { .login-field :deep(input) { height:44px; min-height:44px; font-size:16px; } .login-card :deep([data-slot='button']) { min-width:44px; min-height:44px; } }
 </style>

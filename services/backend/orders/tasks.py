@@ -10,6 +10,12 @@ from django.utils import timezone
 from .models import KookDispatchRecord, Order, OrderStatusLog
 
 
+@shared_task
+def expire_reservations() -> int:
+    from .reservation_expiration import expire_due_reservations
+    return expire_due_reservations()
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def auto_cancel_pending_order(self, order_id: int) -> str:
     """超时自动取消 PENDING 订单。
@@ -22,6 +28,10 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
     from .state_machine import IllegalTransitionError, transition
     from .settlement import SettlementError
     from .notifier import notify_order_update
+    from .direct_payment_models import DirectPaymentIntent
+    from .direct_payment import DirectPaymentError
+    from .direct_refund import DirectRefundError
+    from .timeout import reserve_expired_direct_refund
 
     try:
         current = Order.objects.only('id', 'status', 'auto_cancel_at').get(id=order_id)
@@ -37,9 +47,21 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
         delta = (current.auto_cancel_at - timezone.now()).total_seconds()
         raise self.retry(countdown=max(1, int(delta)))
 
+    if DirectPaymentIntent.objects.filter(order_id=order_id).exists():
+        try:
+            order = reserve_expired_direct_refund(order_id)
+        except (Order.DoesNotExist, DirectPaymentError, DirectRefundError, IllegalTransitionError):
+            return 'skip'
+        if order is None:
+            return 'skip'
+        transaction.on_commit(lambda: notify_order_update(order))
+        return 'refund_reserved'
+
     def side_effect(order):
-        refund_to_customer(order, reason='超时未接单自动退款')
+        refund = refund_to_customer(order, reason='超时未接单自动退款')
         order.cancel_reason = '超时未接单自动取消'
+        from .timeout import record_timeout_notice
+        record_timeout_notice(order, refunded_to_wallet=bool(refund and refund.amount))
 
     def pre_check(order):
         # 扫描结果可能已过时：必须在订单行锁内重新核对接单状态与本轮期限。
@@ -75,12 +97,8 @@ def check_pending_timeouts() -> int:
     Returns:
         触发的订单数量
     """
-    expired_ids = list(
-        Order.objects.filter(
-            status=Order.Status.PENDING,
-            auto_cancel_at__lte=timezone.now(),
-        ).values_list('id', flat=True)
-    )
+    from .timeout import expired_order_candidates
+    expired_ids = list(expired_order_candidates().values_list('id', flat=True))
     for order_id in expired_ids:
         auto_cancel_pending_order.delay(order_id)
     return len(expired_ids)

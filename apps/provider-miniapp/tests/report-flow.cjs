@@ -11,12 +11,21 @@ const order = (id, status = 'COMPLETED') => ({ id, order_no: `XA-${id}`, status,
 const report = overrides => ({ id: 10, order_id: 10, order_no: 'XA-10', game_name: '测试服务', expected_income: 1000, status: 'DRAFT', status_display: '草稿', order_status: 'COMPLETED', submitted_at: null, settled_at: null, entry_image_url: 'entry.jpg', completion_image_url: 'completion.jpg', result_image_urls: ['result.jpg'], result_images: [{ id: 30, url: 'result.jpg' }], audit_remark: '', can_edit: true, can_submit: true, edit_block_reason: '', ...overrides });
 
 // Exercise the actual page event handlers without a browser or business writes.
-function environment({ orders = [], reports = [], create = async () => ({ code: 0 }), read } = {}) {
+function environment({ orders = [], reports = [], create = async () => ({ code: 0 }), read, submit, upload, remove, orderRead, switchError, files = ['picked.jpg'] } = {}) {
   const values = [];
   let cursor = 0, didShow, didHide, pullDown, tree, firstRender = true, revision = 1, token = 'local-fixture', nextTimer = 0;
   const effects = [], cleanups = [], listeners = new Map(), authListeners = new Set(), timers = new Map();
   const requests = { created: [], uploaded: [], submitted: [], deleted: [], choose: [], notices: [], reads: [], stopped: 0 };
   const refreshModule = { exports: {} };
+  const reportNavigation = { exports: {} };
+  const orderNavigation = { exports: {} };
+  const navigation = [];
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(appRoot, 'src/utils/reportNavigation.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText, { module: reportNavigation, exports: reportNavigation.exports, require: () => ({ getSessionRevision: () => revision }), Number });
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(appRoot, 'src/utils/orderNavigation.ts'), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText, { module: orderNavigation, exports: orderNavigation.exports, require: () => ({ getSessionRevision: () => revision }), Number });
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(appRoot, 'src/utils/coalescedRefresh.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText, { module: refreshModule, exports: refreshModule.exports,
@@ -44,11 +53,14 @@ function environment({ orders = [], reports = [], create = async () => ({ code: 
     '@tarojs/components': { Button: 'Button', Input: 'Input', Text: 'Text', View: 'View' },
     '@tarojs/taro': { __esModule: true, default: {
       showToast: options => requests.notices.push(options),
-      chooseImage: async options => { requests.choose.push(options); return { tempFilePaths: ['picked.jpg'] }; },
+      switchTab: async options => { if (switchError) throw new Error('navigation failed'); navigation.push(options.url); },
+      chooseImage: async options => { requests.choose.push(options); return { tempFilePaths: files }; },
       stopPullDownRefresh: () => { requests.stopped++; },
       eventCenter: { on: (type, callback) => { assert.equal(type, 'xa:auth.changed'); authListeners.add(callback); }, off: (type, callback) => authListeners.delete(callback) },
     }, useDidShow: callback => { didShow = callback; }, useDidHide: callback => { didHide = callback; }, usePullDownRefresh: callback => { pullDown = callback; } },
     '@/utils/auth': { getSessionRevision: () => revision, getStoredToken: () => token },
+    '@/utils/reportNavigation': reportNavigation.exports,
+    '@/utils/orderNavigation': orderNavigation.exports,
     '@/utils/coalescedRefresh': refreshModule.exports,
     '@/services/websocket': { wsService: { on: (type, callback) => {
       if (!listeners.has(type)) listeners.set(type, new Set());
@@ -64,12 +76,12 @@ function environment({ orders = [], reports = [], create = async () => ({ code: 
     '@/services/report': {
       fetchReports: async () => { requests.reads.push(revision); return read ? read() : { code: 0, data: reports }; },
       createReport: async id => { requests.created.push(id); return create(id); },
-      uploadReportImage: async (id, image, kind) => { requests.uploaded.push({ id, image, kind }); return { code: 0 }; },
-      submitReport: async id => { requests.submitted.push(id); return { code: 0 }; },
-      deleteReportImage: async (id, imageId) => { requests.deleted.push({ id, imageId }); return { code: 0 }; },
+      uploadReportImage: async (id, image, kind) => { requests.uploaded.push({ id, image, kind }); return upload ? upload(id, image, kind) : { code: 0 }; },
+      submitReport: async id => { requests.submitted.push(id); return submit ? submit(id) : { code: 0 }; },
+      deleteReportImage: async (id, imageId) => { requests.deleted.push({ id, imageId }); return remove ? remove(id, imageId) : { code: 0 }; },
     },
-    '@/services/order': { fetchOrders: async () => ({ code: 0, data: orders }) },
-    '@/types/order': { statusTextMap: { GRABBED: '已接单', IN_SERVICE: '服务中', COMPLETED: '已完成' } },
+    '@/services/order': { fetchOrders: async () => orderRead ? orderRead() : ({ code: 0, data: orders }) },
+    '@/types/order': (() => { const mod = { exports: {} }; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(appRoot, 'src/types/order.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, { module: mod, exports: mod.exports }); return mod.exports; })(),
     '@/utils/format': { formatXaCoin: amount => String(amount / 10) },
     './index.module.scss': { default: new Proxy({}, { get: (_, key) => String(key) }) },
   };
@@ -103,7 +115,7 @@ function environment({ orders = [], reports = [], create = async () => ({ code: 
   const button = label => nodes().find(node => node.type === 'Button' && text(node) === label);
   const dialog = () => nodes().find(node => node.type === 'SurfaceDialog');
   render();
-  return { requests, render, nodes, button, dialog, text: () => text(tree), timers, listeners, authListeners,
+  return { requests, navigation, render, nodes, button, dialog, text: () => text(tree), timers, listeners, authListeners, reportNavigation: reportNavigation.exports, orderNavigation: orderNavigation.exports,
     setReports: next => { reports = next; }, setRead: next => { read = next; },
     emit: (type, data) => { for (const listener of listeners.get(type) || []) listener(data); },
     session: (next, logged = true) => { revision = next; token = logged ? 'local-fixture-' + next : ''; for (const listener of authListeners) listener(); render(); },
@@ -112,6 +124,286 @@ function environment({ orders = [], reports = [], create = async () => ({ code: 
     pull: async () => { await pullDown(); render(); },
     load: async () => { await didShow(); render(); }, begin: async () => { await button('从订单创建').props.onClick(); render(); } };
 }
+
+test('real team report evidence link opens its own order and completes both stages', { skip: !process.env.XA_TEAM_REPORT_NAV_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_TEAM_REPORT_NAV_HTTP);
+  const request = async (token, path, options = {}) => {
+    const response = await fetch(fixture.base + path, { ...options, headers: { Authorization: 'Bearer ' + token, ...(options.headers || {}) } });
+    return response.json();
+  };
+  const read = () => request(fixture.providerToken, '/api/wallet/reports/');
+  const evidence = async (token, action, field) => {
+    const form = new FormData();
+    form.append(field, new Blob([Buffer.from(fixture.image, 'base64')], { type: 'image/png' }), 'evidence.png');
+    const result = await request(token, `/api/orders/orders/${fixture.orderId}/${action}/`, { method: 'POST', body: form });
+    assert.equal(result.code, 0, JSON.stringify(result));
+  };
+  const failed = environment({ read, switchError: true });
+  failed.reportNavigation.queueReportOrder(fixture.orderId);
+  await failed.load();
+  await failed.button('前往订单').props.onClick();
+  assert.equal(failed.orderNavigation.takeOrderFocus(), null);
+  assert.ok(failed.requests.notices.some(item => item.title === '订单页面暂时无法打开'));
+  failed.unmount();
+  const env = environment({ read });
+  env.reportNavigation.queueReportOrder(fixture.orderId);
+  await env.load();
+  assert.ok(env.text().includes(fixture.orderNo));
+  assert.ok(!env.text().includes(fixture.otherOrderNo));
+  await env.button('前往订单').props.onClick();
+  assert.deepEqual(env.navigation, ['/pages/orders/index']);
+  assert.equal(env.orderNavigation.takeOrderFocus(), fixture.orderId);
+  const before = await request(fixture.providerToken, `/api/orders/orders/${fixture.orderId}/`);
+  assert.ok(before.data.allowed_actions.includes('START'));
+  await evidence(fixture.providerToken, 'start', 'entry_image');
+  await evidence(fixture.partnerToken, 'start', 'entry_image');
+  await env.load();
+  assert.ok(env.text().includes('结单截图'));
+  await env.button('前往订单').props.onClick();
+  assert.equal(env.orderNavigation.takeOrderFocus(), fixture.orderId);
+  const inService = await request(fixture.providerToken, `/api/orders/orders/${fixture.orderId}/`);
+  assert.equal(inService.data.status, 'IN_SERVICE');
+  assert.ok(inService.data.allowed_actions.includes('COMPLETE'));
+  await evidence(fixture.providerToken, 'complete', 'completion_image');
+  await evidence(fixture.partnerToken, 'complete', 'completion_image');
+  assert.equal((await request(fixture.bossToken, `/api/orders/orders/${fixture.orderId}/`)).data.status, 'COMPLETED');
+  env.unmount();
+});
+
+test('real report actions recover after their committed responses are lost', { skip: !process.env.XA_REPORT_ACTIONS_LOST_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_ACTIONS_LOST_HTTP);
+  const request = async (path, method = 'GET', body) => {
+    const response = await fetch(fixture.base + path, { method,
+      headers: { Authorization: 'Bearer ' + fixture.token, 'Content-Type': 'application/json' },
+      ...(body ? { body: JSON.stringify(body) } : {}) });
+    return response.json();
+  };
+  const read = () => request('/api/wallet/reports/');
+  const first = environment({
+    read,
+    orderRead: () => request('/api/orders/orders/?role=provider'),
+    create: async id => {
+      const result = await request('/api/wallet/reports/', 'POST', { order_id: id });
+      assert.equal(result.code, 0, JSON.stringify(result));
+      throw new Error('response lost after commit');
+    },
+    remove: async (id, imageId) => {
+      const result = await request(`/api/wallet/reports/${id}/images/${imageId}/`, 'DELETE');
+      assert.equal(result.code, 0, JSON.stringify(result));
+      throw new Error('response lost after commit');
+    },
+  });
+  await first.load(); await first.begin();
+  const option = first.nodes().find(node => node.type === 'Button' &&
+    node.props.className?.includes('orderOption ') && JSON.stringify(node.props.children).includes(fixture.firstOrderNo));
+  assert.ok(option); option.props.onClick(); first.render();
+  await first.button('创建报单').props.onClick(); first.render();
+  assert.equal(first.dialog().props.open, false);
+  assert.ok(first.requests.notices.some(item => item.title === '创建结果未确认，请核对报单'));
+  assert.ok(first.text().includes(fixture.firstOrderNo));
+  const firstRow = (await read()).data.find(item => item.order_id === fixture.firstOrderId);
+  assert.ok(firstRow);
+  const form = new FormData();
+  form.append('kind', 'RESULT');
+  form.append('image', new Blob([Buffer.from(fixture.image, 'base64')], { type: 'image/png' }), 'result.png');
+  const uploaded = await fetch(fixture.base + `/api/wallet/reports/${firstRow.id}/images/`, {
+    method: 'POST', headers: { Authorization: 'Bearer ' + fixture.token }, body: form,
+  });
+  assert.equal((await uploaded.json()).code, 0);
+  await first.load();
+  await first.button('删除此图').props.onClick(); first.render();
+  assert.ok(first.requests.notices.some(item => item.title === '删除结果未确认，请核对截图'));
+  assert.ok(first.text().includes('0/9 张'));
+  assert.equal((await read()).data.find(item => item.id === firstRow.id).result_images.length, 0);
+  first.unmount();
+
+  const second = environment({ read, submit: async id => {
+    const result = await request(`/api/wallet/reports/${id}/submit/`, 'POST', {});
+    assert.equal(result.code, 0, JSON.stringify(result));
+    throw new Error('response lost after commit');
+  } });
+  second.reportNavigation.queueReportOrder(fixture.secondOrderId);
+  await second.load();
+  await second.button('提交审核').props.onClick(); second.render();
+  assert.ok(second.requests.notices.some(item => item.title === '提交结果未确认，请核对报单状态'));
+  assert.ok(second.text().includes('待审核'));
+  assert.equal((await read()).data.find(item => item.order_id === fixture.secondOrderId).status, 'PENDING');
+  second.unmount();
+});
+
+test('report focus is scoped to the account, can be cleared, and handles missing orders', async () => {
+  const env = environment({ reports: [report({ id: 10, order_id: 10, order_no: 'XA-10' }), report({ id: 20, order_id: 20, order_no: 'XA-20' })] });
+  env.reportNavigation.queueReportOrder(20); await env.load();
+  assert.ok(env.text().includes('XA-20')); assert.ok(!env.text().includes('XA-10'));
+  env.button('查看全部报单').props.onClick(); env.render();
+  assert.ok(env.text().includes('XA-10') && env.text().includes('XA-20'));
+  env.reportNavigation.queueReportOrder(99); await env.load();
+  assert.ok(env.nodes().some(node => node.type === 'Empty' && node.props.title === '未找到关联报单'));
+  env.reportNavigation.queueReportOrder(20); env.session(2); await env.load();
+  assert.ok(!env.text().includes('正在查看关联订单的报单'));
+});
+
+test('real multi-order report list focuses the intended order and clears on account change', { skip: !process.env.XA_REPORT_FOCUS_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_FOCUS_HTTP);
+  let token = fixture.token;
+  const env = environment({ read: async () => (await fetch(fixture.base + '/api/wallet/reports/', { headers: { Authorization: 'Bearer ' + token } })).json() });
+  env.reportNavigation.queueReportOrder(fixture.secondOrderId); await env.load();
+  assert.ok(env.text().includes(fixture.secondOrderNo)); assert.ok(!env.text().includes(fixture.firstOrderNo));
+  env.button('查看全部报单').props.onClick(); env.render();
+  assert.ok(env.text().includes(fixture.firstOrderNo) && env.text().includes(fixture.secondOrderNo));
+  env.reportNavigation.queueReportOrder(fixture.missingOrderId); await env.load();
+  assert.ok(env.nodes().some(node => node.type === 'Empty' && node.props.title === '未找到关联报单'));
+  token = fixture.otherToken; env.session(2); await env.load();
+  assert.ok(!env.text().includes(fixture.firstOrderNo) && !env.text().includes(fixture.secondOrderNo));
+  assert.ok(!env.text().includes('正在查看关联订单的报单'));
+});
+
+test('an actual old-account order response cannot reopen the create dialog after switching account', { skip: !process.env.XA_REPORT_ACCOUNT_SWITCH_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_ACCOUNT_SWITCH_HTTP);
+  let received, release;
+  const receivedResponse = new Promise(resolve => { received = resolve; });
+  const delivery = new Promise(resolve => { release = resolve; });
+  const request = async (path, token) => (await fetch(fixture.base + path, {
+    headers: { Authorization: 'Bearer ' + token },
+  })).json();
+  const env = environment({
+    read: () => request('/api/wallet/reports/', fixture.otherToken),
+    orderRead: async () => {
+      const response = await request('/api/orders/orders/?role=provider', fixture.token);
+      assert.equal(response.code, 0);
+      assert.ok(response.data.some(order => order.id === fixture.orderId));
+      received();
+      await delivery;
+      return response;
+    },
+  });
+  const pending = env.begin();
+  await receivedResponse;
+  env.session(2);
+  release();
+  await pending;
+  assert.equal(env.dialog().props.open, false, 'old account response must not reopen its order selector');
+  assert.ok(!env.text().includes(fixture.orderNo));
+  assert.deepEqual(env.requests.created, []);
+  env.unmount();
+});
+
+test('real account switch releases old action without unlocking a newer one', { skip: !process.env.XA_REPORT_ACCOUNT_SWITCH_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_ACCOUNT_SWITCH_HTTP);
+  let account = 0;
+  const gates = [], arrived = [];
+  const env = environment({
+    read: async () => (await fetch(fixture.base + '/api/wallet/reports/', { headers: { Authorization: 'Bearer ' + (account ? fixture.otherToken : fixture.token) } })).json(),
+    orderRead: async () => {
+      const token = account ? fixture.otherToken : fixture.token;
+      const result = await (await fetch(fixture.base + '/api/orders/orders/?role=provider', { headers: { Authorization: 'Bearer ' + token } })).json();
+      assert.equal(result.code, 0);
+      await new Promise(resolve => { gates.push(resolve); arrived.push(true); });
+      return result;
+    },
+  });
+  const first = env.begin();
+  while (arrived.length < 1) await new Promise(resolve => setTimeout(resolve, 10));
+  account = 1; env.session(2); env.render();
+  assert.ok(env.button('从订单创建'), 'new account can start without waiting for the old request');
+  const second = env.begin();
+  while (arrived.length < 2) await new Promise(resolve => setTimeout(resolve, 10));
+  gates[0](); await first; env.render();
+  assert.equal(env.button('处理中…').props.disabled, true, 'old response must not unlock the new request');
+  gates[1](); await second; env.render();
+  assert.ok(env.button('从订单创建'));
+  env.unmount();
+});
+
+test('two real report submissions stay isolated when account changes', { skip: !process.env.XA_REPORT_SUBMIT_SWITCH_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_SUBMIT_SWITCH_HTTP);
+  let account = 0;
+  const gates = [];
+  const request = async (token, path, options = {}) => (await fetch(fixture.base + path, {
+    ...options, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+  })).json();
+  const env = environment({
+    read: () => request(fixture.tokens[account], '/api/wallet/reports/'),
+    submit: async id => {
+      const result = await request(fixture.tokens[account], `/api/wallet/reports/${id}/submit/`, { method: 'POST', body: '{}' });
+      assert.equal(result.code, 0, JSON.stringify(result));
+      await new Promise(resolve => gates.push(resolve));
+      return result;
+    },
+  });
+  await env.load();
+  const first = env.button('提交审核').props.onClick();
+  while (gates.length < 1) await new Promise(resolve => setTimeout(resolve, 10));
+  account = 1; env.session(2); await env.load();
+  const second = env.button('提交审核').props.onClick();
+  while (gates.length < 2) await new Promise(resolve => setTimeout(resolve, 10));
+  gates[0](); await first; env.render();
+  assert.equal(env.button('处理中…').props.disabled, true, 'old submission must not unlock new submission');
+  assert.ok(!env.requests.notices.some(item => item.title === '已提交审核'), 'old response must not announce success for the new account');
+  gates[1](); await second; env.render();
+  assert.ok(env.text().includes('待审核'));
+  assert.equal(env.requests.notices.filter(item => item.title === '已提交审核').length, 1);
+  env.unmount();
+});
+
+test('a real report created before account switch cannot show success for the new account', { skip: !process.env.XA_REPORT_ACCOUNT_SWITCH_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_ACCOUNT_SWITCH_HTTP);
+  let received, release;
+  const receivedResponse = new Promise(resolve => { received = resolve; });
+  const delivery = new Promise(resolve => { release = resolve; });
+  const request = async (path, token, options = {}) => (await fetch(fixture.base + path, {
+    ...options, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+  })).json();
+  const env = environment({
+    read: () => request('/api/wallet/reports/', fixture.otherToken),
+    orderRead: () => request('/api/orders/orders/?role=provider', fixture.token),
+    create: async id => {
+      const result = await request('/api/wallet/reports/', fixture.token, {
+        method: 'POST', body: JSON.stringify({ order_id: id }),
+      });
+      assert.equal(result.code, 0, JSON.stringify(result));
+      received();
+      await delivery;
+      return result;
+    },
+  });
+  await env.begin();
+  const option = env.nodes().find(node => node.type === 'Button' && node.props.className?.includes('orderOption '));
+  assert.ok(option); option.props.onClick(); env.render();
+  const pending = env.button('创建报单').props.onClick();
+  await receivedResponse;
+  env.session(2);
+  release();
+  await pending; env.render();
+  assert.equal(env.dialog().props.open, false);
+  assert.ok(!env.requests.notices.some(notice => notice.title === '报单已创建'));
+  assert.ok(!env.text().includes(fixture.orderNo));
+  env.unmount();
+});
+
+test('stale rejected report refreshes after another device really resubmits', { skip: !process.env.XA_REPORT_STALE_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_STALE_HTTP);
+  const request = async (path, method = 'GET') => {
+    const response = await fetch(fixture.base + path, {
+      method, headers: { Authorization: 'Bearer ' + fixture.token, 'Content-Type': 'application/json' },
+      ...(method === 'POST' ? { body: '{}' } : {}),
+    });
+    return response.json();
+  };
+  const env = environment({
+    read: () => request('/api/wallet/reports/'),
+    submit: id => request(`/api/wallet/reports/${id}/submit/`, 'POST'),
+  });
+  await env.load();
+  assert.ok(env.text().includes('已驳回'));
+  const otherDevice = await request(`/api/wallet/reports/${fixture.reportId}/submit/`, 'POST');
+  assert.equal(otherDevice.code, 0, JSON.stringify(otherDevice));
+  await env.button('提交审核').props.onClick(); env.render();
+  assert.ok(env.requests.notices.at(-1).title.includes('当前报单不可修改'));
+  assert.ok(env.text().includes('待审核'), 'stale report must refresh to the current server state');
+  assert.equal(env.button('提交审核'), undefined);
+  env.unmount();
+});
 
 for (const count of [6, 7, 18]) test(`all ${count} eligible orders remain reachable, including the last order`, async () => {
   const env = environment({ orders: Array.from({ length: count }, (_, index) => order(index + 1)) });
@@ -132,6 +424,23 @@ test('empty order list gives feedback without creating a report', async () => {
   assert.equal(env.requests.notices.at(-1).title, '暂无可新建报单的订单');
 });
 
+test('a previous team completion image is not counted as ready until the current assignment submits', async () => {
+  const old = report({ order_status: 'IN_SERVICE', can_submit: false,
+    evidence_upload_block_reasons: { COMPLETION: '订单人员已变更，请在订单页重新提交本次结单截图' } });
+  const env = environment({ reports: [old] });
+  await env.load();
+  assert.ok(env.text().includes('2/3 类已就绪'));
+  assert.ok(env.text().includes('结单截图（需重新提交）'));
+  assert.ok(env.text().includes('待补齐：结单截图'));
+  assert.ok(!env.text().includes('三类凭证已齐全'));
+  assert.ok(env.button('前往订单'));
+  env.setReports([report({ evidence_upload_block_reasons: {} })]);
+  await env.load();
+  assert.ok(env.text().includes('3/3 类已就绪'));
+  assert.ok(env.text().includes('三类凭证已齐全'));
+  assert.equal(env.button('提交审核').props.disabled, false);
+});
+
 test('pending, cancelled and already reported orders are excluded', async () => {
   const env = environment({ orders: [order(1, 'PENDING'), order(2, 'CANCELLED'), order(3), order(4, 'GRABBED'), order(5, 'IN_SERVICE')], reports: [report({ order_id: 3 })] });
   await env.load(); await env.begin();
@@ -139,6 +448,48 @@ test('pending, cancelled and already reported orders are excluded', async () => 
   assert.equal(options.length, 2);
   options[1].props.onClick(); env.render(); await env.button('创建报单').props.onClick();
   assert.deepEqual(env.requests.created, [5]);
+});
+
+test('creation choices respect server report eligibility while preserving eligible transfers', async () => {
+  const env = environment({ orders: [
+    { ...order(1), report_entry: { available: false, reason: '转单后本人无结算份额，无需提交报单' } },
+    { ...order(2), report_entry: { available: true, reason: '' } },
+  ] });
+  await env.load(); await env.begin();
+  const options = env.nodes().filter(node => node.type === 'Button' && node.props.className?.includes('orderOption '));
+  assert.equal(options.length, 1);
+  assert.ok(env.text().includes('XA-2'));
+  assert.ok(!env.text().includes('XA-1'));
+  options[0].props.onClick(); env.render(); await env.button('创建报单').props.onClick();
+  assert.deepEqual(env.requests.created, [2]);
+});
+
+test('creation choices use the saved service type after catalog reclassification', async () => {
+  const env = environment({ orders: [
+    { ...order(21), is_gift_snapshot: false, service: { id: 1, name: '原服务', is_gift: true }, report_entry: { available: true, reason: '' } },
+    { ...order(22), is_gift_snapshot: true, service: { id: 2, name: '原礼物', is_gift: false }, report_entry: { available: false, reason: '礼物打赏不需要服务报单' } },
+  ] });
+  await env.load(); await env.begin();
+  const options = env.nodes().filter(node => node.type === 'Button' && node.props.className?.includes('orderOption '));
+  assert.equal(options.length, 1);
+  assert.ok(env.text().includes('XA-21'));
+  assert.ok(!env.text().includes('XA-22'));
+});
+
+test('a rejected report says the consumption clock stopped and requires every report to be effective again', async () => {
+  const env = environment({ reports: [report({ status: 'REJECTED', status_display: '已驳回', submitted_at: '2026-10-30T10:00:00+08:00', audit_remark: '凭证不清晰' })] });
+  await env.load();
+  assert.ok(env.text().includes('实销计时已停止，补充凭证并重提后，全部应提交报单有效才重新起算'));
+  assert.ok(env.text().includes('审核备注：凭证不清晰'));
+  assert.ok(!env.text().includes('实销从全部应提交报单有效时起等待72小时'));
+});
+
+test('a released zero-share participant is not told to resubmit an old rejected report', async () => {
+  const env = environment({ reports: [report({ status: 'REJECTED', status_display: '已驳回', submitted_at: '2026-10-30T10:00:00+08:00', can_edit: false, can_submit: false, edit_block_reason: '本人已退出服务且无结算份额，无需提交报单' })] });
+  await env.load();
+  assert.ok(env.text().includes('本人已退出服务且无结算份额，无需提交报单'));
+  assert.ok(!env.text().includes('实销计时已停止'));
+  assert.ok(!env.text().includes('补充凭证并重提后'));
 });
 
 test('searching by order number and service name can reach orders beyond six', async () => {
@@ -188,6 +539,75 @@ test('rapid confirmation sends one create request even before a rerender', async
   const first = confirm(); await confirm();
   assert.deepEqual(env.requests.created, [1]);
   resolve({ code: 0 }); await first;
+});
+
+test('a real evidence upload confirms success and displays the saved image', { skip: !process.env.XA_REPORT_UPLOAD_SUCCESS_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_UPLOAD_SUCCESS_HTTP);
+  const read = async () => (await fetch(fixture.base + '/api/wallet/reports/', {
+    headers: { Authorization: 'Bearer ' + fixture.token },
+  })).json();
+  const upload = async (id, _path, kind) => {
+    const form = new FormData();
+    form.append('kind', kind);
+    form.append('image', new Blob([Buffer.from(fixture.image, 'base64')], { type: 'image/png' }), 'result.png');
+    return (await fetch(fixture.base + `/api/wallet/reports/${id}/images/`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + fixture.token }, body: form,
+    })).json();
+  };
+  const env = environment({ read, upload });
+  await env.load();
+  await env.button('添加战绩截图').props.onClick();
+  env.render();
+  assert.equal(env.requests.notices.at(-1).title, '截图已上传');
+  assert.ok(env.text().includes('1/9 张'));
+  assert.equal((await read()).data.find(item => item.id === fixture.reportId).result_images.length, 1);
+  env.unmount();
+});
+
+test('a partially completed real image batch with a lost response asks to check the saved evidence', { skip: !process.env.XA_REPORT_UPLOAD_LOST_HTTP }, async () => {
+  const fixture = JSON.parse(process.env.XA_REPORT_UPLOAD_LOST_HTTP);
+  const read = async () => {
+    const response = await fetch(fixture.base + '/api/wallet/reports/', { headers: { Authorization: 'Bearer ' + fixture.token } });
+    const result = await response.json();
+    assert.equal(result.code, 0);
+    return result;
+  };
+  let uploaded = 0;
+  const upload = async (id, _path, kind) => {
+    const form = new FormData();
+    form.append('kind', kind);
+    form.append('image', new Blob([Buffer.from(fixture.image, 'base64')], { type: 'image/png' }), 'result.png');
+    const response = await fetch(fixture.base + `/api/wallet/reports/${id}/images/`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + fixture.token }, body: form,
+    });
+    const saved = await response.json();
+    if (saved.code !== 0) return saved;
+    if (++uploaded === 2) throw new Error('network response lost');
+    return saved;
+  };
+  const env = environment({ read, upload, files: ['first.png', 'second.png', 'third.png'] });
+  await env.load();
+  await env.button('添加战绩截图').props.onClick();
+  env.render();
+  assert.equal(env.requests.uploaded.length, 2, 'do not automatically retry or upload remaining files after an uncertain result');
+  assert.ok(env.requests.notices.some(item => item.title === '上传结果未确认，请核对截图'));
+  assert.ok(env.text().includes('2/9 张'), 'refresh displays both images saved by the server');
+  assert.equal((await read()).data.find(item => item.id === fixture.reportId).result_images.length, 2);
+  // Another device fills the remaining slots while this page still shows 2/9.
+  for (let index = 0; index < 7; index++) {
+    const form = new FormData();
+    form.append('kind', 'RESULT');
+    form.append('image', new Blob([Buffer.from(fixture.image, 'base64')], { type: 'image/png' }), 'result.png');
+    const response = await fetch(fixture.base + `/api/wallet/reports/${fixture.reportId}/images/`, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + fixture.token }, body: form,
+    });
+    assert.equal((await response.json()).code, 0);
+  }
+  await env.button('添加战绩截图').props.onClick();
+  env.render();
+  assert.equal(env.requests.notices.at(-1).title, '战绩截图最多上传9张', 'show the actual business rejection');
+  assert.ok(env.text().includes('9/9 张'));
+  env.unmount();
 });
 
 test('result upload requests only the remaining slot and obeys the nine-image limit', async () => {
@@ -244,11 +664,34 @@ test('order cancellation and settlement pushes refresh report state through the 
   env.setReports([report({ order_status: 'CANCELLED', can_edit: false, can_submit: false })]);
   env.emit('order_status_update', { id: 10, status: 'CANCELLED' }); await env.fire();
   assert.ok(env.text().includes('订单已取消，报单流程已停止'));
-  env.setReports([report({ status: 'APPROVED', status_display: '审核通过', can_edit: false, can_submit: false, settled_at: '2026-10-22T12:00:00Z' })]);
+  env.setReports([report({ status: 'APPROVED', status_display: '审核通过', can_edit: false, can_submit: false, settled_at: '2026-10-22T12:00:00Z', settlement_status: 'SETTLED' })]);
   for (const event of ['order_status_update', 'report_status_update', 'connected']) env.emit(event, { id: 10 });
   assert.equal(env.timers.size, 1); await env.fire();
-  assert.equal(env.requests.reads.length, 3); assert.ok(env.text().includes('收益已结算，可在钱包查看流水'));
+  assert.equal(env.requests.reads.length, 3); assert.ok(env.text().includes('收益已记入内部钱包，冻结及可用金额以钱包为准'));
   assert.ok(!env.text().includes('订单已取消，报单流程已停止'));
+});
+
+test('order updates refresh the aftersale notice and respect already settled income', async () => {
+  const env = environment({ reports: [report({ status: 'APPROVED', settled_at: null, aftersale_status: 'OPEN' })] });
+  await env.load();
+  assert.ok(env.text().includes('售后处理中，本单暂不结算'));
+  env.setReports([report({ status: 'APPROVED', settled_at: null, aftersale_status: 'RESOLVED' })]);
+  env.emit('order_status_update', { id: 10 }); await env.fire();
+  assert.ok(!env.text().includes('售后处理中'));
+  assert.ok(env.text().includes('售后已处理，收益状态以本单结算信息为准'));
+  env.setReports([report({ status: 'APPROVED', settled_at: '2026-10-29T10:00:00Z', aftersale_status: 'OPEN' })]);
+  env.emit('order_status_update', { id: 10 }); await env.fire();
+  assert.ok(env.text().includes('售后处理中，请关注处理结果；已结算收益以钱包流水为准'));
+  assert.ok(!env.text().includes('本单暂不结算'));
+});
+
+test('real resolved aftersale report shows its outcome and settlement', { skip: !process.env.XA_REAL_RESOLVED_REPORT }, async () => {
+  const actual = JSON.parse(process.env.XA_REAL_RESOLVED_REPORT);
+  const env = environment({ reports: [actual] });
+  await env.load();
+  assert.ok(env.text().includes('售后已处理，收益状态以本单结算信息为准'));
+  assert.ok(!env.text().includes('售后处理中'));
+  assert.ok(env.text().includes('凭证已通过，等待全部审核及售后窗口结束'));
 });
 
 test('an approved report on a refunded order never promises future settlement', async () => {
@@ -261,6 +704,37 @@ test('an approved report on a refunded order never promises future settlement', 
   assert.ok(!env.text().includes('收益已结算，可在钱包查看流水'));
 });
 
+test('direct or missing settlement state never promises wallet income', async () => {
+  for (const settlement_status of ['REVIEW', undefined, 'unexpected']) {
+    const env = environment({ reports: [report({ status: 'APPROVED', status_display: '审核通过', settlement_status, settled_at: '2026-10-22T12:00:00Z' })] });
+    await env.load();
+    assert.ok(env.text().includes('凭证已通过，收益待核对，请联系客服核对'));
+    assert.ok(!env.text().includes('收益已结算，可在钱包查看流水'));
+    assert.ok(!env.text().includes('收益已记入内部钱包'));
+    assert.ok(!env.text().includes('凭证已通过，等待全部审核及售后窗口结束'));
+  }
+});
+
+test('settled wallet income describes freezing and zero shares accurately', async () => {
+  for (const [expected_income, expected] of [[1000, '收益已记入内部钱包，冻结及可用金额以钱包为准'], [0, '已结算，本单收益为 0']]) {
+    const env = environment({ reports: [report({ status: 'APPROVED', settlement_status: 'SETTLED', expected_income })] });
+    await env.load();
+    assert.ok(env.text().includes(expected));
+    assert.ok(!env.text().includes('可立即提现'));
+  }
+});
+
+test('missing own double-service share does not display or invent an income', async () => {
+  for (const settlement_status of ['REVIEW', 'SETTLED']) {
+    const env = environment({ reports: [report({ status: 'APPROVED', settlement_status,
+                                                 expected_income: null, payout_amount: null })] });
+    await env.load();
+    assert.ok(env.text().includes('收益待核对，请联系客服核对'));
+    assert.ok(!env.text().includes('0 兴安币'));
+    assert.ok(!env.text().includes('收益已记入内部钱包'));
+  }
+});
+
 test('refunded settled report labels its original snapshot without claiming it remains earned', async () => {
   const env = environment({ reports: [report({ status: 'APPROVED', status_display: '审核通过', order_status: 'CANCELLED', settled_at: '2026-10-19T00:00:00Z', submitted_at: '2026-10-15T00:00:00Z', can_edit: false, can_submit: false })] }); await env.load();
   assert.ok(env.text().includes('原核定单钱')); assert.ok(env.text().includes('历史金额仅供核对，净收益以钱包为准')); assert.ok(env.text().includes('原结算收益已按退款规则冲回，实际净收益以钱包流水为准'));
@@ -268,12 +742,20 @@ test('refunded settled report labels its original snapshot without claiming it r
   assert.ok(!env.text().includes('实销从全部有效报单起等待72小时'));
 });
 
+test('real provider refund response renders the report income and refund', { skip: !process.env.XA_REAL_PROVIDER_REFUND }, async () => {
+  const { report: actual } = JSON.parse(process.env.XA_REAL_PROVIDER_REFUND);
+  const env = environment({ reports: [actual] });
+  await env.load();
+  assert.ok(env.text().includes(`订单累计已退 ${actual.refund_summary.amount / 10}币`));
+  assert.ok(env.text().includes(`服务净收益 ${actual.refund_summary.net_income / 10}币`));
+  assert.ok(env.text().includes(actual.payment_status === 'PARTIALLY_REFUNDED' ? '部分退款核对' : '退款核对'));
+});
 test('partially refunded report keeps the completed service and displays actual remaining income/freeze from the API', async () => {
   const env = environment({ reports: [report({ expected_income: 8000, status: 'APPROVED', status_display: '审核通过', order_status: 'COMPLETED', payment_status: 'PARTIALLY_REFUNDED', settled_at: '2026-10-19T00:00:00Z', can_edit: false, can_submit: false,
-    refund_summary: { amount: 3750, remaining_amount: 6250, recovered_amount: 3000, net_income: 5000, remaining_frozen_amount: 5000,
-      records: [{ id: 8, amount: 2500, recovered_amount: 2000, created_at: '2026-10-20T00:00:00Z' }, { id: 9, amount: 1250, recovered_amount: 1000, created_at: '2026-10-20T01:00:00Z' }] },
+    refund_summary: { amount: 3750, remaining_amount: 6250, recovered_amount: 3000, net_income: 5000, referral_recovered_amount: 250, referral_net_income: 750, remaining_frozen_amount: 5000,
+      records: [{ id: 8, amount: 2500, recovered_amount: 2000, referral_recovered_amount: 250, created_at: '2026-10-20T00:00:00Z' }, { id: 9, amount: 1250, recovered_amount: 1000, created_at: '2026-10-20T01:00:00Z' }] },
   })] }); await env.load();
-  for (const expected of ['原核定单钱', '订单已部分退款，剩余净收益及冻结以钱包流水为准', '订单累计已退 375币 · 剩余 625币', '本人累计追回收益 300币', '本单实际净收益 500币', '本单剩余冻结 500币', '退款 #8 · 250币 · 本人追回 200币', '退款 #9 · 125币 · 本人追回 100币']) assert.ok(env.text().includes(expected), expected);
+  for (const expected of ['原核定单钱', '订单已部分退款，剩余净收益及冻结以钱包流水为准', '订单累计已退 375币 · 剩余 625币', '服务收益累计追回 300币', '服务净收益 500币', '推荐分佣追回 25币', '推荐分佣净额 75币', '本单剩余冻结 500币', '退款 #8 · 250币 · 服务收益追回 200币 · 推荐分佣追回 25币', '退款 #9 · 125币 · 服务收益追回 100币']) assert.ok(env.text().includes(expected), expected);
   for (const wrong of ['订单已取消', '不再结算收益', '原结算收益已按退款规则冲回', '收益已结算，可在钱包查看流水']) assert.ok(!env.text().includes(wrong), wrong);
   assert.deepEqual(env.requests.submitted, []); assert.deepEqual(env.requests.deleted, []);
 });

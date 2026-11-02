@@ -1,0 +1,10 @@
+@use '@/styles/variables.scss' as *;
+.stack { position:relative; margin:12PX 0; border:1PX solid var(--xa-color-border); border-radius:14PX; background:var(--xa-color-surface-card); box-shadow:0 4PX 0 -2PX var(--xa-color-surface-subtle); transition:box-shadow var(--xa-motion-base); }
+.open { box-shadow:var(--xa-shadow-card); }
+.trigger { @include button-reset; display:flex; align-items:center; justify-content:space-between; gap:12PX; width:100%; min-height:48PX; padding:12PX 14PX; text-align:left; white-space:normal; color:var(--xa-color-text-primary); background:transparent; }
+.title { display:block; font-size:14PX; font-weight:600; }.hint { display:block; margin-top:4PX; font-size:12PX; color:var(--xa-color-text-secondary); }
+.chevron { flex:none; font-size:12PX; color:var(--xa-color-primary); }
+.region { display:grid; grid-template-rows:0fr; opacity:0; visibility:hidden; transition:grid-template-rows var(--xa-motion-slow), opacity var(--xa-motion-base), visibility var(--xa-motion-base); }
+.inner { min-height:0; overflow:hidden; }.inner > * { margin:0 14PX 14PX; }
+.open .region { grid-template-rows:1fr; opacity:1; visibility:visible; }
+@media(prefers-reduced-motion:reduce) { .region, .chevron, .stack { transition:none; } }

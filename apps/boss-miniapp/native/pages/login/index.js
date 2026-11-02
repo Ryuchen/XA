@@ -1,9 +1,11 @@
+const { runtime } = require('../../core/runtime');
+const { modal: themedModal } = require('../../core/ui');
 const auth = require('../../core/auth');
 const { request } = require('../../core/api');
 const { go, toast } = require('../../core/ui');
 const { brandAssets } = require('../../core/brand-assets');
 Page({
-  data: { ...brandAssets(), agreed: false, busy: false, requiresBinding: false, error: '' },
+  data: { phoneAuthorizationSupported: runtime().phoneAuthorizationSupported, ...brandAssets(), agreed: false, busy: false, requiresBinding: false, error: '' },
   onLoad() { this._alive = true; },
   onUnload() { this._alive = false; },
   agree(event) { this.setData({ agreed: event.detail.value.includes('agree') }); },
@@ -22,17 +24,18 @@ Page({
       if (result.requiresBinding) { this.setData({ requiresBinding: true }); return; }
       auth.setSession(result);
       wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/mine/index' }) });
-    } catch (error) { if (this._alive) this.setData({ error: error.message }); }
+    } catch (error) { if (this._alive && !error.cancelled) this.setData({ error: error.message }); }
     finally { if (this._alive) this.setData({ busy: false }); }
   },
   quickLogin() { return this.login(); },
   phone(event) {
+    if (!this.data.phoneAuthorizationSupported) { this.setData({ error: '请先在微信小程序中管理已验证手机号，再返回登录。' }); return; }
     if (!event.detail.code) { this.setData({ error: '未获得手机号授权，你仍可选择创建新账号或联系客服' }); return; }
     return this.login(event.detail.code);
   },
   createAccount() {
     if (this.data.busy || !this.data.agreed) return;
-    wx.showModal({ title: '创建新的老板账号', content: '新账号拥有独立的钱包和订单。已有余额或历史订单，请优先授权手机号找回原账号。', confirmText: '确认创建', success: result => { if (result.confirm && this._alive) this.login('', true); } });
+    themedModal({ title: '创建新的老板账号', content: '新账号拥有独立的钱包和订单。已有余额或历史订单，请优先授权手机号找回原账号。', confirmText: '确认创建', success: result => { if (result.confirm && this._alive) this.login('', true); } });
   },
   support() { go('/pages/support/index'); },
 });

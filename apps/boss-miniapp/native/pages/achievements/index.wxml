@@ -1,6 +1,33 @@
 <view class="page achievements-page">
-  <view class="page-heading"><text class="title" role="heading" aria-level="1">我的成就</text><text class="subtitle">记录你的每一次游戏体验</text><button wx:if="{{!logged}}" class="xa-button button" bindtap="login" hover-class="xa-button-hover">登录后查看成就</button></view>
+  <view class="achievement-header">
+    <text class="title" role="heading" aria-level="1">我的成就</text>
+    <text class="subtitle">查看已完成订单和累计消费的成就进度</text>
+    <button wx:if="{{!logged}}" class="xa-button login-hit" bindtap="login" hover-class="xa-button-hover"><text class="login-face">登录后查看成就</text></button>
+  </view>
+
   <state-view wx:if="{{logged}}" loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" empty-text="成就记录将在这里展示" bind:retry="load"/>
-  <block wx:if="{{logged && !error}}"><view class="panel achievement-card" wx:for="{{items}}" wx:key="code"><view class="achievement-heading"><text class="section-title" role="heading" aria-level="2">{{item.title}}</text><text class="achievement-state {{item.unlocked ? 'is-unlocked' : ''}}">{{item.unlocked ? '已达成' : '进行中'}}</text></view><text class="achievement-desc">{{item.desc}}</text><view class="achievement-progress"><text class="progress-label">当前进度</text><view class="progress-values"><text class="current-value">{{item.currentText}}</text><text class="target-value">/ {{item.targetText}} {{item.metric === 'amount' ? '兴安币' : '单'}}</text></view></view></view></block>
+
+  <view wx:if="{{logged && !error && items.length}}" class="achievements-list">
+    <view wx:for="{{items}}" wx:key="code" class="achievement-card">
+      <view class="achievement-heading">
+        <text class="achievement-title" role="heading" aria-level="2">{{item.title}}</text>
+        <text class="achievement-state {{item.unlocked ? 'is-unlocked' : ''}}">{{item.unlocked ? '已达成' : '进行中'}}</text>
+      </view>
+      <text wx:if="{{item.desc}}" class="achievement-desc">{{item.desc}}</text>
+      <view class="achievement-progress">
+        <text class="progress-label">{{item.metric === 'amount' ? '累计消费' : '完成订单'}}</text>
+        <view class="progress-values">
+          <text class="current-value">{{item.currentText}}</text>
+          <text class="target-value">/ {{item.targetText}} {{item.metric === 'amount' ? '兴安币' : '单'}}</text>
+        </view>
+      </view>
+      <progress
+        class="progress-bar" aria-hidden="true"
+        percent="{{item.unlocked ? 100 : (item.target > 0 ? item.current * 100 / item.target : 0)}}"
+        stroke-width="4" border-radius="4"
+        activeColor="{{item.unlocked ? '#22745d' : '#2563eb'}}" backgroundColor="#eeeee7"
+      />
+    </view>
+  </view>
 </view>
 <bottom-navigation/>

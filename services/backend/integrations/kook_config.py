@@ -15,7 +15,7 @@ DEFAULT_TEMPLATE = (
     '模式：{escort_mode} · {game_rounds} {price_unit}\n'
     '区服：{game_region}\n'
     '玩法要求：{gameplay_requirements}\n'
-    '以上为本单打手实得，报单审核通过后结算。\n'
+    '以上为本单打手分账金额，实际入账以订单结算和钱包流水为准。\n'
     '请到打手端确认订单状态并接单。'
 )
 TEMPLATE_FIELDS = {

@@ -6,7 +6,7 @@ from fractions import Fraction
 from django.conf import settings
 from django.core import signing
 from django.db import transaction
-from django.db.models import Sum,OuterRef,Subquery,F,Value,BigIntegerField
+from django.db.models import Sum,OuterRef,Subquery,F,Value,BigIntegerField,Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from club_accounts.models import ClubAccount
@@ -80,10 +80,11 @@ def proportional_targets(weights,total):
         result[key] += 1
     return result
 
-def request_fingerprint(amount,reason):
-    return hashlib.sha256(json.dumps([amount,reason],ensure_ascii=False).encode()).hexdigest()
+def request_fingerprint(amount,reason,allocation=None):
+    intent = [amount,reason] if allocation is None else [amount,reason,allocation]
+    return hashlib.sha256(json.dumps(intent,ensure_ascii=False,sort_keys=True).encode()).hexdigest()
 
-def replay_refund(order,request_id,amount,reason):
+def replay_refund(order,request_id,amount,reason,allocation=None):
     if not request_id:
         return None
     if not isinstance(request_id,str) or not 1 <= len(request_id) <= 64:
@@ -91,12 +92,13 @@ def replay_refund(order,request_id,amount,reason):
     existing = OrderRefund.objects.filter(order=order,client_request_id=request_id).first()
     if existing:
         intended = parse_refund_amount(amount,order.amount) if amount is not None else existing.amount
-        if existing.request_fingerprint != request_fingerprint(intended,reason):
+        if existing.request_fingerprint != request_fingerprint(intended,reason,allocation):
             raise RefundError('同一操作凭证不能用于不同退款意图',code='REFUND_REQUEST_CONFLICT')
     return existing
 
 def can_request_aftersale(order):
-    if order.status != 'COMPLETED' or order.payment_status not in PAID_STATES or refunded_amount(order) >= order.amount:
+    if (order.status != 'COMPLETED' or order.payment_status not in PAID_STATES
+            or (order.amount > 0 and refunded_amount(order) >= order.amount)):
         return False
     rows = list(order.aftersales.all())
     if rows and rows[0].status in ('OPEN','REFUNDED'):
@@ -105,7 +107,7 @@ def can_request_aftersale(order):
         return True
     from engagement.confirmation import aftersale_deadline
     cutoff = aftersale_deadline(order)
-    return bool(not rows and cutoff and timezone.now() < cutoff and not order.consumption_confirmed_at)
+    return bool(cutoff and timezone.now() < cutoff and not order.consumption_confirmed_at)
 
 def _customer_wallet(order):
     rows = list(Wallet.objects.filter(user_id=order.customer_id))
@@ -116,10 +118,13 @@ def _customer_wallet(order):
         raise RefundError('客户钱包寻址异常，无法退款')
     return next(iter(rows.values()))
 
-def build_refund_plan(order,*,refund_amount=None,lock=False,exclude_refund_id=None):
+def build_refund_plan(order,*,refund_amount=None,lock=False,exclude_refund_id=None,negotiated=None):
     """GET stays read-only; confirmation recalculates with ordered locks."""
     if lock and not transaction.get_connection().in_atomic_block:
         raise RuntimeError('退款追缴必须处于订单加锁事务')
+    from .direct_payment_models import DirectPaymentIntent
+    if DirectPaymentIntent.objects.filter(order_id=order.pk).exists():
+        raise RefundError('微信支付订单的渠道退款尚未开放', code='REFUND_CHANNEL_UNSUPPORTED')
     persisted = Order.objects.values('status','payment_status','settled_at').get(pk=order.pk)
     prior_rows = list(OrderRefund.objects.filter(order=order).exclude(pk=exclude_refund_id).order_by('pk'))
     prior = sum(row.amount for row in prior_rows)
@@ -138,15 +143,23 @@ def build_refund_plan(order,*,refund_amount=None,lock=False,exclude_refund_id=No
         payments = [row for row in originals if row.tx_type == 'PAY' or (row.tx_type == 'GIFT' and row.amount < 0)]
         paid = -sum(row.amount for row in payments)
         if (paid != order.amount or any(row.wallet_id != customer.pk or row.amount > 0 for row in payments)
-                or sum(row.amount for row in credits) != paid):
+                or (negotiated is None and sum(row.amount for row in credits) != paid)):
             raise RefundError('原支付、成功结算入账与订单实付不一致，请先人工核账',code='REFUND_LEDGER_INCOMPLETE')
     reversals = list(order.transactions.filter(status='SUCCESS',reversal_of__isnull=False).order_by('pk'))
     reversed_totals = defaultdict(int)
     for row in reversals:
         reversed_totals[row.reversal_of_id] += -row.amount
     weights = {row.pk:row.amount for row in credits}
-    previous_targets = proportional_targets(weights,prior) if settled else {}
-    targets = proportional_targets(weights,prior+amount) if settled else {}
+    if negotiated is not None:
+        if not settled or prior or set(negotiated['recovery']) != set(weights):
+            raise RefundError('协商退款原收益流水已变化，请重新核对',code='REFUND_LEDGER_INCOMPLETE')
+        previous_targets = {pk:0 for pk in weights}
+        targets = negotiated['recovery']
+        if any(type(value) is not int or value < 0 or value > weights[pk] for pk,value in targets.items()):
+            raise RefundError('协商追回金额与原收益不符',code='REFUND_LEDGER_INCOMPLETE')
+    else:
+        previous_targets = proportional_targets(weights,prior) if settled else {}
+        targets = proportional_targets(weights,prior+amount) if settled else {}
     if settled and any(reversed_totals[row.pk] != previous_targets[row.pk] for row in credits):
         raise RefundError('历史退款与原入账冲正不一致，请先人工核账',code='REFUND_LEDGER_INCOMPLETE')
     deltas = {row.pk:targets[row.pk]-previous_targets[row.pk] for row in credits}
@@ -249,6 +262,8 @@ def build_refund_plan(order,*,refund_amount=None,lock=False,exclude_refund_id=No
              'profiles':[(pk,r.deposit_paid) for pk,r in sorted(profiles.items())],
              'holds':[(r.pk,r.amount,r.recovered_amount,str(r.released_at),str(r.cancelled_at),str(r.release_at)) for r in holds],
              'recoveries':recoveries}
+    if negotiated is not None:
+        facts['negotiated'] = negotiated['fingerprint']
     fingerprint = hashlib.sha256(json.dumps(facts,sort_keys=True,default=str).encode()).hexdigest()
     public = {'order_id':order.pk,'is_settled':settled,'eligible':bool(valid and not shortfalls),
               'original_amount':order.amount,'refunded_amount':prior,'remaining_amount':order.amount-prior,
@@ -258,10 +273,10 @@ def build_refund_plan(order,*,refund_amount=None,lock=False,exclude_refund_id=No
     return public,{'wallets':wallets,'credits':credits,'deltas':deltas,'hold_freezes':hold_freezes,
                   'deposit_pairs':deposit_pairs,'fingerprint':fingerprint}
 
-def recover_settlement(order,refund,*,plan_token,operator,operator_account):
+def recover_settlement(order,refund,*,plan_token,operator,operator_account,negotiated=None):
     if not authorized_refund(operator_account):
         raise RefundError('仅有退款权限的后台账号可追回已结算资金')
-    preview,state = build_refund_plan(order,refund_amount=refund.amount,lock=True,exclude_refund_id=refund.pk)
+    preview,state = build_refund_plan(order,refund_amount=refund.amount,lock=True,exclude_refund_id=refund.pk,negotiated=negotiated)
     if preview['shortfalls']:
         raise RefundError('追回余额不足，本次退款未执行',code='REFUND_RECOVERY_INSUFFICIENT',data={'shortfalls':preview['shortfalls'],'preview':preview})
     try:
@@ -301,6 +316,46 @@ def recover_settlement(order,refund,*,plan_token,operator,operator_account):
     refund.recovered_amount = preview['recovery_total']
     return list(state['wallets'].values())
 
+def schedule_refund_notices(order, amount, *, partial):
+    """Tell offline parties about a committed balance refund once per operation."""
+    from .services import push_message_safe
+
+    whole, fraction = divmod(amount, 10)
+    amount_text = f'{whole}.{fraction}' if fraction else str(whole)
+    title = '订单部分退款' if partial else '订单已退款'
+    recipients = [(order.customer_id, order.customer_account_id,
+                   f'订单「{order.order_no}」已退还 {amount_text} 兴安币至余额，可查看订单和钱包流水。', True)]
+    shares = list(order.providers.filter(
+        Q(released_at__isnull=True) | Q(settlement_base__gt=0) | Q(provider_income__gt=0)
+    ).values_list('provider_id', 'provider_account_id'))
+    if not shares and order.provider_id:
+        shares = [(order.provider_id, order.provider_account_id)]
+    for user_id, account_id in shares:
+        recipients.append((user_id, account_id,
+            f'订单「{order.order_no}」{"已部分退款" if partial else "已退款"}，收益变化请查看钱包流水。', True))
+
+    # A distinct inviter may have a separate income reversal, even without
+    # being a service participant. Notify only when a reversal was recorded.
+    latest = order.refund_records.order_by('-pk').first()
+    if order.inviter_id and latest and latest.recovery_lines.filter(
+            Q(original_transaction__remark__startswith='推荐分佣：') |
+            Q(original_transaction__remark__startswith='礼物推荐分佣：'),
+            wallet__user_id=order.inviter_id).exists():
+        recipients.append((order.inviter_id, order.inviter_account_id,
+                           f'订单「{order.order_no}」退款，推荐收益变化请查看钱包流水。', False))
+    seen_users, seen_accounts = set(), set()
+    for user_id, account_id, preview, can_open_order in recipients:
+        if not user_id or user_id in seen_users or (account_id and account_id in seen_accounts):
+            continue
+        seen_users.add(user_id)
+        if account_id:
+            seen_accounts.add(account_id)
+        transaction.on_commit(lambda user_id=user_id, account_id=account_id, preview=preview, can_open_order=can_open_order:
+            push_message_safe(recipient_id=user_id, recipient_account_id=account_id, title=title,
+                              preview=preview, msg_type='ORDER', related_order_id=order.pk if can_open_order else None,
+                              action_url='' if can_open_order else '/pages/wallet/index'))
+
+
 @transaction.atomic
 def apply_admin_refund(order_id,*,reason,operator,operator_account,refund_amount=None,client_request_id=None,plan_token=None,notify=True):
     from .services import refund_to_customer,refresh_escort_status
@@ -333,32 +388,92 @@ def apply_admin_refund(order_id,*,reason,operator,operator_account,refund_amount
             update_fields=['cancel_reason','payment_status','refunded_at'])
         refresh_escort_status(provider_ids=[order.provider_id,*order.providers.values_list('provider_id',flat=True)],
             account_ids=[order.provider_account_id,*order.providers.values_list('provider_account_id',flat=True)],exclude_order_ids=[order.pk])
+    schedule_refund_notices(order, amount, partial=partial)
     if notify:
         transaction.on_commit(lambda:notify_order_update(order))
     return order
 
 
-def refund_summary(order,*,detailed=False,account=None):
+def prepare_provider_refund_evidence(orders, account):
+    """Batch the requesting provider's refund evidence for a list response."""
+    if not account or account.account_type != 'PROVIDER':
+        return
+    from django.db.models import Prefetch, Q, prefetch_related_objects
+    from club_accounts.models import LegacyAccountMap
+    from .models import RefundRecoveryLine
+
+    orders = [order for order in orders if order and list(order.refund_records.all())]
+    for start in range(0, len(orders), 200):
+        chunk = orders[start:start + 200]
+        recoveries = RefundRecoveryLine.objects.select_related('wallet', 'reversal_transaction', 'original_transaction')
+        prefetch_related_objects(chunk, Prefetch('refund_records__recovery_lines', queryset=recoveries))
+        ids = [order.pk for order in chunk]
+        legacy_user = LegacyAccountMap.objects.filter(account_id=account.pk).values('legacy_user_id')
+        wallets = list(Wallet.objects.filter(Q(account_id=account.pk) |
+            Q(account_id__isnull=True, user_id__in=legacy_user)))
+        by_id = {wallet.pk: wallet for wallet in wallets}
+        owned_by_order = defaultdict(set)
+        for order_id, wallet_id in Transaction.objects.filter(order_id__in=ids, wallet_id__in=by_id).values_list('order_id', 'wallet_id').distinct():
+            owned_by_order[order_id].add(wallet_id)
+        incomes = defaultdict(list)
+        for tx in Transaction.objects.filter(order_id__in=ids, wallet_id__in=by_id,
+                status='SUCCESS', tx_type__in=['INCOME', 'GIFT']).select_related('reversal_of'):
+            incomes[tx.order_id].append(tx)
+        frozen = defaultdict(int)
+        for hold in IncomeHold.objects.filter(wallet_id__in=by_id, income_transaction__order_id__in=ids,
+                released_at__isnull=True, cancelled_at__isnull=True).values('wallet_id', 'income_transaction__order_id', 'amount', 'recovered_amount'):
+            order_id = hold['income_transaction__order_id']
+            if hold['wallet_id'] in owned_by_order[order_id]:
+                frozen[order_id] += hold['amount'] - hold['recovered_amount']
+        for order in chunk:
+            order._provider_refund_evidence = {
+                'account_id': account.pk, 'wallet_ids': set(by_id),
+                'wallets': [by_id[pk] for pk in owned_by_order[order.pk]],
+                'income': incomes[order.pk], 'frozen': frozen[order.pk],
+            }
+
+
+def refund_summary(order,*,detailed=False,account=None,customer_owner=False,provider_owner=False):
     rows = sorted(order.refund_records.all(), key=lambda row: (row.created_at, row.pk), reverse=True)
     if not rows:
         return None
     provider = bool(account and account.account_type == 'PROVIDER')
+    evidence = getattr(order, '_provider_refund_evidence', None)
+    if evidence and (not provider or evidence['account_id'] != account.pk):
+        evidence = None
     records,all_lines = [],[]
     for row in rows:
         item = {'id':row.pk,'amount':row.amount,'created_at':row.created_at,'reason':row.reason,'client_request_id':row.client_request_id}
+        if account and account.account_type == 'BOSS' and (account.pk == order.customer_account_id or customer_owner):
+            # Only events explicitly recorded at refund time are exposed;
+            # old refunds have no reliable coupon-to-order link after restoration.
+            if 'order_coupon_results' in row.benefit_effects:
+                item['coupon_results'] = row.benefit_effects['order_coupon_results']
+            if row.benefit_effects.get('gift_claim_results'):
+                item['gift_claim_results'] = row.benefit_effects['gift_claim_results']
+        naming = row.benefit_effects.get('gift_naming')
+        if naming and account and (account.pk in (order.customer_account_id, order.provider_account_id) or customer_owner or provider_owner):
+            item['gift_naming_result'] = {
+                'expires_at': naming['expires_at'],
+                'remaining_paid_grants': naming['remaining_paid_grants'],
+            }
         lines = []
         if detailed or provider:
             recovery_lines = row.recovery_lines.all()
             if 'recovery_lines' not in getattr(row, '_prefetched_objects_cache', {}):
-                recovery_lines = recovery_lines.select_related('wallet', 'reversal_transaction')
+                recovery_lines = recovery_lines.select_related('wallet', 'reversal_transaction', 'original_transaction')
             lines = list(recovery_lines)
         if detailed:
             item.update(recovered_amount=row.recovered_amount,benefit_effects=row.benefit_effects,
+                negotiated_allocation=row.negotiated_allocation,
                 recovery_lines=[{'original_transaction_id':r.original_transaction_id,'reversal_transaction_id':r.reversal_transaction_id,
                 'wallet_id':r.wallet_id,'account_id':owner_account_id(r.wallet),'tx_type':r.reversal_transaction.tx_type,'amount':r.amount,'source':r.source} for r in lines])
             all_lines.extend(item['recovery_lines'])
         elif provider:
-            item['recovered_amount'] = sum(-r.amount for r in lines if r.reversal_transaction.tx_type in ('INCOME','GIFT') and owner_account_id(r.wallet) == account.pk)
+            own_income = [r for r in lines if r.reversal_transaction.tx_type in ('INCOME','GIFT') and
+                          (r.wallet_id in evidence['wallet_ids'] if evidence is not None else owner_account_id(r.wallet) == account.pk)]
+            item['recovered_amount'] = sum(-r.amount for r in own_income if not r.original_transaction.remark.startswith(('推荐分佣：', '礼物推荐分佣：')))
+            item['referral_recovered_amount'] = sum(-r.amount for r in own_income if r.original_transaction.remark.startswith(('推荐分佣：', '礼物推荐分佣：')))
         records.append(item)
     total = sum(r.amount for r in rows)
     data = {'id':rows[0].pk,'amount':total,'original_amount':order.amount,'remaining_amount':max(0,order.amount-total),
@@ -366,9 +481,29 @@ def refund_summary(order,*,detailed=False,account=None):
     if detailed:
         data.update(recovered_amount=sum(r.recovered_amount for r in rows),recovery_lines=all_lines,benefit_effects=rows[0].benefit_effects)
     elif provider:
-        owned = [r.pk for r in Wallet.objects.filter(pk__in=order.transactions.values('wallet_id')) if owner_account_id(r) == account.pk]
+        wallets = evidence['wallets'] if evidence is not None else [r for r in Wallet.objects.filter(pk__in=order.transactions.values('wallet_id')) if owner_account_id(r) == account.pk]
+        owned = [r.pk for r in wallets]
         data['recovered_amount'] = sum(r['recovered_amount'] for r in records)
-        data['net_income'] = order.transactions.filter(wallet_id__in=owned,status='SUCCESS',tx_type__in=['INCOME','GIFT']).aggregate(v=Sum('amount'))['v'] or 0
-        data['remaining_frozen_amount'] = sum(r.amount-r.recovered_amount for r in IncomeHold.objects.filter(
+        data['referral_recovered_amount'] = sum(r['referral_recovered_amount'] for r in records)
+        income = evidence['income'] if evidence is not None else list(order.transactions.filter(wallet_id__in=owned,status='SUCCESS',tx_type__in=['INCOME','GIFT']).select_related('reversal_of'))
+        def referral(tx):
+            original = tx.reversal_of if tx.reversal_of_id else tx
+            return original.remark.startswith(('推荐分佣：', '礼物推荐分佣：'))
+        data['net_income'] = sum(tx.amount for tx in income if not referral(tx))
+        data['referral_net_income'] = sum(tx.amount for tx in income if referral(tx))
+        # A historic unlabelled referral in the same wallet cannot be
+        # distinguished from service pay by amount alone.
+        same_inviter = order.inviter_id and any(wallet.user_id == order.inviter_id for wallet in wallets)
+        recorded_referral = sum(tx.amount for tx in income if not tx.reversal_of_id and referral(tx))
+        negotiated_referral = next((item for refund in rows for item in refund.negotiated_allocation
+                                    if item.get('role') == 'INVITER'), None)
+        expected_referral = negotiated_referral['retained'] if negotiated_referral else order.inviter_commission
+        if same_inviter and expected_referral and recorded_referral != expected_referral:
+            for key in ('recovered_amount', 'referral_recovered_amount', 'net_income', 'referral_net_income'):
+                data[key] = None
+            for item in records:
+                item['recovered_amount'] = item['referral_recovered_amount'] = None
+            data['income_breakdown_unavailable'] = True
+        data['remaining_frozen_amount'] = evidence['frozen'] if evidence is not None else sum(r.amount-r.recovered_amount for r in IncomeHold.objects.filter(
             wallet_id__in=owned,income_transaction__order=order,released_at__isnull=True,cancelled_at__isnull=True))
     return data

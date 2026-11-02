@@ -2,6 +2,10 @@
 
 微信小程序默认入口已经切换为 `native/`，使用原生 App / Page / Component、JavaScript、WXML、WXSS。无需 Taro、React 或 npm 构建产物即可导入微信开发者工具。现有 `src/` 保留为历史 Taro/H5 实现。
 
+2026-11-02 技术路线：继续维护微信原生代码，目标是在微信开发者工具中迁移至多端应用模式；不使用 uni-app 或 HBuilderX 构建。已在独立副本通过官方工具升级为多端项目，并同步 `projectArchitecture: multiPlatform`、官方插件映射、`project.miniapp.json`、`native/app.miniapp.json` 和 `i18n/base.json`；`compileType: miniprogram` 与 `native/` 入口按官方生成方式保留。安装后的桌面 App 名称按用户确认沿用“声浪游玩社”，项目业务名称和现有界面仍为兴安电竞。App 登录、手机号/头像、环境选择、客服及实际安装包能力仍需逐项适配和验证，当前原生充值为联系客服，不包含在线支付 SDK；不能以小程序编译或配置升级代替 App 验收。详见 [多端核查记录](../../docs/ops/boss-multiplatform-readiness-20261102.md)。环境识别和登录/安全已有最小代码适配，详见 [环境与登录适配记录](../../docs/ops/boss-multiplatform-runtime-adapter-20261102.md)；当前没有实际 App SDK 授权通过结论。
+
+2026-11-02 当前交付范围：使用多端项目开发，现阶段只打包/交付微信小程序，唯一目标机型为 iPhone 12 Pro。iOS/Android App 仅保留后续开发条件；移动应用关联、身份管理、App SDK 授权及安装包真机验证不作为本轮小程序交付前置，也未记为通过。
+
 ## 开发与验证
 
 从微信开发者工具导入本目录 `apps/boss-miniapp`，项目配置指向 `native/`。本地后端默认 `http://127.0.0.1:18080/api`，连接 WSL 容器验证环境；真机使用可访问的 HTTPS 域名。启动方式和实际验收结果见 [本地部署记录](../../docs/LOCAL_DEPLOYMENT_VALIDATION.md)。
@@ -19,7 +23,7 @@ node --test scripts/test-native-core.cjs
 
 小程序单张图片上限为 200,000 字节。素材先压缩再提供展示地址；商品图、活动图、头像和聊天图片使用不超过该上限的展示版本，原始凭证保留。小程序上传头像或聊天图片前自动压缩并复核大小，超限时不上传。首页品牌图也由构建检查逐张校验。
 
-原生端共 46 个页面（含业务页与历史分享路径兼容入口），导航为首页、服务、订单、消息、我的。新增礼物、积分商城、幸运转盘、会员权益、奖品交付及活动海报入口，见 [会员运营说明](../../docs/CLUB_ENGAGEMENT_IMPLEMENTATION.md)。功能规划、接口和验收范围见 [原生老板端产品与联动说明](../../docs/BOSS_NATIVE_PRODUCT.md)。
+原生端共 50 个页面（含业务页与历史分享路径兼容入口），导航为首页、服务、订单、消息、我的。新增礼物、积分商城、幸运转盘、会员权益、奖品交付及活动海报入口，见 [会员运营说明](../../docs/CLUB_ENGAGEMENT_IMPLEMENTATION.md)。功能规划、接口和验收范围见 [原生老板端产品与联动说明](../../docs/BOSS_NATIVE_PRODUCT.md)。
 
 ## 环境与发布
 

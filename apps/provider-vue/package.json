@@ -1,0 +1,30 @@
+{
+  "name": "xa-provider-vue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "vue-tsc --noEmit",
+    "build": "vue-tsc --noEmit && vite build"
+  },
+  "dependencies": {
+    "@xa/shadcn-vue": "workspace:*",
+    "@xa/money": "workspace:*",
+    "pinia": "^2.2.2",
+    "vue": "^3.5.44",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.6.2",
+    "vite": "^8.3.5",
+    "vue-tsc": "^2.1.6",
+    "@types/node": "^22.19.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

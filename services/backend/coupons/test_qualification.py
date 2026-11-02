@@ -133,6 +133,8 @@ class QualificationCouponTests(APITestCase):
         order = self.paid_order()
         response = self.client.post(f'/api/orders/orders/{order.pk}/cancel/', {}, format='json')
         self.assertEqual(response.data['code'], 0, response.data)
+        self.assertEqual(response.data['data']['refund_summary']['records'][0]['coupon_results'],
+                         [{'name': self.coupon.name, 'outcome': 'NOT_RETURNED'}])
         self.assert_consumed(order)
         self.wallet.refresh_from_db()
         self.assertEqual(self.wallet.balance, 100000)

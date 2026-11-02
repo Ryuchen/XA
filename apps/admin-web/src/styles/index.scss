@@ -1,10 +1,9 @@
 @use './tokens.scss';
 @use './controls.scss';
 @use './modals.scss';
+@use './ocean.scss';
 
-html,
-body,
-#app {
+html, body, #app {
   height: 100%;
   min-height: 100%;
   margin: 0;
@@ -25,26 +24,16 @@ body {
 
 body.ap-nav-open { overflow: hidden; }
 
-*,
-*::before,
-*::after { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
 
-button,
-input,
-textarea,
-select { font: inherit; }
+button, input, textarea, select { font: inherit; }
 
 a {
   color: inherit;
   text-decoration: none;
 }
 
-button,
-[role='button'],
-a,
-input,
-select,
-textarea {
+button, [role='button'], a, input, select, textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -58,174 +47,13 @@ textarea {
   background: var(--primary);
 }
 
-/* ===== 将设计 token 映射到 Element Plus 语义变量 ===== */
-:root, html.dark {
-  /* 与三端共享的中国传统蓝色色阶保持一致。 */
-  --el-color-primary: var(--primary);
-  --el-color-primary-light-3: color-mix(in srgb, var(--primary) 70%, var(--card));
-  --el-color-primary-light-5: color-mix(in srgb, var(--primary) 50%, var(--card));
-  --el-color-primary-light-7: color-mix(in srgb, var(--primary) 30%, var(--card));
-  --el-color-primary-light-8: color-mix(in srgb, var(--primary) 20%, var(--card));
-  --el-color-primary-light-9: color-mix(in srgb, var(--primary) 10%, var(--card));
-  --el-color-primary-dark-2: var(--xa-color-primary-hover);
-
-  --el-color-success: var(--success);
-  --el-color-warning: var(--warning);
-  --el-color-danger: var(--destructive);
-  --el-color-error: var(--destructive);
-  --el-color-info: var(--xa-color-info);
-
-  /* 控件与内容卡片保持各自的圆角层级。 */
-  --el-border-radius-base: var(--radius-sm);
-  --el-border-radius-small: 8px;
-  --el-border-radius-round: 999px;
-
-  /* 文本与边框 */
-  --el-text-color-primary: var(--foreground);
-  --el-text-color-regular: var(--text-600);
-  --el-text-color-secondary: var(--muted-foreground);
-  --el-text-color-placeholder: var(--muted-foreground);
-  --el-fill-color-blank: var(--card);
-  --el-fill-color: var(--secondary);
-  --el-mask-color: color-mix(in srgb, var(--card) 85%, transparent);
-  --el-border-color: var(--border);
-  --el-border-color-light: var(--border);
-  --el-border-color-lighter: var(--border);
-  --el-fill-color-light: var(--secondary);
-  --el-fill-color-lighter: var(--accent);
-  --el-bg-color: var(--card);
-  --el-bg-color-overlay: var(--card);
-
-  /* 阴影 */
-  --el-box-shadow-light: var(--shadow-sm);
-  --el-box-shadow: var(--shadow-md);
-  --el-font-size-base: 14px;
-}
-
 /* 卡片圆角与阴影对齐设计稿 */
-.el-card {
-  border-radius: var(--radius-sm);
-  border-color: var(--border);
-  box-shadow: var(--shadow-sm) !important;
-  background: var(--card);
-}
 
 /* 按钮交互；尺寸由 controls.scss 统一管理。 */
-.el-button {
-  font-weight: 600;
-  transition: transform var(--xa-motion-fast), background-color var(--xa-motion-fast),
-    border-color var(--xa-motion-fast), box-shadow var(--xa-motion-fast);
-}
-
-.el-button:active:not(.is-disabled) {
-  transform: scale(0.97);
-}
 
 /* 实心按钮使用填充色对应的文字色；plain、link、text 保留原有语义。 */
-.el-button--primary:not(.is-link):not(.is-text):not(.is-plain) {
-  --el-button-text-color: var(--xa-color-on-primary);
-  --el-button-hover-text-color: var(--xa-color-on-primary);
-  --el-button-disabled-text-color: var(--xa-color-on-primary);
-  --el-button-hover-bg-color: var(--xa-color-primary-hover);
-  --el-button-hover-border-color: var(--xa-color-primary-hover);
-  --el-button-active-bg-color: var(--xa-color-primary-hover);
-  --el-button-active-border-color: var(--xa-color-primary-hover);
-}
-.el-button:is(.el-button--success, .el-button--warning, .el-button--danger, .el-button--info):not(.is-link):not(.is-text):not(.is-plain) {
-  --el-button-text-color: var(--xa-color-on-primary);
-  --el-button-hover-text-color: var(--xa-color-on-primary);
-  --el-button-disabled-text-color: var(--xa-color-on-primary);
-  --el-button-hover-bg-color: color-mix(in srgb, var(--el-button-bg-color) 88%, var(--foreground));
-  --el-button-hover-border-color: var(--el-button-hover-bg-color);
-  --el-button-active-bg-color: var(--el-button-hover-bg-color);
-  --el-button-active-border-color: var(--el-button-hover-bg-color);
-}
-
-.el-input__wrapper,
-.el-select__wrapper,
-.el-textarea__inner {
-  border-radius: var(--control-radius);
-  box-shadow: 0 0 0 1px var(--border) inset !important;
-  background: color-mix(in srgb, var(--card) 92%, var(--secondary));
-  transition: box-shadow var(--xa-motion-fast), background-color var(--xa-motion-fast);
-}
-
-.el-input__wrapper.is-focus,
-.el-select__wrapper.is-focused,
-.el-textarea__inner:focus {
-  background: var(--card);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent),
-    0 0 0 1px var(--primary) inset !important;
-}
-
-.el-form-item.is-error :is(.el-input__wrapper, .el-select__wrapper, .el-textarea__inner) {
-  box-shadow: 0 0 0 1px var(--destructive) inset !important;
-}
-.el-form-item.is-error :is(.el-input__wrapper.is-focus, .el-select__wrapper.is-focused, .el-textarea__inner:focus) {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 14%, transparent),
-    0 0 0 1px var(--destructive) inset !important;
-}
-
-.el-table {
-  --el-table-header-bg-color: color-mix(in srgb, var(--secondary) 70%, var(--card));
-  --el-table-row-hover-bg-color: color-mix(in srgb, var(--primary) 5%, var(--card));
-  --el-table-current-row-bg-color: var(--xa-color-primary-soft);
-  border-radius: 12px;
-  overflow: hidden;
-}
 
 /* 懒加载的组件样式不能把暗色表格状态恢复成浅色填充。 */
-html.dark .el-table {
-  --el-table-bg-color: var(--xa-color-surface-card);
-  --el-table-tr-bg-color: var(--xa-color-surface-card);
-  --el-table-expanded-cell-bg-color: var(--xa-color-surface-card);
-  --el-table-header-bg-color: var(--xa-color-surface-subtle);
-  --el-table-header-text-color: var(--xa-color-text-secondary);
-  --el-table-text-color: var(--xa-color-text-primary);
-  --el-table-row-hover-bg-color: color-mix(in srgb, var(--xa-color-primary) 12%, var(--xa-color-surface-card));
-  --el-table-current-row-bg-color: var(--xa-color-surface-hover);
-}
-html.dark .el-table .el-table__body tr.el-table__row--striped > td.el-table__cell {
-  background-color: var(--xa-color-surface-subtle);
-}
-html.dark .el-table .el-table__body tr.hover-row > td.el-table__cell,
-html.dark .el-table.el-table--enable-row-hover .el-table__body tr:hover > td.el-table__cell,
-html.dark .el-table .el-table__body tr > td.hover-cell {
-  background-color: var(--el-table-row-hover-bg-color);
-}
-html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
-  background-color: var(--el-table-current-row-bg-color);
-}
-
-.el-table th.el-table__cell {
-  height: 46px;
-  color: var(--text-500);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.el-table td.el-table__cell { height: 50px; }
-.el-table .cell { line-height: 1.6; }
-.el-table td.el-table__cell .cell:has(> .el-button) {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
-  overflow: visible;
-}
-.el-table td.el-table__cell .cell > .el-button { margin-left: 0; }
-.el-table__empty-block { min-height: 180px; }
-.el-table__empty-text { max-width: 100%; line-height: 1.6; }
-.el-empty { padding: var(--space-6) var(--space-4); }
-
-.el-tag {
-  border-radius: 6px;
-  font-weight: 600;
-}
-
-.el-pagination button,
-.el-pager li { border-radius: 8px !important; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -234,10 +62,6 @@ html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
   border-radius: 999px;
   background: color-mix(in srgb, var(--muted-foreground) 42%, transparent);
   background-clip: padding-box;
-}
-
-.el-menu {
-  border-right: none;
 }
 
 /* ===== 页面通用容器 ===== */
@@ -290,10 +114,6 @@ html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
   color: var(--muted-foreground);
 }
 /* 使用列间 gap 的业务页无需再叠加头部 margin。 */
-:is(.db-page, .chat-page, .ac-page, .el-page, .mg-page, .an-page, .dp-page, .ev-page,
-  .wd-page, .es-page, .cp-page, .su-page, .au-page, .bt-page, .bn-page, .rp-page,
-  .wl-page, .pm-page, .ad-page, .rc-page, .rl-page, .us-page, .pd-page, .od-page,
-  .tx-page, .sp-page, .sv-page) > .ap-page-head { margin-bottom: 0; }
 .ap-page-head-actions {
   display: flex;
   flex-wrap: wrap;
@@ -336,9 +156,6 @@ html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
   border-radius: var(--radius-sm);
   background: var(--secondary);
   color: var(--primary);
-}
-.ap-kpi-ic .el-icon {
-  font-size: 22px;
 }
 .ap-kpi-label {
   margin: 6px 0 0;
@@ -422,20 +239,7 @@ html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
     gap: 8px;
   }
 
-  .page-toolbar .el-input,
-  .page-toolbar .el-select,
-  .page-toolbar .el-autocomplete,
-  .page-toolbar .el-cascader,
-  .page-toolbar .el-date-editor,
-  .page-toolbar .el-input-number {
-    width: 100% !important;
-  }
-
   .page-toolbar .spacer { display: none; }
-
-  .page-toolbar > .el-button {
-    flex: 1 1 auto;
-  }
 
   .ap-page-head {
     align-items: stretch;
@@ -450,11 +254,6 @@ html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
     flex-wrap: wrap;
   }
 
-  .ap-page-head-actions > .el-button {
-    flex: 1 1 auto;
-    margin-left: 0;
-  }
-
   .ap-kpi-grid {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -466,41 +265,15 @@ html.dark .el-table .el-table__body tr.current-row > td.el-table__cell {
   .ap-card-head { padding: 16px; }
 
   /* 数据表保留完整列，通过内部横向滚动查看，固定操作列仍可触达。 */
-  .el-table {
-    max-width: 100%;
-    font-size: 13px;
-  }
-
-  .el-table .el-scrollbar__wrap {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-inline: contain;
-  }
-
-  .el-table th.el-table__cell,
-  .el-table td.el-table__cell {
-    padding: 7px 0;
-  }
 
   .pagination-wrap {
     justify-content: center;
     margin-top: 12px;
   }
-
-  .pagination-wrap .el-pagination {
-    flex-wrap: nowrap;
-    padding: 0;
-  }
-
-  .el-message {
-    width: calc(100vw - 24px);
-    min-width: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;

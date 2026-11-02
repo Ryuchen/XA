@@ -8,6 +8,7 @@
 .preview { color: $color-text-primary; font-size: $font-size-md; font-weight: $font-weight-semibold; line-height: $line-height-normal; }
 .paragraph { margin-top: $spacing-md; color: $color-text-secondary; font-size: $font-size-md; line-height: 1.8; }
 .empty { padding: 80PX 0; text-align: center; color: $color-text-tertiary; }
+.orderButton { min-height:44PX; margin:20PX 0 0; padding:0 16PX; border:0; border-radius:8PX; background:$color-primary; color:var(--xa-color-on-primary); font-size:13PX; }
 
 .page { padding-top:0; padding-bottom:100PX; }.card { max-width:920PX; padding:24PX; border:1PX solid $color-border; border-radius:16PX; background:$color-bg-card; box-shadow:none; }.title { font-size:24PX; overflow-wrap:anywhere; }.paragraph,.preview { overflow-wrap:anywhere; }
 @media(min-width:960px) { .page { padding:0; }.card { padding:32PX; } }

@@ -11,7 +11,7 @@
 .shortcut-title { display:block; font-size:var(--xa-control-font); font-weight:600; line-height:1.4; white-space:nowrap; }
 .shortcut-note { display:block; margin-top:2rpx; color:var(--xa-color-muted); font-size:var(--xa-control-small-font); line-height:1.4; }
 .messages-page .xa-button.login-button { margin-top:12rpx; }
-.messages-page .xa-button.announcement-entry { display:flex; align-items:center; gap:16rpx; width:100%; min-height:54px; margin:0 0 20rpx; padding:16rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; background:var(--xa-color-surface); text-align:left; font-weight:400; }
+.messages-page .xa-button.announcement-entry { display:flex; align-items:center; gap:16rpx; width:100%; min-height:var(--xa-control-compact); margin:0 0 16rpx; padding:16rpx; border:1rpx solid var(--xa-color-border); border-radius:20rpx; background:var(--xa-color-surface); text-align:left; font-weight:400; }
 .announcement-icon { background:var(--xa-color-surface-subtle); }
 .announcement-copy { flex:1; min-width:0; }
 .announcement-title { display:block; font-size:var(--xa-control-font); font-weight:600; line-height:1.4; }

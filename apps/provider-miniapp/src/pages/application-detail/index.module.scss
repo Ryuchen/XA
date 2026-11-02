@@ -1,0 +1,12 @@
+@use '@/styles/variables.scss' as *;
+.page { min-height:100dvh; box-sizing:border-box; padding:0 $page-padding 100PX; background:$color-bg-page; }
+.card { max-width:720PX; padding:20PX 16PX; border:1PX solid $color-border; border-radius:12PX; background:$color-bg-card; color:$color-text-primary; }
+.heading,.muted,.label,.member,.reason { display:block; }
+.heading { font-size:18PX; font-weight:700; line-height:1.4; }
+.muted { margin-top:5PX; color:$color-text-secondary; font-size:12PX; }
+.section { display:grid; gap:8PX; margin-top:20PX; padding-top:16PX; border-top:1PX solid $color-divider; font-size:14PX; }
+.label { font-weight:600; }.member,.reason { color:$color-text-secondary; }.reason { line-height:1.5; }
+.actions { display:flex; flex-wrap:wrap; gap:8PX; margin-top:20PX; }
+.primary,.secondary { flex:1; min-width:120PX; min-height:44PX; margin:0; padding:0 12PX; border-radius:8PX; font-size:13PX; }
+.primary { border:0; background:$color-primary; color:var(--xa-color-on-primary); }.secondary { border:1PX solid $color-border; background:$color-bg-card; color:$color-primary; }
+.applicationChoice { display:block; width:100%; min-height:44PX; margin:12PX 0 0; padding:8PX 12PX; border:1PX solid $color-border; border-radius:8PX; text-align:left; background:$color-bg-card; color:$color-text-primary; font-size:13PX; }

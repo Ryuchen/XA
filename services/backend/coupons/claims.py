@@ -1,5 +1,6 @@
 from datetime import timedelta
 from django.db import transaction
+from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from orders.purchase_benefits import activity_scope, BEIJING
 from orders.models import ExperienceUse
@@ -27,6 +28,40 @@ def already_claimed(account, coupon):
         return UserCoupon.objects.filter(claim_key=key).exists()
     return UserCoupon.objects.filter(account=account, coupon=coupon,
         business_cycle=account.business_cycle, claim_period=period).exists()
+
+
+def claimed_coupon_ids(account, coupons):
+    """Resolve the claim centre's ordinary and shared qualification status in one query."""
+    identities = {coupon.pk: claim_identity(account, coupon)[2] for coupon in coupons}
+    ordinary_ids = [coupon_id for coupon_id, key in identities.items() if key is None]
+    qualification_keys = [key for key in identities.values() if key is not None]
+    if not identities:
+        return set()
+    rows = UserCoupon.objects.filter(
+        Q(account=account, business_cycle=account.business_cycle, claim_period='ONCE', coupon_id__in=ordinary_ids)
+        | Q(claim_key__in=qualification_keys)
+    ).values_list('coupon_id', 'claim_key')
+    ordinary_claims, qualification_claims = set(), set()
+    for coupon_id, key in rows:
+        ordinary_claims.add(coupon_id)
+        if key is not None:
+            qualification_claims.add(key)
+    return {coupon_id for coupon_id, key in identities.items()
+            if (key in qualification_claims if key is not None else coupon_id in ordinary_claims)}
+
+
+def used_qualification_ids(account, coupons):
+    """Resolve the same account, platform and period scopes enforced by claim()."""
+    scopes = {coupon.pk: activity_scope(account, coupon.experience_kind, coupon.platform)
+              for coupon in coupons if coupon.experience_kind}
+    if not scopes:
+        return set()
+    query = Q(pk__in=[])
+    for scope in scopes.values():
+        query |= Q(**scope)
+    used = set(ExperienceUse.objects.filter(query).values_list('kind', 'platform', 'period'))
+    return {coupon_id for coupon_id, scope in scopes.items()
+            if (scope['kind'], scope['platform'], scope['period']) in used}
 
 
 @transaction.atomic

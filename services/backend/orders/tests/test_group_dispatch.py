@@ -127,7 +127,10 @@ class GroupDispatchTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
 
     def post(self, channels=None):
-        return self.client.post(self.url, {'channels': channels or ['KOOK', 'WECOM']}, format='json')
+        channels = channels or ['KOOK', 'WECOM']
+        response = self.client.get(self.url)
+        keys = {item['channel']: item['confirmation_key'] for item in response.data['data']['channels'] if item['channel'] in channels} if response.status_code == 200 else {}
+        return self.client.post(self.url, {'channels': channels, 'confirmation_keys': keys}, format='json')
 
     def test_preview_and_card_only_expose_frozen_provider_payout(self):
         response = self.client.get(self.url)
@@ -146,6 +149,8 @@ class GroupDispatchTest(APITestCase):
         self.service.commission_rate = 99
         self.service.save()
         self.assertIn('¥64.00', build_dispatch_text(self.order))
+        self.assertIn('实际入账以订单结算和钱包流水为准', build_dispatch_text(self.order))
+        self.assertNotIn('报单审核通过后结算', build_dispatch_text(self.order))
 
     def test_dispatch_uses_the_purchased_unit_from_the_order_snapshot(self):
         self.order.gameplay_snapshot = {
@@ -225,6 +230,16 @@ class GroupDispatchTest(APITestCase):
         wecom_mock.assert_called_once_with(build_dispatch_text(self.order))
         self.assertIn('640 兴安币（¥64.00）', kook_mock.call_args.kwargs['content'])
         kook_mock.assert_called_once()
+
+    @patch('integrations.wecom.WecomClient.send_text')
+    def test_wecom_uses_queued_text_when_order_changes_before_delivery(self, send_mock):
+        record = self.record('WECOM')
+        self.assertIsNotNone(record)
+        queued_text = record.content
+        Order.objects.filter(pk=self.order.pk).update(game_region='验收后修改的区服')
+        self.assertTrue(deliver_dispatch('WECOM', record.pk).startswith('sent:'))
+        send_mock.assert_called_once_with(queued_text)
+        self.assertNotIn('验收后修改的区服', queued_text)
 
     @patch('integrations.wecom.WecomClient.send_text', side_effect=WecomDeliveryUnknown('timeout'))
     @patch('integrations.kook.KookClient.send_channel_message', side_effect=KookDeliveryUnknown('timeout'))

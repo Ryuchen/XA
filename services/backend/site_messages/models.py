@@ -27,6 +27,7 @@ class Message(models.Model):
     detail = models.TextField(blank=True, default='')
     action_url = models.CharField(max_length=255, blank=True, default='')
     is_read = models.BooleanField(default=False, db_index=True)
+    assignment_alert = models.BooleanField(default=False)
     related_order_id = models.PositiveIntegerField(blank=True, null=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

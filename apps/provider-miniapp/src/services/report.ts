@@ -12,12 +12,14 @@ export interface ProviderReport {
   commission_rate: number;
   commission_type?: 'PERCENT' | 'FIXED';
   commission_fixed?: number;
-  payout_amount: number;
-  expected_income: number;
+  payout_amount: number | null;
+  expected_income: number | null;
   submitted_at: string | null;
   settled_at: string | null;
+  settlement_status?: 'REVIEW' | 'WAITING' | 'SETTLED';
   order_status: string;
   payment_status?: string;
+  aftersale_status?: 'OPEN' | 'RESOLVED' | 'REFUNDED' | 'PARTIALLY_REFUNDED' | '';
   refund_summary?: OrderRefundSummary | null;
   status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
   status_display: string;
@@ -29,6 +31,7 @@ export interface ProviderReport {
   can_edit: boolean;
   can_submit: boolean;
   edit_block_reason: string;
+  evidence_upload_block_reasons?: Partial<Record<'ENTRY' | 'COMPLETION', string>>;
 }
 
 export const fetchReports = () => request<ApiResponse<ProviderReport[]>>('/wallet/reports/');

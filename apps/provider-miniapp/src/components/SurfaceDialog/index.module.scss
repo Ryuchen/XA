@@ -1,4 +1,11 @@
 @use '@/styles/variables.scss' as *;
+@keyframes ocean-dialog-mask { from { opacity:0; } to { opacity:1; } }
+@keyframes ocean-dialog-panel { from { transform:translateY(20PX); opacity:0; } to { transform:translateY(0); opacity:1; } }
+.mask { animation:ocean-dialog-mask 150ms var(--xa-ease-out); }
+.mask .panel { animation:ocean-dialog-panel 250ms var(--xa-ease-out); }
+.mask.closing { opacity:0; pointer-events:none; transition:opacity 150ms ease; }
+.mask.closing .panel { transform:translateY(12PX); transition:transform 150ms ease; }
+@media(prefers-reduced-motion:reduce) { .mask,.mask .panel { animation:none; }.mask.closing,.mask.closing .panel { transition:none; transform:none; } }
 // Layers: tab bar 30, sticky page header 40, dialogs 100.
 .mask { position:fixed; inset:0; z-index:5000; display:flex; justify-content:center; align-items:flex-end; padding-top:24PX; background:var(--xa-color-overlay); }
 .panel { display:flex; flex-direction:column; width:100%; max-width:600PX; max-height:calc(100dvh - 24PX); min-height:0; border:1PX solid $color-border; border-bottom:0; border-radius:20PX 20PX 0 0; background:$color-bg-card; box-shadow:0 20PX 60PX rgba(15,23,42,.18); overflow:hidden; }

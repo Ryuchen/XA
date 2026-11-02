@@ -1,7 +1,8 @@
 const { image, money } = require('./ui');
 
 function prepareCompanion(item) {
-  return { ...item, qualifications: (item.qualifications || []).filter(q => q.is_active),
+  return { ...item, qualifications: (item.qualifications || []).filter(q => q.is_active), displayTags: (item.display_tags || []),
+    previewTags: (item.display_tags || []).slice(0, 3),
     avatarUrl: image(item.avatar), voiceUrl: image(item.voice_card_url),
     monthlyAmountText: money(item.monthly_order_amount),
     hasHourlyPrice: item.hasReferenceHourlyPrice === undefined ? Number(item.pricePerHour) > 0 : !!item.hasReferenceHourlyPrice,

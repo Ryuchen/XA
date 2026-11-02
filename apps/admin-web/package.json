@@ -10,16 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.3.1",
+    "@tailwindcss/vite": "^4.3.3",
     "@tiptap/extension-image": "^3.31.4",
     "@tiptap/pm": "^3.31.4",
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/vue-3": "^3.31.4",
+    "@xa/shadcn-vue": "workspace:^",
     "axios": "^1.7.7",
     "echarts": "^6.1.0",
-    "element-plus": "^2.8.4",
     "pinia": "^2.2.2",
-    "vue": "^3.5.10",
+    "tailwindcss": "^4.3.3",
+    "vue": "^3.5.44",
     "vue-router": "^4.4.5"
   },
   "devDependencies": {

@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
-from orders.models import Order
+from orders.models import GameCategory, Order
 from orders.tests.factories import make_order, make_provider, make_service, make_user
 from users.models import EscortLevel
 
@@ -61,6 +61,8 @@ class CompanionDetailTest(APITestCase):
                 self.assertTrue(row['order_unavailable_reason'])
 
     def test_gender_and_removed_service_skill_block_selection_without_hiding_detail(self):
+        self.service.game_category = GameCategory.objects.create(name='测试游戏')
+        self.service.save(update_fields=['game_category'])
         row = self.detail(service_item=self.service.pk, gender='MALE')
         self.assertFalse(row['can_order'])
         self.assertIn('性别', row['order_unavailable_reason'])
@@ -68,6 +70,10 @@ class CompanionDetailTest(APITestCase):
         row = self.detail(service_item=self.service.pk)
         self.assertFalse(row['can_order'])
         self.assertIn('技能', row['order_unavailable_reason'])
+
+    def test_unclassified_legacy_service_preserves_existing_skill_compatibility(self):
+        self.profile.service_items.clear()
+        self.assertTrue(self.detail(service_item=self.service.pk)['can_order'])
 
     def test_capacity_is_current_and_other_profiles_are_not_used(self):
         for _ in range(Order.MAX_CONCURRENT_ORDERS):

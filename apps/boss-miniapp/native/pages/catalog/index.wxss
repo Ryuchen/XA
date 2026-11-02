@@ -57,3 +57,8 @@
 .catalog .coupon-context .xa-button.button-quiet { width: auto; flex-shrink: 0; min-height: var(--xa-control-compact); margin: 0; padding: 6rpx 0; font-size: var(--xa-control-small-font); }
 
 .service-cover { background:var(--xa-color-surface-subtle); }
+.active-filter-summary { padding:20rpx 4rpx 4rpx; }
+.active-filter-summary .chips { margin:12rpx 0; gap:12rpx; }
+.active-filter-summary .chip { max-width:100%; gap:12rpx; text-align:left; white-space:normal; }
+.active-filter-summary .chip > text:first-child { min-width:0; overflow-wrap:anywhere; }
+.filter-remove { flex:none; font-size:30rpx; line-height:1; }

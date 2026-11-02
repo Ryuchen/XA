@@ -26,7 +26,9 @@ function setup() {
     '@/utils/orderAlertSound': { orderAlertSound: {
       prepare() {}, play() { sounds.played++; }, stop() { sounds.stopped++; }, dispose() {},
     } },
-    '@/utils/request': { request: url => new Promise((resolve, reject) => requests.push({ url, resolve, reject })) },
+    '@/utils/request': { request: url => url.startsWith('/messages/assignment-alerts/')
+      ? Promise.resolve({ code: 0, data: { latest_id: 0, pending: false } })
+      : new Promise((resolve, reject) => requests.push({ url, resolve, reject })) },
     './websocket': { wsService: { on: (name, fn) => { socket.set(name, fn); return () => socket.delete(name); } } },
   };
   function load(file) {
@@ -78,6 +80,24 @@ test('initial snapshot is silent; only unseen pending IDs ring once per refresh'
 test('an initially empty pool establishes a baseline before its first new order', async () => {
   const s = setup(); s.service.show(); await s.reply([]);
   await s.poll(); await s.reply([pending(1)]); assert.equal(s.sounds.played, 1);
+  s.service.dispose();
+});
+
+test('only new personal assignment notices ring, once per message', async () => {
+  const s = setup(); s.service.show(); await s.reply([]);
+  const message = s.socket.get('site_message_update');
+  message({}); message({ assignment_message_id: 10 }); message({ assignment_message_id: 10 });
+  assert.equal(s.sounds.played, 1);
+  message({ assignment_message_id: 11 }); assert.equal(s.sounds.played, 2);
+  s.service.dispose();
+});
+
+test('a rejected public order alerts again even if it returned between reads', async () => {
+  const s = setup(); s.service.show(); await s.reply([{ ...pending(1), reject_count: 0 }]);
+  await s.poll(); await s.reply([{ ...pending(1), reject_count: 1 }]);
+  assert.equal(s.sounds.played, 1);
+  await s.poll(); await s.reply([{ ...pending(1), reject_count: 1 }]);
+  assert.equal(s.sounds.played, 1);
   s.service.dispose();
 });
 
@@ -160,7 +180,7 @@ test('packaged bell is a short, nonempty mono PCM WAV', () => {
 });
 
 function setupSound(target) {
-  const events = new Map(), contexts = [], native = [], tones = [];
+  const events = new Map(), contexts = [], native = [], tones = [], storage = new Map();
   class WebAudio {
     constructor() { this.state = 'suspended'; this.currentTime = 10; contexts.push(this); }
     resume() { this.state = 'running'; return Promise.resolve(); }
@@ -171,7 +191,7 @@ function setupSound(target) {
       tones.push(tone); return tone;
     }
   }
-  const taro = { createInnerAudioContext() {
+  const taro = { getStorageSync: key => storage.get(key), setStorageSync: (key, value) => storage.set(key, value), createInnerAudioContext() {
     const audio = { played: 0, stopped: 0, destroyed: false, play() { this.played++; }, stop() { this.stopped++; }, destroy() { this.destroyed = true; }, onError(fn) { this.error = fn; } };
     native.push(audio); return audio;
   } };
@@ -184,8 +204,18 @@ function setupSound(target) {
       addEventListener: (name, fn) => events.set(name, fn), removeEventListener: name => events.delete(name),
     }, require: name => name === '@tarojs/taro' ? { default: taro } : { default: '/assets/new-order-bell.wav' },
   });
-  return { sound: module.exports.orderAlertSound, contexts, native, tones, events };
+  return { sound: module.exports.orderAlertSound, contexts, native, tones, events, storage };
 }
+
+test('sound preference mutes immediately and is retained on the device', async () => {
+  const s = setupSound('h5'); s.sound.prepare(); s.events.get('click')(); await tick();
+  assert.equal(s.sound.isEnabled(), true);
+  s.sound.setEnabled(false); s.sound.play(); assert.equal(s.tones.length, 0);
+  assert.equal(s.storage.get('xa_provider_order_sound'), 'off');
+  s.sound.setEnabled(true); s.sound.play(); assert.equal(s.tones.length, 3);
+  assert.equal(s.storage.get('xa_provider_order_sound'), 'on');
+  s.sound.dispose();
+});
 
 test('H5 unlock is silent; one alert ends after 650ms with no loop or deferred sound', async () => {
   const s = setupSound('h5'); s.sound.prepare(); s.sound.prepare();

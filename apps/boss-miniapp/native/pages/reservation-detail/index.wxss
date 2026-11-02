@@ -1,0 +1,6 @@
+.reservation-detail { padding-bottom: 150rpx; }
+.panel { margin-bottom: 20rpx; }
+.row { display: flex; justify-content: space-between; gap: 20rpx; padding: 18rpx 0; border-bottom: 1rpx solid var(--border); }
+.row text:last-child { text-align: right; overflow-wrap: anywhere; }
+.panel button { margin-top: 20rpx; }
+.error { color: var(--danger); display: block; margin-top: 12rpx; }

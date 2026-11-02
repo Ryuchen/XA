@@ -1,0 +1,5 @@
+<view class="page reservations-page"><view class="panel"><view class="title">我的预约</view><view class="subtitle">查看确认进度与成单状态 · 北京时间</view></view>
+  <view wx:if="{{!logged}}" class="panel"><button class="xa-button button" bindtap="login">登录后查看</button></view>
+  <state-view wx:else loading="{{loading}}" error="{{error}}" empty="{{!loading && !error && !items.length}}" empty-text="暂无预约" bind:retry="load"/>
+    <block wx:if="{{logged && !loading && !error}}"><button wx:for="{{items}}" wx:key="id" class="xa-button panel reservation-card" data-id="{{item.id}}" bindtap="open"><view class="line"><text class="section-title">{{item.service.name}}</text><text class="state">{{item.statusText}}</text></view><view class="small muted">{{item.provider.name}} · {{item.startText}}</view><view class="small muted">{{item.reservation_no}} ›</view></button><button wx:if="{{nextCursor}}" class="xa-button button-secondary" bindtap="more" disabled="{{moreBusy}}" loading="{{moreBusy}}">加载更多</button><button wx:if="{{!items.length}}" class="xa-button button-secondary" bindtap="browse">选择服务</button></block>
+</view><bottom-navigation/>

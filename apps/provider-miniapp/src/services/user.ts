@@ -5,6 +5,7 @@ export type EscortStatus = 'AVAILABLE' | 'BUSY' | 'OFFLINE';
 
 export interface ProviderQualification { id:number; game_category:number; game_category_name:string; provider_kind:string; platform:string; security_level:string; grade:string; grade_name:string; label:string; is_active:boolean }
 export interface EscortMeProfile {
+  display_tags: Array<{id:number;title:string;highlighted:boolean}>;
   qualifications: ProviderQualification[];
   dispatch_notification_preferences: Record<string,boolean>;
   dispatch_notification_options: Array<{key:string;label:string;eligible:boolean;enabled:boolean}>;

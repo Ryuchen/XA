@@ -82,16 +82,19 @@ class CatalogLinkTests(APITestCase):
             'display_name': '新陪玩', 'service_items': [self.service.pk]})
         self.assertFalse(serializer.is_valid())
 
-    def test_disabled_parent_hides_catalog_detail_favorites_and_skills(self):
+    def test_disabled_parent_hides_catalog_detail_and_skills_but_marks_favorites_unavailable(self):
         self.profile.service_items.add(self.service)
         ServiceFavorite.objects.create(user=self.boss, account=self.accounts[self.boss.pk], service=self.service)
         for parent in (self.game, self.category):
-            parent.is_active = False
-            parent.save()
+            path = ('game-categories' if parent == self.game else 'service-categories')
+            self.login(self.staff)
+            changed = self.client.patch(f'/api/admin/{path}/{parent.pk}/', {'is_active': False}, format='json')
+            self.assertEqual(changed.data['code'], 0, changed.data)
             self.login(self.boss)
             self.assertEqual(self.client.get('/api/orders/services/').data['data'], [])
             self.assertEqual(self.client.get(f'/api/orders/services/{self.service.pk}/').data['code'], 404)
-            self.assertEqual(self.client.get('/api/orders/favorites/').data['data'], [])
+            favorite = self.client.get('/api/orders/favorites/').data['data']
+            self.assertEqual([(row['id'], row['available']) for row in favorite], [(self.service.pk, False)])
             self.assertEqual(self.client.get('/api/users/escorts/', {'service_item': self.service.pk}).data['data'], [])
             quote = self.client.post('/api/orders/quote/', {'service_id': self.service.pk}, format='json')
             self.assertNotEqual(quote.data['code'], 0)
@@ -99,8 +102,9 @@ class CatalogLinkTests(APITestCase):
             self.assertEqual(self.client.get('/api/users/escorts/skill-options/').data['data'], [])
             invalid = self.client.patch('/api/users/escorts/me/', {'service_items': [self.service.pk], 'bio': '不得写入'}, format='json')
             self.assertEqual(invalid.data['code'], 400)
-            parent.is_active = True
-            parent.save()
+            self.login(self.staff)
+            changed = self.client.patch(f'/api/admin/{path}/{parent.pk}/', {'is_active': True}, format='json')
+            self.assertEqual(changed.data['code'], 0, changed.data)
 
     def test_skill_metadata_and_display_order(self):
         make_service(game_category=self.other_game)

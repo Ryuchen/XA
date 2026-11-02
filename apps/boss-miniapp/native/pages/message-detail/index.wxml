@@ -13,7 +13,7 @@
       <text wx:if="{{item.detail || item.preview}}" class="message-content" selectable>{{item.detail || item.preview}}</text>
       <text wx:else class="message-content message-content-empty">暂无通知正文</text>
     </view>
-    <view wx:if="{{target}}" class="section-surface message-action"><text class="related-title">相关内容</text><button class="xa-button button-secondary related-button" bindtap="action" hover-class="xa-button-hover">{{item.related_order_id ? '查看关联订单' : '查看相关内容'}}</button></view>
+    <view wx:if="{{target}}" class="section-surface message-action"><text class="related-title">相关内容</text><button class="xa-button button-secondary related-button" bindtap="action" hover-class="xa-button-hover">{{actionText}}</button></view>
   </block>
 </view>
 <bottom-navigation/>

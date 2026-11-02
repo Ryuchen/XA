@@ -1,0 +1,4 @@
+.expand-region { overflow:hidden; height:0; opacity:0; visibility:hidden; transition:height var(--xa-motion-slow),opacity var(--xa-motion-base),visibility var(--xa-motion-base); }
+.expand-region.is-open { opacity:1; visibility:visible; }
+.expand-inner { padding:1rpx 0; }
+@media(prefers-reduced-motion:reduce) { .expand-region { transition:none; } }

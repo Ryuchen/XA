@@ -235,6 +235,8 @@ def create_claim(account, reward, key, *, source, points_spent=0, details=None, 
         duration_months=reward.duration_months, highlighted=reward.highlighted,
         points_spent=points_spent, details=details or {}, request_fingerprint=request_fingerprint,
         balance_amount=reward.balance_amount)
+    from .notifier import notify_claims_after_commit
+    notify_claims_after_commit()
     if reward.kind == RewardItem.Kind.POINTS:
         if reward.point_value < 1:
             raise ValidationError('积分奖品未配置积分值')
@@ -476,18 +478,42 @@ def draw(account, campaign_id, client_request_id, expected_version=None):
     return lottery_batch_draws(draw_batch(account, campaign_id, client_request_id, expected_version, count=1))[0]
 
 
+class ClaimDetailsChanged(Exception):
+    """Delivery details changed since the operator opened the claim."""
+
+
+class ClaimStatusChanged(Exception):
+    """Another operator has changed the claim's delivery status."""
+
+
+class ClaimTermsChanged(Exception):
+    """The entitlement's delivery terms have changed."""
+
+
 @transaction.atomic
-def process_claim(claim_id, status, note, operator):
+def process_claim(claim_id, status, note, operator, expected_details=None, expected_status=None, expected_terms=None, tag_reviewed=False):
     # 先锁奖品再锁领取记录，与兑换/抽奖库存锁顺序一致。
     initial = RewardClaim.objects.get(pk=claim_id)
     reward = RewardItem.objects.select_for_update().get(pk=initial.reward_id)
     # Do not implicitly lock ClubAccount before the member points profile.
     claim = RewardClaim.objects.select_for_update().get(pk=claim_id)
-    transitions = {'PENDING': {'FULFILLING', 'COMPLETED', 'CANCELLED'}, 'FULFILLING': {'COMPLETED', 'CANCELLED'}}
-    if claim.status == status:
+    transitions = {'PENDING': {'FULFILLING', 'COMPLETED', 'CANCELLED'}, 'FULFILLING': {'PENDING', 'COMPLETED', 'CANCELLED'}}
+    if expected_status is not None and claim.status != expected_status:
+        if claim.status == status and claim.delivery_note == note:
+            return claim
+        raise ClaimStatusChanged
+    tag_revision = claim.status == 'PENDING' and status == 'PENDING' and claim.kind_snapshot == 'TAG' and claim.delivery_note != note
+    if claim.status == status and not tag_revision:
         return claim
-    if status not in transitions.get(claim.status, set()):
+    if expected_details is not None and claim.details != expected_details:
+        raise ClaimDetailsChanged
+    if expected_terms is not None and expected_terms != {'duration_days': claim.duration_days,
+            'duration_months': claim.duration_months, 'highlighted': claim.highlighted}:
+        raise ClaimTermsChanged
+    if not tag_revision and status not in transitions.get(claim.status, set()):
         raise ValidationError('该兑换记录不能执行此操作')
+    if claim.kind_snapshot == 'TAG' and claim.tag_revision_required and status == 'FULFILLING':
+        raise ValidationError('标签正等待用户修改，请修改后再进入交付中')
     if not note.strip():
         raise ValidationError('请填写交付或取消说明')
     if status == 'CANCELLED':
@@ -500,6 +526,7 @@ def process_claim(claim_id, status, note, operator):
         reward.redeemed_count = max(0, reward.redeemed_count - 1)
         reward.save(update_fields=['stock', 'redeemed_count'])
     if status == 'COMPLETED':
+        claim.tag_revision_required = False
         claim.completed_at = timezone.now()
         if claim.duration_days:
             claim.expires_at = claim.completed_at + timedelta(days=claim.duration_days)
@@ -509,19 +536,37 @@ def process_claim(claim_id, status, note, operator):
             year, month = divmod(end.year * 12 + end.month - 1 + claim.duration_months, 12)
             claim.expires_at = end.replace(year=year, month=month+1, day=min(end.day, calendar.monthrange(year, month+1)[1]))
         if claim.kind_snapshot == 'TAG':
+            if not tag_reviewed:
+                raise ValidationError('请先确认已审核 TAG 内容符合要求')
             title = str(claim.details.get('tag', '')).strip()
             if not title or len(title) > 30:
                 raise ValidationError('请先填写用户希望展示的 TAG（最多 30 字）')
             MemberTag.objects.get_or_create(event_key=f'claim:{claim.pk}:tag', defaults={
                 'account': claim.account, 'title': title, 'priority': 100,
                 'highlighted': claim.highlighted, 'expires_at': claim.expires_at,
+                'reviewed_at': timezone.now(), 'reviewed_by': operator,
             })
         if claim.kind_snapshot == 'NAMING':
             broadcast('NAMING', f'claim:{claim.pk}:naming', account=claim.account, reward=claim.name_snapshot)
+    if claim.kind_snapshot == 'TAG' and status == 'PENDING' and (claim.status == 'FULFILLING' or tag_revision):
+        claim.tag_revision_required = True
     claim.status = status
     claim.delivery_note = note[:255]
     claim.operator = operator
-    claim.save(update_fields=['status', 'delivery_note', 'operator', 'completed_at', 'expires_at'])
+    claim.save(update_fields=['status', 'delivery_note', 'operator', 'completed_at', 'expires_at', 'tag_revision_required'])
+    from .notifier import notify_claims_after_commit
+    notify_claims_after_commit()
+    from club_accounts.models import LegacyAccountMap
+    recipient_id = LegacyAccountMap.objects.filter(account_id=claim.account_id).values_list('legacy_user_id', flat=True).first()
+    if recipient_id:
+        from orders.services import push_message_safe
+        labels = {'PENDING': '已退回补充资料', 'FULFILLING': '交付中', 'COMPLETED': '已交付', 'CANCELLED': '已取消'}
+        title = '权益交付进度更新'
+        preview = (f'「{claim.name_snapshot}」已取消，{claim.points_spent} 积分已退回。' if status == 'CANCELLED' and claim.source == 'REDEMPTION'
+                   else f'「{claim.name_snapshot}」{labels[status]}，可查看处理详情。')
+        transaction.on_commit(lambda: push_message_safe(
+            recipient_id=recipient_id, recipient_account_id=claim.account_id, title=title,
+            preview=preview, msg_type='SYSTEM', action_url=f'/pages/reward-claim/index?id={claim.pk}'))
     return claim
 
 
@@ -617,6 +662,7 @@ def sync_vip_entitlements(account, tier):
             family = reward.kind if reward.kind in ('TAG', 'NAMING') else (reward.vip_quota_kind or reward.code)
             configured[family] = (reward, bundle['quantity'])
     quotas = {'TAG':[1,1,2,2,3,5], 'FRIEND':[0,0,1,2,5,10], 'NAMING':[3,6,6,6,10,12]}
+    terms_changed = False
     for family, (reward, configured_count) in configured.items():
         if family == 'BIRTHDAY_GIFT':
             continue  # issued on the birthday, not on every upgrade
@@ -626,25 +672,35 @@ def sync_vip_entitlements(account, tier):
                 {'business_cycle': account.business_cycle, 'quota_kind': family})
         claims = RewardClaim.objects.filter(account=account, event_key__startswith=f'{prefix}{family}:').order_by('pk')
         if family == 'NAMING':
-            claims.filter(status__in=['PENDING','FULFILLING']).update(duration_days=7 if level < 4 else 0,
-                duration_months=0 if level < 4 else 1)
+            days, months = (7, 0) if level < 4 else (0, 1)
+            changed = claims.filter(status__in=['PENDING','FULFILLING']).exclude(duration_days=days, duration_months=months).update(
+                duration_days=days, duration_months=months)
+            terms_changed |= bool(changed)
         elif family == 'TAG':
             high = [0,0,0,1,2,5][level-1]
             for index, claim in enumerate(claims):
+                terms_changed |= claim.highlighted != (index < high) or bool(claim.duration_days or claim.duration_months)
                 claim.highlighted = index < high
                 claim.duration_days = claim.duration_months = 0
                 claim.save(update_fields=['highlighted','duration_days','duration_months'])
                 MemberTag.objects.filter(event_key=f'claim:{claim.pk}:tag').update(highlighted=claim.highlighted)
+    if terms_changed:
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
 
 
 def grant_entitlement(account, reward, key, source, details=None, source_order=None):
     """VIP/赠礼权益不占积分商品库存；仍进入同一客服交付闭环。"""
-    return RewardClaim.objects.get_or_create(event_key=key, defaults={
+    claim, created = RewardClaim.objects.get_or_create(event_key=key, defaults={
         'account': account, 'reward': reward, 'source': source, 'name_snapshot': reward.name,
         'kind_snapshot': reward.kind, 'duration_days': reward.duration_days,
         'duration_months': reward.duration_months, 'highlighted': reward.highlighted,
         'details': details or {}, 'source_order': source_order,
-    })[0]
+    })
+    if created:
+        from .notifier import notify_claims_after_commit
+        notify_claims_after_commit()
+    return claim
 
 
 def award_gift_benefits(order):

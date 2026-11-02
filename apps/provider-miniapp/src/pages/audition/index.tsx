@@ -3,6 +3,7 @@ import { Button, Input, Text, Textarea, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import {
   AuditionInfo,
+  AuditionSignup,
   fetchAuditionInfo,
   fetchMyAuditionSignups,
   submitAuditionSignup,
@@ -31,7 +32,7 @@ const AuditionPage: React.FC = () => {
   const [game, setGame] = useState('');
   const [remark, setRemark] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [mySignups, setMySignups] = useState<any[]>([]);
+  const [mySignups, setMySignups] = useState<AuditionSignup[]>([]);
 
   const loadMySignups = async () => {
     if (!getStoredToken()) return;
@@ -98,15 +99,15 @@ const AuditionPage: React.FC = () => {
 
   if (state === 'loading' || !info || state === 'error') return <PlatformLayout active='mine'><View className={`xa-provider-page ${styles.container}`}><PageNav title="试音报名" fallbackUrl="/pages/mine/index" /><View className={styles.center}>{state === 'loading' ? <Loading text="加载试音活动…" /> : <Empty icon="🎧" title="无法打开试音链接" desc={error} />}</View></View></PlatformLayout>;
 
-  const hasSubmitted = mySignups.some(item => item.link === info.id);
+  const currentSignup = mySignups.find(item => item.link === info.id);
   return (
     <PlatformLayout active='mine'><View className={`xa-provider-page ${styles.container}`}>
       <PageNav title="试音报名" />
       <View className={styles.hero}><Text className={styles.tag}>陪玩招募</Text><Text className={styles.title}>{info.title}</Text><Text className={styles.remark}>{info.remark || '欢迎报名本次试音活动'}</Text><Text className={styles.expire}>截止：{formatExpire(info.expire_at)}</Text></View>
       {!getStoredToken() ? (
         <View className={styles.card}><Text className={styles.notice}>请先使用陪玩账号登录后报名。专属链接已绑定账号时会自动登录。</Text><Button className={`xa-button-primary ${styles.primaryButton}`} onClick={goLogin}>去登录</Button></View>
-      ) : hasSubmitted ? (
-        <View className={styles.card}><Text className={styles.notice}>你已报名本次试音活动，请等待运营审核。</Text></View>
+      ) : currentSignup ? (
+        <View className={styles.card}><Text className={styles.notice}>{currentSignup.status === 'PENDING' ? '报名已提交，请等待运营审核。' : currentSignup.status === 'APPROVED' ? '报名已通过，请留意后续联系。' : '报名未通过，请查看审核备注。'}</Text>{currentSignup.status === 'REJECTED' && currentSignup.audit_remark && <Text className={styles.recordSub}>审核备注：{currentSignup.audit_remark}</Text>}</View>
       ) : (
         <View className={styles.card}>
           <Text className={styles.sectionTitle}>提交报名信息</Text>

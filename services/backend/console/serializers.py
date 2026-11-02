@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
+from wallet.settlement_display import OrderSettlementListSerializer, ReportSettlementListSerializer
 
 from announcements.models import Announcement
 from audition.models import AuditionLink, AuditionSignup
@@ -99,7 +100,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
     def get_wallet_balance(self, obj):
         wallet = getattr(obj, 'wallet', None)
-        return wallet.balance if wallet else 0
+        return wallet.balance if wallet else None
 
     # 封禁流程真正翻转的开关，与 console.ban_utils.BAN_LOCKED_FIELDS 同源。
     # 两处必须一致：一边锁 A 一边拦 B，报错文案就会开始说谎。
@@ -407,11 +408,35 @@ class AdminOrderProviderSerializer(serializers.ModelSerializer):
 
     def get_provider_name(self, obj):
         if obj.provider_account_id:
-            return obj.provider_account.nickname or obj.provider_account.username
+            profile = getattr(obj.provider_account, 'escort_profile', None)
+            return (profile.display_name if profile else '') or obj.provider_name_snapshot or obj.provider_account.nickname or obj.provider_account.username
         return obj.provider_name_snapshot or ''
 
 
 class AdminOrderSerializer(serializers.ModelSerializer):
+    source_order_no = serializers.CharField(source='source_order.order_no', read_only=True, default='')
+    settlement_status = serializers.SerializerMethodField()
+    team_progress = serializers.SerializerMethodField()
+    application_progress = serializers.SerializerMethodField()
+
+    def get_application_progress(self, obj):
+        if (obj.status != Order.Status.PENDING or obj.dispatch_route != Order.DispatchRoute.PUBLIC
+                or not obj.requires_boss_selection or not hasattr(obj, '_pending_applications')):
+            return None
+        return {'total': obj._pending_applications, 'waiting_partner': obj._waiting_partner_applications}
+
+    def get_team_progress(self, obj):
+        from orders.team_progress import team_progress
+        return team_progress(obj)
+    settlement_review_reason = serializers.SerializerMethodField()
+
+    def get_settlement_review_reason(self, obj):
+        from wallet.settlement_display import legacy_customer_settlement_reason
+        return legacy_customer_settlement_reason(obj)
+
+    def get_settlement_status(self, obj):
+        from wallet.settlement_display import order_settlement_status
+        return order_settlement_status(obj)
     can_aftersale = serializers.SerializerMethodField()
     refund_summary = serializers.SerializerMethodField()
     def get_can_aftersale(self,obj):
@@ -432,11 +457,21 @@ class AdminOrderSerializer(serializers.ModelSerializer):
         return public_requirement(obj)
     aftersale_deadline = serializers.SerializerMethodField()
     aftersale_status = serializers.SerializerMethodField()
+    aftersale_open_at = serializers.SerializerMethodField()
     def get_aftersale_deadline(self, obj):
         from engagement.confirmation import aftersale_deadline
         return aftersale_deadline(obj)
     def get_aftersale_status(self, obj):
-        return next((row.status for row in obj.aftersales.all()), '')
+        return next((row.status for row in self._aftersale_rows(obj)), '')
+
+    def _aftersale_rows(self, obj):
+        if not hasattr(obj, '_admin_aftersale_rows'):
+            obj._admin_aftersale_rows = list(obj.aftersales.all())
+        return obj._admin_aftersale_rows
+
+    def get_aftersale_open_at(self, obj):
+        opened = next((row.created_at for row in self._aftersale_rows(obj) if row.status == 'OPEN'), None)
+        return serializers.DateTimeField().to_representation(opened) if opened else None
 
     customer = serializers.PrimaryKeyRelatedField(
         source='customer_account',
@@ -454,50 +489,167 @@ class AdminOrderSerializer(serializers.ModelSerializer):
     payment_status_display = serializers.CharField(source='get_payment_status_display', read_only=True)
     escort_mode_display = serializers.CharField(source='get_escort_mode_display', read_only=True)
     customer_name = serializers.SerializerMethodField()
-    customer_username = serializers.CharField(source='customer_account.username', read_only=True)
-    customer_nickname = serializers.CharField(source='customer_account.nickname', read_only=True)
-    customer_phone = serializers.CharField(source='customer_account.phone', read_only=True)
+    customer_username = serializers.SerializerMethodField()
+    customer_nickname = serializers.SerializerMethodField()
+    customer_phone = serializers.SerializerMethodField()
     provider_name = serializers.SerializerMethodField()
     inviter_name = serializers.SerializerMethodField()
     promotion_title = serializers.CharField(source='promotion.title', read_only=True)
     providers = AdminOrderProviderSerializer(many=True, read_only=True)
+    staff_dispatch_actionable = serializers.SerializerMethodField()
+    dispatch_assignment_allowed = serializers.SerializerMethodField()
+    dispatch_message_allowed = serializers.SerializerMethodField()
+    dispatch_message_unavailable_reason = serializers.SerializerMethodField()
+    pending_deadline_expired = serializers.SerializerMethodField()
+
+    def get_pending_deadline_expired(self, obj):
+        return bool(obj.status == Order.Status.PENDING and obj.payment_status == Order.PaymentStatus.PAID
+                    and obj.auto_cancel_at and obj.auto_cancel_at <= timezone.now())
+
+    def _dispatch_message_error(self, obj):
+        request = self.context.get('request')
+        if not request or not getattr(request, 'account', None):
+            return '订单状态待核对'
+        cache = self.context.setdefault('_dispatch_message_eligibility', {})
+        if obj.pk not in cache:
+            from orders.dispatching import eligibility_error
+            cache[obj.pk] = eligibility_error(obj)
+        return cache[obj.pk]
+
+    def get_dispatch_message_allowed(self, obj):
+        return not self._dispatch_message_error(obj)
+
+    def get_dispatch_message_unavailable_reason(self, obj):
+        return self._dispatch_message_error(obj)
+
+    def get_dispatch_assignment_allowed(self, obj):
+        from orders.staff_dispatch_readiness import dispatch_assignment_allowed
+        # Without an authenticated console request this is only an unscoped
+        # serialization, not a grant to show or offer an assignment action.
+        request = self.context.get('request')
+        if not request or not getattr(request, 'account', None):
+            return False
+        cache = self.context.setdefault('_dispatch_assignment_readiness', {})
+        if obj.pk not in cache:
+            cache[obj.pk] = dispatch_assignment_allowed(obj)
+        return cache[obj.pk]
+
+    def get_staff_dispatch_actionable(self, obj):
+        return (obj.dispatch_route == Order.DispatchRoute.STAFF
+                and self.get_dispatch_assignment_allowed(obj))
 
     class Meta:
         model = Order
+        list_serializer_class = OrderSettlementListSerializer
         fields = [
             'provider_requirement',
-            'id', 'order_no', 'status', 'status_display', 'payment_status', 'settled_at', 'settlement_mode',
+            'id', 'order_no', 'status', 'status_display', 'payment_status', 'settled_at', 'settlement_status', 'settlement_review_reason', 'settlement_mode', 'dispatch_route', 'requires_boss_selection',
             'payment_status_display', 'escort_mode', 'escort_mode_display', 'provider_gender',
             'required_provider_count', 'required_team_size',
-            'amount', 'game_rounds', 'service_name_snapshot', 'gameplay_snapshot', 'roulette_result',
+            'amount', 'game_rounds', 'service_name_snapshot', 'gameplay_snapshot', 'roulette_result', 'is_gift_snapshot', 'source_order', 'source_order_no',
             'support_contact', 'support_contact_name_snapshot',
             'unit_price_snapshot', 'customer', 'customer_name', 'customer_username',
             'customer_nickname', 'customer_phone', 'customer_phone_snapshot',
             'provider', 'provider_name', 'commission_type', 'commission_fixed', 'commission_override', 'commission_source', 'commission_rate', 'provider_income',
-            'providers',
+            'providers', 'team_progress', 'application_progress',
             'inviter', 'inviter_name', 'inviter_commission', 'shop_income',
             'original_amount', 'boss_discount', 'promo_discount', 'coupon_discount',
             'promotion', 'promotion_title',
-            'remark', 'cancel_reason', 'reject_count',
+            'remark', 'cancel_reason', 'reject_count', 'auto_cancel_at', 'pending_timeout_minutes', 'pending_deadline_expired', 'staff_dispatch_actionable', 'dispatch_assignment_allowed', 'dispatch_message_allowed', 'dispatch_message_unavailable_reason',
             'grabbed_at', 'in_service_at', 'completed_at', 'cancelled_at', 'refunded_at',
-            'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status', 'can_aftersale', 'refund_summary',
+            'business_cycle', 'experience_kind', 'report_ready_at', 'consumption_ready_at', 'consumption_confirmed_at', 'aftersale_deadline', 'aftersale_status', 'aftersale_open_at', 'can_aftersale', 'refund_summary',
             'created_at', 'updated_at',
         ]
 
     def get_customer_name(self, obj):
-        if not obj.customer_account_id:
-            return ''
-        return obj.customer_account.nickname or obj.customer_account.username
+        customer = obj.customer_account if obj.customer_account_id else obj.customer
+        return (customer.nickname or customer.username) if customer else ''
+
+    def _customer_field(self, obj, field):
+        customer = obj.customer_account if obj.customer_account_id else obj.customer
+        return (getattr(customer, field, '') or '') if customer else ''
+
+    def get_customer_username(self, obj):
+        return self._customer_field(obj, 'username')
+
+    def get_customer_nickname(self, obj):
+        return self._customer_field(obj, 'nickname')
+
+    def get_customer_phone(self, obj):
+        return self._customer_field(obj, 'phone')
 
     def get_provider_name(self, obj):
         if not obj.provider_account_id:
             return obj.provider_name_snapshot or ''
-        return obj.provider_account.nickname or obj.provider_account.username
+        profile = getattr(obj.provider_account, 'escort_profile', None)
+        return (profile.display_name if profile else '') or obj.provider_name_snapshot or obj.provider_account.nickname or obj.provider_account.username
 
     def get_inviter_name(self, obj):
         if not obj.inviter_account_id:
             return ''
         return obj.inviter_account.nickname or obj.inviter_account.username
+
+
+def _order_provider_identity(obj):
+    identity = obj.provider_account if obj.provider_account_id else obj.provider if obj.provider_id else None
+    profile = getattr(identity, 'escort_profile', None) if identity else None
+    return {
+        'provider_no': (profile.escort_no or '') if profile else '',
+        'provider_username': (identity.username or '') if identity else '',
+        'provider_identity_source': 'ACCOUNT' if obj.provider_account_id else 'LEGACY' if obj.provider_id else '',
+    }
+
+
+class AdminOrderProviderIdentitySerializer(AdminOrderProviderSerializer):
+    provider_no = serializers.SerializerMethodField()
+    provider_username = serializers.SerializerMethodField()
+    provider_identity_source = serializers.SerializerMethodField()
+
+    class Meta(AdminOrderProviderSerializer.Meta):
+        fields = [*AdminOrderProviderSerializer.Meta.fields, 'provider_no', 'provider_username', 'provider_identity_source']
+
+    def get_provider_no(self, obj):
+        return _order_provider_identity(obj)['provider_no']
+
+    def get_provider_username(self, obj):
+        return _order_provider_identity(obj)['provider_username']
+
+    def get_provider_identity_source(self, obj):
+        return _order_provider_identity(obj)['provider_identity_source']
+
+
+class AdminOrderWithIdentitySerializer(AdminOrderSerializer):
+    providers = AdminOrderProviderIdentitySerializer(many=True, read_only=True)
+    provider_no = serializers.SerializerMethodField()
+    provider_username = serializers.SerializerMethodField()
+    provider_identity_source = serializers.SerializerMethodField()
+
+    class Meta(AdminOrderSerializer.Meta):
+        fields = [*AdminOrderSerializer.Meta.fields, 'provider_no', 'provider_username', 'provider_identity_source']
+
+    def get_provider_no(self, obj):
+        return _order_provider_identity(obj)['provider_no']
+
+    def get_provider_username(self, obj):
+        return _order_provider_identity(obj)['provider_username']
+
+    def get_provider_identity_source(self, obj):
+        return _order_provider_identity(obj)['provider_identity_source']
+
+
+class AdminOrderDetailSerializer(AdminOrderWithIdentitySerializer):
+    reservation_origin = serializers.SerializerMethodField()
+
+    def get_reservation_origin(self, obj):
+        from django.core.exceptions import ObjectDoesNotExist
+        from orders.serializers import reservation_origin
+        try:
+            return reservation_origin(obj.reservation)
+        except ObjectDoesNotExist:
+            return None
+
+    class Meta(AdminOrderWithIdentitySerializer.Meta):
+        fields = [*AdminOrderWithIdentitySerializer.Meta.fields, 'game_region', 'game_nickname', 'game_uid', 'reservation_origin']
 
 
 class AdminOrderLogSerializer(serializers.ModelSerializer):
@@ -523,11 +675,11 @@ class AdminOrderLogSerializer(serializers.ModelSerializer):
 
 class AdminEvaluationSerializer(serializers.ModelSerializer):
     customer_name = serializers.SerializerMethodField()
-    customer_username = serializers.CharField(source='customer.username', read_only=True)
-    customer_nickname = serializers.CharField(source='customer.nickname', read_only=True)
+    customer_username = serializers.SerializerMethodField()
+    customer_nickname = serializers.SerializerMethodField()
     provider_name = serializers.SerializerMethodField()
-    provider_username = serializers.CharField(source='provider.username', read_only=True)
-    provider_nickname = serializers.CharField(source='provider.nickname', read_only=True)
+    provider_username = serializers.SerializerMethodField()
+    provider_nickname = serializers.SerializerMethodField()
     service_name = serializers.SerializerMethodField()
     order_no = serializers.CharField(source='order.order_no', read_only=True)
     avg_score = serializers.FloatField(read_only=True)
@@ -539,16 +691,32 @@ class AdminEvaluationSerializer(serializers.ModelSerializer):
                   'provider_nickname', 'service_name', 'score',
                   'skill_score', 'attitude_score', 'communication_score', 'avg_score',
                   'content', 'is_anonymous',
-                  'reply_content', 'replied_at', 'created_at']
+                  'reply_content', 'reply_author', 'replied_at', 'reply_version', 'created_at']
 
     def get_customer_name(self, obj):
         anon = '（匿名）' if obj.is_anonymous else ''
-        return f"{obj.customer.nickname or obj.customer.username}{anon}"
+        customer = obj.customer_account if obj.customer_account_id else obj.customer
+        return f"{customer.nickname or customer.username}{anon}"
+
+    def get_customer_username(self, obj):
+        customer = obj.customer_account if obj.customer_account_id else obj.customer
+        return customer.username
+
+    def get_customer_nickname(self, obj):
+        customer = obj.customer_account if obj.customer_account_id else obj.customer
+        return customer.nickname
 
     def get_provider_name(self, obj):
-        if not obj.provider_id:
-            return ''
-        return obj.provider.nickname or obj.provider.username
+        from orders.evaluation_targets import evaluation_provider_name
+        return evaluation_provider_name(obj)
+
+    def get_provider_username(self, obj):
+        provider = obj.provider_account if obj.provider_account_id else obj.provider
+        return provider.username if provider else ''
+
+    def get_provider_nickname(self, obj):
+        provider = obj.provider_account if obj.provider_account_id else obj.provider
+        return provider.nickname if provider else ''
 
     def get_service_name(self, obj):
         return obj.order.service_name_snapshot
@@ -556,14 +724,14 @@ class AdminEvaluationSerializer(serializers.ModelSerializer):
 
 # ---------------- 钱包/流水 ----------------
 class AdminWalletSerializer(serializers.ModelSerializer):
-    user_role = serializers.CharField(source='user.role', read_only=True)
-    username = serializers.CharField(source='user.username', read_only=True)
-    nickname = serializers.CharField(source='user.nickname', read_only=True)
-    phone = serializers.CharField(source='user.phone', read_only=True)
+    user_role = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
+    nickname = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
     boss_no = serializers.SerializerMethodField()
     account_id = serializers.IntegerField(read_only=True)
-    avatar_url = serializers.CharField(source='user.avatar_url', read_only=True)
-    boss_type_name = serializers.CharField(source='user.boss_type.name', read_only=True)
+    avatar_url = serializers.SerializerMethodField()
+    boss_type_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Wallet
@@ -571,6 +739,30 @@ class AdminWalletSerializer(serializers.ModelSerializer):
                   'boss_type_name', 'balance',
                   'frozen_amount', 'total_recharge', 'total_gift', 'is_active', 'updated_at']
         read_only_fields = ['user', 'balance', 'frozen_amount', 'total_recharge', 'total_gift']
+
+    def _owner(self, obj):
+        return obj.account if obj.account_id else obj.user
+
+    def get_user_role(self, obj):
+        if obj.account_id:
+            return {'BOSS': 'CUSTOMER', 'PROVIDER': 'PROVIDER'}.get(obj.account.account_type, obj.account.account_type)
+        return obj.user.role
+
+    def get_username(self, obj):
+        return self._owner(obj).username
+
+    def get_nickname(self, obj):
+        return self._owner(obj).nickname
+
+    def get_phone(self, obj):
+        return self._owner(obj).phone
+
+    def get_avatar_url(self, obj):
+        return self._owner(obj).avatar_url
+
+    def get_boss_type_name(self, obj):
+        owner = self._owner(obj)
+        return owner.boss_type.name if owner.boss_type_id else None
 
     def get_boss_no(self, obj):
         return obj.account.account_no if obj.account_id else obj.user.boss_no
@@ -584,30 +776,33 @@ class AdminTransactionSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     username = serializers.SerializerMethodField()
     operator_name = serializers.SerializerMethodField()
+    order_no = serializers.CharField(source='order.order_no', read_only=True, default=None)
 
     class Meta:
         model = Transaction
-        fields = ['id', 'tx_no', 'wallet', 'username', 'order', 'amount', 'tx_type',
+        fields = ['id', 'tx_no', 'wallet', 'username', 'order', 'order_no', 'amount', 'tx_type',
                   'tx_type_display', 'balance_before', 'balance_after', 'status',
                   'status_display', 'remark', 'operator', 'operator_name', 'created_at','reversal_of','is_reversal']
 
     def get_username(self, obj):
-        return obj.wallet.user.username if obj.wallet_id else ''
+        if not obj.wallet_id:
+            return ''
+        owner = obj.wallet.account if obj.wallet.account_id else obj.wallet.user
+        return owner.username
 
     def get_operator_name(self, obj):
-        if not obj.operator_id:
-            return ''
-        return obj.operator.nickname or obj.operator.username
+        operator = obj.operator_account if obj.operator_account_id else obj.operator
+        return (operator.nickname or operator.username) if operator else ''
 
 
 class AdminRechargeRecordSerializer(serializers.ModelSerializer):
-    user_role = serializers.CharField(source='user.role', read_only=True)
-    username = serializers.CharField(source='user.username', read_only=True)
-    nickname = serializers.CharField(source='user.nickname', read_only=True)
-    phone = serializers.CharField(source='user.phone', read_only=True)
+    user_role = serializers.SerializerMethodField()
+    username = serializers.SerializerMethodField()
+    nickname = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
     boss_no = serializers.SerializerMethodField()
-    avatar_url = serializers.CharField(source='user.avatar_url', read_only=True)
-    boss_type_name = serializers.CharField(source='user.boss_type.name', read_only=True)
+    avatar_url = serializers.SerializerMethodField()
+    boss_type_name = serializers.SerializerMethodField()
     operator_name = serializers.SerializerMethodField()
     proof_image_url = serializers.SerializerMethodField()
     total_amount = serializers.IntegerField(read_only=True)
@@ -619,21 +814,44 @@ class AdminRechargeRecordSerializer(serializers.ModelSerializer):
                   'total_amount', 'trade_no', 'proof_image_url', 'remark',
                   'operator', 'operator_name', 'created_at']
 
+    def _owner(self, obj):
+        return obj.account if obj.account_id else obj.user
+
+    def get_user_role(self, obj):
+        if obj.account_id:
+            return {'BOSS': 'CUSTOMER', 'PROVIDER': 'PROVIDER'}.get(obj.account.account_type, obj.account.account_type)
+        return obj.user.role
+
+    def get_username(self, obj):
+        return self._owner(obj).username
+
+    def get_nickname(self, obj):
+        return self._owner(obj).nickname
+
+    def get_phone(self, obj):
+        return self._owner(obj).phone
+
+    def get_avatar_url(self, obj):
+        return self._owner(obj).avatar_url
+
+    def get_boss_type_name(self, obj):
+        owner = self._owner(obj)
+        return owner.boss_type.name if owner.boss_type_id else None
+
     def get_boss_no(self, obj):
         return obj.account.account_no if obj.account_id else obj.user.boss_no
 
     def get_operator_name(self, obj):
-        if not obj.operator_id:
-            return ''
-        return obj.operator.nickname or obj.operator.username
+        operator = obj.operator_account if obj.operator_account_id else obj.operator
+        return (operator.nickname or operator.username) if operator else ''
 
     def get_proof_image_url(self, obj):
         return build_media_url(self.context.get('request'), obj.proof_image)
 
 
 class AdminDisposeRecordSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
-    nickname = serializers.CharField(source='user.nickname', read_only=True)
+    username = serializers.SerializerMethodField()
+    nickname = serializers.SerializerMethodField()
     dispose_type_display = serializers.CharField(source='get_dispose_type_display', read_only=True)
     operator_name = serializers.SerializerMethodField()
 
@@ -642,25 +860,75 @@ class AdminDisposeRecordSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'username', 'nickname', 'dispose_type', 'dispose_type_display',
                   'amount', 'reason', 'operator', 'operator_name', 'created_at']
 
+    def get_username(self, obj):
+        return (obj.account if obj.account_id else obj.user).username
+
+    def get_nickname(self, obj):
+        return (obj.account if obj.account_id else obj.user).nickname
+
     def get_operator_name(self, obj):
-        if not obj.operator_id:
-            return ''
-        return obj.operator.nickname or obj.operator.username
+        operator = obj.operator_account if obj.operator_account_id else obj.operator
+        return (operator.nickname or operator.username) if operator else ''
 
 
 # ---------------- 陪玩报单 ----------------
+def pending_report_order_block_q():
+    """Pending reports whose linked order fails the approval state check."""
+    from django.db.models import Q
+    return (Q(status=ProviderReport.Status.PENDING, order__isnull=False)
+            & (~Q(order__status=Order.Status.COMPLETED) | ~Q(order__payment_status=Order.PaymentStatus.PAID)))
+
+
 class AdminProviderReportSerializer(serializers.ModelSerializer):
+    payout_amount = serializers.SerializerMethodField()
+    order_approval_block_reason = serializers.SerializerMethodField()
+    settlement_review_reason = serializers.SerializerMethodField()
+    aftersale_status = serializers.SerializerMethodField()
+
+    def get_aftersale_status(self, obj):
+        return next((row.status for row in obj.order.aftersales.all()), '') if obj.order_id else ''
+
+    def get_settlement_review_reason(self, obj):
+        from wallet.settlement_display import legacy_customer_settlement_reason
+        return legacy_customer_settlement_reason(obj.order) if obj.order_id else ''
+
+    def get_order_approval_block_reason(self, obj):
+        # This is only the order-state restriction in approve_order_report,
+        # not a promise that the remaining evidence and share checks pass.
+        if obj.status != ProviderReport.Status.PENDING or not obj.order_id:
+            return ''
+        order = obj.order
+        if order.payment_status != Order.PaymentStatus.PAID:
+            if order.payment_status == Order.PaymentStatus.REFUNDED:
+                return '订单已退款，不能通过报单'
+            if order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED:
+                return '订单已部分退款，不能通过报单'
+            return '订单未支付，不能通过报单'
+        if order.status != Order.Status.COMPLETED:
+            return '订单未完成，不能通过报单'
+        return ''
+
+    def get_payout_amount(self, obj):
+        from wallet.reporting import report_has_valid_order_share
+        return obj.payout_amount if report_has_valid_order_share(obj) else None
+    settlement_status = serializers.SerializerMethodField()
+
+    def get_settlement_status(self, obj):
+        from wallet.settlement_display import report_settlement_status
+        return report_settlement_status(obj)
     submitted_at = serializers.DateTimeField(read_only=True)
     fulfillment = serializers.CharField(source='order.fulfillment', read_only=True, default='')
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     provider_name = serializers.SerializerMethodField()
-    provider_username = serializers.CharField(source='provider.username', read_only=True)
-    provider_nickname = serializers.CharField(source='provider.nickname', read_only=True)
+    provider_username = serializers.SerializerMethodField()
+    provider_nickname = serializers.SerializerMethodField()
+    provider_no = serializers.SerializerMethodField()
     auditor_name = serializers.SerializerMethodField()
     proof_image_url = serializers.SerializerMethodField()
     suggested_commission_rate = serializers.SerializerMethodField()
     commission_source_label = serializers.SerializerMethodField()
     order_no = serializers.CharField(source='order.order_no', read_only=True, default='')
+    order_payment_status = serializers.CharField(source='order.payment_status', read_only=True, default='')
     entry_image_url = serializers.SerializerMethodField()
     completion_image_url = serializers.SerializerMethodField()
     result_image_urls = serializers.SerializerMethodField()
@@ -672,21 +940,35 @@ class AdminProviderReportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProviderReport
+        list_serializer_class = ReportSettlementListSerializer
         fields = [
-            'id', 'provider', 'provider_name', 'provider_username', 'provider_nickname',
-            'game_name', 'description', 'amount', 'order', 'order_no', 'fulfillment',
+            'id', 'provider', 'provider_name', 'provider_username', 'provider_nickname', 'provider_no',
+            'game_name', 'description', 'amount', 'order', 'order_no', 'order_payment_status', 'fulfillment',
             'proof_image_url', 'entry_image_url', 'completion_image_url', 'result_image_urls',
             'status', 'status_display', 'commission_rate',
             'suggested_commission_rate', 'commission_source_label', 'commission_type', 'commission_fixed', 'payout_amount',
             'remark', 'audit_remark', 'auditor', 'auditor_name', 'transaction',
             'created_at', 'submitted_at', 'audited_at',
-            'settled_at', 'settlement_mode', 'expected_income',
+            'settled_at', 'settlement_status', 'settlement_review_reason', 'settlement_mode', 'expected_income', 'order_approval_block_reason', 'aftersale_status',
         ]
 
     def get_provider_name(self, obj):
-        if not obj.provider_id:
-            return ''
-        return obj.provider.nickname or obj.provider.username
+        identity = obj.provider_account if obj.provider_account_id else obj.provider
+        profile = getattr(identity, 'escort_profile', None) if identity else None
+        return (profile.display_name if profile else '') or ((identity.nickname or identity.username) if identity else '')
+
+    def get_provider_username(self, obj):
+        identity = obj.provider_account if obj.provider_account_id else obj.provider
+        return identity.username if identity else ''
+
+    def get_provider_nickname(self, obj):
+        identity = obj.provider_account if obj.provider_account_id else obj.provider
+        return (identity.nickname or '') if identity else ''
+
+    def get_provider_no(self, obj):
+        identity = obj.provider_account if obj.provider_account_id else obj.provider
+        profile = getattr(identity, 'escort_profile', None) if identity else None
+        return profile.escort_no if profile else ''
 
     def get_expected_income(self, obj):
         return self._financial_snapshot(obj)['expected_income']
@@ -738,9 +1020,11 @@ class AdminWithdrawSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     payee_method_display = serializers.CharField(source='get_payee_method_display', read_only=True)
     user_name = serializers.SerializerMethodField()
-    provider_username = serializers.CharField(source='user.username', read_only=True)
-    provider_nickname = serializers.CharField(source='user.nickname', read_only=True)
+    provider_username = serializers.SerializerMethodField()
+    provider_nickname = serializers.SerializerMethodField()
     auditor_name = serializers.SerializerMethodField()
+    claimed_by_name = serializers.SerializerMethodField()
+    claim_is_mine = serializers.SerializerMethodField()
 
     class Meta:
         model = WithdrawRequest
@@ -750,24 +1034,51 @@ class AdminWithdrawSerializer(serializers.ModelSerializer):
             'payee_method', 'payee_method_display',
             'payee_account', 'payee_name', 'status', 'status_display', 'remark',
             'audit_remark', 'payout_reference', 'paid_at',
-            'auditor', 'auditor_name', 'transaction', 'created_at', 'audited_at',
+            'auditor', 'auditor_name', 'claimed_by_account', 'claimed_by_name', 'claimed_at', 'claim_is_mine',
+            'transaction', 'created_at', 'audited_at',
         ]
 
     def get_user_name(self, obj):
-        if not obj.user_id:
-            return ''
-        return obj.user.nickname or obj.user.username
+        user = obj.account if obj.account_id else obj.user
+        return (user.nickname or user.username) if user else ''
+
+    def get_provider_username(self, obj):
+        user = obj.account if obj.account_id else obj.user
+        return user.username if user else ''
+
+    def get_provider_nickname(self, obj):
+        user = obj.account if obj.account_id else obj.user
+        return user.nickname if user else ''
 
     def get_auditor_name(self, obj):
-        if not obj.auditor_id:
-            return ''
-        return obj.auditor.nickname or obj.auditor.username
+        auditor = obj.auditor_account if obj.auditor_account_id else obj.auditor
+        return (auditor.nickname or auditor.username) if auditor else ''
+
+    def get_claimed_by_name(self, obj):
+        account = obj.claimed_by_account if obj.claimed_by_account_id else None
+        return (account.nickname or account.username) if account else ''
+
+    def get_claim_is_mine(self, obj):
+        account = getattr(self.context.get('request'), 'account', None)
+        return bool(account and obj.claimed_by_account_id == account.pk)
 
 
 # ---------------- 在线客服 ----------------
+class AdminChatReadSerializer(serializers.Serializer):
+    through_id = serializers.IntegerField(min_value=0, required=False)
+    message_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=200, required=False)
+
+    def validate(self, attrs):
+        if 'through_id' in attrs and 'message_ids' in attrs:
+            raise serializers.ValidationError('请选择一种已读范围')
+        return attrs
+
+
 class AdminChatReplySerializer(serializers.Serializer):
     content = serializers.CharField(max_length=1000, required=False, allow_blank=True, default='')
     image = serializers.ImageField(required=False)
+    read_through_id = serializers.IntegerField(min_value=0, required=False)
+    client_message_id = serializers.RegexField(regex=r'^[a-zA-Z0-9_-]{8,64}$', required=False)
 
     def validate(self, attrs):
         if not attrs.get('content') and not attrs.get('image'):
@@ -783,7 +1094,7 @@ class AdminChatMessageSerializer(serializers.ModelSerializer):
         model = ChatMessage
         fields = [
             'id', 'session', 'sender', 'is_from_support', 'content_type',
-            'content_type_display', 'content', 'image_url', 'is_read', 'created_at',
+            'content_type_display', 'content', 'image_url', 'is_read', 'created_at', 'client_message_id',
         ]
 
     def get_image_url(self, obj):
@@ -792,8 +1103,8 @@ class AdminChatMessageSerializer(serializers.ModelSerializer):
 
 class AdminChatSessionSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
-    user_avatar = serializers.CharField(source='user.avatar_url', read_only=True)
-    user_role_display = serializers.CharField(source='user.get_role_display', read_only=True)
+    user_avatar = serializers.SerializerMethodField()
+    user_role_display = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatSession
@@ -803,9 +1114,17 @@ class AdminChatSessionSerializer(serializers.ModelSerializer):
         ]
 
     def get_user_name(self, obj):
+        if obj.account_id:
+            return obj.account.nickname or obj.account.username
         if not obj.user_id:
             return ''
         return obj.user.nickname or obj.user.username
+
+    def get_user_avatar(self, obj):
+        return (obj.account.avatar_url or '') if obj.account_id else (obj.user.avatar_url or '' if obj.user_id else '')
+
+    def get_user_role_display(self, obj):
+        return obj.account.get_account_type_display() if obj.account_id else (obj.user.get_role_display() if obj.user_id else '')
 
 
 # ---------------- 优惠券 ----------------
@@ -868,28 +1187,41 @@ class AdminCouponSerializer(serializers.ModelSerializer):
 
 class AdminUserCouponSerializer(serializers.ModelSerializer):
     coupon_name = serializers.CharField(source='coupon.name', read_only=True)
-    username = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
     order_no = serializers.CharField(source='order.order_no', read_only=True, default='')
     status = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
+    effective_valid_to = serializers.DateTimeField(source='valid_to', read_only=True)
 
     class Meta:
         model = UserCoupon
         fields = ['id', 'user', 'username', 'user_name', 'coupon', 'coupon_name', 'status',
-                  'status_display', 'order', 'order_no', 'claimed_at', 'used_at']
+                  'status_display', 'order', 'order_no', 'claimed_at', 'used_at', 'effective_valid_to']
 
     def get_user_name(self, obj):
         account = obj.account or obj.user
         return (account.nickname or account.username) if account else ''
 
+    def get_username(self, obj):
+        return (obj.account or obj.user).username
+
     def get_status(self, obj):
-        if obj.status == UserCoupon.Status.UNUSED and (not obj.is_usable):
-            return UserCoupon.Status.EXPIRED
+        if hasattr(obj, 'admin_status'):
+            return obj.admin_status
+        if obj.status == UserCoupon.Status.UNUSED:
+            deadline = obj.expires_at or obj.coupon.valid_to
+            if deadline is not None and deadline <= timezone.now():
+                return 'EXPIRED'
+            if not obj.coupon.is_active:
+                return 'DISABLED'
+            if obj.account_id and obj.business_cycle != obj.account.business_cycle:
+                return 'PREVIOUS_CYCLE'
         return obj.status
 
     def get_status_display(self, obj):
-        return UserCoupon.Status(self.get_status(obj)).label
+        return {'UNUSED': '未使用', 'USED': '已使用', 'EXPIRED': '已过期',
+                'DISABLED': '模板停用', 'PREVIOUS_CYCLE': '非当前周期'}.get(self.get_status(obj), '状态待核对')
 
 
 # ---------------- 公告 ----------------
@@ -904,18 +1236,32 @@ class AdminAnnouncementSerializer(serializers.ModelSerializer):
 
 
 # ---------------- Banner ----------------
+class AdminBannerListSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        from banners.availability import prepare_banner_availability
+        return super().to_representation(prepare_banner_availability(data.all() if hasattr(data, 'all') else data))
+
+
 class AdminBannerSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
+    link_available = serializers.SerializerMethodField()
     link_type_display = serializers.CharField(source='get_link_type_display', read_only=True)
 
     class Meta:
         model = Banner
+        list_serializer_class = AdminBannerListSerializer
         fields = ['id', 'image', 'image_url', 'title', 'link_type', 'link_type_display',
-                  'link_value', 'sort_order', 'is_active', 'created_at']
+                  'link_value', 'link_available', 'sort_order', 'is_active', 'created_at']
         extra_kwargs = {'image': {'write_only': True, 'required': False}}
 
     def get_image_url(self, obj):
         return build_media_url(self.context.get('request'), obj.image)
+
+    def get_link_available(self, obj):
+        if not hasattr(obj, 'link_available'):
+            from banners.availability import prepare_banner_availability
+            prepare_banner_availability([obj])
+        return obj.link_available
 
     def validate(self, attrs):
         if self.instance is None and not attrs.get('image'):
@@ -1055,6 +1401,10 @@ class AdminServiceCategorySerializer(serializers.ModelSerializer):
 
 
 class AdminServiceItemSerializer(serializers.ModelSerializer):
+    price = serializers.IntegerField(min_value=1, max_value=2147483647, error_messages={
+        'min_value': '商品价格必须大于 0', 'max_value': '商品价格超出允许范围',
+    })
+
     @transaction.atomic
     def update(self, instance, validated_data):
         old_game = instance.game_category_id
@@ -1170,12 +1520,13 @@ class AdminPromotionSerializer(serializers.ModelSerializer):
     scope_display = serializers.CharField(source='get_scope_display', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True, default='')
     item_names = serializers.SerializerMethodField()
+    window_status = serializers.CharField(read_only=True)
 
     class Meta:
         model = Promotion
         fields = ['id', 'title', 'remark', 'discount_rate', 'commission_type', 'commission_fixed', 'commission_rate',
                   'scope', 'scope_display', 'category', 'category_name', 'items', 'item_names',
-                  'start_at', 'end_at', 'priority', 'is_active',
+                  'start_at', 'end_at', 'priority', 'is_active', 'window_status',
                   'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
 
@@ -1204,7 +1555,7 @@ class AdminSupportCardSerializer(serializers.ModelSerializer):
         model = SupportContactCard
         fields = ['id', 'name', 'company', 'wechat_id', 'wecom_corp_id',
                   'wecom_service_url', 'avatar_url', 'qrcode_url',
-                  'tips', 'is_active', 'sort_order', 'created_at']
+                  'tips', 'is_active', 'sort_order', 'created_at', 'updated_at']
 
     def validate(self, attrs):
         corp_id = attrs.get('wecom_corp_id', getattr(self.instance, 'wecom_corp_id', ''))
@@ -1224,16 +1575,66 @@ class AdminAuditionLinkSerializer(serializers.ModelSerializer):
     boss_user_name = serializers.SerializerMethodField()
     provider_user_name = serializers.SerializerMethodField()
     boss_url = serializers.SerializerMethodField()
+    boss_token = serializers.SerializerMethodField()
     provider_url = serializers.SerializerMethodField()
+    provider_token = serializers.SerializerMethodField()
+    boss_binding = serializers.SerializerMethodField()
+    provider_binding = serializers.SerializerMethodField()
+    entry_status = serializers.CharField(read_only=True)
+    boss_url_placeholder = serializers.SerializerMethodField()
+    provider_url_placeholder = serializers.SerializerMethodField()
 
     class Meta:
         model = AuditionLink
         fields = ['id', 'title', 'remark', 'expire_at', 'is_active',
                   'operator', 'operator_name', 'boss_token', 'provider_token',
                   'boss_user', 'boss_user_name', 'provider_user', 'provider_user_name',
+                  'boss_binding', 'provider_binding', 'entry_status', 'boss_url_placeholder', 'provider_url_placeholder',
                   'boss_url', 'provider_url', 'created_at', 'updated_at']
         read_only_fields = ['operator', 'boss_token', 'provider_token',
                             'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        if 'boss_user' in self.initial_data:
+            raise serializers.ValidationError({'boss_user': '请使用老板账号绑定操作，旧入口不可直接修改'})
+        if 'provider_user' in self.initial_data:
+            raise serializers.ValidationError({'provider_user': '请使用陪玩账号绑定操作，旧入口不可直接修改'})
+        return attrs
+
+    def get_boss_binding(self, obj):
+        if obj.boss_account_id:
+            account = obj.boss_account
+            return {'kind': 'account', 'id': account.id, 'name': account.nickname or account.username,
+                    'username': account.username, 'account_no': account.account_no,
+                    'available': account.is_active and account.can_login and account.account_type == 'BOSS'}
+        if obj.boss_user_id:
+            return {'kind': 'legacy', 'id': None, 'name': obj.boss_user.nickname or obj.boss_user.username,
+                    'username': obj.boss_user.username, 'account_no': '', 'available': None}
+        return {'kind': 'unbound', 'id': None, 'name': '', 'username': '', 'account_no': '', 'available': False}
+
+    def get_provider_binding(self, obj):
+        if obj.provider_account_id:
+            from club_accounts.otp import otp_required
+            account = obj.provider_account
+            return {'kind': 'account', 'id': account.id, 'name': account.nickname or account.username,
+                    'username': account.username, 'account_no': account.account_no,
+                    'available': account.is_active and account.can_login and account.account_type == 'PROVIDER',
+                    'otp_required': otp_required(account)}
+        if obj.provider_user_id:
+            return {'kind': 'legacy', 'id': None, 'name': obj.provider_user.nickname or obj.provider_user.username,
+                    'username': obj.provider_user.username, 'account_no': '', 'available': None, 'otp_required': None}
+        return {'kind': 'unbound', 'id': None, 'name': '', 'username': '', 'account_no': '', 'available': None, 'otp_required': None}
+
+    def _placeholder(self, setting):
+        from django.conf import settings
+        host = (urlsplit(getattr(settings, setting, settings.AUDITION_LINK_BASE_URL)).hostname or '').lower()
+        return not host or host == 'example.com' or host.endswith('.example.com') or host.endswith('.example')
+
+    def get_boss_url_placeholder(self, obj):
+        return self._placeholder('AUDITION_BOSS_LINK_BASE_URL')
+
+    def get_provider_url_placeholder(self, obj):
+        return self._placeholder('AUDITION_PROVIDER_LINK_BASE_URL')
 
     def get_operator_name(self, obj):
         if not obj.operator_id:
@@ -1261,34 +1662,65 @@ class AdminAuditionLinkSerializer(serializers.ModelSerializer):
         return f'{base}?token={token}&role={role}'
 
     def get_boss_url(self, obj):
-        return self._build_url(obj.boss_token, 'boss')
+        return self._build_url(obj.boss_token, 'boss') if self._can_manage_boss_link() else None
+
+    def get_boss_token(self, obj):
+        return obj.boss_token if self._can_manage_boss_link() else None
+
+    def _can_manage_boss_link(self):
+        if not hasattr(self, '_boss_link_allowed'):
+            from .permissions import get_account_permissions
+            request = self.context.get('request')
+            self._boss_link_allowed = bool(request and 'audition:bind_boss' in get_account_permissions(getattr(request, 'account', None)))
+        return self._boss_link_allowed
 
     def get_provider_url(self, obj):
-        return self._build_url(obj.provider_token, 'provider')
+        return self._build_url(obj.provider_token, 'provider') if self._can_access_provider_link(obj) else None
+
+    def get_provider_token(self, obj):
+        return obj.provider_token if self._can_access_provider_link(obj) else None
+
+    def _can_access_provider_link(self, obj):
+        if not obj.provider_account_id and not obj.provider_user_id:
+            return True
+        if not hasattr(self, '_provider_link_allowed'):
+            from .permissions import get_account_permissions
+            request = self.context.get('request')
+            self._provider_link_allowed = bool(request and 'audition:bind_provider' in get_account_permissions(getattr(request, 'account', None)))
+        return self._provider_link_allowed
 
 
 class AdminAuditionSignupSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     applicant_name = serializers.SerializerMethodField()
+    applicant_username = serializers.SerializerMethodField()
+    applicant_no = serializers.CharField(source='applicant_account.account_no', read_only=True, default='')
     link_title = serializers.SerializerMethodField()
     auditor_name = serializers.SerializerMethodField()
 
     class Meta:
         model = AuditionSignup
-        fields = ['id', 'link', 'link_title', 'applicant', 'applicant_name',
+        fields = ['id', 'link', 'link_title', 'applicant', 'applicant_name', 'applicant_username', 'applicant_no',
                   'contact', 'game', 'remark', 'status', 'status_display',
                   'auditor', 'auditor_name', 'audit_remark', 'audited_at',
                   'created_at', 'updated_at']
 
     def get_applicant_name(self, obj):
+        if obj.applicant_account_id:
+            return obj.applicant_account.nickname or obj.applicant_account.username
         if not obj.applicant_id:
             return ''
         return obj.applicant.nickname or obj.applicant.username
+
+    def get_applicant_username(self, obj):
+        return obj.applicant_account.username if obj.applicant_account_id else (obj.applicant.username if obj.applicant_id else '')
 
     def get_link_title(self, obj):
         return obj.link.title if obj.link_id else ''
 
     def get_auditor_name(self, obj):
+        if obj.auditor_account_id:
+            return obj.auditor_account.nickname or obj.auditor_account.username
         if not obj.auditor_id:
             return ''
         return obj.auditor.nickname or obj.auditor.username
@@ -1298,15 +1730,22 @@ class AdminAuditionSignupSerializer(serializers.ModelSerializer):
 class AdminMessageSerializer(serializers.ModelSerializer):
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     recipient_name = serializers.SerializerMethodField()
+    recipient_username = serializers.SerializerMethodField()
+    recipient_no = serializers.CharField(source='recipient_account.account_no', read_only=True, default='')
 
     class Meta:
         model = Message
-        fields = ['id', 'recipient', 'recipient_name', 'type', 'type_display', 'title',
+        fields = ['id', 'recipient', 'recipient_name', 'recipient_username', 'recipient_no', 'type', 'type_display', 'title',
                   'preview', 'detail', 'action_url', 'is_read', 'related_order_id',
                   'created_at']
 
     def get_recipient_name(self, obj):
+        if obj.recipient_account_id:
+            return obj.recipient_account.nickname or obj.recipient_account.username
         return obj.recipient.nickname or obj.recipient.username if obj.recipient_id else ''
+
+    def get_recipient_username(self, obj):
+        return obj.recipient_account.username if obj.recipient_account_id else (obj.recipient.username if obj.recipient_id else '')
 
 
 # ---------------- 角色 ----------------

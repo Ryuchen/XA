@@ -620,6 +620,12 @@ class WithdrawRequest(models.Model):
         help_text='实际打款的渠道流水号或人工转账凭证编号',
     )
     paid_at = models.DateTimeField(null=True, blank=True)
+    claimed_by_account = models.ForeignKey(
+        'club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='claimed_withdrawals',
+        help_text='先领取后线下打款，仅领取人可审核',
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
     auditor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='audited_withdrawals',

@@ -6,6 +6,7 @@ from .models import Coupon, UserCoupon
 class CouponSerializer(serializers.ModelSerializer):
     is_claimed = serializers.SerializerMethodField()
     claimable = serializers.SerializerMethodField()
+    claim_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Coupon
@@ -19,6 +20,7 @@ class CouponSerializer(serializers.ModelSerializer):
             'valid_to',
             'is_claimed',
             'claimable',
+            'claim_status',
         ]
 
     def get_is_claimed(self, obj):
@@ -27,6 +29,17 @@ class CouponSerializer(serializers.ModelSerializer):
 
     def get_claimable(self, obj):
         return obj.is_claimable
+
+    def get_claim_status(self, obj):
+        if obj.id in self.context.get('used_qualification_ids', set()):
+            return 'USED'
+        if self.get_is_claimed(obj):
+            return 'CLAIMED'
+        if obj.discount_type == Coupon.DiscountType.QUALIFICATION and not obj.service_ids:
+            return 'UNAVAILABLE'
+        if obj.total_qty and obj.claimed_qty >= obj.total_qty:
+            return 'SOLD_OUT'
+        return 'AVAILABLE' if obj.is_claimable else 'UNAVAILABLE'
 
 
 class UserCouponSerializer(serializers.ModelSerializer):
@@ -43,6 +56,7 @@ class UserCouponSerializer(serializers.ModelSerializer):
     experience_kind = serializers.CharField(source='coupon.experience_kind', read_only=True)
     platform = serializers.CharField(source='coupon.platform', read_only=True)
     valid_to = serializers.DateTimeField(read_only=True)
+    availability_status = serializers.CharField(read_only=True)
 
     class Meta:
         model = UserCoupon
@@ -55,6 +69,7 @@ class UserCouponSerializer(serializers.ModelSerializer):
             'amount',
             'valid_to',
             'status',
+            'availability_status',
             'claimed_at',
             'used_at',
         ]

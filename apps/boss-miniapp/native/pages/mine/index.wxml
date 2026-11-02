@@ -29,6 +29,7 @@
   </view>
 
   <view class="section-surface settings"><view class="panel-heading"><text class="menu-title" role="heading" aria-level="2">账号与服务</text></view>
+    <button class="xa-button menu-row" data-page="reservations" bindtap="open" hover-class="xa-button-hover"><view class="menu-main"><image src="/assets/icons/calendar.png" class="menu-icon" aria-hidden="true"/><text>我的预约</text></view><image class="arrow-icon" src="/assets/icons/chevron.png" aria-hidden="true"/></button>
     <button class="xa-button menu-row" data-page="profile" bindtap="open" hover-class="xa-button-hover"><view class="menu-main"><image src="/assets/icons/profile.png" class="menu-icon" aria-hidden="true"/><text>个人与游戏资料</text></view><image class="arrow-icon" src="/assets/icons/chevron.png" aria-hidden="true"/></button>
     <button class="xa-button menu-row" data-page="security" bindtap="open" hover-class="xa-button-hover"><view class="menu-main"><image src="/assets/icons/shield.png" class="menu-icon" aria-hidden="true"/><text>账号与微信绑定</text></view><image class="arrow-icon" src="/assets/icons/chevron.png" aria-hidden="true"/></button>
     <button class="xa-button menu-row" data-page="club-content" bindtap="open" hover-class="xa-button-hover"><view class="menu-main"><image src="/assets/icons/headphones.png" class="menu-icon" aria-hidden="true"/><text>俱乐部规范</text></view><image class="arrow-icon" src="/assets/icons/chevron.png" aria-hidden="true"/></button>

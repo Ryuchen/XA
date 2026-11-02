@@ -51,7 +51,7 @@ class GiftBenefitTests(APITestCase):
         claim=grant_entitlement(self.account, self.reward, 'vip:test:tag', 'VIP', {'tag': '我的专属标签'})
         now=datetime(2026, 1, 31, 12, tzinfo=ZoneInfo('Asia/Shanghai'))
         with patch('engagement.services.timezone.now', return_value=now):
-            process_claim(claim.pk, 'COMPLETED', '已交付', None)
+            process_claim(claim.pk, 'COMPLETED', '已交付', None, tag_reviewed=True)
             process_claim(claim.pk, 'COMPLETED', '已交付', None)
         claim.refresh_from_db()
         self.assertEqual(timezone.localtime(claim.expires_at).date().isoformat(), '2026-02-28')

@@ -1,50 +1,45 @@
 <template>
-  <el-dialog :model-value="modelValue" :title="`封禁管理 · ${targetName || '账户'}`" width="800px"
-    @update:model-value="emit('update:modelValue', $event)" class="ap-modal">
-    <div v-loading="loading">
-      <el-alert v-if="active" :title="`当前封禁：${active.reason}`" type="warning" :closable="false" />
-      <el-alert v-else-if="loaded" :title="accountActive && canLogin ? '账户当前可登录' : '账户当前停用，未发现生效封禁记录'"
-        type="info" :closable="false" />
-      <el-form v-if="auth.hasPerm('user:ban')"  class="ban-form ap-modal-form ap-form-grid" label-position="top">
-        <el-form-item label="操作原因" required class="ap-field--full">
-          <el-input v-model="reason" type="textarea" :rows="2" maxlength="2000" show-word-limit placeholder="填写封禁或解封原因，记入操作记录" />
-        </el-form-item>
-        <el-form-item label="封禁到期">
-          <el-date-picker v-model="expiresAt" type="datetime" clearable placeholder="留空为永久封禁" />
-        </el-form-item>
-        <el-form-item v-if="resource === 'escorts' && auth.hasPerm('user:ban_force')" label="强制处理">
-          <el-checkbox v-model="force">即使有在途订单也封禁，相关订单需要客服跟进</el-checkbox>
-        </el-form-item>
-      </el-form>
-      <el-alert v-if="blockingOrders.length" title="需先处理以下在途订单" type="warning" :closable="false">
+  <Dialog :open="modelValue" @update:open="value => emit('update:modelValue', value)"><DialogContent class="ban-dialog">
+    <DialogHeader><DialogTitle>封禁管理 · {{ targetName || '账户' }}</DialogTitle><DialogDescription>查看账户状态及封禁记录。</DialogDescription></DialogHeader>
+    <div class="ban-content">
+      <p v-if="loading" role="status">正在加载…</p>
+      <Alert v-if="active"><AlertDescription>当前封禁：{{ active.reason }}</AlertDescription></Alert>
+      <Alert v-else-if="loaded"><AlertDescription>{{ accountActive && canLogin ? '账户当前可登录' : '账户当前停用，未发现生效封禁记录' }}</AlertDescription></Alert>
+      <p v-if="notice" role="status" class="ban-notice">{{ notice }}</p>
+      <div v-if="auth.hasPerm('user:ban')" class="ban-form">
+        <label class="ban-field">操作原因 <Textarea v-model="reason" :rows="2" maxlength="2000" placeholder="填写封禁或解封原因，记入操作记录" /></label>
+        <label class="ban-field">封禁到期（留空为永久）<Input v-model="expiresAt" type="datetime-local" /></label>
+        <label v-if="resource === 'escorts' && auth.hasPerm('user:ban_force')" class="ban-force"><Checkbox v-model="force" />即使有在途订单也封禁，相关订单需要客服跟进</label>
+      </div>
+      <Alert v-if="blockingOrders.length"><AlertTitle>需先处理以下在途订单</AlertTitle><AlertDescription>
         <div v-for="orderNo in blockingOrders" :key="orderNo">{{ orderNo }}</div>
-      </el-alert>
+      </AlertDescription></Alert>
       <h3 class="ban-history-title">封禁记录</h3>
-      <el-table :data="records" max-height="280">
-        <el-table-column prop="status_display" label="状态" width="90" />
-        <el-table-column prop="reason" label="封禁原因" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="operator_name" label="操作人" width="100" />
-        <el-table-column label="封禁时间" width="160"><template #default="{ row }">{{ formatDateTime(row.banned_at) }}</template></el-table-column>
-        <el-table-column label="到期时间" width="160"><template #default="{ row }">{{ row.expires_at ? formatDateTime(row.expires_at) : '永久' }}</template></el-table-column>
-        <el-table-column prop="lift_reason" label="解封原因" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="lifted_by_name" label="解封人" width="100" />
-        <el-table-column label="解封时间" width="160"><template #default="{ row }">{{ row.lifted_at ? formatDateTime(row.lifted_at) : '—' }}</template></el-table-column>
-      </el-table>
-      <el-pagination v-model:current-page="page" :page-size="10" :total="total" layout="total, prev, pager, next" @current-change="load" />
+      <div class="ban-table"><Table><TableHeader><TableRow><TableHead>状态</TableHead><TableHead>封禁原因</TableHead><TableHead>操作人</TableHead><TableHead>封禁时间</TableHead><TableHead>到期时间</TableHead><TableHead>解封原因</TableHead><TableHead>解封人</TableHead><TableHead>解封时间</TableHead></TableRow></TableHeader><TableBody><TableRow v-for="row in records" :key="row.id"><TableCell>{{ row.status_display }}</TableCell><TableCell>{{ row.reason }}</TableCell><TableCell>{{ row.operator_name }}</TableCell><TableCell>{{ formatDateTime(row.banned_at) }}</TableCell><TableCell>{{ row.expires_at ? formatDateTime(row.expires_at) : '永久' }}</TableCell><TableCell>{{ row.lift_reason || '—' }}</TableCell><TableCell>{{ row.lifted_by_name || '—' }}</TableCell><TableCell>{{ row.lifted_at ? formatDateTime(row.lifted_at) : '—' }}</TableCell></TableRow></TableBody></Table><p v-if="!loading && !records.length">暂无封禁记录</p></div>
+      <div class="ban-pages"><span>共 {{ total }} 条 · 第 {{ page }} / {{ Math.max(1,Math.ceil(total / 10)) }} 页</span><Button variant="outline" :disabled="loading || page <= 1" @click="page--; load()">上一页</Button><Button variant="outline" :disabled="loading || page >= Math.ceil(total / 10)" @click="page++; load()">下一页</Button></div>
     </div>
-    <template #footer>
-      <el-button @click="emit('update:modelValue', false)">关闭</el-button>
+    <DialogFooter>
+      <Button variant="outline" @click="emit('update:modelValue', false)">关闭</Button>
       <template v-if="auth.hasPerm('user:ban')">
-        <el-button v-if="active" type="success" :loading="saving" :disabled="loading" @click="submit('unban')">解封账户</el-button>
-        <el-button type="danger" :loading="saving" :disabled="loading || !loaded" @click="submit('ban')">{{ active ? '更新封禁' : '封禁账户' }}</el-button>
+        <Button v-if="active" variant="outline" :disabled="loading || saving" @click="submit('unban')">解封账户</Button>
+        <Button variant="destructive" :disabled="loading || saving || !loaded" @click="submit('ban')">{{ saving ? '处理中…' : active ? '更新封禁' : '封禁账户' }}</Button>
       </template>
-    </template>
-  </el-dialog>
+    </DialogFooter>
+  </DialogContent></Dialog>
+  <ConfirmDialog v-model:open="confirmOpen" v-bind="confirmOptions" @confirm="confirmYes" @cancel="confirmNo" />
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { Button } from '@xa/shadcn-vue/button'
+import { Input } from '@xa/shadcn-vue/input'
+import { Textarea } from '@xa/shadcn-vue/textarea'
+import { Checkbox } from '@xa/shadcn-vue/checkbox'
+import { Alert, AlertDescription, AlertTitle } from '@xa/shadcn-vue/alert'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@xa/shadcn-vue/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@xa/shadcn-vue/table'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { request } from '@/api/request'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/format'
@@ -52,6 +47,7 @@ import { formatDateTime } from '@/utils/format'
 const props = defineProps<{ modelValue: boolean; targetId?: number; resource: 'users' | 'escorts'; targetName?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; changed: [] }>()
 const auth = useAuthStore()
+const { open: confirmOpen, options: confirmOptions, ask: askConfirm, confirm: confirmYes, cancel: confirmNo } = useConfirmDialog()
 const records = ref<any[]>([])
 const active = ref<any>(null)
 const accountActive = ref(false)
@@ -60,7 +56,8 @@ const loading = ref(false)
 const loaded = ref(false)
 const saving = ref(false)
 const reason = ref('')
-const expiresAt = ref<Date | null>(null)
+const expiresAt = ref('')
+const notice = ref('')
 const force = ref(false)
 const blockingOrders = ref<string[]>([])
 const page = ref(1)
@@ -87,27 +84,22 @@ async function load() {
 
 async function submit(action: 'ban' | 'unban') {
   if (saving.value || !props.targetId) return
-  if (!reason.value.trim()) { ElMessage.warning('请填写操作原因'); return }
+  if (!reason.value.trim()) { notice.value = '请填写操作原因'; return }
   const targetId = props.targetId
   const resource = props.resource
-  try {
-    await ElMessageBox.confirm(action === 'ban' ? '封禁后该账户将无法登录，请确认原因及订单处理安排。' : '确认解封？系统将恢复封禁前的账户状态。',
-      action === 'ban' ? '确认封禁' : '确认解封', { type: 'warning' })
-  } catch { return }
+  if (!await askConfirm({title:action === 'ban' ? '确认封禁' : '确认解封',description:action === 'ban' ? '封禁后该账户将无法登录，请确认原因及订单处理安排。' : '确认解封？系统将恢复封禁前的账户状态。'})) return
   if (!props.modelValue || targetId !== props.targetId || resource !== props.resource) return
   saving.value = true
   blockingOrders.value = []
   try {
     const result = await request({ url: `/${resource}/${targetId}/${action}/`, method: 'post', data: {
-      reason: reason.value.trim(), ...(action === 'ban' ? { expires_at: expiresAt.value?.toISOString() || null, force: force.value } : {}),
+      reason: reason.value.trim(), ...(action === 'ban' ? { expires_at: expiresAt.value ? new Date(expiresAt.value).toISOString() : null, force: force.value } : {}),
     } })
     emit('changed')
     if (!props.modelValue || targetId !== props.targetId) return
     const orphaned = result.data?.orphaned_order_count || 0
-    ElMessage.success(action === 'ban' ? '封禁已生效' : '已解封')
-    if (orphaned) {
-      await ElMessageBox.alert(`还有 ${orphaned} 笔在途订单需要跟进：${(result.data.orphaned_order_nos || []).join('、')}`, '订单跟进提醒')
-    }
+    notice.value = action === 'ban' ? '封禁已生效' : '已解封'
+    if (orphaned) notice.value += `；还有 ${orphaned} 笔在途订单需要跟进：${(result.data.orphaned_order_nos || []).join('、')}`
     reason.value = ''
     force.value = false
     page.value = 1
@@ -126,15 +118,24 @@ watch(() => [props.modelValue, props.targetId, props.resource], () => {
   page.value = 1
   total.value = 0
   reason.value = ''
-  expiresAt.value = null
+  expiresAt.value = ''
   force.value = false
   blockingOrders.value = []
+  notice.value = ''
+  confirmNo()
   if (props.modelValue) void load().catch(() => {})
 }, { immediate: true })
 </script>
 
 <style scoped>
-.ban-form { margin-top: 20px; }
+.ban-dialog { max-width:min(800px, calc(100vw - 24px)); }
+.ban-content { max-height:65vh; overflow:auto; }
+.ban-form { margin-top: 20px; display:grid; gap:12px; }
+.ban-field { display:grid; gap:8px; }
+.ban-force { display:flex; gap:8px; align-items:center; }
 .ban-history-title { margin: 20px 0 12px; font-size: 15px; }
-.el-pagination { margin-top: 12px; }
+.ban-table { max-height:280px; overflow:auto; }
+.ban-table :deep(table) { min-width:900px; }
+.ban-pages { margin-top:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.ban-notice { color:var(--primary); }
 </style>

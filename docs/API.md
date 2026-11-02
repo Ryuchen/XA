@@ -373,17 +373,29 @@
 - PUT `/withdraw-accounts/<payee_method>/` body：`payee_account, payee_name, expected_id, expected_version`。首次绑定传两个 `0`；修改传最近读取的 ID/版本。每名陪玩每种方式最多一条。
 - DELETE 同路径 body：`expected_id, expected_version`，解绑不影响已提交申请。旧页 ID/版本不匹配时返回 `code=409, errorCode=PAYEE_CHANGED`，不能覆盖重新绑定的账户。
 
+### 3.1.3 后台提现领取与审核
+
+后台提现列表和详情返回 `claimed_by_account`、`claimed_by_name`、`claimed_at` 和当前账号的 `claim_is_mine`。待审核申请须先由持有 `withdraw:audit` 的客服调用 `POST /api/admin/withdrawals/<id>/claim/`；本人重复领取返回当前领取，其他客服领取时返回 409。历史待审核申请迁移后为未领取状态。
+
+领取人核对最新收款快照并线下打款后，调用 `POST /api/admin/withdrawals/<id>/approve/`，提交 `payout_reference` 和本次领取返回的 `expected_claimed_at`。驳回使用 `POST /api/admin/withdrawals/<id>/reject/`，提交 `audit_remark` 和同一 `expected_claimed_at`。审核仅接受当前领取人及当前领取时间；缺失或不一致返回 409，须重新读取申请并核对打款记录。仅比较账号不足以区分同一账号在释放后的再次领取。
+
+持有 `withdraw:view` 和 `withdraw:release` 的管理员在核实尚未打款后，可调用 `POST /api/admin/withdrawals/<id>/release-claim/`，提交 `confirmed_unpaid: true`、`reason`、`expected_claimed_by_account` 和 `expected_claimed_at`。仅当前待审核且领取信息一致时释放，写入审计并允许其他客服重新领取；不自动释放。领取、释放和审核变更推送提现状态，客户端断线重连后应重新读取详情。
+
+上线时需先执行包括 `wallet.0032` 和 `console.0016` 的数据库迁移，再同步更新后台客户端；未发送领取时间的旧审核客户端无法继续审核。线下打款仍需管理员与领取人核实，接口不能控制系统外转账。
+
 ### 3.2 订单关联报单、凭证与审核
 
 | 方法/路径（均在 `/api/wallet/` 下） | 请求 | 返回/约束 |
 | --- | --- | --- |
 | `GET reports/` | — | 当前账号自己的报单数组，包含草稿、待审核、已通过与已驳回记录 |
-| `POST reports/` | JSON `order_id` | 本人已接单/服务中/已完成的服务订单，返回创建或恢复的 `DRAFT` 草稿；同一订单/陪玩不重复建报单。礼物、订单打赏及转单后无结算份额者不能新建服务报单 |
+| `POST reports/` | JSON `order_id` | 本人已接单/服务中/已完成的服务订单，返回现有报单或创建 `DRAFT` 草稿；同一订单/陪玩不重复建报单。礼物、订单打赏及转单后无结算份额者不能使用此入口 |
 | `POST reports/<id>/images/` | multipart `image` 文件、`kind=ENTRY/COMPLETION/RESULT` | 入队/结单各一张（再次上传替换）；战绩图片追加，最多九张；须为有效图片且报单可编辑，返回最新报单对象 |
 | `DELETE reports/<id>/images/<image_id>/` | — | 仅移除本人可编辑报单的战绩图片引用，图片不存在返回 `code=404`；原文件由媒体保留策略处理 |
 | `POST reports/<id>/submit/` | 无须提交金额或抽成 | 服务订单须 `COMPLETED + PAID`，且有入队、结单和至少一张战绩截图；成功变为 `PENDING`、更新 `submitted_at` 并清空旧驳回备注 |
 
 创建草稿时，服务名称/备注、本人结算基数与抽成从关联订单和本人分账快照生成，客户端不以 `game_name/amount/proof_image` 新建手工报单。开始/完成服务上传的入队/结单截图会同步到该成员报单。三类凭证均通过权限签发的私有 URL 展示，查看过期图片应续签，不能把文件路径当公开素材。
+
+订单列表及详情为陪玩返回 `report_entry: {available, reason}`，表示当前账号能否使用上述 POST 创建或获取该订单报单，原因与 POST 的资格判断一致；其他身份返回 `null`。这不是报单编辑或历史查看权限：报单列表仍保留本人历史记录，能否编辑及提交以报单对象字段为准。实际提交时服务端仍以最新订单状态重新判断。
 
 报单对象字段：
 
@@ -393,7 +405,7 @@
 | 金额/抽成 | `amount` 为本人结算基数；`expected_income` 为当前服务端收益快照；`commission_type=PERCENT/FIXED`、`commission_rate`、`commission_fixed`、`payout_amount`。金额均为内部账务单位；`FIXED` 的 `commission_rate=0` 不能解释为零抽成，须用固定抽成和收益快照展示 |
 | 凭证 | `proof_image_url`（历史兼容）、`entry_image_url, completion_image_url, result_image_urls[]`、`result_images[{id,url}]`（用于准确删除对应图片） |
 | 审核 | `status=DRAFT/PENDING/APPROVED/REJECTED, status_display, remark, audit_remark, created_at, audited_at, submitted_at` |
-| 履约/结算 | `order_status, settled_at`；`APPROVED` 仅表示凭证通过，`settled_at` 才表明订单分账已执行，不能仅凭审核状态当作可提现余额 |
+| 履约/结算 | `order_status, settled_at, aftersale_status`；`aftersale_status` 为关联订单售后状态或空字符串，不包含老板的售后原文。`OPEN` 未结算订单暂不结算，已结算订单仍以钱包流水核对；`APPROVED` 仅表示凭证通过，`settled_at` 才表明订单分账已执行，不能仅凭审核状态当作可提现余额 |
 | 操作能力 | `can_edit, can_submit, edit_block_reason`；仅草稿/驳回且关联订单仍已付、未停止流程、本人仍有必要报单份额时可编辑。`can_submit` 另要求订单完成；该字段不代表截图已齐全，提交仍校验三类凭证 |
 
 驳回后可补图并重提；取消、退款、回待接单池以及本人已退出且无结算份额时停止编辑与提交。后台列表排除 `DRAFT`；审核权限为 `report:audit`，只允许待审核报单通过/驳回，驳回必须有 `audit_remark`。后台对象另返回 `suggested_commission_rate, commission_source_label, commission_type, commission_fixed, expected_income, settlement_mode, settled_at`；关联订单采用本人已经保存的分账快照，不能在审核时将固定抽成重新套成百分比。
@@ -443,6 +455,8 @@
 | 全部已读 | `POST /api/messages/read-all/` | 全量置已读 |
 | 详情 | `GET /api/messages/<message_id>/` | 读取自动置已读；不存在→404 |
 
+站内消息创建或已读状态变化后，提交成功会向接收账号发送 `site_message_update` WebSocket 失效提示，消息内容及未读数仍通过上述 HTTP 接口读取；重连后应重新查询，推送不是持久消息队列。
+
 均需登录且仅能访问本人消息。
 
 ### 5.4 客服名片
@@ -454,9 +468,10 @@
 
 | 接口 | 方法/路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| 会话+历史 | `GET /api/chat/session/` | 登录（OPERATOR 拒绝，走后台工作台） | 自动创建会话，返回 `session{id,last_message,last_message_at,unread_user,created_at}` + `messages[]` |
-| 发送 | `POST /api/chat/send/` | 登录（OPERATOR 拒绝） | body `content` 或 `image`（multipart），至少其一；`unread_support+1` 并 WS 推送 |
-| 标记已读 | `POST /api/chat/read/` | 登录 | 清零 `unread_user` |
+| 会话+历史 | `GET /api/chat/session/` | 登录（OPERATOR 拒绝，走后台工作台） | 自动创建会话并返回最近 50 条消息；响应含 `session`、按时间正序排列的 `messages[]`、`has_more`、`next_before_id`。加载更早记录传 `before_id=next_before_id`；游标只属于当前账号的会话。 |
+| 客服回复未读数 | `GET /api/chat/unread/` | 登录（客服账号除外） | 返回 `unread`；仅读取现有会话，不创建空会话。 |
+| 发送 | `POST /api/chat/send/` | 登录（OPERATOR 拒绝） | body `content`（最多 1000 字）或 `image`（multipart），至少其一；`unread_support+1` 并 WS 推送。无旧用户映射的业务账号也可创建会话；未绑定的历史会话会按已认证旧身份关联。 |
+| 标记已读 | `POST /api/chat/read/` | 登录 | `through_id` 为已展示的最后消息 ID；仅标记该 ID 及之前的客服消息，返回剩余 `unread_user`。旧客户端省略时沿用全部标记已读。 |
 
 消息对象字段：`id, is_from_support, content_type, content_type_display, content, image_url, is_read, created_at`。
 
@@ -525,6 +540,10 @@
 | 促销活动 | `promotions` | 读写 | `promotion:view` / `promotion:edit` | — |
 | 客服名片 | `support-cards` | 读写 | `support:view` / `support:edit` | — |
 | 试音链接 | `audition-links` | 读写 | `audition:view` / `audition:edit` | — |
+| 老板试音入口 | `audition-links/{id}/bind-boss/` | POST | `audition:bind_boss` | `account_id` 为老板业务账号 ID 或 null，`expected_updated_at` 为读取版本；绑定变化轮换老板 token，保留陪玩 token，旧版 `boss_user` 直接修改被拒绝。持有该权限才能读取老板 token 和 URL；不撤销已签发会话。 |
+| 老板试音入口候选 | `options/audition-bosses/` | GET | `audition:bind_boss` | 返回可登录老板账号的编号、昵称和用户名，不返回余额。 |
+| 陪玩试音入口 | `audition-links/{id}/bind-provider/` | POST | `audition:bind_provider` | `account_id` 为陪玩业务账号 ID 或 null，`expected_updated_at` 为读取版本；绑定变化轮换陪玩 token，保留老板 token 和既有报名，旧版 `provider_user` 直接修改被拒绝。已绑定入口的 token 和 URL 仅该权限可读；普通报名入口仍按查看权限读取。轮换不撤销已签发会话，绑定也不限制其他已登录陪玩报名。 |
+| 陪玩试音入口候选 | `options/audition-providers/` | GET | `audition:bind_provider` | 返回可登录陪玩账号的编号、昵称和用户名。 |
 | 试音报名 | `audition-signups` | 只读 | `audition:signup_view` | `status, link, keyword` |
 | 会话 | `chat-sessions` | 只读 | `chat:view` | `keyword, only_unread` |
 | 站内消息 | `messages` | 只读 | `message:view` | `type, recipient` |
@@ -550,13 +569,27 @@
 | 提现 | 通过 | `POST withdrawals/<id>/approve/` | `withdraw:audit` | `frozen-=amount`，流水→SUCCESS |
 | 提现 | 驳回 | `POST withdrawals/<id>/reject/` | `withdraw:audit` | `audit_remark`(必填)；`frozen-=amount, balance+=amount`，流水→FAILED |
 | 会话 | 消息列表 | `GET chat-sessions/<id>/messages/` | `chat:view` | — |
-| 会话 | 回复 | `POST chat-sessions/<id>/reply/` | `chat:reply` | `content` 或 `image`；`unread_user+1`，WS 推送 |
-| 会话 | 标记已读 | `POST chat-sessions/<id>/read/` | `chat:reply` | 清零 `unread_support` |
+| 会话 | 回复 | `POST chat-sessions/<id>/reply/` | `chat:reply` | `content` 或 `image`；可传 `read_through_id` 仅将已展示的用户消息标为已读，`unread_user+1`，WS 推送。旧客户端省略时沿用全部标记已读。 |
+| 会话 | 标记已读 | `POST chat-sessions/<id>/read/` | `chat:reply` | 可传 `through_id`，仅标记该 ID 及之前的用户消息，返回剩余 `unread_support`；旧客户端省略时沿用全部标记已读。 |
 | 试音报名 | 通过 | `POST audition-signups/<id>/approve/` | `audition:signup_audit` | 发站内消息通知 |
 | 试音报名 | 驳回 | `POST audition-signups/<id>/reject/` | `audition:signup_audit` | `audit_remark`(必填) |
 | 站内消息 | 推送 | `POST messages/push/` | `message:push` | `title, preview, detail, type, broadcast(bool), recipient_ids[]` |
 
 ---
+
+#### 老板订单筛选确认
+
+`GET /api/admin/orders/?customer_account_id=<老板账号ID>` 按业务账号筛选，并兼容关联该账号的旧用户订单。成功响应的 `data.customer_account_id_applied` 为实际应用的账号 ID 字符串，空结果也会返回；未指定筛选不返回该字段。无效 ID 返回 400。后台页面要求确认值与请求一致，缺失或不一致时不展示结果；前后端需要配合部署。
+
+`GET /api/admin/orders/?created_day=YYYY-MM-DD` 按服务端当前时区的订单创建自然日筛选，起始包含、次日零点不包含；成功响应在 `data.created_day_applied` 返回 `date` 和 `timezone`，即使没有匹配订单也返回。日期无效返回 400；未指定日期不返回该字段。工作台的七日新增订单使用相同时区和创建日期，统计与列表分别读取，期间数据变化可能造成数量差异。新页面要求服务端确认日期，前后端需配合部署。
+
+`GET /api/admin/orders/?actionable_staff=1` 的客服可派队列按 `auto_cancel_at` 从早到晚排序，未记录截止时间的订单排后，同一截止时间按创建时间及 ID 升序稳定排序；直付校验有上限时亦优先检查较早截止的候选项。成功响应的 `data.staff_queue_order` 为 `deadline_asc`；旧服务未返回时页面显示排序待确认。`staff_queue_needs_review` 仍表示有订单需要单独核对，排序不替代指派时资格检查。
+
+工作台 `pending_paid_overdue` 统计读取时仍为已支付、待接单且接单截止时间已到的订单；无截止时间的不计入。`GET /api/admin/orders/?overdue_pending=1` 按服务端当前时间筛选相同范围，成功响应包含 `data.overdue_pending_applied=true`。单独筛选时按截止时间、创建时间和订单 ID 升序排序，并返回 `overdue_pending_order=deadline_asc`；与售后或客服待派叠加时沿用对应队列排序。两次读取间状态或时间可能变化，数量不保证相等。该筛选只供核对，不执行取消或退款。
+
+工作台 `legacy_team_inflight_total` 统计当前仍处于已接单或服务中、且使用旧版履约流程的双陪订单。`GET /api/admin/orders/?legacy_team=1` 筛选同一范围，成功返回 `data.legacy_team_applied=true`；跨请求期间状态变化可能导致数量不同。客服核实双方尚未开始后，可对满足条件的已接单订单提交 `POST /api/admin/orders/{id}/enable-team-evidence/`，请求体为 `{"confirmed":true}`；服务端会再次核查成员及履约记录并写入状态流水，不能切换已开始服务或已有报单的订单。该操作需要 `order:dispatch` 权限，不自动修改其他历史订单。
+
+`GET /api/admin/orders/?aftersale_open=1` 返回当前有处理中售后的订单，按本轮申请时间从早到晚、同一时间按订单 ID 升序排列，分页前完成排序；成功响应 `data.aftersale_queue_order` 为 `opened_asc`，每行 `aftersale_open_at` 为本轮申请时间。售后处理后再次申请使用重新申请时间，不是原订单创建时间。叠加 `actionable_staff=1` 时仍按客服待派截止时间排序，仅返回其排序标记；未确认排序时页面显示“排序待确认”。
 
 ### 10.2 订单百分比与整单固定抽成
 

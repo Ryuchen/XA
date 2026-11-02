@@ -27,10 +27,10 @@
 .is-summoning .summon-ring { border-color:var(--xa-color-primary); animation:summon-pulse .75s ease-in-out infinite alternate; }
 .is-summoning.rarity-SSR .summon-ring { border-color:var(--lottery-gold); box-shadow:0 0 28rpx rgba(var(--xa-warning-rgb),.25); }
 .draw-actions { display:flex; gap:16rpx; }
-.lottery-page .xa-button.draw-button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2rpx; min-height:52px; padding:8rpx 12rpx; border-radius:14rpx; font-size:15px; font-weight:650; }
+.lottery-page .xa-button.draw-button { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:var(--xa-control-compact); padding:8rpx 16rpx; border-radius:var(--xa-radius-control); font-size:var(--xa-control-font); line-height:1.2; font-weight:650; }
 .lottery-page .draw-single { background:var(--xa-color-primary-soft); color:var(--xa-color-primary); border:1rpx solid var(--xa-color-border); }
 .lottery-page .draw-ten { background:var(--xa-gradient-primary); color:var(--xa-color-on-primary); }
-.draw-cost { font-size:12px; font-weight:400; }
+.draw-cost { font-size:var(--xa-control-small-font); font-weight:400; }
 .lottery-page .xa-button.draw-button[disabled] { background:var(--xa-color-surface-subtle); color:var(--xa-color-muted); border:1rpx solid var(--xa-color-border); }
 .centered { display:block; margin:14rpx 0 0; text-align:center; font-size:12px; }
 .request-status { color:var(--xa-color-primary); }

@@ -10,7 +10,7 @@ from rest_framework.test import APITestCase
 from audition.models import AuditionLink
 from console.models import AdminMembership, AdminRole
 from orders.models import Evaluation
-from orders.ratings import apply_escort_rating
+from orders.ratings import refresh_escort_rating
 from orders.tests.factories import (
     Transaction,
     User,
@@ -81,7 +81,7 @@ class EvaluationAdminTest(APITestCase):
     def test_reply_success(self):
         ev = self._eval(score=5)
         self.client.force_authenticate(self.admin)
-        res = self.client.post(f'/api/admin/evaluations/{ev.id}/reply/', {'reply_content': '感谢'})
+        res = self.client.post(f'/api/admin/evaluations/{ev.id}/reply/', {'reply_content': '感谢', 'reply_version': 0}, format='json')
         self.assertEqual(res.data['code'], 0)
         ev.refresh_from_db()
         self.assertEqual(ev.reply_content, '感谢')
@@ -94,10 +94,10 @@ class EvaluationAdminTest(APITestCase):
         self.assertEqual(res.data['code'], 400)
 
     def test_destroy_rolls_back_rating(self):
-        apply_escort_rating(self.provider.id, 4)  # 模拟评价已计入聚合
         ev = self._eval(score=4)
+        refresh_escort_rating(self.provider.id)
         self.client.force_authenticate(self.admin)
-        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/')
+        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0}, format='json')
         self.assertEqual(res.data['code'], 0)
         self.assertFalse(Evaluation.objects.filter(id=ev.id).exists())
         self.provider.escort_profile.refresh_from_db()
@@ -115,7 +115,7 @@ class EvaluationAdminTest(APITestCase):
         user = make_console_user(perms=['evaluation:view'])
         self.client.force_authenticate(user)
         self.assertEqual(self.client.get('/api/admin/evaluations/').status_code, 200)
-        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/')
+        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0}, format='json')
         self.assertEqual(res.status_code, 403)
         self.assertTrue(Evaluation.objects.filter(id=ev.id).exists())
 
@@ -123,7 +123,7 @@ class EvaluationAdminTest(APITestCase):
         ev = self._eval(score=5)
         user = make_console_user(perms=['evaluation:view', 'evaluation:delete'])
         self.client.force_authenticate(user)
-        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/')
+        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0}, format='json')
         self.assertEqual(res.status_code, 200)
         self.assertFalse(Evaluation.objects.filter(id=ev.id).exists())
 
@@ -248,9 +248,11 @@ class WithdrawAdminTest(APITestCase):
     def test_approve_deducts_frozen(self):
         withdraw = self._apply_withdraw(amount=20000)
         self.client.force_authenticate(self.admin)
+        claim = self.client.post(f'/api/admin/withdrawals/{withdraw.id}/claim/').data
+        self.assertEqual(claim['code'], 0)
         res = self.client.post(
             f'/api/admin/withdrawals/{withdraw.id}/approve/',
-            {'payout_reference': 'WX-PAYOUT-001'},
+            {'payout_reference': 'WX-PAYOUT-001', 'expected_claimed_at': claim['data']['claimed_at']},
         )
         self.assertEqual(res.data['code'], 0)
         wallet = Wallet.objects.get(user=self.provider)
@@ -264,9 +266,11 @@ class WithdrawAdminTest(APITestCase):
     def test_reject_refunds_balance(self):
         withdraw = self._apply_withdraw(amount=20000)
         self.client.force_authenticate(self.admin)
+        claim = self.client.post(f'/api/admin/withdrawals/{withdraw.id}/claim/').data
+        self.assertEqual(claim['code'], 0)
         res = self.client.post(
             f'/api/admin/withdrawals/{withdraw.id}/reject/',
-            {'audit_remark': '信息有误'},
+            {'audit_remark': '信息有误', 'expected_claimed_at': claim['data']['claimed_at']},
         )
         self.assertEqual(res.data['code'], 0)
         wallet = Wallet.objects.get(user=self.provider)
@@ -284,13 +288,15 @@ class WithdrawAdminTest(APITestCase):
     def test_approve_twice_rejected(self):
         withdraw = self._apply_withdraw(amount=20000)
         self.client.force_authenticate(self.admin)
+        claim = self.client.post(f'/api/admin/withdrawals/{withdraw.id}/claim/').data
+        self.assertEqual(claim['code'], 0)
         self.client.post(
             f'/api/admin/withdrawals/{withdraw.id}/approve/',
-            {'payout_reference': 'WX-PAYOUT-002'},
+            {'payout_reference': 'WX-PAYOUT-002', 'expected_claimed_at': claim['data']['claimed_at']},
         )
         res = self.client.post(
             f'/api/admin/withdrawals/{withdraw.id}/approve/',
-            {'payout_reference': 'WX-PAYOUT-003'},
+            {'payout_reference': 'WX-PAYOUT-003', 'expected_claimed_at': claim['data']['claimed_at']},
         )
         self.assertEqual(res.data['code'], 400)
 

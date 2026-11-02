@@ -107,10 +107,38 @@ class ListQueryBoundsTest(APITestCase):
         self.assertTrue(all('GRAB' in row['allowed_actions'] for row in rows))
         self.assertLessEqual(larger_queries, queries + 1)
         # One shared prefetch loads complaint states for the whole page.
-        self.assertLessEqual(larger_queries, 16)  # Shared qualification/skill prefetches remain independent of pool size.
+        # Shared qualification, refund and settlement prefetches remain
+        # independent of pool size as the list exposes more order context.
+        self.assertLessEqual(larger_queries, 21)
         EscortProfile.objects.filter(account=account).update(deposit_required=100)
         rows, _ = self.read('/api/orders/orders/?status=pending')
         self.assertEqual(rows, [])
+
+    def test_teammate_picker_queries_are_bounded_and_respect_capacity_and_schedule(self):
+        requester_user, requester = self.provider()
+        first_user, first = self.provider()
+        service = make_service(name='双陪测试', billing_provider_count=2)
+        order = make_order(self.boss, service=service, customer_account=self.boss_account,
+                           payment_status='PAID', requires_boss_selection=True)
+        Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(hours=1))
+        self.login(requester)
+        url = f'/api/orders/orders/{order.pk}/teammates/'
+        initial, queries = self.read(url)
+        added = [self.provider() for _ in range(19)]
+        rows, larger_queries = self.read(url)
+        self.assertEqual(len(initial), 1)
+        self.assertEqual(len(rows), 20)
+        self.assertLessEqual(larger_queries, queries + 2)
+        # Full-capacity and off-shift teammates must disappear on the next read.
+        for _ in range(Order.MAX_CONCURRENT_ORDERS):
+            make_order(self.boss, service=service, provider=first_user, provider_account=first, status='GRABBED')
+        off_user, off = added[0]
+        EscortSchedule.objects.create(provider=off_user, account=off,
+                                      weekday=(timezone.localdate().weekday() + 1) % 7,
+                                      start_minute=0, end_minute=1440)
+        rows, _ = self.read(url)
+        self.assertNotIn(first.pk, {row['id'] for row in rows})
+        self.assertNotIn(off.pk, {row['id'] for row in rows})
 
     def test_prefetched_income_is_personal_and_does_not_leak_other_provider_share(self):
         first_user, first = self.provider()

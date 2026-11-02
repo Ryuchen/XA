@@ -43,7 +43,7 @@ Page({
     } catch (error) { if (this._alive && seq === this._seq) this.setData({ moreError: error.message }); }
     finally { if (this._alive && seq === this._seq) this.setData({ loadingMore: false }); }
   },
-  format(items) { return (items || []).map(item => ({ ...item, title: labels[item.tx_type] || item.tx_type, time: date(item.created_at), displayAmount: (item.amount > 0 ? '+' : '') + money(item.amount), after: money(item.balance_after) })); },
+  format(items) { return (items || []).map(item => ({ ...item, title: item.tx_type === 'GIFT' ? (item.amount > 0 ? '赠送入账' : item.amount < 0 ? '赠送支出' : '赠送') : labels[item.tx_type] || item.tx_type, time: date(item.created_at), displayAmount: (item.amount > 0 ? '+' : '') + money(item.amount), after: money(item.balance_after) })); },
   filter(event) { this.setData({ filter: event.currentTarget.dataset.value, items: [] }); this.load(); },
   recharge() { go('/pages/support/index?scene=recharge'); },
   login() { auth.ensure(); },

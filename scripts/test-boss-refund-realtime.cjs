@@ -20,7 +20,8 @@ function native(name) {
   const auth = { getSession: () => owner ? { token: 'fixture', user: { id: owner } } : null, ensure: () => !!owner, revision: () => revision };
   const request = async (url, method = 'GET', data) => { calls.push({ url, method, data }); return response ? response(url, method, data)
     : url.includes('/aftersale/') ? sale : url.includes('/orders/') ? order : { balance: 1234, frozen_amount: 0, total: 1, transactions: [{ id: 1, amount: 1234, tx_type: 'REFUND', created_at: '2026-10-20T10:00:00Z' }] }; };
-  const ui = { money: value => String(value / 10), date: value => value || '', image: value => value || '', toast() {}, go() {} };
+  const ui = { money: value => String(value / 10), date: value => value || '', image: value => value || '', toast() {}, go() {},
+    modal: options => typeof modal === 'function' ? modal(options) : options.success(modal) };
   const orderModule = { exports: {} };
   vm.runInNewContext(fs.readFileSync(path.join(root, 'apps/boss-miniapp/native/core/orders.js'), 'utf8'), { module: orderModule, exports: orderModule.exports, require: () => ui });
   const pageModule = { exports: {} };
@@ -50,6 +51,22 @@ test('native wallet rejects in-flight data across account changes and page unloa
   const s = native('wallet'), pending = deferred(); s.respond(() => pending.promise); s.page.onShow();
   s.session(null); pending.resolve({ balance: 999990, transactions: [], total: 0 }); await tick();
   assert.equal(s.page.data.balance, ''); s.page.onUnload();
+});
+
+test('native wallet describes gift credits and gift debits without guessing their source', async () => {
+  const s = native('wallet');
+  s.respond(() => ({ balance: 12500, frozen_amount: 0, total: 2, transactions: [
+    { id: 1, tx_type: 'GIFT', amount: 1000, balance_after: 13000, remark: '客服赠送兴安币' },
+    { id: 2, tx_type: 'GIFT', amount: -500, balance_after: 12500, remark: '礼物打赏' },
+  ] }));
+  await s.show();
+  assert.equal(s.page.data.items[0].title, '赠送入账');
+  assert.equal(s.page.data.items[1].title, '赠送支出');
+  assert.equal(s.page.data.items[0].displayAmount, '+100');
+  assert.equal(s.page.data.items[1].displayAmount, '-50');
+  s.page.filter({ currentTarget: { dataset: { value: 'TOPUP' } } }); await tick();
+  assert.match(s.calls.at(-1).url, /tx_type=TOPUP$/);
+  s.page.onUnload();
 });
 
 const mineData = (url, { vip = '原会员', points = 100, balance = 1000 } = {}) => url === '/club/me/' ? { vip: { name: vip }, points, display_tags: [{ key: 'vip', title: vip }] }
@@ -87,6 +104,44 @@ test('native aftersale detail reloads the actual resolution and distinguishes re
   assert.equal(s.page.data.aftersale.resolution, '本地审核已全额退款'); assert.equal(s.page.data.order.amountText, '123.4'); assert.equal(s.page.data.order.canAfterSale, false);
   const template = fs.readFileSync(path.join(root, 'apps/boss-miniapp/native/pages/order-detail/index.wxml'), 'utf8');
   assert.match(template, /aftersale.resolution/); assert.match(template, /order.refundAmountText.*已退回钱包/); assert.match(template, /<bottom-navigation\/>/);
+  s.page.onUnload();
+});
+
+test('native defers order update during an operation and reloads even when it fails', async () => {
+  const s = native('order-detail'), pending = deferred();
+  s.set(baseOrder(), null); await s.show();
+  const operation = s.page.operate(async () => { await pending.promise; throw Error('订单状态已变化'); });
+  assert.equal(s.page.data.busy, true);
+  s.set({ ...baseOrder(), status: 'CANCELLED', payment_status: 'REFUNDED', can_aftersale: false,
+    refund_summary: { amount: 1234, remaining_amount: 0 } }, null);
+  s.emit('order.changed');
+  assert.equal(s.page.data.order.payment_status, 'PAID');
+  pending.resolve(); await operation;
+  assert.equal(s.page.data.busy, false);
+  assert.equal(s.page.data.order.payment_status, 'REFUNDED');
+  assert.equal(s.page.data.order.refundAmountText, '123.4');
+  assert.equal(s.page.data.order.canAfterSale, false);
+  s.page.onUnload();
+});
+
+test('native consumption clock distinguishes a pending milestone from confirmation while aftersale is open', async () => {
+  const s = native('order-detail');
+  const clock = '2026-10-23T10:00:00Z';
+  s.set({ ...baseOrder(), consumption_ready_at: clock }, null); await s.show();
+  assert.equal(s.page.data.order.consumptionLabel, '实销计时节点');
+  assert.match(s.page.data.order.consumptionNote, /仍需满足报单审核及售后/);
+  s.set({ ...baseOrder(), consumption_ready_at: clock, aftersale_status: 'OPEN' }, { status: 'OPEN', reason: '服务问题' });
+  s.emit('order.changed'); await tick();
+  assert.equal(s.page.data.order.consumptionReadyText, clock);
+  assert.match(s.page.data.order.consumptionNote, /售后处理中，实销暂不确认；处理结束后仍需满足确认条件/);
+  s.set({ ...baseOrder(), consumption_ready_at: null, aftersale_status: 'OPEN' }, { status: 'OPEN' }); await s.page.load();
+  assert.equal(s.page.data.order.consumptionLabel, ''); assert.match(s.page.data.order.consumptionNote, /实销暂不确认/);
+  s.set({ ...baseOrder(), consumption_ready_at: clock, consumption_confirmed_at: '2026-10-23T12:00:00Z', aftersale_status: 'OPEN' }, { status: 'OPEN' }); await s.page.load();
+  assert.equal(s.page.data.order.consumptionLabel, '实销确认时间'); assert.doesNotMatch(s.page.data.order.consumptionNote, /暂不确认/);
+  s.set({ ...baseOrder(), status: 'CANCELLED', payment_status: 'REFUNDED', consumption_ready_at: clock }, null); await s.page.load();
+  assert.equal(s.page.data.order.consumptionLabel, ''); assert.equal(s.page.data.order.consumptionNote, '');
+  const template = fs.readFileSync(path.join(root, 'apps/boss-miniapp/native/pages/order-detail/index.wxml'), 'utf8');
+  assert.match(template, /order\.consumptionLabel/); assert.match(template, /order\.consumptionNote/); assert.doesNotMatch(template, /实销预计确认/);
   s.page.onUnload();
 });
 
@@ -128,7 +183,7 @@ test('native partial refunds preserve completed service, expose cumulative and i
     { status: 'PARTIALLY_REFUNDED', reason: '第一轮申请', resolution: '首次处理保留', client_request_id: 'round-one' },
     { status: 'PARTIALLY_REFUNDED', client_request_id: 'round-two' },
   ] }); await s.show();
-  assert.equal(s.page.data.order.status, 'COMPLETED'); assert.equal(s.page.data.order.statusText, '已部分退款'); assert.equal(s.page.data.order.canAfterSale, true);
+  assert.equal(s.page.data.order.status, 'COMPLETED'); assert.equal(s.page.data.order.statusText, '已完成'); assert.equal(s.page.data.order.canAfterSale, true);
   assert.equal(s.page.data.order.amountText, '1000'); assert.equal(s.page.data.order.refundAmountText, '375'); assert.equal(s.page.data.order.refundRemainingText, '625');
   assert.equal(s.page.data.order.refundRecords.length, 2); assert.equal(s.page.data.order.refundRecords[0].amountText, '250'); assert.equal(s.page.data.order.refundRecords[1].amountText, '125');
   assert.equal(s.page.data.order.aftersaleStatusText, '已部分退款'); assert.equal(s.page.data.aftersale.history[0].statusText, '已部分退款');

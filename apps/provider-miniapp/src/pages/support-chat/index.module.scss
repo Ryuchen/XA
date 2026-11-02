@@ -1,0 +1,22 @@
+@use '@/styles/variables.scss' as *;
+.page { min-height: 100dvh; padding: 0 16PX 100PX; background: $color-bg-page; box-sizing: border-box; }
+.card { max-width: 920PX; padding: 16PX; background: $color-bg-card; border: 1PX solid $color-border; border-radius: $radius-lg; }
+.heading { display: block; font-size: $font-size-lg; font-weight: $font-weight-bold; }
+.hint, .meta { display: block; color: $color-text-secondary; font-size: $font-size-sm; line-height: 1.5; }
+.hint { margin: 8PX 0; }
+.history { height: 42vh; min-height: 240PX; margin: 12PX 0; box-sizing: border-box; }
+.message { display: flex; flex-direction: column; align-items: flex-start; margin: 12PX 0; }
+.own { align-items: flex-end; }
+.meta { font-size: $font-size-xs; margin-bottom: 4PX; }
+.bubble { max-width: 88%; padding: 8PX 12PX; background: $color-bg-page; border-radius: $radius-md; overflow-wrap: anywhere; line-height: 1.5; }
+.own .bubble { background: $color-primary; color: #fff; }
+.image { display: block; width: 160PX; max-width: 100%; background: $color-bg-card; border-radius: $radius-sm; }
+.pending, .error { padding: 12PX; margin: 12PX 0; border: 1PX solid $color-border; border-radius: $radius-md; }
+.pendingContent { display: block; margin: 8PX 0; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 8PX; }
+.orderContext { display: flex; align-items: center; justify-content: space-between; gap: 8PX; padding: 8PX; background: $color-bg-page; border-radius: $radius-sm; overflow-wrap: anywhere; font-size: $font-size-sm; }
+.composer { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8PX; }
+.input { display: block; box-sizing: border-box; width: 100%; min-height: 80PX; padding: 8PX; margin: 12PX 0; border: 1PX solid $color-border; border-radius: $radius-md; background: $color-bg-page; }
+.secondary, .send { @include button-reset; min-height: 44PX; padding: 8PX 12PX; border-radius: $radius-md; font-size: $font-size-sm; }
+.secondary { background: $color-bg-page; color: $color-primary; }
+.send { width: 100%; min-width: 0; background: $color-primary; color: #fff; }

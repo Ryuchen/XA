@@ -120,6 +120,19 @@ class TransferredFixtures(TeamRefundFixtures):
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', LEGACY_FORCE_AUTH_COMPAT=False,
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True)
 class TransferredTeamRefundTest(TransferredFixtures, APITestCase):
+    def test_transfer_preserves_historical_submitted_report_amount(self):
+        order = self.in_service()
+        # Historical imported rows can already be awaiting review; transfer
+        # must never rewrite that submitted record as if it were a draft.
+        old = order.providers.get(provider=self.provider)
+        report = ProviderReport.objects.create(order=order, provider=self.provider,
+            provider_account=self.provider_account, game_name='历史报单',
+            amount=old.settlement_base, commission_rate=old.commission_rate, status='PENDING')
+        before = (report.amount, report.commission_rate, report.status)
+        self.ok(self.transfer(order))
+        report.refresh_from_db()
+        self.assertEqual((report.amount, report.commission_rate, report.status), before)
+
     def test_released_old_provider_is_required_and_credited_only_after_all_three_approvals(self):
         order = self.in_service()
         self.ok(self.transfer(order))

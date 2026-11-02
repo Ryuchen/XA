@@ -30,6 +30,10 @@ class ReservationStateMachineError(Exception):
 class IllegalReservationTransitionError(ReservationStateMachineError):
     """非法的预约状态转换。"""
 
+    def __init__(self, message, *, current_status=None):
+        super().__init__(message)
+        self.current_status = current_status
+
 
 # 合法状态转换白名单：(from_status, to_status) -> Action
 RESERVATION_TRANSITIONS: Dict[Tuple[str, str], str] = {
@@ -106,7 +110,7 @@ def transition_reservation(
     from_status = reservation.status
     if not can_transition_reservation(from_status, to_status):
         raise IllegalReservationTransitionError(
-            f'非法状态转换: {from_status} -> {to_status}'
+            f'非法状态转换: {from_status} -> {to_status}', current_status=from_status,
         )
 
     if pre_check:

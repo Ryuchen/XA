@@ -1,4 +1,4 @@
-import { PropsWithChildren, ReactNode, useEffect, useId, useRef } from 'react';
+import { PropsWithChildren, ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { Button, Text, View } from '@tarojs/components';
 import { createPortal } from 'react-dom';
 import styles from './index.module.scss';
@@ -7,6 +7,12 @@ type Props = PropsWithChildren<{ open: boolean; title: string; busy?: boolean; f
 
 /** Desktop dialog / mobile sheet, with one scroll body and visible actions. */
 export default function SurfaceDialog({ open, title, busy = false, footer, onClose, children }: Props) {
+  const [present, setPresent] = useState(open);
+  useEffect(() => {
+    if (open) { setPresent(true); return; }
+    const timer = setTimeout(() => setPresent(false), 150);
+    return () => clearTimeout(timer);
+  }, [open]);
   const id = `provider-dialog-${useId().replace(/:/g, '')}`;
   const closeRef = useRef(onClose);
   const busyRef = useRef(busy);
@@ -45,8 +51,8 @@ export default function SurfaceDialog({ open, title, busy = false, footer, onClo
       if (previousFocus?.isConnected) previousFocus.focus();
     };
   }, [open, id]);
-  if (!open) return null;
-  const dialog = <View className={styles.mask} onClick={() => !busy && onClose()}>
+  if (!open && !present) return null;
+  const dialog = <View className={`${styles.mask} ${!open ? styles.closing : ''}`} aria-hidden={!open} onClick={() => open && !busy && onClose()}>
     <View id={id} className={styles.panel} onClick={event => event.stopPropagation()}>
       <View className={styles.handle} />
       <View className={styles.header}><Text id={`${id}-title`} className={styles.title}>{title}</Text><Button className={styles.close} size='mini' disabled={busy} onClick={onClose}>取消</Button></View>

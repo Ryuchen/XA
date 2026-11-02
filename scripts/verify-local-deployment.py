@@ -227,8 +227,9 @@ balance(provider, 38000, 10000)
 check(WithdrawRequest.objects.filter(account=provider).count() == 1, 'Duplicate withdrawal')
 withdrawal.refresh_from_db()
 check(withdrawal.payee_account == f'LOCAL_TEST_ONLY_{run_id}', 'Submitted payee snapshot changed')
+withdraw_claim = request(f'/api/admin/withdrawals/{withdrawal.pk}/claim/', staff_token, {})
 request(f'/api/admin/withdrawals/{withdrawal.pk}/approve/', staff_token,
-        {'payout_reference': f'LOCAL_SIMULATED_PAYOUT_{run_id}'})
+        {'payout_reference': f'LOCAL_SIMULATED_PAYOUT_{run_id}', 'expected_claimed_at': withdraw_claim['claimed_at']})
 balance(provider, 38000, 0)
 print('PASS bound payee, freeze, unbind/retry snapshot and simulated payout approval', flush=True)
 
@@ -240,8 +241,9 @@ request('/api/wallet/withdraw/', provider_token, {
 })
 balance(provider, 28000, 10000)
 rejected = WithdrawRequest.objects.get(account=provider, status='PENDING')
+reject_claim = request(f'/api/admin/withdrawals/{rejected.pk}/claim/', staff_token, {})
 request(f'/api/admin/withdrawals/{rejected.pk}/reject/', staff_token,
-        {'audit_remark': '本地部署验证驳回'})
+        {'audit_remark': '本地部署验证驳回', 'expected_claimed_at': reject_claim['claimed_at']})
 balance(provider, 38000, 0)
 print('PASS withdrawal rejection restores balance and releases frozen funds', flush=True)
 

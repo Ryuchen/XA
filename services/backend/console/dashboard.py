@@ -22,10 +22,10 @@ def player_order_metrics(order_qs):
     from orders.analytics import partial_share_rows
     kpi = dict.fromkeys(('total_amount', 'game_amount', 'gift_amount', 'male_game',
                          'female_game', 'male_gift', 'female_gift'), 0)
-    for row in with_net_amount(order_qs).values('service__service_category__is_gift').annotate(amount=Sum('_net_paid_amount')):
+    for row in with_net_amount(order_qs).values('is_gift_snapshot').annotate(amount=Sum('_net_paid_amount')):
         amount = row['amount'] or 0
         kpi['total_amount'] += amount
-        kpi['gift_amount' if row['service__service_category__is_gift'] else 'game_amount'] += amount
+        kpi['gift_amount' if row['is_gift_snapshot'] else 'game_amount'] += amount
 
     # 先按成员和商品类型在数据库聚合，避免读取全量订单到进程内存。
     snapshots = order_qs.exclude(payment_status='PARTIALLY_REFUNDED')
@@ -33,14 +33,14 @@ def player_order_metrics(order_qs):
         Q(released_at__isnull=True) | Q(settlement_base__gt=0) | Q(provider_income__gt=0),
     )
     rows = []
-    for row in shares.values('provider_account_id', 'provider_id', 'order__service__service_category__is_gift').annotate(
+    for row in shares.values('provider_account_id', 'provider_id', 'order__is_gift_snapshot').annotate(
         amount=Sum('settlement_base'), income=Sum('provider_income'), count=Count('order_id', distinct=True),
     ):
-        rows.append({**row, 'is_gift': row['order__service__service_category__is_gift']})
+        rows.append({**row, 'is_gift': row['order__is_gift_snapshot']})
     for row in snapshots.filter(providers__isnull=True).values(
-        'provider_account_id', 'provider_id', 'service__service_category__is_gift',
+        'provider_account_id', 'provider_id', 'is_gift_snapshot',
     ).annotate(amount=Sum('amount'), income=Sum('provider_income'), count=Count('id')):
-        rows.append({**row, 'is_gift': row['service__service_category__is_gift']})
+        rows.append({**row, 'is_gift': row['is_gift_snapshot']})
     rows.extend(partial_share_rows(order_qs))
 
     legacy_ids = {row['provider_id'] for row in rows if row['provider_id']}
@@ -51,9 +51,15 @@ def player_order_metrics(order_qs):
     by_account = {profile.account_id: profile for profile in profiles if profile.account_id}
     by_legacy = {profile.user_id: profile for profile in profiles}
     providers = {}
+    income_review_orders = set()
+    income_review_unidentified = 0
     for row in rows:
         account_id = row['provider_account_id'] or mappings.get(row['provider_id'])
+        if row.get('income_review_order_id'):
+            income_review_orders.add(row['income_review_order_id'])
         if not account_id and not row['provider_id']:
+            if row.get('income_review_order_id'):
+                income_review_unidentified += 1
             continue
         account = accounts.get(account_id)
         profile = by_account.get(account_id) or by_legacy.get(row['provider_id'])
@@ -65,8 +71,10 @@ def player_order_metrics(order_qs):
         item = providers.setdefault(key, {
             'nickname': nickname or '历史陪玩',
             'escort_no': profile.escort_no if profile else (account.account_no if account else ''),
-            'gender': gender, 'amount': 0, 'income': 0, 'count': 0,
+            'gender': gender, 'amount': 0, 'income': 0, 'count': 0, 'income_incomplete': False,
         })
+        if row.get('income_review_order_id'):
+            item['income_incomplete'] = True
         for metric in ('amount', 'income', 'count'):
             item[metric] += row[metric] or 0
         if gender in (EscortProfile.Gender.MALE, EscortProfile.Gender.FEMALE):
@@ -74,6 +82,10 @@ def player_order_metrics(order_qs):
 
     rank = {}
     for metric in ('amount', 'income', 'count'):
-        ranked = sorted(providers.values(), key=lambda item: (-item[metric], item['escort_no'], item['nickname']))[:10]
+        eligible = (item for item in providers.values() if metric != 'income' or not item['income_incomplete'])
+        ranked = sorted(eligible, key=lambda item: (-item[metric], item['escort_no'], item['nickname']))[:10]
         rank[metric] = [{name: item[name] for name in ('nickname', 'escort_no', 'gender')} | {'value': item[metric]} for item in ranked]
-    return kpi, rank
+    income_review = {'order_count': len(income_review_orders),
+                     'provider_count': sum(item['income_incomplete'] for item in providers.values()),
+                     'unidentified_count': income_review_unidentified}
+    return kpi, rank, income_review

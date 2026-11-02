@@ -1,0 +1,15 @@
+/* Standard shadcn foundations, scoped to the admin application build. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@import '@xa/shadcn-vue/theme.css';
+@source '../../../../packages/shadcn-vue/src';
+
+@source '../';
+
+/* shadcn's border utilities inherit the application border token. */
+@layer base { *, ::before, ::after { border-color: var(--border); } }
+@media (pointer: coarse) { [data-slot='button'], [data-slot='input'], [data-slot='native-select'], [data-slot='select-trigger'], [data-slot='pagination-item'], [data-slot='pagination-next'], [data-slot='pagination-previous'] { min-height: 44px; } [data-slot='button']:has(> svg:only-child) { min-width:44px; } }
+
+@media (pointer: coarse), (max-width:720px) { [data-slot="dialog-close"] { display:grid; place-items:center; width:44px; height:44px; top:2px; right:2px; } }

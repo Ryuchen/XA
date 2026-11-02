@@ -63,7 +63,7 @@ class AdminAuditMiddleware:
 
         response = self.get_response(request)
 
-        if need_audit and getattr(response, 'status_code', 500) < 400:
+        if need_audit and getattr(response, 'status_code', 500) < 400 and not getattr(request, '_business_audit_recorded', False):
             self._record(request, response, path, method, raw_body)
         return response
 

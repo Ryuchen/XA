@@ -6,11 +6,12 @@
         {{ uploading ? '图片上传中…' : '＋ 上传图片' }}
         <input type="file" accept="image/png,image/jpeg,image/webp" :disabled="uploading || disabled" @change="uploadImage" />
       </label>
-      <el-button size="small" text @click="preview = !preview">{{ preview ? '继续编辑' : '手机预览' }}</el-button>
+      <Button variant="ghost" @click="preview = !preview">{{ preview ? '继续编辑' : '手机预览' }}</Button>
     </div>
     <div v-if="preview" class="preview-wrap"><div class="mobile-preview catalog-document" v-html="editor?.getHTML() || ''" /></div>
     <editor-content v-else :editor="editor" />
     <div class="editor-hint">{{ hint }} 图片支持 PNG、JPEG、WebP，单张不超过 10MB；选中图片可按删除键移除。</div>
+    <p v-if="notice" role="status" class="editor-hint">{{ notice }}</p>
   </div>
 </template>
 
@@ -19,14 +20,14 @@ import { watch, ref, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
-import { ElMessage } from 'element-plus'
+import { Button } from '@xa/shadcn-vue/button'
 import { catalogImageApi } from '@/api/modules'
 
 const props = withDefaults(defineProps<{ modelValue?: string; disabled?: boolean; hint?: string }>(), {
   modelValue: '', disabled: false, hint: '文字、标题、列表和图片会一起显示在小程序的价目下方。',
 })
 const emit = defineEmits<{ 'update:modelValue': [value: string]; 'uploading': [value: boolean] }>()
-const preview = ref(false), uploading = ref(false)
+const preview = ref(false), uploading = ref(false), notice = ref('')
 const CatalogImage = Image.extend({
   addAttributes() {
     return {
@@ -66,7 +67,7 @@ async function uploadImage(event: Event) {
   const input = event.target as HTMLInputElement, file = input.files?.[0]
   if (!file) return
   input.value = ''
-  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) { ElMessage.warning('请上传 10MB 以内的 PNG、JPEG 或 WebP 图片'); return }
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024) { notice.value = '请上传 10MB 以内的 PNG、JPEG 或 WebP 图片'; return }
   uploading.value = true; emit('uploading', true)
   try {
     const { data } = await catalogImageApi.upload(file)
@@ -74,25 +75,25 @@ async function uploadImage(event: Event) {
     const src = new URL(data.url, apiRoot).href
     const originalSrc = new URL(data.original_url || data.url, apiRoot).href
     editor.value?.chain().focus().insertContent({ type: 'image', attrs: { src, originalSrc, alt: file.name } }).run()
-    ElMessage.success('图片已插入，请保存文案')
+    notice.value = '图片已插入，请保存文案'
   } finally { uploading.value = false; emit('uploading', false) }
 }
 </script>
 
 <style scoped>
-.catalog-editor { width:100%; border:1px solid var(--el-border-color); border-radius:10px; overflow:hidden; }
-.editor-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); padding:var(--space-3); border-bottom:1px solid var(--el-border-color-lighter); background:var(--el-fill-color-light); }
-.editor-toolbar button, .image-upload { display:inline-flex; align-items:center; justify-content:center; min-height:var(--control-height-sm); border:0; border-radius:var(--control-radius); background:transparent; color:var(--el-text-color-primary); padding:6px 10px; font-size:13px; cursor:pointer; line-height:20px; }
-.editor-toolbar button.active, .editor-toolbar button:hover, .image-upload:hover { color:var(--el-color-primary); background:var(--el-color-primary-light-9); }
+.catalog-editor { width:100%; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.editor-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); padding:var(--space-3); border-bottom:1px solid var(--border); background:var(--muted); }
+.editor-toolbar button, .image-upload { display:inline-flex; align-items:center; justify-content:center; min-height:var(--control-height-sm); border:0; border-radius:var(--control-radius); background:transparent; color:var(--foreground); padding:6px 10px; font-size:13px; cursor:pointer; line-height:20px; }
+.editor-toolbar button.active, .editor-toolbar button:hover, .image-upload:hover { color:var(--primary); background:var(--accent); }
 .editor-toolbar button:disabled, .busy { opacity:.5; pointer-events:none; }
 .image-upload input { display:none; }
-.editor-hint { padding:10px 14px; line-height:1.6; font-size:12px; color:var(--el-text-color-secondary); border-top:1px solid var(--el-border-color-lighter); }
+.editor-hint { padding:10px 14px; line-height:1.6; font-size:12px; color:var(--muted-foreground); border-top:1px solid var(--border); }
 :deep(.catalog-document) { min-height:220px; max-height:480px; overflow:auto; padding:var(--space-5); font-size:14px; line-height:1.8; overflow-wrap:anywhere; }
 :deep(.catalog-document:focus-visible) { outline:2px solid var(--primary); outline-offset:-2px; }
 :deep(.catalog-document p) { margin:0 0 12px; }
 :deep(.catalog-document h2), :deep(.catalog-document h3) { margin:20px 0 10px; line-height:1.4; }
 :deep(.catalog-document img) { display:block; max-width:100%; height:auto; margin:12px 0; }
-:deep(.catalog-document img.ProseMirror-selectednode) { outline:3px solid var(--el-color-primary); }
+:deep(.catalog-document img.ProseMirror-selectednode) { outline:3px solid var(--primary); }
 :deep(.catalog-document ul), :deep(.catalog-document ol) { padding-left:24px; }
 .preview-wrap { padding:var(--space-5); background:var(--xa-color-surface-hover); }
 .mobile-preview { max-width:375px; margin:auto; background:var(--xa-color-surface-card); color:var(--xa-color-text-primary); border:1px solid var(--border); border-radius:var(--radius-sm); }
