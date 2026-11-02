@@ -118,3 +118,147 @@ textarea.input { height: max(152rpx, 76px); line-height: 1.65; }
 @keyframes ocean-native-enter { from { opacity:.35; } to { opacity:1; } }
 .page { animation:ocean-native-enter 250ms var(--xa-ease-out); }
 @media(prefers-reduced-motion:reduce) { .page,.page .xa-button,.bottom-bar .xa-button,.page .service-tab::after { animation:none; transition:none; }.page .xa-button-hover,.bottom-bar .xa-button-hover { transform:none; } }
+
+/* ══════════════════════════════════════════════════════════════
+   澄海 2026 · 原生视觉层
+   只做视觉补充：形状 / 海拔 / 玻璃 / 渐变令牌，以及基础控件重绘。
+   不改变业务结构、接口与交互逻辑；theme.wxss 由脚本生成，此处仅覆盖。
+   ══════════════════════════════════════════════════════════════ */
+page {
+  /* 形状 — 4pt 节奏，向更柔和的 Apple 圆角靠拢 */
+  --xa-radius: 20px;
+  --xa-radius-card: 20px;
+  --xa-radius-control: 12px;
+  --xa-r-xs: 8px;
+  --xa-r-sm: 12px;
+  --xa-r-md: 16px;
+  --xa-r-lg: 20px;
+  --xa-r-xl: 24px;
+  --xa-r-2xl: 28px;
+  --xa-r-pill: 999rpx;
+
+  /* 海拔 — 蓝调投影，替代中性灰，让奶白表面有空气感 */
+  --xa-elev-1: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 20px -10px rgba(30, 58, 138, .16);
+  --xa-elev-2: 0 1px 3px rgba(15, 23, 42, .05), 0 16px 34px -14px rgba(30, 58, 138, .22);
+  --xa-elev-3: 0 2px 8px rgba(15, 23, 42, .06), 0 28px 52px -18px rgba(30, 58, 138, .30);
+
+  /* 描边 — 冷调细线，代替纯灰边 */
+  --xa-hairline: rgba(30, 58, 138, .09);
+  --xa-hairline-strong: rgba(30, 58, 138, .14);
+
+  /* 玻璃 — 底部操作区与浮层 */
+  --xa-glass-bg: rgba(255, 254, 250, .82);
+  --xa-glass-blur: saturate(180%) blur(20px);
+  --xa-glass-line: rgba(255, 255, 255, .55);
+
+  /* 渐变 — 深海 → 品牌蓝 → 浅海 */
+  --xa-grad-deep: linear-gradient(142deg, #0b1220 0%, #14275c 44%, #1e3a8a 100%);
+  --xa-grad-brand: linear-gradient(142deg, #1e3a8a 0%, #2563eb 58%, #38bdf8 100%);
+  --xa-grad-cta: linear-gradient(135deg, #2f6bf0 0%, #2154d8 52%, #1e3a8a 100%);
+  --xa-grad-soft: linear-gradient(155deg, #ffffff 0%, #f3f7ff 60%, #e9f1fe 100%);
+  --xa-grad-card: linear-gradient(178deg, #ffffff 0%, #fffefa 62%, #fcfdff 100%);
+  --xa-ring-primary: 0 0 0 4rpx rgba(37, 99, 235, .14);
+}
+
+/* ── 表面：柔和圆角 + 双色描边 + 蓝调海拔 ───────────────────── */
+.panel, .card, .page-heading, .section-surface {
+  border-radius: var(--xa-radius);
+  border: 1rpx solid var(--xa-hairline);
+  background: var(--xa-color-surface-card);
+}
+.page .panel, .page .card, .page .page-heading, .page .section-surface {
+  box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, .9), var(--xa-elev-1);
+}
+
+/* ── 标题与文字层级 ───────────────────────────────────────── */
+.title { letter-spacing: -1.2rpx; }
+.section-title { font-weight: 600; letter-spacing: -.4rpx; }
+.eyebrow { font-size: 22rpx; font-weight: 600; letter-spacing: 2rpx; }
+.price { letter-spacing: -.6rpx; font-weight: 700; }
+
+/* ── 按钮：主操作用品牌渐变，次操作用浅蓝面 ─────────────────── */
+.xa-button.button {
+  color: var(--xa-color-on-primary);
+  background: var(--xa-grad-cta);
+  letter-spacing: .6rpx;
+  box-shadow: 0 10px 22px -12px rgba(37, 99, 235, .75), inset 0 1rpx 0 rgba(255, 255, 255, .22);
+}
+.xa-button.button-secondary {
+  color: var(--xa-color-primary-hover);
+  background: rgba(37, 99, 235, .07);
+  box-shadow: inset 0 0 0 1rpx rgba(37, 99, 235, .14);
+}
+.page .xa-button.button-hover, .bottom-bar .xa-button.button-hover { opacity: 1; }
+.page .xa-button-hover { opacity: 1; }
+
+/* ── 胶囊筛选与标签 ────────────────────────────────────────── */
+.page .xa-button.chip {
+  border-radius: var(--xa-r-pill);
+  border-color: var(--xa-hairline);
+  background: var(--xa-color-surface-card);
+  padding: 8rpx 24rpx;
+}
+.page .xa-button.chip-active {
+  color: var(--xa-color-on-primary);
+  border-color: transparent;
+  background: var(--xa-color-primary);
+  box-shadow: 0 8px 16px -10px rgba(37, 99, 235, .9);
+}
+.tag {
+  border-radius: var(--xa-r-pill);
+  padding: 6rpx 16rpx;
+  background: rgba(37, 99, 235, .08);
+  color: var(--xa-color-primary-hover);
+}
+
+/* ── 输入：白底细描边，聚焦时浮起 ───────────────────────────── */
+.input {
+  border: 1rpx solid var(--xa-hairline-strong);
+  background: var(--xa-color-surface-card);
+  border-radius: var(--xa-radius-control);
+}
+.input:focus {
+  border-color: rgba(37, 99, 235, .5);
+  box-shadow: var(--xa-ring-primary);
+}
+
+/* ── 底部操作区：玻璃态，保留业务内容的连续感 ───────────────── */
+.bottom-bar {
+  background: var(--xa-glass-bg);
+  -webkit-backdrop-filter: var(--xa-glass-blur);
+  backdrop-filter: var(--xa-glass-blur);
+  border-top: 1rpx solid var(--xa-hairline);
+  box-shadow: 0 -16rpx 40rpx -24rpx rgba(30, 58, 138, .35);
+}
+
+/* ── 其他基础件 ───────────────────────────────────────────── */
+.avatar { box-shadow: inset 0 0 0 1rpx var(--xa-hairline); }
+.cover { border-radius: var(--xa-r-md); }
+.menu-row + .menu-row { border-top-color: var(--xa-hairline); }
+.divider { background: var(--xa-hairline); }
+.empty, .loading { padding: 56rpx 24rpx; }
+.link { font-weight: 500; }
+
+/* ── 视觉工具类 ───────────────────────────────────────────── */
+.xa-glass {
+  background: var(--xa-glass-bg);
+  -webkit-backdrop-filter: var(--xa-glass-blur);
+  backdrop-filter: var(--xa-glass-blur);
+  border: 1rpx solid var(--xa-glass-line);
+}
+.xa-bloom { position: relative; overflow: hidden; }
+.xa-bloom::after {
+  content: ''; position: absolute; z-index: 0; pointer-events: none;
+  top: -80rpx; right: -60rpx; width: 300rpx; height: 300rpx; border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, .38), rgba(56, 189, 248, 0) 70%);
+}
+.xa-hairline-top { box-shadow: inset 0 1rpx 0 rgba(30, 58, 138, .10); }
+
+@keyframes xa-rise { from { opacity: 0; transform: translate3d(0, 20rpx, 0); } to { opacity: 1; transform: none; } }
+.xa-rise { animation: xa-rise 440ms var(--xa-ease-out) both; }
+.xa-rise-2 { animation-delay: 60ms; }
+.xa-rise-3 { animation-delay: 120ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .xa-rise { animation: none; }
+}
