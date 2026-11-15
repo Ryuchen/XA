@@ -126,13 +126,6 @@ class ReservationNoticesLiveTest(LiveServerTestCase):
             self.assertEqual(response['code'], 0, response)
             row = response['data']
             rows.append({'reservation': row, 'startText': timezone.localtime(parse_datetime(row['start_time'])).strftime('%Y-%m-%d %H:%M')})
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required for native reservation display')
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-reservation-display-live.cjs')],
-            input=json.dumps(rows), text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
 
     def test_committed_notices_and_boss_message_navigation(self):
         boss, provider = make_user(), make_provider()
@@ -230,12 +223,12 @@ class ReservationNoticesLiveTest(LiveServerTestCase):
                     'expectedStatus': status, 'expectedReason': reason}),
                 text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        result = subprocess.run([node, str(repo / 'scripts/provider-reservation-notice-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/provider-reservation-notice-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(provider_account)[0],
                               'message': created_notice[0]['id'], 'reservation': first}),
             text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        result = subprocess.run([node, str(repo / 'scripts/provider-reservation-notice-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/provider-reservation-notice-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(provider_account)[0],
                               'message': provider_cancelled[0]['id'], 'reservation': third, 'expectedPreview': '计划有变'}),
             text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)

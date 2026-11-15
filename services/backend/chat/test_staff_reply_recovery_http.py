@@ -47,7 +47,7 @@ class StaffReplyRecoveryHTTPTest(LiveServerTestCase):
         self.assertEqual(claimant.post(f'/api/admin/chat-sessions/{sessions[0]}/claim/', {'expected_version': 0}, format='json').data['code'], 0)
         repo = Path(__file__).resolve().parents[3]
         image = io.BytesIO(); Image.new('RGB', (3, 3), 'green').save(image, format='PNG')
-        result = subprocess.run(['node', str(repo / 'scripts/admin-chat-reply-recovery-live.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/admin-chat-reply-recovery-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'sessions': sessions,
                               'staffIds': [a.pk for a in staff], 'tokens': [issue_account_tokens(a)[0] for a in staff],
                               'image': base64.b64encode(image.getvalue()).decode('ascii')}),

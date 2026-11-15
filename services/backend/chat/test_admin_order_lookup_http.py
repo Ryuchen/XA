@@ -1,7 +1,6 @@
 """An order number received in chat opens the actual order search."""
 import json
 import io
-import os
 import shutil
 import subprocess
 import tempfile
@@ -64,9 +63,3 @@ class AdminChatOrderLookupHTTPTest(LiveServerTestCase):
                 'sessionId': session['data']['session']['id'], 'orderNo': order_no}),
             text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        if os.environ.get('XA_ADMIN_CHAT_375') == '1':
-            result = subprocess.run([node, str(repo / 'scripts/admin-chat-order-mobile-live.cjs')],
-                input=json.dumps({'api': self.live_server_url, 'token': staff_token,
-                    'bossName': boss_account.nickname or boss_account.username, 'orderNo': order_no}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90, cwd=repo)
-            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)

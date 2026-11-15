@@ -44,7 +44,7 @@ class FreeVipProviderUITest(LiveServerTestCase):
         self.assertEqual(assigned['code'],0,assigned)
         self.assertEqual(clients[1].get(f'/api/orders/orders/{oid}/').data['data']['expected_income'],0)
         repo=Path(settings.BASE_DIR).parent.parent
-        result=subprocess.run(['node',str(repo/'scripts/provider-zero-income-live.cjs')],cwd=repo,
+        result=subprocess.run(['node',str(repo/'scripts/scenarios/provider-zero-income-live.cjs')],cwd=repo,
             input=json.dumps({'base':self.live_server_url,
                 'id':accounts[1].pk,'token':issue_account_tokens(accounts[1])[0], 'orderId':oid}),
             text=True,encoding='utf-8',capture_output=True,timeout=40)

@@ -4,7 +4,7 @@
 
 ## 配置与启动
 
-托管方式使用仓库根目录 `docker-compose.managed.yml`，**单独使用此文件**，不叠加原有 remote/release 编排。没有内置数据库服务或 `mysql_data` 卷，也不需要云数据库 root 密码。Redis、媒体和静态资源仍按原部署方案运行；Web 为两个实例，Beat 为一个。
+托管方式使用仓库根目录 `deploy/compose/docker-compose.managed.yml`，**单独使用此文件**，不叠加原有 remote/release 编排。没有内置数据库服务或 `mysql_data` 卷，也不需要云数据库 root 密码。Redis、媒体和静态资源仍按原部署方案运行；Web 为两个实例，Beat 为一个。
 
 1. 在与 CVM 同地域、同 VPC 的数据库实例创建应用库和专用非 root 账号。授予该库所需的建表、迁移和业务读写权限；账号限制到应用来源，启用实例 TLS，并要求该账号使用 TLS。
 2. 从数据库平台取得 CA 公钥证书，保存到服务器受控目录，例如 `/etc/xa/mysql-ca.pem`。确认数据库访问地址能从 CVM 解析和连通，并与服务器证书中的身份匹配；应用会验证证书链与主机身份，不关闭校验来规避不匹配。
@@ -21,10 +21,10 @@
 手工部署时，先确定不可变镜像版本（`sha-完整提交SHA`）和 Docker Hub 命名空间，使用与镜像对应的源码，再执行：
 
 ```sh
-docker compose --env-file .env.release -f docker-compose.managed.yml config --quiet
-docker compose --env-file .env.release -f docker-compose.managed.yml pull
-docker compose --env-file .env.release -f docker-compose.managed.yml up -d --no-build --wait --wait-timeout 180
-docker compose --env-file .env.release -f docker-compose.managed.yml exec -T web python manage.py check_mysql_readiness
+docker compose --env-file .env.release -f deploy/compose/docker-compose.managed.yml config --quiet
+docker compose --env-file .env.release -f deploy/compose/docker-compose.managed.yml pull
+docker compose --env-file .env.release -f deploy/compose/docker-compose.managed.yml up -d --no-build --wait --wait-timeout 180
+docker compose --env-file .env.release -f deploy/compose/docker-compose.managed.yml exec -T web python manage.py check_mysql_readiness
 ```
 
 脚本化部署使用已有 `deploy/deploy-release.sh`，执行环境额外设置 `XA_DATABASE_MODE=managed`，其余 `DEPLOY_COMMIT`、`XA_IMAGE_TAG`、`DOCKERHUB_NAMESPACE` 规则不变。GitHub 自动部署在仓库 **Variables** 中设置 `XA_DATABASE_MODE=managed`；未设置时继续选择原来的内置数据库模式。这个选择由部署脚本/工作流环境控制，仅在 `.env.release` 添加同名变量不会切换脚本使用的 Compose 文件。

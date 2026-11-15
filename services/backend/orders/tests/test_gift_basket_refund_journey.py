@@ -128,10 +128,6 @@ class GiftBasketRefundJourneyTest(LiveServerTestCase):
         if os.environ.get('XA_NATIVE_NAMING_REFUND') == '1':
             self.check_native(accounts[0], second.pk, final['refund_summary']['records'][0]['gift_naming_result'], 'all-final')
         details.append(final)
-        repo = Path(settings.BASE_DIR).parent.parent
-        check = subprocess.run(['node', str(repo / 'scripts/native-gift-naming-refund.cjs')], cwd=repo,
-            input=json.dumps(details, default=str), text=True, encoding='utf-8', capture_output=True, timeout=20)
-        self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
 
     def check_native(self, account, order_id, naming_result, phase):
         repo = Path(settings.BASE_DIR).parent.parent

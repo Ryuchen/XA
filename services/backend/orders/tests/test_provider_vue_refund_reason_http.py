@@ -51,7 +51,7 @@ class ProviderVueRefundReasonHTTPTest(LiveServerTestCase):
             self.assertEqual((detail['status'], detail['cancel_reason']), ('CANCELLED','隔离客服核实终止服务'))
         repo = Path(settings.BASE_DIR).parent.parent
         def browser(row, expected, refunded):
-            run = subprocess.run(['node', str(repo / 'scripts/provider-vue-refund-reason-375.cjs')],
+            run = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-refund-reason-375.cjs')],
                 input=json.dumps({'root':root,'base':self.live_server_url,'orderId':row['id'],'orderNo':row['order_no'],
                     'token':issue_account_tokens(self.accounts[self.provider.pk])[0], 'id':self.accounts[self.provider.pk].pk,
                     'expected':expected, 'refunded':refunded}), text=True,encoding='utf-8',capture_output=True,timeout=35,cwd=repo)

@@ -224,9 +224,6 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
         rows = [row for row in wallet['transactions'] if row['is_referral_income']]
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['amount'], 500)
-        result = subprocess.run(['node', str(repo/'scripts/native-negotiated-referral-wallet.cjs')],
-            input=json.dumps(rows), cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=15)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_transferred_provider_who_is_inviter_gets_one_clear_notice(self):
         boss_account = self.accounts[self.boss.pk]

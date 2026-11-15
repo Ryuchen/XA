@@ -40,7 +40,7 @@ class ProviderVueChatNoticeTest(ReactLiveHTTPTestCase):
         self.assertEqual(pushed.data['code'], 0, pushed.data)
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-chat-notice-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-chat-notice-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'token':tokens[0],
                     'id':accounts[0].pk, 'staffToken':tokens[1], 'sessionId':session['id'],
                     'fixed':True}),

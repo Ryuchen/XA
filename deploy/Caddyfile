@@ -56,14 +56,26 @@
 	}
 }
 
-{$XA_PROVIDER_DOMAIN} {
+{$XA_SL_DOMAIN}, {$XA_XA_DOMAIN} {
 	encode gzip
 	@backend path /api/* /ws/*
 	handle @backend {
 		import backend
 	}
 	import media
-	handle {
+	redir /boss /boss/ permanent
+	redir /player /player/ permanent
+	handle /boss/* {
+		reverse_proxy boss-web:80
+	}
+	handle /player/* {
 		reverse_proxy provider-h5:80
+	}
+	handle /brand.svg {
+		rewrite * /boss/brand.svg
+		reverse_proxy boss-web:80
+	}
+	handle {
+		respond 404
 	}
 }

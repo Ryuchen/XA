@@ -54,11 +54,6 @@ class QuickDoubleMessageBrowserTest(LiveServerTestCase):
         inbox = client.get('/api/messages/').data['data']['messages']
         message = next(row for row in inbox if row['related_order_id'] == order['id'] and row['title'] == '已为你指派双陪')
         repo = Path(settings.BASE_DIR).parent.parent
-        native = subprocess.run([node, str(repo / 'scripts/native-quick-double-message-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'messageId': message['id'], 'orderId': order['id'], 'names': names,
-                'session': {'token': tokens[0], 'user': {'id': str(accounts[0].pk), 'role': 'customer'}}}),
-            text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
-        self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
         for index, (account, token) in enumerate(zip(accounts[2:], tokens[2:])):
             provider = subprocess.run([node, str(repo / 'scripts/provider-aftersale-message-375-live.cjs')],
                 input=json.dumps({'api': self.live_server_url, 'token': token, 'providerId': str(account.pk),

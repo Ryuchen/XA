@@ -60,7 +60,7 @@ class ProviderVueReservationNavigationHTTPTest(LiveServerTestCase):
             self.assertEqual(ok(client.get(f"/api/orders/reservations/{first['id']}/"))['status'], 'CONVERTED')
             self.assertEqual(ok(client.get(f"/api/orders/reservations/{second['id']}/"))['status'], 'PENDING')
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-reservation-navigation-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-reservation-navigation-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'orderId':converted['order']['id'],
                 'orderNo':converted['order']['order_no'], 'first':first, 'second':second, 'expired':expired, 'hidden':hidden,
                 'id':accounts[1].pk, 'token':issue_account_tokens(accounts[1])[0],

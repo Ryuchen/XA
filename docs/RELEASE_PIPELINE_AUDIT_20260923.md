@@ -1,5 +1,7 @@
 # 原生入口与发布链路验收 · 2026-09-23
 
+> 旧端脚本已删除，历史命令不再适用；具体处理见[脚本核对记录](ops/legacy-script-audit-20261115.md)。
+
 本文件保留早期发布门禁的阶段记录。后续已安装 WSL、完成容器部署与开发者工具真实 OpenID 登录，最新证据见 [本地部署验收](LOCAL_DEPLOYMENT_VALIDATION.md)。现已增加托管 MySQL 编排及部署模式选择，部署脚本回归由下文历史 5 项扩展为 7 项通过，见 [托管部署说明](MANAGED_MYSQL_DEPLOYMENT.md)。
 
 ## 已修正

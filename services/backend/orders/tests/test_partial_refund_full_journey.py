@@ -83,7 +83,7 @@ class PartialRefundFullJourneyTest(APITestCase):
                 if not node:
                     self.fail('Node runtime required to check the native order presentation')
                 repo = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run([node, str(repo / 'scripts/native-order-refund-live.cjs')],
+                result = subprocess.run([node, str(repo / 'scripts/scenarios/native-order-refund-live.cjs')],
                     input=json.dumps({'order': detail, 'statusText': '已完成' if status == 'COMPLETED' else '已取消',
                                       'refunded': refunded, 'remaining': remaining, 'count': count}, cls=DjangoJSONEncoder),
                     text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)
@@ -237,7 +237,7 @@ class PartialRefundFullJourneyTest(APITestCase):
         if not node:
             self.fail('Node runtime required to check the native refund presentation')
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-coupon-refund-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/native-coupon-refund-live.cjs')],
             input=json.dumps({'order': final, 'name': '退款后返回券', 'outcome': 'RETURNED'}, cls=DjangoJSONEncoder),
             text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)

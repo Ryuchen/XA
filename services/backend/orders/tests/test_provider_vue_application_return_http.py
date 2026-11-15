@@ -58,7 +58,7 @@ class ProviderVueApplicationReturnTest(ReactLiveHTTPTestCase):
             'dispatch_mode': 'BOSS_SELECT', 'client_request_id': 'team-progress-three-roles'}, format='json'))
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime, report_approval=True) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/three-role-application-progress-live.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/three-role-application-progress-live.cjs')],
                 input=json.dumps({'providerRoot':provider_root, 'adminRoot':admin_root, 'base':base, 'wsBase':ws_base,
                     'orderId':order['id'], 'orderNo':order['order_no'], 'bossId':self.accounts[self.boss.pk].pk,
                     'image':str(repo / 'apps/boss-miniapp/native/assets/icons/chat.png'),
@@ -142,7 +142,7 @@ class ProviderVueApplicationReturnTest(ReactLiveHTTPTestCase):
                 self.assertIn('未结算收益暂缓', notices[0]['preview'])
                 self.assertIn('已结算收益请查看钱包流水', notices[0]['preview'])
         with current_http(self, isolated_realtime, report_approval=True) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/team-aftersale-resolution-live.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/team-aftersale-resolution-live.cjs')],
                 input=json.dumps({'providerRoot':provider_root, 'adminRoot':admin_root, 'base':base, 'wsBase':ws_base,
                     'orderId':order_row.pk, 'orderNo':order_row.order_no, 'bossId':self.accounts[self.boss.pk].pk,
                     'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],
@@ -264,7 +264,7 @@ class ProviderVueApplicationReturnTest(ReactLiveHTTPTestCase):
             ids.append(OrderApplication.objects.get(order_id=order['id'], applicant=self.accounts[user.pk]).pk)
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-application-return-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-application-return-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'orderId':order['id'],
                     'orderNo':order['order_no'], 'chosenId':ids[1], 'historyOnly':True,
                     'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
@@ -302,7 +302,7 @@ class ProviderVueApplicationReturnTest(ReactLiveHTTPTestCase):
         self.assertEqual(notice['action_url'], f'/pages/orders/index?application_id={app.pk}')
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-application-return-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-application-return-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'orderId':order['id'],
                     'orderNo':order['order_no'], 'applicationId':app.pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
                     'id':self.accounts[self.provider.pk].pk, 'assignedToken':issue_account_tokens(self.accounts[assigned.pk])[0],

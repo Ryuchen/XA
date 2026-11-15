@@ -33,7 +33,7 @@ class ProviderVueEvaluationConflictHTTPTest(LiveServerTestCase):
         role.permissions = [*role.permissions, 'evaluation:view', 'evaluation:reply', 'evaluation:delete']; role.save(update_fields=['permissions'])
         repo = Path(settings.BASE_DIR).parent.parent
         fixed = True
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-evaluation-conflict-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-evaluation-conflict-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'providerToken':self.tokens[self.provider.pk],
                 'providerId':self.accounts[self.provider.pk].pk, 'staffToken':self.tokens[self.staff.pk],
                 'reviewId':review['id'], 'fixed':fixed, 'lost':lost, 'deleted':deleted}),

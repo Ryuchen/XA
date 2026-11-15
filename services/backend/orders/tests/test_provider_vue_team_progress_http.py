@@ -113,7 +113,7 @@ class ProviderVueTeamProgressHTTPTest(LiveServerTestCase):
                   (('boss', self.boss), ('staff', self.admin), ('first', self.provider), ('second', second))}
         repo = Path(settings.BASE_DIR).parent.parent
         def exercise(base, ws_base=None):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-team-progress-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-team-progress-375.cjs')],
                 input=json.dumps({'root': root, 'base': base, 'wsBase': ws_base, 'realtime': bool(ws_base), 'orderId': order['id'], 'tokens': tokens, 'bossId': self.accounts[self.boss.pk].pk,
                     'providers': [{'token': tokens['first'], 'id': self.accounts[self.provider.pk].pk},
                                   {'token': tokens['second'], 'id': self.accounts[second.pk].pk}],

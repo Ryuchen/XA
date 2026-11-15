@@ -61,7 +61,7 @@ class NativeExpiredReservationHTTPTest(LiveServerTestCase):
         now = timezone.now()
         Reservation.objects.filter(pk__in=[original_id, old['data']['id']]).update(start_time=now - timedelta(hours=2), end_time=now - timedelta(hours=1))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-expired-reservation-live.cjs')], input=json.dumps({
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/native-expired-reservation-live.cjs')], input=json.dumps({
             'base': self.live_server_url, 'id': original_id, 'unavailableId': old['data']['id'],
             'unavailableServiceId': unavailable.pk, 'providerId': provider_account.pk, 'serviceId': service.pk,
             'changingServiceId': changing.pk, 'staffToken': issue_account_tokens(staff_account)[0],

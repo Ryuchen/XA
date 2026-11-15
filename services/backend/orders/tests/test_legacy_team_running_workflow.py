@@ -75,7 +75,7 @@ class LegacyTeamRunningWorkflowTest(APITransactionTestCase):
         self.assertEqual(presented.returncode, 0, presented.stdout + presented.stderr)
         login(0)
         boss_detail = ok(self.client.get(f'/api/orders/orders/{order_id}/'))
-        native = subprocess.run([node, str(repo / 'scripts/native-legacy-team-progress.cjs')],
+        native = subprocess.run([node, str(repo / 'scripts/scenarios/native-legacy-team-progress.cjs')],
             input=json.dumps(boss_detail, cls=DjangoJSONEncoder), text=True, encoding='utf-8',
             capture_output=True, timeout=20, cwd=repo)
         self.assertEqual(native.returncode, 0, native.stdout + native.stderr)

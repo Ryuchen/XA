@@ -55,7 +55,9 @@ WSL 的 mirrored 设置属于全机配置，部署只检查，不自动覆盖 `.
 
 运行状态与日志位于忽略提交的 `esports-local/.runtime/`，包括 `backend-18106.json`、后端日志和 `deployment-health.json`。浏览器 HMR 验证需要仓库根目录的 Playwright 及其 Chromium；它仅触碰 CSS 修改时间并核对内容散列，不写业务接口。
 
-生产发布、历史 `local-validation` 和 `round01` 脚本保留各自用途，不是当前三端日常开发入口。
+三端发布 Compose 集中在 [`compose/`](compose/)，静态镜像构建文件位于 [`images/frontend/`](images/frontend/)。发布流程使用 `deploy-release.sh` 和独立环境文件，CI 的远程部署仅在手动触发工作流时运行。`local-validation` 和 `round01` 脚本各有隔离范围，不是当前三端日常开发入口。
+
+2026 年腾讯云旧容器迁移脚本依赖已退役服务、历史备份和固定服务器路径，已从仓库移除。仓库变更不会自动修改任何服务器或已安装的定时任务。完整生产发布、真实微信和短信渠道仍需在目标环境中验收；本机配置检查不代表已经上线。
 
 ## 许可与版权
 

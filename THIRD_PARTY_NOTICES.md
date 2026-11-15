@@ -8,7 +8,7 @@ XA 项目中由**青岛声浪传媒有限公司**依法享有权利的原创代�
 
 | 材料 | 原版权署名 | 许可及来源说明 |
 | --- | --- | --- |
-| shadcn-vue 上游组件 | Copyright (c) 2023 unovue | [上游 MIT 原文](packages/shadcn-vue/UPSTREAM-LICENSE)、[适配包说明](packages/shadcn-vue/README.md) |
+| shadcn-vue 历史上游组件 | Copyright (c) 2023 unovue | [上游 MIT 原文](docs/licenses/shadcn-vue/UPSTREAM-LICENSE)、[历史适配包说明](docs/licenses/shadcn-vue/README.md) |
 | Tabler Icons SVG | Copyright (c) 2020–2025 Paweł Kuna | [MIT 原文](scripts/icon-sources/tabler/LICENSE.txt)、[来源说明](scripts/icon-sources/tabler/README.md) |
 | MiSans 字体 | MiSans © Xiaomi Inc. | [官方许可 PDF](fronted/shared/assets/fonts/misans/MiSans-LICENSE.pdf)、[字体来源与使用说明](fronted/shared/assets/fonts/misans/README.md) |
 
@@ -24,7 +24,7 @@ React、Django、Vue 及其他通过包管理器取得的依赖，以其发行�
 
 项目自有私有包统一使用 `private: true`、`license: "UNLICENSED"` 和公司署名。`author`、`copyright` 字段仅用于项目自有内容的署名，不转移其他权利人的权利。
 
-`packages/shadcn-vue` 为包含上游代码的适配包，其 `license` 使用 `SEE LICENSE IN LICENSE`，指向[包内范围说明](packages/shadcn-vue/LICENSE)。公司版权字段明确限于项目特有原创改动，上游 MIT 原文继续保留。字段格式参考 [npm 的 license 元数据说明](https://docs.npmjs.com/cli/configuring-npm/package-json/#license)。
+已退役的 shadcn-vue 适配包源码不再属于当前交付，历史[适配包许可说明](docs/licenses/shadcn-vue/LICENSE)和上游 MIT 原文仍保留。字段格式参考 [npm 的 license 元数据说明](https://docs.npmjs.com/cli/configuring-npm/package-json/#license)。
 
 `UNLICENSED` 不表示采用 The Unlicense，也不表示进入公有领域。JavaScript 锁文件只同步本地项目包的许可字段，第三方依赖的许可证、版本、来源和完整性记录保持原样。
 

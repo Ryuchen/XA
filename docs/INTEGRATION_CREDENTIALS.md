@@ -11,7 +11,7 @@
 | 微信老板小程序 | AppID（公开标识） | 服务端 `WECHAT_APPID`；`apps/boss-miniapp/project.config.json` 的 `appid`；发布构建时两者必须一致 | 微信公众平台的小程序账号，开发管理中的开发设置 |
 | 微信登录与手机号授权 | AppSecret（密钥） | **仅服务端** `WECHAT_SECRET` | 同一小程序的开发设置，由有权限的管理员获取或重置 |
 | 服务端签名 | Django Secret Key（随机密钥） | `DJANGO_SECRET_KEY` | 生成独立的高强度随机值；当前业务 JWT 默认也使用此签名配置，轮换需要考虑现有登录会话 |
-| 应用数据库 | 库名、非 root 用户名、密码 | `MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`；托管方式另配 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_SSL_CA_FILE` | 数据库管理员创建应用账号并授权给项目库；内置库使用 remote + release，托管库单独使用 `docker-compose.managed.yml` |
+| 应用数据库 | 库名、非 root 用户名、密码 | `MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD`；托管方式另配 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_SSL_CA_FILE` | 数据库管理员创建应用账号并授权给项目库；内置库使用 remote + release，托管库单独使用 `deploy/compose/docker-compose.managed.yml` |
 | 自建 MySQL 初始化 | root 密码 | `MYSQL_ROOT_PASSWORD` | 仅用于数据库初始化和运维，应用使用上面的非 root 密码；改环境变量不会自动修改已有库密码 |
 | 正式访问地址 | API、后台、打手 H5 三个域名 | `XA_API_DOMAIN`、`XA_ADMIN_DOMAIN`、`XA_PROVIDER_DOMAIN` | 准备域名、DNS 和服务器；使用 HTTPS/WSS |
 | 原生老板端访问后端 | API、可选独立 WebSocket 根地址 | `apps/boss-miniapp/native/config.js` 的 `trial` / `release` 中 `apiBase`、`socketBase` | API 如 `https://api.<域名>/api`；socket 如 `wss://api.<域名>`，留空从 API 推导；媒体根地址也由 API 推导。`TARO_APP_*` 不会注入原生文件 |

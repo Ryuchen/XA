@@ -71,7 +71,7 @@ class ProviderReportLabelHTTPTest(LiveServerTestCase):
         self.assertEqual(record['expected_income'], 8000)
         self.assertEqual(record['refund_summary']['net_income'], 6000 if settled else 0)
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-report-label-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-report-label-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url,
                 'token': issue_account_tokens(self.accounts[self.provider.pk])[0],
                 'id': self.accounts[self.provider.pk].pk, 'orderId': order.pk, 'orderNo': order.order_no,

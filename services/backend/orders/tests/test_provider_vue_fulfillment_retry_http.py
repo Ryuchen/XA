@@ -35,7 +35,7 @@ class ProviderVueFulfillmentRetryHTTPTest(LiveServerTestCase):
         file = Path(self.media.name) / 'fulfillment.png'
         file.write_bytes(flow.screenshot().read())
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-fulfillment-retry-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-fulfillment-retry-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'orderId': order.pk,
                 'orderNo': order.order_no, 'id': self.accounts[provider.pk].pk, 'operation': operation,
                 'image': str(file), 'token': issue_account_tokens(self.accounts[provider.pk])[0],

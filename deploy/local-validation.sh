@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 compose=(docker compose -p xa-local-validation --env-file .tools/local-validation.env
-  -f docker-compose.remote.yml -f deploy/compose.local-validation.yml)
+  -f deploy/compose/docker-compose.remote.yml -f deploy/compose.local-validation.yml)
 if [[ -r /etc/xa-local-validation/wechat.env ]]; then
   compose+=(--env-file /etc/xa-local-validation/wechat.env -f deploy/compose.local-wechat.yml)
 fi
@@ -35,8 +35,8 @@ print("PASS isolated Compose database and loopback-only fixed ports")
 '
     ;;
   build)
-    # Separate invocations also keep BuildKit from building all three at once.
-    for service in web admin-web provider-h5; do
+    # Separate invocations avoid building all images at once.
+    for service in web admin-web provider-h5 boss-web; do
       "${compose[@]}" build "$service"
     done
     ;;

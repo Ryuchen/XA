@@ -68,7 +68,7 @@ class ProviderVueClaimCancelRealtimeTest(ReactLiveHTTPTestCase):
         self.assertEqual(ok(clients[1].get('/api/club/points/'))['points'], 3)
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_redis_asgi) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-claim-cancel-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-claim-cancel-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'claimId':claim['id'],
                     'oldId':old[0]['id'], 'targetId':target.pk, 'id':accounts[1].pk, 'token':tokens[1],
                     'bossToken':tokens[0], 'staffToken':tokens[2],

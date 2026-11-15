@@ -2,6 +2,8 @@
 
 # XA 电竞陪玩管理系统
 
+> 旧端脚本已删除，历史命令不再适用；具体处理见[脚本核对记录](../ops/legacy-script-audit-20261115.md)。
+
 当前交付源码为 [`fronted/`](../../fronted/README.md) 的老板端、陪玩端和管理后台（React + Tailwind CSS 4 + shadcn）。老板端和陪玩端同时适配手机与桌面，后台适配桌面及1366×1024横屏平板；老板端仅微信快捷登录，最小小程序只承担授权桥接。下方旧小程序、Vue、历史部署及币种称呼保留作迁移追溯，当前技术与产品标准以 [`AGENTS.md`](../../AGENTS.md) 为准。
 
 系统现支持多门店：每店独立名称、三端入口、账号、钱包、订单、运营和薪资/ROI数据；平台门店管理授权与店内角色分开。原有数据保留在默认门店，新门店使用独立业务库。初始化、迁移、授权、门店入口及验证边界见[门店与多租户说明](../../docs/ops/multitenancy-20261104.md)。
@@ -342,10 +344,10 @@ lsof -nP -iTCP:5180 -sTCP:LISTEN
 - [当前产品需求与验收基线](../../docs/PRD_CURRENT.md)
 - [历史产品需求文档](../../docs/PRD.md)
 - [代码现状版产品文档](../../docs/PRODUCT_DOCUMENTATION.md)
-- [系统架构与业务边界](../../docs/ARCHITECTURE.md)
+- [系统架构与业务边界](../../docs/architecture/ARCHITECTURE.md)
 - [接口文档](../../docs/API.md)
-- [数据模型 ER 图](../../docs/ER.md)
-- [核心流程时序图](../../docs/Sequence.md)
+- [数据模型 ER 图](../../docs/architecture/ER.md)
+- [核心流程时序图](../../docs/architecture/Sequence.md)
 - [三端视觉规范](../../docs/DESIGN_SYSTEM.md)
 - [贡献指南](../../CONTRIBUTING.md)
 

@@ -53,7 +53,7 @@ class ProviderVueGameContextHTTPTest(LiveServerTestCase):
         pool_admin = self.ok(self.client.get(f"/api/admin/orders/{pool['id']}/"))
         self.assertEqual((pool_admin['game_region'], pool_admin['game_nickname'], pool_admin['game_uid']), ('隔离大区', '池中隔离昵称', 'POOL-ISOLATED-UID'))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-game-context-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-game-context-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'orderId': order['id'], 'orderNo': order['order_no'],
                 'token': issue_account_tokens(self.accounts[self.provider.pk])[0], 'id': self.accounts[self.provider.pk].pk,
                 'poolToken': issue_account_tokens(candidate_account)[0], 'poolId': candidate_account.pk, 'poolOrderNo': pool['order_no'], 'poolOrderId': pool['id']}),

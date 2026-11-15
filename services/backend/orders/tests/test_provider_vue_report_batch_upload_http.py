@@ -45,7 +45,7 @@ class ProviderVueReportBatchUploadHTTPTest(LiveServerTestCase):
         invalid = Path(self.media.name) / 'invalid.png'
         invalid.write_bytes(b'not an image')
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-report-batch-upload-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-report-batch-upload-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'orderId': order.pk,
                 'orderNo': order.order_no, 'reportId': report.pk, 'pictures': pictures, 'invalid': str(invalid),
                 'id': self.accounts[self.provider.pk].pk, 'token': issue_account_tokens(self.accounts[self.provider.pk])[0],

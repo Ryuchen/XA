@@ -44,7 +44,7 @@ class TransferResponseLossHTTPTest(LiveServerTestCase):
         self.ok(self.client.post(f'/api/orders/orders/{order_id}/start/',
                                  {'entry_image': flow.screenshot()}, format='multipart'))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/admin-transfer-lost-live.cjs')], input=json.dumps({
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/admin-transfer-lost-live.cjs')], input=json.dumps({
             'base': self.live_server_url, 'order': order_id, 'staffId': self.accounts[self.admin.pk].pk,
             'incoming': self.accounts[incoming.pk].pk, 'old': self.accounts[self.provider.pk].pk,
             'staffToken': issue_account_tokens(self.accounts[self.admin.pk])[0],

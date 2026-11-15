@@ -234,11 +234,6 @@ class MenuOperationsTest(APITestCase):
             self.assertFalse(Banner.objects.filter(pk=banner['id']).exists())
 
     def test_banner_destination_tracks_real_service_visibility_for_boss(self):
-        import json
-        import shutil
-        import subprocess
-        from pathlib import Path
-        from django.conf import settings
         def image_file():
             output = BytesIO()
             Image.new('RGB', (750, 320), '#224466').save(output, format='PNG')
@@ -259,13 +254,6 @@ class MenuOperationsTest(APITestCase):
             unavailable = self.ok(self.client.get('/api/banners/'))
             self.assertFalse(next(row for row in unavailable if row['id'] == banner['id'])['link_available'])
             self.assertNotEqual(self.client.get(f'/api/orders/services/{service.pk}/').data['code'], 0)
-            node = shutil.which('node')
-            self.assertTrue(node)
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run([node, str(repo / 'scripts/native-banner-destination-check.cjs')],
-                input=json.dumps({'available': available, 'unavailable': unavailable, 'bannerId': banner['id'], 'serviceId': service.pk}),
-                cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=30)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
             self.ok(self.client.patch(f'/api/admin/service-items/{service.pk}/', {'is_active': True}, format='json'))
             admin_rows = self.ok(self.client.get('/api/admin/banners/'))['list']

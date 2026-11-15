@@ -58,7 +58,7 @@ class ProviderVueGiftPageRealtimeTest(ReactLiveHTTPTestCase):
             self.assertEqual((initial['pagination']['dispose']['total'], len(initial['dispose_records'])), (30, 20))
             repo = Path(settings.BASE_DIR).parent.parent
             with current_http(self, isolated_realtime) as (base, ws_base):
-                result = subprocess.run(['node', str(repo / 'scripts/provider-vue-gift-page-realtime-375.cjs')],
+                result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-gift-page-realtime-375.cjs')],
                     input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'token':tokens[1], 'id':accounts[1].pk,
                         'bossToken':tokens[0], 'giftId':gift.pk, 'oldest':gifts[0]['order_no'],
                         'fixed':True, 'concurrent':os.environ.get('XA_GIFT_PAGE_CONCURRENT') == '1'}),

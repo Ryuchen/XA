@@ -52,7 +52,7 @@ class ProviderVueApplicationReadinessHTTPTest(LiveServerTestCase):
         own = next(item for item in pool if item['id'] == self.order.pk)['my_applications']
         self.assertTrue(any(item['id'] == self.application.pk and item['ready'] for item in own))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-application-readiness-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-application-readiness-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'orderId': self.order.pk,
                 'orderNo': self.order.order_no, 'applicationId': self.application.pk,
                 'bossToken': issue_account_tokens(self.accounts[self.boss.pk])[0],
@@ -93,7 +93,7 @@ class ProviderVueApplicationReadinessHTTPTest(LiveServerTestCase):
         self.invite()
         repo = Path(settings.BASE_DIR).parent.parent
         def check(user, order, application, state, partner=False):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-application-readiness-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-application-readiness-375.cjs')],
                 input=json.dumps({'root': root, 'base': self.live_server_url, 'orderId': order.pk,
                     'orderNo': order.order_no, 'applicationId': application.pk, 'poolState': state,
                     'isPartner': partner, 'provider': {'id': self.accounts[user.pk].pk,

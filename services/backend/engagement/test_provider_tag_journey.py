@@ -127,17 +127,7 @@ class ProviderTagJourneyTest(LiveServerTestCase):
             revised = ok(clients[0].patch(url, {'details':{'tag':'海洋搭子'}}, format='json'))
             self.assertFalse(revised['tag_revision_required'])
             check_ready(1)
-            if os.environ.get('XA_PROVIDER_TAG_VUE_REVIEW') == '1':
-                repo = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run(['node', str(repo/'scripts/provider-tag-vue-review-live.cjs')], cwd=repo,
-                    input=json.dumps({'base':self.live_server_url, 'adminRoot':os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                        'providerRoot':os.environ['XA_PROVIDER_VUE_ROOT'], 'claimId':claim['id'],
-                        'staffToken':issue_account_tokens(accounts[2])[0], 'providerId':accounts[0].pk,
-                        'providerToken':issue_account_tokens(accounts[0])[0], 'bossToken':issue_account_tokens(accounts[1])[0]}),
-                    text=True,encoding='utf-8',capture_output=True,timeout=60)
-                self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-            else:
-                ok(clients[2].post(process, {'status':'COMPLETED','note':'已发放','tag_reviewed':True}, format='json'))
+            ok(clients[2].post(process, {'status':'COMPLETED','note':'已发放','tag_reviewed':True}, format='json'))
             check_ready(0)
         claim = RewardClaim.objects.get(account=accounts[0],reward=reward)
         self.assertEqual((claim.status, claim.details['tag']), ('COMPLETED', '海洋搭子'))

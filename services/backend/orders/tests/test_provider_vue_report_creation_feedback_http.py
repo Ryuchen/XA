@@ -35,7 +35,7 @@ class ProviderVueReportCreationFeedbackHTTPTest(LiveServerTestCase):
         order = self.new_order()
         self.assertFalse(ProviderReport.objects.filter(order=order).exists())
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-report-creation-feedback-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-report-creation-feedback-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'orderId': order.pk,
                 'orderNo': order.order_no, 'serviceId': self.service.pk,
                 'id': self.accounts[self.provider.pk].pk,

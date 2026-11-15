@@ -2,7 +2,7 @@
 
 > 文档版本：v2.0　│　文档性质：**专项产品规格（PRD）**　│　最后更新：2026-08-03
 >
-> 编制依据：`docs/PRD.md`（现状梳理 v1.0）、`docs/PRODUCT_DOCUMENTATION.md`（代码现状版 v1.0）、`docs/DATABASE_DESIGN.md`、`docs/API.md`、`docs/ARCHITECTURE.md`、`README.md`。
+> 编制依据：`docs/PRD.md`（现状梳理 v1.0）、`docs/PRODUCT_DOCUMENTATION.md`（代码现状版 v1.0）、`docs/architecture/DATABASE_DESIGN.md`、`docs/API.md`、`docs/architecture/ARCHITECTURE.md`、`README.md`。
 >
 > 说明：本文在完整记录系统**现有全部软件功能**（作为需求基线）的基础上，**专项深化游戏陪玩订单管理**与**陪玩后端报单/提现结算体系**两大主线，并将其中的实现缺口整理为本期专项新需求。金额在服务端一律以「分」为内部单位，前端展示为「元」。
 
@@ -296,4 +296,4 @@ COMPLETED / CANCELLED 为终态，不可再流转。
 | 财务 | `RechargeRecord`、`WithdrawRequest`、`ProviderReport`、`DisposeRecord` | 充值/提现/报单/奖罚 |
 | 配置 | `SystemConfig`、`EscortLevel`、`BossType` | 抽成率/最低提现/税率、等级与分级 |
 
-> 字段级定义见 `docs/DATABASE_DESIGN.md` 与 `docs/API.md`；状态机与流程见 `docs/Sequence.md` 与 `docs/ER.md`。
+> 字段级定义见 `docs/architecture/DATABASE_DESIGN.md` 与 `docs/API.md`；状态机与流程见 `docs/architecture/Sequence.md` 与 `docs/architecture/ER.md`。

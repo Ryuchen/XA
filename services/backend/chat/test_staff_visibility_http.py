@@ -37,7 +37,7 @@ class StaffChatVisibilityHTTPTest(LiveServerTestCase):
         self.assertEqual(first.post(f"/api/admin/chat-sessions/{session['id']}/claim/", {'expected_version': 0}, format='json').data['code'], 0)
         self.assertEqual(second.get(f"/api/admin/chat-sessions/{session['id']}/messages/").status_code, 403)
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/admin-chat-visibility-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/admin-chat-visibility-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'sessionId': session['id'],
                               'bossToken': tokens[0], 'firstStaffToken': tokens[1], 'secondStaffToken': tokens[2]}),
             cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=45)

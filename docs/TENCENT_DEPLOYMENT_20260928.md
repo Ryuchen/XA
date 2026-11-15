@@ -1,5 +1,7 @@
 # 兴安电竞腾讯云部署验收 · 2026-09-28
 
+> 历史记录：对应旧容器迁移脚本和旧端已退役，不代表当前首版已部署或通过验收。现行部署入口见 [部署说明](../deploy/README.md)。
+
 ## 已部署入口
 
 | 用途 | 地址 | 状态 |
@@ -18,7 +20,7 @@ DNSPod 的根域、www、api、admin、provider 均指向用户指定腾讯云�
 
 部署目录 `/opt/xa-upgrade-20260928`，当前入口 `/opt/xa-current`。当前源码来自本工作区，基线 Git HEAD 为 `194463853eb75b9fd6b6297bb018fedad325bcef`；包含尚未提交的业务改动，以 `manifest.json` 文件摘要和实际镜像为发布依据，不把 Git HEAD 单独视为完整源码版本。
 
-初次部署的后端镜像为 `sha256:4285facc7f57baa879010be627ee050b4f3ee3bbc7f93dadaef6c7f761397f53`；KOOK 升级镜像为 `sha256:43efce6cb45bcba9beee2cfc804652dcab0fa4a159da92808d6fb15d4ed67f62`。后续微信客服升级的实际镜像以 `/etc/xa/release.env`、运行容器与对应验收记录为准。MySQL/Redis 复用原镜像，Nginx/Caddy 固定拉取摘要；完整部署声明见 `docker-compose.tencent.yml` 与 `deploy/compose.tencent-domains.yml`。
+初次部署的后端镜像为 `sha256:4285facc7f57baa879010be627ee050b4f3ee3bbc7f93dadaef6c7f761397f53`；KOOK 升级镜像为 `sha256:43efce6cb45bcba9beee2cfc804652dcab0fa4a159da92808d6fb15d4ed67f62`。后续微信客服升级的实际镜像以 `/etc/xa/release.env`、运行容器与对应验收记录为准。MySQL/Redis 复用原镜像，Nginx/Caddy 固定拉取摘要；完整部署声明见 `deploy/compose/docker-compose.tencent.yml` 与 `deploy/compose.tencent-domains.yml`。
 
 运行两个 Daphne Web 副本、一个 Celery Worker、唯一一个 Beat、MySQL、Redis、两个静态前端和 Caddy。已设置容器内存上限和日志轮转。后端关闭 DEBUG、模拟微信登录、任意 CORS；应用使用仅授权 `xa_db` 的专用数据库账户。充值凭证、报单图片和资金请求唯一标识均强制检查。私有财务、报单和会话图片不能通过公开媒体路径绕过权限读取。
 
@@ -68,8 +70,8 @@ AppID `wx495c9fb56eb3ad24`。原生 47 个注册页面、48 个 WXML 和 49 个 
 日常命令从 `/opt/xa-current` 执行：
 
 ```sh
-sudo docker compose --env-file /etc/xa/release.env -f docker-compose.tencent.yml -f deploy/compose.tencent-domains.yml ps
-sudo docker compose --env-file /etc/xa/release.env -f docker-compose.tencent.yml -f deploy/compose.tencent-domains.yml exec -T --index 1 web python manage.py check_mysql_readiness
+sudo docker compose --env-file /etc/xa/release.env -f deploy/compose/docker-compose.tencent.yml -f deploy/compose.tencent-domains.yml ps
+sudo docker compose --env-file /etc/xa/release.env -f deploy/compose/docker-compose.tencent.yml -f deploy/compose.tencent-domains.yml exec -T --index 1 web python manage.py check_mysql_readiness
 sudo systemctl status xa-backup.timer xa-backup.service
 sudo journalctl -u xa-backup.service --no-pager -n 30
 curl --fail https://api.xaesports.club/api/health/

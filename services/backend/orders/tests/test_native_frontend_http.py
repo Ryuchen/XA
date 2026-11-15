@@ -94,7 +94,7 @@ class NativeFrontendHTTPTest(LiveServerTestCase):
                 patch('orders.views.enqueue_wecom_dispatch'), patch('orders.views.notify_order_update'), \
                 patch('users.views._wechat_code2session', return_value='native-http-wechat'):
             result = subprocess.run(
-                [node, str(repo / 'scripts' / 'native-live-driver.cjs')],
+                [node, str(repo / 'scripts/scenarios' / 'native-live-driver.cjs')],
                 input=json.dumps(payload), text=True, capture_output=True,
                 encoding='utf-8', timeout=90, cwd=repo,
             )

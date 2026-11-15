@@ -11,7 +11,7 @@ function fixture(mode) {
   return new Promise((resolve, reject) => {
     const child = spawn('wsl.exe', ['-d', 'XA-Ubuntu-24.04', '-u', 'root', '--cd', '/mnt/g/Github/XA', '--exec',
       'docker', 'compose', '-p', 'xa-local-validation', '--env-file', '.tools/local-validation.env',
-      '-f', 'docker-compose.remote.yml', '-f', 'deploy/compose.local-validation.yml',
+      '-f', 'deploy/compose/docker-compose.remote.yml', '-f', 'deploy/compose.local-validation.yml',
       'exec', '-T', 'web', 'python', '-', mode, run],
     { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
     let output = '';

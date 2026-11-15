@@ -6,8 +6,7 @@
  *   app 的 sourceRoot（`apps/*\/src`），包目录下的 `.ts` 源码会直接撞上没有
  *   loader 的 webpack，类型注解被当成语法错误（ModuleParseError）。
  * - 写成不带类型注解的 ESM `.js`，webpack / Vite / esbuild 都能原生解析，
- *   零构建步骤、零 loader 配置，与 `packages/design-system` 的「纯资源包」
- *   定位保持一致。类型信息由同目录的 `index.d.ts` 提供给 tsc / vue-tsc。
+ *   零构建步骤、零 loader 配置。类型信息由同目录的 `index.d.ts` 提供。
  *
  * 金额口径（与后端完全一致）：
  * - 后端全链路使用「内部账务单位」整数，10 个账务单位 = 1 浪花。

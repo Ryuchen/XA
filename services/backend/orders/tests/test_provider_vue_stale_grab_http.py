@@ -53,7 +53,7 @@ class ProviderVueStaleGrabHTTPTest(LiveServerTestCase):
             if realtime:
                 self.assertTrue(ws_base, 'Realtime contracts require XA_REACT_CONTRACT_REAL_NETWORK=1')
                 self.assertNotEqual(base, ws_base, 'Use distinct real HTTP and WebSocket Daphne workers')
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-stale-grab-375.cjs')], input=json.dumps({
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-stale-grab-375.cjs')], input=json.dumps({
                 'root': root, 'base': base, 'wsBase': ws_base, 'orderId': order.pk, 'orderNo': order.order_no,
                 'id': accounts[0].pk, 'token': issue_account_tokens(accounts[0])[0],
                 'otherToken': issue_account_tokens(accounts[1])[0], 'lostResponse': lost_response,

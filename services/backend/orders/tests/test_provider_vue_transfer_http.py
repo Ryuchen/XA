@@ -57,7 +57,7 @@ class ProviderVueTransferHTTPTest(LiveServerTestCase):
             if realtime:
                 self.assertTrue(ws_base, 'Realtime contracts require XA_REACT_CONTRACT_REAL_NETWORK=1')
                 self.assertNotEqual(base, ws_base, 'Use distinct real HTTP and WebSocket Daphne workers')
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-transfer-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-transfer-375.cjs')],
                 input=json.dumps({'root': root, 'base': base, 'wsBase': ws_base, 'realtime': realtime,
                     'staffToken': issue_account_tokens(self.accounts[self.admin.pk])[0], 'orderId': order['id'],
                     'orderNo': order['order_no'], 'providers': providers, 'settled': settled}),

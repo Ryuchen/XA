@@ -997,10 +997,6 @@ class CouponAvailabilityWorkflowTest(APITransactionTestCase):
         first = create_order()
         self.assertEqual((first['amount'], first['coupon_discount']), (9000, 1000))
         detail = self.ok(self.boss.get(f"/api/orders/orders/{first['id']}/"))
-        repo = Path(settings.BASE_DIR).parent.parent
-        presentation = subprocess.run(['node', str(repo / 'scripts/native-order-price-breakdown.cjs')],
-            input=json.dumps(detail), text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)
-        self.assertEqual(presentation.returncode, 0, presentation.stdout + presentation.stderr)
         self.wallet.refresh_from_db()
         self.assertEqual(self.wallet.balance, 41000)
         self.assertEqual(next(row for row in self.ok(self.boss.get('/api/coupons/mine/'))
@@ -1074,7 +1070,7 @@ class CouponAvailabilityWorkflowTest(APITransactionTestCase):
         node = shutil.which('node')
         self.assertIsNotNone(node, 'Node runtime required for native presentation')
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-coupon-refund-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/native-coupon-refund-live.cjs')],
             input=json.dumps({'order': cancelled, 'name': '全额优惠券', 'outcome': 'RETURNED', 'zeroPayment': True}, cls=DjangoJSONEncoder),
             text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
@@ -1256,7 +1252,7 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
         rate = Coupon.objects.create(name='带门槛折扣券', discount_type='RATE', amount=1, discount_rate=80, threshold=2000)
         repo = Path(settings.BASE_DIR).parent.parent
         with isolated_redis_asgi() as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/native-coupon-stock-realtime.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/native-coupon-stock-realtime.cjs')],
                 input=json.dumps({'base': base, 'wsBase': ws_base, 'couponId': coupon.pk, 'legacyId': legacy.pk, 'rateId': rate.pk,
                     'token': issue_account_tokens(second_account)[0], 'account': second_account.pk,
                     'firstToken': issue_account_tokens(first_account)[0]}),
@@ -1379,7 +1375,7 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
         self.assertNotIn('benefit_effects', admin)
         self.assertNotIn('recovery_lines', admin)
         repo = Path(settings.BASE_DIR).parent.parent
-        native = subprocess.run(['node', str(repo/'scripts/native-coupon-refund-live.cjs')],
+        native = subprocess.run(['node', str(repo/'scripts/scenarios/native-coupon-refund-live.cjs')],
             input=json.dumps({'order':detail, 'name':'隔离返还再用券', 'outcome':'RETURNED'}, cls=DjangoJSONEncoder),
             text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)
         self.assertEqual(native.returncode, 0, native.stdout + native.stderr)

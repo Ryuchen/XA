@@ -72,7 +72,7 @@ class ProviderVueEvaluationMessageHTTPTest(LiveServerTestCase):
         self.assertTrue(any(row['id'] == review['id'] for row in self.ok(self.client.get('/api/admin/evaluations/'))['list']))
         repo = Path(settings.BASE_DIR).parent.parent
         fixed = True
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-evaluation-message-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-evaluation-message-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'orderId':order_id, 'foreignOrderId':foreign_id,
                 'orderNo':order['order_no'], 'messageId':notice['id'], 'id':self.accounts[self.provider.pk].pk,
                 'token':self.tokens[self.provider.pk], 'fixed':fixed}),
@@ -87,7 +87,7 @@ class ProviderVueEvaluationMessageHTTPTest(LiveServerTestCase):
             item = self.ok(self.client.get(f"/api/admin/evaluations/{review['id']}/"))
             self.assertEqual(item['reply_content'], '感谢老板，已收到评价')
             self.assertEqual(self.client.delete(f"/api/admin/evaluations/{review['id']}/", {'reply_version':item['reply_version']}, format='json').data['code'], 0)
-            missing = subprocess.run(['node', str(repo / 'scripts/provider-vue-evaluation-message-375.cjs')],
+            missing = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-evaluation-message-375.cjs')],
                 input=json.dumps({'root':root, 'base':self.live_server_url, 'orderId':order_id,
                     'orderNo':order['order_no'], 'messageId':notice['id'], 'id':self.accounts[self.provider.pk].pk,
                     'token':self.tokens[self.provider.pk], 'fixed':True, 'missing':True}),

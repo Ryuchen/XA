@@ -29,7 +29,7 @@ class ProviderVueWithdrawReceiptHTTPTest(LiveServerTestCase):
 
     def run_browser(self, root, ids):
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-withdraw-receipt-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-withdraw-receipt-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'token':self.tokens[self.provider.pk],
                 'id':self.accounts[self.provider.pk].pk, 'fixed':True, 'withdrawals':ids}),
             text=True, encoding='utf-8', capture_output=True, timeout=40, cwd=repo)

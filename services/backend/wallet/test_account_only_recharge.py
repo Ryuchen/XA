@@ -105,16 +105,6 @@ class AccountOnlyRechargeTest(TransactionTestCase):
         self.assertEqual(transactions['code'], 0, transactions)
         rows = transactions['data']['transactions']
         self.assertEqual(sum(row['amount'] for row in rows if row['is_referral_income']), 0)
-        if account_only_inviter and not linked_buyer:
-            import json, shutil, subprocess
-            from pathlib import Path
-            from django.conf import settings
-            node = shutil.which('node')
-            self.assertIsNotNone(node, 'Node is required to verify native wallet rendering')
-            repo = Path(settings.BASE_DIR).parent.parent
-            rendered = subprocess.run([node, str(repo / 'scripts/native-referral-wallet-live.cjs')],
-                input=json.dumps(rows), text=True, encoding='utf-8', capture_output=True, cwd=repo, timeout=15)
-            self.assertEqual(rendered.returncode, 0, rendered.stdout + rendered.stderr)
         if account_only_inviter:
             self.assertFalse(LegacyAccountMap.objects.filter(account=inviter_account).exists())
         gift=make_service(name='隔离推荐礼物',price=3000,service_category=make_service_category(is_gift=True),commission_rate=20)

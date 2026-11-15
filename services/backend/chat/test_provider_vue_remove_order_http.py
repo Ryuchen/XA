@@ -45,7 +45,7 @@ class ProviderVueRemoveOrderHTTPTest(LiveServerTestCase):
                 self.assertEqual(client.get(f"{prefix}{order['id']}/").data['data']['status'], 'GRABBED')
         fixed = True
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-chat-remove-order-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-chat-remove-order-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'token':tokens[1], 'id':accounts[1].pk,
                 'first':first['data'], 'second':second['data'], 'fixed':fixed}),
             text=True, encoding='utf-8', capture_output=True, timeout=50, cwd=repo)

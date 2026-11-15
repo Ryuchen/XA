@@ -1,5 +1,7 @@
 # 兴安电竞 · 腾讯云部署方案
 
+> 历史方案：相关旧端和旧容器迁移脚本已退役；当前部署入口见 [部署说明](../deploy/README.md)。
+
 2026-09-28 已按用户提供的现有主机完成实际部署；资源规格不同于本文采购建议。现状与验收以 [腾讯云部署记录](TENCENT_DEPLOYMENT_20260928.md) 为准，本文保留为架构和后续容量规划。
 
 更新：2026-09-23。状态：部署设计与采购规格建议；尚未购买资源、修改 DNS 或执行远程部署。
@@ -82,14 +84,14 @@ Docker 官方支持 Ubuntu 24.04；安装使用官方软件源中的 Docker Engi
 
 | 项目 | 当前证据 | 部署前需要完成 |
 | --- | --- | --- |
-| 云 MySQL | 新增独立 `docker-compose.managed.yml`，外部地址、证书与主机身份校验、连接超时、迁移成功依赖已实现；见 [托管部署说明](MANAGED_MYSQL_DEPLOYMENT.md) | 在目标腾讯云实例配置私网授权、专用账号、证书与备份，完成真实环境验收 |
+| 云 MySQL | 新增独立 `deploy/compose/docker-compose.managed.yml`，外部地址、证书与主机身份校验、连接超时、迁移成功依赖已实现；见 [托管部署说明](MANAGED_MYSQL_DEPLOYMENT.md) | 在目标腾讯云实例配置私网授权、专用账号、证书与备份，完成真实环境验收 |
 | 数据库兼容 | SQLite 全量与 MySQL 8.0 专项已验证 | 在选定 TXSQL 版本执行真实迁移、时区/隔离级别检查、资金并发、备份恢复及重连验证 |
 | 媒体与 COS | `FileSystemStorage` + Docker 媒体卷 | 先实现并验证异地备份；如启用业务 COS，再实现存储适配、权限与过期链接刷新 |
 | 镜像发布 | 现有 CI/脚本固定 Docker Hub 和完整 SHA | 在目标 CVM 验证镜像拉取；若采用国内 TCR，再适配仓库地址、鉴权及发布脚本，不能只修改命名空间 |
 | 运行状态 | 现有脚本检查 Django/MySQL，不等于业务健康或压力验证 | 补 HTTP/WebSocket、任务、证书、磁盘和备份告警；配置日志轮转与容量阈值 |
 | 正式微信与外部渠道 | 小程序真实凭据已保存在本机受限配置，开发者工具 OpenID 登录绑定通过；KOOK/企微仍无实际联调配置 | 继续验收真实手机号绑定、真机、客服会话、KOOK/企微投递和正式域名上的订单资金链路；本地证据见 [部署记录](LOCAL_DEPLOYMENT_VALIDATION.md) |
 
-`docker-compose.remote.yml + docker-compose.release.yml` 继续用于自带 MySQL 的单机方案；托管数据库单独使用 `docker-compose.managed.yml`。新编排不自动搬迁已有数据，切换流程见 [托管部署说明](MANAGED_MYSQL_DEPLOYMENT.md)。
+`deploy/compose/docker-compose.remote.yml + deploy/compose/docker-compose.release.yml` 继续用于自带 MySQL 的单机方案；托管数据库单独使用 `deploy/compose/docker-compose.managed.yml`。新编排不自动搬迁已有数据，切换流程见 [托管部署说明](MANAGED_MYSQL_DEPLOYMENT.md)。
 
 ## 7. 压测与发布顺序
 

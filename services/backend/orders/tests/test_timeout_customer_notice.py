@@ -1,15 +1,9 @@
 """Offline customers can see the result of a genuinely expired order."""
 from datetime import timedelta
-import json
-import shutil
-import subprocess
 from io import StringIO
-from pathlib import Path
 from uuid import uuid4
 
 from django.core.management import call_command
-from django.conf import settings
-from django.core.serializers.json import DjangoJSONEncoder
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
@@ -87,14 +81,6 @@ class TimeoutCustomerNoticeTest(APITransactionTestCase):
         self.assertFalse(Transaction.objects.filter(order=order, tx_type='REFUND').exists())
         detail = self.client.get(f'/api/orders/orders/{order.pk}/').data['data']
         self.assertEqual((detail['status'], detail['payment_status']), ('CANCELLED', 'UNPAID'))
-        node = shutil.which('node')
-        if not node:
-            self.fail('Node runtime required to check the native order presentation')
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-unpaid-timeout-display.cjs')],
-            input=json.dumps(detail, cls=DjangoJSONEncoder), text=True, encoding='utf-8',
-            capture_output=True, timeout=15, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_new_pending_deadline_is_not_announced_as_cancelled(self):
         order_id = self.create_paid('STAFF')

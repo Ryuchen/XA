@@ -47,7 +47,7 @@ class AdminReservationFrontendHTTPTest(LiveServerTestCase):
         service = make_service(price=10000)
         start = (timezone.now() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/admin-reservation-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/admin-reservation-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'staffToken': issue_account_tokens(staff_account)[0],
                 'providerToken': issue_account_tokens(provider_account)[0], 'bossToken': issue_account_tokens(boss_account)[0], 'staffId': staff_account.pk,
                 'viewerToken': issue_account_tokens(viewer_account)[0], 'cancelToken': issue_account_tokens(cancel_account)[0],

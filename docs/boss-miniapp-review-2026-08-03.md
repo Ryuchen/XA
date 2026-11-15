@@ -2,7 +2,7 @@
 
 > 审查日期：2026-08-03
 > 审查人：WeChat Mini Program Developer（专家视角）
-> 审查基线：`docs/PRD.md`、`docs/ARCHITECTURE.md`、`docs/API.md`
+> 审查基线：`docs/PRD.md`、`docs/architecture/ARCHITECTURE.md`、`docs/API.md`
 > 技术栈：Taro 4.1.9 + React 18 + TypeScript + Sass + Zustand（微信 / H5 双端）
 
 ---

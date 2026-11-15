@@ -19,7 +19,7 @@ class ProviderVueWithdrawNoticeHTTPTest(ProviderVueWithdrawReceiptHTTPTest):
         empty_provider.escort_profile.account = empty_account
         empty_provider.escort_profile.save(update_fields=['account'])
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-withdraw-notice-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-withdraw-notice-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'token':self.tokens[self.provider.pk],
                 'id':self.accounts[self.provider.pk].pk, 'emptyToken':issue_account_tokens(empty_account)[0],
                 'emptyId':empty_account.pk, 'withdrawals':ids, 'fixed':True}),

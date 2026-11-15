@@ -59,7 +59,7 @@ class ProviderVueReservationOriginHTTPTest(LiveServerTestCase):
 
         repo = Path(settings.BASE_DIR).parent.parent
         def browser(account, can_open):
-            run = subprocess.run(['node', str(repo / 'scripts/provider-vue-reservation-origin-375.cjs')],
+            run = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-reservation-origin-375.cjs')],
                 input=json.dumps({'root':root, 'base':self.live_server_url, 'orderId':oid,
                     'orderNo':result['order']['order_no'], 'reservationId':rid,
                     'token':issue_account_tokens(account)[0], 'id':account.pk, 'canOpen':can_open,

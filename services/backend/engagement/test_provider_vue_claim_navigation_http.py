@@ -64,7 +64,7 @@ class ProviderVueClaimNavigationHTTPTest(LiveServerTestCase):
         fixed = True
         repo = Path(settings.BASE_DIR).parent.parent
         try:
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-claim-navigation-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-claim-navigation-375.cjs')],
                 input=json.dumps({'root':root, 'base':self.live_server_url, 'token':tokens[1], 'id':accounts[1].pk,
                     'oldId':old['id'], 'fixed':fixed, 'lost':lost}), text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
         except subprocess.TimeoutExpired as error:

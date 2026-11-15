@@ -1,5 +1,9 @@
 # XA 发布与联调说明
 
+> 旧端脚本已删除，历史命令不再适用；具体处理见[脚本核对记录](ops/legacy-script-audit-20261115.md)。
+
+> 历史阶段记录：其中旧端、服务器和部署脚本不作为当前首版的发布依据。当前入口见 [开发与部署说明](../deploy/README.md)，进度见 [研发记录](development/16-开发进度.md)。
+
 2026-09-28 公网部署增量：腾讯云 `43.167.213.74` 的三端配套和 HTTPS 已部署，云端 1,069 项回归零失败，微信开发版本 `2026.9.28` 上传成功，用户确认手机预览和手机号授权正常。最新入口、数据迁移、每日备份和仍待正式提审的事项见 [腾讯云实际部署验收](TENCENT_DEPLOYMENT_20260928.md)。下文 2026-09-23 内容保留为历史阶段记录。
 
 更新：2026-09-23。本文件记录当前源码、验收证据和上线条件；历史产品文档存在时间差，以这里的发布口径为准。
@@ -164,15 +168,15 @@ AppSecret、数据库和服务器口令只放部署环境，不写入源码或�
 
 ### 启动服务
 
-部署编排采用基础 `docker-compose.remote.yml` 加 `docker-compose.release.yml`。发布覆盖层固定关闭 Mock 登录、打开充值和订单凭证检查，使用非 root 数据库账号，配置媒体 HTTPS 根地址和跨域白名单。
+部署编排采用基础 `deploy/compose/docker-compose.remote.yml` 加 `deploy/compose/docker-compose.release.yml`。发布覆盖层固定关闭 Mock 登录、打开充值和订单凭证检查，使用非 root 数据库账号，配置媒体 HTTPS 根地址和跨域白名单。
 
 ```sh
-docker compose --env-file .env.release -f docker-compose.remote.yml -f docker-compose.release.yml config --quiet
-docker compose --env-file .env.release -f docker-compose.remote.yml -f docker-compose.release.yml up -d --build
-docker compose --env-file .env.release -f docker-compose.remote.yml -f docker-compose.release.yml ps
-docker compose --env-file .env.release -f docker-compose.remote.yml -f docker-compose.release.yml exec web python manage.py check
-docker compose --env-file .env.release -f docker-compose.remote.yml -f docker-compose.release.yml exec web python manage.py check_mysql_readiness
-docker compose --env-file .env.release -f docker-compose.remote.yml -f docker-compose.release.yml exec web python manage.py bootstrap_console --username your_admin_name
+docker compose --env-file .env.release -f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml config --quiet
+docker compose --env-file .env.release -f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml up -d --build
+docker compose --env-file .env.release -f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml ps
+docker compose --env-file .env.release -f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml exec web python manage.py check
+docker compose --env-file .env.release -f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml exec web python manage.py check_mysql_readiness
+docker compose --env-file .env.release -f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml exec web python manage.py bootstrap_console --username your_admin_name
 ```
 
 最后一步交互输入管理员密码，不回显；拒绝覆盖现有账号。该命令创建可登录运营后台的业务管理员及完整权限映射，不依赖演示账号。

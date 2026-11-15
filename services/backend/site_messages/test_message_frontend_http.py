@@ -33,7 +33,7 @@ class MessageFrontendHTTPTest(LiveServerTestCase):
         inputs = {'base': self.live_server_url, 'firstToken': issue_account_tokens(accounts[0])[0],
                   'secondToken': issue_account_tokens(accounts[1])[0], 'staffToken': issue_account_tokens(staff_account)[0],
                   'firstAccount': accounts[0].pk, 'oldest': oldest_id}
-        script = Path(__file__).resolve().parents[3] / 'scripts' / 'provider-messages-live.cjs'
+        script = Path(__file__).resolve().parents[3] / 'scripts/scenarios' / 'provider-messages-live.cjs'
         completed = subprocess.run(['node', str(script)], input=json.dumps(inputs), text=True, encoding='utf-8',
                                    capture_output=True, timeout=45)
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)

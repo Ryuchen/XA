@@ -54,7 +54,7 @@ class PendingDeadlineFrontendHTTPTest(LiveServerTestCase):
         # Starting Node/importing the actual React controllers must not consume
         # the five-second business window. Arm the persisted deadline only once
         # both real initial HTTP reads have completed in the ready process.
-        with subprocess.Popen([node, str(repo / 'scripts/native-pending-deadline-live.cjs')],
+        with subprocess.Popen([node, str(repo / 'scripts/scenarios/native-pending-deadline-live.cjs')],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True, encoding='utf-8', cwd=repo) as process:
             try:

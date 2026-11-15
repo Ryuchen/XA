@@ -56,7 +56,7 @@ class ProviderVueMineDepositRealtimeTest(ReactLiveHTTPTestCase):
         self.ok(self.recharge(trade_no='mine-cash-recharge', request_id='mine-cash-recharge', account=cash_account))
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-mine-deposit-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-mine-deposit-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'orderId':order.pk, 'reportId':report.pk,
                     'id':self.accounts[self.provider.pk].pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
                     'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],

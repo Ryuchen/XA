@@ -104,7 +104,7 @@ class ProviderChatFrontendHTTPTest(LiveServerTestCase):
             self.assertEqual(response.data['code'], 0, response.data)
         self.assertEqual(client.get('/api/chat/unread/').data['data']['unread'], 51)
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/provider-chat-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/provider-chat-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'providerToken': issue_account_tokens(provider_account)[0],
                               'providerId': provider_account.pk, 'staffToken': issue_account_tokens(staff_account)[0],
                               'sessionId': session_id}), text=True, encoding='utf-8', capture_output=True, timeout=40, cwd=repo)

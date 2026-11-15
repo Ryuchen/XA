@@ -40,7 +40,7 @@ class ReportReviewLiveVueTest(LiveServerTestCase):
         self.assertIsNotNone(order.consumption_ready_at)
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime, report_approval=True) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-report-review-live.cjs')], cwd=repo,
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-report-review-live.cjs')], cwd=repo,
                 input=json.dumps({'base':base, 'wsBase':ws_base,
                     'id':self.accounts[self.provider.pk].pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
                     'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],

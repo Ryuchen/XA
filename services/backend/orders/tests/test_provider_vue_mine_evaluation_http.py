@@ -36,7 +36,7 @@ class ProviderVueMineEvaluationRealtimeTest(ReactLiveHTTPTestCase):
         role.save(update_fields=['permissions'])
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-mine-evaluation-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-mine-evaluation-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'orderId':order.pk,
                     'id':self.accounts[self.provider.pk].pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
                     'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],
@@ -63,7 +63,7 @@ class ProviderVueMineEvaluationRealtimeTest(ReactLiveHTTPTestCase):
         role.save(update_fields=['permissions'])
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-mine-evaluation-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-mine-evaluation-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'orderId':order.pk,
                     'id':self.accounts[self.provider.pk].pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
                     'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],

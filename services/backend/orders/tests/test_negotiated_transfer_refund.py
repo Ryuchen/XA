@@ -212,7 +212,7 @@ class NegotiatedTransferRefundTest(APITestCase):
                 from django.conf import settings
                 from django.core.serializers.json import DjangoJSONEncoder
                 repo = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run(['node', str(repo / 'scripts/native-order-refund-live.cjs')],
+                result = subprocess.run(['node', str(repo / 'scripts/scenarios/native-order-refund-live.cjs')],
                     input=json.dumps({'order': detail, 'statusText': '已取消', 'refunded': 5000,
                                       'remaining': 5000, 'count': 1}, cls=DjangoJSONEncoder),
                     text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)

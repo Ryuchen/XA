@@ -119,10 +119,6 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
             self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
         def check_native_refund(partial, amount, remaining):
             detail = ok(clients[0].get(f'/api/orders/orders/{gift_order.pk}/'))
-            result = subprocess.run(['node', str(repo / 'scripts/native-gift-refund-presentation.cjs')], cwd=repo,
-                input=json.dumps({'order': detail, 'partial': partial, 'amount': amount, 'remaining': remaining}, default=str),
-                text=True, encoding='utf-8', capture_output=True, timeout=20)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             if os.environ.get('XA_NATIVE_GIFT_REFUND') == '1':
                 native = subprocess.run(['node', str(repo / '.tools/native-recharge-checkout-375-20261102/native-gift-refund-375.cjs')], cwd=repo,
                     input=json.dumps({'base': self.live_server_url, 'session': session, 'orderId': gift_order.pk,

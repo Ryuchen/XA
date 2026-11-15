@@ -45,7 +45,7 @@ class ProviderVueReportNavigationHTTPTest(LiveServerTestCase):
         second = self.ok(self.client.post('/api/orders/create/', {'service_id':self.service.pk,
             'provider_id':self.accounts[self.provider.pk].pk, 'client_request_id':'report-navigation-b'}, format='json'))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-report-navigation-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-report-navigation-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'first':first, 'second':second,
                 'messageId':notice.pk, 'id':self.accounts[self.provider.pk].pk,
                 'token':self.tokens[self.provider.pk], 'fixed':True,

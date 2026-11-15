@@ -33,7 +33,7 @@ class ProviderVueMineAssignmentStatusTest(ReactLiveHTTPTestCase):
             'client_request_id':f'mine-assignment-status-{index}'}, format='json')) for index in range(2)]
         repo = Path(settings.BASE_DIR).parent.parent
         with current_http(self, isolated_realtime) as (base, ws_base):
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-mine-assignment-status-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-mine-assignment-status-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'orders':[row['id'] for row in orders],
                     'id':self.accounts[self.provider.pk].pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
                     'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],

@@ -1,0 +1,46 @@
+# 历史容器联调入口。日常三端开发使用 deploy/dev.ps1；该文件不替代域名网关。
+include:
+  - docker-compose.yml
+
+services:
+  provider-h5:
+    build:
+      context: ../..
+      dockerfile: deploy/images/frontend/Dockerfile
+      args:
+        XA_APP: provider
+    image: xa-provider-h5:dev
+    container_name: xa_provider_h5
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8081:80"
+    depends_on:
+      - web
+
+  admin-web:
+    build:
+      context: ../..
+      dockerfile: deploy/images/frontend/Dockerfile
+      args:
+        XA_APP: admin
+    image: xa-admin-web:dev
+    container_name: xa_admin_web
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
+
+  boss-web:
+    build:
+      context: ../..
+      dockerfile: deploy/images/frontend/Dockerfile
+      args:
+        XA_APP: boss
+    image: xa-boss-web:dev
+    ports:
+      - "8082:80"
+    depends_on:
+      - web

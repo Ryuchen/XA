@@ -4,7 +4,7 @@ set -euo pipefail
 umask 077
 cd "$(dirname "$0")/.."
 compose=(docker compose -p xa-local-validation --env-file .tools/local-validation.env
-  -f docker-compose.remote.yml -f deploy/compose.local-validation.yml)
+  -f deploy/compose/docker-compose.remote.yml -f deploy/compose.local-validation.yml)
 if [[ -r /etc/xa-local-validation/wechat.env ]]; then
   compose+=(--env-file /etc/xa-local-validation/wechat.env -f deploy/compose.local-wechat.yml)
 fi

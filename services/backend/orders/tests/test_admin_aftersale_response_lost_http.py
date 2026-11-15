@@ -43,7 +43,7 @@ class AdminAfterSaleResponseLostHTTPTest(LiveServerTestCase):
         second_ticket = self.open_aftersale(second_id)
         balance_before = Wallet.objects.get(user=self.boss).balance
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/admin-aftersale-lost-live.cjs')],
+        result = subprocess.run([node, str(repo / 'scripts/scenarios/admin-aftersale-lost-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'orderId': order_id, 'ticketId': ticket_id,
                 'secondOrder': second_id, 'secondTicket': second_ticket, 'reportId': report_id,
                 'staffToken': self.tokens[self.staff.pk], 'bossToken': self.tokens[self.boss.pk],

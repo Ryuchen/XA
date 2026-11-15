@@ -1,5 +1,7 @@
 # XA 三端样式系统
 
+> 历史资料：下述旧 Sass 主题包和原生业务端已退役。当前设计标准见 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) 及仓库根目录 [DESIGN.md](../DESIGN.md)。
+
 ## 单一事实来源
 
 三端品牌色、语义色、暗色模式和动效时长统一维护在

@@ -53,7 +53,7 @@ class ProviderVueSettlementNoticeHTTPTest(LiveServerTestCase):
         notice=next(row for row in notices if row['title']=='报单审核通过' and row['related_order_id']==oid)
         self.assertEqual(notice['preview'],'凭证已通过，结算结果请查看钱包流水。')
         repo=Path(settings.BASE_DIR).parent.parent
-        result=subprocess.run(['node',str(repo/'scripts/provider-vue-settlement-notice-375.cjs')],
+        result=subprocess.run(['node',str(repo/'scripts/scenarios/provider-vue-settlement-notice-375.cjs')],
             input=json.dumps({'root':root,'base':self.live_server_url,'token':self.tokens[self.provider.pk],
                 'id':self.accounts[self.provider.pk].pk,'orderNo':created['order_no'],'messageId':notice['id']}),
             text=True,encoding='utf-8',capture_output=True,timeout=40,cwd=repo)

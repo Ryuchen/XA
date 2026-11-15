@@ -1,5 +1,5 @@
 # Local-only production-image verification. Use project name xa-local-validation.
-# Merge after docker-compose.remote.yml; requires modern Docker Compose (!reset).
+# Merge after deploy/compose/docker-compose.remote.yml; requires modern Docker Compose (!reset).
 # Generate private credentials in .tools/local-validation.env; never use production credentials.
 x-local-env: &local-env
   XA_LOCAL_VALIDATION: "true"
@@ -61,7 +61,7 @@ services:
       - "127.0.0.1:18081:81"
       - "127.0.0.1:18082:82"
     volumes:
-      - ./deploy/Caddyfile.local-validation:/etc/caddy/Caddyfile:ro
+      - ../Caddyfile.local-validation:/etc/caddy/Caddyfile:ro
       - backend_media:/srv/media:ro
       - backend_static:/srv/static:ro
     depends_on:

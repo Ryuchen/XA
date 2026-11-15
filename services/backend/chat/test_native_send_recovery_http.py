@@ -31,7 +31,7 @@ class NativeChatSendRecoveryHTTPTest(LiveServerTestCase):
                              'user': {'id': str(account.pk), 'role': 'customer'}})
         repo = Path(settings.BASE_DIR).parent.parent
         with tempfile.TemporaryDirectory(prefix='xa-chat-send-recovery-') as media, override_settings(MEDIA_ROOT=media):
-            result = subprocess.run([node, str(repo / 'scripts/native-chat-send-recovery-live.cjs')],
+            result = subprocess.run([node, str(repo / 'scripts/scenarios/native-chat-send-recovery-live.cjs')],
                 input=json.dumps({'base': self.live_server_url, 'sessions': sessions}),
                 text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

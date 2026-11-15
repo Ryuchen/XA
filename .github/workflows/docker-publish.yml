@@ -35,14 +35,21 @@ jobs:
             image: xa-backend
             context: services/backend
             dockerfile: services/backend/Dockerfile
-          - name: dispatch
+          - name: admin
             image: xa-admin-web
             context: .
-            dockerfile: apps/admin-web/Dockerfile
+            dockerfile: deploy/images/frontend/Dockerfile
+            app: admin
           - name: provider
             image: xa-provider-h5
             context: .
-            dockerfile: apps/provider-vue/Dockerfile
+            dockerfile: deploy/images/frontend/Dockerfile
+            app: provider
+          - name: boss
+            image: xa-boss-web
+            context: .
+            dockerfile: deploy/images/frontend/Dockerfile
+            app: boss
 
     steps:
       - name: Checkout repository
@@ -84,6 +91,8 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          build-args: |
+            XA_APP=${{ matrix.app }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -105,7 +114,7 @@ jobs:
   deploy:
     name: Deploy Docker Hub images to remote server
     needs: build
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     concurrency:
       group: xa-production-deployment

@@ -50,7 +50,7 @@ class ProviderVueGrabRetryHTTPTest(LiveServerTestCase):
             'dispatch_route': 'PUBLIC', 'dispatch_mode': 'AUTO_GRAB', 'client_request_id': 'grab-reset-test'}, format='json'))
         Order.objects.filter(pk=data['id']).update(pool_entered_at=timezone.now()-timedelta(hours=1))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-grab-retry-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-grab-retry-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'orderId': data['id'],
                 'orderNo': data['order_no'], 'id': self.accounts[self.provider.pk].pk,
                 'token': issue_account_tokens(self.accounts[self.provider.pk])[0],
@@ -97,7 +97,7 @@ class ProviderVueGrabRetryHTTPTest(LiveServerTestCase):
             self.ok(self.client.post(f"/api/orders/orders/{order['id']}/reject/", {'reason': '隔离档期调整'}, format='json'))
             ids.append(order)
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-history-pages-live.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-history-pages-live.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'oldest': ids[0]['order_no'],
                 'latest': ids[-1]['order_no'], 'id': self.accounts[self.provider.pk].pk,
                 'token': issue_account_tokens(self.accounts[self.provider.pk])[0]}),

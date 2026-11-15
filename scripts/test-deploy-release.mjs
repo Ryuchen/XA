@@ -26,9 +26,10 @@ function fixture(t) {
   }
   git(source, 'init', '-q', '-b', 'main');
   fs.writeFileSync(path.join(source, '.gitignore'), '.env.release\n');
-  fs.writeFileSync(path.join(source, 'docker-compose.remote.yml'), 'services: {}\n');
-  fs.writeFileSync(path.join(source, 'docker-compose.release.yml'), 'services: {}\n');
-  fs.writeFileSync(path.join(source, 'docker-compose.managed.yml'), 'services: {}\n');
+  fs.mkdirSync(path.join(source, 'deploy', 'compose'), { recursive: true });
+  fs.writeFileSync(path.join(source, 'deploy/compose/docker-compose.remote.yml'), 'services: {}\n');
+  fs.writeFileSync(path.join(source, 'deploy/compose/docker-compose.release.yml'), 'services: {}\n');
+  fs.writeFileSync(path.join(source, 'deploy/compose/docker-compose.managed.yml'), 'services: {}\n');
   fs.writeFileSync(path.join(source, 'version.txt'), 'previous\n');
   git(source, 'add', '.'); git(source, 'commit', '-q', '-m', 'previous');
   const previous = git(source, 'rev-parse', 'HEAD');
@@ -66,7 +67,7 @@ test('tagged commit deploys exact source and images using release overlay withou
   assert.equal(lines.length, 6);
   for (const line of lines) {
     assert.ok(line.includes(`tag=sha-${f.target}`));
-    assert.ok(line.includes('--env-file .env.release -f docker-compose.remote.yml -f docker-compose.release.yml'));
+    assert.ok(line.includes('--env-file .env.release -f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml'));
   }
   assert.match(f.commands(), /up -d --no-build --remove-orphans --wait --wait-timeout 180/);
   assert.match(f.commands(), /manage.py check_mysql_readiness/);
@@ -115,9 +116,9 @@ test('managed deployment selects only its standalone compose file and preserves 
   const lines = f.commands().trim().split('\n');
   assert.equal(lines.length, 6);
   for (const line of lines) {
-    assert.match(line, /--env-file .env.release -f docker-compose.managed.yml/);
-    assert.ok(!line.includes('docker-compose.remote.yml'));
-    assert.ok(!line.includes('docker-compose.release.yml'));
+    assert.ok(line.includes('--env-file .env.release -f deploy/compose/docker-compose.managed.yml'));
+    assert.ok(!line.includes('deploy/compose/docker-compose.remote.yml'));
+    assert.ok(!line.includes('deploy/compose/docker-compose.release.yml'));
   }
   assert.equal(fs.readFileSync(f.envFile, 'utf8'), 'UNCHANGED_CONFIGURATION=yes\n');
 });

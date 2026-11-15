@@ -54,7 +54,7 @@ class ProviderVueAfterSaleHTTPTest(LiveServerTestCase):
         self.login(self.boss)
         order = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-aftersale-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-aftersale-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'token': self.tokens[self.provider.pk],
                 'id': self.accounts[self.provider.pk].pk, 'bossToken': self.tokens[self.boss.pk],
                 'staffToken': self.tokens[self.staff.pk], 'orderId': order_id, 'orderNo': order['order_no'], 'caseId': case_id, 'partial': partial}),
@@ -85,7 +85,7 @@ class ProviderVueAfterSaleHTTPTest(LiveServerTestCase):
             summary = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))['refund_summary']
             self.assertTrue(summary['income_breakdown_unavailable'])
             self.assertIsNone(summary['net_income']); self.assertIsNone(summary['recovered_amount'])
-            result = subprocess.run(['node', str(repo / 'scripts/provider-vue-aftersale-375.cjs')],
+            result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-aftersale-375.cjs')],
                 input=json.dumps({'root':root,'base':self.live_server_url,'token':self.tokens[self.provider.pk],
                     'id':self.accounts[self.provider.pk].pk,'orderId':order_id,'orderNo':order['order_no'],'ambiguous':True}),
                 text=True,encoding='utf-8',capture_output=True,timeout=45,cwd=repo)
@@ -110,7 +110,7 @@ class ProviderVueAfterSaleHTTPTest(LiveServerTestCase):
         self.login(self.provider)
         self.ok(self.client.post(f"/api/orders/orders/{order['id']}/start/", {'entry_image': flow.image()}, format='multipart'))
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/provider-vue-aftersale-375.cjs')],
+        result = subprocess.run(['node', str(repo / 'scripts/scenarios/provider-vue-aftersale-375.cjs')],
             input=json.dumps({'root': root, 'base': self.live_server_url, 'token': self.tokens[self.provider.pk],
                 'id': self.accounts[self.provider.pk].pk, 'orderId': order['id'], 'orderNo': order['order_no'], 'inProgress': True}),
             text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)

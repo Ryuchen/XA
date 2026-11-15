@@ -51,7 +51,7 @@ class ProviderVueGameplaySnapshotHTTPTest(LiveServerTestCase):
         repo=Path(settings.BASE_DIR).parent.parent
         def browser(row,mode,account=None):
             account = account or accounts[1]
-            run=subprocess.run(['node',str(repo/'scripts/provider-vue-gameplay-snapshot-375.cjs')],
+            run=subprocess.run(['node',str(repo/'scripts/scenarios/provider-vue-gameplay-snapshot-375.cjs')],
                 input=json.dumps({'root':root,'base':self.live_server_url,'orderId':row['id'],'orderNo':row['order_no'],
                     'token':issue_account_tokens(account)[0],'id':account.pk,'fulfillment':fulfillment if mode!='empty' else '',
                     'rules':rules if mode!='empty' else '', 'pool':mode=='pool'}),text=True,encoding='utf-8',capture_output=True,timeout=40,cwd=repo)

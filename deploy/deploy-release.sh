@@ -8,8 +8,8 @@ set -euo pipefail
 [[ "$XA_IMAGE_TAG" == "sha-$DEPLOY_COMMIT" ]] || { echo 'Image tag must match the source commit.' >&2; exit 1; }
 [[ "$DOCKERHUB_NAMESPACE" =~ ^[a-z0-9]+([_.-][a-z0-9]+)*$ ]] || { echo 'Invalid Docker Hub namespace.' >&2; exit 1; }
 case "${XA_DATABASE_MODE:-embedded}" in
-  embedded) compose_files=(-f docker-compose.remote.yml -f docker-compose.release.yml) ;;
-  managed) compose_files=(-f docker-compose.managed.yml) ;;
+  embedded) compose_files=(-f deploy/compose/docker-compose.remote.yml -f deploy/compose/docker-compose.release.yml) ;;
+  managed) compose_files=(-f deploy/compose/docker-compose.managed.yml) ;;
   *) echo 'XA_DATABASE_MODE must be embedded or managed.' >&2; exit 1 ;;
 esac
 

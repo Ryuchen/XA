@@ -70,7 +70,7 @@ class InvitationFrontendHTTPTest(LiveServerTestCase):
             'firstApplicant': self.provider.escort_profile.display_name, 'singleService': single.pk, 'support': self.card.pk,
             'image': base64.b64encode(release_flow.screenshot().read()).decode('ascii'),
         }
-        script = Path(__file__).resolve().parents[4] / 'scripts' / 'provider-invitation-live.cjs'
+        script = Path(__file__).resolve().parents[4] / 'scripts/scenarios' / 'provider-invitation-live.cjs'
         completed = subprocess.run(['node', str(script)], input=json.dumps(inputs), text=True, encoding='utf-8', capture_output=True, timeout=45)
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         result = json.loads(completed.stdout.strip())

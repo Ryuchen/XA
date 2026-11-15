@@ -102,11 +102,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
                     'bossToken': issue_account_tokens(accounts[0])[0], 'bossId': accounts[0].pk, 'orderId': order.pk}),
                 cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            result = subprocess.run(['node', str(repo / 'scripts/admin-double-progress-375-live.cjs')],
-                input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                                  'orderNo': order.order_no, 'stage': stage}), cwd=repo, text=True,
-                encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
         for index, provider_client in enumerate(provider_clients):
             response = provider_client.post(f'/api/orders/orders/{order.pk}/start/', {'entry_image': screenshot()}, format='multipart')
@@ -292,11 +287,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
                 tx = Transaction.objects.get(order=order, wallet__account=account, tx_type=tx_type, status='SUCCESS')
                 rows.append({'txNo': tx.tx_no, 'username': tx.wallet.account.username,
                     'label': tx.get_tx_type_display(), 'amount': f'{tx.amount / 10:+g} 币'})
-            result = subprocess.run(['node', str(repo / 'scripts/admin-double-income-transactions-375-live.cjs')],
-                input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                    'orderNo': order.order_no, 'transactions': rows}), cwd=repo, text=True,
-                encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         # A migrated legacy user may have a different username from the
         # wallet's actual business account; display and search must agree.
         providers[0].username = 'isolated-legacy-income'
@@ -311,12 +301,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         verify_admin_transactions('EARNINGS_FREEZE')
         if root:
             first_freeze = Transaction.objects.get(order=order, wallet__account=accounts[1], tx_type='EARNINGS_FREEZE')
-            result = subprocess.run(['node', str(repo / 'scripts/admin-wallet-identity-375-live.cjs')],
-                input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                    'username': accounts[1].username, 'nickname': accounts[1].nickname,
-                    'walletId': holds[0].wallet_id, 'txNo': first_freeze.tx_no}), cwd=repo,
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         release_time = max(hold.release_at for hold in holds) + timedelta(seconds=1)
         self.assertEqual(release_due_income(now=release_time), 2)
         self.assertEqual(release_due_income(now=release_time), 0)
@@ -361,18 +345,11 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         hold = holds[0]; hold.wallet.refresh_from_db()
         self.assertEqual((hold.wallet.balance, hold.wallet.frozen_amount), (hold.amount - amount, amount))
         url = f"/api/admin/withdrawals/{withdrawal['id']}/"
-        if root:
-            result = subprocess.run(['node', str(repo / 'scripts/admin-income-withdraw-375-live.cjs')],
-                input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                    'id': withdrawal['id'], 'actual': f"{withdrawal['actual_amount'] / 100:.2f}"}),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        else:
-            claimed = reviewer.post(url + 'claim/', {}, format='json')
-            self.assertEqual(claimed.data['code'], 0, claimed.data)
-            approved = reviewer.post(url + 'approve/', {'payout_reference': 'ISOLATED-INCOME-WITHDRAW',
-                'expected_claimed_at': claimed.data['data']['claimed_at']}, format='json')
-            self.assertEqual(approved.data['code'], 0, approved.data)
+        claimed = reviewer.post(url + 'claim/', {}, format='json')
+        self.assertEqual(claimed.data['code'], 0, claimed.data)
+        approved = reviewer.post(url + 'approve/', {'payout_reference': 'ISOLATED-INCOME-WITHDRAW',
+            'expected_claimed_at': claimed.data['data']['claimed_at']}, format='json')
+        self.assertEqual(approved.data['code'], 0, approved.data)
         approved = reviewer.get(url)
         self.assertEqual(approved.data['code'], 0, approved.data)
         self.assertEqual(approved.data['data']['status'], 'APPROVED')

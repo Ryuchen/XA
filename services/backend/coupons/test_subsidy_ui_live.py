@@ -78,7 +78,7 @@ class SubsidyRealUITest(LiveServerTestCase):
             self.assertEqual(record['safety_box_replenishment'], expected_status)
             coupon = record['coupon_results'][0]
             self.assertEqual(coupon['outcome'], 'NOT_RETURNED')
-            native = subprocess.run(['node', str(repo / 'scripts/native-coupon-refund-live.cjs')],
+            native = subprocess.run(['node', str(repo / 'scripts/scenarios/native-coupon-refund-live.cjs')],
                 input=json.dumps({'order': boss_order, 'name': coupon['name'], 'outcome': 'NOT_RETURNED',
                     'zeroPayment': True, 'replenishmentText': expected_text}, cls=DjangoJSONEncoder),
                 cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=15)

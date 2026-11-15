@@ -1,0 +1,135 @@
+# 后端公共环境：Web / worker / beat 共享同一套变量与镜像。
+# 使用 x- 扩展字段作锚点，compose 不会把它当真实服务启动。
+# 数据库与 Redis 主机名指向 compose 服务名，走容器内网。
+x-backend: &backend
+  build:
+    context: ../../services/backend
+  image: xa-backend:dev
+  environment:
+    XA_STORE_DATABASES: ${XA_STORE_DATABASES:-}
+    XA_STORE_INTEGRATIONS: ${XA_STORE_INTEGRATIONS:-}
+    DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-xa-local-development-key-change-before-production}
+    DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+    CORS_ALLOW_ALL_ORIGINS: ${CORS_ALLOW_ALL_ORIGINS:-true}
+    MYSQL_DATABASE: ${MYSQL_DATABASE:-xa_db}
+    MYSQL_USER: ${MYSQL_USER:-root}
+    MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-xa_dev_password}
+    MYSQL_HOST: db
+    MYSQL_PORT: 3306
+    REDIS_HOST: redis
+    DJANGO_CACHE_URL: ${DJANGO_CACHE_URL:-redis://redis:6379/3}
+    REDIS_PORT: 6379
+    WECHAT_APPID: ${WECHAT_APPID:-}
+    WECHAT_SECRET: ${WECHAT_SECRET:-}
+    WECHAT_WEB_LOGIN_ENV: ${WECHAT_WEB_LOGIN_ENV:-release}
+    SMS_SECRET_ID: ${SMS_SECRET_ID:-}
+    SMS_SECRET_KEY: ${SMS_SECRET_KEY:-}
+    SMS_APP_ID: ${SMS_APP_ID:-}
+    SMS_TEMPLATE_ID: ${SMS_TEMPLATE_ID:-}
+    SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
+    SMS_REGION: ${SMS_REGION:-ap-guangzhou}
+    WECHAT_MOCK_LOGIN: ${WECHAT_MOCK_LOGIN:-true}
+    KOOK_ENABLED: ${KOOK_ENABLED:-false}
+    KOOK_BOT_TOKEN: ${KOOK_BOT_TOKEN:-}
+    KOOK_DISPATCH_CHANNEL_ID: ${KOOK_DISPATCH_CHANNEL_ID:-}
+    KOOK_DISPATCH_NEW_ORDERS: ${KOOK_DISPATCH_NEW_ORDERS:-true}
+    KOOK_DISPATCH_REJECTED_ORDERS: ${KOOK_DISPATCH_REJECTED_ORDERS:-true}
+    KOOK_DISPATCH_MENTION_ROLE_IDS: ${KOOK_DISPATCH_MENTION_ROLE_IDS:-}
+    KOOK_ADMIN_ORDER_URL: ${KOOK_ADMIN_ORDER_URL:-}
+    KOOK_REQUEST_TIMEOUT: ${KOOK_REQUEST_TIMEOUT:-8}
+    WECOM_DISPATCH_ENABLED: ${WECOM_DISPATCH_ENABLED:-false}
+    WECOM_DISPATCH_WEBHOOK: ${WECOM_DISPATCH_WEBHOOK:-}
+    WECOM_DISPATCH_NEW_ORDERS: ${WECOM_DISPATCH_NEW_ORDERS:-true}
+    WECOM_DISPATCH_REJECTED_ORDERS: ${WECOM_DISPATCH_REJECTED_ORDERS:-true}
+    WECOM_REQUEST_TIMEOUT: ${WECOM_REQUEST_TIMEOUT:-8}
+  volumes:
+    # 开发模式：挂载源码实现热更新；媒体和静态资源持久化到命名卷。
+    - ../../services/backend:/app
+    - backend_media:/app/media
+    - backend_static:/app/staticfiles
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: xa_django_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-xa_dev_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-xa_db}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:alpine
+    container_name: xa_django_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # 初始化任务：Web / worker 启动前完成迁移并收集 Admin 静态资源。
+  migrate:
+    <<: *backend
+    container_name: xa_backend_migrate
+    command: sh -c "python manage.py migrate_stores && python manage.py collectstatic --noinput"
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    <<: *backend
+    container_name: xa_backend_web
+    command: python -m config.serve -b 0.0.0.0 -p 8000 config.asgi:application
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  celery-worker:
+    <<: *backend
+    container_name: xa_backend_worker
+    command: celery -A config worker -l info
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  celery-beat:
+    <<: *backend
+    container_name: xa_backend_beat
+    command: celery -A config beat -l info
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  mysql_data:
+  backend_media:
+  backend_static:
