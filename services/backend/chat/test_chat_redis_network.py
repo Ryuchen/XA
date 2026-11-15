@@ -62,11 +62,12 @@ class ChatRedisNetworkTest(TransactionTestCase):
         processes = []
         redis_client = redis.Redis(host='127.0.0.1', port=redis_port, password=password, socket_timeout=.2)
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+        container_name = 'xa-chat-network-' + secrets.token_hex(6)
+        docker = ['wsl.exe', '-d', 'XA-Ubuntu-24.04', '-u', 'root', '--', 'docker']
         try:
-            server = subprocess.Popen(['wsl.exe', '-d', 'XA-Ubuntu-24.04', '--', 'env',
-                'LD_LIBRARY_PATH=/tmp/xa-report-redis-qa/root/usr/lib/x86_64-linux-gnu',
-                '/tmp/xa-report-redis-qa/root/usr/bin/redis-server', '--bind', '127.0.0.1', '--port', str(redis_port),
-                '--save', '', '--appendonly', 'no', '--requirepass', password],
+            server = subprocess.Popen(docker + ['run', '--rm', '--name', container_name,
+                '-p', f'127.0.0.1:{redis_port}:6379', 'redis:alpine',
+                'redis-server', '--save', '', '--appendonly', 'no', '--requirepass', password],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
             processes.append(server)
             for _ in range(150):
@@ -114,6 +115,9 @@ class ChatRedisNetworkTest(TransactionTestCase):
                 redis_client.shutdown(nosave=True)
             except redis.RedisError:
                 pass
+            # Keep teardown scoped to this test's disposable Redis instance.
+            subprocess.run(docker + ['stop', container_name],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if processes:
                 try:
                     processes[0].wait(timeout=10)

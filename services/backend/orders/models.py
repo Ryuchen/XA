@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
+from stores.context import current_currency_name
 
 
 def default_settlement_mode():
@@ -63,6 +64,28 @@ class GameCategory(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class GameCommissionProfile(models.Model):
+    """Explicit store-local game identity and draft commission rules."""
+
+    class Game(models.TextChoices):
+        DELTA = 'DELTA', '三角洲行动'
+        VALORANT = 'VALORANT', '瓦罗兰特'
+        LEAGUE = 'LEAGUE', '英雄联盟'
+
+    game_category = models.OneToOneField(GameCategory, on_delete=models.PROTECT,
+        related_name='commission_profile')
+    game = models.CharField(max_length=12, choices=Game.choices, unique=True)
+    rules = models.JSONField(default=dict)
+    version = models.PositiveIntegerField(default=1)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(game__in=['DELTA', 'VALORANT', 'LEAGUE']), name='game_commission_game_valid'),
+            models.CheckConstraint(condition=models.Q(version__gte=1), name='game_commission_version_positive'),
+        ]
 
 
 class ServiceCategory(models.Model):
@@ -160,11 +183,13 @@ class ServiceItem(models.Model):
     catalog_variant = models.CharField(max_length=150, blank=True, default='', help_text='玩法详情内的套餐档位名称')
     price_unit = models.CharField(max_length=20, default='份')
     billing_provider_count = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(2)], help_text='每人计价的双陪套餐为2；已含全部陪玩的总价为1')
+    fulfillment_provider_count = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(2)], help_text='服务实际履约陪玩人数')
     gift_naming_days = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(3650)], help_text='每件礼物累计的冠名天数，0 表示无冠名权益')
     gift_festival = models.CharField(max_length=40, blank=True, default='', help_text='节日限定标识；为空表示常规礼物')
     gift_starts_at = models.DateTimeField(null=True, blank=True)
     gift_ends_at = models.DateTimeField(null=True, blank=True)
     is_addon = models.BooleanField(default=False, help_text='须关联主订单的加仓、升级或其他附加费用')
+    room_enabled = models.BooleanField(default=False, help_text='付款且陪玩安排完成后创建通用订单房间')
     purchase_mode = models.CharField(max_length=10, choices=PurchaseMode.choices, default=PurchaseMode.DIRECT)
     purchase_note = models.CharField(max_length=255, blank=True, default='')
 
@@ -178,7 +203,7 @@ class ServiceItem(models.Model):
     roulette_pool = models.JSONField(default=list, blank=True)
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=255, blank=True, default='')
-    price = models.PositiveIntegerField()  # 兴安币价格（内部账务单位）
+    price = models.PositiveIntegerField()  # 浪花价格（内部账务单位）
     game_category = models.ForeignKey(
         GameCategory, on_delete=models.PROTECT, null=True, blank=True,
         related_name='service_items',
@@ -237,7 +262,7 @@ class ServiceItem(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.name} - {self.price / 10:g}兴安币"
+        return f"{self.name} - {self.price / 10:g}{current_currency_name()}"
 
 
 class ServiceFavorite(models.Model):
@@ -313,6 +338,9 @@ class Order(models.Model):
     business_cycle = models.PositiveIntegerField(default=1, editable=False)
     experience_kind = models.CharField(max_length=16, blank=True, default='', editable=False)
     is_gift_snapshot = models.BooleanField(default=False, editable=False)
+    gift_category_id_snapshot = models.PositiveBigIntegerField(null=True, blank=True, editable=False, db_index=True)
+    gift_provider_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    room_required_snapshot = models.BooleanField(null=True, blank=True, editable=False)
     required_provider_count = models.PositiveSmallIntegerField(
         null=True, blank=True, editable=False,
         validators=[MinValueValidator(1), MaxValueValidator(2)],
@@ -322,7 +350,7 @@ class Order(models.Model):
     consumption_ready_at = models.DateTimeField(null=True, blank=True, db_index=True, editable=False)
     consumption_confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
     order_no = models.CharField(max_length=32, unique=True, blank=True, default='', db_index=True)
-    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='placed_orders')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='placed_orders', null=True, blank=True)
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='received_orders')
     customer_account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -348,6 +376,8 @@ class Order(models.Model):
         related_name='orders',
     )
     support_contact_name_snapshot = models.CharField(max_length=50, blank=True, default='')
+    responsible_staff = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                          null=True, blank=True, related_name='responsible_orders')
     class ProviderGender(models.TextChoices):
         ANY = 'ANY', '不限'
         MALE = 'MALE', '男陪'
@@ -361,11 +391,12 @@ class Order(models.Model):
     requires_boss_selection = models.BooleanField(default=False)
     provider_name_snapshot = models.CharField(max_length=50, blank=True, default='')
     provider_requirement_snapshot = models.JSONField(default=dict, db_default={}, blank=True)
+    game_commission_snapshot = models.JSONField(default=dict, db_default={}, blank=True)
     gameplay_snapshot = models.JSONField(default=dict, blank=True)
     roulette_result = models.JSONField(default=dict, blank=True)
     service_name_snapshot = models.CharField(max_length=100, blank=True, default='')
     unit_price_snapshot = models.PositiveIntegerField(default=0)
-    # 兴安币计价明细（下单时以内部账务单位落库）
+    # 浪花计价明细（下单时以内部账务单位落库）
     original_amount = models.PositiveIntegerField(default=0)  # 原价：单价×局数
     boss_discount = models.PositiveIntegerField(default=0)  # 老板VIP折扣额
     promo_discount = models.PositiveIntegerField(default=0)  # 活动折扣额
@@ -374,15 +405,34 @@ class Order(models.Model):
         'promotions.Promotion', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='orders',
     )  # 命中的促销活动快照
-    # 兴安币拆账字段（下单时按服务抽成率计算并以内部账务单位落库）
+    # 浪花拆账字段（下单时按服务抽成率计算并以内部账务单位落库）
     commission_type = models.CharField(max_length=10, choices=[('PERCENT','百分比'),('FIXED','整单固定金额')], default='PERCENT')
     commission_fixed = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(2147483647)])  # 整单总扣额快照；旧逐人固定记录不回填
     commission_override = models.BooleanField(default=False)  # 自定义比例须独立于资格档位冻结
     commission_source = models.CharField(max_length=32, blank=True, default='')
-    commission_rate = models.PositiveSmallIntegerField(default=0)  # 平台抽成率快照(%)
+    commission_rate = models.PositiveSmallIntegerField(default=0, null=True)  # 待分配时尚无本人抽成
+    commission_allocation_pending = models.BooleanField(default=False)
     commission_policy = models.CharField(max_length=12, choices=ServiceItem.CommissionPolicy.choices, default='LEGACY')
     income_hold_hours = models.PositiveSmallIntegerField(default=0)
-    provider_income = models.PositiveIntegerField(default=0)  # 陪玩实得
+    gift_aftersale_hours = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+    gift_freeze_hours = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+    gift_vip_enabled_snapshot = models.BooleanField(null=True, blank=True, editable=False)
+    gift_points_snapshot = models.JSONField(null=True, blank=True, editable=False)
+    # NULL identifies legacy service payments, whose original source and
+    # benefit terms must not be retroactively reconstructed.
+    funding_terms = models.JSONField(null=True, blank=True, editable=False)
+    funding_confirmation = models.JSONField(null=True, blank=True, editable=False)
+    funding_benefits_resolved_at = models.DateTimeField(null=True, blank=True, editable=False)
+    funding_award_refunded_principal = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    service_aftersale_hours = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+    service_freeze_hours = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+    service_clock_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    service_deposit_percent = models.PositiveSmallIntegerField(null=True, blank=True, editable=False)
+    provider_income = models.PositiveIntegerField(default=0, null=True)  # 待分配时未知
+    # Verified external store funding reserved for this order's settlement.
+    settlement_store_funding = models.PositiveIntegerField(default=0)
+    # Net add-on cash available to support the main order's combined settlement.
+    settlement_addon_contribution = models.PositiveIntegerField(default=0)
     inviter = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='referred_orders',
@@ -396,7 +446,7 @@ class Order(models.Model):
     )
     inviter_commission = models.PositiveIntegerField(default=0)  # 推荐人分佣
     inviter_commission_rate_snapshot = models.PositiveSmallIntegerField(default=0)
-    shop_income = models.PositiveIntegerField(default=0)  # 店铺/平台留存
+    shop_income = models.PositiveIntegerField(default=0, null=True)  # 待分配时未知
     # 老板下单时填写的游戏账号资料（结构化落库，供陪玩端与后台读取）
     game_region = models.CharField(max_length=50, blank=True, default='')
     game_nickname = models.CharField(max_length=50, blank=True, default='')
@@ -449,6 +499,7 @@ class Order(models.Model):
             ),
         ]
         constraints = [
+            models.CheckConstraint(condition=models.Q(customer__isnull=False) | models.Q(customer_account__isnull=False), name='order_has_customer'),
             models.CheckConstraint(condition=models.Q(dispatch_route__in=['PUBLIC', 'STAFF']), name='order_dispatch_route_valid'),
             models.CheckConstraint(condition=models.Q(pending_timeout_minutes__isnull=True) | models.Q(pending_timeout_minutes__range=(1, 1440)), name='order_pending_timeout_range'),
             models.CheckConstraint(
@@ -470,17 +521,26 @@ class Order(models.Model):
                 condition=models.Q(payment_status__in=['UNPAID', 'PAID', 'REFUNDED','PARTIALLY_REFUNDED']),
                 name='order_payment_status_valid',
             ),
-            # 资金守恒硬闸门：订单级三项分账之和不得超过实付金额。
-            # 用 <= 而非 == 是为了兼容历史上分账字段全为 0 的旧订单。
+            # 未结算允许推荐佣金超出当前门店抽成，缺口须实际补资；
+            # 已结算时三项分账必须被支付及已核实的补资覆盖。
             models.CheckConstraint(
-                condition=models.Q(
+                condition=(models.Q(settled_at__isnull=True, inviter_commission__lte=models.F('amount'),
+                                    provider_income__lte=models.F('amount') - models.F('shop_income')) | models.Q(
                     provider_income__lte=(
-                        models.F('amount')
+                        models.F('amount') + models.F('settlement_store_funding') + models.F('settlement_addon_contribution')
                         - models.F('inviter_commission')
                         - models.F('shop_income')
                     )
-                ),
+                )),
                 name='order_split_not_exceed_amount',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(settlement_store_funding=0) | models.Q(funding_terms__isnull=False),
+                name='order_store_funding_requires_terms',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(settlement_addon_contribution=0) | models.Q(funding_terms__isnull=False),
+                name='order_addon_support_requires_terms',
             ),
             models.CheckConstraint(
                 condition=models.Q(escort_mode__in=['SINGLE', 'DOUBLE']),
@@ -494,19 +554,39 @@ class Order(models.Model):
                 from .timeout import current_timeout_config
                 self.pending_timeout_minutes = current_timeout_config().minutes
             if self.required_provider_count is None:
-                self.required_provider_count = self.service.billing_provider_count
+                self.required_provider_count = self.service.fulfillment_provider_count
             from .gameplay import make_order_snapshot
             from wallet.club_rules import order_hold_hours
             self.business_cycle = self.customer_account.business_cycle if self.customer_account_id else 1
             self.experience_kind = self.service.experience_kind
             self.is_gift_snapshot = bool(self.service.service_category_id and self.service.service_category.is_gift)
+            self.gift_category_id_snapshot = self.service.service_category_id if self.is_gift_snapshot else None
+            self.room_required_snapshot = bool(self.service.room_enabled and not self.is_gift_snapshot and not self.service.is_addon)
+            if self.is_gift_snapshot:
+                from wallet.settlement_clocks import current_rules
+                gift_clocks = current_rules()
+                self.gift_aftersale_hours = gift_clocks['aftersale_hours']
+                self.gift_freeze_hours = gift_clocks['income_freeze_hours']
+            elif (self.payment_status == self.PaymentStatus.PAID and self.service_aftersale_hours is None):
+                from wallet.settlement_clocks import current_rules
+                from wallet.club_rules import deposit_income_percent
+                clocks = current_rules()
+                self.service_aftersale_hours = clocks['aftersale_hours']
+                self.service_freeze_hours = clocks['income_freeze_hours']
+                self.service_clock_version = clocks['version']
+                self.service_deposit_percent = deposit_income_percent()
             self.commission_policy = self.service.commission_policy
             from users.qualifications import service_requirement
             requirement=service_requirement(self.service)
             self.provider_requirement_snapshot = dict(requirement, commission_rate=self.commission_rate) if requirement else {}
             self.income_hold_hours = order_hold_hours()
-            if self.inviter_id:
-                self.inviter_commission_rate_snapshot = self.customer_account.inviter_commission_rate if self.customer_account_id else self.customer.inviter_commission_rate
+            if self.inviter_id or self.inviter_account_id:
+                if self.customer_account_id and self.customer_account.inviter_id:
+                    self.inviter_commission_rate_snapshot = self.customer_account.inviter_commission_rate
+                elif self.customer_id:
+                    self.inviter_commission_rate_snapshot = self.customer.inviter_commission_rate
+                elif self.customer_account_id:
+                    self.inviter_commission_rate_snapshot = self.customer_account.inviter_commission_rate
             self.gameplay_snapshot, self.roulette_result = make_order_snapshot(
                 self.service, self.game_rounds,
                 companion_assignment=(self.escort_mode == self.EscortMode.DOUBLE
@@ -518,8 +598,8 @@ class Order(models.Model):
             self.service_name_snapshot = self.service.name
         if not self.unit_price_snapshot and self.service_id:
             self.unit_price_snapshot = self.service.price
-        if not self.customer_phone_snapshot and self.customer_id:
-            self.customer_phone_snapshot = self.customer.phone or ''
+        if not self.customer_phone_snapshot and (self.customer_account_id or self.customer_id):
+            self.customer_phone_snapshot = (self.customer_account if self.customer_account_id else self.customer).phone or ''
         if not self.provider_name_snapshot and self.provider_id:
             self.provider_name_snapshot = self.provider.nickname or self.provider.username
         if not self.support_contact_name_snapshot and self.support_contact_id:
@@ -565,6 +645,11 @@ class KookDispatchRecord(models.Model):
     content = models.TextField(blank=True, default='')
     route_key = models.CharField(max_length=64, blank=True, default='')
     card_content = models.TextField(blank=True, default='')
+    content_contract_version = models.PositiveSmallIntegerField(default=0)
+    pool_delivery_due_at = models.DateTimeField(null=True, blank=True, editable=False)
+    pool_recovery_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
+    # The publisher raised; this does not prove the broker rejected the task.
+    pool_enqueue_failed = models.BooleanField(default=False, editable=False)
 
     class Meta:
         ordering = ['-created_at']
@@ -586,6 +671,8 @@ class KookDispatchRecord(models.Model):
                 fields=['status', 'created_at'],
                 name='kook_dispatch_status_idx',
             ),
+            models.Index(fields=['content_contract_version', 'status', 'pool_delivery_due_at'],
+                         name='kook_pool_due_idx'),
         ]
 
     def __str__(self):
@@ -606,6 +693,11 @@ class WecomDispatchRecord(models.Model):
     attempts = models.PositiveSmallIntegerField(default=0)
     last_error = models.CharField(max_length=500, blank=True, default='')
     content = models.TextField(blank=True, default='')
+    content_contract_version = models.PositiveSmallIntegerField(default=0)
+    pool_delivery_due_at = models.DateTimeField(null=True, blank=True, editable=False)
+    pool_recovery_lease_until = models.DateTimeField(null=True, blank=True, editable=False)
+    # The publisher raised; this does not prove the broker rejected the task.
+    pool_enqueue_failed = models.BooleanField(default=False, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(blank=True, null=True)
 
@@ -618,6 +710,8 @@ class WecomDispatchRecord(models.Model):
                 name='wecom_dispatch_status_valid',
             ),
         ]
+        indexes = [models.Index(fields=['content_contract_version', 'status', 'pool_delivery_due_at'],
+                                name='wecom_pool_due_idx')]
 
 
 class OrderProvider(models.Model):
@@ -647,6 +741,7 @@ class OrderProvider(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='order_assignments',
     )
+    provider_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     provider_account = models.ForeignKey(
         'club_accounts.ClubAccount',
         on_delete=models.SET_NULL,
@@ -662,6 +757,7 @@ class OrderProvider(models.Model):
     commission_rate = models.PositiveSmallIntegerField(
         default=0, validators=[MinValueValidator(0), MaxValueValidator(100)]
     )  # 该打手抽成率快照(%)，百分比方式生效
+    game_commission_snapshot = models.JSONField(default=dict, db_default={}, blank=True)
     commission_fixed = models.PositiveIntegerField(default=0)  # 固定抽成额快照（内部账务单位）
     provider_income = models.PositiveIntegerField(default=0)  # 该打手实得（内部账务单位）
     settled_at = models.DateTimeField(blank=True, null=True)  # 入账时间，空表示未结算
@@ -697,6 +793,267 @@ class OrderProvider(models.Model):
         return f"OrderProvider<order={self.order_id} provider={self.provider_id}>"
 
 
+class OrderPaidServiceScope(models.Model):
+    """Service eligibility at payment; absent means historical facts are unknown."""
+    order = models.OneToOneField(Order, on_delete=models.PROTECT, related_name='paid_service_scope')
+    scope = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrderOriginalAttribution(models.Model):
+    """Payment-time boundary for original-price participation facts."""
+    order = models.OneToOneField(Order, on_delete=models.PROTECT, related_name='original_attribution')
+    original_amount = models.PositiveBigIntegerField()
+    rounding_surplus = models.PositiveBigIntegerField(default=0)
+    status = models.CharField(max_length=16, default='PENDING', choices=[
+        ('PENDING', '等待分配'), ('ACTIVE', '已记录'), ('REVIEW', '待核对')])
+    review_reason = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrderParticipationSegment(models.Model):
+    """A single provider's particular entry into an original-price slot."""
+    attribution = models.ForeignKey(OrderOriginalAttribution, on_delete=models.PROTECT, related_name='segments')
+    provider_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    provider_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    slot = models.PositiveSmallIntegerField()
+    original_share = models.PositiveBigIntegerField()
+    accepted_at = models.DateTimeField()
+    started_at = models.DateTimeField(null=True, blank=True)
+    start_source = models.CharField(max_length=16, blank=True, default='')
+    entry_image = models.ImageField(upload_to='reports/participation/', null=True, blank=True)
+    completion_image = models.ImageField(upload_to='reports/participation/', null=True, blank=True)
+    released_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['provider_account', 'accepted_at'], name='participation_acct_time_idx')]
+
+
+class OrderProviderCompletionFact(models.Model):
+    """First accepted team completion image for one actual participation."""
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='provider_completion_facts')
+    provider_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    segment = models.OneToOneField(OrderParticipationSegment, on_delete=models.PROTECT,
+                                   null=True, blank=True, related_name='completion_fact')
+    evidence = models.CharField(max_length=500)
+    completed_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['order', 'provider_account'],
+            condition=models.Q(segment__isnull=True), name='unique_unsegmented_team_completion')]
+
+
+class OrderOriginalShareTransfer(models.Model):
+    """Audited agreement for splitting one service participation segment."""
+    previous_segment = models.OneToOneField(OrderParticipationSegment, on_delete=models.PROTECT, related_name='original_transfer_out')
+    next_segment = models.OneToOneField(OrderParticipationSegment, on_delete=models.PROTECT, related_name='original_transfer_in')
+    original_share_before = models.PositiveBigIntegerField()
+    retained_share = models.PositiveBigIntegerField()
+    transferred_share = models.PositiveBigIntegerField()
+    operator = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    agreement = models.CharField(max_length=500)
+    created_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(original_share_before=models.F('retained_share') + models.F('transferred_share')),
+                                   name='original_transfer_share_conserved'),
+            models.CheckConstraint(condition=~models.Q(previous_segment=models.F('next_segment')),
+                                   name='original_transfer_segments_distinct'),
+        ]
+
+
+class OrderSegmentFinancialCoverage(models.Model):
+    """Whether deal-base facts can be proved for all of this order's segments."""
+    attribution = models.OneToOneField(OrderOriginalAttribution, on_delete=models.PROTECT, related_name='financial_coverage')
+    deal_amount = models.PositiveBigIntegerField()
+    source = models.CharField(max_length=40)
+    status = models.CharField(max_length=16, choices=[('PENDING', '等待分配'),
+        ('ACTIVE', '已记录'), ('REVIEW', '待核对')], default='PENDING')
+    review_reason = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrderSegmentFinancialSnapshot(models.Model):
+    """Immutable entry economics; retained basis is set when the segment ends."""
+    segment = models.OneToOneField(OrderParticipationSegment, on_delete=models.PROTECT, related_name='financial_snapshot')
+    incoming_basis = models.PositiveBigIntegerField()
+    retained_basis = models.PositiveBigIntegerField(null=True, blank=True)
+    commission_type = models.CharField(max_length=10, choices=OrderProvider.CommissionType.choices)
+    commission_rate = models.PositiveSmallIntegerField()
+    commission_fixed = models.PositiveBigIntegerField()
+    fixed_rule_total = models.PositiveBigIntegerField(null=True, blank=True)
+    commission_source = models.CharField(max_length=40, blank=True, default='')
+    income_at_entry = models.PositiveBigIntegerField()
+    game_commission_snapshot = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(commission_type__in=['PERCENT', 'FIXED']), name='segment_finance_type_valid'),
+            models.CheckConstraint(condition=models.Q(commission_rate__range=(0, 100)), name='segment_finance_rate_valid'),
+            models.CheckConstraint(condition=models.Q(income_at_entry__lte=models.F('incoming_basis')), name='segment_finance_income_lte_basis'),
+            models.CheckConstraint(condition=models.Q(retained_basis__isnull=True) | models.Q(retained_basis__lte=models.F('incoming_basis')),
+                                   name='segment_finance_retained_lte_basis'),
+        ]
+
+
+class OrderSegmentTransferBasis(models.Model):
+    """Deal-base allocation, not a payout or a new commission snapshot."""
+    transfer = models.OneToOneField(OrderOriginalShareTransfer, on_delete=models.PROTECT, related_name='deal_allocation')
+    basis_before = models.PositiveBigIntegerField()
+    retained_basis = models.PositiveBigIntegerField()
+    transferred_basis = models.PositiveBigIntegerField()
+    remainder_numerator = models.PositiveBigIntegerField()
+    fixed_fee_store_shortfall = models.PositiveBigIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(
+            condition=models.Q(basis_before=models.F('retained_basis') + models.F('transferred_basis')),
+            name='segment_deal_basis_conserved')]
+
+
+class OrderSegmentReport(models.Model):
+    """Per-participation report; legacy person/order reports remain intact."""
+    segment = models.OneToOneField(OrderParticipationSegment, on_delete=models.PROTECT, related_name='segment_report')
+    status = models.CharField(max_length=16, choices=[('DRAFT', '待提交'), ('PENDING', '待审核'),
+        ('APPROVED', '已通过'), ('REJECTED', '已驳回')], default='DRAFT')
+    version = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(status__in=['DRAFT','PENDING','APPROVED','REJECTED']),
+                                               name='segment_report_status_valid')]
+
+
+class OrderSegmentReportImage(models.Model):
+    """Editable result evidence; previous submitted versions hold their own references."""
+    report = models.ForeignKey(OrderSegmentReport, on_delete=models.PROTECT, related_name='draft_images')
+    image = models.ImageField(upload_to='reports/segment_results/')
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrderSegmentReportSubmission(models.Model):
+    """One auditable submission version, with immutable evidence references."""
+    report = models.ForeignKey(OrderSegmentReport, on_delete=models.PROTECT, related_name='submissions')
+    version = models.PositiveIntegerField()
+    status = models.CharField(max_length=16, choices=[('PENDING','待审核'), ('APPROVED','已通过'),
+                                                      ('REJECTED','已驳回'), ('WITHDRAWN','已撤回')])
+    entry_image = models.ImageField(upload_to='reports/participation/')
+    completion_image = models.ImageField(upload_to='reports/participation/')
+    submitted_at = models.DateTimeField()
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewer = models.ForeignKey('club_accounts.ClubAccount', null=True, blank=True, on_delete=models.PROTECT, related_name='+')
+    review_remark = models.CharField(max_length=500, blank=True, default='')
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['report', 'version'], name='segment_report_version_unique'),
+            models.CheckConstraint(condition=models.Q(version__gt=0), name='segment_report_version_positive'),
+            models.CheckConstraint(condition=models.Q(status__in=['PENDING','APPROVED','REJECTED','WITHDRAWN']),
+                                   name='segment_submission_status_valid')]
+
+
+class OrderSegmentSubmissionImage(models.Model):
+    submission = models.ForeignKey(OrderSegmentReportSubmission, on_delete=models.PROTECT, related_name='result_images')
+    image = models.ImageField(upload_to='reports/segment_results/')
+
+
+class OrderSegmentSettlementManifest(models.Model):
+    """Frozen allocation used to reconcile independently released people."""
+    order = models.OneToOneField(Order, on_delete=models.PROTECT, related_name='segment_settlement_manifest')
+    plan = models.JSONField()
+    plan_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    finalized_at = models.DateTimeField(null=True, blank=True)
+    inviter_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='+')
+    store_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='+')
+    rounding_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='+')
+
+
+class OrderSegmentPersonSettlement(models.Model):
+    """Exactly one credited share per person, even when the person returned."""
+    manifest = models.ForeignKey(OrderSegmentSettlementManifest, on_delete=models.PROTECT, related_name='people')
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    amount = models.PositiveBigIntegerField()
+    segment_ids = models.JSONField()
+    report_versions = models.JSONField()
+    income_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='+')
+    deposit_debit = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='+')
+    deposit_credit = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='+')
+    settled_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['manifest', 'account'], name='segment_settlement_one_person'),
+            models.CheckConstraint(condition=models.Q(amount=0, income_transaction__isnull=True)
+                | models.Q(amount__gt=0, income_transaction__isnull=False), name='segment_income_tx_matches_amount'),
+            models.CheckConstraint(condition=models.Q(deposit_debit__isnull=True, deposit_credit__isnull=True)
+                | models.Q(deposit_debit__isnull=False, deposit_credit__isnull=False), name='segment_deposit_tx_pair'),
+        ]
+
+
+class OrderSegmentSettlementRevision(models.Model):
+    """Auditable transition from a partly paid plan to its refunded plan."""
+    manifest = models.ForeignKey(OrderSegmentSettlementManifest, on_delete=models.PROTECT, related_name='revisions')
+    posting = models.OneToOneField('orders.PointsNegotiationPosting', on_delete=models.PROTECT,
+                                   related_name='segment_settlement_revision')
+    before_plan_hash = models.CharField(max_length=64)
+    after_plan = models.JSONField()
+    after_plan_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrderPrestartHandoff(models.Model):
+    """Auditable replacement before any participant has begun fulfillment."""
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='prestart_handoffs')
+    old_provider = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    new_provider = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    operator = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    old_snapshot = models.JSONField(default=dict)
+    new_snapshot = models.JSONField(default=dict)
+    reason = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OrderPlatformSubsidy(models.Model):
+    """Separately records the platform-funded basis of a zero-paid order."""
+    order = models.OneToOneField(Order, on_delete=models.PROTECT, related_name='platform_subsidy')
+    coupon_id_snapshot = models.PositiveBigIntegerField()
+    basis = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(basis__gt=0), name='order_subsidy_basis_positive')]
+
+
+class OrderPlatformSubsidyShare(models.Model):
+    """A provider's frozen entitlement and the corresponding paid ledger entries."""
+    subsidy = models.ForeignKey(OrderPlatformSubsidy, on_delete=models.PROTECT, related_name='shares')
+    assignment = models.OneToOneField(OrderProvider, on_delete=models.PROTECT, related_name='platform_subsidy_share')
+    amount = models.PositiveIntegerField()
+    retained_amount = models.PositiveIntegerField(default=0)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    expense_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT, null=True, blank=True, related_name='funded_subsidy_share')
+    income_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT, null=True, blank=True, related_name='received_subsidy_share')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(
+            condition=(models.Q(expense_transaction__isnull=True, income_transaction__isnull=True)
+                       | models.Q(expense_transaction__isnull=False, income_transaction__isnull=False)),
+            name='order_subsidy_share_tx_pair',
+        )]
+
+
 class OrderStatusLog(models.Model):
     """订单状态变更审计日志"""
 
@@ -709,6 +1066,7 @@ class OrderStatusLog(models.Model):
         REJECT = 'REJECT', '拒单'
         CANCEL = 'CANCEL', '取消'
         REFUND = 'REFUND', '退款'
+        NEGOTIATED_STOP = 'NEGOTIATED_STOP', '协商终止'
         TRANSFER = 'TRANSFER', '转单'
         AUTO_CANCEL = 'AUTO_CANCEL', '超时自动取消'
         TEAM_WORKFLOW = 'TEAM_WORKFLOW', '启用双人凭证流程'
@@ -746,7 +1104,7 @@ class OrderStatusLog(models.Model):
 
 class Evaluation(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='evaluations')
-    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='given_evaluations')
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='given_evaluations', null=True, blank=True)
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='received_evaluations')
     customer_account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -774,6 +1132,15 @@ class Evaluation(models.Model):
     )  # 沟通
     content = models.TextField(blank=True, default='')
     is_anonymous = models.BooleanField(default=False)
+    low_rating_aftersale_state = models.CharField(max_length=16, blank=True, default='', editable=False,
+        choices=[('', '非低星或历史未核实'), ('OPENED', '已创建售后'), ('ATTACHED', '已关联处理中售后'),
+                 ('CLOSED', '已有售后已结案'), ('EXPIRED', '售后期已结束'), ('INELIGIBLE', '订单不可创建售后')])
+    low_rating_aftersale = models.ForeignKey('AfterSale', on_delete=models.PROTECT, null=True, blank=True,
+                                             related_name='low_rating_evaluations', editable=False)
+    voided_at = models.DateTimeField(null=True, blank=True, editable=False)
+    void_reason = models.CharField(max_length=1000, blank=True, default='', editable=False)
+    voided_by = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True,
+                                  related_name='voided_evaluations', editable=False)
     reply_content = models.TextField(blank=True, default='')
     # Older replies have no reliable author evidence; do not infer one.
     reply_author = models.CharField(max_length=12, blank=True, default='', choices=[
@@ -793,6 +1160,7 @@ class Evaluation(models.Model):
             ),
         ]
         constraints = [
+            models.CheckConstraint(condition=models.Q(customer__isnull=False) | models.Q(customer_account__isnull=False), name='evaluation_has_customer'),
             models.UniqueConstraint(fields=['order', 'provider'], name='evaluation_order_provider_unique'),
             models.CheckConstraint(
                 condition=models.Q(score__range=(1, 5)),
@@ -841,7 +1209,7 @@ class Reservation(models.Model):
     TERMINAL_STATUSES = {
         Status.REJECTED, Status.CANCELLED, Status.CONVERTED, Status.EXPIRED,
     }
-    # 占用陪玩时间片的状态：冲突检测只看这两种，被拒/取消/过期的档期立刻释放
+    # 未转单预约的占用态；转单后的订单还需按当前履约人员和状态判定占用。
     ACTIVE_STATUSES = {Status.PENDING, Status.CONFIRMED}
 
     reservation_no = models.CharField(
@@ -851,6 +1219,8 @@ class Reservation(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='placed_reservations',
+        null=True,
+        blank=True,
     )
     customer_account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -859,6 +1229,8 @@ class Reservation(models.Model):
         blank=True,
         related_name='placed_reservations',
     )
+    customer_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    invitation_notice_intent = models.JSONField(null=True, blank=True, editable=False)
     provider = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -871,7 +1243,10 @@ class Reservation(models.Model):
         on_delete=models.CASCADE,
         related_name='received_reservations',
     )
+    provider_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     service = models.ForeignKey(ServiceItem, on_delete=models.PROTECT)
+    # The team size belongs to the booking, not the current catalog row.
+    required_provider_count = models.PositiveSmallIntegerField(default=1)
     # 转单产物：一条预约最多转出一张订单，转完即终态
     order = models.OneToOneField(
         Order,
@@ -900,6 +1275,12 @@ class Reservation(models.Model):
         db_index=True,
     )
     confirmed_at = models.DateTimeField(blank=True, null=True)
+    confirmation_deadline = models.DateTimeField(null=True, blank=True, editable=False, db_index=True)
+    confirmation_timeout_minutes = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    confirmation_config_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    payment_deadline = models.DateTimeField(null=True, blank=True, editable=False, db_index=True)
+    payment_timeout_minutes = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    payment_config_version = models.PositiveIntegerField(null=True, blank=True, editable=False)
     rejected_at = models.DateTimeField(blank=True, null=True)
     cancelled_at = models.DateTimeField(blank=True, null=True)
     converted_at = models.DateTimeField(blank=True, null=True)
@@ -928,6 +1309,31 @@ class Reservation(models.Model):
             ),
         ]
         constraints = [
+            models.CheckConstraint(condition=models.Q(customer__isnull=False) | models.Q(customer_account__isnull=False), name='reservation_has_customer'),
+            models.CheckConstraint(condition=models.Q(required_provider_count__in=[1, 2]), name='reservation_team_size_valid'),
+            models.CheckConstraint(
+                condition=(models.Q(confirmation_deadline__isnull=True, confirmation_timeout_minutes__isnull=True,
+                                    confirmation_config_version__isnull=True)
+                    | models.Q(confirmation_deadline__isnull=False, confirmation_timeout_minutes__isnull=False,
+                               confirmation_config_version__isnull=False, confirmation_timeout_minutes__gte=1,
+                               confirmation_config_version__gte=1, confirmation_deadline__lte=models.F('start_time'))),
+                name='reservation_confirm_snapshot_valid',
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(payment_deadline__isnull=True, payment_timeout_minutes__isnull=True,
+                                    payment_config_version__isnull=True)
+                    | models.Q(payment_deadline__isnull=False, payment_timeout_minutes__isnull=False,
+                               payment_config_version__isnull=False, payment_timeout_minutes__gte=1,
+                               payment_config_version__gte=1, confirmation_deadline__isnull=False,
+                               payment_deadline__lte=models.F('start_time'))),
+                name='reservation_payment_snapshot_valid',
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(confirmation_config_version__isnull=True)
+                    | ~models.Q(status__in=['CONFIRMED', 'CONVERTED'])
+                    | models.Q(payment_deadline__isnull=False)),
+                name='reservation_confirmed_has_payment_deadline',
+            ),
             models.CheckConstraint(
                 condition=models.Q(end_time__gt=models.F('start_time')),
                 name='reservation_time_window_valid',
@@ -977,6 +1383,66 @@ class Reservation(models.Model):
         return f"Reservation<{self.reservation_no} {self.status}>"
 
 
+class ReservationSeat(models.Model):
+    """Current assignment for one seat of a two-provider appointment."""
+
+    class Status(models.TextChoices):
+        VACANT = 'VACANT', '待选人'
+        PENDING = 'PENDING', '待确认'
+        CONFIRMED = 'CONFIRMED', '已确认'
+
+    reservation = models.ForeignKey(Reservation, on_delete=models.CASCADE, related_name='seats')
+    number = models.PositiveSmallIntegerField()
+    provider_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                         related_name='reservation_seats', null=True, blank=True)
+    provider_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                 related_name='reservation_seats', null=True, blank=True)
+    provider_name_snapshot = models.CharField(max_length=50, blank=True, default='')
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.VACANT)
+    confirmation_deadline = models.DateTimeField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['number']
+        constraints = [
+            models.UniqueConstraint(fields=['reservation', 'number'], name='reservation_seat_number_unique'),
+            models.UniqueConstraint(fields=['reservation', 'provider_account'], name='reservation_seat_provider_unique'),
+            models.CheckConstraint(condition=models.Q(number__in=[1, 2]), name='reservation_seat_number_valid'),
+            models.CheckConstraint(condition=(
+                models.Q(status='VACANT', provider_account__isnull=True, provider__isnull=True,
+                         confirmation_deadline__isnull=True, confirmed_at__isnull=True)
+                | models.Q(status='PENDING', provider_account__isnull=False,
+                           confirmation_deadline__isnull=False, confirmed_at__isnull=True)
+                | models.Q(status='CONFIRMED', provider_account__isnull=False,
+                           confirmation_deadline__isnull=False, confirmed_at__isnull=False)),
+                name='reservation_seat_status_valid'),
+        ]
+        indexes = [models.Index(fields=['provider_account', 'status'], name='reservation_seat_provider_idx')]
+
+
+class ReservationSeatEvent(models.Model):
+    """Immutable evidence for an assignment, decision or replacement."""
+
+    reservation = models.ForeignKey(Reservation, on_delete=models.CASCADE, related_name='seat_events')
+    seat_number = models.PositiveSmallIntegerField()
+    action = models.CharField(max_length=20)
+    provider_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                         related_name='+', null=True, blank=True)
+    provider_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    actor_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                      related_name='+', null=True, blank=True)
+    reason = models.CharField(max_length=255, blank=True, default='')
+    invitation_notice_intent = models.JSONField(null=True, blank=True, editable=False)
+    status_notice_intent = models.JSONField(null=True, blank=True, editable=False)
+    occurred_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ['id']
+        indexes = [models.Index(fields=['reservation', 'seat_number', 'id'], name='reservation_seat_event_idx')]
+
+
 class ReservationStatusLog(models.Model):
     """预约状态变更审计日志：与 ``OrderStatusLog`` 同构，但独立成表。
 
@@ -1013,6 +1479,8 @@ class ReservationStatusLog(models.Model):
         related_name='reservation_status_logs',
     )
     reason = models.CharField(max_length=255, blank=True, default='')
+    status_notice_intent = models.JSONField(null=True, blank=True, editable=False)
+    notification_intents = models.JSONField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1047,6 +1515,8 @@ class ExperienceUse(models.Model):
 
 class AfterSale(models.Model):
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='aftersales')
+    addon_payment = models.ForeignKey('orders.OrderAddonPayment', on_delete=models.PROTECT,
+                                      null=True, blank=True, editable=False, related_name='+')
     account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
     reason = models.CharField(max_length=1000)
     status = models.CharField(max_length=24, default='OPEN', choices=[('OPEN', '处理中'), ('RESOLVED', '处理完成'), ('REFUNDED', '已退款'), ('PARTIALLY_REFUNDED', '部分退款')])
@@ -1056,6 +1526,10 @@ class AfterSale(models.Model):
     resolved_at = models.DateTimeField(null=True, blank=True)
     history = models.JSONField(default=list, blank=True)
     client_request_id = models.CharField(max_length=64, blank=True, default='')
+    # NULL means whole-order/unknown historical scope.  Nonempty account IDs
+    # are validated against this order under its lock when the case is opened.
+    affected_provider_account_ids = models.JSONField(null=True, blank=True, default=None)
+    affected_segment_ids = models.JSONField(null=True, blank=True, default=None)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['order'], name='one_aftersale_per_order')]
@@ -1063,6 +1537,8 @@ class AfterSale(models.Model):
 
 class OrderRefund(models.Model):
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='refund_records')
+    customer_transaction = models.OneToOneField('wallet.Transaction', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='ordinary_customer_refund')
     amount = models.PositiveIntegerField()
     recovered_amount = models.PositiveIntegerField(default=0)
     reason = models.CharField(max_length=1000)
@@ -1104,3 +1580,67 @@ from .direct_payment_session_models import DirectPaymentSession, DirectPaymentSe
 from .direct_callback_models import DirectCallbackQuarantine, DirectCallbackQuarantineObservation, DirectCallbackEnvelope, DirectCallbackEnvelopeBody  # noqa: E402,F401
 from .direct_clearing_models import DirectClearingBatch, DirectClearingLine  # noqa: E402,F401
 from .payment_fee_policy_models import PaymentFeePolicy, PaymentFeePolicyHistory  # noqa: E402,F401
+from .grab_clock_models import GrabClockDiagnosticState, GrabClockDiagnosticObservation  # noqa: E402,F401
+from .grab_pool_models import (OrderGrabReviewCancellation, OrderGrabPoolOpeningIntent, OrderGrabPoolSnapshot, OrderGrabPoolPassSnapshot, OrderGrabRound, OrderGrabRoundOpeningEvidence, OrderGrabCutoffWatermark,
+    OrderGrabTeamDraft, OrderGrabTeamDraftMember, OrderGrabRoundSeat, OrderGrabReceiptProbe,
+    OrderGrabReceiptPassEvidence, OrderGrabSingleRoundState, OrderGrabSingleAdmission, OrderGrabTeamRoundState)  # noqa: E402,F401
+from .applications_models import OrderApplicationVoice  # noqa: E402,F401
+from .points_payment_models import (OrderPointsRedemption, OrderPointsBenefitSnapshot, OrderPointsRefund, OrderPointsFundingAllocation,
+                                    OrderPointsFundingAction, OrderPointsFundingRelease, OrderPointsFundingReleaseEvidence,
+                                    OrderPointsSettlement, OrderPointsSettlementFunding,
+                                    OrderPointsSettlementPerson, PointsFirstRefundPaidPersonEvidence)  # noqa: E402,F401
+from .points_transfer_revision_models import OrderPointsTransferFundingRevision, OrderPointsTransferFundingRelease  # noqa: E402,F401
+from .reservation_cancel_funding_models import ReservationPointsCancelFundingEvidence, ReservationPointsCancelFundingRelease  # noqa: E402,F401
+from .points_prestart_cancel_models import PointsPrestartCancelFundingEvidence, PointsPrestartCancelFundingRelease  # noqa: E402,F401
+from .addon_config_models import ServiceAddonConfiguration, ServiceAddonPriceOption  # noqa: E402,F401
+from .addon_intent_models import OrderAddonIntent  # noqa: E402,F401
+from .addon_payment_models import OrderAddonPayment, OrderAddonFundingAllocation  # noqa: E402,F401
+from .addon_refund_models import (OrderAddonRefundProposal, OrderAddonRefundDecision, OrderAddonRefundParticipant, OrderAddonRefund,
+                                  OrderAddonRefundEarningDeduction, OrderAddonRefundShareAllocation)  # noqa: E402,F401
+from .addon_main_segment_models import OrderAddonRefundMainSegmentDeduction  # noqa: E402,F401
+from .addon_refund_wallet_evidence_models import AddonRefundZeroWalletEvidence, AddonRefundParticipantZeroWalletEvidence  # noqa: E402,F401
+from .addon_handover_models import OrderAddonHandover, OrderAddonHandoverShare, OrderAddonHandoverDecision  # noqa: E402,F401
+from .addon_completion_models import OrderAddonCompletion  # noqa: E402,F401
+from .addon_funding_models import (OrderAddonFundingReleaseRun, OrderAddonFundingRelease, OrderAddonSettlement,
+                                  OrderSegmentAddonSettlement, OrderSegmentAddonSettlementRevision,
+                                  OrderAddonConsumption, OrderOrdinaryRefundAddonSettlementEvidence,
+                                  OrdinaryPaidAddonRefundEvidence)  # noqa: E402,F401
+from .room_models import (OrderRoom, OrderRoomObjection, OrderRoomCompletionRequest, OrderRoomConfirmation, OrderRoomMessage, OrderRoomMessageImage,
+                          OrderRoomImageUploadIntent)  # noqa: E402,F401
+from .legacy_room_models import LegacyRoomCompletion  # noqa: E402,F401
+from .legacy_clock_models import LegacyClockCutover  # noqa: E402,F401
+from .subsidy_agreement_models import SubsidyAgreementExecution, SubsidyTransferAgreementTerms  # noqa: E402,F401
+from .transfer_limit_models import OrderTransferSeat, OrderTransferSeatEvent  # noqa: E402,F401
+from .work_stint_models import OrderWorkStint  # noqa: E402,F401
+from .work_original_models import OrderWorkOriginalShare, OrderWorkOriginalTransfer  # noqa: E402,F401
+from .negotiation_models import (NegotiationProposal, NegotiationDecision, PointsNegotiationTerms,
+                                 PointsNegotiationPosting, PointsNegotiationPostingShare, NegotiationExecution,
+                                 NegotiationExecutionShare, NegotiationFollowupLink)  # noqa: E402,F401
+from .points_zero_followup_models import PointsZeroFollowupTermination  # noqa: E402,F401
+from .points_third_addon_models import PointsThirdAddonFundingRevision  # noqa: E402,F401
+from .points_third_transfer_models import PointsThirdTransferRevision, PointsThirdTransferRelease  # noqa: E402,F401
+from .points_third_target_invalidation_models import PointsThirdHandoverTargetInvalidation  # noqa: E402,F401
+from .points_transfer_zero_settlement_models import PointsTransferZeroSettlementRevision  # noqa: E402,F401
+from .points_handover_invalidation_models import PointsHandoverRefundInvalidation  # noqa: E402,F401
+from .referral_cycle_models import OrderReferralCycleSnapshot  # noqa: E402,F401
+from .negotiation_transfer_models import OrderTransferNegotiationEvidence  # noqa: E402,F401
+from .ordinary_transfer_addon_agreement_models import OrdinaryTransferAddonAgreement  # noqa: E402,F401
+from .ordinary_transfer_followup_models import OrdinaryTransferFollowupRound  # noqa: E402,F401
+from .ordinary_transfer_followup_revision_models import OrdinaryTransferFollowupSettlementRevision  # noqa: E402,F401
+from .ordinary_post_refund_transfer_models import OrdinaryPostRefundTransferRevision  # noqa: E402,F401
+from .referral_funding_models import ReferralRefundFunding, ReferralRefundFundingAction, ReferralRefundFundingRelease  # noqa: E402,F401
+from .points_post_refund_transfer_models import (PointsPostRefundTransferRevision, PointsPostRefundTransferRelease,
+                                                 PointsFollowupTransferRevision, PointsFollowupTransferRelease,
+                                                 PointsTransferAddonLiabilityRevision)  # noqa: E402,F401
+from .points_refunded_settlement_models import (OrderPointsRefundSettlement, OrderPointsRefundSettlementFunding,
+                                               OrderPointsRefundSettlementPerson,
+                                               OrderPointsFollowupFundingRevision,
+                                               OrderPointsFollowupFundingReleaseEvidence,
+                                               OrderPointsTransferFollowupFundingRevision)  # noqa: E402,F401
+from .continuation_models import OrderContinuation, OrderContinuationReward  # noqa: E402,F401
+from .points_voluntary_paid_models import (PointsVoluntaryPaidRefundEvidence, PointsVoluntaryPaidPaymentEvidence,
+                                          PointsVoluntaryPaidPaymentSettlementRevision)  # noqa: E402,F401
+from .points_followup_paid_handover_models import (PointsPaidHandoverEvidence,
+    PointsPaidHandoverSettlementRevision, PointsPaidCompletionSettlementRevision)  # noqa: E402,F401
+from .points_refund_round_models import PointsRefundRoundEvidence  # noqa: E402,F401
+from .ordinary_addon_paid_models import OrdinaryAddonPaidRefundEvidence, OrdinaryRefundedAddonPaidRevision  # noqa: E402,F401

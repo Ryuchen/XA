@@ -33,7 +33,6 @@ function setup(kind, defer = false) {
   };
   const module = { exports: {} };
   const file = kind === 'native' ? 'apps/boss-miniapp/native/core/realtime.js'
-    : kind === 'boss' ? 'apps/boss-miniapp/src/services/websocket.ts'
     : kind === 'provider' ? 'apps/provider-miniapp/src/services/websocket.ts' : 'apps/admin-web/src/utils/ws.ts';
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
@@ -75,7 +74,7 @@ function setup(kind, defer = false) {
   };
 }
 
-for (const kind of ['provider', 'admin', 'boss']) {
+for (const kind of ['provider', 'admin']) {
   test(`${kind}: repeated page/app connection calls keep one connection`, async () => {
     const s = setup(kind); s.service.connect(); s.service.connect(); s.service.connect(); await tick();
     assert.equal(s.sockets.length, 1);

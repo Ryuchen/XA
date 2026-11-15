@@ -1,0 +1,110 @@
+{
+  "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+  "result": "PASS",
+  "local_only": true,
+  "real_payment_or_payout": false,
+  "wallets": {
+    "p1": {
+      "balance_coins": "42",
+      "net_income_coins": "77",
+      "frozen_coins": "35",
+      "normal_ui": true
+    },
+    "p5": {
+      "balance_coins": "84",
+      "net_income_coins": "154",
+      "frozen_coins": "70",
+      "normal_ui": true
+    },
+    "p2": {
+      "balance_coins": "126",
+      "net_income_coins": "231",
+      "frozen_coins": "105",
+      "normal_ui": true
+    },
+    "p3": {
+      "balance_coins": "72",
+      "net_income_coins": "132",
+      "frozen_coins": "60",
+      "normal_ui": true
+    },
+    "p4": {
+      "balance_coins": "126",
+      "net_income_coins": "231",
+      "frozen_coins": "105",
+      "normal_ui": true
+    }
+  },
+  "own_reports": {
+    "p1": {
+      "original_coins": 70,
+      "recovered_coins": 28,
+      "net_coins": 42,
+      "remaining_frozen": 0
+    },
+    "p5": {
+      "original_coins": 140,
+      "recovered_coins": 56,
+      "net_coins": 84,
+      "remaining_frozen": 0
+    },
+    "p2": {
+      "original_coins": 210,
+      "recovered_coins": 84,
+      "net_coins": 126,
+      "remaining_frozen": 0
+    },
+    "p3": {
+      "original_coins": 120,
+      "recovered_coins": 48,
+      "net_coins": 72,
+      "remaining_frozen": 0
+    },
+    "p4": {
+      "original_coins": 210,
+      "recovered_coins": 84,
+      "net_coins": 126,
+      "remaining_frozen": 0
+    }
+  },
+  "insufficient_cases": [
+    "p1",
+    "p2",
+    "p3",
+    "p4",
+    "p5"
+  ],
+  "realtime_wallets": {
+    "p1": true,
+    "p5": true
+  },
+  "shortage_setup_realtime_claimed": false,
+  "shortage_setup_wallet_views_reopened": true,
+  "all_five_fixture_ui_sessions_logged_out": true,
+  "temporary_second_origin_tab_closed": true,
+  "original_provider_restored": "local_provider",
+  "original_provider_wallet": {
+    "balance_coins": 0,
+    "frozen_coins": 0,
+    "net_income_coins": 0
+  },
+  "original_native_account_restored": 1142,
+  "original_native_home_error": "",
+  "official_transfer_operations": 12,
+  "official_provider_submissions": 15,
+  "official_provider_approvals": 15,
+  "refund_records": 5,
+  "total_refunded_coins": 1400,
+  "source_reversal_lines": 45,
+  "insufficient_cases_all_six_wallets_unchanged": true,
+  "successful_refund_replays_unchanged": true,
+  "final_runtime_api": "PASS",
+  "django_system_check": "PASS",
+  "migrations_check": "PASS",
+  "diff_check": "PASS",
+  "ordinary_services_running": 9,
+  "production_source_changes_this_round": 0,
+  "source_hashes_match_tested": true,
+  "isolated_mysql_container_removed": true,
+  "checked_at": "2026-10-20T03:24:31.635Z"
+}

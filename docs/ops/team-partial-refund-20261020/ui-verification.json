@@ -1,0 +1,54 @@
+{
+  "run": "XA-TEAM-PARTIAL-REFUND-20261020-a3267c",
+  "result": "PASS",
+  "local_only": true,
+  "real_payment_or_payout": false,
+  "actual_split_for_1000_coins": {"p1_income":400,"p2_income":350,"platform_income":250},
+  "refunds_coins": [250,150,600,250,150],
+  "total_refunded_coins": 1400,
+  "admin": {
+    "entered_amount_and_refreshed_server_preview": true,
+    "two_actual_provider_credits_displayed": true,
+    "insufficient_refund_coins":250,
+    "p1_required_coins":100,
+    "p1_available_coins":400,
+    "p2_required_coins":87.5,
+    "p2_available_coins":50,
+    "p2_shortfall_coins":37.5,
+    "confirmation_disabled_with_reason_filled":true,
+    "backend_also_refused_with_no_wallet_order_or_ledger_change":true
+  },
+  "provider_wallets": {
+    "p1":{"available_coins":240,"frozen_coins":200,"net_income_coins":440},
+    "p2":{"available_coins":210,"frozen_coins":175,"net_income_coins":385},
+    "refund_changes_observed_without_manual_reload_on_both":true,
+    "independent_loopback_origins":true
+  },
+  "partial_order_own_reports": {
+    "p1":{"original_approved_income_coins":400,"recovered_coins":160,"net_income_coins":240},
+    "p2":{"original_approved_income_coins":350,"recovered_coins":140,"net_income_coins":210},
+    "original_approved_label_correct":true,
+    "order_refunded_coins":400,
+    "order_remaining_coins":600
+  },
+  "native_boss":{"final_balance_coins":1400,"refund_entries":5,"last_refund_observed_without_manual_reload":true},
+  "shortage_setup": {
+    "withdrawal_minimum_coins":1000,
+    "withdrawal_form_only_opened_then_cancelled":true,
+    "withdrawal_not_submitted":true,
+    "new_fixture_only_penalty_coins":300,
+    "new_fixture_only_restoration_coins":300,
+    "setup_net_coins":0,
+    "setup_wallet_reopened_before_refund_observation":true,
+    "existing_rules_unchanged":true
+  },
+  "final_runtime_api":"PASS",
+  "django_system_check":"PASS",
+  "migrations_check":"PASS",
+  "diff_check":"PASS",
+  "original_native_account_restored":"1142",
+  "original_native_home_error":"",
+  "original_provider_restored":"local_provider",
+  "original_provider_wallet":{"available_coins":0,"frozen_coins":0,"net_income_coins":0},
+  "second_origin_fixture_logged_out_and_temporary_tab_closed":true
+}

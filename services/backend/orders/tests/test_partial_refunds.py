@@ -191,7 +191,7 @@ class PartialRefundTest(APITestCase):
         self.assertEqual((self.provider_wallet.balance,self.provider_wallet.frozen_amount),(0,4000))
         self.assertIsNone(foreign_hold.cancelled_at)
 
-    def test_partial_gift_keeps_qualifying_right_and_prorates_naming_time(self):
+    def test_partial_gift_preserves_right_and_full_naming_time(self):
         from engagement.models import GiftBenefitRule,GiftNamingGrant,ProviderNaming
         category = ServiceCategory.objects.create(name='部分赠礼',is_gift=True)
         gift = make_service(price=4000,commission_rate=20,service_category=category,gift_naming_days=2)
@@ -202,13 +202,15 @@ class PartialRefundTest(APITestCase):
             'client_request_id':'partial-gift-order'},format='json'))
         order = Order.objects.get(pk=result['id'])
         grant = GiftNamingGrant.objects.get(order=order)
-        base = grant.expires_at-timedelta(days=2)
+        expiry = grant.expires_at
         self.ok(self.pay_refund(order,500))
         self.assertEqual(RewardClaim.objects.get(source_order=order).status,'PENDING')
         naming = ProviderNaming.objects.get(pk=grant.naming_id)
-        self.assertAlmostEqual((naming.expires_at-base).total_seconds(),2*86400*3500//4000,delta=1)
+        self.assertEqual(naming.expires_at, expiry)
         self.ok(self.pay_refund(order,501))
-        self.assertEqual(RewardClaim.objects.get(source_order=order).status,'CANCELLED')
+        self.assertEqual(RewardClaim.objects.get(source_order=order).status,'PENDING')
+        naming.refresh_from_db()
+        self.assertEqual(naming.expires_at, expiry)
 
     def test_partial_earnings_deposit_and_remaining_hold_reconcile_to_zero(self):
         from wallet.models import SystemConfig

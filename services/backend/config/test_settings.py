@@ -4,6 +4,7 @@ from .settings import *  # noqa: F403
 # 显式钉死安全基线相关配置，避免测试环境被 config.checks 的生产 fail-fast 打死：
 # 无论宿主机 / CI 是否导出了 DJANGO_DEBUG=0，测试都以「本地零配置」语义运行。
 DEBUG = True
+ISOLATED_CONTROL_PLANE = False
 SECRET_KEY = 'xa-test-only-secret-key-not-for-production-use'
 ALLOWED_HOSTS = ['*']
 
@@ -13,6 +14,10 @@ DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memor
 CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
 CELERY_BROKER_URL = 'memory://'
 CELERY_RESULT_BACKEND = 'cache+memory://'
+LICENSE_NOTICE_DISPATCH_ENABLED = False
+LICENSE_ACCOUNT_ADMISSION_ENABLED = False
+LICENSE_BENEFIT_ENFORCEMENT_ENABLED = False
+LICENSE_SNAPSHOT_CACHE_ENABLED = False
 
 # 限流默认关闭：历史用例存在同一测试内高频登录/下单，开启会误伤。
 # 需要验证 429 的用例请用 @override_settings(REST_FRAMEWORK={...}) 单点打开
@@ -60,6 +65,9 @@ REQUIRE_RECHARGE_PROOF = False
 ORDER_SETTLEMENT_MODE = 'COMPLETION'
 
 LOGIN_OTP_REQUIRED = False
+# Existing historical fixtures predate the mandatory WeChat gate. Dedicated
+# acceptance tests explicitly enable it and exercise real eligibility logic.
+PROVIDER_WECHAT_GATE_ENABLED = False
 
 # 新流量场景在专项测试中显式启用。
 ORDER_TRAFFIC_ENABLED = False

@@ -38,6 +38,13 @@ class AuditionBossBindingTest(APITestCase):
     def exchange(self, token):
         return APIClient().post('/api/audition/exchange', {'token': token, 'role': 'boss'}, format='json').data
 
+    def wechat_session(self, account):
+        # A role JWT is the already-confirmed WeChat session fixture. The
+        # invitation itself must never create or replace this login state.
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        return client
+
     def test_bind_rotate_exchange_unbind_and_stale_update(self):
         self.assertEqual(self.exchange(self.original_boss_token)['code'], 409)
         bound = self.bind(self.boss.pk)
@@ -48,8 +55,16 @@ class AuditionBossBindingTest(APITestCase):
         self.assertEqual(bound.data['data']['provider_token'], self.provider_token)
         self.assertEqual(self.exchange(self.original_boss_token)['code'], 404)
         exchanged = self.exchange(new_token)
-        self.assertEqual(exchanged['code'], 0, exchanged)
-        self.assertEqual(exchanged['data']['userInfo']['id'], str(self.boss.pk))
+        self.assertEqual(exchanged['code'], 403, exchanged)
+        self.assertNotIn('data', exchanged)
+        self.assertEqual(APIClient().get('/api/audition/enter', {'token': new_token}).status_code, 401)
+        existing_session = self.wechat_session(self.boss)
+        entered = existing_session.get('/api/audition/enter', {'token': new_token, 'role': 'boss'})
+        self.assertEqual(entered.status_code, 200, entered.data)
+        self.assertTrue(entered.data['data']['matched'])
+        self.assertNotIn('token', entered.data['data'])
+        wrong_owner = self.wechat_session(self.other).get('/api/audition/enter', {'token': new_token})
+        self.assertEqual(wrong_owner.status_code, 403)
         stale = self.bind(self.other.pk)
         self.assertEqual(stale.status_code, 409)
         link = AuditionLink.objects.get(pk=self.link_id)
@@ -59,8 +74,7 @@ class AuditionBossBindingTest(APITestCase):
         self.assertEqual(self.exchange(new_token)['code'], 404)
         self.assertEqual(self.exchange(unbound.data['data']['boss_token'])['code'], 409)
         self.assertEqual(unbound.data['data']['provider_token'], self.provider_token)
-        existing_session = APIClient()
-        existing_session.credentials(HTTP_AUTHORIZATION='Bearer ' + exchanged['data']['token'])
+        self.assertEqual(existing_session.get('/api/audition/enter', {'token': new_token}).status_code, 404)
         self.assertEqual(existing_session.get('/api/users/me/').data['code'], 0)
 
     def test_permission_and_no_legacy_field_bypass(self):

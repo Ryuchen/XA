@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A real review notice opens its own review and keeps the order link."""
 import json
 import os
@@ -28,9 +29,9 @@ class ProviderVueEvaluationMessageHTTPTest(LiveServerTestCase):
     prepare = flow.ProviderAfterSaleStatusTest.prepare
 
     def test_review_notice_and_reply(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         other_id, _ = self.prepare()
         self.login(self.boss)
         self.ok(self.client.post('/api/orders/evaluate/', {
@@ -70,7 +71,7 @@ class ProviderVueEvaluationMessageHTTPTest(LiveServerTestCase):
         self.login(self.staff)
         self.assertTrue(any(row['id'] == review['id'] for row in self.ok(self.client.get('/api/admin/evaluations/'))['list']))
         repo = Path(settings.BASE_DIR).parent.parent
-        fixed = os.environ.get('XA_EVALUATION_MESSAGE_FIXED') == '1'
+        fixed = True
         result = subprocess.run(['node', str(repo / 'scripts/provider-vue-evaluation-message-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'orderId':order_id, 'foreignOrderId':foreign_id,
                 'orderNo':order['order_no'], 'messageId':notice['id'], 'id':self.accounts[self.provider.pk].pk,

@@ -1,4 +1,5 @@
-"""Two providers compete for an actual order while one Vue workbench is stale."""
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
+"""Two providers compete while the current React workbench has a stale read."""
 import json
 import os
 import subprocess
@@ -21,9 +22,9 @@ from wallet.models import Transaction
                    CELERY_TASK_ALWAYS_EAGER=False)
 class ProviderVueStaleGrabHTTPTest(LiveServerTestCase):
     def exercise(self, lost_response, *, hold_pool=False, sound=False, realtime=False):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         boss = make_user()
         boss_account = get_or_create_account_for_legacy_user(boss)
         link_legacy_relations(boss, boss_account)
@@ -49,6 +50,9 @@ class ProviderVueStaleGrabHTTPTest(LiveServerTestCase):
         Order.objects.filter(pk=order.pk).update(pool_entered_at=timezone.now()-timedelta(hours=1))
         repo = Path(settings.BASE_DIR).parent.parent
         def run(base, ws_base=None):
+            if realtime:
+                self.assertTrue(ws_base, 'Realtime contracts require XA_REACT_CONTRACT_REAL_NETWORK=1')
+                self.assertNotEqual(base, ws_base, 'Use distinct real HTTP and WebSocket Daphne workers')
             result = subprocess.run(['node', str(repo / 'scripts/provider-vue-stale-grab-375.cjs')], input=json.dumps({
                 'root': root, 'base': base, 'wsBase': ws_base, 'orderId': order.pk, 'orderNo': order.order_no,
                 'id': accounts[0].pk, 'token': issue_account_tokens(accounts[0])[0],
@@ -60,7 +64,7 @@ class ProviderVueStaleGrabHTTPTest(LiveServerTestCase):
             print(result.stdout.strip())
         if realtime:
             from orders.tests.test_provider_vue_team_progress_http import isolated_realtime
-            with isolated_realtime() as (base, ws_base):
+            with current_http(self, isolated_realtime) as (base, ws_base):
                 run(base, ws_base)
         else:
             run(self.live_server_url)

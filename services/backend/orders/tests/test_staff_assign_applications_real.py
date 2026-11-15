@@ -27,7 +27,7 @@ class StaffAssignApplicationsRealTest(APITransactionTestCase):
     recharge = release_flow.ReleaseFlowTest.recharge
 
     def _assignment_then_reject(self, use_legacy_endpoint=False, assign_applicant=False):
-        applicant = self.provider if assign_applicant else make_provider()
+        applicant = self.provider if assign_applicant else make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         applicant_account = get_or_create_account_for_legacy_user(applicant)
         self.accounts[applicant.pk] = applicant_account
         for user in (applicant, self.provider):
@@ -63,29 +63,39 @@ class StaffAssignApplicationsRealTest(APITransactionTestCase):
             result = self.ok(self.client.get(f'/api/orders/orders/{order_id}/applications/{application.pk}/mine/'))
             self.assertEqual(result['closed_reason'], '订单已选择其他陪玩，本次报名结束。')
         self.login(self.provider)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '时间冲突'}, format='json'))
         order = Order.objects.get(pk=order_id)
-        self.assertEqual((order.status, order.requires_boss_selection), ('PENDING', True))
+        before = (order.status, order.provider_account_id, order.payment_status, order.status_logs.count(),
+                  order.transactions.count())
+        rejected = self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '时间冲突'}, format='json')
+        self.assertEqual(rejected.data['errorCode'], 'ORDER_SELF_REJECTION_DISABLED')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.provider_account_id, order.payment_status, order.status_logs.count(),
+                          order.transactions.count()), before)
         self.login(self.boss)
         detail = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))
         self.assertEqual(detail['applications'], [])
         self.login(applicant)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/grab/', {}, format='json'))
+        self.assertNotEqual(self.client.post(f'/api/orders/orders/{order_id}/grab/', {}, format='json').data['code'], 0)
         application.refresh_from_db()
         self.assertEqual(application.status, 'SELECTED' if assign_applicant else 'NOT_SELECTED')
-        current = OrderApplication.objects.get(order_id=order_id, applicant=applicant_account, status='PENDING')
-        self.assertNotEqual(current.pk, application.pk)
+        self.assertFalse(OrderApplication.objects.filter(order_id=order_id, status='PENDING').exists())
 
-    def test_admin_assignment_closes_others_and_reopens_for_new_application(self):
+    def test_admin_assignment_closes_others_and_rejection_keeps_assignment(self):
         self._assignment_then_reject()
 
-    def test_order_assignment_closes_others_and_reopens_for_new_application(self):
+    def test_legacy_assignment_closes_others_and_rejection_keeps_assignment(self):
         self._assignment_then_reject(use_legacy_endpoint=True)
 
     def test_assigning_the_applicant_records_selection_without_wrong_notice(self):
         self._assignment_then_reject(assign_applicant=True)
 
-    def test_old_selected_round_cannot_replay_after_new_selection(self):
+    @override_settings(PRESTART_HANDOFF_ENABLED=True)
+    def test_old_selection_cannot_replay_after_staff_handoff_away_and_back(self):
+        replacement = make_provider(deposit_mode='EARNINGS')
+        replacement_account = get_or_create_account_for_legacy_user(replacement)
+        replacement.escort_profile.account = replacement_account
+        replacement.escort_profile.save(update_fields=['account'])
+        self.accounts[replacement.pk] = replacement_account
         profile = self.provider.escort_profile
         profile.pass_tier = 'BLACK'
         profile.pass_expires_at = timezone.now() + timedelta(days=1)
@@ -103,30 +113,23 @@ class StaffAssignApplicationsRealTest(APITransactionTestCase):
         self.login(self.boss)
         self.ok(self.client.post(first_select, {}, format='json'))
         self.ok(self.client.post(first_select, {}, format='json'))
-        self.login(self.provider)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '时间冲突'}, format='json'))
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/grab/', {}, format='json'))
-        second = OrderApplication.objects.get(order_id=order_id, status='PENDING')
-        self.assertNotEqual(first.pk, second.pk)
+        order = Order.objects.get(pk=order_id)
+        before = (order.payment_status, order.amount, order.transactions.count())
+        self.login(self.admin)
+        for old, new in ((self.provider, replacement), (replacement, self.provider)):
+            self.ok(self.client.post(f'/api/admin/orders/{order_id}/transfer/', {
+                'reason': '客服协调更换', 'transfers': [{'old_provider_id': self.accounts[old.pk].pk,
+                    'new_provider_id': self.accounts[new.pk].pk, 'split_type': 'PERCENT',
+                    'split_value': 0, 'penalty_amount': 0}],
+            }, format='json'))
         self.login(self.boss)
-        second_select = f'/api/orders/orders/{order_id}/applications/{second.pk}/select/'
-        self.ok(self.client.post(second_select, {}, format='json'))
         stale = self.client.post(first_select, {}, format='json').data
         self.assertNotEqual(stale['code'], 0, stale)
-        self.ok(self.client.post(second_select, {}, format='json'))
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.provider_account_id), ('GRABBED', self.accounts[self.provider.pk].pk))
+        self.assertEqual((order.payment_status, order.amount, order.transactions.count()), before)
+        self.assertEqual(order.prestart_handoffs.count(), 2)
         self.assertEqual(OrderApplication.objects.get(pk=first.pk).status, 'SELECTED')
-        self.assertEqual(OrderApplication.objects.get(pk=second.pk).status, 'SELECTED')
-        # Reassigning the same provider does not turn a previous boss
-        # selection into the current assignment.
-        self.login(self.provider)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '再次调整'}, format='json'))
-        self.login(self.admin)
-        self.ok(self.client.post(f'/api/admin/orders/{order_id}/assign/', {
-            'provider_id': self.accounts[self.provider.pk].pk,
-        }, format='json'))
-        self.login(self.boss)
-        stale = self.client.post(second_select, {}, format='json').data
-        self.assertNotEqual(stale['code'], 0, stale)
 
     @skipUnless(connection.vendor == 'mysql', 'Requires real MySQL row locks')
     def test_boss_selection_races_applicant_withdrawal(self):
@@ -174,7 +177,7 @@ class StaffAssignApplicationsRealTest(APITransactionTestCase):
 
     @skipUnless(connection.vendor == 'mysql', 'Requires real MySQL row locks')
     def test_boss_selection_races_staff_assignment(self):
-        other = make_provider()
+        other = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         self.accounts[other.pk] = get_or_create_account_for_legacy_user(other)
         for user in (self.provider, other):
             profile = user.escort_profile

@@ -1,0 +1,393 @@
+{
+  "result": "PASS",
+  "run": "XA-TRANSFERRED-TEAM-REFUND-20261020-18ce30",
+  "checked_at": "2026-10-19T19:15:55.935961+00:00",
+  "database_writes": 0,
+  "read_only_transaction": true,
+  "snapshot_isolation": "REPEATABLE READ",
+  "secrets_in_report": false,
+  "money_unit": "raw ledger integer: 10 = 1 XA coin; 100 = 1 RMB",
+  "boss": {
+    "account_id": 1155,
+    "balance_raw": 14000,
+    "frozen_raw": 0,
+    "refund_raw": 14000
+  },
+  "providers": [
+    {
+      "provider_key": "p1",
+      "account_id": 1156,
+      "balance_raw": 960,
+      "frozen_raw": 800,
+      "net_income_raw": 1760,
+      "withdrawal_records": 0
+    },
+    {
+      "provider_key": "p2",
+      "account_id": 1157,
+      "balance_raw": 2100,
+      "frozen_raw": 1750,
+      "net_income_raw": 3850,
+      "withdrawal_records": 0
+    },
+    {
+      "provider_key": "p3",
+      "account_id": 1158,
+      "balance_raw": 1440,
+      "frozen_raw": 1200,
+      "net_income_raw": 2640,
+      "withdrawal_records": 0
+    }
+  ],
+  "platform": {
+    "baseline_raw": 71600,
+    "balance_raw": 74350,
+    "fixture_net_raw": 2750
+  },
+  "conservation": {
+    "initial_raw": 25000,
+    "boss_raw": 14000,
+    "provider_available_raw": 4500,
+    "provider_frozen_raw": 3750,
+    "platform_raw": 2750,
+    "equal": true
+  },
+  "orders": [
+    {
+      "key": "frozen_recovery",
+      "order_id": 120,
+      "amount_raw": 10000,
+      "status": "CANCELLED",
+      "payment_status": "REFUNDED",
+      "refund_parts_raw": [
+        2500,
+        1500,
+        6000
+      ],
+      "cumulative_refund_raw": 10000,
+      "remaining_raw": 0,
+      "participants": [
+        {
+          "provider_key": "p1",
+          "report_id": 32,
+          "original_base_raw": 1600,
+          "original_actual_income_raw": 1600,
+          "released_transfer_out": true,
+          "net_income_raw": 0
+        },
+        {
+          "provider_key": "p2",
+          "report_id": 33,
+          "original_base_raw": 5000,
+          "original_actual_income_raw": 3500,
+          "released_transfer_out": false,
+          "net_income_raw": 0
+        },
+        {
+          "provider_key": "p3",
+          "report_id": 34,
+          "original_base_raw": 3400,
+          "original_actual_income_raw": 2400,
+          "released_transfer_out": false,
+          "net_income_raw": 0
+        }
+      ],
+      "source_reversal_lines": 21,
+      "official_transfer_and_completion": true,
+      "original_assignment_ids_retained": true
+    },
+    {
+      "key": "available_recovery",
+      "order_id": 121,
+      "amount_raw": 10000,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refund_parts_raw": [
+        2500,
+        1500
+      ],
+      "cumulative_refund_raw": 4000,
+      "remaining_raw": 6000,
+      "participants": [
+        {
+          "provider_key": "p1",
+          "report_id": 35,
+          "original_base_raw": 1600,
+          "original_actual_income_raw": 1600,
+          "released_transfer_out": true,
+          "net_income_raw": 960
+        },
+        {
+          "provider_key": "p2",
+          "report_id": 36,
+          "original_base_raw": 5000,
+          "original_actual_income_raw": 3500,
+          "released_transfer_out": false,
+          "net_income_raw": 2100
+        },
+        {
+          "provider_key": "p3",
+          "report_id": 37,
+          "original_base_raw": 3400,
+          "original_actual_income_raw": 2400,
+          "released_transfer_out": false,
+          "net_income_raw": 1440
+        }
+      ],
+      "source_reversal_lines": 8,
+      "official_transfer_and_completion": true,
+      "original_assignment_ids_retained": true
+    },
+    {
+      "key": "protected_foreign_hold",
+      "order_id": 122,
+      "amount_raw": 5000,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "refund_parts_raw": [],
+      "cumulative_refund_raw": 0,
+      "remaining_raw": 5000,
+      "participants": [
+        {
+          "provider_key": "p1",
+          "report_id": 38,
+          "original_base_raw": 800,
+          "original_actual_income_raw": 800,
+          "released_transfer_out": true,
+          "net_income_raw": 800
+        },
+        {
+          "provider_key": "p2",
+          "report_id": 39,
+          "original_base_raw": 2500,
+          "original_actual_income_raw": 1750,
+          "released_transfer_out": false,
+          "net_income_raw": 1750
+        },
+        {
+          "provider_key": "p3",
+          "report_id": 40,
+          "original_base_raw": 1700,
+          "original_actual_income_raw": 1200,
+          "released_transfer_out": false,
+          "net_income_raw": 1200
+        }
+      ],
+      "source_reversal_lines": 0,
+      "official_transfer_and_completion": true,
+      "original_assignment_ids_retained": true
+    }
+  ],
+  "refunds": {
+    "records": 5,
+    "amount_raw": 14000,
+    "recovered_raw": 14000,
+    "source_reversal_lines": 29,
+    "originals_preserved": true,
+    "released_original_provider_recovered": true,
+    "one_line_per_refund_original": true,
+    "cumulative_source_limit_respected": true
+  },
+  "consumption": {
+    "confirmed_order_id": 121,
+    "original_confirmed_raw": 10000,
+    "cumulative_refunded_raw": 4000,
+    "per_tranche_net_raw": [
+      7500,
+      6000
+    ],
+    "confirmed_remaining_raw": 6000,
+    "pending_remaining_raw": 5000
+  },
+  "holds": [
+    {
+      "provider_key": "p1",
+      "a_hold_id": 11,
+      "a_fully_recovered_raw": 1600,
+      "a_cancelled_excluded_after_due": true,
+      "d_hold_id": 14,
+      "d_protected_raw": 800
+    },
+    {
+      "provider_key": "p2",
+      "a_hold_id": 12,
+      "a_fully_recovered_raw": 3500,
+      "a_cancelled_excluded_after_due": true,
+      "d_hold_id": 15,
+      "d_protected_raw": 1750
+    },
+    {
+      "provider_key": "p3",
+      "a_hold_id": 13,
+      "a_fully_recovered_raw": 2400,
+      "a_cancelled_excluded_after_due": true,
+      "d_hold_id": 16,
+      "d_protected_raw": 1200
+    }
+  ],
+  "shortfall_setup": {
+    "official_disposals": [
+      {
+        "provider_key": "p1",
+        "id": 3,
+        "transaction_id": 1087,
+        "type": "PENALTY",
+        "amount_raw": 1300,
+        "signed_raw": -1300,
+        "before_raw": 1600,
+        "after_raw": 300
+      },
+      {
+        "provider_key": "p1",
+        "id": 4,
+        "transaction_id": 1088,
+        "type": "REWARD",
+        "amount_raw": 1300,
+        "signed_raw": 1300,
+        "before_raw": 300,
+        "after_raw": 1600
+      },
+      {
+        "provider_key": "p3",
+        "id": 5,
+        "transaction_id": 1089,
+        "type": "PENALTY",
+        "amount_raw": 1900,
+        "signed_raw": -1900,
+        "before_raw": 2400,
+        "after_raw": 500
+      },
+      {
+        "provider_key": "p3",
+        "id": 6,
+        "transaction_id": 1090,
+        "type": "REWARD",
+        "amount_raw": 1900,
+        "signed_raw": 1900,
+        "before_raw": 500,
+        "after_raw": 2400
+      }
+    ],
+    "net_funding_change_raw": 0,
+    "withdrawal_records": 0
+  },
+  "protected_old_rows": [
+    {
+      "table": "orders_order",
+      "old_rows": 99,
+      "original_columns": 61,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "wallet_wallet",
+      "old_rows": 1154,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 2750
+    },
+    {
+      "table": "wallet_transaction",
+      "old_rows": 1020,
+      "original_columns": 16,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "wallet_incomehold",
+      "old_rows": 10,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "wallet_providerreport",
+      "old_rows": 31,
+      "original_columns": 22,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_aftersale",
+      "old_rows": 10,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "engagement_consumptionconfirmation",
+      "old_rows": 13,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_orderrefund",
+      "old_rows": 15,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_refundrecoveryline",
+      "old_rows": 45,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_orderstatuslog",
+      "old_rows": 209,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "engagement_orderpointallocation",
+      "old_rows": 5,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_orderprovider",
+      "old_rows": 21,
+      "original_columns": 13,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "wallet_disposerecord",
+      "old_rows": 2,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "console_adminauditlog",
+      "old_rows": 114,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    }
+  ],
+  "old_order_hash_equal": true,
+  "all_old_wallets_unchanged_except_exact_platform_net": true,
+  "official_operation_audit_paths_checked": 19,
+  "no_business_services_invoked": true,
+  "container_temporary_backup_removed": true
+}

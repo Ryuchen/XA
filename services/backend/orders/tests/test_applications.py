@@ -34,7 +34,7 @@ class ApplicationTest(APITestCase):
     def setUp(self):
         self.boss=make_user();self.boss_account=account(self.boss)
         self.service=make_service(price=10001,commission_rate=20)
-        self.providers=[make_provider() for _ in range(3)]
+        self.providers=[make_provider(deposit_mode='EARNINGS') for _ in range(3)]
         self.accounts=[account(user) for user in self.providers]
         for index,(user,a) in enumerate(zip(self.providers,self.accounts)):
             level=EscortLevel.objects.create(name=f'Level{index}',commission_rate=20,sort_order=index+1)

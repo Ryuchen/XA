@@ -20,3 +20,16 @@ class UserCouponAdmin(ModelAdmin):
     list_display = ('id', 'user', 'coupon', 'status', 'claimed_at', 'used_at')
     list_filter = ('status',)
     search_fields = ('user__username', 'coupon__name')
+    # Ownership, cycle, stock and redemption state are business facts.  The
+    # generic model form and bulk-delete action cannot establish the required
+    # lifecycle locks, funding evidence or audit trail.
+    actions = None
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

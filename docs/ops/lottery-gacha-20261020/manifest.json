@@ -1,0 +1,68 @@
+{
+  "archived_at": "2026-10-20T10:13:30.754Z",
+  "files": [
+    {
+      "name": "verification.json",
+      "bytes": 1340,
+      "sha256": "ba972c512c63d41cb157ac1fc7ef0584d6e4c5d61daaceb1f3b3b6418861a1d8"
+    },
+    {
+      "name": "backend-isolated-tests.json",
+      "bytes": 8401,
+      "sha256": "a25cf6cfbf045f33cc2bb77a70b67913f235c390dfad0841652108401fe251ea"
+    },
+    {
+      "name": "native-unit-verification.json",
+      "bytes": 1780,
+      "sha256": "7a11ff83ec5ede22fb65066969c48c1c414f9b3a340335dc484f2430e137a4ad"
+    },
+    {
+      "name": "native-ui-verification.json",
+      "bytes": 767,
+      "sha256": "0c95d87a9154247e85f8e16f51a6a527a1f8c7eb5e12beeb533c94e8263baa71"
+    },
+    {
+      "name": "native-live-read-verification.json",
+      "bytes": 4706,
+      "sha256": "49f70bff1d80febff9b581950e0a159532bb4273815537b1ded43526fb4158d2"
+    },
+    {
+      "name": "backup-financial-audit.json",
+      "bytes": 7737,
+      "sha256": "38bb7419f6e3e889d95811041bdfc521fba0cf9bea2b8ef62347c7c9d22def3e"
+    },
+    {
+      "name": "final-financial-audit.json",
+      "bytes": 7867,
+      "sha256": "41c356ab6edbf614aad30080ff6148c8ddcc90a1ae96d0ca8c34c0f708759b26"
+    },
+    {
+      "name": "local-deployment-log.json",
+      "bytes": 1800,
+      "sha256": "51677a668f9bb93859c5acf8ea19414e9f44442b67a75f84c1ed38991f70042a"
+    },
+    {
+      "name": "native-gacha-before.png",
+      "bytes": 166783,
+      "sha256": "66608f4bc52c27061027a53b7f3888c89cce928f3af4a72eb7123bb41e258d12"
+    },
+    {
+      "name": "native-gacha-animation.png",
+      "bytes": 191322,
+      "sha256": "441dbff3e09f37e79a1491dcce8367f15bdcb5d26283f7dbb21c693671ff7bd7"
+    },
+    {
+      "name": "native-gacha-ten-results.png",
+      "bytes": 107238,
+      "sha256": "608726221859775e3de07931da51565038151596ad1212ea935a1fe6eff030b6"
+    },
+    {
+      "name": "native-live-disabled.png",
+      "bytes": 179533,
+      "sha256": "01601ea19279551d2da8e99266a4a1a53253942b25042081e4fa0b701dc5da41"
+    }
+  ],
+  "source_hashes_match": true,
+  "all_images_below_200000_bytes": true,
+  "private_credentials_and_sql_excluded": true
+}

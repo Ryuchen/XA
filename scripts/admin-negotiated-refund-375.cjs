@@ -17,14 +17,20 @@ const server = http.createServer((req, res) => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
   try {
-    const context = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+    const context = await browser.newContext(input.desktop ? { viewport: { width: 1440, height: 900 } } : { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
     await context.addInitScript(token => localStorage.setItem('xa_admin_token', token), input.token);
     const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${server.address().port}/orders`);
-    const card = page.locator('.od-mobile-card').filter({ hasText: input.orderNo });
+    const card = (input.desktop ? page.getByRole('row') : page.locator('.od-mobile-card')).filter({ hasText: input.orderNo });
     await card.waitFor({ timeout: 30000 });
-    await card.getByRole('button', { name: '退款', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: '订单退款 · 资金复核' });
+    if (input.fromAftersale) {
+      await card.getByText('售后处理中，请先处理售后再结单或转单', { exact: true }).waitFor();
+      assert.equal(await card.getByRole('button', { name: '转单', exact: true }).isDisabled(), true);
+      assert.equal(await card.getByRole('button', { name: '完成', exact: true }).isDisabled(), true);
+      await card.getByRole('button', { name: input.desktop ? '详情' : '查看详情', exact: true }).click();
+      await page.getByRole('dialog', { name: '订单详情' }).getByRole('button', { name: '退款结案' }).click();
+    } else await card.getByRole('button', { name: '退款', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: input.fromAftersale ? '售后退款 · 资金复核' : '订单退款 · 资金复核' });
     await dialog.getByText('服务中转单协商退款', { exact: true }).waitFor({ timeout: 15000 });
     await dialog.getByPlaceholder('请输入本次退款金额').fill('500');
     const entries = dialog.locator('label.od-refund-input').filter({ has: page.getByPlaceholder('填写承担金额（可填 0）') });
@@ -56,7 +62,7 @@ const server = http.createServer((req, res) => {
     await dialog.getByRole('checkbox', { name: '我已核对协商资料和各方承担金额' }).check();
     await dialog.getByRole('button', { name: '确认本次退款' }).click();
     await dialog.waitFor({ state: 'hidden', timeout: 15000 });
-    await card.getByRole('button', { name: '查看详情' }).click();
+    if (!input.fromAftersale) await card.getByRole('button', { name: input.desktop ? '详情' : '查看详情', exact: true }).click();
     await page.getByText('协商承担 100 币', { exact: false }).first().waitFor({ timeout: 15000 });
     await page.getByText('订单保留金额', { exact: true }).waitFor();
     console.log('Real admin negotiation form, signed preview, submission and detail receipt verified at 375px');
@@ -92,6 +98,8 @@ const server = http.createServer((req, res) => {
         assert.ok(rendered.includes('已退老板：500 币'), rendered);
         assert.ok(rendered.includes(`本人服务收益已追回：${user.recovered} 币`), rendered);
         assert.ok(rendered.includes(`本人服务收益流水净额：${user.net} 币`), rendered);
+        assert.ok(rendered.includes(`本人协商承担：${user.burden} 币`), rendered);
+        assert.ok(rendered.includes(`协商时保留收益：${user.net} 币`), rendered);
         console.log('Provider receipt checked', user.id);
         await pp.goto(`http://127.0.0.1:${providerServer.address().port}/#/reports?order=${input.orderId}`);
         const report = pp.locator('.report').filter({hasText: input.orderNo});
@@ -99,7 +107,9 @@ const server = http.createServer((req, res) => {
         const reportText = await report.innerText();
         assert.ok(reportText.includes(input.reportLabel || '原订单分账'), reportText);
         assert.ok(reportText.includes(`${user.snapshot} 兴安币`), reportText);
-        assert.ok(reportText.includes(`服务净收益 ${user.net} 币`), reportText);
+        assert.ok(reportText.includes(`服务收益流水净额 ${user.net} 币`), reportText);
+        assert.ok(reportText.includes(`本人协商承担：${user.burden} 币`), reportText);
+        assert.ok(reportText.includes(`协商时保留收益：${user.net} 币`), reportText);
         assert.ok(reportText.includes('待提交') && reportText.includes('暂无战绩截图'), reportText);
         assert.ok(!reportText.includes('至少上传一张战绩截图'), reportText);
         console.log('Provider report snapshot label and real net:', user.id, reportText.replace(/\s+/g, ' '));

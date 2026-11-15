@@ -1,0 +1,132 @@
+{
+  "run": "XA-TRANSFERRED-TEAM-REFUND-20261020-18ce30",
+  "result": "PASS",
+  "secrets_in_report": false,
+  "source_bytes_preserved": true,
+  "json_files": 10,
+  "image_files": 13,
+  "image_limit_bytes": 200000,
+  "max_image_bytes": 159004,
+  "secret_scan": "PASS",
+  "copy_sha256_checks": "PASS",
+  "restore_marker_checks": "PASS",
+  "final_runtime": "PASS",
+  "files": [
+    {
+      "file": "final-database.json",
+      "bytes": 10387,
+      "sha256": "c98c85aad00b0a2564c9ac7af322993bd25f93a69b9072f9ec48946a0c8e65e7"
+    },
+    {
+      "file": "backend-isolated-tests.json",
+      "bytes": 12024,
+      "sha256": "403e7275e69db8b40dd78509413ddda431fb13c4923687c22e2e144d3ae7fc8b"
+    },
+    {
+      "file": "lifecycle-verification.json",
+      "bytes": 4168,
+      "sha256": "d03e77a350948efe97ec560e4374a7472c800655015cd54140121c5875dae480"
+    },
+    {
+      "file": "mature-verification.json",
+      "bytes": 1345,
+      "sha256": "e9706d9c39051cd2a8e8a139602ab6f3d2dbf2af37e31b3b0a1aac43d9b17009"
+    },
+    {
+      "file": "consumption-confirmation.json",
+      "bytes": 210,
+      "sha256": "4cb305c1c98837df48e88d613b570f571d824588fcd5d46fd0d01b7617b95347"
+    },
+    {
+      "file": "action-verification.json",
+      "bytes": 10473,
+      "sha256": "e6d7430ecf95c0e09c1f01045d3c06bbd4d8bf04974d97da54f2109a5ffa3d01"
+    },
+    {
+      "file": "verification-stages.json",
+      "bytes": 174982,
+      "sha256": "ef25153ebe38e7b4c6a4704d81e1de8a8797d00d968d4689e6ff3781e5726947"
+    },
+    {
+      "file": "native-verification.json",
+      "bytes": 4692,
+      "sha256": "f14b9fda246c2c141b107393af2713420995bdd8d46e906d8cfa16a9a497dc3a"
+    },
+    {
+      "file": "ui-verification.json",
+      "bytes": 3095,
+      "sha256": "cc6d145d84e3be096603a5e859b864c6fc1a70f89cb9c8975e5a564381313e1e"
+    },
+    {
+      "file": "admin-transfer-three-original-shares.png",
+      "bytes": 86215,
+      "sha256": "f4ba3a18362b84de11a29f30102d15394a6877913c4d1d9f4861414108ae4775"
+    },
+    {
+      "file": "admin-frozen-250-preview.png",
+      "bytes": 80746,
+      "sha256": "b8c7cee202ef280d2e63334c9c93b8da7f1eeb9cd3975124a3b1aeca801b4dd0"
+    },
+    {
+      "file": "admin-old-provider-insufficient.png",
+      "bytes": 75982,
+      "sha256": "49ef5062537e934086e66b84c7ac654fecbd16d1469b8f6bece691da755db4cc"
+    },
+    {
+      "file": "admin-new-provider-insufficient.png",
+      "bytes": 76311,
+      "sha256": "3fd7e911c01efe8b176e90b2765aecd1712e7607ec62794d2a4625207f99fca1"
+    },
+    {
+      "file": "admin-final-partial-detail.png",
+      "bytes": 84660,
+      "sha256": "8b330a22a6ca5e3b220ccb2f6225c71c592847b03904d68297294734b62a6b3e"
+    },
+    {
+      "file": "old-provider-final-wallet.png",
+      "bytes": 49309,
+      "sha256": "50cb1eadd47f83b4268c2c19d581ec74e156d70cc3498e9924770bff51a07ece"
+    },
+    {
+      "file": "new-provider-final-wallet.png",
+      "bytes": 49611,
+      "sha256": "762784805e67705d1d8b15e9bfacc8fe7af6d1711de1d3156f57b83c32cec193"
+    },
+    {
+      "file": "teammate-final-wallet.png",
+      "bytes": 49909,
+      "sha256": "3356c4fecd18a73796b10587fa302272428a5e1df5e1f6ded18ac1aa4db5ec6d"
+    },
+    {
+      "file": "old-provider-partial-report.png",
+      "bytes": 54846,
+      "sha256": "06808f63f31188a5ed6027e6a60f521655f1369d2974002bbc69ab5ce0dfa48b"
+    },
+    {
+      "file": "new-provider-partial-report.png",
+      "bytes": 54888,
+      "sha256": "15d6cf3fadefc2374902709b55ea8e0870da01f701bef5d756a0ff6abd00060d"
+    },
+    {
+      "file": "teammate-partial-report.png",
+      "bytes": 55057,
+      "sha256": "769d39fcfea1526d271f5737997475852c50e6770fc3df21677e6af9d20647dc"
+    },
+    {
+      "file": "native-partial-refund-summary.png",
+      "bytes": 157171,
+      "sha256": "7017b85d361f5b2b1e10acbd76b05006ed9ef4fe2e45563d5c6363c453aa4992"
+    },
+    {
+      "file": "native-wallet-final-proof.png",
+      "bytes": 159004,
+      "sha256": "c00dff37cf50d8d320b2852e7473dbd2cbd16af1bd44a7041271ca63d2b57cc2"
+    },
+    {
+      "file": "live-ws-verification.json",
+      "bytes": 2276,
+      "sha256": "9ad35a5ccf882cfeec8b5823bf0a5bbaabba23bd3862c6bbf702e110ca170c49"
+    }
+  ],
+  "live_websocket_readonly": "PASS"
+}

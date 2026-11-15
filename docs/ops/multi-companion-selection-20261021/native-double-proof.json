@@ -1,0 +1,64 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "passed": true,
+  "real_http": true,
+  "mocked_requests": false,
+  "order_submitted": false,
+  "original": {
+    "provider_ids": [
+      2,
+      3
+    ],
+    "names": [
+      "隔离联调 p1",
+      "隔离联调 p2"
+    ],
+    "quote_amount": 10002,
+    "payload": {
+      "dispatch_mode": "BOSS_SELECT",
+      "service_id": 2,
+      "game_rounds": 1,
+      "game_region": "",
+      "game_nickname": "",
+      "game_uid": "",
+      "remark": "",
+      "provider_gender": "ANY",
+      "provider_ids": [
+        2,
+        3
+      ]
+    },
+    "selected_names_visible": true
+  },
+  "replacement": {
+    "provider_ids": [
+      3,
+      4
+    ],
+    "names": [
+      "隔离联调 p2",
+      "隔离联调 p3"
+    ],
+    "quote_amount": 10002,
+    "payload": {
+      "dispatch_mode": "BOSS_SELECT",
+      "service_id": 2,
+      "game_rounds": 1,
+      "game_region": "",
+      "game_nickname": "",
+      "game_uid": "",
+      "remark": "",
+      "provider_gender": "ANY",
+      "provider_ids": [
+        3,
+        4
+      ]
+    },
+    "selected_names_visible": true
+  },
+  "partial_cannot_confirm": true,
+  "third_blocked": true,
+  "reentry_preserved": true,
+  "search_preserved": true,
+  "cancel_preserved": true
+}

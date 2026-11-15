@@ -9,6 +9,7 @@ import sys
 import time
 from datetime import timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -37,8 +38,8 @@ class TeamReportHandoffTest(APITransactionTestCase):
     recharge = flow.ReleaseFlowTest.recharge
 
     def test_transfer_messages_describe_zero_share_and_existing_service(self):
-        second = make_provider(display_name='留守陪玩')
-        incoming = make_provider(display_name='转入陪玩')
+        second = make_provider(display_name='留守陪玩', deposit_paid=40000)
+        incoming = make_provider(display_name='转入陪玩', deposit_paid=40000)
         for provider in (second, incoming):
             self.accounts[provider.pk] = get_or_create_account_for_legacy_user(provider)
             provider.escort_profile.account = self.accounts[provider.pk]
@@ -97,8 +98,8 @@ class TeamReportHandoffTest(APITransactionTestCase):
                              for item in messages), 1)
 
     def test_returned_member_must_complete_new_team_assignment(self):
-        second = make_provider(display_name='留守陪玩')
-        incoming = make_provider(display_name='临时代班')
+        second = make_provider(display_name='留守陪玩', deposit_paid=40000)
+        incoming = make_provider(display_name='临时代班', deposit_paid=40000)
         for provider in (second, incoming):
             self.accounts[provider.pk] = get_or_create_account_for_legacy_user(provider)
             provider.escort_profile.account = self.accounts[provider.pk]
@@ -154,8 +155,8 @@ class TeamReportHandoffTest(APITransactionTestCase):
         self.assertTrue(ProviderReport.objects.get(order_id=order_id, provider=self.provider).completion_image.storage.exists(old_image))
 
     def test_transferred_member_can_prepare_evidence_without_completing_team(self):
-        second = make_provider(display_name='留守陪玩')
-        incoming = make_provider(display_name='转入陪玩')
+        second = make_provider(display_name='留守陪玩', deposit_paid=40000)
+        incoming = make_provider(display_name='转入陪玩', deposit_paid=40000)
         for provider in (second, incoming):
             self.accounts[provider.pk] = get_or_create_account_for_legacy_user(provider)
             provider.escort_profile.account = self.accounts[provider.pk]
@@ -231,7 +232,7 @@ class TeamReportHandoffTest(APITransactionTestCase):
             repo = Path(__file__).resolve().parents[4]
             result = subprocess.run(
                 [node, '--test', '--test-name-pattern=transferred provider sees',
-                 str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+                 str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                 cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=30,
                 env={**os.environ, 'XA_TRANSFERRED_ORDER_JSON': json.dumps(old_detail)},
             )
@@ -290,11 +291,15 @@ class TeamReportHandoffTest(APITransactionTestCase):
         self.assertTrue(all(row['settlement_status'] == 'WAITING' for row in by_id.values()))
         for report in reports[1:]:
             self.ok(self.client.post(f'/api/admin/reports/{report.pk}/approve/'))
-        # The completion-based aftersale window elapses. Execute the real
-        # settlement workflow rather than manufacturing wallet transactions.
+        # The aftersale window alone is insufficient: each report's freeze
+        # runs from its own last submission, independently of that window.
         process_order(order_id)
-        self.assertIsNotNone(Order.objects.get(pk=order_id).settled_at)
-        process_order(order_id)
+        self.assertIsNone(Order.objects.get(pk=order_id).settled_at)
+        ready_at = max(report.submitted_at for report in reports) + timedelta(hours=73)
+        with patch('django.utils.timezone.now', return_value=ready_at):
+            process_order(order_id)
+            self.assertIsNotNone(Order.objects.get(pk=order_id).settled_at)
+            process_order(order_id)
         rows = self.ok(self.client.get('/api/admin/reports/'))['list']
         by_id = {row['id']: row for row in rows if row['order'] == order_id}
         self.assertEqual(set(by_id), {report.pk for report in reports})
@@ -312,7 +317,7 @@ class TeamReportHandoffTest(APITransactionTestCase):
             self.assertEqual(by_id[row['id']]['expected_income'], share.provider_income)
 
     def test_evidence_cannot_bypass_team_handoff_and_both_reports_reach_review(self):
-        second = make_provider(display_name='第二陪玩')
+        second = make_provider(display_name='第二陪玩', deposit_paid=40000)
         self.accounts[second.pk] = get_or_create_account_for_legacy_user(second)
         second.escort_profile.account = self.accounts[second.pk]
         second.escort_profile.save(update_fields=['account'])
@@ -374,7 +379,7 @@ class TeamReportHandoffTest(APITransactionTestCase):
         self.assertIsNotNone(order.consumption_ready_at)
 
     def test_legacy_two_submitted_images_can_resume_the_existing_transition(self):
-        second = make_provider(display_name='第二陪玩')
+        second = make_provider(display_name='第二陪玩', deposit_paid=40000)
         self.accounts[second.pk] = get_or_create_account_for_legacy_user(second)
         second.escort_profile.account = self.accounts[second.pk]
         second.escort_profile.save(update_fields=['account'])

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from stores.db import transaction
 
 from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user

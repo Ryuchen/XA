@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """The active Vue provider page shows actual aftersale and refund outcomes."""
 import json
 import os
@@ -33,9 +34,9 @@ class ProviderVueAfterSaleHTTPTest(LiveServerTestCase):
     open_aftersale = flow.ProviderAfterSaleStatusTest.open_aftersale
 
     def exercise_receipt(self, partial, ambiguous=False):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         if ambiguous:
             self.boss.inviter = self.provider
             self.boss.inviter_commission_rate = 50
@@ -100,9 +101,9 @@ class ProviderVueAfterSaleHTTPTest(LiveServerTestCase):
         self.exercise_receipt(True, ambiguous=True)
 
     def test_in_service_remains_estimated(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         self.login(self.boss)
         order = self.ok(self.client.post('/api/orders/create/', {'service_id': self.service.pk,
             'provider_id': self.accounts[self.provider.pk].pk, 'client_request_id': 'vue-service-receipt'}, format='json'))

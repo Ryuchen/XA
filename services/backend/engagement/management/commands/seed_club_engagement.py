@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.core.files import File
 from django.core.files.storage import default_storage
 from pathlib import Path
-from django.db import transaction
+from stores.db import transaction
 from users.models import BossType
 from orders.models import ServiceCategory, ServiceItem
 from engagement.catalog import (VIP_THRESHOLDS, VIP_DISCOUNTS, VIP_COMPANIONS, VIP_NAMING,
@@ -106,16 +106,17 @@ class Command(BaseCommand):
         GiftBenefitRule.objects.get_or_create(name='中秋限定 TAG', defaults={
             'reward': holiday_tag, 'category': ServiceCategory.objects.get(name='中秋限定'),
             'threshold': 21000, 'inclusive': False, 'once_per_account': True, 'enabled': False})
-        # 30 元外卖支持兑换等值店铺余额，单独陈列选择，避免把兑物强行换成余额。
-        RewardItem.objects.get_or_create(code='points-takeout-balance', defaults={'name': '30 元外卖兑换为余额',
-            'point_cost': 3600, 'kind': 'BALANCE', 'balance_amount': 3000, 'is_active': True,
-            'description': '到账 300 兴安币，可用于后续服务，不计入累充。', 'sort_order': 33})
         for index, (band, cost) in enumerate(ACCOUNT_SUBSIDIES):
             RewardItem.objects.get_or_create(code=f'provider-account-{index}', defaults={
                 'name': f'{band} 纯币账号补贴（仅打手）', 'point_cost': cost, 'kind': 'SERVICE',
                 'is_active': False, 'in_shop': False, 'sort_order': 100+index,
                 'description': '海报注明仅限店内打手，不在老板积分商城开放。500M–600M 档积分需确认。'})
-        campaign, _ = LotteryCampaign.objects.get_or_create(name='兴安幸运转盘', defaults={
+        # Reuse an existing historical campaign; do not create a second one or rename it.
+        campaign_name = '声浪幸运转盘'
+        if (not LotteryCampaign.objects.filter(name=campaign_name).exists()
+                and LotteryCampaign.objects.filter(name='兴安幸运转盘').exists()):
+            campaign_name = '兴安幸运转盘'
+        campaign, _ = LotteryCampaign.objects.get_or_create(name=campaign_name, defaults={
             'point_cost': 100, 'enabled': False, 'rules': '每次消耗 100 积分。奖品以中奖记录为准，积分奖励自动到账，其余奖品由俱乐部安排交付。奖项概率由后台配置，总计 100%。'})
         prizes = [('experience-68', '68 体验单', 'SERVICE', 0, 0)] + [
             (f'points-{value}', f'{value} 积分', 'POINTS', value, 0) for value in [200,150,80,60,40,20,10,5]] + [

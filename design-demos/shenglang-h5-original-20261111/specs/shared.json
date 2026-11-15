@@ -1,0 +1,67 @@
+[
+  {
+    "id": "h5-order-gate",
+    "route": "/checkout",
+    "title": "自主下单未开放",
+    "area": "首页与发现",
+    "layout": "把门店可提供的服务放在页中央，联系本店客服为首要操作。",
+    "sections": [
+      {
+        "name": "门店状态",
+        "body": "展示本店暂未开放自主下单，本店客服仍可安排。"
+      },
+      {
+        "name": "已有记录",
+        "body": "本人已产生的订单、售后和既有权益继续可查。"
+      }
+    ],
+    "actions": [
+      {
+        "label": "联系客服",
+        "to": "support"
+      },
+      {
+        "label": "我的订单",
+        "to": "orders"
+      }
+    ],
+    "states": [
+      "模块权益未开通或待核对时展示此入口"
+    ],
+    "visual": "手机的下单入口受限状态。浅色底、声浪印章、一条中断的印刷线，其下「自主下单暂未开放」「请联系声浪电竞客服安排服务。既有订单、售后与权益仍可查看。」下方明确双操作「联系本店客服」「查看我的订单」。不得画购买模块按钮。"
+  },
+  {
+    "id": "data-states",
+    "route": "/wallet",
+    "title": "钱包读取状态",
+    "area": "首页与发现",
+    "layout": "竖向并置同一钱包局部四个时刻，用完全相同的标题、账目列和区域位置演示。",
+    "sections": [
+      {
+        "name": "加载",
+        "body": "保留本店钱包和明细，金额位置是占位线。"
+      },
+      {
+        "name": "成功空结果",
+        "body": "真实返回零可用余额时显示 0 浪花，已确认无流水时显示暂无流水。"
+      },
+      {
+        "name": "异常及刷新",
+        "body": "无首次数据时本店可用余额 — 浪花，显示重新读取；同账户旧快照刷新失败时显示上次读取的金额与时间。"
+      }
+    ],
+    "actions": [
+      {
+        "label": "钱包正常稿",
+        "to": "wallet"
+      }
+    ],
+    "states": [
+      "原位加载",
+      "成功空结果",
+      "首次异常",
+      "保留同账号快照"
+    ],
+    "visual": "UX state study on one tall mobile sheet, 4 stacked short original snapshots of the SAME wallet component. Quiet ivory with four aligned sections 标题分别「正在读取」「暂无流水」「读取失败」「更新失败」. First: skeleton lines with no number; second: real confirmed 「0 浪花」 and 「暂无流水」; third: 「— 浪花」「重新读取」; fourth: 「268 浪花」「上次读取 09:18」「重试」。No fake zero in errors; no decorative hero or repeated unrelated sections."
+  }
+]

@@ -10,7 +10,7 @@ import json
 import re
 import uuid
 
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 
 from .direct_payment import DirectPaymentError, VerifiedPayment, _require_test_domain, confirm_verified_payment

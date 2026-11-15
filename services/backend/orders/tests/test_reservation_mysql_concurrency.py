@@ -16,19 +16,15 @@ from orders.models import Order, Reservation
 from orders.tests.factories import make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile
 from wallet.models import Transaction, Wallet
+from common.mysql_test_support import mysql_locking_statements, require_disposable_mysql
 
 URL = '/api/orders/reservations/'
 
 
 def competing_lock_waits(observer):
-    """Observe real InnoDB waits on the isolated database from another connection."""
-    with observer.cursor() as cursor:
-        cursor.execute('SHOW ENGINE INNODB STATUS')
-        status = cursor.fetchone()[2]
-    transactions = status.split('LIST OF TRANSACTIONS FOR EACH SESSION:', 1)[1].split('FILE I/O', 1)[0]
-    waiting = [entry for entry in transactions.split('---TRANSACTION') if '\nLOCK WAIT ' in entry]
-    wallets = sum('`wallet_wallet`' in entry for entry in waiting)
-    providers = sum('`orders_providerdispatchlock`' in entry for entry in waiting)
+    """Observe own competing statements while the buyer wallet rows are locked."""
+    wallets = mysql_locking_statements(observer, 'wallet_wallet')
+    providers = mysql_locking_statements(observer, 'orders_providerdispatchlock')
     return wallets, providers
 
 
@@ -37,9 +33,12 @@ def competing_lock_waits(observer):
                    CELERY_TASK_ALWAYS_EAGER=False)
 class ReservationMySQLConcurrencyTest(TransactionTestCase):
     def setUp(self):
+        require_disposable_mysql(connection)
+        from console.reservation_deadlines import save_deadlines
+        save_deadlines(30, 60, 0, lambda *_: None)
         self.boss = make_user()
         self.other = make_user()
-        self.provider = make_provider()
+        self.provider = make_provider(deposit_mode='EARNINGS')
         self.boss_account = self.bind(self.boss)
         self.other_account = self.bind(self.other)
         self.provider_account = self.bind(self.provider)
@@ -92,6 +91,31 @@ class ReservationMySQLConcurrencyTest(TransactionTestCase):
         self.assertEqual(sorted(result['code'] for result in results), [0, 409], results)
         self.assertEqual(Reservation.objects.filter(provider_account=self.provider_account, status='PENDING').count(), 1)
 
+    def test_team_and_single_compete_for_secondary_provider_slot(self):
+        other_provider = make_provider(deposit_mode='EARNINGS')
+        other_account = self.bind(other_provider)
+        EscortProfile.objects.filter(user=other_provider).update(account=other_account)
+        team_service = make_service(price=1000, billing_provider_count=2, price_unit='份')
+        team = {**self.payload, 'service_id': team_service.pk,
+                'provider_account_ids': [self.provider_account.pk, other_account.pk], 'game_rounds': 1}
+        single = {**self.payload, 'provider_account_id': other_account.pk}
+        results = self.race([(self.boss_account.pk, URL, team), (self.other_account.pk, URL, single)])
+        self.assertEqual(sorted(row['code'] for row in results), [0, 409], results)
+        self.assertEqual(Reservation.objects.count(), 1)
+
+    def test_opposite_team_order_cannot_double_book_or_deadlock(self):
+        other_provider = make_provider(deposit_mode='EARNINGS')
+        other_account = self.bind(other_provider)
+        EscortProfile.objects.filter(user=other_provider).update(account=other_account)
+        team_service = make_service(price=1000, billing_provider_count=2, price_unit='份')
+        first = {**self.payload, 'service_id': team_service.pk, 'game_rounds': 1,
+                 'provider_account_ids': [self.provider_account.pk, other_account.pk]}
+        second = {**first, 'provider_account_id': other_account.pk,
+                  'provider_account_ids': [other_account.pk, self.provider_account.pk]}
+        results = self.race([(self.boss_account.pk, URL, first), (self.other_account.pk, URL, second)])
+        self.assertEqual(sorted(row['code'] for row in results), [0, 409], results)
+        self.assertEqual(Reservation.objects.count(), 1)
+
     def test_concurrent_conversions_create_one_order_and_debit_once(self):
         reservation_id = self.create()
         self.assertEqual(self.post(self.provider_account.pk, f'{URL}{reservation_id}/confirm/', {})['code'], 0)
@@ -140,12 +164,7 @@ class ReservationMySQLConcurrencyTest(TransactionTestCase):
                 deadline = monotonic() + 4
                 waiting = False
                 while monotonic() < deadline:
-                    with observer.cursor() as cursor:
-                        cursor.execute('SHOW ENGINE INNODB STATUS')
-                        status = cursor.fetchone()[2]
-                    entries = status.split('LIST OF TRANSACTIONS FOR EACH SESSION:', 1)[1].split('FILE I/O', 1)[0]
-                    waiting = any('\nLOCK WAIT ' in entry and '`orders_reservation`' in entry
-                                  for entry in entries.split('---TRANSACTION'))
+                    waiting = bool(mysql_locking_statements(observer, 'orders_reservation'))
                     if waiting or future.done():
                         break
                     sleep(.05)
@@ -160,6 +179,42 @@ class ReservationMySQLConcurrencyTest(TransactionTestCase):
         self.assertIn('已取消', rejected['msg'])
         self.assertNotIn('待确认', rejected['msg'])
         self.assertEqual(Reservation.objects.get(pk=reservation_id).status, Reservation.Status.CANCELLED)
+
+    def test_confirmation_rechecks_deadline_after_waiting_for_provider_lock(self):
+        reservation_id = self.create()
+        def confirm():
+            close_old_connections()
+            try:
+                return self.post(self.provider_account.pk, f'{URL}{reservation_id}/confirm/', {})
+            finally:
+                close_old_connections()
+
+        observer = connection.copy()
+        pool = ThreadPoolExecutor(max_workers=1)
+        try:
+            with transaction.atomic():
+                EscortProfile.objects.select_for_update().get(account=self.provider_account)
+                future = pool.submit(confirm)
+                deadline = monotonic() + 4
+                waiting = False
+                while monotonic() < deadline:
+                    waiting = bool(mysql_locking_statements(observer, 'users_escortprofile'))
+                    if waiting or future.done():
+                        break
+                    sleep(.05)
+                self.assertTrue(waiting, 'Confirmation must wait on the provider row')
+                # Simulate the passage of the configured deadline while the
+                # request is blocked, without sleeping for the whole window.
+                Reservation.objects.filter(pk=reservation_id).update(
+                    confirmation_deadline=timezone.now()-timedelta(seconds=1))
+            result = future.result(timeout=20)
+        finally:
+            observer.close()
+            pool.shutdown(wait=True)
+        self.assertEqual(result['code'], 409, result)
+        booking = Reservation.objects.get(pk=reservation_id)
+        self.assertEqual((booking.status, booking.confirmed_at, booking.payment_deadline), ('EXPIRED', None, None))
+        self.assertEqual(Wallet.objects.get(pk=self.wallet.pk).balance, 100000)
 
     def test_two_confirmed_reservations_compete_for_same_provider(self):
         second_wallet = make_wallet(self.other, balance=100000)

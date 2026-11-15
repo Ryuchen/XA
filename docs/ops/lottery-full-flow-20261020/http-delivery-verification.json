@@ -1,0 +1,24 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "api_base": "http://127.0.0.1:18190/api",
+  "passed": true,
+  "checked_at": "2026-10-20T15:19:50.569Z",
+  "case": "single240",
+  "claim_id": 12,
+  "synthetic_delivery_statuses_only": true,
+  "foreign_get_status": 404,
+  "foreign_patch_status": 404,
+  "points_and_pity_and_inventory_unchanged": true,
+  "transitions": [
+    {
+      "status": "FULFILLING",
+      "client_admin_equal": true,
+      "completed_at": null
+    },
+    {
+      "status": "COMPLETED",
+      "client_admin_equal": true,
+      "completed_at": "2026-10-20T23:19:50.542076+08:00"
+    }
+  ]
+}

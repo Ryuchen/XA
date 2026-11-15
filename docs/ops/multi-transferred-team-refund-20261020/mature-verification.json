@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+  "scope": "new official multi-transfer fixture clocks only",
+  "funds_changed": false,
+  "unrelated_order_hash_equal": true,
+  "clocks": [
+    {
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "completed_at": "2026-10-17T02:04:36.729979+00:00",
+      "report_ready_at": "2026-10-20T03:04:10.033696+00:00",
+      "consumption_ready_at": "2026-10-23T03:04:10.033696+00:00",
+      "changed_fields": [
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at"
+      ]
+    },
+    {
+      "key": "available_recovery",
+      "order_id": 124,
+      "completed_at": "2026-10-17T00:04:36.729979+00:00",
+      "report_ready_at": "2026-10-17T01:04:36.729979+00:00",
+      "consumption_ready_at": "2026-10-20T01:04:36.729979+00:00",
+      "changed_fields": [
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at",
+        "five submitted_at"
+      ]
+    },
+    {
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "completed_at": "2026-10-17T02:04:36.729979+00:00",
+      "report_ready_at": "2026-10-20T03:04:20.242208+00:00",
+      "consumption_ready_at": "2026-10-23T03:04:20.242208+00:00",
+      "changed_fields": [
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at"
+      ]
+    }
+  ]
+}

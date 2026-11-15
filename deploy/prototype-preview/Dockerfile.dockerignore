@@ -1,0 +1,13 @@
+**
+!deploy/
+!deploy/prototype-preview/
+!deploy/prototype-preview/nginx.conf
+!deploy/prototype-preview/all-pages.html
+!design-demos/
+!design-demos/shenglang-web-prototype/
+!design-demos/shenglang-web-prototype/app/
+!design-demos/shenglang-web-prototype/app/dist/
+!design-demos/shenglang-web-prototype/app/dist/**
+!design-demos/shenglang-web-prototype/provider/
+!design-demos/shenglang-web-prototype/provider/**
+!design-demos/shenglang-web-prototype/watch.js

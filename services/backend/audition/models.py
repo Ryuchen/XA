@@ -14,8 +14,7 @@ class AuditionLink(models.Model):
 
     一条记录产出两个分享 token：boss_token（老板观看/邀约入口）与
     provider_token（陪玩报名/试音入口）。后台据此拼出可复制的 URL。
-    每个 token 可绑定一个真实用户（boss_user / provider_user），访客打开
-    链接后凭 token 换发该用户的真正 JWT 登录态。
+    每个 token 可绑定本店业务账号；邀请链接不能代替本人登录。
     """
 
     title = models.CharField(max_length=100, verbose_name='标题')
@@ -92,7 +91,7 @@ class AuditionLink(models.Model):
 
 
 class AuditionSignup(models.Model):
-    """陪玩报名：访客凭 provider_token 换发登录态后，向某条试音链接提交的报名。
+    """陪玩报名：已登录的陪玩凭 provider_token 向试音链接提交报名。
 
     报名人来自登录态（applicant），同一链接同一报名人只允许一条记录。
     客服在后台审核（通过/驳回），审核仅改状态，不涉及任何资金动作。
@@ -112,6 +111,8 @@ class AuditionSignup(models.Model):
     applicant = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='audition_signups',
         verbose_name='报名人',
     )
@@ -123,6 +124,8 @@ class AuditionSignup(models.Model):
         related_name='audition_signups',
         verbose_name='报名业务账户',
     )
+    applicant_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    audit_notice_intent = models.JSONField(null=True, blank=True, editable=False)
     contact = models.CharField(max_length=100, blank=True, default='', verbose_name='联系方式')
     game = models.CharField(max_length=100, blank=True, default='', verbose_name='擅长游戏')
     remark = models.CharField(max_length=255, blank=True, default='', verbose_name='备注')
@@ -154,6 +157,8 @@ class AuditionSignup(models.Model):
     class Meta:
         ordering = ['-created_at']
         unique_together = ('link', 'applicant')
+        constraints = [models.UniqueConstraint(fields=['link', 'applicant_account'],
+                                                name='audition_link_account_unique')]
         verbose_name = '试音报名'
         verbose_name_plural = '试音报名'
 

@@ -4,7 +4,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from django.conf import settings
+from stores.conf import settings
 
 
 class WecomError(Exception):

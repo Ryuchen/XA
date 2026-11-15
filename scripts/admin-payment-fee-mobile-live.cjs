@@ -14,7 +14,7 @@ async function main() {
       proxy.on('error', () => res.writeHead(502).end()); req.pipe(proxy); return;
     }
     const pathname = new URL(req.url, 'http://localhost').pathname;
-    const file = path.resolve(build, pathname.startsWith('/assets/') ? pathname.slice(1) : 'index.html');
+    const file = path.resolve(build, pathname.startsWith('/assets/') || pathname === '/appearance.js' ? pathname.slice(1) : 'index.html');
     if (!file.startsWith(build + path.sep)) { res.writeHead(404).end(); return; }
     fs.readFile(file, (error, data) => {
       if (error) { res.writeHead(404).end(); return; }
@@ -27,7 +27,7 @@ async function main() {
   try {
     const base = `http://127.0.0.1:${server.address().port}`;
     browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-    const context = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
+    const context = await browser.newContext({ viewport: { width: 1366, height: 1024 }, hasTouch: true });
     await context.addInitScript(token => localStorage.setItem('xa_admin_token', token), input.token);
     const page = await context.newPage();
     const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -55,7 +55,7 @@ async function main() {
     assert.equal(await history.isVisible(), true);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     assert.deepEqual(errors, []);
-    console.log('Real 375px fee configuration, preview and history passed.');
+    console.log('Real iPad landscape fee configuration, preview and history passed.');
   } finally { if (browser) await browser.close(); server.closeAllConnections(); server.close(); }
 }
 main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });

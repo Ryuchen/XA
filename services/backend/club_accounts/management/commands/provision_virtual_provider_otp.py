@@ -5,7 +5,7 @@ import secrets
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from stores.db import transaction
 
 from club_accounts.models import ClubAccount, OtpCredential
 from club_accounts.otp import decrypt_secret, encrypt_secret, recovery_hash

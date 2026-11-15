@@ -34,6 +34,11 @@ class ContactCardView(APIView):
                 return Response({'code': 400, 'msg': '订单标识无效'})
             if not order:
                 return Response({'code': 404, 'msg': '订单不存在'})
+            # Order contacts must still be bound to an available store staff
+            # member, just like the cards offered at order creation.
+            cards = cards.filter(staff_account__account_type='STAFF',
+                staff_account__is_active=True, staff_account__can_login=True,
+                staff_account__admin_membership__is_active=True)
             card_id = order.support_contact_id
         if card_id:
             try:
@@ -49,6 +54,17 @@ class ContactCardView(APIView):
         data = SupportContactCardSerializer(card).data
         data['customer_reference'] = request.account.account_no
         data['order_no'] = order.order_no if order else ''
+        if order:
+            # The card used to offer contact may fall back to the default
+            # after a card is disabled. That does not reassign the order.
+            data['order_contact_name'] = order.support_contact_name_snapshot or ''
+            data['contact_fallback'] = bool(
+                (order.support_contact_id or order.support_contact_name_snapshot)
+                and card.pk != order.support_contact_id
+            )
+            data['contact_is_order_responsible'] = bool(
+                order.responsible_staff_id and card.staff_account_id == order.responsible_staff_id
+            )
         return Response({'code': 0, 'data': data})
 
 
@@ -57,5 +73,7 @@ class ContactCardListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        cards = SupportContactCard.objects.filter(is_active=True).order_by('sort_order', '-updated_at')
+        cards = SupportContactCard.objects.filter(is_active=True, staff_account__account_type='STAFF',
+            staff_account__is_active=True, staff_account__can_login=True,
+            staff_account__admin_membership__is_active=True).order_by('sort_order', '-updated_at')
         return Response({'code': 0, 'data': SupportContactCardSerializer(cards, many=True).data})

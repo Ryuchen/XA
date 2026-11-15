@@ -1,0 +1,10 @@
+{
+  "pages": ["pages/web-login/index"],
+  "window": {
+    "navigationBarTitleText": "确认网页登录",
+    "navigationBarBackgroundColor": "#fafaf7",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fafaf7"
+  },
+  "style": "v2"
+}

@@ -1,0 +1,348 @@
+{
+  "result": "PASS",
+  "tested_at": "2026-10-20T03:04:21.858787+00:00",
+  "scope": "Four official team transfers including same-person re-entry, five final provider credits, cumulative partial/full recovery, insufficiency, private events and real MySQL arbitration",
+  "production_source_modified": false,
+  "financial_rules_changed": false,
+  "schema_changes": false,
+  "files_added": [
+    "services/backend/orders/tests/test_multi_transferred_team_refunds.py"
+  ],
+  "existing_dirty_changes_preserved": true,
+  "applicable_agents_instructions": "Explicit root/ancestor paths and backend subtree were searched; no existing applicable AGENTS.md was found.",
+  "contract": {
+    "authority": "Parent explicitly confirmed retaining the established merge-then-resplit rule; no new transfer-compensation rule was authorized.",
+    "existing_regression": "orders.tests.test_release_flow.ReleaseFlowTest.test_returning_provider_can_transfer_again_and_settles_accumulated_share_once",
+    "same_person_model": "UNIQUE(order,provider) and UNIQUE(order,provider_account) retain one aggregate assignment per person. Re-entry adds the received pending share to the same original row. A later transfer splits that whole unapproved/uncredited aggregate.",
+    "not_separate_locked_segments": true,
+    "immutable_posted_money": "Official transfers require IN_SERVICE and reject settled outgoing assignments or settled positive incoming assignments. Approvals require COMPLETED/PAID, so official approved or credited income cannot be rewritten by a later official transfer.",
+    "source_audit": "No required production defect found under this existing rule."
+  },
+  "official_chain": {
+    "original_amount_raw": 10000,
+    "initial_provider_income_raw": {
+      "A": 4000,
+      "B": 3500
+    },
+    "platform_raw": 2500,
+    "moves": [
+      {
+        "from": "A",
+        "to": "C",
+        "keep_percent": 40,
+        "pending_income_raw": [
+          1600,
+          3500,
+          2400
+        ]
+      },
+      {
+        "from": "C",
+        "to": "A",
+        "keep_percent": 50,
+        "pending_income_raw": [
+          2800,
+          3500,
+          1200
+        ],
+        "original_A_row_reused": true
+      },
+      {
+        "from": "A",
+        "to": "D",
+        "keep_percent": 25,
+        "pending_income_raw": [
+          700,
+          3500,
+          1200,
+          2100
+        ]
+      },
+      {
+        "from": "B",
+        "to": "E",
+        "keep_percent": 60,
+        "pending_income_raw": [
+          700,
+          2100,
+          1200,
+          2100,
+          1400
+        ]
+      }
+    ],
+    "final_bases_raw": [
+      700,
+      2100,
+      1200,
+      3100,
+      2900
+    ],
+    "final_provider_credit_raw": [
+      700,
+      2100,
+      1200,
+      2100,
+      1400
+    ],
+    "final_platform_credit_raw": 2500,
+    "aggregate_rows": 5,
+    "released": [
+      "A",
+      "B",
+      "C"
+    ],
+    "active": [
+      "D",
+      "E"
+    ],
+    "required_reports": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ],
+    "approved_and_credited_before_last_report": false
+  },
+  "isolation": {
+    "mysql_container": "xa-multi-transferred-team-refund-mysql-20261020",
+    "mysql_image": "mysql:8.0",
+    "mysql_network": "none",
+    "published_ports": 0,
+    "app_network": "container:xa-multi-transferred-team-refund-mysql-20261020",
+    "host": "127.0.0.1",
+    "configured_database": "xa_test_multi_transferred_team_refund",
+    "actual_database": "test_xa_test_multi_transferred_team_refund",
+    "settings": "config.mysql_test_settings",
+    "complete_migrations": 195,
+    "source_mount": "read-only",
+    "media": "independent TemporaryDirectory",
+    "cache": "LocMemCache",
+    "celery_broker": "memory://",
+    "channel_layer": "InMemoryChannelLayer",
+    "kook_enabled": false,
+    "wecom_enabled": false,
+    "live_db_or_api_access": false,
+    "external_network_access": false,
+    "real_payment_or_external_message": false,
+    "ordinary_services_restarted": false
+  },
+  "mysql": {
+    "labels": [
+      "orders.tests.test_multi_transferred_team_refunds"
+    ],
+    "tests_run": 13,
+    "passed": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "wall_seconds": 53.036,
+    "test_seconds": 50.084,
+    "real_concurrency_tests": 6,
+    "test_cases": {
+      "MultiTransferredRefundTest": [
+        "test_official_return_reuses_one_row_and_retransfers_its_whole_unposted_pool",
+        "test_mixed_five_sources_multi_round_full_remainder_and_final_replay",
+        "test_each_of_five_actual_recipients_can_block_the_entire_refund_without_touching_others",
+        "test_one_raw_midpoint_oracle_monotonicity_and_final_cap_over_six_credits",
+        "test_all_five_own_http_and_private_ws_summaries_do_not_leak_other_recipient_money",
+        "test_settled_or_approved_order_cannot_rewrite_merged_shares"
+      ],
+      "MultiTransferredConcurrencyTest": [
+        "test_concurrent_different_seats_can_transfer_without_losing_a_historical_row",
+        "test_duplicate_outgoing_after_reentry_commits_only_one_replacement",
+        "test_same_key_partial_refund_commits_once_for_all_five_recipients",
+        "test_different_keys_cannot_reuse_the_same_six_source_refund_plan",
+        "test_released_historical_middle_provider_release_racing_partial_refund",
+        "test_multi_recipient_refund_and_withdrawal_cannot_spend_protected_funds"
+      ],
+      "MultiTransferredSocketTest": [
+        "test_all_five_full_private_events_and_boss_remain_scoped_after_four_transfers"
+      ]
+    }
+  },
+  "mysql_contract_baseline": {
+    "label": "orders.tests.test_release_flow.ReleaseFlowTest.test_returning_provider_can_transfer_again_and_settles_accumulated_share_once",
+    "tests_run": 1,
+    "passed": 1,
+    "failures": 0,
+    "skipped": 0,
+    "wall_seconds_including_empty_db_migrations": 182.845,
+    "test_seconds": 1.544
+  },
+  "sqlite": {
+    "labels": [
+      "orders.tests.test_multi_transferred_team_refunds.MultiTransferredRefundTest",
+      "orders.tests.test_multi_transferred_team_refunds.MultiTransferredSocketTest",
+      "orders.tests.test_release_flow"
+    ],
+    "tests_run": 22,
+    "passed": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "wall_seconds": 23.073,
+    "test_seconds": 21.469,
+    "new_functional_and_socket_tests": 7,
+    "existing_release_flow_regressions": 15
+  },
+  "refund_assertions": {
+    "partial_amount_raw": 2500,
+    "recovery_by_original_credit_raw": [
+      175,
+      525,
+      300,
+      525,
+      350,
+      625
+    ],
+    "cumulative_amount_raw": 4000,
+    "cumulative_recovery_raw": [
+      280,
+      840,
+      480,
+      840,
+      560,
+      1000
+    ],
+    "final_remainder_raw": 6000,
+    "final_recovery_exactly_equals_each_original": true,
+    "mixed_sources": "Historical C and current E release only their own fixture hold first; other original recipients retain same-order holds. Refund takes available or same-order remaining hold without touching the foreign five-provider holds.",
+    "all_five_individually_insufficient": {
+      "scaled_order_amount_raw": 100000,
+      "refund_amount_raw": 25000,
+      "required_raw": [
+        1750,
+        5250,
+        3000,
+        5250,
+        3500
+      ],
+      "shortfall_each_raw": 100,
+      "method": "Official penalty then reward around each serial failed refund; original successful order credits are preserved.",
+      "exact_preview_shortfalls_asserted": true,
+      "same_unsuccessful_key_can_later_succeed": true,
+      "restored_balance_invalidates_old_plan": true
+    },
+    "failure_snapshot_models": [
+      "wallet.Wallet",
+      "wallet.Transaction",
+      "wallet.IncomeHold",
+      "orders.OrderRefund",
+      "orders.RefundRecoveryLine",
+      "orders.Order",
+      "orders.OrderProvider",
+      "wallet.ProviderReport",
+      "orders.AfterSale",
+      "orders.OrderStatusLog",
+      "wallet.WithdrawRequest",
+      "engagement.MemberProfile",
+      "engagement.PointLedger",
+      "engagement.OrderPointAllocation",
+      "engagement.ConsumptionConfirmation",
+      "engagement.RewardClaim",
+      "users.EscortProfile"
+    ],
+    "failure_snapshot_model_count": 17,
+    "failure_assertion": "All rows and stored fields in the listed business/fund models are identical before and after each rejected refund. HTTP/admin audit rows and other unlisted models are not claimed to have no writes.",
+    "one_raw_boundary": {
+      "original_raw": 43,
+      "original_six_credits_raw": [
+        3,
+        9,
+        5,
+        10,
+        6,
+        10
+      ],
+      "one_raw_refunds": 13,
+      "oracle": "Independent exact Fraction midpoint atom sorting, not the production allocation function",
+      "above_remaining_rejected_without_business_snapshot_change": true,
+      "final_remainder_clears_every_original": true
+    },
+    "same_key_successful_replay_no_business_changes": true,
+    "changed_intent_same_key_409_no_business_changes": true,
+    "completion_and_settlement_clocks_preserved": true
+  },
+  "concurrency_cases": [
+    {
+      "case": "Different active seats transfer concurrently after a re-entry",
+      "result": "Both commits succeed, two active seats/five aggregate rows survive; exact final credits 700/2100/2250/1050/1400/2500 are asserted."
+    },
+    {
+      "case": "Same outgoing actor transferred concurrently to two fresh targets after re-entry",
+      "result": "One success and one code 400; no orphan target assignment; four final provider credits plus platform settle/refund exactly once."
+    },
+    {
+      "case": "Same refund key over six original credits",
+      "result": "Both requests return successful original result, only one OrderRefund commits."
+    },
+    {
+      "case": "Different keys with the same cumulative plan",
+      "result": "One success and one 409; a fresh remaining refund clears every original exactly."
+    },
+    {
+      "case": "Released historical middle actor C income release versus partial refund",
+      "result": "Only own remaining hold releases; stale plan is retried only after explicit new preview; other order holds remain byte-for-byte unchanged."
+    },
+    {
+      "case": "Five-recipient refund versus retained actor B withdrawal",
+      "result": "Exactly one succeeds; withdrawal frozen money cannot fund refund; rejection/restoration allows fresh refund and full remainder."
+    }
+  ],
+  "http_ws": {
+    "real_communicator_sockets": 7,
+    "actors": [
+      "A released",
+      "B released",
+      "C released",
+      "D current",
+      "E current",
+      "boss",
+      "unrelated provider"
+    ],
+    "five_own_list_detail_and_ws_income_match": true,
+    "own_recovered_net_and_remaining_hold_only": true,
+    "private_recipient_deduplicated": true,
+    "full_provider_property_preserved": true,
+    "settled_at_json_string": true,
+    "boss_internal_recovery_hidden": true,
+    "unrelated_provider_receives_nothing": true
+  },
+  "production_freeze_comparison_to_previous_report": {
+    "services/backend/console/views.py": true,
+    "services/backend/orders/notifier.py": true,
+    "services/backend/orders/serializers.py": true
+  },
+  "source_sha256": {
+    "services/backend/console/views.py": "25da2a30f4ea3b7722eb7c4579ca85a87262ee0e8150a92095ca3eaf7724af9f",
+    "services/backend/orders/models.py": "9441b08d91c2d271d9e741c0fdeef42d812ff338f95e6862eed067923b24c253",
+    "services/backend/orders/services.py": "464e27132c1fa015cc56a4985e0baef2e5bd953c09ee8d37bb213cf29c09c556",
+    "services/backend/orders/refunds.py": "b230402146632540c45b13081f54a9237a345e47f4b69f354f7b352ae524524a",
+    "services/backend/orders/notifier.py": "50336e096c8cb88ed86a5d3c7fc810c28fd95561a45102e6b69d81198db24080",
+    "services/backend/orders/serializers.py": "0952da8b818d41b3d2747a239e107d1d9190f8c9d30ccf0071555518ed3e4a73",
+    "services/backend/wallet/income.py": "6e8e880758768220a24cb13813bb0b3c62217c4e51588943c1ba302362e72945",
+    "services/backend/orders/tests/test_multi_transferred_team_refunds.py": "74faf1d5ba3cf63db37070680152c19325b1d5e496c47709bf9a7beb2dae0351"
+  },
+  "review": {
+    "independent_source_and_new_test_intent_review": "PASS; no required findings under the explicitly confirmed existing rule. Reviewer did not execute tests or live operations.",
+    "review_file": ".tools/multi-transferred-team-refund-flow-20261020/review.json",
+    "python_ast": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "setup_note": "The first app attempt preceded MySQL readiness and failed to connect before any tests executed. mysqladmin readiness was then confirmed before the successful guarded migration/baseline and final test runs.",
+  "cleanup": {
+    "identity_guard": "/xa-multi-transferred-team-refund-mysql-20261020 mysql:8.0 none 0",
+    "exact_container_removed_with_volumes": true,
+    "absence_verified": true
+  },
+  "limits": [
+    "Assignment rows aggregate each person across pending service periods; individual same-person legs are not separate immutable earning slices under the established contract.",
+    "The dedicated late-transfer guard test uses fully approved/settled orders. Rejection of approved-but-unsettled COMPLETED orders was reviewed from the official IN_SERVICE entry guard rather than added as a separate dynamic case.",
+    "This new suite focuses on transfer/refund/holds/withdrawal/realtime. It does not repeat every historical gift, inviter, deposit-offset, coupon/VIP or crash-durability scenario.",
+    "Live local client integration and final live database auditing remain the parent task; this isolated runner never accesses xa_verify.",
+    "Six specified real MySQL concurrency cases passed; no claim is made that every possible interleaving has been proven."
+  ],
+  "secrets_in_report": false
+}

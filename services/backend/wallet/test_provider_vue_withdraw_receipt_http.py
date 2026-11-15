@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """An actual earned order and staff-recorded withdrawal share the same receipt wording."""
 from datetime import timedelta
 import json
@@ -26,18 +27,18 @@ class ProviderVueWithdrawReceiptHTTPTest(LiveServerTestCase):
     ok = flow.ProviderAfterSaleStatusTest.ok
     prepare = flow.ProviderAfterSaleStatusTest.prepare
 
-    def run_browser(self, root):
+    def run_browser(self, root, ids):
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run(['node', str(repo / 'scripts/provider-vue-withdraw-receipt-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'token':self.tokens[self.provider.pk],
-                'id':self.accounts[self.provider.pk].pk, 'fixed':os.environ.get('XA_WITHDRAW_RECEIPT_FIXED')=='1'}),
+                'id':self.accounts[self.provider.pk].pk, 'fixed':True, 'withdrawals':ids}),
             text=True, encoding='utf-8', capture_output=True, timeout=40, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout.strip())
 
     def test_earned_order_and_staff_recorded_withdrawal(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
-        if not root: self.skipTest('requires isolated Vue build')
+        root = fronted_root('provider')
+        if not root: self.skipTest('requires current React source')
         SystemConfig.objects.update_or_create(key='min_withdraw_amount', defaults={'value':'1000'})
         SystemConfig.objects.update_or_create(key='withdraw_tax_rate', defaults={'value':'2'})
         role = self.staff.admin_membership.roles.first()
@@ -71,6 +72,9 @@ class ProviderVueWithdrawReceiptHTTPTest(LiveServerTestCase):
         notices = self.ok(self.client.get('/api/messages/'))['messages']
         approved_notice = next(row for row in notices if row['title'] == '提现审核通过')
         self.assertIn('已登记打款人民币 ¥19.60', approved_notice['preview'])
-        self.run_browser(root)
+        self.assertEqual(approved_notice['action_url'], f'/pages/wallet/index?withdraw_id={ids[0]}')
+        rejected_notice = next(row for row in notices if row['title'] == '提现审核未通过')
+        self.assertEqual(rejected_notice['action_url'], f'/pages/wallet/index?withdraw_id={ids[1]}')
+        self.run_browser(root, ids)
         wallet = Wallet.objects.get(user=self.provider)
         self.assertEqual((wallet.balance, wallet.frozen_amount), (4000, 2000))

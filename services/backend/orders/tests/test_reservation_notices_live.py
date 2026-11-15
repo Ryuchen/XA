@@ -65,9 +65,11 @@ class ReservationNoticesLiveTest(LiveServerTestCase):
         self.assertEqual(len(notices('boss', '客服已创建预约', boss_route)), 1)
         self.assertEqual(len(notices('provider', '有新的预约待确认', provider_route)), 1)
         result = clients['staff'].post(f'/api/orders/reservations/{rid}/confirm/', {}, format='json').data
+        self.assertEqual(result['code'], 403, result)
+        result = clients['provider'].post(f'/api/orders/reservations/{rid}/confirm/', {}, format='json').data
         self.assertEqual(result['code'], 0, result)
         self.assertEqual(len(notices('boss', '预约已确认', boss_route)), 1)
-        self.assertEqual(len(notices('provider', '预约已确认', provider_route)), 1)
+        self.assertEqual(len(notices('provider', '预约已确认', provider_route)), 0)
         quote = clients['staff'].get(f'/api/orders/reservations/{rid}/quote/').data
         self.assertEqual(quote['code'], 0, quote)
         cursor = clients['provider'].get('/api/messages/assignment-alerts/').data['data']['latest_id']
@@ -108,12 +110,12 @@ class ReservationNoticesLiveTest(LiveServerTestCase):
 
         second = create(2)
         result = clients['staff'].post(f'/api/orders/reservations/{second}/reject/', {'reason': '档期调整'}, format='json').data
+        self.assertEqual(result['code'], 403, result)
+        result = clients['provider'].post(f'/api/orders/reservations/{second}/reject/', {'reason': '档期调整'}, format='json').data
         self.assertEqual(result['code'], 0, result)
         self.assertEqual(len(notices('boss', '预约已拒绝', f'/pages/reservation-detail/index?id={second}')), 1)
-        self.assertEqual(len(notices('provider', '预约已拒绝', f'/pages/reservations/index?id={second}')), 1)
-        # Either staff or the provider can reject. Feed the real account-scoped
-        # API responses into the native presenter so it cannot attribute every
-        # rejection to the provider, and its clock agrees with the other ends.
+        self.assertEqual(len(notices('provider', '预约已拒绝', f'/pages/reservations/index?id={second}')), 0)
+        # Feed real account-scoped provider rejections into the native presenter.
         third = create(3)
         result = clients['provider'].post(f'/api/orders/reservations/{third}/reject/', {'reason': '时间不合适'}, format='json').data
         self.assertEqual(result['code'], 0, result)

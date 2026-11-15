@@ -1,5 +1,5 @@
 """Negotiated termination of historical, partly settled transfer orders."""
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 
 from wallet.models import Transaction
@@ -9,6 +9,9 @@ from users.models import EscortProfile
 from .models import Order
 from .refunds import (RefundError, authorized_refund, build_refund_plan,
                       parse_refund_amount, replay_refund, schedule_refund_notices)
+
+LEGACY_AGREEMENT_BLOCK = 'LEGACY_NEGOTIATION_AGREEMENT_REQUIRED'
+LEGACY_AGREEMENT_MESSAGE = '历史转单退款尚未接通当事人确认及新结算规则，请先由客服核对'
 
 
 def _intent(value):
@@ -43,7 +46,7 @@ def options(order):
     rows = [{'key': f'provider:{row.pk}', 'role': 'PROVIDER', 'name': row.provider_name_snapshot or f'陪玩 #{row.provider_id}',
              'account_id': row.provider_account_id, 'user_id': row.provider_id, 'entitlement': row.provider_income,
              'settled': bool(row.settled_at), 'share_id': row.pk} for row in shares]
-    if order.inviter_id:
+    if order.inviter_id or order.inviter_account_id:
         rows.append({'key': 'inviter', 'role': 'INVITER', 'name': '推荐人', 'account_id': order.inviter_account_id,
                      'user_id': order.inviter_id, 'entitlement': order.inviter_commission, 'settled': False})
     elif order.inviter_commission:
@@ -88,6 +91,14 @@ def plan(order, amount, allocation):
                   'fingerprint': rows}
     preview, _ = build_refund_plan(order, refund_amount=amount, negotiated=negotiated)
     preview['allocations'] = rows
+    # This old allocation format has no verifiable customer/provider consent
+    # and its immediate-settlement and referral recovery rules predate the
+    # current agreement. Preserve the accounting preview for reconciliation,
+    # but never present it as an executable new refund.
+    preview['funds_eligible'] = preview['eligible']
+    preview['eligible'] = False
+    preview['execution_block_code'] = LEGACY_AGREEMENT_BLOCK
+    preview['execution_block_reason'] = LEGACY_AGREEMENT_MESSAGE
     return preview, negotiated
 
 
@@ -109,7 +120,8 @@ def apply(order_id, *, amount, allocation, reason, request_id, plan_token, opera
     lock_order_money()
     preview, negotiated = plan(order, amount, intent)
     if not preview['eligible']:
-        raise RefundError('追回余额不足，本次退款未执行', code='REFUND_RECOVERY_INSUFFICIENT',
+        raise RefundError(preview.get('execution_block_reason') or '追回余额不足，本次退款未执行',
+                          code=preview.get('execution_block_code') or 'REFUND_RECOVERY_INSUFFICIENT',
                           data={'shortfalls': preview['shortfalls'], 'preview': preview})
 
     def effect(locked):
@@ -144,6 +156,15 @@ def apply(order_id, *, amount, allocation, reason, request_id, plan_token, opera
     order = transition(order.pk, Order.Status.CANCELLED, operator=operator, operator_account=operator_account,
         action='REFUND', reason=reason, side_effect=effect, allow_settled_refund=True,
         update_fields=['cancel_reason', 'payment_status', 'refunded_at', 'settled_at'])
+    from .aftersale import append_history, notify_aftersale_reports
+    for case in order.aftersales.select_for_update().filter(status='OPEN'):
+        case.status = 'REFUNDED' if order.payment_status == 'REFUNDED' else 'PARTIALLY_REFUNDED'
+        case.operator, case.resolved_at, case.resolution = operator_account, timezone.now(), reason
+        append_history(case)
+        from wallet.income_priority_evidence import attach_closure
+        attach_closure(case)
+        case.save(update_fields=['status', 'operator', 'resolved_at', 'resolution', 'history'])
+        transaction.on_commit(lambda: notify_aftersale_reports(order))
     refresh_escort_status(provider_ids=[order.provider_id, *order.providers.values_list('provider_id', flat=True)],
         account_ids=[order.provider_account_id, *order.providers.values_list('provider_account_id', flat=True)], exclude_order_ids=[order.pk])
     schedule_refund_notices(order, int(amount), partial=int(amount) < order.amount)

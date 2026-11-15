@@ -28,12 +28,12 @@ async function main() {
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
     const base = `http://127.0.0.1:${server.address().port}`;
-    await page.goto(`${base}/#/pages/wallet/index`);
+    await page.goto(`${base}/#/wallet`);
     await page.locator('[aria-pressed]').filter({ hasText: /^提现$/ }).click({ timeout: 15000 });
-    await page.getByText(`已打款 ¥${input.actual}`, { exact: true }).waitFor({ timeout: 15000 });
+    await page.getByText(`已登记打款 ¥${input.actual}`, { exact: true }).waitFor({ timeout: 15000 });
     await page.getByText(`打款凭证：${input.reference}`, { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
-    await page.goto(`${base}/#/pages/messages/index`);
+    await page.goto(`${base}/#/messages`);
     await page.getByText('提现审核通过', { exact: true }).waitFor({ timeout: 15000 });
     await page.getByText(`¥${input.actual}`, { exact: false }).first().waitFor({ timeout: 15000 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);

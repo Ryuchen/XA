@@ -76,11 +76,11 @@ class TeamReportNavigationHTTPTest(LiveServerTestCase):
                                     text=True, encoding='utf-8', timeout=90)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = subprocess.run([node, '--test', '--test-name-pattern=real team evidence destination',
-                                 str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+                                 str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                                 cwd=repo, env=env, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = subprocess.run([node, '--test', '--test-name-pattern=real team report evidence link',
-                                 str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+                                 str(repo / 'scripts/fronted-report-contracts.test.mjs')],
                                 cwd=repo, env=env, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(Order.objects.get(pk=team['id']).status, 'COMPLETED')

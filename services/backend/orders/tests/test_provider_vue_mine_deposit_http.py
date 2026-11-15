@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """An open provider profile follows actual earnings-to-deposit settlement."""
 import json
 import os
@@ -22,7 +23,7 @@ from wallet.models import SystemConfig
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
                    REQUIRE_RECHARGE_PROOF=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
-class ProviderVueMineDepositRealtimeTest(APITransactionTestCase):
+class ProviderVueMineDepositRealtimeTest(ReactLiveHTTPTestCase):
     setUp = flow.ReleaseFlowTest.setUp
     login = flow.ReleaseFlowTest.login
     ok = flow.ReleaseFlowTest.ok
@@ -31,9 +32,9 @@ class ProviderVueMineDepositRealtimeTest(APITransactionTestCase):
     finish = flow.ReleaseFlowTest.finish
 
     def test_staff_approval_settles_and_updates_open_deposit_card(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         SystemConfig.objects.update_or_create(key='club_income_rules_enabled', defaults={'value':'1'})
         profile = self.provider.escort_profile
         profile.deposit_mode = 'EARNINGS'
@@ -54,14 +55,14 @@ class ProviderVueMineDepositRealtimeTest(APITransactionTestCase):
         cash.escort_profile.save(update_fields=['account'])
         self.ok(self.recharge(trade_no='mine-cash-recharge', request_id='mine-cash-recharge', account=cash_account))
         repo = Path(settings.BASE_DIR).parent.parent
-        with isolated_realtime() as (base, ws_base):
+        with current_http(self, isolated_realtime) as (base, ws_base):
             result = subprocess.run(['node', str(repo / 'scripts/provider-vue-mine-deposit-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'orderId':order.pk, 'reportId':report.pk,
                     'id':self.accounts[self.provider.pk].pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
                     'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],
                     'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
                     'cashId':cash_account.pk, 'cashToken':issue_account_tokens(cash_account)[0],
-                    'fixed':os.environ.get('XA_MINE_DEPOSIT_FIXED') == '1'}),
+                    'fixed':True}),
                 text=True, encoding='utf-8', capture_output=True, cwd=repo, timeout=70)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             print(result.stdout.strip())

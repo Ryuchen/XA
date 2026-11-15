@@ -53,7 +53,7 @@ class _CapacityTestBase(APITestCase):
         OneToOne，而后台三条派单入口全部走 ``ClubAccount.escort_profile``
         反查，不补这一步会直接 404/「陪玩不存在」，测不到产能这一层。
         """
-        user = make_provider(display_name=display_name)
+        user = make_provider(display_name=display_name, deposit_mode='EARNINGS')
         account = _account_for(user)
         profile = user.escort_profile
         profile.account = account
@@ -518,16 +518,16 @@ class AdminEscortDepositFieldTest(APITestCase):
         self.assertEqual(self.profile.display_name, '阿甲改名')
         self.assertEqual(self.profile.deposit_paid, 30000)
 
-    def test_deposit_required_remains_editable(self):
-        """应缴押金是运营策略参数不是资金余额，改它不动钱，必须放行。"""
+    def test_individual_deposit_required_cannot_override_store_target(self):
+        """押金目标由门店统一配置，个人档案不能绕过该规则。"""
         res = self.client.patch(
             self._url(), {'deposit_required': 80000}, format='json',
         )
 
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.data['code'], 0)
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(res.data['code'], 400)
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.deposit_required, 80000)
+        self.assertEqual(self.profile.deposit_required, 50000)
         self.assertEqual(self.profile.deposit_paid, 30000)
 
     def test_status_and_verify_flags_unaffected(self):

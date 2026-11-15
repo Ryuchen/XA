@@ -1,0 +1,95 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "passed": true,
+  "resource_absence_checks": [
+    {
+      "kind": "container",
+      "id": "8ef8865685f2243586ba00ce5b9043d85d94434e6a67db1f8221363734f859ee",
+      "absent": true
+    },
+    {
+      "kind": "container",
+      "id": "7e72f82c645e420913205c1c3b440722278a6dd423d3170d1bb307bd8f0691a7",
+      "absent": true
+    },
+    {
+      "kind": "network",
+      "id": "48142411d469726431b26c0176d191a333d20a8f764dd26cc4de9a5b2d3e7bac",
+      "absent": true
+    },
+    {
+      "kind": "volume",
+      "id": "3c9a9bad760ca63784745bc570c54a2930157f9e0981941bbae35bf38a056a18",
+      "absent": true
+    }
+  ],
+  "relay_running": false,
+  "stopped_exact_relay_pid": 634719,
+  "regression_test_schema_destroyed_confirmed_before_cleanup": true,
+  "regression_tests_passed": 91,
+  "original_database_unchanged_tables": 25,
+  "original_database_unchanged_rows": 3713,
+  "native_original_session_and_config_restored": true,
+  "original_business_containers_running": [
+    {
+      "name": "xa-local-validation-provider-h5-1",
+      "id": "9626957a2ccd42534249aa4c233712ed4e6a1bab889f72b098e22147ecb916d4",
+      "state": "running",
+      "health": null
+    },
+    {
+      "name": "xa-local-validation-admin-web-1",
+      "id": "c7f4fb3a967bbdf4fc696881bf1b280b0c4b2f1bd8429da5204d41b8a5a91abe",
+      "state": "running",
+      "health": null
+    },
+    {
+      "name": "xa-local-validation-celery-worker-1",
+      "id": "9fce2cf00cf45043ccb0ebb96ce36679e013aaf50b84565cde516288614a7d20",
+      "state": "running",
+      "health": null
+    },
+    {
+      "name": "xa-local-validation-celery-beat-1",
+      "id": "26757bf6dbb273deba7db4c5f31c548f6de80c4a0dc756954007132072521762",
+      "state": "running",
+      "health": null
+    },
+    {
+      "name": "xa-local-validation-web-2",
+      "id": "2082f47ec7ddb33f84701c9d0c72e8b39d8b82ebf118edbdf712df33cbc9086e",
+      "state": "running",
+      "health": null
+    },
+    {
+      "name": "xa-local-validation-web-1",
+      "id": "780ca65749f6cabeff835339d71a31570dbdedaf39b8ccd9fd78855a50a40dbf",
+      "state": "running",
+      "health": null
+    },
+    {
+      "name": "xa-local-validation-gateway-1",
+      "id": "e03eecac929c9fa515adbe4500265a65326aae04feee1c5930ca0ed52e8eba05",
+      "state": "running",
+      "health": null
+    },
+    {
+      "name": "xa-local-validation-redis-1",
+      "id": "44e0fbd68c6c7e4cd3111ebab697f3627dadeb8cf96bc8627bbac77fb1f94204",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "name": "xa-local-validation-db-1",
+      "id": "6f148d97cd9c5a4c21fa01b3af335d60333298e450b8f62022431d82a341f254",
+      "state": "running",
+      "health": "healthy"
+    }
+  ],
+  "endpoints": {
+    "isolated_port_18191_closed": true,
+    "original_api_18080_status": 200,
+    "checked_at": "2026-10-20T16:48:23.5310280Z"
+  },
+  "checked_at": "2026-10-20T16:48:26.843293+00:00"
+}

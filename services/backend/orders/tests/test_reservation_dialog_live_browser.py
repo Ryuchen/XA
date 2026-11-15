@@ -86,7 +86,8 @@ class ReservationDialogLiveBrowserTest(APITransactionTestCase):
             repo = Path(settings.BASE_DIR).parent.parent
             result = subprocess.run([node, str(repo / 'scripts/provider-reservation-dialog-live.cjs')],
                 input=json.dumps({'api': f'http://127.0.0.1:{port}', 'bossToken': tokens[0], 'providerToken': tokens[1],
-                    'providerId': str(accounts[1].pk), 'reservationId': rid, 'otherId': other_id}),
+                    'providerId': str(accounts[1].pk), 'reservationId': rid, 'otherId': other_id,
+                    'root': os.environ.get('XA_PROVIDER_VUE_ROOT', '.tools/provider-reservation-dialog-20261101')}),
                 cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             result = subprocess.run([node, str(repo / 'scripts/admin-reservation-convert-conflict-live.cjs')],

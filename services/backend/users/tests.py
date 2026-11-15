@@ -99,7 +99,7 @@ class EscortPublicListOrderingTest(APITestCase):
         self.client.force_authenticate(self.customer)
 
     def _provider(self, name, tier='', scores=(), service_area=''):
-        provider = make_provider(display_name=name, is_verified=True)
+        provider = make_provider(display_name=name, is_verified=True, deposit_mode='EARNINGS')
         from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
         account = get_or_create_account_for_legacy_user(provider)
         link_legacy_relations(provider, account)
@@ -128,6 +128,18 @@ class EscortPublicListOrderingTest(APITestCase):
         res = self.client.get(self.URL)
         self.assertEqual([item['nickname'] for item in res.data['data']], ['银卡高好评', '银卡低好评'])
         self.assertEqual(res.data['data'][0]['favorableRate'], 100.0)
+
+    def test_voided_evaluation_is_excluded_from_favorable_rate(self):
+        provider = self._provider('作废评价排序', scores=(2, 5))
+        before = self.client.get(self.URL).data['data']
+        self.assertEqual(before[0]['favorableRate'], 50.0)
+        from orders.models import Evaluation
+        low = Evaluation.objects.get(provider=provider, score=2)
+        low.voided_at = timezone.now()
+        low.void_reason = '违规评价'
+        low.save(update_fields=['voided_at', 'void_reason'])
+        after = self.client.get(self.URL).data['data']
+        self.assertEqual(after[0]['favorableRate'], 100.0)
 
     def test_filters_by_game_service_area(self):
         self._provider('王者陪玩', service_area='王者荣耀、英雄联盟')
@@ -418,7 +430,7 @@ class ProviderStatsExtensionTest(APITestCase):
 
 
 class EscortScheduleTest(APITestCase):
-    """陪玩每周循环档期（四段制）接口测试。"""
+    """陪玩每周循环档期接口及旧时段兼容测试。"""
 
     SCHEDULE_URL = '/api/users/escorts/schedule/'
 
@@ -484,7 +496,7 @@ class EscortScheduleTest(APITestCase):
         self.client.force_authenticate(self.provider)
         res = self.client.put(
             self.SCHEDULE_URL,
-            {'slots': [{'weekday': 0, 'start_minute': 0, 'end_minute': 100}]},
+            {'slots': [{'weekday': 0, 'start_minute': 100, 'end_minute': 100}]},
             format='json',
         )
         self.assertEqual(res.data['code'], 400)
@@ -548,7 +560,7 @@ class CheckinTest(APITestCase):
 
     def setUp(self):
         self.user = make_user(role='CUSTOMER')
-        # ¥188 按 1:10 换算为 1880 兴安币（内部账务值 18800）。
+        # ¥188 按 1:10 换算为 1880 浪花（内部账务值 18800）。
         make_order(self.user, amount=18800)
 
     def test_requires_authentication(self):
@@ -703,7 +715,7 @@ class CheckinTest(APITestCase):
 
 
 class CustomerAchievementTest(APITestCase):
-    """老板成就：按已完成订单实时计算解锁状态。"""
+    """老板成就：按已确认的本店服务实销计算解锁状态。"""
 
     URL = '/api/users/achievements/'
 
@@ -711,13 +723,25 @@ class CustomerAchievementTest(APITestCase):
         # 清空迁移预置的成就，保证用例独立于 seed 数据
         Achievement.objects.all().delete()
         self.user = make_user(role='CUSTOMER')
+        from club_accounts.services import get_or_create_account_for_legacy_user
+        self.account = get_or_create_account_for_legacy_user(self.user)
+
+    def confirmed_order(self, **kwargs):
+        fields = {'customer_account': self.account, 'business_cycle': self.account.business_cycle,
+                  'status': Order.Status.COMPLETED, 'payment_status': Order.PaymentStatus.PAID,
+                  'settled_at': timezone.now(), 'consumption_confirmed_at': timezone.now()}
+        return make_order(self.user, **{**fields, **kwargs})
+
+    def login(self):
+        from club_accounts.tokens import issue_account_tokens
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
 
     def test_requires_authentication(self):
         res = self.client.get(self.URL)
         self.assertEqual(res.status_code, 401)
 
     def test_empty_when_no_achievements_configured(self):
-        self.client.force_authenticate(self.user)
+        self.login()
         res = self.client.get(self.URL)
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data'], [])
@@ -727,9 +751,9 @@ class CustomerAchievementTest(APITestCase):
             code='first_order', title='初出茅庐',
             metric=Achievement.Metric.ORDERS, target=2,
         )
-        make_order(self.user, status=Order.Status.COMPLETED)
-        make_order(self.user, status=Order.Status.COMPLETED)
-        self.client.force_authenticate(self.user)
+        self.confirmed_order()
+        self.confirmed_order()
+        self.login()
         res = self.client.get(self.URL)
         item = res.data['data'][0]
         self.assertTrue(item['unlocked'])
@@ -738,8 +762,8 @@ class CustomerAchievementTest(APITestCase):
 
     def test_orders_metric_locked_below_target(self):
         make_achievement(metric=Achievement.Metric.ORDERS, target=3)
-        make_order(self.user, status=Order.Status.COMPLETED)
-        self.client.force_authenticate(self.user)
+        self.confirmed_order()
+        self.login()
         res = self.client.get(self.URL)
         item = res.data['data'][0]
         self.assertFalse(item['unlocked'])
@@ -750,19 +774,21 @@ class CustomerAchievementTest(APITestCase):
             code='big_spender', title='一掷千金',
             metric=Achievement.Metric.AMOUNT, target=15000,
         )
-        make_order(self.user, status=Order.Status.COMPLETED, amount=10000)
-        make_order(self.user, status=Order.Status.COMPLETED, amount=8000)
-        self.client.force_authenticate(self.user)
+        self.confirmed_order(amount=10000)
+        self.confirmed_order(amount=8000)
+        self.login()
         res = self.client.get(self.URL)
         item = res.data['data'][0]
         self.assertEqual(item['current'], 18000)
         self.assertTrue(item['unlocked'])
 
-    def test_only_completed_orders_counted(self):
+    def test_unconfirmed_orders_are_not_counted(self):
         make_achievement(metric=Achievement.Metric.ORDERS, target=1)
-        make_order(self.user, status=Order.Status.PENDING)
-        make_order(self.user, status=Order.Status.CANCELLED)
-        self.client.force_authenticate(self.user)
+        make_order(self.user, customer_account=self.account, status=Order.Status.PENDING,
+                   payment_status=Order.PaymentStatus.PAID)
+        make_order(self.user, customer_account=self.account, status=Order.Status.COMPLETED,
+                   payment_status=Order.PaymentStatus.PAID)
+        self.login()
         res = self.client.get(self.URL)
         item = res.data['data'][0]
         self.assertEqual(item['current'], 0)
@@ -770,9 +796,36 @@ class CustomerAchievementTest(APITestCase):
 
     def test_inactive_achievement_excluded(self):
         make_achievement(target=1, is_active=False)
-        self.client.force_authenticate(self.user)
+        self.login()
         res = self.client.get(self.URL)
         self.assertEqual(res.data['data'], [])
+
+    def test_achievement_and_member_tag_share_confirmed_non_gift_net_sales(self):
+        from orders.models import OrderRefund
+        amount = make_achievement(code='net-service', title='有效实销', metric=Achievement.Metric.AMOUNT, target=500)
+        count = make_achievement(code='service-count', title='有效订单', metric=Achievement.Metric.ORDERS, target=1)
+        paid = self.confirmed_order(amount=1000)
+        paid.payment_status = Order.PaymentStatus.PARTIALLY_REFUNDED
+        paid.status = Order.Status.CANCELLED
+        paid.save(update_fields=['payment_status', 'status'])
+        OrderRefund.objects.create(order=paid, amount=500, reason='协商部分退款')
+        gift = self.confirmed_order(amount=9000)
+        Order.objects.filter(pk=gift.pk).update(is_gift_snapshot=True)
+        previous_cycle = self.confirmed_order(amount=9000)
+        Order.objects.filter(pk=previous_cycle.pk).update(business_cycle=self.account.business_cycle + 1)
+        make_order(self.user, customer_account=self.account, business_cycle=self.account.business_cycle,
+                   status=Order.Status.COMPLETED, payment_status=Order.PaymentStatus.PAID, amount=9000)
+        refunded = self.confirmed_order(amount=9000)
+        refunded.payment_status = Order.PaymentStatus.REFUNDED
+        refunded.save(update_fields=['payment_status'])
+        self.login()
+        rows = self.client.get(self.URL).data['data']
+        by_code = {row['code']: row for row in rows}
+        self.assertEqual((by_code['net-service']['current'], by_code['service-count']['current']), (500, 1))
+        self.assertTrue(by_code['net-service']['unlocked'] and by_code['service-count']['unlocked'])
+        member = self.client.get('/api/club/me/').data['data']
+        keys = {tag['key'] for tag in member['tags']}
+        self.assertTrue({f'achievement:{amount.pk}', f'achievement:{count.pk}'}.issubset(keys))
 
 
 @override_settings(WECHAT_MOCK_LOGIN=True)

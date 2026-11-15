@@ -1,4 +1,6 @@
 from django.db.models import Q
+from django.conf import settings
+from stores.db import transaction
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -7,10 +9,34 @@ from .models import Message
 from .serializers import MessageDetailSerializer, MessageListItemSerializer
 
 
+def _lock_current_account(request):
+    """Serialize message reads and read markers with the account's cycle change."""
+    from club_accounts.models import ClubAccount
+    if (not getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)
+            and request.account.account_type not in (ClubAccount.AccountType.BOSS, ClubAccount.AccountType.PROVIDER)):
+        return True
+    from stores.context import current_database
+    snapshot = request.account
+    if (snapshot._state.db != current_database() or type(snapshot.business_cycle) is not int
+            or snapshot.business_cycle <= 0):
+        return False
+    account = ClubAccount.objects.select_for_update().filter(pk=snapshot.pk).first()
+    return bool(account and account.account_type == snapshot.account_type
+                and account.business_cycle == snapshot.business_cycle and account.license_membership_active
+                and account.is_active and account.can_login)
+
+
+def _changed_account_response():
+    return Response({'code': 409, 'msg': '账号身份已变化，请重新登录后查看消息'}, status=409)
+
+
 class MessageListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
+    @transaction.atomic
     def get(self, request):
+        if not _lock_current_account(request):
+            return _changed_account_response()
         qs = Message.objects.filter(recipient_account=request.account)
         msg_type = request.query_params.get('type')
         if msg_type:
@@ -45,7 +71,7 @@ class MessageListView(APIView):
         return Response({
             'code': 0,
             'data': {
-                'messages': MessageListItemSerializer(items, many=True).data,
+                'messages': MessageListItemSerializer(items, many=True, context={'request': request}).data,
                 'total': total,
                 'unread': unread,
                 'page': page,
@@ -59,7 +85,10 @@ class MessageListView(APIView):
 class MessageDetailView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
+    @transaction.atomic
     def get(self, request, message_id):
+        if not _lock_current_account(request):
+            return _changed_account_response()
         try:
             msg = Message.objects.get(
                 id=message_id,
@@ -72,29 +101,35 @@ class MessageDetailView(APIView):
             msg.is_read = True
             msg.save(update_fields=['is_read'])
             from .notifier import notify_messages_after_commit
-            notify_messages_after_commit(request.account.pk)
+            notify_messages_after_commit(request.account.pk, business_cycle=request.account.business_cycle)
 
-        return Response({'code': 0, 'data': MessageDetailSerializer(msg).data})
+        return Response({'code': 0, 'data': MessageDetailSerializer(msg, context={'request': request}).data})
 
 
 class MessageReadAllView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
+    @transaction.atomic
     def post(self, request):
+        if not _lock_current_account(request):
+            return _changed_account_response()
         updated = Message.objects.filter(
             recipient_account=request.account,
             is_read=False,
         ).update(is_read=True)
         if updated:
             from .notifier import notify_messages_after_commit
-            notify_messages_after_commit(request.account.pk)
+            notify_messages_after_commit(request.account.pk, business_cycle=request.account.business_cycle)
         return Response({'code': 0, 'msg': '全部已读'})
 
 
 class MessageUnreadCountView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
+    @transaction.atomic
     def get(self, request):
+        if not _lock_current_account(request):
+            return _changed_account_response()
         unread = Message.objects.filter(
             recipient_account=request.account,
             is_read=False,
@@ -106,7 +141,10 @@ class AssignmentAlertCursorView(APIView):
     """Reconcile missed alerts against unread assignments still being served."""
     permission_classes = [IsClubAccountAuthenticated]
 
+    @transaction.atomic
     def get(self, request):
+        if not _lock_current_account(request):
+            return _changed_account_response()
         from club_accounts.models import ClubAccount
         from orders.models import Order
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
@@ -116,13 +154,18 @@ class AssignmentAlertCursorView(APIView):
             return Response({'code': 400, 'msg': '提醒位置无效'}, status=400)
         after = int(raw) if raw is not None else None
         messages = Message.objects.filter(recipient_account=request.account, assignment_alert=True)
+        # Historical notices remain readable, but must not trigger a new-cycle
+        # assignment sound or advance its alert cursor.
+        messages = messages.filter(recipient_business_cycle=request.account.business_cycle)
         latest = messages.order_by('-id').values_list('id', flat=True).first() or 0
         pending = False
         if after is not None and latest > after:
             active = Order.objects.filter(
-                Q(provider_account=request.account) | Q(providers__provider_account=request.account, providers__released_at__isnull=True),
+                Q(provider_account=request.account, providers__isnull=True)
+                | Q(providers__provider_account=request.account, providers__released_at__isnull=True),
                 status__in=[Order.Status.GRABBED, Order.Status.IN_SERVICE],
-                payment_status=Order.PaymentStatus.PAID,
+                payment_status__in=[Order.PaymentStatus.PAID, Order.PaymentStatus.PARTIALLY_REFUNDED,
+                                    Order.PaymentStatus.REFUNDED],
             ).values('pk')
             pending = messages.filter(id__gt=after, id__lte=latest, is_read=False, related_order_id__in=active).exists()
         return Response({'code': 0, 'data': {'latest_id': latest, 'pending': pending}})

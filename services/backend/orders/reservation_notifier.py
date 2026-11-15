@@ -3,12 +3,18 @@ import logging
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.db import transaction
+from stores.db import transaction
 
 
 def notify_reservation_after_commit(reservation):
     reservation_id = reservation.pk
     account_ids = {reservation.customer_account_id, reservation.provider_account_id} - {None}
+    if reservation.required_provider_count == 2:
+        account_ids.discard(reservation.provider_account_id)
+        account_ids.update(reservation.seats.filter(provider_account__isnull=False).values_list('provider_account_id', flat=True))
+    if reservation.status == reservation.Status.CONVERTED and reservation.order_id:
+        account_ids.update(reservation.order.providers.filter(released_at__isnull=True,
+            provider_account__isnull=False).values_list('provider_account_id', flat=True))
 
     def send():
         try:

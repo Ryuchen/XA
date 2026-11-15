@@ -55,7 +55,7 @@ class ReportStaleFrontendHTTPTest(LiveServerTestCase):
         repo = Path(settings.BASE_DIR).parent.parent
         env = {**os.environ, 'XA_REPORT_SUBMIT_SWITCH_HTTP': json.dumps({'base': self.live_server_url, 'tokens': tokens})}
         result = subprocess.run([node, '--test', '--test-name-pattern=two real report submissions',
-            str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')], env=env, cwd=repo,
+            str(repo / 'scripts/fronted-report-contracts.test.mjs')], env=env, cwd=repo,
             capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         for report in reports:
@@ -89,11 +89,11 @@ class ReportStaleFrontendHTTPTest(LiveServerTestCase):
             'secondOrderId': second_id, 'image': base64.b64encode(flow.image().read()).decode('ascii'),
         })}
         result = subprocess.run([node, '--test', '--test-name-pattern=real report actions recover',
-                                 str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+                                 str(repo / 'scripts/fronted-report-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         result = subprocess.run([node, '--test', '--test-name-pattern=real order report entry opens report after a lost response',
-                                 str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+                                 str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         first_report = ProviderReport.objects.get(order_id=first['id'], provider=self.provider)
@@ -161,10 +161,10 @@ class ReportStaleFrontendHTTPTest(LiveServerTestCase):
             'secondOrderId': orders[1]['id'], 'secondOrderNo': orders[1]['order_no'],
             'missingOrderId': max(order['id'] for order in orders) + 1000,
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-report-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -187,7 +187,7 @@ class ReportStaleFrontendHTTPTest(LiveServerTestCase):
             'image': base64.b64encode(flow.image().read()).decode('ascii'),
         })}
         result = subprocess.run([node, '--test', '--test-name-pattern=a real evidence upload',
-                                 str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+                                 str(repo / 'scripts/fronted-report-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(report.result_images.count(), 1)
@@ -210,7 +210,7 @@ class ReportStaleFrontendHTTPTest(LiveServerTestCase):
             'base': self.live_server_url, 'token': self.tokens[self.provider.pk], 'reportId': report.pk,
             'image': base64.b64encode(flow.image().read()).decode('ascii'),
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-report-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(report.result_images.count(), 9)
@@ -238,7 +238,7 @@ class ReportStaleFrontendHTTPTest(LiveServerTestCase):
             'base': self.live_server_url, 'token': self.tokens[self.provider.pk], 'otherToken': other_token,
             'orderId': created['id'], 'orderNo': created['order_no'],
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-report-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(ProviderReport.objects.filter(order_id=created['id'], provider=self.provider).count(), 1)
@@ -267,7 +267,7 @@ class ReportStaleFrontendHTTPTest(LiveServerTestCase):
         env = {**os.environ, 'XA_REPORT_STALE_HTTP': json.dumps({
             'base': self.live_server_url, 'token': self.tokens[self.provider.pk], 'reportId': report.pk,
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-report-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         report.refresh_from_db()

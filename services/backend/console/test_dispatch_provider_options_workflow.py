@@ -18,7 +18,7 @@ class DispatchProviderOptionsWorkflowTest(APITestCase):
         boss = make_user()
         self.boss = get_or_create_account_for_legacy_user(boss)
         make_wallet(boss, balance=100000)
-        staff = make_console_user(['order:dispatch'])
+        staff = make_console_user(['order:dispatch', 'order:view'])
         staff_account = get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account = staff_account
         staff.admin_membership.save(update_fields=['account'])
@@ -33,8 +33,14 @@ class DispatchProviderOptionsWorkflowTest(APITestCase):
 
     @staticmethod
     def client_for(account):
+        account.is_phone_verified = True
+        fields = ['is_phone_verified']
+        if account.account_type == 'STAFF':
+            account.is_openid_bound = True
+            fields.append('is_openid_bound')
+        account.save(update_fields=fields)
         client = APIClient()
-        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account, auth_method='password_sms')[0])
         return client
 
     def assign(self, account):
@@ -48,6 +54,7 @@ class DispatchProviderOptionsWorkflowTest(APITestCase):
             'expected_amount': quote.data['data']['amount'], 'client_request_id': str(uuid4()),
         }, format='json')
         self.assertEqual(response.data['code'], 0, response.data)
+        return response.data['data']
 
     def available(self, account):
         response = self.client_for(account).post('/api/users/escorts/status/', {'status': 'AVAILABLE'}, format='json')
@@ -113,3 +120,17 @@ class DispatchProviderOptionsWorkflowTest(APITestCase):
             response = self.admin.get('/api/admin/options/escorts/', params)
             self.assertEqual(response.data['data']['total'], 20)
         self.assertLessEqual(len(expanded), len(first) + 1, (len(first), len(expanded)))
+
+
+    def test_order_detail_exposes_service_for_candidate_filter(self):
+        created = self.assign(self.providers[0][1])
+        detail = self.admin.get(f'/api/admin/orders/{created["id"]}/')
+        self.assertEqual(detail.data['code'], 0, detail.data)
+        self.assertEqual(detail.data['data']['service_item'], self.service.pk)
+        options = self.admin.get('/api/admin/options/escorts/', {
+            'service_id': detail.data['data']['service_item'], 'page_size': 100,
+        })
+        self.assertEqual(options.data['code'], 0, options.data)
+        ids = {row['user'] for row in options.data['data']['list']}
+        self.assertNotIn(self.providers[0][1].pk, ids)
+        self.assertIn(self.providers[1][1].pk, ids)

@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+from unittest import skipUnless
 
 from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
@@ -15,6 +16,7 @@ from engagement.models import RewardClaim, RewardItem
 from orders.tests.factories import make_console_user, make_user
 
 
+@skipUnless(os.environ.get('XA_NATIVE_REDEEM_RETRY') == '1', 'requires isolated WeChat developer tools')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class BossRedemptionRetryNativeTest(LiveServerTestCase):
     host, port = '127.0.0.1', 19210

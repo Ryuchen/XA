@@ -1,0 +1,117 @@
+name: xa-esports-local
+
+x-source-volumes: &source-volumes
+  - ../../fronted:/workspace/fronted
+  - ../../packages/money:/workspace/packages/money:ro
+  - node_modules:/workspace/fronted/node_modules
+  - admin_modules:/workspace/fronted/admin/node_modules
+  - boss_modules:/workspace/fronted/boss/node_modules
+  - provider_modules:/workspace/fronted/provider/node_modules
+  - shared_modules:/workspace/fronted/shared/node_modules
+  - npm_cache:/root/.npm
+  - ${XA_NPM_CACHE_HOST:?Run deploy/dev.ps1 Up to configure the Windows npm cache}:/npm-cache-readonly:ro
+  - ./scripts:/opt/esports-local:ro
+
+services:
+  dependencies:
+    image: ${XA_NODE_IMAGE:-node:22-slim}
+    network_mode: host
+    working_dir: /workspace/fronted
+    volumes: *source-volumes
+    command: ["sh", "/opt/esports-local/install-deps.sh"]
+    environment:
+      npm_config_https_proxy: ${XA_NPM_PROXY:-}
+      npm_config_proxy: ${XA_NPM_PROXY:-}
+
+  boss:
+    image: ${XA_NODE_IMAGE:-node:22-slim}
+    network_mode: host
+    working_dir: /workspace/fronted
+    volumes: *source-volumes
+    environment:
+      XA_BASE_PATH: /boss/
+      XA_DEV_HOST: 127.0.0.1
+      XA_API_PROXY: http://127.0.0.1:18106
+    command: ["sh", "/opt/esports-local/dev-server.sh", "boss", "14101"]
+    depends_on:
+      dependencies:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:14101/boss/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+      start_period: 15s
+
+  provider:
+    image: ${XA_NODE_IMAGE:-node:22-slim}
+    network_mode: host
+    working_dir: /workspace/fronted
+    volumes: *source-volumes
+    environment:
+      XA_BASE_PATH: /player/
+      XA_DEV_HOST: 127.0.0.1
+      XA_API_PROXY: http://127.0.0.1:18106
+    command: ["sh", "/opt/esports-local/dev-server.sh", "provider", "14102"]
+    depends_on:
+      dependencies:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:14102/player/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+      start_period: 15s
+
+  admin:
+    image: ${XA_NODE_IMAGE:-node:22-slim}
+    network_mode: host
+    working_dir: /workspace/fronted
+    volumes: *source-volumes
+    environment:
+      XA_BASE_PATH: /
+      XA_DEV_HOST: 127.0.0.1
+      XA_API_PROXY: http://127.0.0.1:18106
+      XA_ADMIN_ENTRY_HOST: admin.esports.club
+    command: ["sh", "/opt/esports-local/dev-server.sh", "admin", "14103"]
+    depends_on:
+      dependencies:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:14103/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+      start_period: 15s
+
+  gateway:
+    image: ${XA_NGINX_IMAGE:-nginx:alpine}
+    network_mode: host
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    command: ["nginx", "-g", "daemon off;"]
+    depends_on:
+      boss:
+        condition: service_healthy
+      provider:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "--header=Host: sl.esports.club", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  node_modules:
+  admin_modules:
+  boss_modules:
+  provider_modules:
+  shared_modules:
+  npm_cache:

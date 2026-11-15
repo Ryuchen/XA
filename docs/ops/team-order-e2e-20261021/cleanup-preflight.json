@@ -1,0 +1,82 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "checked_public_proofs": [
+    "native-selection-proof.json",
+    "native-submit-proof.json",
+    "flow-verification.json",
+    "browser-flow-proof.json",
+    "native-restoration-proof.json"
+  ],
+  "final_completed_order_id": 1,
+  "final_draft_reports": 2,
+  "four_evidence_files_present": true,
+  "cash_conserved": true,
+  "no_income_hold_or_settlement": true,
+  "native_original_account_config_form_and_fund_storage_restored": true,
+  "test_client_processes_stopped": [
+    {
+      "port": 3002,
+      "pid": 10440
+    },
+    {
+      "port": 3003,
+      "pid": 8428
+    },
+    {
+      "port": 5182,
+      "pid": 62116
+    }
+  ],
+  "original_business_database_unchanged": true,
+  "protected_tables": 25,
+  "protected_rows": 3713,
+  "original_business_containers": [
+    {
+      "name": "xa-local-validation-provider-h5-1",
+      "id": "9626957a2ccd42534249aa4c233712ed4e6a1bab889f72b098e22147ecb916d4",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-admin-web-1",
+      "id": "c7f4fb3a967bbdf4fc696881bf1b280b0c4b2f1bd8429da5204d41b8a5a91abe",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-celery-worker-1",
+      "id": "9fce2cf00cf45043ccb0ebb96ce36679e013aaf50b84565cde516288614a7d20",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-celery-beat-1",
+      "id": "26757bf6dbb273deba7db4c5f31c548f6de80c4a0dc756954007132072521762",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-gateway-1",
+      "id": "e03eecac929c9fa515adbe4500265a65326aae04feee1c5930ca0ed52e8eba05",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-redis-1",
+      "id": "44e0fbd68c6c7e4cd3111ebab697f3627dadeb8cf96bc8627bbac77fb1f94204",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-db-1",
+      "id": "6f148d97cd9c5a4c21fa01b3af335d60333298e450b8f62022431d82a341f254",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-web-1",
+      "id": "780ca65749f6cabeff835339d71a31570dbdedaf39b8ccd9fd78855a50a40dbf",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-web-2",
+      "id": "2082f47ec7ddb33f84701c9d0c72e8b39d8b82ebf118edbdf712df33cbc9086e",
+      "state": "running"
+    }
+  ],
+  "checked_at": "2026-10-20T17:32:54.219115+00:00"
+}

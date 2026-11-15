@@ -1,0 +1,229 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "passed": true,
+  "completed_at": "2026-10-20T15:25:07.443Z",
+  "environment": "Separate ephemeral MySQL + production Django ASGI + official WeChat native SDK + separate Vue admin; synthetic fixture data only",
+  "mocked_requests": false,
+  "mocked_lottery_results": false,
+  "native_ui_click_batches": 5,
+  "native_continuous_single_draw_requests": 240,
+  "successful_http_batches": 247,
+  "awarded_claims": 274,
+  "point_ledger_rows": 550,
+  "point_awards": 268,
+  "non_points_claims": {
+    "tag_pending": 1,
+    "experience_68": 5
+  },
+  "hard_pity_hits": 4,
+  "ten_fallback_hits": 1,
+  "early_natural_ssr_hits": 1,
+  "accounts": [
+    {
+      "case": "normal",
+      "actual_draws": 11,
+      "initial_points": 20000,
+      "point_cost": 1100,
+      "awarded_points": 50,
+      "final_points": 18950,
+      "pity_before": 0,
+      "pity_after": 11
+    },
+    {
+      "case": "single240",
+      "actual_draws": 1,
+      "initial_points": 20000,
+      "point_cost": 100,
+      "awarded_points": 0,
+      "final_points": 19900,
+      "pity_before": 239,
+      "pity_after": 0
+    },
+    {
+      "case": "cross240",
+      "actual_draws": 10,
+      "initial_points": 20000,
+      "point_cost": 1000,
+      "awarded_points": 45,
+      "final_points": 19045,
+      "pity_before": 235,
+      "pity_after": 5
+    },
+    {
+      "case": "tenth240",
+      "actual_draws": 10,
+      "initial_points": 20000,
+      "point_cost": 1000,
+      "awarded_points": 45,
+      "final_points": 19045,
+      "pity_before": 230,
+      "pity_after": 0
+    },
+    {
+      "case": "early",
+      "actual_draws": 1,
+      "initial_points": 20000,
+      "point_cost": 100,
+      "awarded_points": 0,
+      "final_points": 19900,
+      "pity_before": 237,
+      "pity_after": 0
+    },
+    {
+      "case": "lowpoints",
+      "actual_draws": 0,
+      "initial_points": 999.99,
+      "point_cost": 0,
+      "awarded_points": 0,
+      "final_points": 999.99,
+      "pity_before": 0,
+      "pity_after": 0
+    },
+    {
+      "case": "guard",
+      "actual_draws": 1,
+      "initial_points": 20000,
+      "point_cost": 100,
+      "awarded_points": 5,
+      "final_points": 19905,
+      "pity_before": 0,
+      "pity_after": 1
+    },
+    {
+      "case": "full240",
+      "actual_draws": 240,
+      "initial_points": 50000,
+      "point_cost": 24000,
+      "awarded_points": 1195,
+      "final_points": 27195,
+      "pity_before": 0,
+      "pity_after": 0
+    }
+  ],
+  "negative_cases": [
+    {
+      "case": "lowpoints",
+      "scenario": "upfront-999.99-cannot-borrow-prizes",
+      "status": 400,
+      "message": "积分不足，请先备足本次全部抽奖积分",
+      "http_financial_snapshot_unchanged": true,
+      "database_snapshot_checked": true
+    },
+    {
+      "case": "guard",
+      "scenario": "no-positive-non-points-candidate",
+      "status": 400,
+      "message": "奖池尚未配置正概率非积分奖，暂不支持十连抽",
+      "http_financial_snapshot_unchanged": true,
+      "database_snapshot_checked": true
+    },
+    {
+      "case": "guard",
+      "scenario": "tenth-sr-stock-exhaustion-rolls-back-first-nine",
+      "status": 400,
+      "message": "奖品已兑完，请稍后再试",
+      "http_financial_snapshot_unchanged": true,
+      "database_snapshot_checked": true
+    }
+  ],
+  "replayed_batches": 9,
+  "synthetic_claim_delivery": {
+    "claim_id": 12,
+    "states": [
+      "PENDING",
+      "FULFILLING",
+      "COMPLETED"
+    ],
+    "real_service_fulfilled": false
+  },
+  "original_database": {
+    "protected_tables": 25,
+    "protected_rows": 3713,
+    "exact_unchanged": true,
+    "campaign_enabled": false,
+    "prize_count": 13,
+    "all_base_probabilities": 0
+  },
+  "native_restoration": {
+    "run": "lottery-full-flow-20261020",
+    "passed": true,
+    "checked_at": "2026-10-20T15:24:17.851Z",
+    "all_runtime_config_restored": true,
+    "original_account_restored": true,
+    "lottery_scoped_storage_exact_restored": true,
+    "restored_storage_key_count": 1,
+    "home_page_loaded": true,
+    "api_base": "http://127.0.0.1:18080/api"
+  },
+  "cleanup": {
+    "isolated_resources_removed": true,
+    "temporary_vite_stopped": true,
+    "original_nine_services_running": true
+  },
+  "screenshots": [
+    {
+      "name": "admin-real-68-detail.png",
+      "bytes": 55585
+    },
+    {
+      "name": "admin-real-claims.png",
+      "bytes": 68534
+    },
+    {
+      "name": "native-cross240-10-animation.png",
+      "bytes": 164894
+    },
+    {
+      "name": "native-cross240-10-results.png",
+      "bytes": 98477
+    },
+    {
+      "name": "native-normal-1-animation.png",
+      "bytes": 151088
+    },
+    {
+      "name": "native-normal-1-results.png",
+      "bytes": 98941
+    },
+    {
+      "name": "native-normal-10-animation.png",
+      "bytes": 151663
+    },
+    {
+      "name": "native-normal-10-results.png",
+      "bytes": 85864
+    },
+    {
+      "name": "native-real-216-progress.png",
+      "bytes": 135446
+    },
+    {
+      "name": "native-real-240-progress.png",
+      "bytes": 134583
+    },
+    {
+      "name": "native-real-68-delivered.png",
+      "bytes": 45795
+    },
+    {
+      "name": "native-single240-1-animation.png",
+      "bytes": 167656
+    },
+    {
+      "name": "native-single240-1-results.png",
+      "bytes": 109878
+    },
+    {
+      "name": "native-tenth240-10-animation.png",
+      "bytes": 165522
+    },
+    {
+      "name": "native-tenth240-10-results.png",
+      "bytes": 83275
+    }
+  ],
+  "limitations": [
+    "Personal claims list exposes the latest 100 only; every winning ID was checked through its detail endpoint.",
+    "Admin claims do not expose draw batch/pity fields; persisted draw/batch snapshots require the independent read-only auditor."
+  ]
+}

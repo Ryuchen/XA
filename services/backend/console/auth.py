@@ -4,24 +4,37 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
-from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated
-from club_accounts.services import authenticate_account
-from club_accounts.tokens import issue_account_tokens, refresh_account_access_token
+from club_accounts.tokens import refresh_account_access_token
 
 from .permissions import get_account_permissions, is_console_account
+from stores.context import current_store
+from stores.serializers import public_store
+
+
+def _store_payload(store):
+    return {'store_slug': store.slug, 'store': public_store(store)}
 
 
 def _profile_payload(account):
+    from identifiers.services import get_entity_number
+    from rest_framework.exceptions import PermissionDenied
+    from stores.context import current_database
+    if current_store() is None or account._state.db != current_database():
+        raise PermissionDenied('后台账号所属门店不一致，请重新登录')
     membership = getattr(account, 'admin_membership', None)
     roles = [r for r in membership.roles.all() if r.is_active] if membership else []
     role_list = [{'id': r.id, 'name': r.name, 'code': r.code} for r in roles]
     is_super_admin = any(role['code'] == 'super_admin' for role in role_list)
     return {
         'id': account.id,
+        'entity_no': get_entity_number(account),
         'username': account.username,
         'nickname': account.nickname or account.username,
         'avatar': account.avatar_url or '',
+        'phone': account.phone or '',
+        'isWechatBound': bool(account.is_openid_bound and (account.openid or account.wechat_identities.exists())),
+        'isPhoneVerified': account.is_phone_verified,
         'is_superuser': is_super_admin,
         'roles': role_list,
         # 兼容旧前端：取首个角色
@@ -37,34 +50,9 @@ class ConsoleLoginView(APIView):
     throttle_scope = 'login'
 
     def post(self, request):
-        username = (request.data.get('username') or '').strip()
-        password = request.data.get('password') or ''
-        if not username or not password:
-            return Response({'code': 400, 'msg': '请输入账号和密码'})
-
-        account = authenticate_account(
-            username,
-            password,
-            account_type=ClubAccount.AccountType.STAFF,
-        )
-        if account is None:
-            return Response({'code': 400, 'msg': '账号或密码错误'})
-        if not is_console_account(account):
-            return Response({'code': 403, 'msg': '该账号无后台访问权限'})
-
-        from club_accounts.otp import otp_login_gate
-        otp=otp_login_gate(account,request.data,'admin')
-        if isinstance(otp,Response):return otp
-        access_token, refresh_token = issue_account_tokens(account,otp_verified=bool(otp and otp['otp_verified']))
-        return Response({
-            'code': 0,
-            'data': {
-                'recoveryCodes': otp.get('recoveryCodes',[]) if otp else [],
-                'token': access_token,
-                'refresh': refresh_token,
-                'profile': _profile_payload(account),
-            },
-        })
+        # The legacy URL must not bypass password and SMS verification.
+        from .dual_auth import ConsolePasswordLoginView
+        return ConsolePasswordLoginView().post(request)
 
 
 class ConsoleRefreshView(APIView):
@@ -85,7 +73,8 @@ class ConsoleRefreshView(APIView):
                 {'code': 401, 'msg': '登录已过期，请重新登录'},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        return Response({'code': 0, 'data': {'token': access_token}})
+        return Response({'code': 0, 'data': {'token': access_token,
+            **_store_payload(current_store())}})
 
 
 class ConsoleProfileView(APIView):

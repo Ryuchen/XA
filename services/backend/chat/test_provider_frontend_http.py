@@ -97,6 +97,7 @@ class ProviderChatFrontendHTTPTest(LiveServerTestCase):
         session_id = session_data['data']['session']['id']
         admin = APIClient()
         admin.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff_account)[0])
+        self.assertEqual(admin.post(f'/api/admin/chat-sessions/{session_id}/claim/', {'expected_version': 0}, format='json').data['code'], 0)
         for index in range(51):
             response = admin.post(f'/api/admin/chat-sessions/{session_id}/reply/',
                                   {'content': f'历史客服消息 {index}'}, format='json')
@@ -159,8 +160,13 @@ class ProviderChatRealtimeTest(APITransactionTestCase):
                     '/api/chat/send/', {'content': '陪玩询问订单'}, format='json')
                 self.assertEqual(sent.data['code'], 0, sent.data)
                 events = [await socket.receive_json_from(timeout=3) for socket in sockets]
-                self.assertTrue(all(event['type'] == 'chat_message' for event in events))
+                self.assertEqual([event['type'] for event in events], ['chat_message', 'chat_session_update'])
+                self.assertEqual(events[1]['data']['session']['last_message'], '')
                 session_id = events[0]['data']['session_id']
+                claim = await database_sync_to_async(clients[1].post)(
+                    f'/api/admin/chat-sessions/{session_id}/claim/', {'expected_version': 0}, format='json')
+                self.assertEqual(claim.data['code'], 0, claim.data)
+                self.assertEqual((await sockets[1].receive_json_from(timeout=3))['type'], 'chat_session_update')
                 reply = await database_sync_to_async(clients[1].post)(
                     f'/api/admin/chat-sessions/{session_id}/reply/', {'content': '客服已收到'}, format='json')
                 self.assertEqual(reply.data['code'], 0, reply.data)

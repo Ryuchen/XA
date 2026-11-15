@@ -1,0 +1,1045 @@
+.boss-points-page {
+  min-width: 0;
+}
+.boss-points-header { padding-block: 8px 16px; }
+.boss-points-header > p:first-child { color: var(--boss-link); font-size: 12px; font-weight: 500; line-height: 1.65; }
+.boss-points-header > h1 { margin-top: 4px; font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: -.04em; }
+.boss-points-header > p:last-child { margin-top: 4px; color: var(--muted-foreground); font-size: 12px; line-height: 16px; }
+.boss-points-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.boss-points-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border: 1px solid color-mix(in oklab, var(--primary) 25%, transparent);
+  border-radius: 12px;
+  background: linear-gradient(
+    140deg,
+    rgb(30 58 138 / 0.4),
+    rgb(2 6 23 / 0.96) 62%
+  );
+  background-color: #0f172a;
+  color: #fff;
+}
+.boss-points-orbit {
+  position: absolute;
+  right: -56px;
+  top: -80px;
+  width: 208px;
+  height: 208px;
+  border: 1px solid rgb(186 230 253 / 0.1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.boss-points-trophy {
+  position: absolute;
+  right: -12px;
+  top: 28px;
+  width: 112px;
+  height: 112px;
+  color: rgb(186 230 253 / 0.055);
+  pointer-events: none;
+}
+.boss-points-hero-content {
+  position: relative;
+}
+.boss-points-hero-content > p {
+  font-size: 12px;
+  line-height: 16px;
+  color: rgb(224 242 254 / 0.75);
+}
+.boss-points-hero-content > strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.boss-points-hero-content > strong small {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: rgb(224 242 254 / 0.75);
+}
+.boss-points-hero-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+.boss-points-hero-actions > a {
+  min-height: 44px;
+  height: auto;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.boss-points-hero-actions > a:first-child {
+  flex: 1;
+  background: #7dd3fc;
+  color: #020617;
+}
+.boss-points-hero-actions > a:first-child:hover {
+  background: #bae6fd;
+}
+.boss-points-hero-actions > a:last-child {
+  border-color: rgb(224 242 254 / 0.15);
+  background: rgb(255 255 255 / 0.05);
+  color: #f0f9ff;
+}
+.boss-points-hero-actions > a:last-child:hover {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+.boss-points-kook {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.boss-points-kook > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.boss-points-kook-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  color: var(--boss-link);
+}
+.boss-points-kook > header > div {
+  min-width: 0;
+  flex: 1;
+}
+.boss-points-kook h2 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.boss-points-kook > header p {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+}
+.boss-points-kook > header [data-slot="badge"] {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+.boss-points-kook-connected,
+.boss-points-binding {
+  margin-top: 12px;
+  border-radius: 8px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--muted) 35%, transparent);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--muted-foreground);
+}
+.boss-points-kook-connected > p:first-child {
+  color: var(--foreground);
+}
+.boss-points-binding {
+  background: color-mix(in oklab, var(--primary) 6%, transparent);
+  color: var(--boss-link);
+}
+.boss-points-bind {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 44px;
+  font-size: 12px;
+}
+.boss-points-binding button {
+  margin-top: 8px;
+}
+.boss-points-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 4px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+}
+.boss-points-tabs > button {
+  min-height: 44px;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+.boss-points-tabs > button[aria-selected="true"] {
+  background: var(--card);
+  color: var(--boss-link);
+  box-shadow:
+    0 1px 3px 0 #0000001a,
+    0 1px 2px -1px #0000001a;
+}
+.boss-points-tabs > button:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+.boss-points-filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+.boss-points-filters > button {
+  min-height: 44px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+.boss-points-filters > button[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.boss-points-filters > button:not([aria-pressed="true"]):hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.boss-points-rewards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.boss-points-reward {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--card);
+}
+.boss-points-reward-art {
+  display: grid;
+  height: 80px;
+  flex-shrink: 0;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: linear-gradient(
+    145deg,
+    rgb(37 99 235 / 0.2),
+    rgb(56 189 248 / 0.06)
+  );
+  color: var(--boss-link);
+}
+.boss-points-reward-image {
+  width: 100%;
+  height: 80px;
+  object-fit: contain;
+}
+.boss-points-reward-kind {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 14px;
+  color: var(--muted-foreground);
+}
+.boss-points-reward h2 {
+  min-height: 40px;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.boss-points-reward-price {
+  margin-top: 8px;
+  font-size: 18px;
+  line-height: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--boss-link);
+}
+.boss-points-reward-price > span {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.boss-points-reward-stock {
+  min-height: 16px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+}
+.boss-points-reward > button {
+  width: 100%;
+  min-height: 44px;
+  height: auto;
+  margin-top: 12px;
+  border-radius: 8px;
+  padding-inline: 8px;
+  font-size: 12px;
+}
+.boss-points-claims {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.boss-points-claim {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--card);
+  text-align: left;
+  transition: background-color 150ms;
+}
+.boss-points-claim:hover {
+  background: var(--accent);
+}
+.boss-points-claim-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.boss-points-claim-heading > div {
+  min-width: 0;
+}
+.boss-points-claim-heading h2 {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.boss-points-claim-heading p {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+}
+.boss-points-claim-heading [data-slot="badge"] {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.boss-points-claim-notice {
+  margin-top: 12px;
+  border-radius: 6px;
+  padding: 8px;
+  background: color-mix(in oklab, var(--warning) 7%, transparent);
+  color: var(--warning-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.dark .boss-points-claim-notice {
+  color: var(--warning);
+}
+.boss-points-claim-link {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  padding-inline: 12px;
+  margin-top: 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--boss-link);
+}
+.boss-points-ledger {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+.boss-points-ledger-row {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-block: 12px;
+}
+.boss-points-ledger-row > div {
+  min-width: 0;
+}
+.boss-points-ledger-row h2 {
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.boss-points-ledger-row p {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+}
+.boss-points-ledger-row > strong {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.boss-points-ledger-row > strong.positive {
+  color: var(--boss-link);
+}
+.boss-points-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+.boss-points-pagination > span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.boss-points-pagination > button {
+  min-height: 44px;
+  padding-inline: 12px;
+  font-size: 12px;
+}
+.boss-points-account-note {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--primary) 4.5%, transparent);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-points-account-note > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--boss-link);
+}
+.boss-points-page :is(button, a):focus-visible,
+.boss-gifts-page :is(button, a):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.boss-points-page button:active,
+.boss-points-claim:active {
+  filter: brightness(0.96);
+}
+.boss-gifts-page {
+  min-width: 0;
+}
+.boss-gifts-page .boss-gifts-source-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+.boss-gift-recipient-card {
+  grid-column: 1 / -1;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow:
+    0 1px 3px 0 #0000001a,
+    0 1px 2px -1px #0000001a;
+}
+.boss-gift-recipient-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.boss-gift-recipient-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.boss-gift-recipient-card h2 > svg {
+  color: var(--boss-link);
+}
+.boss-gift-recipient-card > header > span {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gift-recipient-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.boss-gift-recipient-row > :only-child {
+  grid-column: 1 / -1;
+}
+.boss-gift-recipient-search {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.boss-gift-recipient-search > .search-shell {
+  flex: 1;
+  min-width: 0;
+}
+.boss-gift-recipient-search > button {
+  flex-shrink: 0;
+  min-height: 44px;
+  height: auto;
+  border-radius: 8px;
+}
+.boss-gift-recipient-choice {
+  min-width: 0;
+}
+.boss-gift-recipient-choice .boss-field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.boss-gift-recipient-choice [data-slot="select-trigger"] {
+  width: 100%;
+  min-height: 44px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+.boss-gift-recipient-empty {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gift-source-order {
+  margin-top: 16px;
+  border-radius: 8px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gifts-page .boss-gift-catalog {
+  min-width: 0;
+}
+.boss-gift-catalog-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.boss-gift-catalog-heading h2 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.boss-gift-catalog-heading p {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gift-catalog-heading [data-slot="badge"] {
+  flex-shrink: 0;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.boss-gift-filterbar {
+  overflow-x: auto;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--muted) 60%, transparent);
+  padding: 4px;
+  margin-top: 16px;
+  scrollbar-width: thin;
+}
+.boss-gift-filterbar > div {
+  display: grid;
+  grid-template-columns: repeat(var(--gift-filter-columns), minmax(0, 1fr));
+}
+.boss-gift-filterbar button {
+  display: flex;
+  min-height: 44px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  transition:
+    color 150ms,
+    background-color 150ms;
+}
+.boss-gift-filterbar button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.boss-gift-filterbar button[aria-pressed="true"] {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow:
+    0 1px 3px 0 #0000001a,
+    0 1px 2px -1px #0000001a;
+}
+.boss-gift-filterbar button:hover {
+  color: var(--foreground);
+}
+.boss-gift-filterbar button:not([aria-pressed="true"]):hover {
+  background: var(--accent);
+}
+.boss-gift-source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.boss-gifts-page .boss-gift-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow:
+    0 1px 3px 0 #0000001a,
+    0 1px 2px -1px #0000001a;
+  transition:
+    border-color 150ms,
+    background-color 150ms;
+}
+.boss-gifts-page .boss-gift-tile.selected {
+  border-color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 3.5%, var(--card));
+}
+.boss-gifts-page .boss-gift-tile-main {
+  flex: 1;
+  min-height: 176px;
+  padding: 16px 12px 12px;
+}
+.boss-gifts-page .boss-gift-tile-main:disabled {
+  opacity: 0.7;
+}
+.boss-gift-art {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  color: var(--boss-link);
+}
+.boss-gift-art > .boss-gift-image {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.boss-gift-festival {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--boss-link);
+}
+.boss-gifts-page .boss-gift-tile-main h3 {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.boss-gifts-page .boss-gift-tile-main .boss-price {
+  margin-top: 4px;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.boss-gifts-page .boss-gift-tile-main .boss-price small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.boss-gifts-page .boss-gift-tile-main > p {
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gift-quantity {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--border);
+  padding-block: 4px;
+}
+.boss-gift-quantity > button {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+.boss-gift-quantity > span {
+  min-width: 28px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.boss-gift-source-aside {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+}
+.boss-gift-checklist {
+  padding: 20px;
+  border: 1px solid color-mix(in oklab, var(--primary) 20%, var(--border));
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow:
+    0 1px 3px 0 #0000001a,
+    0 1px 2px -1px #0000001a;
+}
+.boss-gift-checklist > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.boss-gift-checklist h2 {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.boss-gift-checklist > header > span {
+  color: var(--boss-link);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.boss-gift-checklist-lines {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.boss-gift-checklist-lines > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.boss-gift-checklist-lines p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.boss-gift-checklist-lines p > span {
+  margin-left: 4px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.boss-gift-checklist-lines strong {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.boss-gift-naming {
+  margin-top: 16px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--primary) 5%, transparent);
+  padding: 12px;
+}
+.boss-gift-naming > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.boss-gift-naming label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.boss-gift-naming label > svg {
+  color: var(--boss-link);
+}
+.boss-gift-naming > div > span {
+  flex-shrink: 0;
+  color: var(--boss-link);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.boss-gift-naming > input {
+  min-height: 44px;
+  margin-top: 12px;
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 14px;
+}
+.boss-gift-naming > p {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gift-totals {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.boss-gift-totals > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.boss-gift-totals dt {
+  color: var(--muted-foreground);
+}
+.boss-gift-totals dd {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.boss-gift-totals > div:last-child dd {
+  color: var(--boss-link);
+  font-weight: 600;
+}
+.boss-gift-warning,
+.boss-gift-naming > p.boss-gift-warning {
+  margin-top: 12px;
+  color: var(--warning-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.dark .boss-gift-warning,
+.dark .boss-gift-naming > p.boss-gift-warning {
+  color: var(--warning);
+}
+.boss-gift-error {
+  margin-top: 12px;
+  color: var(--destructive);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gift-error [data-slot="button"] {
+  margin-top: 8px;
+}
+.boss-gifts-page .boss-explanation-button {
+  min-height: 48px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.boss-gift-dock {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 30;
+  border-top: 1px solid var(--border);
+  background: color-mix(in oklab, var(--background) 95%, transparent);
+  padding: 12px 24px;
+  backdrop-filter: blur(24px);
+}
+.boss-gift-dock > div {
+  display: flex;
+  max-width: 1072px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-inline: auto;
+}
+.boss-gift-dock-amount {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 16px;
+}
+.boss-gift-dock-amount p {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.boss-gift-dock-amount strong {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+  color: var(--boss-link);
+  font-variant-numeric: tabular-nums;
+}
+.boss-gift-dock-amount small {
+  margin-left: 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 400;
+}
+.boss-gift-dock > div > button {
+  width: 176px;
+  height: auto;
+  min-height: 48px;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+.boss-app .boss-content[data-page="gifts"]:has(.boss-gift-dock) {
+  padding-bottom: 128px;
+}
+@media (min-width: 1024px) {
+  .boss-gift-source-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .boss-gifts-page .boss-gifts-source-layout {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}
+@media (max-width: 767px) {
+  .boss-gifts-page .boss-gifts-source-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .boss-gift-recipient-card {
+    padding: 16px;
+  }
+  .boss-gift-recipient-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .boss-gift-recipient-search > button {
+    padding-inline: 12px;
+  }
+  .boss-gift-filterbar > div {
+    display: flex;
+    min-width: max-content;
+  }
+  .boss-gift-filterbar button {
+    flex-shrink: 0;
+    padding-inline: 16px;
+  }
+  .boss-gift-filterbar button > span {
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .boss-gift-checklist {
+    padding: 16px;
+  }
+  .boss-gift-dock {
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    padding-inline: 16px;
+  }
+  .boss-gift-dock-amount {
+    display: block;
+    flex: 1;
+  }
+  .boss-gift-dock-amount strong {
+    display: block;
+    margin-top: 4px;
+  }
+  .boss-gift-dock > div > button {
+    width: auto;
+    min-width: 112px;
+  }
+  .boss-app .boss-content[data-page="gifts"]:has(.boss-gift-dock) {
+    padding-bottom: calc(224px + env(safe-area-inset-bottom));
+  }
+}
+.boss-points-stale {
+  padding: 12px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--warning) 7%, transparent);
+  color: var(--warning-foreground);
+  font-size: 12px;
+  line-height: 20px;
+}
+.dark .boss-points-stale {
+  color: var(--warning);
+}
+.boss-gift-recipient-search-fields {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+.boss-gift-recipient-search-fields > .search-shell {
+  flex: 1;
+  min-width: 0;
+}
+.boss-gift-recipient-search-fields > button {
+  min-height: 44px;
+  height: auto;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+.boss-gift-recipient-search-fields:disabled .search-shell {
+  opacity: 0.6;
+}
+
+.boss-points-hero-content > p { line-height: 1.65; }
+.boss-points-hero-content > strong small { line-height: 16px; }
+.boss-points-kook > header [data-slot="badge"], .boss-points-claim-heading [data-slot="badge"] { line-height: 16px; }
+.boss-points-filters > button, .boss-points-reward > button, .boss-points-pagination > button { line-height: 16px; }
+.boss-points-reward-kind, .boss-points-reward-stock, .boss-points-claim-heading p, .boss-points-claim-notice, .boss-points-ledger-row p { line-height: 1.65; }
+.boss-points-ledger-row h2 { line-height: 16px; }
+.boss-points-ledger-row > strong { line-height: 20px; }
+.boss-gift-recipient-card > header > span, .boss-gift-catalog-heading p, .boss-gift-checklist > header > span, .boss-gift-checklist-lines p > span, .boss-gift-naming > div > span, .boss-gift-warning, .boss-gift-naming > p.boss-gift-warning, .boss-gift-dock-amount p { line-height: 16px; }
+.boss-gifts-page .boss-gift-tile-main .boss-price small, .boss-gift-dock-amount small { line-height: 16px; }
+.boss-gift-quantity > span, .boss-gift-naming label, .boss-gift-naming > input { line-height: 20px; }
+.boss-gifts-page .boss-page-title h1 { font-size: 26px; line-height: 1.3; font-weight: 600; letter-spacing: -.03em; }
+.boss-gifts-page .boss-page-title p { margin-top: 8px; font-size: 14px; line-height: 24px; }
+.boss-points-page [data-slot="button"], .boss-gifts-page [data-slot="button"] { font-weight: 500; }
+.boss-gifts-page .boss-gift-tile-main:not(:disabled):hover { background: color-mix(in oklab, var(--primary) 4%, transparent); }
+.boss-gifts-page .boss-gift-tile-main:not(:disabled):active, .boss-gift-filterbar button:active { background: var(--accent); }

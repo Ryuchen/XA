@@ -1,0 +1,90 @@
+.boss-order-detail { display: grid; gap: 24px; padding-bottom: 104px; }
+.boss-order-detail > .boss-order-summary-panel { margin: 0; }
+.boss-order-detail .boss-order-status-meta strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boss-order-detail .boss-order-status-label { line-height: 20px; }
+.boss-order-detail .boss-order-status-meta :is(p, strong, [data-slot="button"]) { line-height: 16px; }
+.boss-order-detail .boss-timeline { gap: 0; }
+.boss-order-detail .boss-timeline > li > span { display: block; line-height: 20px; }
+.boss-order-detail .boss-timeline time { line-height: 16px; }
+.boss-order-detail-columns { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.boss-order-detail-main, .boss-order-detail-aside { display: grid; gap: 24px; min-width: 0; }
+.boss-order-detail-columns .boss-panel { margin: 0; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a; }
+.boss-order-detail-columns .boss-panel > h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); font-size: 16px; font-weight: 600; line-height: 24px; }
+.boss-order-detail-columns .boss-panel > h2 > svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--boss-link); }
+.boss-order-detail-columns .boss-info { margin: 0; }
+.boss-order-detail-columns .boss-info > div { align-items: center; padding-block: 8px; line-height: 20px; }
+.boss-order-service-name { font-size: 16px; font-weight: 600; line-height: 24px; overflow-wrap: anywhere; }
+.boss-order-service-category { margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.boss-order-service-name ~ .boss-info { margin-top: 12px; }
+.boss-order-detail-columns .boss-muted { font-size: 14px; line-height: 24px; }
+.boss-order-provider-selection { border-color: color-mix(in oklab, var(--primary) 20%, var(--border)); background: color-mix(in oklab, var(--primary) 2.5%, var(--card)); }
+.boss-order-provider-selection > .boss-list-row { gap: 16px; margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in oklab, var(--muted) 25%, var(--card)); }
+.boss-order-provider-selection > .boss-list-row > div { min-width: 0; }
+.boss-order-provider-selection > .boss-list-row strong { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.boss-order-provider-selection > .boss-list-row .boss-muted { margin-top: 4px; font-size: 12px; line-height: 20px; }
+.boss-order-provider-selection > .boss-list-row [data-slot="button"] { min-height: 44px; flex-shrink: 0; }
+.boss-order-provider-selection > .boss-order-applicant { display: flex; align-items: center; gap: 16px; }
+.boss-order-applicant-identity { display: flex; align-items: center; flex: 1; min-width: 0; gap: 12px; }
+.boss-order-applicant-identity > div:last-child { min-width: 0; }
+.boss-order-applicant-avatars { display: flex; flex-shrink: 0; }
+.boss-order-applicant-avatars > span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: color-mix(in oklab, var(--primary) 10%, var(--card)); border: 1px solid var(--card); color: var(--boss-link); font-size: 14px; font-weight: 600; }
+.boss-order-applicant-avatars > span + span { margin-left: -12px; }
+.boss-order-applicant-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.boss-order-applicant-heading > [data-slot="badge"] { border-radius: 6px; font-size: 12px; }
+.boss-order-applicant-heading > .ready { border-color: color-mix(in oklab, var(--success) 25%, transparent); background: color-mix(in oklab, var(--success) 10%, transparent); color: var(--success); }
+.boss-order-applicant-heading > .not-ready { color: var(--muted-foreground); }
+.boss-order-applicant-reason { max-width: 160px; font-size: 12px; line-height: 20px; color: var(--muted-foreground); }
+.boss-order-provider-selection > .boss-order-applicant [data-slot="button"] { min-width: 112px; }
+.boss-order-detail .boss-order-section-action { width: 100%; min-height: 44px; margin-top: 16px; }
+.boss-order-detail-note { margin-top: 16px; padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 50%, transparent); font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
+.boss-order-detail-note > p:first-child { color: var(--muted-foreground); }
+.boss-order-detail-note > div { margin-top: 4px; }
+.boss-order-detail-actions { position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px max(24px, calc((100vw - 1072px) / 2)); border-top: 1px solid var(--border); background: color-mix(in oklab, var(--background) 95%, transparent); backdrop-filter: blur(20px); }
+.boss-order-detail-actions > div:first-child { min-width: 0; }
+.boss-order-detail-actions > div:first-child > p { color: var(--muted-foreground); font-size: 12px; line-height: 16px; }
+.boss-order-detail-actions > div:first-child > strong { display: block; margin-top: 4px; font-size: 14px; font-weight: 500; line-height: 20px; }
+.boss-order-detail-action-buttons { display: flex; gap: 12px; }
+.boss-order-detail-action-buttons > [data-slot="button"] { height: 48px; min-height: 48px; min-width: 128px; border-radius: 8px; }
+.boss-order-detail-action-buttons > [data-slot="button"]:last-child { min-width: 176px; }
+.boss-order-detail-action-buttons .boss-order-cancel { color: var(--destructive); }
+.boss-order-evaluation-label { font-size: 14px; font-weight: 500; line-height: 20px; }
+.boss-order-evaluation-targets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.boss-order-evaluation-targets > [data-slot="button"] { min-width: 0; min-height: 44px; padding-inline: 8px; white-space: normal; }
+.boss-order-evaluation-score { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; line-height: 20px; }
+.boss-order-evaluation-score > span { color: var(--boss-link); font-variant-numeric: tabular-nums; }
+.boss-order-evaluation-dimensions > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 12px; margin-inline: -12px; border-radius: 6px; color: var(--muted-foreground); cursor: pointer; font-size: 14px; list-style: none; }
+.boss-order-evaluation-dimensions > summary:hover { background: var(--accent); }
+.boss-order-evaluation-dimensions > summary:focus-visible { outline: 2px solid var(--ring); }
+.boss-order-evaluation-dimensions[open] > summary > svg { transform: rotate(90deg); }
+.boss-order-evaluation-dimensions .boss-form-grid { margin-top: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.boss-order-evaluation-anonymous { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; font-size: 14px; }
+.boss-order-detail .boss-order-evaluation-submit { min-height: 44px; }
+.boss-order-review-entry { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.boss-order-review-entry:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: 0; }
+.boss-order-review-entry > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boss-order-review-entry > header > p { font-size: 14px; font-weight: 500; line-height: 20px; }
+.boss-order-review-content { margin-top: 8px; font-size: 14px; line-height: 24px; overflow-wrap: anywhere; }
+.boss-order-review-dimensions { margin-top: 8px; font-size: 12px; line-height: 20px; color: var(--muted-foreground); }
+.boss-order-review-dimensions:empty { display: none; }
+.boss-order-review-reply { margin-top: 12px; border-radius: 8px; padding: 12px; background: color-mix(in oklab, var(--muted) 50%, transparent); color: var(--muted-foreground); font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
+.boss-order-review-reply > span { color: var(--foreground); }
+.boss-order-form-dialog [data-slot="dialog-title"] { font-size: 20px; line-height: 20px; font-weight: 500; }
+.boss-order-form-dialog [data-slot="dialog-description"] { font-size: 14px; line-height: 24px; }
+.boss-order-form-dialog .boss-field textarea { min-height: 96px; font-size: 14px; line-height: 24px; }
+.boss-order-cancel-dialog .boss-field textarea { min-height: 80px; }
+.boss-order-form-dialog [data-slot="dialog-footer"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.boss-order-form-dialog [data-slot="dialog-footer"] > [data-slot="button"] { width: 100%; min-height: 44px; }
+@media (min-width: 1280px) { .boss-order-detail-columns { grid-template-columns: minmax(0, 1fr) 360px; } }
+@media (max-width: 767px) {
+  .boss-order-detail-columns { grid-template-columns: minmax(0, 1fr); }
+  .boss-order-detail-columns .boss-panel { padding: 16px; }
+  .boss-order-provider-selection > .boss-list-row { display: block; padding: 12px; }
+  .boss-order-provider-selection > .boss-order-applicant { display: block; }
+  .boss-order-applicant-reason { max-width: none; margin-top: 12px; }
+  .boss-order-provider-selection > .boss-list-row [data-slot="button"] { width: 100%; margin-top: 12px; }
+  .boss-order-detail-actions { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); padding: 12px 16px; }
+  .boss-order-evaluation-dimensions .boss-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .boss-order-detail-actions > div:first-child { display: none; }
+  .boss-order-detail-action-buttons { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; }
+  .boss-order-detail-action-buttons > [data-slot="button"], .boss-order-detail-action-buttons > [data-slot="button"]:last-child { min-width: 0; padding-inline: 8px; }
+}

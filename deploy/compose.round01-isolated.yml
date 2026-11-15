@@ -1,0 +1,136 @@
+# Standalone local WSL acceptance stack. Run through round01-isolated.sh only.
+x-backend: &backend
+  image: xa-round01/backend:${ROUND_ID:?required}
+  build:
+    context: ../services/backend
+  init: true
+  environment: &backend-env
+    XA_LOCAL_VALIDATION: "true"
+    DJANGO_DEBUG: "false"
+    XA_ISOLATED_CONTROL_PLANE: "false"
+    DJANGO_SECRET_KEY: ${ROUND_SECRET:?required}
+    DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost,web
+    DJANGO_TRUST_PROXY: "false"
+    DJANGO_MEDIA_BASE_URL: http://127.0.0.1:28080
+    CORS_ALLOW_ALL_ORIGINS: "false"
+    CORS_ALLOWED_ORIGINS: http://127.0.0.1:28081,http://127.0.0.1:28082
+    CSRF_TRUSTED_ORIGINS: http://127.0.0.1:28081,http://127.0.0.1:28082
+    MYSQL_DATABASE: xa_round01
+    MYSQL_USER: xa_round01
+    MYSQL_PASSWORD: ${ROUND_DB_PASSWORD:?required}
+    MYSQL_HOST: db
+    MYSQL_PORT: "3306"
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    DJANGO_CACHE_URL: redis://redis:6379/3
+    WECHAT_APPID: ""
+    WECHAT_SECRET: ""
+    WECHAT_MOCK_LOGIN: "false"
+    KOOK_ENABLED: "false"
+    KOOK_BOT_TOKEN: ""
+    KOOK_DISPATCH_CHANNEL_ID: ""
+    WECOM_DISPATCH_ENABLED: "false"
+    WECOM_DISPATCH_WEBHOOK: ""
+    REQUIRE_ORDER_EVIDENCE_IMAGES: "true"
+    REQUIRE_RECHARGE_PROOF: "true"
+  volumes:
+    - backend_media:/app/media
+    - backend_static:/app/staticfiles
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${ROUND_ROOT_PASSWORD:?required}
+      MYSQL_DATABASE: xa_round01
+      MYSQL_USER: xa_round01
+      MYSQL_PASSWORD: ${ROUND_DB_PASSWORD:?required}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  redis:
+    image: redis:alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  migrate:
+    <<: *backend
+    command: >-
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py check_mysql_readiness &&
+      python manage.py collectstatic --noinput"
+  web:
+    <<: *backend
+    command: python -m config.serve -b 0.0.0.0 -p 8000 config.asgi:application
+    deploy:
+      replicas: 2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  celery-worker:
+    <<: *backend
+    command: celery -A config worker -l warning --concurrency=1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  celery-beat:
+    <<: *backend
+    command: celery -A config beat -l warning
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  admin-web:
+    image: xa-round01/admin:${ROUND_ID:?required}
+    build:
+      context: ..
+      dockerfile: apps/admin-web/Dockerfile
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    depends_on:
+      web:
+        condition: service_started
+  provider-h5:
+    image: xa-round01/provider:${ROUND_ID:?required}
+    build:
+      context: ..
+      dockerfile: apps/provider-vue/Dockerfile
+    environment:
+      BACKEND_ORIGIN: http://web:8000
+    depends_on:
+      web:
+        condition: service_started
+  gateway:
+    image: caddy:2-alpine
+    ports:
+      - "127.0.0.1:28080:80"
+      - "127.0.0.1:28081:81"
+      - "127.0.0.1:28082:82"
+    volumes:
+      - ./Caddyfile.local-validation:/etc/caddy/Caddyfile:ro
+      - backend_media:/srv/media:ro
+      - backend_static:/srv/static:ro
+    depends_on:
+      - web
+      - admin-web
+      - provider-h5
+
+volumes:
+  mysql_data:
+  redis_data:
+  backend_media:
+  backend_static:

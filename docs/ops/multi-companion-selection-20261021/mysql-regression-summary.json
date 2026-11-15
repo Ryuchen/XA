@@ -1,0 +1,15 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "backend": "mysql",
+  "test_database": "test_xa_test_multi_provider_flow_20261021",
+  "main_http_all_rows_unchanged": true,
+  "main_http_tables": 110,
+  "main_http_rows": 905,
+  "tests_run": 91,
+  "failures": 0,
+  "failure_count": 0,
+  "error_count": 0,
+  "skipped": [],
+  "elapsed_seconds": 143.05,
+  "tested_at": "2026-10-20T16:41:52.175287+00:00"
+}

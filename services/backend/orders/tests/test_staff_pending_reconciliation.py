@@ -53,7 +53,8 @@ class StaffPendingReconciliationTest(APITestCase):
         make_wallet(self.boss, balance=50000)
         request = SimpleNamespace(account=self.boss_account, legacy_user=self.boss, data={
             'service_id': self.service.pk, 'expected_amount': self.service.price,
-            'dispatch_route': route, 'client_request_id': f'staff-review-{suffix}',
+            'dispatch_route': route, 'dispatch_mode': 'AUTO_GRAB' if route == 'PUBLIC' else 'BOSS_SELECT',
+            'client_request_id': f'staff-review-{suffix}',
         })
         intent = prepare_direct_order(request, appid='wx-staff-test', mchid='mch-staff-test')
         evidence = VerifiedPayment(intent.merchant_order_no, f'staff-test-transaction-{suffix}', intent.appid,
@@ -220,6 +221,7 @@ class StaffPendingReconciliationTest(APITestCase):
         team_service = make_service(billing_provider_count=2)
         team = make_order(self.boss, service=team_service, customer_account=self.boss_account,
                           dispatch_route='PUBLIC')
+        Order.objects.filter(pk__in=[legacy.pk, team.pk]).update(original_amount=10000)
         intent = self.direct_order(route='PUBLIC')
         self.authenticate(['order:view', 'order:dispatch'])
         def detail(order_id):

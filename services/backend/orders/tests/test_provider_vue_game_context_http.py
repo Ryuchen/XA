@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Boss order details survive staff assignment into the provider's current Vue UI."""
 import json
 import os
@@ -26,9 +27,9 @@ class ProviderVueGameContextHTTPTest(LiveServerTestCase):
     recharge = flow.ReleaseFlowTest.recharge
 
     def test_boss_input_staff_assignment_provider_view(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         self.ok(self.recharge())
         self.login(self.boss)
         order = self.ok(self.client.post('/api/orders/create/', {'service_id': self.service.pk, 'dispatch_route': 'STAFF',

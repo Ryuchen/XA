@@ -54,9 +54,11 @@ class DashboardChatUnreadWorkflowTest(APITestCase):
         count_and_queue(first, 22)
         count_and_queue(second, 22)
         session_id, first_message = sessions[0]
+        self.ok(first.post(f'/api/admin/chat-sessions/{session_id}/claim/', {'expected_version': 0}, format='json'))
         self.ok(first.post(f'/api/admin/chat-sessions/{session_id}/read/', {'message_ids': [first_message]}, format='json'))
         count_and_queue(second, 22)  # A second unread message keeps the conversation in the queue.
-        self.ok(second.post(f'/api/admin/chat-sessions/{session_id}/read/', {'message_ids': [second_message['id']]}, format='json'))
+        self.assertEqual(second.post(f'/api/admin/chat-sessions/{session_id}/read/', {'message_ids': [second_message['id']]}, format='json').status_code, 403)
+        self.ok(first.post(f'/api/admin/chat-sessions/{session_id}/read/', {'message_ids': [second_message['id']]}, format='json'))
         count_and_queue(first, 21)
         self.ok(bosses[0].post('/api/chat/send/', {'content': '再次咨询'}, format='json'))
         count_and_queue(second, 22)

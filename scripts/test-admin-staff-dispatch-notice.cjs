@@ -146,11 +146,13 @@ test('actual app notification opens the review list and rechecks permissions', (
   const queue = { status: 'review', update() {} }, navigations = []
   let captured
   const mocks = {
-    vue: { watch() {}, onMounted() {}, onUnmounted() {} }, 'element-plus': { ElNotification() {} },
+    vue: { watch() {}, onMounted() {}, onUnmounted() {} },
     'vue-router': { useRouter: () => ({ push: target => { navigations.push(target) } }) },
     '@/stores/auth': { useAuthStore: () => auth }, '@/stores/staffDispatchQueue': { useStaffDispatchQueue: () => queue },
     '@/utils/ws': { adminWs: { on: () => () => {}, connect() {}, disconnect() {} } },
-    '@/utils/staffNoticeSound': { staffNoticeSound: { prepare() {}, play() {}, dispose() {} } },
+    '@/utils/staffNoticeSound': { staffNoticeSound: { prepare() {}, play() {}, dispose() {} }, chatNoticeSound: { prepare() {}, play() {}, dispose() {} } },
+    '@/utils/notice': { showInteractiveNotice() {} },
+    '@/utils/chatAttention': { attendedChatSession: { value: null } },
     '@/api/request': { request() {} },
     '@/utils/staffDispatchNotice': { createStaffDispatchNotice: deps => { captured = deps; return { receive() {}, reconcile() {}, reset() {} } } },
   }

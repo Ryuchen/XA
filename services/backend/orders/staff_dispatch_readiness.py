@@ -17,8 +17,10 @@ def staff_dispatch_candidate_q(*, now=None):
     from .direct_payment import test_domain_available
     team = (Q(escort_mode=Order.EscortMode.DOUBLE) | Q(required_provider_count=2)
             | Q(escort_mode=Order.EscortMode.SINGLE, required_provider_count__isnull=True,
-                gameplay_snapshot__has_key='billing_provider_count',
-                gameplay_snapshot__billing_provider_count=2))
+                gameplay_snapshot__fulfillment_provider_count=2)
+            | (Q(escort_mode=Order.EscortMode.SINGLE, required_provider_count__isnull=True,
+                 gameplay_snapshot__billing_provider_count=2)
+               & ~Q(gameplay_snapshot__has_key='fulfillment_provider_count')))
     any_provider = Exists(OrderProvider.objects.filter(order_id=OuterRef('pk')))
     payment_candidate = Q(direct_payment__isnull=True)
     if test_domain_available():

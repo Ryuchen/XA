@@ -91,7 +91,7 @@ class MenuOperationsTest(APITestCase):
         coupon.refresh_from_db()
         self.assertEqual(coupon.total_qty, 5)
 
-    def test_wallet_adjustment_is_once_only_and_bound_to_boss_wallet(self):
+    def test_wallet_adjustment_is_once_only_for_boss_and_provider(self):
         wallet, _ = Wallet.objects.get_or_create(user=self.boss, defaults={'account': self.boss_account})
         wallet.balance = 1000
         wallet.save(update_fields=['balance'])
@@ -107,7 +107,9 @@ class MenuOperationsTest(APITestCase):
         self.assertEqual(self.client.post(url, {'amount': 200}, format='json').status_code, 400)
         from orders.tests.factories import make_provider
         provider_wallet, _ = Wallet.objects.get_or_create(user=make_provider())
-        self.assertEqual(self.client.post(f'/api/admin/wallets/{provider_wallet.pk}/adjust/', {**payload, 'client_request_id': 'wrong-wallet'}, format='json').status_code, 404)
+        self.ok(self.client.post(f'/api/admin/wallets/{provider_wallet.pk}/adjust/', {**payload, 'client_request_id': 'provider-adjust'}, format='json'))
+        provider_wallet.refresh_from_db()
+        self.assertEqual(provider_wallet.balance, 200)
 
     @patch('console.views._schedule_auto_cancel')
     def test_dispatch_and_cancel_fund_records_identify_actual_operator(self, _schedule):
@@ -172,7 +174,7 @@ class MenuOperationsTest(APITestCase):
     def test_invalid_roles_do_not_partially_save_staff_profile(self):
         role = AdminRole.objects.create(code='operator_test', name='功能客服', permissions=['order:view'])
         row = self.ok(self.client.post('/api/admin/admins/', {
-            'username': 'menu_staff', 'password': 'Menu-pass-928!', 'nickname': '原昵称', 'roles': [role.pk],
+            'username': 'menu_staff', 'password': 'Menu-pass-928!', 'phone': '13800005678', 'nickname': '原昵称', 'roles': [role.pk],
         }, format='json'))
         url = f"/api/admin/admins/{row['id']}/"
         response = self.client.patch(url, {'nickname': '不应保存', 'roles': [99999999]}, format='json')
@@ -342,7 +344,9 @@ class MenuOperationsTest(APITestCase):
         for role in self.staff.admin_membership.roles.all():
             role.permissions = ['chat:view']
             role.save(update_fields=['permissions'])
-        self.assertEqual(self.client.get(url + 'messages/').status_code, 200)
+        # A supervisor may reply without claiming; removing supervision does
+        # not make the same unclaimed conversation visible to a viewer.
+        self.assertEqual(self.client.get(url + 'messages/').status_code, 403)
         self.assertEqual(self.client.post(url + 'read/').status_code, 403)
         self.assertEqual(self.client.post(url + 'reply/', {'content': '拒绝'}, format='json').status_code, 403)
 
@@ -391,7 +395,7 @@ class MenuOperationsTest(APITestCase):
     def test_audit_tracks_write_operator_and_masks_password(self):
         role = AdminRole.objects.create(code='audit_staff', name='审计客服', permissions=['order:view'])
         self.ok(self.client.post('/api/admin/admins/', {
-            'username': 'audit_staff', 'password': 'Menu-secret-928!', 'roles': [role.pk],
+            'username': 'audit_staff', 'password': 'Menu-secret-928!', 'phone': '13800005679', 'roles': [role.pk],
         }, format='json'))
         record = AdminAuditLog.objects.get(resource='admins', method='POST')
         self.assertEqual(record.operator_account_id, self.staff.pk)

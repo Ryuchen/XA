@@ -1,0 +1,668 @@
+from datetime import timedelta
+from tempfile import TemporaryDirectory
+from unittest import skipUnless
+from unittest.mock import patch
+from uuid import uuid4
+
+from django.conf import settings
+from django.test import TestCase, override_settings
+from django.utils import timezone
+from rest_framework.test import APIClient
+
+from club_accounts.services import get_or_create_account_for_legacy_user
+from club_accounts.tokens import issue_account_tokens
+from engagement.models import ConsumptionConfirmation
+from orders.models import (GameCategory, Order, OrderAddonConsumption, OrderParticipationSegment, OrderProvider,
+                           OrderSegmentAddonSettlement, ServiceAddonConfiguration, ServiceAddonPriceOption)
+from orders.tests import test_points_checkout_integration as fixture
+from orders.tests.factories import make_console_user, make_provider, make_service
+from orders.tests.test_release_flow import screenshot
+from stores.context import store_context
+from stores.db import transaction
+from wallet.models import Transaction
+
+
+@skipUnless('store_b' in settings.DATABASES, 'requires two isolated store databases')
+@override_settings(ALLOWED_HOSTS=['*'], PLATFORM_IDENTITY_ENABLED=True, PLATFORM_PASS_REPAYMENT_ENABLED=True,
+    POINTS_REDEMPTION_PREVIEW_ENABLED=True, DISCOUNT_OPTIONS_PREVIEW_ENABLED=True,
+    DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=True, POINTS_USAGE_SWITCHES_ENABLED=True,
+    SERVICE_ORDER_POINTS_RECEIPT_ENABLED=True, BOSS_FUNDING_SELECTION_ENABLED=True,
+    SERVICE_POINTS_CHECKOUT_TESTING=True, SERVICE_POINTS_ASSIGN_TESTING=True,
+    SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_FUNDING_TESTING=True,
+    SERVICE_POINTS_SETTLEMENT_TESTING=True, SERVICE_POINTS_CONSUMPTION_TESTING=True,
+    SERVICE_POINTS_TRANSFER_CAPTURE_TESTING=True, SERVICE_POINTS_TRANSFER_FUNDING_REVISION_TESTING=True,
+    SERVICE_POINTS_TRANSFER_SETTLEMENT_TESTING=True, SERVICE_POINTS_TRANSFER_ADDON_SETTLEMENT_TESTING=True,
+    ADDON_PAYMENT_INTERNAL_TESTING=True, ADDON_ORDER_FUNDING_INTERNAL_TESTING=True,
+    ADDON_SETTLEMENT_INTERNAL_TESTING=True, ADDON_SEGMENT_SETTLEMENT_INTERNAL_TESTING=True,
+    ADDON_HANDOVER_INTERNAL_TESTING=True, ADDON_REFUND_EXECUTION_INTERNAL_TESTING=True,
+    ADDON_SEGMENT_REFUND_REVISION_INTERNAL_TESTING=True,
+    ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True, SEGMENT_STANDARD_TRANSFER_ENABLED=True,
+    SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
+    ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True, LEGACY_FORCE_AUTH_COMPAT=False,
+    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
+class PointsTransferAddonSettlementTest(TestCase):
+    databases = {'default', 'store_b'} if 'store_b' in settings.DATABASES else {'default'}
+    setUp = fixture.PointsFundingPlatformRecoveryTests.setUp
+    payload = fixture.PointsFundingPlatformRecoveryTests.payload
+    quoted_payload = fixture.PointsFundingPlatformRecoveryTests.quoted_payload
+    create_assigned_points_order = fixture.PointsFundingPlatformRecoveryTests.create_assigned_points_order
+    verify = fixture.PointsFundingPlatformRecoveryTests.verify
+    fund = fixture.PointsFundingPlatformRecoveryTests.fund
+
+    def test_preexisting_addon_and_funding_are_rebalanced_at_transfer_and_handover(self):
+        self._preexisting_addon_and_funding()
+
+    def test_second_transfer_after_addon_handover_preserves_funding_and_settlement(self):
+        self._preexisting_addon_and_funding(second_transfer=True)
+
+    def test_addon_refund_then_second_transfer_recalculates_funding(self):
+        self._preexisting_addon_and_funding(second_transfer=True, refund_before_transfer=True)
+
+    def test_main_burden_refund_then_second_transfer_preserves_person_deduction(self):
+        self._preexisting_addon_and_funding(second_transfer=True, refund_before_transfer=True, main_burden=True)
+
+    def test_addon_refund_before_handover_then_settle_remaining_work(self):
+        self._preexisting_addon_and_funding(refund_before_handover=True)
+
+    def test_addon_license_unknown_is_reviewable_without_blocking_settlement(self):
+        self._preexisting_addon_and_funding(license_outage=True)
+
+    def test_addon_license_review_uses_previously_refunded_principal(self):
+        self._preexisting_addon_and_funding(license_outage=True, refund_before_handover=True)
+
+    def test_addon_license_review_only_unknown_vip(self):
+        self._preexisting_addon_and_funding(license_outage=True, unknown_kind='vip')
+
+    def test_addon_license_review_only_unknown_points(self):
+        self._preexisting_addon_and_funding(license_outage=True, unknown_kind='points')
+
+    def test_addon_license_review_denies_benefits(self):
+        self._preexisting_addon_and_funding(license_outage=True, review_deny=True)
+
+    def test_addon_license_review_retries_deferred_vip(self):
+        self._preexisting_addon_and_funding(license_outage=True, defer_vip=True)
+
+    def test_addon_license_review_recovers_platform_audit(self):
+        self._preexisting_addon_and_funding(license_outage=True, audit_failure=True)
+
+    def test_addon_license_review_reverses_later_principal_refund(self):
+        self._preexisting_addon_and_funding(license_outage=True, verify_reverse=True)
+
+    def test_addon_license_review_does_not_restore_closed_cycle(self):
+        self._preexisting_addon_and_funding(license_outage=True, closed_cycle=True)
+
+    def test_points_main_earnings_cover_addon_refund_using_deal_snapshot(self):
+        from engagement.models import PointFundingLot
+        from engagement.confirmation import process_order
+        from orders.models import OrderAddonRefund, OrderPointsSettlement, OrderSegmentFinancialSnapshot
+        from wallet.models import ProviderReport
+        from wallet.services import get_wallet
+        with TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media), store_context(self.second):
+            order = Order.objects.get(pk=self.order.pk)
+            assignment = OrderProvider.objects.get(order=order, released_at__isnull=True)
+            provider = assignment.provider_account
+            player = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(provider)[0])
+            boss = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
+            self.assertEqual(player.post(f'/api/orders/orders/{order.pk}/start/',
+                {'entry_image': screenshot()}, format='multipart').data['code'], 0)
+            snapshot = OrderSegmentFinancialSnapshot.objects.get(segment__attribution__order=order)
+            self.assertEqual((assignment.provider_income, snapshot.income_at_entry), (3200, 4800))
+            game = GameCategory.objects.create(name='积分主单承担加购退款')
+            self.service.game_category = game
+            self.service.save(update_fields=['game_category'])
+            addon = make_service(name='加购项目', game_category=game, is_addon=True)
+            relation = ServiceAddonConfiguration.objects.create(service=self.service, addon=addon,
+                enabled=True, conditions='', condition_mode='NONE', version=1)
+            ServiceAddonPriceOption.objects.create(configuration=relation, unit='HOUR', price=20000)
+            wallet = get_wallet(account=self.account)
+            wallet.balance += 16000
+            wallet.save(update_fields=['balance'])
+            PointFundingLot.objects.create(account=self.account, source_key='points-addon-main-test',
+                                           kind='PREPAID', remaining=16000)
+            url = f'/api/orders/orders/{order.pk}/addons/intents/'
+            intent = boss.post(url, {'addon_id': addon.pk, 'unit': 'HOUR', 'quantity': 1,
+                'configuration_version': 1, 'provider_account_id': provider.pk, 'request_id': 'main-burden-addon',
+                'expected_amount': 20000, 'gift_balance_amount': 0, 'compensation_balance_amount': 0}, format='json')
+            self.assertEqual(intent.status_code, 200, intent.data)
+            paid = boss.post(url + f"{intent.data['data']['id']}/pay/", {}, format='json')
+            self.assertEqual(paid.status_code, 200, paid.data)
+            payment_id = paid.data['data']['payment_id']
+            self.assertEqual(player.post(f'/api/orders/orders/{order.pk}/complete/',
+                {'completion_image': screenshot()}, format='multipart').data['code'], 0)
+            case = boss.post(f'/api/orders/orders/{order.pk}/aftersale/', {'reason': '加购全部未履行',
+                'affected_provider_account_ids': [provider.pk], 'client_request_id': 'main-burden-case'}, format='json')
+            self.assertEqual(case.status_code, 200, case.data)
+            case_id = case.data['data']['id']
+            staff_user = make_console_user(['order:view', 'order:refund', 'order:settle', 'report:view', 'report:audit'])
+            staff = get_or_create_account_for_legacy_user(staff_user)
+            staff_user.admin_membership.account = staff
+            staff_user.admin_membership.save(update_fields=['account'])
+            admin = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+            refund_url = f'/api/admin/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/'
+            proposal = admin.post(refund_url, {'request_id': 'main-burden-refund', 'amount_raw': 20000,
+                'case_id': case_id, 'explanation': '双方同意加购全退'}, format='json')
+            self.assertEqual(proposal.status_code, 200, proposal.data)
+            proposal_id = proposal.data['data']['id']
+            user_url = f'/api/orders/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/{proposal_id}/'
+            for client in (boss, player):
+                self.assertEqual(client.post(user_url, {'accepted': True}, format='json').status_code, 200)
+            response = admin.post(refund_url + f'{proposal_id}/execute/', {}, format='json')
+            self.assertEqual(response.status_code, 200, response.data)
+            refund = OrderAddonRefund.objects.get(proposal_id=proposal_id)
+            self.assertEqual((refund.addon_pending_deduction, refund.main_pending_deduction,
+                              refund.wallet_deduction, refund.deposit_deduction), (16000, 4000, 0, 0))
+            self.assertEqual(admin.post(f'/api/admin/aftersales/{case_id}/resolve/',
+                {'resolution': '加购退款完成'}, format='json').status_code, 200)
+            report = ProviderReport.objects.get(order=order)
+            self.assertEqual(player.post(f'/api/wallet/reports/{report.pk}/images/',
+                {'kind': 'RESULT', 'image': screenshot()}, format='multipart').data['code'], 0)
+            self.assertEqual(player.post(f'/api/wallet/reports/{report.pk}/submit/', {}, format='json').data['code'], 0)
+            self.assertEqual(admin.post(f'/api/admin/reports/{report.pk}/approve/', {}, format='json').data['code'], 0)
+            report.refresh_from_db()
+            with patch('django.utils.timezone.now', return_value=report.submitted_at + timedelta(hours=73)):
+                self.assertTrue(process_order(order.pk))
+                self.assertFalse(process_order(order.pk))
+            settlement = OrderPointsSettlement.objects.get(order=order)
+            self.assertEqual((settlement.paid_units, settlement.provider_units, settlement.funding_units,
+                              settlement.store_units), (4000, 800, 0, 3200))
+            self.assertEqual(settlement.persons.get().amount, 800)
+            income = Transaction.objects.get(order=order, wallet__account=provider,
+                                             tx_type='INCOME', remark=f'订单收入：{order.order_no}')
+            self.assertEqual(income.amount, 800)
+            self.assertEqual(get_wallet(account=provider).balance, 320)
+            self.assertEqual(player.get('/api/wallet/reports/').data['data'][0]['settlement_status'], 'SETTLED')
+            self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 4000)
+
+    def _preexisting_addon_and_funding(self, *, second_transfer=False, refund_before_transfer=False,
+                                       refund_before_handover=False, license_outage=False, main_burden=False,
+                                       unknown_kind='both', review_deny=False, defer_vip=False, audit_failure=False,
+                                       verify_reverse=False, closed_cycle=False):
+        with TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
+            with store_context(self.second):
+                order = Order.objects.get(pk=self.order.pk)
+                old = OrderProvider.objects.get(order=order, released_at__isnull=True).provider_account
+                old_client = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(old)[0])
+                self.assertEqual(old_client.post(f'/api/orders/orders/{order.pk}/start/',
+                    {'entry_image': screenshot()}, format='multipart').data['code'], 0)
+                game = GameCategory.objects.create(name='积分转单前加购')
+                self.service.game_category = game
+                self.service.save(update_fields=['game_category'])
+                addon = make_service(name='积分转单前加购', is_addon=True, game_category=game)
+                config = ServiceAddonConfiguration.objects.create(service=self.service, addon=addon,
+                    enabled=True, condition_mode='NONE', conditions='', version=1)
+                ServiceAddonPriceOption.objects.create(configuration=config, unit='HOUR', price=1000)
+                boss = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
+                path = f'/api/orders/orders/{order.pk}/addons/intents/'
+                intent = boss.post(path, {'addon_id': addon.pk, 'unit': 'HOUR', 'quantity': 1,
+                    'configuration_version': 1, 'provider_account_id': old.pk, 'request_id': 'before-transfer-addon',
+                    'expected_amount': 1000, 'gift_balance_amount': 0, 'compensation_balance_amount': 0}, format='json')
+                self.assertEqual(intent.status_code, 200, intent.data)
+                paid = boss.post(path + f"{intent.data['data']['id']}/pay/", {}, format='json')
+                self.assertEqual(paid.status_code, 200, paid.data)
+            self.assertEqual(self.verify().status_code, 200)
+            allocation = self.fund({'request_id': str(uuid4()), 'order_id': order.pk, 'amount': 300})
+            self.assertEqual(allocation.status_code, 200, allocation.data)
+            with store_context(self.second):
+                replacement = make_provider(deposit_mode='EARNINGS')
+                new = get_or_create_account_for_legacy_user(replacement)
+                replacement.escort_profile.account = new
+                replacement.escort_profile.save(update_fields=['account'])
+                staff_user = make_console_user(['order:view', 'order:dispatch', 'order:refund', 'order:settle',
+                                                'support:edit', 'report:audit'])
+                staff = get_or_create_account_for_legacy_user(staff_user)
+                staff_user.admin_membership.account = staff
+                staff_user.admin_membership.save(update_fields=['account'])
+                admin = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+                self.service.commission_override = True
+                self.service.commission_rate = 30
+                self.service.save(update_fields=['commission_override', 'commission_rate'])
+                result = admin.post(f'/api/admin/orders/{order.pk}/transfer/', {'reason': '双方同意', 'transfers': [{
+                    'old_provider_id': old.pk, 'new_provider_id': new.pk, 'split_type': 'PERCENT', 'split_value': 0,
+                    'penalty_amount': 0, 'original_share': {'retained': 4000, 'transferred': 6000,
+                                                          'agreement': '双方同意'}}]}, format='json')
+                self.assertEqual(result.data['code'], 0, result.data)
+                old_segment = OrderParticipationSegment.objects.get(attribution__order=order, provider_account=old)
+                self.assertEqual(old_client.post(f'/api/orders/orders/{order.pk}/participation-evidence/',
+                    {'segment_id': old_segment.pk, 'completion_image': screenshot()}, format='multipart').data['code'], 0)
+                from orders.models import OrderPointsFundingAllocation, OrderPointsTransferFundingRevision
+                revision = OrderPointsTransferFundingRevision.objects.get(order=order)
+                self.assertEqual((revision.before_funding['additional_store_funding_units'],
+                                  revision.after_funding['additional_store_funding_units']), (600, 240))
+                self.assertEqual(list(revision.releases.values_list('amount', flat=True)), [60])
+                segment = OrderParticipationSegment.objects.get(attribution__order=order, provider_account=new)
+                player = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(new)[0])
+                self.assertEqual(player.post(f'/api/orders/orders/{order.pk}/participation-start/',
+                    {'segment_id': segment.pk, 'entry_image': screenshot()}, format='multipart').data['code'], 0)
+                payment_id = paid.data['data']['payment_id']
+                if refund_before_handover:
+                    case = admin.post('/api/admin/aftersales/open-negotiation/', {'order_id': order.pk,
+                        'affected_provider_account_ids': [old.pk], 'reason': '原陪玩加购部分退款',
+                        'client_request_id': 'addon-refund-before-handover'}, format='json')
+                    self.assertEqual(case.status_code, 200, case.data)
+                    case_id = case.data['data']['id']
+                    refund_url = f'/api/admin/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/'
+                    proposed = admin.post(refund_url, {'request_id': 'refund-before-addon-handover',
+                        'amount_raw': 100, 'case_id': case_id, 'explanation': '甲负责部分未完成',
+                        'affected_provider_account_ids': [old.pk]}, format='json')
+                    self.assertEqual(proposed.status_code, 200, proposed.data)
+                    proposal_id = proposed.data['data']['id']
+                    user_url = f'/api/orders/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/{proposal_id}/'
+                    for client in (boss, old_client):
+                        decision = client.post(user_url, {'accepted': True}, format='json')
+                        self.assertEqual(decision.status_code, 200, decision.data)
+                    refund = admin.post(refund_url + f'{proposal_id}/execute/', {}, format='json')
+                    self.assertEqual(refund.status_code, 200, refund.data)
+                    resolved = admin.post(f'/api/admin/aftersales/{case_id}/resolve/',
+                        {'resolution': '加购退款完成'}, format='json')
+                    self.assertEqual(resolved.status_code, 200, resolved.data)
+                    from orders.points_funding_evidence import verify_order_funding
+                    from orders.points_funding_plan import PointsFundingPlanError
+                    with transaction.atomic(), self.assertRaises(PointsFundingPlanError):
+                        verify_order_funding(order.pk)
+                staff_url = f'/api/admin/orders/{order.pk}/addons/payments/{payment_id}/handovers/'
+                handover = admin.post(staff_url, {'request_id': 'pre-funded-addon-handover',
+                    'target_provider_account_id': new.pk, 'retained_basis_raw': 400,
+                    'completed_work': '甲已完成部分', 'remaining_work': '乙接替剩余部分'}, format='json')
+                self.assertEqual(handover.status_code, 200, handover.data)
+                handover_id = handover.data['data']['id']
+                decision_url = f'/api/orders/orders/{order.pk}/addons/payments/{payment_id}/handovers/{handover_id}/decision/'
+                for client in (boss, old_client, player):
+                    decision = client.post(decision_url, {'accepted': True}, format='json')
+                    self.assertEqual(decision.status_code, 200, decision.data)
+                from orders.models import OrderAddonFundingReleaseRun
+                release = OrderAddonFundingReleaseRun.objects.get(handover_id=handover_id)
+                required_initial = 201 if refund_before_handover else 180
+                self.assertEqual((release.allocated_before, release.required_amount, release.released_amount),
+                                 (240, required_initial, 240 - required_initial))
+                self.assertEqual(OrderPointsFundingAllocation.objects.get(redemption__order=order).amount, 300)
+                from orders.points_funding_evidence import verify_order_funding
+                with transaction.atomic():
+                    proof = verify_order_funding(order.pk)
+                    self.assertEqual((proof.required, proof.allocated, proof.remaining), (required_initial, required_initial, 0))
+                self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
+                if refund_before_transfer:
+                    case = admin.post('/api/admin/aftersales/open-negotiation/', {'order_id': order.pk,
+                        'affected_provider_account_ids': [new.pk], 'reason': '加购部分退款',
+                        'client_request_id': 'addon-refund-before-return'}, format='json')
+                    self.assertEqual(case.status_code, 200, case.data)
+                    case_id = case.data['data']['id']
+                    refund_url = f'/api/admin/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/'
+                    proposed = admin.post(refund_url, {'request_id': 'addon-refund-before-return',
+                        'amount_raw': 500 if main_burden else 100, 'case_id': case_id, 'explanation': '乙负责部分未完成',
+                        'affected_provider_account_ids': [new.pk]}, format='json')
+                    self.assertEqual(proposed.status_code, 200, proposed.data)
+                    proposal_id = proposed.data['data']['id']
+                    user_url = f'/api/orders/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/{proposal_id}/'
+                    for client in (boss, player):
+                        decision = client.post(user_url, {'accepted': True}, format='json')
+                        self.assertEqual(decision.status_code, 200, decision.data)
+                    refund = admin.post(refund_url + f'{proposal_id}/execute/', {}, format='json')
+                    self.assertEqual(refund.status_code, 200, refund.data)
+                    if main_burden:
+                        from orders.models import OrderAddonRefund
+                        record = OrderAddonRefund.objects.get(proposal_id=proposal_id)
+                        self.assertEqual((record.addon_pending_deduction, record.main_pending_deduction), (420, 80))
+                    resolved = admin.post(f'/api/admin/aftersales/{case_id}/resolve/',
+                        {'resolution': '加购退款完成'}, format='json')
+                    self.assertEqual(resolved.status_code, 200, resolved.data)
+                participants = [(old_client, old_segment), (player, segment)]
+                expected_payouts = ({old_segment.pk: 311, segment.pk: 350} if refund_before_handover else
+                                    {old_segment.pk: 320, segment.pk: 420})
+                completing_client = player
+                if second_transfer:
+                    result = admin.post(f'/api/admin/orders/{order.pk}/transfer/', {'reason': '再次协商转单',
+                        'transfers': [{'old_provider_id': new.pk, 'new_provider_id': old.pk,
+                            'split_type': 'PERCENT', 'split_value': 0, 'penalty_amount': 0,
+                            'original_share': {'retained': 2000, 'transferred': 4000, 'agreement': '双方同意'}}]}, format='json')
+                    self.assertEqual(result.data['code'], 0, result.data)
+                    revision = OrderPointsTransferFundingRevision.objects.filter(order=order).order_by('-pk').first()
+                    self.assertEqual((revision.before_funding['additional_store_funding_units'],
+                                      revision.after_funding['additional_store_funding_units']), (180, 180))
+                    self.assertEqual(revision.allocations[0][-1], 120)
+                    returned = OrderParticipationSegment.objects.get(attribution__order=order,
+                        provider_account=old, released_at__isnull=True)
+                    self.assertEqual(player.post(f'/api/orders/orders/{order.pk}/participation-evidence/',
+                        {'segment_id': segment.pk, 'completion_image': screenshot()}, format='multipart').data['code'], 0)
+                    self.assertEqual(old_client.post(f'/api/orders/orders/{order.pk}/participation-start/',
+                        {'segment_id': returned.pk, 'entry_image': screenshot()}, format='multipart').data['code'], 0)
+                    handover = admin.post(staff_url, {'request_id': 'pre-funded-addon-return',
+                        'target_provider_account_id': old.pk, 'retained_basis_raw': 0 if main_burden else 200,
+                        'completed_work': '乙已完成部分', 'remaining_work': '甲接替剩余部分'}, format='json')
+                    self.assertEqual(handover.status_code, 200, handover.data)
+                    handover_id = handover.data['data']['id']
+                    decision_url = f'/api/orders/orders/{order.pk}/addons/payments/{payment_id}/handovers/{handover_id}/decision/'
+                    for client in (boss, player, old_client):
+                        decision = client.post(decision_url, {'accepted': True}, format='json')
+                        self.assertEqual(decision.status_code, 200, decision.data)
+                    release = OrderAddonFundingReleaseRun.objects.get(handover_id=handover_id)
+                    required = 250 if main_burden else 198 if refund_before_transfer else 180
+                    self.assertEqual((release.allocated_before, release.required_amount, release.released_amount), (180, required, 0))
+                    with transaction.atomic():
+                        proof = verify_order_funding(order.pk)
+                        self.assertEqual((proof.required, proof.allocated, proof.remaining), (required, 180, required - 180))
+                    participants.append((old_client, returned))
+                    expected_payouts = ({old_segment.pk: 320, returned.pk: 70} if main_burden else
+                                        {old_segment.pk: 320, segment.pk: 128, returned.pk: 210}
+                                        if refund_before_transfer else
+                                        {old_segment.pk: 320, segment.pk: 140, returned.pk: 280})
+                    completing_client = old_client
+                self.assertEqual(completing_client.post(f'/api/orders/orders/{order.pk}/complete/',
+                    {'completion_image': screenshot()}, format='multipart').data['code'], 0)
+                for client, participant in participants:
+                    for action, extra in [('open', {}), ('upload', {'image': screenshot()}), ('submit', {'version': 0})]:
+                        response = client.post(f'/api/orders/orders/{order.pk}/segment-report/',
+                            {'segment_id': participant.pk, 'action': action, 'client_request_id': str(uuid4()), **extra},
+                            format='multipart' if action == 'upload' else 'json')
+                        self.assertEqual(response.data['code'], 0, response.data)
+                    response = admin.post(f'/api/admin/orders/{order.pk}/segments/{participant.pk}/report-review/',
+                        {'action': 'approve', 'version': 1}, format='json')
+                    self.assertEqual(response.data['code'], 0, response.data)
+                from engagement.confirmation import process_order
+                future = timezone.now() + timedelta(hours=100)
+                if refund_before_transfer:
+                    with patch('django.utils.timezone.now', return_value=future):
+                        self.assertFalse(process_order(order.pk))
+                    self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
+                    extra = self.fund({'request_id': str(uuid4()), 'order_id': order.pk,
+                                       'amount': 70 if main_burden else 18})
+                    self.assertEqual(extra.status_code, 200, extra.data)
+                if license_outage:
+                    from django.db import DatabaseError
+                    def selective(feature=None):
+                        unknown = (unknown_kind == 'vip' and feature == 'VIP_GROWTH') or (
+                            unknown_kind == 'points' and feature is None)
+                        return ('UNKNOWN', {'status': 'CONTROL_UNAVAILABLE'}) if unknown else ('ALLOW', {'status': 'ACTIVE'})
+                    outage = (patch('stores.license_status.status_for_store', side_effect=DatabaseError('control offline'))
+                              if unknown_kind == 'both' else
+                              patch('stores.license_benefits.check_new_benefits', side_effect=selective))
+                    with override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=True, LICENSE_SNAPSHOT_CACHE_ENABLED=False), \
+                            outage, patch('django.utils.timezone.now', return_value=future):
+                        self.assertTrue(process_order(order.pk))
+                        self.assertFalse(process_order(order.pk))
+                else:
+                    with patch('django.utils.timezone.now', return_value=future):
+                        self.assertTrue(process_order(order.pk))
+                        self.assertFalse(process_order(order.pk))
+                payouts = dict(OrderSegmentAddonSettlement.objects.filter(payment_id=payment_id)
+                               .values_list('segment_id', 'amount'))
+                self.assertEqual(payouts, expected_payouts)
+                order.refresh_from_db()
+                self.assertEqual((order.provider_income, order.settlement_store_funding,
+                                  order.settlement_addon_contribution),
+                                 (4360, 250, 110) if main_burden else (4440, 198, 242) if refund_before_transfer else
+                                 (4440, 201, 239) if refund_before_handover else (4440, 180, 260))
+                self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 4000)
+                consumption = OrderAddonConsumption.objects.get(payment_id=payment_id)
+                self.assertEqual((consumption.paid_units, consumption.refunded_units),
+                                 (1000, 500 if main_burden else 100 if refund_before_transfer or refund_before_handover else 0))
+                if license_outage:
+                    self.assertEqual(consumption.awarded_points, 0)
+                    self.assertEqual(consumption.license_decisions['points']['outcome'],
+                                     'ALLOW' if unknown_kind == 'vip' else 'UNKNOWN')
+                    self.assertTrue(consumption.license_decisions['points']['applicable'])
+            with store_context(self.first):
+                self.assertFalse(OrderSegmentAddonSettlement.objects.exists())
+            if license_outage:
+                from stores.models import PlatformAccount, PlatformRoleGrant
+                from stores.platform_auth import issue_tokens
+                supervisor = PlatformAccount.objects.create(username='addon-license-supervisor', phone='13800001999',
+                                                            is_phone_verified=True)
+                PlatformRoleGrant.objects.create(account=supervisor, role='SUPER_ADMIN', scope_slug='*')
+                supervisor_token, _ = issue_tokens(supervisor, 'SMS', supervisor.phone)
+                url = f'/api/admin/platform/store-management/{self.second.pk}/license-points-review'
+                response = self.client.get(url, {'kind': 'ADDON'}, HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                self.assertEqual(response.status_code, 200, response.data)
+                self.assertEqual(response.data['data']['total'], 1)
+                row = response.data['data']['list'][0]
+                self.assertEqual((row['order_id'], row['payment_id']), (order.pk, payment_id))
+                self.assertEqual(row['decisions']['points']['outcome'], 'ALLOW' if unknown_kind == 'vip' else 'UNKNOWN')
+                self.assertEqual(row['decisions']['points']['reason'], 'ACTIVE' if unknown_kind == 'vip' else 'CONTROL_UNAVAILABLE')
+                self.assertEqual(row['decisions']['points']['points_at_decision_hundredths'],
+                                 consumption.license_decisions['points']['points_at_decision_hundredths'])
+                other = self.client.get(f'/api/admin/platform/store-management/{self.first.pk}/license-points-review',
+                    {'kind': 'ADDON'}, HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                self.assertEqual(other.data['data']['total'], 0)
+                denied = self.client.get(url, {'kind': 'ADDON'}, HTTP_AUTHORIZATION='Bearer ' + self.token)
+                self.assertEqual(denied.status_code, 403)
+                from engagement.models import LicenseAddonBenefitsReview, MemberProfile
+                from engagement.services import completed_consumption
+                with store_context(self.second):
+                    account = consumption.account
+                    if closed_cycle:
+                        account.business_cycle += 1
+                        account.save(update_fields=['business_cycle'])
+                    before_points = MemberProfile.objects.get(account=account).points_balance
+                    before_vip = completed_consumption(account)
+                resolve_url = f'{url}/addons/{consumption.pk}/resolve'
+                chosen = 'DENY' if review_deny else 'ALLOW'
+                body = {'request_id': str(uuid4()), 'vip_outcome': None if unknown_kind == 'points' else chosen,
+                        'points_outcome': None if unknown_kind == 'vip' else chosen,
+                        'reason': '已核对加购实销时授权和 VIP 功能有效'}
+                if audit_failure:
+                    from django.db import DatabaseError
+                    from stores.models import PlatformAuditEvent
+                    original = PlatformAuditEvent.objects.create
+                    def fail_audit(**kwargs):
+                        if kwargs.get('action') == 'license.addon_benefits_reviewed':
+                            raise DatabaseError('模拟平台审计失败')
+                        return original(**kwargs)
+                    with patch('stores.models.PlatformAuditEvent.objects.create', side_effect=fail_audit):
+                        uncertain = self.client.post(resolve_url, body, format='json',
+                            HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                    self.assertEqual(uncertain.status_code, 503, uncertain.data)
+                    pending = self.client.get(url, {'kind': 'ADDON_REVIEWED'},
+                        HTTP_AUTHORIZATION='Bearer ' + supervisor_token).data['data']['list'][0]
+                    self.assertEqual((pending['status'], pending['request_id']), ('AUDIT_PENDING', body['request_id']))
+                    replacement = PlatformAccount.objects.create(username='addon-license-recovery', phone='13800001998',
+                                                                 is_phone_verified=True)
+                    PlatformRoleGrant.objects.create(account=replacement, role='SUPER_ADMIN', scope_slug='*')
+                    replacement_token, _ = issue_tokens(replacement, 'SMS', replacement.phone)
+                    recovered = self.client.post(resolve_url, body, format='json',
+                        HTTP_AUTHORIZATION='Bearer ' + replacement_token)
+                    self.assertEqual(recovered.status_code, 200, recovered.data)
+                    audit = PlatformAuditEvent.objects.get(action='license.addon_benefits_reviewed')
+                    self.assertEqual(audit.account_id, replacement.pk)
+                    self.assertEqual(audit.detail['original_actor_id'], str(supervisor.pk))
+                if defer_vip:
+                    with patch('stores.license_benefits.check_new_benefits', return_value=('DENY', {'status': 'EXPIRED'})):
+                        response = self.client.post(resolve_url, body, format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                    self.assertTrue(response.data['data']['vip_recalculation_pending'])
+                    with store_context(self.first), override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=False):
+                        from engagement.tasks import retry_addon_vip_recalculations
+                        self.assertEqual(retry_addon_vip_recalculations.run(), 0)
+                    with store_context(self.second), override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=False):
+                        from engagement.tasks import retry_addon_vip_recalculations
+                        self.assertEqual(retry_addon_vip_recalculations.run(), 1)
+                    with override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=False):
+                        response = self.client.post(resolve_url, body, format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                    self.assertFalse(response.data['data']['vip_recalculation_pending'])
+                else:
+                    response = self.client.post(resolve_url, body, format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                self.assertEqual(response.status_code, 200, response.data)
+                self.assertEqual(response.data['data']['awarded_points_hundredths'],
+                                 0 if review_deny or closed_cycle else consumption.license_decisions['points']['points_at_decision_hundredths'])
+                if closed_cycle:
+                    self.assertEqual(response.data['data']['skip_reason'], 'CYCLE_CLOSED')
+                self.assertEqual(self.client.post(resolve_url, body, format='json',
+                    HTTP_AUTHORIZATION='Bearer ' + supervisor_token).data, response.data)
+                self.assertEqual(self.client.get(url, {'kind': 'ADDON'},
+                    HTTP_AUTHORIZATION='Bearer ' + supervisor_token).data['data']['total'], 0)
+                with store_context(self.second):
+                    consumption.refresh_from_db()
+                    review = LicenseAddonBenefitsReview.objects.get(consumption=consumption)
+                    self.assertEqual(review.vip_applied, unknown_kind != 'points' and not review_deny and not closed_cycle)
+                    self.assertEqual(consumption.license_decisions['vip']['outcome'],
+                                     'ALLOW' if unknown_kind == 'points' else 'UNKNOWN')
+                    self.assertEqual(MemberProfile.objects.get(account=account).points_balance,
+                                     before_points + review.awarded_points)
+                    self.assertEqual(completed_consumption(account), before_vip + (
+                        0 if unknown_kind == 'points' or review_deny or closed_cycle else consumption.paid_units - consumption.refunded_units))
+                    if verify_reverse:
+                        from orders.models import AfterSale, OrderAddonRefund, OrderAddonRefundProposal
+                        from orders.addon_consumption import reverse_addon_consumption
+                        from wallet.services import get_wallet
+                        from engagement.models import PointLedger
+                        with transaction.atomic():
+                            payment = consumption.payment
+                            allocation = payment.allocations.select_for_update().filter(kind='PREPAID').first()
+                            amount = min(100, allocation.amount - allocation.refunded_amount)
+                            self.assertGreater(amount, 0)
+                            case, _ = AfterSale.objects.get_or_create(order=order,
+                                defaults={'account': account, 'reason': '隔离退款积分测试'})
+                            proposal = OrderAddonRefundProposal.objects.create(payment=payment, case=case,
+                                case_opened_at=case.created_at, created_by=account, request_id='review-refund',
+                                amount=amount, source_plan=[], explanation='隔离退款积分测试', status='ACCEPTED')
+                            allocation.refunded_amount += amount
+                            allocation.save(update_fields=['refunded_amount'])
+                            lot = allocation.lot
+                            lot.remaining += amount
+                            lot.save(update_fields=['remaining'])
+                            wallet = get_wallet(account=account, for_update=True)
+                            old_balance = wallet.balance
+                            wallet.balance += amount
+                            wallet.save(update_fields=['balance'])
+                            buyer_tx = Transaction.objects.create(wallet=wallet, order=order, tx_type='REFUND',
+                                amount=amount, balance_before=old_balance, balance_after=wallet.balance)
+                            refund = OrderAddonRefund.objects.create(order=order, payment=payment, proposal=proposal,
+                                operator=account, amount=amount, addon_pending_deduction=amount, buyer_transaction=buyer_tx)
+                            reverse_addon_consumption(refund)
+                            reverse_addon_consumption(refund)
+                            terms = payment.benefit_terms
+                            remaining = (consumption.principal_units - allocation.refunded_amount) * terms['points_rate'] * terms['birthday_multiplier'] // 100
+                            expected = review.awarded_points - remaining
+                            self.assertEqual(PointLedger.objects.get(kind='ADDON_LICENSE_REFUND').amount, -expected)
+                            self.assertEqual(MemberProfile.objects.get(account=account).points_balance,
+                                             before_points + review.awarded_points - expected)
+                            transaction.set_rollback(True)
+                with store_context(self.first):
+                    self.assertFalse(LicenseAddonBenefitsReview.objects.exists())
+
+    def test_transfer_addon_shared_funding_and_independent_settlement(self):
+        self._transfer_addon_refund_and_settlement(full_refund=False)
+
+    def test_transfer_addon_refund_deducts_unsettled_main_without_repaying_teammate(self):
+        self._transfer_addon_refund_and_settlement(full_refund=True)
+
+    def _transfer_addon_refund_and_settlement(self, *, full_refund):
+        from engagement.confirmation import process_order
+        from orders.points_funding_evidence import verify_order_funding
+        with TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
+            with store_context(self.second):
+                order = Order.objects.get(pk=self.order.pk)
+                boss = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
+                old = OrderProvider.objects.get(order=order, released_at__isnull=True).provider_account
+                old_client = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(old)[0])
+                self.assertEqual(old_client.post(f'/api/orders/orders/{order.pk}/start/',
+                    {'entry_image': screenshot()}, format='multipart').data['code'], 0)
+                replacement = make_provider(deposit_mode='EARNINGS')
+                new = get_or_create_account_for_legacy_user(replacement)
+                replacement.escort_profile.account = new
+                replacement.escort_profile.save(update_fields=['account'])
+                player = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(new)[0])
+                staff_user = make_console_user(['order:view', 'order:dispatch', 'order:refund', 'order:settle', 'report:audit'])
+                staff = get_or_create_account_for_legacy_user(staff_user)
+                staff_user.admin_membership.account = staff
+                staff_user.admin_membership.save(update_fields=['account'])
+                admin = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+                self.service.commission_override = True
+                self.service.commission_rate = 30
+                self.service.save(update_fields=['commission_override', 'commission_rate'])
+                moved = admin.post(f'/api/admin/orders/{order.pk}/transfer/', {'reason': '双方同意', 'transfers': [{
+                    'old_provider_id': old.pk, 'new_provider_id': new.pk, 'split_type': 'PERCENT', 'split_value': 0,
+                    'penalty_amount': 0, 'original_share': {'retained': 4000, 'transferred': 6000, 'agreement': '双方同意'}}]}, format='json')
+                self.assertEqual(moved.data['code'], 0, moved.data)
+                old_segment = OrderParticipationSegment.objects.get(attribution__order=order, provider_account=old)
+                new_segment = OrderParticipationSegment.objects.get(attribution__order=order, provider_account=new)
+                self.assertEqual(old_client.post(f'/api/orders/orders/{order.pk}/participation-evidence/',
+                    {'segment_id': old_segment.pk, 'completion_image': screenshot()}, format='multipart').data['code'], 0)
+                self.assertEqual(player.post(f'/api/orders/orders/{order.pk}/participation-start/',
+                    {'segment_id': new_segment.pk, 'entry_image': screenshot()}, format='multipart').data['code'], 0)
+                game = GameCategory.objects.create(name='积分转单加购')
+                self.service.game_category = game
+                self.service.save(update_fields=['game_category'])
+                addon = make_service(name='积分转单加购', is_addon=True, game_category=game)
+                config = ServiceAddonConfiguration.objects.create(service=self.service, addon=addon,
+                    enabled=True, condition_mode='NONE', conditions='', version=1)
+                ServiceAddonPriceOption.objects.create(configuration=config, unit='HOUR', price=1000)
+                path = f'/api/orders/orders/{order.pk}/addons/intents/'
+                result = boss.post(path, {'addon_id': addon.pk, 'unit': 'HOUR', 'quantity': 1,
+                    'configuration_version': 1, 'provider_account_id': new.pk, 'request_id': 'points-transfer-addon',
+                    'expected_amount': 1000, 'gift_balance_amount': 0, 'compensation_balance_amount': 0}, format='json')
+                self.assertEqual(result.status_code, 200, result.data)
+                paid = boss.post(path + f"{result.data['data']['id']}/pay/", {}, format='json')
+                self.assertEqual(paid.status_code, 200, paid.data)
+                payment_id = paid.data['data']['payment_id']
+                self.assertEqual(player.post(f'/api/orders/orders/{order.pk}/complete/',
+                    {'completion_image': screenshot()}, format='multipart').data['code'], 0)
+                case = boss.post(f'/api/orders/orders/{order.pk}/aftersale/', {'reason': '加购部分未履行',
+                    'affected_provider_account_ids': [new.pk], 'client_request_id': 'points-addon-aftersale'}, format='json')
+                self.assertEqual(case.status_code, 200, case.data)
+                case_id = case.data['data']['id']
+                def report(client, segment):
+                    for action, extra in [('open', {}), ('upload', {'image': screenshot()}), ('submit', {'version': 0})]:
+                        result = client.post(f'/api/orders/orders/{order.pk}/segment-report/',
+                            {'segment_id': segment.pk, 'action': action, 'client_request_id': str(uuid4()), **extra},
+                            format='multipart' if action == 'upload' else 'json')
+                        self.assertEqual(result.data['code'], 0, result.data)
+                    result = admin.post(f'/api/admin/orders/{order.pk}/segments/{segment.pk}/report-review/',
+                        {'action': 'approve', 'version': 1}, format='json')
+                    self.assertEqual(result.data['code'], 0, result.data)
+                report(old_client, old_segment)
+                details = admin.get(f'/api/admin/orders/{order.pk}/').data['data']
+                self.assertIsNone(details['settlement_store_funding'])
+                self.assertIsNone(details['settlement_addon_contribution'])
+                future = timezone.now() + timedelta(hours=100)
+                with transaction.atomic():
+                    proof = verify_order_funding(order.pk)
+                    self.assertEqual((proof.required, proof.allocated), (140, 0))
+                with patch('django.utils.timezone.now', return_value=future):
+                    self.assertFalse(process_order(order.pk))
+                self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
+            self.assertEqual(self.verify().status_code, 200)
+            funded = self.fund({'request_id': str(uuid4()), 'order_id': order.pk, 'amount': 140})
+            self.assertEqual(funded.status_code, 200, funded.data)
+            with store_context(self.second):
+                with patch('django.utils.timezone.now', return_value=future):
+                    self.assertFalse(process_order(order.pk))
+                first_income = Transaction.objects.get(order=order, tx_type='INCOME')
+                staff_url = f'/api/admin/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/'
+                proposal = admin.post(staff_url, {'request_id': 'points-addon-refund', 'amount_raw': 1000 if full_refund else 500,
+                    'explanation': '双方同意部分退款', 'case_id': case_id}, format='json')
+                self.assertEqual(proposal.status_code, 200, proposal.data)
+                proposal_id = proposal.data['data']['id']
+                user_url = f'/api/orders/orders/{order.pk}/addons/payments/{payment_id}/refund-proposals/{proposal_id}/'
+                for client in (boss, player):
+                    decision = client.post(user_url, {'accepted': True}, format='json')
+                    self.assertEqual(decision.status_code, 200, decision.data)
+                refund = admin.post(staff_url + f'{proposal_id}/execute/', {}, format='json')
+                self.assertEqual(refund.status_code, 200, refund.data)
+                if full_refund:
+                    from orders.models import OrderAddonRefund
+                    receipt = OrderAddonRefund.objects.get(proposal_id=proposal_id)
+                    self.assertEqual((receipt.addon_pending_deduction, receipt.main_pending_deduction), (700, 300))
+                resolved = admin.post(f'/api/admin/aftersales/{case_id}/resolve/', {'resolution': '加购退款完成'}, format='json')
+                self.assertEqual(resolved.status_code, 200, resolved.data)
+                report(player, new_segment)
+                with patch('django.utils.timezone.now', return_value=future):
+                    self.assertTrue(process_order(order.pk))
+                    self.assertFalse(process_order(order.pk))
+                if full_refund:
+                    self.assertFalse(OrderSegmentAddonSettlement.objects.filter(payment_id=payment_id).exists())
+                else:
+                    self.assertEqual(OrderSegmentAddonSettlement.objects.get(payment_id=payment_id).amount, 200)
+                self.assertEqual(Transaction.objects.filter(pk=first_income.pk).count(), 1)
+                from orders.models import OrderSegmentAddonSettlementRevision
+                self.assertEqual(OrderSegmentAddonSettlementRevision.objects.filter(manifest__order=order).count(), 1)
+                order.refresh_from_db()
+                self.assertEqual((order.provider_income, order.settlement_store_funding,
+                                  order.settlement_addon_contribution),
+                                 (4140, 140, 0) if full_refund else (4440, 140, 300))
+                details = admin.get(f'/api/admin/orders/{order.pk}/').data['data']
+                self.assertEqual((details['settlement_store_funding'], details['settlement_addon_contribution']),
+                                 (140, 0) if full_refund else (140, 300))
+                self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 4000)
+                consumption = OrderAddonConsumption.objects.get(payment_id=payment_id)
+                self.assertEqual((consumption.paid_units, consumption.refunded_units),
+                                 (1000, 1000) if full_refund else (1000, 500))
+            with store_context(self.first):
+                self.assertFalse(OrderSegmentAddonSettlement.objects.exists())

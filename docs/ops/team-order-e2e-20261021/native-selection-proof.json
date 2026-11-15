@@ -1,0 +1,35 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "real_ui": true,
+  "mocked_requests": false,
+  "initial": {
+    "provider_ids": [
+      2,
+      3
+    ],
+    "names": [
+      "隔离联调 p1",
+      "隔离联调 p2"
+    ],
+    "amount_raw": 10002,
+    "names_visible": true
+  },
+  "replaced": {
+    "provider_ids": [
+      3,
+      4
+    ],
+    "names": [
+      "隔离联调 p2",
+      "隔离联调 p3"
+    ],
+    "amount_raw": 10002,
+    "names_visible": true
+  },
+  "reentry_preserved": true,
+  "cancel_preserved": true,
+  "third_selection_blocked": true,
+  "partial_cannot_confirm": true,
+  "order_submitted": false
+}

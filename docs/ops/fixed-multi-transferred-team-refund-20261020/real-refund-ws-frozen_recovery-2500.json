@@ -1,0 +1,119 @@
+{
+  "result": "PASS",
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "order_id": 127,
+  "expected_cumulative_raw": 2500,
+  "transport": "Actual refund commit -> Redis channel layer -> localhost gateway WebSocket",
+  "manual_notification_calls": 0,
+  "business_writes_by_observer": 0,
+  "roles": {
+    "boss": {
+      "matching_events": 1,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_raw": 2500,
+      "remaining_raw": 7500,
+      "whole_order_fixed_raw": 1001,
+      "internal_recovery_hidden": true,
+      "wallet_after_raw": {
+        "balance": 2500,
+        "frozen": 0
+      }
+    },
+    "p1": {
+      "matching_events": 1,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_raw": 2500,
+      "remaining_raw": 7500,
+      "whole_order_fixed_raw": 1001,
+      "recovered_amount": 197,
+      "net_income": 590,
+      "remaining_frozen_amount": 590,
+      "original_income_raw": 787,
+      "private_personal_payload": true,
+      "wallet_after_raw": {
+        "balance": 787,
+        "frozen": 939
+      }
+    },
+    "p2": {
+      "matching_events": 1,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_raw": 2500,
+      "remaining_raw": 7500,
+      "whole_order_fixed_raw": 1001,
+      "recovered_amount": 675,
+      "net_income": 2025,
+      "remaining_frozen_amount": 2025,
+      "original_income_raw": 2700,
+      "private_personal_payload": true,
+      "wallet_after_raw": {
+        "balance": 2700,
+        "frozen": 3225
+      }
+    },
+    "p3": {
+      "matching_events": 1,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_raw": 2500,
+      "remaining_raw": 7500,
+      "whole_order_fixed_raw": 1001,
+      "recovered_amount": 338,
+      "net_income": 1012,
+      "remaining_frozen_amount": 1012,
+      "original_income_raw": 1350,
+      "private_personal_payload": true,
+      "wallet_after_raw": {
+        "balance": 1350,
+        "frozen": 1612
+      }
+    },
+    "p4": {
+      "matching_events": 1,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_raw": 2500,
+      "remaining_raw": 7500,
+      "whole_order_fixed_raw": 1001,
+      "recovered_amount": 590,
+      "net_income": 1772,
+      "remaining_frozen_amount": 1772,
+      "original_income_raw": 2362,
+      "private_personal_payload": true,
+      "wallet_after_raw": {
+        "balance": 2362,
+        "frozen": 2822
+      }
+    },
+    "p5": {
+      "matching_events": 1,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_raw": 2500,
+      "remaining_raw": 7500,
+      "whole_order_fixed_raw": 1001,
+      "recovered_amount": 450,
+      "net_income": 1350,
+      "remaining_frozen_amount": 1350,
+      "original_income_raw": 1800,
+      "private_personal_payload": true,
+      "wallet_after_raw": {
+        "balance": 1800,
+        "frozen": 2150
+      }
+    },
+    "admin": {
+      "matching_events": 1,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_raw": 2500,
+      "remaining_raw": 7500,
+      "whole_order_fixed_raw": 1001
+    }
+  },
+  "checked_at": "2026-10-20T07:55:04.751Z",
+  "finished_at": "2026-10-20T07:55:24.364Z"
+}

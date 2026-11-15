@@ -6,6 +6,8 @@ x-backend: &backend
   init: true
   restart: unless-stopped
   environment:
+    XA_STORE_DATABASES: ${XA_STORE_DATABASES:-}
+    XA_STORE_INTEGRATIONS: ${XA_STORE_INTEGRATIONS:-}
     XA_DATABASE_MODE: managed
     DJANGO_DEBUG: "false"
     DJANGO_TRUST_PROXY: "true"
@@ -27,6 +29,13 @@ x-backend: &backend
     REDIS_PORT: 6379
     WECHAT_APPID: ${WECHAT_APPID:?miniapp AppID required}
     WECHAT_SECRET: ${WECHAT_SECRET:?miniapp secret required}
+    WECHAT_WEB_LOGIN_ENV: ${WECHAT_WEB_LOGIN_ENV:-release}
+    SMS_SECRET_ID: ${SMS_SECRET_ID:-}
+    SMS_SECRET_KEY: ${SMS_SECRET_KEY:-}
+    SMS_APP_ID: ${SMS_APP_ID:-}
+    SMS_TEMPLATE_ID: ${SMS_TEMPLATE_ID:-}
+    SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
+    SMS_REGION: ${SMS_REGION:-ap-guangzhou}
     WECHAT_MOCK_LOGIN: "false"
     REQUIRE_ORDER_EVIDENCE_IMAGES: "true"
     REQUIRE_RECHARGE_PROOF: "true"
@@ -70,7 +79,7 @@ services:
     # Validate the real connection before applying any schema changes.
     command: >-
       sh -c "python manage.py check_mysql_readiness &&
-      python manage.py migrate --noinput &&
+      python manage.py migrate_stores &&
       python manage.py check_mysql_readiness &&
       python manage.py collectstatic --noinput"
     depends_on:
@@ -101,9 +110,7 @@ services:
   provider-h5:
     build:
       context: .
-      dockerfile: apps/provider-miniapp/Dockerfile
-      args:
-        TARO_APP_API: /api
+      dockerfile: apps/provider-vue/Dockerfile
     image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-provider-h5:${XA_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:

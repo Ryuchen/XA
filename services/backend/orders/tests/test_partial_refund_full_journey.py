@@ -114,8 +114,8 @@ class PartialRefundFullJourneyTest(APITestCase):
                 repo = Path(settings.BASE_DIR).parent.parent
                 result = subprocess.run([
                     node, '--test', '--test-name-pattern=real provider refund response',
-                    str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs'),
-                    str(repo / 'apps/provider-miniapp/tests/report-flow.cjs'),
+                    str(repo / 'scripts/fronted-order-contracts.test.mjs'),
+                    str(repo / 'scripts/fronted-report-contracts.test.mjs'),
                 ], env={**os.environ, 'XA_REAL_PROVIDER_REFUND': json.dumps(
                     {'order': detail, 'report': row}, cls=DjangoJSONEncoder)},
                     text=True, encoding='utf-8', capture_output=True, timeout=20, cwd=repo)
@@ -295,7 +295,7 @@ class PartialRefundFullJourneyTest(APITestCase):
         self.assertEqual(Message.objects.filter(recipient=self.provider, related_order_id=order.pk,
                                                 title='订单部分退款').count(), 1)
         notice = Message.objects.get(recipient=self.boss, related_order_id=order.pk, title='订单部分退款')
-        self.assertIn('250.6 兴安币至余额', notice.preview)
+        self.assertIn('250.6 浪花至余额', notice.preview)
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 6745)
         self.login(self.provider)
         detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
@@ -308,7 +308,7 @@ class PartialRefundFullJourneyTest(APITestCase):
         if not node:
             self.fail('Node runtime required to check the provider wallet presentation')
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/wallet-realtime.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-wallet-contracts.test.mjs')],
             env={**os.environ, 'XA_REAL_WALLET_JSON': json.dumps(refunded_wallet, cls=DjangoJSONEncoder)},
             text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)

@@ -52,6 +52,20 @@ class WithdrawalFeedbackRealTest(APITestCase):
         return {'amount': 20000, 'withdrawal_account_id': row['id'],
                 'expected_payee_version': row['version'], 'client_request_id': request_id}
 
+    def test_pending_queue_prioritizes_oldest_request_across_pages(self):
+        payee = self.bind('queue-account-1234')
+        ids = [self.ok(self.provider_client.post('/api/wallet/withdraw/',
+            self.payload(payee, f'oldest-queue-{n}'), format='json'))['data']['request']['id'] for n in range(3)]
+        # Same-time requests still have a stable order across pagination.
+        first_time = WithdrawRequest.objects.get(pk=ids[0]).created_at
+        WithdrawRequest.objects.filter(pk=ids[1]).update(created_at=first_time)
+        page1 = self.ok(self.staff_client.get('/api/admin/withdrawals/', {'status':'PENDING', 'page_size':2}))['data']
+        page2 = self.ok(self.staff_client.get('/api/admin/withdrawals/', {'status':'PENDING', 'page_size':2, 'page':2}))['data']
+        self.assertEqual(page1['pending_order'], 'oldest_first')
+        self.assertEqual([row['id'] for row in page1['list'] + page2['list']], ids)
+        all_rows = self.ok(self.staff_client.get('/api/admin/withdrawals/'))['data']['list']
+        self.assertEqual(all_rows[0]['id'], ids[2])
+
     def test_provider_sees_claim_release_and_recorded_payout(self):
         payee = self.bind('status-account-1234')
         created = self.ok(self.provider_client.post('/api/wallet/withdraw/',
@@ -104,7 +118,7 @@ class WithdrawalFeedbackRealTest(APITestCase):
         self.assertIn('人民币 ¥196.00', paid['preview'])
         message = self.ok(self.provider_client.get(f"/api/messages/{paid['id']}/"))['data']
         self.assertIn('已登记打款人民币 ¥196.00', message['detail'])
-        self.assertIn('折合 1960 兴安币', message['detail'])
+        self.assertIn('折合 1960 浪花', message['detail'])
         self.assertIn('代扣税', message['detail'])
         self.assertNotIn('将结算', message['detail'])
         rows = self.ok(self.provider_client.get('/api/wallet/withdraw/'))['data']['requests']

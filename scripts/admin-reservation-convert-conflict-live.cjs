@@ -42,7 +42,7 @@ async function main() {
       page.on('websocket', ws => ws.on('framereceived', frame => { if (String(frame.payload).includes('pong')) { clearTimeout(timer); resolve(); } }));
     });
     await page.goto(`${base}/reservations?find_reservation=${input.reservationId}`);
-    const drawer = page.locator('.el-drawer');
+    const drawer = page.getByRole('dialog', { name: '预约详情' });
     const actionName = input.reject ? '拒绝预约' : '报价并转单';
     try { await drawer.getByRole('button', { name: actionName }).waitFor({ timeout: 30000 }); }
     catch (error) { throw new Error(`${error.message}\n${await page.locator('body').innerText()}\n${page.url()}`); }
@@ -50,7 +50,7 @@ async function main() {
     await drawer.getByRole('button', { name: actionName }).click();
     const dialog = page.getByRole('dialog', { name: input.reject ? '拒绝预约' : '确认预约转单' });
     await dialog.waitFor({ timeout: 10000 });
-    if (input.reject) await dialog.getByPlaceholder('原因（选填）').fill('填写中的原因');
+    if (input.reject) await dialog.getByPlaceholder('填写原因').fill('填写中的原因');
     if (input.normalReject) {
       await dialog.getByRole('button', { name: '确认', exact: true }).click();
       await dialog.waitFor({ state: 'hidden', timeout: 10000 });

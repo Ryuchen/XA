@@ -1,0 +1,82 @@
+{
+  "run": "XA-PARTIAL-REFUND-20261020-68af85",
+  "archived_on": "2026-10-20",
+  "credential_scan": "PASS",
+  "private_accounts_sql_tokens_otp_included": false,
+  "images_unchanged": true,
+  "maximum_image_bytes": 200000,
+  "files": [
+    {
+      "name": "final-database.json",
+      "bytes": 6296,
+      "sha256": "e49b1ed85f9425d020fae161b99caca4f603c44d8d8660493925d4cc5eff0ae2",
+      "kind": "audit-json"
+    },
+    {
+      "name": "backend-isolated-tests.json",
+      "bytes": 7314,
+      "sha256": "cd051c5dc488dee5b0d8137d419fedcb6119e9eb27f2e7f02769cfd05ffde22a",
+      "kind": "audit-json"
+    },
+    {
+      "name": "action-verification.json",
+      "bytes": 4582,
+      "sha256": "7293e35c62dde02328fcec2a1d457b8538ef42a684ba82b0bdb64ad18787adaf",
+      "kind": "audit-json"
+    },
+    {
+      "name": "verification-stages.json",
+      "bytes": 108982,
+      "sha256": "aa1448334e452b66a19130841ce1dc5b9a0d7b31ab990431893431cb669a1395",
+      "kind": "audit-json"
+    },
+    {
+      "name": "native-verification.json",
+      "bytes": 6980,
+      "sha256": "213b61e1730c8e331f1a1eb7a231eb8567fb803a075f2b356c3f239558b23859",
+      "kind": "audit-json"
+    },
+    {
+      "name": "ui-verification.json",
+      "bytes": 908,
+      "sha256": "99de7de03e8f6fb615a99903c86d6051a38c094c11c38debbbbaed6ec54b915d",
+      "kind": "audit-json"
+    },
+    {
+      "name": "native-partial-refund-summary.png",
+      "bytes": 160777,
+      "sha256": "8688e477ca2fe814d3a680a5e28154321798d2738cf5e1c4473d370ab6a25d1c",
+      "kind": "image"
+    },
+    {
+      "name": "native-wallet-final-proof.png",
+      "bytes": 177941,
+      "sha256": "4a8fc566ae0dd1fb4fbdaef3bce87f7ec5581492a68c0126f929ec35d3200696",
+      "kind": "image"
+    },
+    {
+      "name": "admin-partial-insufficient.png",
+      "bytes": 97734,
+      "sha256": "93f40fc149aa9d9ec63262ab4f2b098d6e82c9c85aca6f145c253020ead37244",
+      "kind": "image"
+    },
+    {
+      "name": "admin-final-partial-detail.png",
+      "bytes": 90187,
+      "sha256": "a5d659298ead84f76972dcc4f4d959cfc913218ff7b68b8570fda97bb03cf04f",
+      "kind": "image"
+    },
+    {
+      "name": "provider-final-wallet.png",
+      "bytes": 64107,
+      "sha256": "2866315711c14cf9dd707a6fcad9ff4a00c6fc800d248a08f9c28cabbbc50f0c",
+      "kind": "image"
+    },
+    {
+      "name": "admin-reversal-ledger.png",
+      "bytes": 104793,
+      "sha256": "bdafc330a1599a181f3b9997a5b2eb4a27ede111e780792ed8fb2f161defaf1a",
+      "kind": "image"
+    }
+  ]
+}

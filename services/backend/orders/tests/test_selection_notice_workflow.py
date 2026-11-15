@@ -1,5 +1,6 @@
 """A selected team can discover and start an order after returning online."""
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.test import override_settings
 from django.utils import timezone
@@ -22,7 +23,38 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
     ok = release_flow.ReleaseFlowTest.ok
     recharge = release_flow.ReleaseFlowTest.recharge
 
+    def test_quick_double_notice_prefixes_each_name_without_changing_profiles(self):
+        from stores.models import Store
+        self.assertEqual(Store.objects.filter(slug='shenglang').update(provider_name_prefix='SL'), 1)
+        second = make_provider(display_name='第二位', deposit_paid=40000, wechat_avatar_legacy_exempt=True)
+        account = get_or_create_account_for_legacy_user(second)
+        account.openid = f'quick-double-prefix-{account.pk}'
+        account.is_openid_bound = True
+        account.save(update_fields=['openid', 'is_openid_bound'])
+        second.escort_profile.account = account
+        second.escort_profile.save(update_fields=['account'])
+        self.service.price = 5000
+        self.service.billing_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count'])
+        names = [self.provider.escort_profile.display_name, second.escort_profile.display_name]
+        self.ok(self.recharge())
+        data = self.ok(self.client.post('/api/admin/orders/dispatch/', {
+            'customer_id': self.accounts[self.boss.pk].pk, 'service_id': self.service.pk,
+            'client_request_id': 'quick-double-prefix', 'escort_mode': 'DOUBLE',
+            'providers': [{'provider_id': self.accounts[self.provider.pk].pk}, {'provider_id': account.pk}],
+        }, format='json'))
+        self.login(self.boss)
+        messages = self.ok(self.client.get('/api/messages/'))['messages']
+        notice = next(item for item in messages if item['related_order_id'] == data['id'] and item['title'] == '已为你指派双陪')
+        self.assertTrue(notice['preview'].startswith(f'SL-{names[0]}、SL-{names[1]}'), notice)
+        self.provider.escort_profile.refresh_from_db()
+        second.escort_profile.refresh_from_db()
+        self.assertEqual([self.provider.escort_profile.display_name, second.escort_profile.display_name], names)
+
     def test_staff_assignment_notice_reaches_boss_account_when_legacy_id_is_stale(self):
+        from stores.models import Store
+        self.assertEqual(Store.objects.filter(slug='shenglang').update(provider_name_prefix='SL'), 1)
+        original_name = self.provider.escort_profile.display_name
         self.ok(self.recharge())
         self.login(self.boss)
         data = self.ok(self.client.post('/api/orders/create/', {
@@ -34,12 +66,24 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         self.accounts[old_boss.pk] = get_or_create_account_for_legacy_user(old_boss)
         Order.objects.filter(pk=order.pk).update(customer=old_boss)
         self.login(self.admin)
-        self.ok(self.client.post(f'/api/admin/orders/{order.pk}/assign/',
-                                 {'provider_id': self.accounts[self.provider.pk].pk}, format='json'))
+        from stores.context import current_store
+        from stores.display import provider_display_name
+        contexts = []
+        def inspect_name(name):
+            store = current_store()
+            contexts.append((getattr(store, 'slug', None), getattr(store, 'provider_name_prefix', None)))
+            return provider_display_name(name)
+        with patch('stores.display.provider_display_name', side_effect=inspect_name):
+            self.ok(self.client.post(f'/api/admin/orders/{order.pk}/assign/',
+                                     {'provider_id': self.accounts[self.provider.pk].pk}, format='json'))
+        self.assertEqual(contexts, [('shenglang', 'SL')])
         self.login(self.boss)
         rows = self.ok(self.client.get('/api/messages/'))['messages']
         notice = next(item for item in rows if item['title'] == '已为你指派大神')
         self.assertEqual(notice['related_order_id'], order.pk)
+        self.assertTrue(notice['preview'].startswith('SL-' + original_name), notice)
+        self.provider.escort_profile.refresh_from_db()
+        self.assertEqual(self.provider.escort_profile.display_name, original_name)
         self.assertEqual(self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))['status'], 'GRABBED')
         self.login(old_boss)
         rows = self.ok(self.client.get('/api/messages/'))['messages']
@@ -73,10 +117,13 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         self.assertTrue(self.ok(self.client.get('/api/messages/assignment-alerts/', {'after': 0}))['pending'])
         self.assertEqual(self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['status'], 'GRABBED')
 
-    def test_previous_selection_describes_rejection_and_new_selection(self):
-        replacement = make_provider(display_name='新陪玩')
+    def test_selected_provider_cannot_return_order_to_pool_by_rejecting(self):
+        replacement = make_provider(display_name='新陪玩', deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         for provider in (self.provider, replacement):
             account = get_or_create_account_for_legacy_user(provider)
+            account.openid = f'selection-notice-{account.pk}'
+            account.is_openid_bound = True
+            account.save(update_fields=['openid', 'is_openid_bound'])
             self.accounts[provider.pk] = account
             profile = provider.escort_profile
             profile.account = account
@@ -98,30 +145,27 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         self.ok(self.client.post(f'/api/orders/orders/{order_id}/applications/{first.pk}/select/', {}, format='json'))
         self.login(self.provider)
         self.assertEqual(self.ok(self.client.get(path))['closed_reason'], '本次报名已选中，请查看订单状态。')
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '时间冲突'}, format='json'))
+        rejected = self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '时间冲突'}, format='json')
+        self.assertEqual(rejected.data['errorCode'], 'ORDER_SELF_REJECTION_DISABLED')
         old = self.ok(self.client.get(path))
         self.assertEqual(old['application']['status'], 'SELECTED')
-        self.assertEqual(old['order']['status'], 'PENDING')
-        self.assertEqual(old['closed_reason'], '本次报名曾被选中，订单已回到待接单池。')
+        self.assertEqual(old['order']['status'], 'GRABBED')
+        self.assertEqual(old['closed_reason'], '本次报名已选中，请查看订单状态。')
         self.login(self.boss)
-        self.assertEqual(self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))['status'], 'PENDING')
+        self.assertEqual(self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))['status'], 'GRABBED')
         self.login(replacement)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/grab/', {}, format='json'))
-        second = OrderApplication.objects.get(order_id=order_id, applicant=self.accounts[replacement.pk])
-        self.login(self.boss)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/applications/{second.pk}/select/', {}, format='json'))
-        self.login(self.provider)
-        old = self.ok(self.client.get(path))
-        self.assertEqual(old['closed_reason'], '本次报名曾被选中，订单已有新的服务安排。')
-        self.login(replacement)
-        current = self.ok(self.client.get(f'/api/orders/orders/{order_id}/applications/{second.pk}/mine/'))
-        self.assertEqual(current['closed_reason'], '本次报名已选中，请查看订单状态。')
+        self.assertNotEqual(self.client.post(f'/api/orders/orders/{order_id}/grab/', {}, format='json').data['code'], 0)
+        self.assertFalse(OrderApplication.objects.filter(order_id=order_id, applicant=self.accounts[replacement.pk]).exists())
 
     @override_settings(REQUIRE_ORDER_EVIDENCE_IMAGES=True)
     def test_selected_team_detail_tracks_staff_transfer_and_return(self):
-        partner, incoming = make_provider(display_name='原队友'), make_provider(display_name='接手陪玩')
+        partner, incoming = (make_provider(display_name=name, deposit_paid=40000, wechat_avatar_legacy_exempt=True)
+                             for name in ('原队友', '接手陪玩'))
         for provider in (self.provider, partner, incoming):
             account = get_or_create_account_for_legacy_user(provider)
+            account.openid = f'selection-notice-{account.pk}'
+            account.is_openid_bound = True
+            account.save(update_fields=['openid', 'is_openid_bound'])
             self.accounts[provider.pk] = account
             profile = provider.escort_profile
             profile.account = account
@@ -146,11 +190,14 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         self.ok(self.client.post(f'/api/orders/orders/{order_id}/applications/{application.pk}/action/',
                                  {'action': 'CONFIRM_TEAM'}, format='json'))
         self.login(self.boss)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/applications/{application.pk}/select/', {}, format='json'))
+        select = f'/api/orders/orders/{order_id}/applications/{application.pk}/select/'
+        self.ok(self.client.post(select, {}, format='json'))
         for provider in (self.provider, partner):
             self.login(provider)
             self.ok(self.client.post(f'/api/orders/orders/{order_id}/start/',
                                      {'entry_image': release_flow.screenshot()}, format='multipart'))
+        self.login(self.boss)
+        self.ok(self.client.post(select, {}, format='json'))
         for old, new in ((self.provider, incoming), (incoming, self.provider)):
             self.login(self.admin)
             self.ok(self.client.post(f'/api/admin/orders/{order_id}/transfer/', {
@@ -159,6 +206,14 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
                                'split_type': 'PERCENT', 'split_value': 40, 'penalty_amount': 0}],
                 'reason': '隔离转单报名状态验证',
             }, format='json'))
+            current = Order.objects.get(pk=order_id)
+            before = (current.status, current.provider_account_id, current.status_logs.count(),
+                      current.transactions.count(), Message.objects.filter(related_order_id=order_id).count())
+            self.login(self.boss)
+            self.assertNotEqual(self.client.post(select, {}, format='json').data['code'], 0)
+            current.refresh_from_db()
+            self.assertEqual((current.status, current.provider_account_id, current.status_logs.count(),
+                              current.transactions.count(), Message.objects.filter(related_order_id=order_id).count()), before)
             for viewer in (self.provider, partner):
                 self.login(viewer)
                 detail = self.ok(self.client.get(path))
@@ -168,9 +223,13 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
                     else '本次报名已选中，请查看订单状态。')
 
     def test_double_team_invitation_confirmation_and_selection_reach_correct_accounts(self):
-        second, outsider = make_provider(), make_provider()
+        second, outsider = (make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True) for _ in range(2))
         for user in (self.provider, second, outsider):
             self.accounts[user.pk] = get_or_create_account_for_legacy_user(user)
+            account = self.accounts[user.pk]
+            account.openid = f'selection-notice-{account.pk}'
+            account.is_openid_bound = True
+            account.save(update_fields=['openid', 'is_openid_bound'])
             profile = user.escort_profile
             profile.account = self.accounts[user.pk]
             profile.pass_tier = 'BLACK'
@@ -200,7 +259,10 @@ class SelectionNoticeWorkflowTest(APITransactionTestCase):
         invited_order = next(item for item in pool if item['id'] == order.pk)
         self.assertTrue(any(item['id'] == application.pk and item['is_partner'] for item in invited_order['my_applications']))
         self.login(outsider)
-        self.assertEqual(self.client.get(f'/api/orders/orders/{order.pk}/').status_code, 404)
+        public = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertFalse(public['applications'])
+        self.assertFalse(public['my_applications'])
+        self.assertFalse(public['customer']['phone'])
         self.login(second)
         action = f'/api/orders/orders/{order.pk}/applications/{application.pk}/action/'
         self.ok(self.client.post(action, {'action': 'CONFIRM_TEAM'}, format='json'))

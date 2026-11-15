@@ -26,7 +26,7 @@ async function main() {
       if (i === 119) throw new Error('Vite did not start');
     }
     browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-    const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const context = await browser.newContext({ viewport: { width: 1366, height: 1024 }, hasTouch: true });
     await context.addInitScript(token => localStorage.setItem('xa_admin_token', token), input.token);
     const page = await context.newPage();
     const errors = [];
@@ -51,26 +51,12 @@ async function main() {
     catch { await page.locator('[aria-label="待审核提现按领取状态"]').getByRole('button', { name: /其他客服已领取/ }).click(); }
     try { await page.waitForURL(/claim_scope=other/, { timeout: 10000 }); }
     catch (error) { throw new Error(`${error.message}\nURL ${page.url()}\nErrors ${JSON.stringify(errors)}\n${(await page.locator('body').innerText()).slice(0, 1800)}`); }
-    const cards = page.locator('.wd-mobile-card');
+    const cards = page.locator('.wd-desktop-table tbody tr');
     await cards.first().waitFor({ timeout: 30000 });
     assert.equal(await cards.count(), 1);
-    assert.match(await cards.first().innerText(), new RegExp(`申请 #${input.claimedId}\\b`));
-    assert.doesNotMatch(await cards.first().innerText(), new RegExp(`申请 #${input.unclaimedId}\\b`));
-    const status = cards.first().locator('.wd-mobile-head .el-tag');
-    assert.equal(await status.innerText(), '待审核');
-    await page.waitForFunction(() => {
-      const tag = document.querySelector('.wd-mobile-card .wd-mobile-head .el-tag');
-      return tag && tag.getBoundingClientRect().width >= tag.clientWidth * 0.98;
-    });
-    const statusBox = await status.evaluate(el => ({ width: el.getBoundingClientRect().width, height: el.getBoundingClientRect().height, clientWidth: el.clientWidth, scrollWidth: el.scrollWidth, color: getComputedStyle(el).color, background: getComputedStyle(el).backgroundColor, transform: getComputedStyle(el).transform }));
-    assert.ok(statusBox.width >= 35 && statusBox.height >= 18 && statusBox.clientWidth >= statusBox.scrollWidth, JSON.stringify(statusBox));
-    const bounds = await cards.first().locator('.wd-mobile-head').evaluate(head => {
-      const name = head.querySelector('strong').getBoundingClientRect();
-      const badge = head.querySelector('.el-tag').getBoundingClientRect();
-      const container = head.getBoundingClientRect();
-      return { nameRight: name.right, badgeLeft: badge.left, badgeRight: badge.right, containerRight: container.right };
-    });
-    assert.ok(bounds.nameRight <= bounds.badgeLeft && bounds.badgeRight <= bounds.containerRight + 1, JSON.stringify(bounds));
+    assert.equal(await cards.first().getByRole('cell', { name: String(input.claimedId), exact: true }).count(), 1);
+    assert.equal(await cards.first().getByRole('cell', { name: String(input.unclaimedId), exact: true }).count(), 0);
+    await cards.first().getByText('待审核', { exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     const screenshotDir = path.resolve('.tools/admin-withdraw-mobile-20261101');
     fs.mkdirSync(screenshotDir, { recursive: true });
@@ -83,18 +69,18 @@ async function main() {
     await dialog.getByRole('button', { name: '确认释放' }).click();
     await dialog.waitFor({ state: 'hidden' });
     await cards.first().waitFor({ state: 'hidden' });
-    const nextContext = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const nextContext = await browser.newContext({ viewport: { width: 1366, height: 1024 }, hasTouch: true });
     await nextContext.addInitScript(token => localStorage.setItem('xa_admin_token', token), input.reclaimerToken);
     const nextPage = await nextContext.newPage();
     nextPage.on('pageerror', error => errors.push(error.message));
     await nextPage.route('**/*', route => origins.has(new URL(route.request().url()).origin) ? route.continue() : route.abort());
     await nextPage.goto(`${base}/withdrawals?status=PENDING&claim_scope=unclaimed`, { waitUntil: 'domcontentloaded' });
-    const nextCard = nextPage.locator('.wd-mobile-card').filter({ hasText: `申请 #${input.claimedId} ` });
+    const nextCard = nextPage.locator('.wd-desktop-table tbody tr').filter({ has: nextPage.getByRole('cell', { name: String(input.claimedId), exact: true }) });
     await nextCard.waitFor({ timeout: 30000 });
     await nextCard.getByRole('button', { name: '领取', exact: true }).click();
     await nextCard.waitFor({ state: 'hidden' });
     await nextPage.goto(`${base}/withdrawals?status=PENDING&claim_scope=mine`, { waitUntil: 'domcontentloaded' });
-    const myCard = nextPage.locator('.wd-mobile-card').filter({ hasText: `申请 #${input.claimedId} ` });
+    const myCard = nextPage.locator('.wd-desktop-table tbody tr').filter({ has: nextPage.getByRole('cell', { name: String(input.claimedId), exact: true }) });
     await myCard.waitFor({ timeout: 30000 });
     await myCard.getByRole('button', { name: '通过', exact: true }).click();
     const payout = nextPage.getByRole('dialog', { name: '提现审核' });
@@ -103,7 +89,7 @@ async function main() {
     await payout.waitFor({ state: 'hidden' });
     await myCard.waitFor({ state: 'hidden' });
     assert.deepEqual(errors, []);
-    console.log('Real withdrawal dashboard drilldown verified at 375px.');
+    console.log('Real withdrawal dashboard drilldown verified at iPad landscape.');
   } finally {
     if (browser) await browser.close();
     vite.kill();

@@ -1,0 +1,19 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "removed": [
+    {
+      "container_id": "3ddadb9155d545dbb0e8d3fd25231f663e7865e5d673f9d55c325985d2ef7113",
+      "name": "xa-lottery-full-http-20261020",
+      "anonymous_volumes": []
+    },
+    {
+      "container_id": "417066bbf09c5929c4e1ec76a376e650e64892142d8c2c194d192409b40f32c6",
+      "name": "xa-lottery-full-mysql-20261020",
+      "anonymous_volumes": [
+        "40563512006e6d00a87e254ad27816a3302d84bb6110da4eb13bdc8724c7cdf1"
+      ]
+    }
+  ],
+  "network_removed": true,
+  "cleaned_at": "2026-10-20T15:23:14.149312+00:00"
+}

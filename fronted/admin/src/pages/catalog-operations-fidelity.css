@@ -1,0 +1,111 @@
+/* Page canvas and component geometry from the admin prototype. */
+.admin-source-page,
+.admin-operations-page {
+  width: 100%;
+  max-width: 1500px;
+  margin-inline: auto;
+  min-width: 0;
+}
+.admin-source-header h1 {
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 600;
+}
+.admin-source-directory {
+  font-size: 14px;
+  line-height: 20px;
+}
+.admin-source-directory [data-slot="card-title"] {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+.admin-source-directory
+  :is([data-slot="table-head"], [data-slot="table-cell"]) {
+  font-size: 14px;
+  line-height: 20px;
+}
+.admin-source-directory [data-slot="table-head"] {
+  color: var(--muted-foreground);
+}
+.admin-source-directory
+  :is(
+    [data-slot="table-head"],
+    [data-slot="table-cell"]
+  )[style*="text-align: right"] {
+  font-variant-numeric: tabular-nums;
+}
+.admin-source-directory-footer .admin-pagination {
+  padding: 0;
+  min-height: 36px;
+}
+.admin-source-editor {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+.admin-source-editor :is(input[type="number"], input[inputmode="decimal"]) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.admin-source-editor :is(summary, button, [role="tab"]) {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+.admin-source-editor summary {
+  border-radius: 6px;
+  outline-offset: 4px;
+}
+.admin-source-editor summary:hover {
+  color: var(--primary);
+}
+.admin-source-editor summary:focus-visible {
+  outline: 2px solid var(--ring);
+}
+.admin-source-gameplay-cover {
+  background: linear-gradient(135deg, #64748b, #334155, #1e3a8a);
+}
+.admin-source-gameplay-cover[data-theme="roulette"] {
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6, #38bdf8);
+}
+.admin-source-gameplay-cover[data-theme="experience"] {
+  background: linear-gradient(135deg, #38bdf8, #3b82f6, #4f46e5);
+}
+.admin-source-gameplay-cover[data-theme="companion"] {
+  background: linear-gradient(135deg, #3b82f6, #6366f1, #334155);
+}
+.admin-source-gameplay-cover[data-theme="fun"] {
+  background: linear-gradient(135deg, #22d3ee, #0ea5e9, #2563eb);
+}
+.admin-source-gameplay-cover[data-theme="mission"] {
+  background: linear-gradient(135deg, #334155, #1e40af, #0ea5e9);
+}
+.admin-source-gameplay-cover[data-theme="extraction"] {
+  background: linear-gradient(135deg, #1e3a8a, #4338ca, #22d3ee);
+}
+.admin-source-gameplay-cover[data-theme="prison"] {
+  background: linear-gradient(135deg, #1e293b, #475569, #3b82f6);
+}
+.admin-source-claim-filters :is(input[type="checkbox"], [data-slot="checkbox"]) {
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+.admin-source-config-card > div > h2 {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-source-editor :is(summary, button, [role="tab"]) {
+    transition: none;
+  }
+}
+.admin-source-editor[data-resource="escort-levels"] [data-slot="input"] {
+  height: var(--control-size-medium);
+}
+.admin-source-editor[data-resource="escort-levels"]
+  label:has([data-slot="switch"]) {
+  min-height: var(--control-size-medium);
+}

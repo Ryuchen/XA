@@ -24,8 +24,7 @@ async function main() {
     page.on('pageerror', error => errors.push(error.message));
     await page.route('**/*', route => [base, input.api].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort());
     await page.goto(`${base}/wallets`, { waitUntil: 'domcontentloaded' });
-    await page.locator('.wl-filter-type').click({ timeout: 30000 });
-    await page.getByRole('option', { name: '打手钱包', exact: true }).click();
+    await page.locator('.wl-filter-type').selectOption('PROVIDER', { timeout: 30000 });
     const search = page.getByPlaceholder('编号、账号、昵称或手机');
     await search.fill(input.username);
     const filtered = page.waitForResponse(response => { const url = new URL(response.url()); return url.pathname === '/api/admin/wallets/' && url.searchParams.get('keyword') === input.username; }, { timeout: 15000 });

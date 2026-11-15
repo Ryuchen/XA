@@ -1,0 +1,56 @@
+{
+  "passed": true,
+  "checked_at": "2026-10-20T15:59:44.879Z",
+  "real_native_sdk_http": true,
+  "order_submitted": false,
+  "real_ui_cases": [
+    {
+      "case": "picker-detail-selection-return",
+      "provider_id": 10,
+      "nickname": "本地体验陪玩",
+      "payload_provider_id": 10,
+      "selected_name_visible": true
+    },
+    {
+      "case": "cancel-preserves-selected-name",
+      "passed": true,
+      "provider_id": 10
+    },
+    {
+      "case": "platform-clears-name-and-payload",
+      "passed": true
+    }
+  ],
+  "native_core_tests": {
+    "passed": 66,
+    "failed": 0
+  },
+  "official_compilers": {
+    "wxml_templates": 49,
+    "wxss_stylesheets": 52,
+    "passed": true
+  },
+  "original_provider_selected_again": true,
+  "original_form_fields_preserved": true,
+  "bottom_navigation_retained": true,
+  "all_images_under_200000_bytes": true,
+  "scope": "Selection UI and callbacks only; actual local service had one eligible companion. Replacement by another ID and stale-session rejection are also covered by the native regression tests.",
+  "source_sha256": [
+    {
+      "path": "apps/boss-miniapp/native/pages/checkout/index.js",
+      "sha256": "e866fa68dcdeaa9b28e6ab48ede5fb96d4d7821c016d477a7fe3b791c80019d8"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/checkout/index.wxml",
+      "sha256": "364d6b66d6804c72e48fdcd82e5a6005cb43e2b2d3bcf6d508ccfb4514252364"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/checkout/index.wxss",
+      "sha256": "b3bdf171a52bab999f74f4dc5fcf81a39b7279609d167f60199830d4bece9197"
+    },
+    {
+      "path": "scripts/test-native-core.cjs",
+      "sha256": "3604272f66501a1cee5d3d1efd711df2c9309184a72fc3ed645ccbbad236dff5"
+    }
+  ]
+}

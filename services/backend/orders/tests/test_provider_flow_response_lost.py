@@ -65,7 +65,7 @@ class ProviderFlowResponseLostTest(LiveServerTestCase):
             'base': self.live_server_url, 'partnerToken': issue_account_tokens(accounts[1])[0],
             'orderId': order.pk, 'applicationId': invitation.pk,
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/application-detail.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-application-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         invitation.refresh_from_db()
@@ -124,7 +124,7 @@ class ProviderFlowResponseLostTest(LiveServerTestCase):
             'partnerToken': issue_account_tokens(accounts[1])[0], 'bossToken': issue_account_tokens(boss_account)[0],
             'partnerName': '隔离队友', 'orderId': order.pk,
         }, ensure_ascii=False)}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         order.refresh_from_db()
@@ -149,7 +149,7 @@ class ProviderFlowResponseLostTest(LiveServerTestCase):
             'base': self.live_server_url, 'partnerToken': issue_account_tokens(accounts[1])[0],
             'orderId': other.pk, 'applicationId': invitation.pk,
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/application-detail.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-application-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         invitation.refresh_from_db()
@@ -201,7 +201,7 @@ class ProviderFlowResponseLostTest(LiveServerTestCase):
             'teammateToken': issue_account_tokens(accounts[1])[0], 'orderId': order.pk,
             'orderNo': order.order_no, 'image': base64.b64encode(image.getvalue()).decode(),
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         order.refresh_from_db()
@@ -256,7 +256,7 @@ class ProviderFlowResponseLostTest(LiveServerTestCase):
             'base': self.live_server_url, 'providerToken': issue_account_tokens(provider_account)[0],
             'serviceNo': service_order.order_no, 'image': base64.b64encode(image.getvalue()).decode(),
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         service_order.refresh_from_db()

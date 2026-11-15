@@ -15,6 +15,20 @@ from club_accounts.services import (
 
 # 权限点分组定义：用于前端权限分配树展示与后端校验。
 PERMISSION_GROUPS = [
+    {'group': 'salary', 'label': '岗位薪资与业绩', 'permissions': [
+        ('salary:view', '查看薪资方案、安排与核算'),
+        ('salary:edit', '配置薪资及核实业绩归属'),
+        ('salary:confirm', '确认月度薪资核算'),
+    ]},
+    {'group': 'operating_cost', 'label': '投流与经营成本', 'permissions': [
+        ('cost:view', '查看每日投流与其他成本'),
+        ('cost:edit', '录入和修改经营成本'),
+        ('roi:view', '查看经营 ROI'),
+    ]},
+    {'group': 'dictionary', 'label': '统一字典配置', 'permissions': [
+        ('dictionary:view', '查看运营字典'),
+        ('dictionary:edit', '维护运营字典'),
+    ]},
     {'group': 'payment_fee', 'label': '微信支付费率', 'permissions': [
         ('payment_fee:view', '查看支付费率配置'), ('payment_fee:edit', '修改支付费率配置'),
     ]},
@@ -54,6 +68,7 @@ PERMISSION_GROUPS = [
         'permissions': [
             ('user:view', '查看用户'),
             ('user:edit', '编辑用户'),
+            ('user:retire', '老板退店清空权益'),
             ('user:ban', '封禁/解封'),
             ('user:ban_force', '强制封禁(跳过在途订单)'),
         ],
@@ -64,9 +79,11 @@ PERMISSION_GROUPS = [
         'permissions': [
             ('escort:view', '查看陪玩'),
             ('escort:edit', '编辑陪玩'),
+            ('escort:retire', '办理陪玩注销'),
             ('escort:verify', '认证审核'),
             ('escort:dispose', '奖励罚款'),
             ('escort:deposit_refund', '押金退还'),
+            ('escort:deposit_topup', '登记线下现金押金补差'),
             ('dispose:view', '查看奖罚记录'),
         ],
     },
@@ -96,7 +113,7 @@ PERMISSION_GROUPS = [
         'permissions': [
             ('evaluation:view', '查看评价'),
             ('evaluation:reply', '回复评价'),
-            ('evaluation:delete', '删除评价'),
+            ('evaluation:delete', '作废评价'),
         ],
     },
     {
@@ -112,7 +129,8 @@ PERMISSION_GROUPS = [
         'label': '提现管理',
         'permissions': [
             ('withdraw:view', '查看提现'),
-            ('withdraw:audit', '提现审核'),
+            ('withdraw:audit', '提现门店初审'),
+            ('withdraw:config', '修改提现规则'),
             ('withdraw:release', '释放提现领取'),
         ],
     },
@@ -124,6 +142,7 @@ PERMISSION_GROUPS = [
             ('wallet:adjust', '钱包调账'),
             ('wallet:recharge', '企微充值入账'),
             ('recharge:view', '查看充值记录'),
+            ('recharge:gift_approve', '审批充值赠送调整'),
             ('transaction:view', '查看流水'),
         ],
     },
@@ -226,6 +245,7 @@ PERMISSION_GROUPS = [
         'permissions': [
             ('chat:view', '查看会话'),
             ('chat:reply', '回复消息'),
+            ('chat:supervise', '查看及分配全部咨询'),
         ],
     },
     {
@@ -287,6 +307,10 @@ def get_account_permissions(account):
     用户可关联多个角色，权限取所有启用角色的并集。
     """
     if not account or not account.is_active or not account.can_login:
+        return set()
+    from stores.context import current_database
+    account_database = getattr(account._state, 'db', None)
+    if account_database and account_database != current_database():
         return set()
     if (
         getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False)

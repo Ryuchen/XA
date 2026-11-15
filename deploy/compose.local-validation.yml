@@ -4,6 +4,7 @@
 x-local-env: &local-env
   XA_LOCAL_VALIDATION: "true"
   DJANGO_DEBUG: "false"
+  XA_ISOLATED_CONTROL_PLANE: "false"
   DJANGO_TRUST_PROXY: "false"
   DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost,web
   DJANGO_MEDIA_BASE_URL: http://127.0.0.1:18080
@@ -25,9 +26,14 @@ x-local-env: &local-env
 
 services:
   db:
+    ports:
+      - "127.0.0.1:13306:3306"
     environment:
       MYSQL_USER: ${MYSQL_USER:?local application database user required}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?local application database password required}
+  redis:
+    ports:
+      - "127.0.0.1:16380:6379"
   migrate:
     environment: *local-env
     command: >-

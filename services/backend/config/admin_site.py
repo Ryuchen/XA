@@ -2,8 +2,8 @@ from django.contrib.admin import AdminSite
 
 
 class SuperuserOnlyAdminSite(AdminSite):
-    site_header = '兴安电竞系统管理'
-    site_title = '兴安电竞系统管理'
+    site_header = '声浪电竞系统管理'
+    site_title = '声浪电竞系统管理'
     index_title = '系统数据管理'
 
     def has_permission(self, request):

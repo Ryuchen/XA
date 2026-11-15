@@ -1,0 +1,44 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-20T10:13:30.746Z",
+  "implemented": {
+    "counts": [
+      1,
+      10
+    ],
+    "ten_cost_multiplier": 10,
+    "hard_pity": 240,
+    "target": "lottery-experience-68",
+    "early_target_resets": true,
+    "shared_single_and_ten_progress": true,
+    "extra_ten_rare_guarantee": false,
+    "soft_pity": false,
+    "existing_base_probabilities_unchanged": true
+  },
+  "test_results": {
+    "sqlite": 39,
+    "mysql": 47,
+    "native": 105,
+    "official_wxml": 49,
+    "official_wxss": 52,
+    "admin_typecheck": "PASS",
+    "admin_production_build": "PASS"
+  },
+  "live": {
+    "migration": "engagement.0016",
+    "backend_processes_restarted": 4,
+    "ordinary_containers_running": 9,
+    "real_api_read": "PASS",
+    "campaign_id": 1,
+    "enabled": false,
+    "probability_sum": 0,
+    "no_live_draws_or_point_deductions": true,
+    "protected_tables": 23,
+    "old_data_unchanged": true
+  },
+  "limits": [
+    "The current campaign remains disabled with its original zero probabilities. Set valid base probabilities in admin before enabling.",
+    "UI draw screenshots use intercepted test responses, not actual awarded prizes; real database behavior was tested in isolated SQLite/MySQL.",
+    "No extra ten-draw rare guarantee or soft pity was introduced without a selected rule."
+  ]
+}

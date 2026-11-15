@@ -8,7 +8,7 @@ import json
 import logging
 import re
 
-from django.db import transaction
+from stores.db import transaction
 
 from integrations.wechatpay_gateway import WeChatPayOutcomeUnknown
 from integrations.wechatpay_payment_evidence import parse_payment_notification

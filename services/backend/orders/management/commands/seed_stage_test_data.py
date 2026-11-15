@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 
 from coupons.models import Coupon, UserCoupon
@@ -49,6 +49,8 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        from users.pass_rules import lock_pass_config
+        lock_pass_config()
         customer_count = max(1, options['customers'])
         provider_count = max(1, options['providers'])
         password = options['password']
@@ -220,15 +222,23 @@ class Command(BaseCommand):
                 starts_at=now, expires_at=now + timedelta(days=30), transaction=tx,
             )
 
+        unused_name = '联调无门槛100浪花券'
+        if (not Coupon.objects.filter(name=unused_name).exists()
+                and Coupon.objects.filter(name='联调无门槛100兴安币券').exists()):
+            unused_name = '联调无门槛100兴安币券'
         coupon_unused, _ = Coupon.objects.get_or_create(
-            name='联调无门槛100兴安币券',
+            name=unused_name,
             defaults={
                 'discount_type': Coupon.DiscountType.DIRECT, 'threshold': 0,
                 'amount': 1000, 'valid_to': now + timedelta(days=90), 'is_active': True,
             },
         )
+        used_name = '联调满500减80浪花券'
+        if (not Coupon.objects.filter(name=used_name).exists()
+                and Coupon.objects.filter(name='联调满500减80兴安币券').exists()):
+            used_name = '联调满500减80兴安币券'
         coupon_used, _ = Coupon.objects.get_or_create(
-            name='联调满500减80兴安币券',
+            name=used_name,
             defaults={
                 'discount_type': Coupon.DiscountType.THRESHOLD, 'threshold': 5000,
                 'amount': 800, 'valid_to': now + timedelta(days=90), 'is_active': True,

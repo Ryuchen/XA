@@ -1,0 +1,15 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "real_h5_ui_uploads": 4,
+  "separate_origins": true,
+  "normal_password_otp_logins": true,
+  "order_no": "ORD44242192FAF44C4EA3B6",
+  "final_status": "COMPLETED",
+  "native_payment_confirmed_by_user": true,
+  "acknowledgement_copy_issue_found": true,
+  "synthetic_images_only": true,
+  "p2_final": "Browser tab: 17, Title: \"接单\", URL: \"http://127.0.0.1:3002/#/pages/orders/index\".\nThere has been no change in the accessibility tree.\nThe focused UI element is 48 checkbox 已完成, Value: 1",
+  "p3_final": "Browser tab: 18, Title: \"接单\", URL: \"http://127.0.0.1:3003/#/pages/orders/index\".\nThere has been no change in the accessibility tree.\nThe focused UI element is 48 checkbox 已完成, Value: 1",
+  "admin_final": "Browser tab: 19, Title: \"兴安电竞 · 后台管理\", URL: \"http://127.0.0.1:5182/orders\".\nThere has been no change in the accessibility tree.\nThe focused UI element is 125 container"
+}

@@ -48,6 +48,8 @@ class AdminChatOrderLookupHTTPTest(LiveServerTestCase):
         order_no = created['data']['order_no']
         session = client.get('/api/chat/session/').data
         self.assertEqual(session['code'], 0, session)
+        admin = APIClient(); admin.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
+        self.assertEqual(admin.post(f"/api/admin/chat-sessions/{session['data']['session']['id']}/claim/", {'expected_version': 0}, format='json').data['code'], 0)
         message = client.post('/api/chat/send/', {'content': f'我想咨询订单编号 {order_no} 的服务情况。'}, format='json').data
         self.assertEqual(message['code'], 0, message)
         image_data = io.BytesIO()

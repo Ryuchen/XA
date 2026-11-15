@@ -1,0 +1,182 @@
+{
+  "result": "PASS",
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "unit": "10 raw = 1 兴安币",
+  "orders": [
+    {
+      "id": 127,
+      "order_no": "ORD0B0E62D877D942FCB13E"
+    },
+    {
+      "id": 128,
+      "order_no": "ORD5BE02CF7377A429A8371"
+    },
+    {
+      "id": 129,
+      "order_no": "ORD9F8EEA6E9C0D4022BBFB"
+    }
+  ],
+  "whole_order_fixed_raw": 1001,
+  "transfers_per_order": 4,
+  "actual_income_recipients_per_order": 5,
+  "report_approvals": 15,
+  "refunds": {
+    "records": 5,
+    "amount_raw": 14000,
+    "source_reversal_lines": 45,
+    "original_income_rows": 15,
+    "originals_preserved": true,
+    "exact_fraction_targets_verified": true
+  },
+  "final_wallets": {
+    "boss": {
+      "balance_raw": 14000,
+      "frozen_raw": 0
+    },
+    "providers": [
+      {
+        "key": "p1",
+        "available_raw": 472,
+        "frozen_raw": 349,
+        "net_income_raw": 821
+      },
+      {
+        "key": "p2",
+        "available_raw": 1620,
+        "frozen_raw": 1200,
+        "net_income_raw": 2820
+      },
+      {
+        "key": "p3",
+        "available_raw": 810,
+        "frozen_raw": 600,
+        "net_income_raw": 1410
+      },
+      {
+        "key": "p4",
+        "available_raw": 1417,
+        "frozen_raw": 1050,
+        "net_income_raw": 2467
+      },
+      {
+        "key": "p5",
+        "available_raw": 1080,
+        "frozen_raw": 800,
+        "net_income_raw": 1880
+      }
+    ],
+    "platform": {
+      "baseline_raw": 77100,
+      "net_delta_raw": 1602,
+      "balance_raw": 78702
+    }
+  },
+  "guard_actions": [
+    {
+      "stage": "settle-samples",
+      "result": "PASS"
+    },
+    {
+      "stage": "preview-frozen_recovery",
+      "result": "PASS"
+    },
+    {
+      "stage": "deplete-p1",
+      "result": "PASS"
+    },
+    {
+      "stage": "insufficient-p1",
+      "result": "PASS"
+    },
+    {
+      "stage": "restore-p1",
+      "result": "PASS"
+    },
+    {
+      "stage": "stale-plan-p1",
+      "result": "PASS"
+    },
+    {
+      "stage": "deplete-p2",
+      "result": "PASS"
+    },
+    {
+      "stage": "insufficient-p2",
+      "result": "PASS"
+    },
+    {
+      "stage": "restore-p2",
+      "result": "PASS"
+    },
+    {
+      "stage": "stale-plan-p2",
+      "result": "PASS"
+    },
+    {
+      "stage": "deplete-p3",
+      "result": "PASS"
+    },
+    {
+      "stage": "insufficient-p3",
+      "result": "PASS"
+    },
+    {
+      "stage": "restore-p3",
+      "result": "PASS"
+    },
+    {
+      "stage": "stale-plan-p3",
+      "result": "PASS"
+    },
+    {
+      "stage": "deplete-p4",
+      "result": "PASS"
+    },
+    {
+      "stage": "insufficient-p4",
+      "result": "PASS"
+    },
+    {
+      "stage": "restore-p4",
+      "result": "PASS"
+    },
+    {
+      "stage": "stale-plan-p4",
+      "result": "PASS"
+    },
+    {
+      "stage": "deplete-p5",
+      "result": "PASS"
+    },
+    {
+      "stage": "insufficient-p5",
+      "result": "PASS"
+    },
+    {
+      "stage": "restore-p5",
+      "result": "PASS"
+    },
+    {
+      "stage": "stale-plan-p5",
+      "result": "PASS"
+    },
+    {
+      "stage": "replay-last-available_recovery",
+      "result": "PASS"
+    },
+    {
+      "stage": "exceed-remaining-available_recovery",
+      "result": "PASS"
+    }
+  ],
+  "websocket_observations": [
+    "frozen_recovery-2500",
+    "available_recovery-2500",
+    "available_recovery-4000"
+  ],
+  "limits": [
+    "Local synthetic funds and evidence only; no external payment or real fulfillment.",
+    "Only three specified refund commits were observed on seven real gateway WebSockets.",
+    "No new concurrency race suite; isolated SQLite and MySQL each ran the same three tests."
+  ]
+}

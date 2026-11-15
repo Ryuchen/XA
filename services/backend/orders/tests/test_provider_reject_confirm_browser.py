@@ -33,10 +33,15 @@ class ProviderRejectConfirmBrowserTest(LiveServerTestCase):
     def test_public_direct_grab_survives_rejection(self):
         self.run_rejection(True)
 
+    def test_public_direct_grab_realtime_across_open_roles(self):
+        if os.environ.get('XA_CURRENT_PROVIDER_REALTIME') != '1':
+            self.skipTest('Requires isolated Redis and ASGI')
+        self.run_rejection(True, realtime=True)
+
     def test_public_boss_selection_survives_rejection(self):
         self.run_rejection(True, selection_mode=True)
 
-    def run_rejection(self, public_route, selection_mode=False):
+    def run_rejection(self, public_route, selection_mode=False, realtime=False):
         node = shutil.which('node')
         if not node:
             self.skipTest('Node runtime required')
@@ -77,8 +82,24 @@ class ProviderRejectConfirmBrowserTest(LiveServerTestCase):
             selected = client.post(f'/api/orders/orders/{order_id}/applications/{application_id}/select/', {}, format='json').data
             self.assertEqual(selected['code'], 0, selected)
         repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/provider-reject-confirm-375.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'bossToken': boss_token, 'staffToken': staff_token,
+        current_vue = os.environ.get('XA_CURRENT_PROVIDER_REJECT') == '1' and public_route and not selection_mode
+        if current_vue:
+            if realtime:
+                from users.test_native_checkin_order_realtime import isolated_redis_asgi
+                base, ws_base = self.enterContext(isolated_redis_asgi())
+            else:
+                base, ws_base = self.live_server_url, None
+            script = 'provider-vue-reject-regrab-realtime.cjs' if realtime else 'provider-vue-reject-regrab-live.cjs'
+            result = subprocess.run([node, str(repo / 'scripts' / script)],
+                input=json.dumps({'base':base,'wsBase':ws_base,'bossToken':boss_token,'bossId':boss_account.pk,
+                    'staffToken':staff_token,'orderId':order_id,'orderNo':order_no,'secondName':'预约替补验收',
+                    'first':{'token':issue_account_tokens(provider_account)[0],'id':provider_account.pk},
+                    'second':{'token':issue_account_tokens(replacement_account)[0],'id':replacement_account.pk},
+                    'providerRoot':os.environ['XA_PROVIDER_VUE_ROOT'],'adminRoot':os.environ['XA_ADMIN_VUE_ROOT']}),
+                text=True,encoding='utf-8',capture_output=True,timeout=60,cwd=repo)
+        else:
+            result = subprocess.run([node, str(repo / 'scripts/provider-reject-confirm-375.cjs')],
+              input=json.dumps({'base': self.live_server_url, 'bossToken': boss_token, 'staffToken': staff_token,
                 'providerToken': issue_account_tokens(provider_account)[0], 'providerId': str(provider_account.pk),
                 'secondToken': issue_account_tokens(replacement_account)[0], 'secondId': str(replacement_account.pk),
                 'secondName': '预约替补验收',

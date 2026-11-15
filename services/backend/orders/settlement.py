@@ -1,15 +1,15 @@
 """订单拆账计算。
 
 将一笔订单金额拆分为：陪玩实得 + 推荐人分佣 + 店铺留存。
-口径（金额单位均为内部账务单位整数，10 = 1 兴安币；整数运算，向下取整后
-用余项兜底，保证三者之和恒等于总额，绝不四舍五入造出/蒸发零头）：
+口径（金额单位均为内部账务单位整数，10 = 1 店币；不足部分由门店补资）：
   - 百分比方式：平台抽成 = amount * commission_rate / 100
   - 固定金额方式：平台抽成 = min(commission_fixed, amount)
   - 陪玩实得   = amount - 平台抽成
-  - 推荐人分佣 = 平台抽成 * inviter_commission_rate / 100
-  - 店铺留存   = 平台抽成 - 推荐人分佣
+  - 推荐人分佣 = 实付 * inviter_commission_rate / 100
+  - 店铺留存   = max(实付 - 陪玩实得 - 推荐人分佣, 0)
+  - 店铺补资   = max(陪玩实得 + 推荐人分佣 - 实付, 0)
 
-多打手（双陪）口径 —— 资金守恒的唯一正确算法：
+多打手（双陪）口径：
   订单实付先在打手之间**均分**得到各自结算基数（余数给靠前打手），
   再由每个打手按**自己的**抽成规则从各自基数中计算实得。
   绝不允许每个打手都以订单全额为基数，否则总流出 > 实付，平台净亏。
@@ -17,8 +17,7 @@
     例：实付 1000，双陪，A 抽成 20%、B 抽成 30%
         基数 A=500 B=500
         实得 A=400 B=350，打手合计 750
-        平台抽成 250 → 推荐人分佣 + 店铺留存
-        合计 750 + 250 = 1000 ✅
+        推荐佣金按订单实付 1000 计算；余额不足时门店补资。
 """
 
 from dataclasses import dataclass
@@ -30,6 +29,7 @@ class OrderSplit:
     provider_income: int       # 陪玩实得（内部账务单位）
     inviter_commission: int    # 推荐人分佣（内部账务单位）
     shop_income: int           # 店铺/平台留存（内部账务单位）
+    funding_required: int = 0  # 陪玩和佣金超过实付时的门店缺口
 
 
 @dataclass(frozen=True)
@@ -53,18 +53,19 @@ def compute_split(
     inviter_commission_rate=0,
     commission_type='PERCENT',
     commission_fixed=0,
+    referral_on_paid=True,
 ):
     """计算订单拆账。
 
     Args:
         amount: 订单实付金额（内部账务单位，非负整数）
         commission_rate: 平台抽成率(%) 0-100，百分比方式生效
-        inviter_commission_rate: 推荐人分佣率(%) 0-100，按平台抽成部分计提
+        inviter_commission_rate: 推荐人分佣率(%) 0-100，服务主单按实付计提
         commission_type: 'PERCENT'(百分比) 或 'FIXED'(固定金额)
         commission_fixed: 固定抽成额（内部账务单位），固定金额方式生效
 
     Returns:
-        OrderSplit，且 provider_income + inviter_commission + shop_income == amount
+        OrderSplit，资金缺口须由门店补足后才能结算。
     """
     amount = max(int(amount or 0), 0)
     commission_rate = _clamp_rate(commission_rate)
@@ -75,14 +76,15 @@ def compute_split(
     else:
         platform_cut = amount * commission_rate // 100
     provider_income = amount - platform_cut
-    inviter_commission = platform_cut * inviter_commission_rate // 100
-    shop_income = platform_cut - inviter_commission
+    inviter_commission = (amount if referral_on_paid else platform_cut) * inviter_commission_rate // 100
+    shop_income = max(platform_cut - inviter_commission, 0)
 
     return OrderSplit(
         commission_rate=commission_rate,
         provider_income=provider_income,
         inviter_commission=inviter_commission,
         shop_income=shop_income,
+        funding_required=max(inviter_commission - platform_cut, 0),
     )
 
 
@@ -153,8 +155,7 @@ def build_provider_shares(amount, provider_specs):
 def aggregate_order_split(amount, shares, inviter_commission_rate=0, primary_rate=0):
     """把多打手份额汇总成订单级拆账（写入 Order 的 4 个分账字段）。
 
-    平台抽成 = 实付 − 打手实得合计，再按推荐分佣率切给推荐人，剩余归店铺。
-    结果恒满足：打手实得合计 + 推荐人分佣 + 店铺留存 == amount
+    推荐佣金按实付计算；不足以支付所有收益时，差额由门店补资。
     """
     amount = max(int(amount or 0), 0)
     total_provider_income = sum(s.provider_income for s in shares)
@@ -163,14 +164,15 @@ def aggregate_order_split(amount, shares, inviter_commission_rate=0, primary_rat
             f'打手实得合计 {total_provider_income} 超过订单实付 {amount}，拒绝拆账'
         )
     platform_cut = amount - total_provider_income
-    inviter_commission = platform_cut * _clamp_rate(inviter_commission_rate) // 100
+    inviter_commission = amount * _clamp_rate(inviter_commission_rate) // 100
     return OrderSplit(
         commission_rate=_clamp_rate(
             shares[0].commission_rate if shares else primary_rate
         ),
         provider_income=total_provider_income,
         inviter_commission=inviter_commission,
-        shop_income=platform_cut - inviter_commission,
+        shop_income=max(platform_cut - inviter_commission, 0),
+        funding_required=max(inviter_commission - platform_cut, 0),
     )
 
 

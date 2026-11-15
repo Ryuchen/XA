@@ -3,12 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { createRequire } = require('node:module');
 const root = path.resolve(__dirname, '..');
-const ts = createRequire(path.join(root, 'apps/boss-miniapp/package.json'))('typescript');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
-const compile = file => ts.transpileModule(fs.readFileSync(path.join(root, file), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.React } }).outputText;
 const baseOrder = () => ({ id: 1, order_no: 'FIXTURE-1', status: 'COMPLETED', payment_status: 'PAID', amount: 1234, original_amount: 1500,
   boss_discount: 266, promo_discount: 0, coupon_discount: 0, service: { id: 1, name: '本地服务', is_gift: false }, provider: { id: 9, nickname: '本地陪玩' },
   customer: { id: 10, nickname: '本地老板' }, game_rounds: 1, created_at: '2026-10-20T10:00:00Z', refunded_at: null, aftersale_status: '', can_aftersale: true, aftersale_deadline: '2099-10-20T10:00:00Z', allowed_actions: [], evaluation: null });
@@ -29,7 +26,7 @@ function native(name) {
   vm.runInNewContext(fs.readFileSync(path.join(root, `apps/boss-miniapp/native/pages/${name}/index.js`), 'utf8'), {
     Page: value => { definition = value; }, wx: { stopPullDownRefresh() {}, showModal: options => typeof modal === 'function' ? modal(options) : options.success(modal) },
     setTimeout: fn => { timers.set(++next, fn); return next; }, clearTimeout: id => timers.delete(id),
-    require: value => value.endsWith('/auth') ? auth : value.endsWith('/api') ? { request } : value.endsWith('/events') ? { on, emit } : value.endsWith('/orders') ? orderModule.exports : value.endsWith('/page') ? pageModule.exports : value.endsWith('/brand-assets') ? { brandAssets: () => ({}) } : ui,
+    require: value => value.endsWith('/auth') ? auth : value.endsWith('/api') ? { request } : value.endsWith('/events') ? { on, emit } : value.endsWith('/orders') ? orderModule.exports : value.endsWith('/page') ? pageModule.exports : value.endsWith('/brand-assets') ? { brandAssets: () => ({}) } : value.endsWith('/navigation') ? { syncTabBar() {} } : ui,
   });
   const page = { ...definition, data: structuredClone(definition.data), setData(patch) { Object.assign(this.data, patch); } };
   page.onLoad({ id: '1' });
@@ -192,135 +189,7 @@ test('native partial refunds preserve completed service, expose cumulative and i
   s.set({ ...order, can_aftersale: false }, null); await s.page.load(); assert.equal(s.page.data.order.canAfterSale, false); s.page.onUnload();
 });
 
-function h5(kind) {
-  const slots = [], timers = new Map(), events = new Map(), authEvents = new Set(), calls = [], writes = [];
-  let cursor = 0, dirty = false, effects = [], tree, didShow, didHide, nextTimer = 0, revision = 1, owner = '10', order = baseOrder(), sale = null, reader, writer, requestNumber = 0;
-  const same = (a, b) => a && b && a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
-  const react = { Fragment: 'Fragment', createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
-    useState(initial) { const i = cursor++; slots[i] ||= { value: typeof initial === 'function' ? initial() : initial }; return [slots[i].value, value => { const next = typeof value === 'function' ? value(slots[i].value) : value; if (!Object.is(next, slots[i].value)) { slots[i].value = next; dirty = true; } }]; },
-    useRef(initial) { return slots[cursor++] ||= { current: initial }; },
-    useCallback(fn, deps) { const i = cursor++; if (!same(slots[i]?.deps, deps)) slots[i] = { deps, value: fn }; return slots[i].value; },
-    useMemo(fn, deps) { const i = cursor++; if (!same(slots[i]?.deps, deps)) slots[i] = { deps, value: fn() }; return slots[i].value; },
-    useEffect(fn, deps) { const i = cursor++; if (!same(slots[i]?.deps, deps)) effects.push(() => { slots[i]?.cleanup?.(); slots[i] = { deps, cleanup: fn() }; }); },
-  };
-  const clock = { setTimeout: fn => { timers.set(++nextTimer, fn); return nextTimer; }, clearTimeout: id => timers.delete(id) };
-  const queue = { exports: {} }; vm.runInNewContext(compile('apps/boss-miniapp/src/utils/coalescedRefresh.ts'), { module: queue, exports: queue.exports, ...clock });
-  const money = { exports: {} }; vm.runInNewContext(compile('packages/money/src/index.js'), { module: money, exports: money.exports });
-  const wallet = { balance: 1234, setBalance: value => { if (wallet.balance !== value) { wallet.balance = value; dirty = true; } }, invalidate() {} };
-  const useWalletStore = Object.assign(selector => selector(wallet), { getState: () => wallet });
-  const read = async label => { calls.push(label); return reader ? reader(label) : label === 'orders' ? { code: 0, data: [{ ...order }] } : label === 'aftersale' ? { code: 0, data: sale }
-    : { code: 0, data: { balance: wallet.balance, transactions: [{ id: 1, tx_type: 'PAY', amount: -1234, remark: '付款', created_at: '2026-10-20' }, { id: 2, tx_type: 'REFUND', amount: 1234, remark: '退款', created_at: '2026-10-20' }] } }; };
-  const store = { useWalletStore, useOrderStore: { getState: () => ({ invalidate() {} }) }, useCatalogStore: { getState: () => ({ loadServices: async () => {} }) }, useServices: () => [] };
-  const dependencies = { react: { default: react, ...react }, '@tarojs/components': Object.fromEntries(['View', 'Text', 'Image', 'ScrollView', 'Textarea', 'Button'].map(name => [name, name])),
-    '@tarojs/taro': { default: { eventCenter: { on: (name, fn) => authEvents.add(fn), off: (name, fn) => authEvents.delete(fn) }, showToast() {}, stopPullDownRefresh() {}, navigateTo() {}, showModal: async () => ({ confirm: false }) },
-      useDidShow: fn => { didShow = fn; }, useDidHide: fn => { didHide = fn; }, usePullDownRefresh() {}, useRouter: () => ({ params: { orderId: '1' } }) },
-    '@/services/wallet': { fetchTransactions: () => read('transactions') }, '@/services/order': { fetchOrders: () => read('orders'), fetchAfterSale: () => read('aftersale'), evaluateOrder() {}, cancelOrder() {}, tipOrder() {},
-      newAfterSaleRequestId: () => `00000000-0000-4000-8000-${String(++requestNumber).padStart(12, '0')}`,
-      submitAfterSale: async (id, reason, clientRequestId) => { writes.push({ id, reason, client_request_id: clientRequestId }); if (writer) return writer(id, reason, clientRequestId); order.aftersale_status = 'OPEN'; sale = { id: 3, status: 'OPEN', reason, resolution: '', client_request_id: clientRequestId }; return { code: 0, data: sale }; } },
-    '@/services/websocket': { wsService: { on: (name, fn) => { if (!events.has(name)) events.set(name, new Set()); events.get(name).add(fn); return () => events.get(name).delete(fn); } } },
-    '@/utils/auth': { getSessionRevision: () => revision, getStoredToken: () => owner ? 'fixture' : '', getStoredUser: () => owner ? { id: owner } : null },
-    '@/utils/coalescedRefresh': queue.exports, '@/services/support': { openWecomCustomerService: async () => ({ opened: false }) }, '@/store': store, '@xa/money': money.exports,
-    '@/components': { Empty: 'Empty', Skeleton: 'Skeleton' }, '@/components/Icon': { default: 'Icon' }, '@/components/RouletteWheel': { default: 'RouletteWheel' }, '@/utils/media': { resolveImageUrl: value => value || '' },
-    '@/hooks/useLoginGuard': { useLoginGuard: () => ({ ensureLogin: fn => fn(), loginSheet: null }) }, './index.module.scss': { default: new Proxy({}, { get: (_, key) => String(key) }) },
-  };
-  const types = { exports: {} }; vm.runInNewContext(compile('apps/boss-miniapp/src/types/order.ts'), { module: types, exports: types.exports }); dependencies['@/types/order'] = types.exports;
-  const module = { exports: {} }; const file = kind === 'wallet' ? 'customer/wallet' : 'orderList';
-  vm.runInNewContext(compile(`apps/boss-miniapp/src/pages/${file}/index.tsx`), { module, exports: module.exports, ...clock, require: name => { if (!(name in dependencies)) throw Error('Unexpected import ' + name); return dependencies[name]; } });
-  const render = () => { dirty = false; cursor = 0; effects = []; tree = module.exports.default(); for (const effect of effects) effect(); };
-  const flush = async () => { for (let i = 0; i < 30; i++) { await tick(); if (!dirty) return; render(); } throw Error('Effects did not settle'); };
-  const visit = (node, result = []) => { if (Array.isArray(node)) node.forEach(child => visit(child, result)); else if (node && typeof node === 'object') { result.push(node); visit(node.props?.children, result); } return result; };
-  const text = node => Array.isArray(node) ? node.map(text).join('') : node && typeof node === 'object' ? text(node.props?.children) : node == null || node === false ? '' : String(node);
-  const nodes = () => visit(tree); render();
-  return { calls, writes, timers, wallet, nodes, text: () => text(tree), flush, button: label => nodes().find(node => node.type === 'Button' && text(node) === label),
-    show: async () => { await didShow(); await flush(); }, hide: () => didHide(), read: fn => { reader = fn; }, write: fn => { writer = fn; },
-    set: (nextOrder, nextSale) => { order = nextOrder; sale = nextSale; },
-    emit: (name, data) => { for (const fn of events.get(name) || []) fn(data); },
-    fire: async () => { assert.equal(timers.size, 1); const [id, fn] = timers.entries().next().value; timers.delete(id); await fn(); await flush(); },
-    session: async nextOwner => { owner = nextOwner; revision++; for (const fn of authEvents) fn(); await flush(); },
-    unmount: () => { for (const slot of slots) slot?.cleanup?.(); },
-  };
-}
-
-test('H5 wallet displays signed payment/refund amounts and coalesces owner wallet invalidations', async () => {
-  const s = h5('wallet'); await s.show(); assert.ok(s.text().includes('-123.4币')); assert.ok(s.text().includes('+123.4币')); assert.ok(s.text().includes('订单退款'));
-  s.emit('wallet_update', { account_id: 99 }); assert.equal(s.timers.size, 0);
-  for (let i = 0; i < 20; i++) s.emit('wallet_update', { account_id: 10 }); await s.fire(); assert.equal(s.calls.length, 2);
-  s.hide(); s.emit('wallet_update', { account_id: 10 }); assert.equal(s.timers.size, 0); s.unmount();
-});
-
-test('H5 wallet discards old responses on session switch and cancels deferred reads on unmount', async () => {
-  const s = h5('wallet'); await s.show(); const pending = deferred(); s.read(() => pending.promise); s.emit('wallet_update', { account_id: 10 }); const reading = s.fire();
-  await s.session(null); pending.resolve({ code: 0, data: { balance: 999990, transactions: [] } }); await reading; assert.equal(s.wallet.balance, 0);
-  s.unmount(); assert.equal(s.timers.size, 0);
-});
-
-test('H5 order detail submits an aftersale once and refreshes its resolved/refunded result through order events', async () => {
-  const s = h5('orders'); await s.show(); s.button('提交售后问题').props.onClick(); await s.flush();
-  s.nodes().find(node => node.type === 'Textarea' && node.props.maxlength === 1000).props.onInput({ detail: { value: '测试售后问题' } }); await s.flush();
-  await s.button('提交售后').props.onClick(); await s.flush(); assert.deepEqual(s.writes, [{ id: 1, reason: '测试售后问题', client_request_id: '00000000-0000-4000-8000-000000000001' }]); assert.ok(s.text().includes('处理中'));
-  s.set({ ...baseOrder(), status: 'CANCELLED', payment_status: 'REFUNDED', aftersale_status: 'REFUNDED', refunded_at: '2026-10-20T12:00:00Z' }, { status: 'REFUNDED', reason: '测试售后问题', resolution: '本地处理全额退回' });
-  s.emit('order_status_update', { id: 1, status: 'CANCELLED' }); await s.fire();
-  assert.ok(s.text().includes('售后服务 · 已退款')); assert.ok(s.text().includes('处理结果：本地处理全额退回')); assert.ok(s.text().includes('123.4 兴安币已退回钱包')); assert.equal(s.button('提交售后问题'), undefined); s.unmount();
-});
-
-test('H5 aftersale editor cannot submit after a session change or unmount', async () => {
-  for (const stop of ['session', 'unmount']) {
-    const s = h5('orders'); await s.show(); s.button('提交售后问题').props.onClick(); await s.flush();
-    s.nodes().find(node => node.type === 'Textarea' && node.props.maxlength === 1000).props.onInput({ detail: { value: '测试售后问题' } }); await s.flush();
-    const submit = s.button('提交售后').props.onClick;
-    if (stop === 'session') await s.session(null); else s.unmount();
-    await submit(); await s.flush(); assert.deepEqual(s.writes, []); s.unmount();
-  }
-});
-
-test('H5 settled aftersale uses server eligibility, retains history and displays authoritative refund amount', async () => {
-  const s = h5('orders'), settled = { ...baseOrder(), aftersale_status: 'RESOLVED', aftersale_deadline: '2020-01-01T00:00:00Z', consumption_confirmed_at: '2020-01-02T00:00:00Z' };
-  s.set(settled, { status: 'RESOLVED', reason: '最新问题', resolution: '最新处理', client_request_id: 'current', history: [
-    { status: 'RESOLVED', reason: '保留的历史问题', resolution: '保留的历史处理', client_request_id: 'previous', created_at: '2026-10-19T00:00:00Z', resolved_at: '2026-10-19T01:00:00Z' },
-    { status: 'RESOLVED', reason: '当前快照勿重复', resolution: '当前结果勿重复', client_request_id: 'current' },
-  ] }); await s.show();
-  assert.ok(s.button('重新申请售后')); assert.ok(s.text().includes('保留的历史处理')); assert.ok(!s.text().includes('当前快照勿重复'));
-  s.set({ ...settled, can_aftersale: false }, null); s.emit('order_status_update', { id: 1 }); await s.fire(); assert.equal(s.button('重新申请售后'), undefined);
-  s.set({ ...settled, payment_status: 'REFUNDED', status: 'CANCELLED', aftersale_status: 'REFUNDED', refund_summary: { amount: 1000, reason: '结算后退款', created_at: '2026-10-20T02:00:00Z' } }, { status: 'REFUNDED', resolution: '退款成功' });
-  s.emit('order_status_update', { id: 1 }); await s.fire(); assert.ok(s.text().includes('100 兴安币已退回钱包')); assert.ok(!s.text().includes('123.4 兴安币已退回钱包')); assert.ok(s.text().includes('退款说明：结算后退款')); assert.equal(s.button('重新申请售后'), undefined); s.unmount();
-});
-
-test('H5 aftersale retries one UUID and gives a later explicit application a new UUID', async () => {
-  const s = h5('orders'); await s.show(); s.button('提交售后问题').props.onClick(); await s.flush();
-  s.nodes().find(node => node.type === 'Textarea' && node.props.maxlength === 1000).props.onInput({ detail: { value: '本地售后问题' } }); await s.flush();
-  let fail = true; s.write(async () => { if (fail) throw Error('模拟断线'); return { code: 0 }; });
-  await s.button('提交售后').props.onClick(); await s.flush(); fail = false; await s.button('提交售后').props.onClick(); await s.flush();
-  assert.equal(s.writes.length, 2); assert.equal(s.writes[0].client_request_id, s.writes[1].client_request_id);
-  s.button('提交售后问题').props.onClick(); await s.flush(); s.nodes().find(node => node.type === 'Textarea' && node.props.maxlength === 1000).props.onInput({ detail: { value: '另一次问题' } }); await s.flush();
-  await s.button('提交售后').props.onClick(); await s.flush(); assert.notEqual(s.writes[2].client_request_id, s.writes[0].client_request_id); s.unmount();
-});
-
-test('H5 legacy history excludes the current round without dropping earlier empty-key rounds', async () => {
-  const s = h5('orders'); s.set({ ...baseOrder(), aftersale_status: 'RESOLVED' }, { reason: '当前申请', created_at: '2026-10-20T01:00:00Z', client_request_id: '', history: [
-    { status: 'RESOLVED', created_at: '2026-10-19T01:00:00+00:00', reason: '应保留的旧轮次' }, { status: 'RESOLVED', created_at: '2026-10-20T01:00:00+00:00', reason: '勿重复的当前轮次' },
-  ] }); await s.show(); assert.ok(s.text().includes('应保留的旧轮次')); assert.ok(!s.text().includes('勿重复的当前轮次')); s.unmount();
-});
-
-test('H5 partial refunds display authoritative cumulative balance/history and allow the next round without calling the service cancelled', async () => {
-  const s = h5('orders'), order = { ...baseOrder(), amount: 10000, payment_status: 'PARTIALLY_REFUNDED', aftersale_status: 'PARTIALLY_REFUNDED', refund_summary: partialSummary() };
-  s.set(order, { status: 'PARTIALLY_REFUNDED', client_request_id: 'round-two', reason: '第二轮', resolution: '第二次部分处理', history: [{ status: 'PARTIALLY_REFUNDED', client_request_id: 'round-one', reason: '第一轮', resolution: '第一次部分处理', created_at: '2026-10-20T00:00:00Z' }] }); await s.show();
-  const text = s.text(); for (const expected of ['部分退款已入账', '累计已退 375 兴安币', '订单剩余金额：625 兴安币', '退款 #8 · 250 兴安币', '退款 #9 · 125 兴安币', '第一次部分处理', '625币']) assert.ok(text.includes(expected), expected);
-  assert.ok(!text.includes('订单已取消')); assert.ok(!text.includes('1000 兴安币已退回钱包')); assert.ok(s.button('重新申请售后'));
-  s.button('重新申请售后').props.onClick(); await s.flush(); s.nodes().find(node => node.type === 'Textarea' && node.props.maxlength === 1000).props.onInput({ detail: { value: '申请剩余部分' } }); await s.flush();
-  await s.button('提交售后').props.onClick(); await s.flush(); assert.equal(s.writes.length, 1); assert.equal(s.writes[0].reason, '申请剩余部分'); assert.equal(s.writes[0].amount, undefined);
-  s.set({ ...order, status: 'CANCELLED', payment_status: 'REFUNDED', aftersale_status: 'REFUNDED', refund_summary: { ...partialSummary(), amount: 10000, remaining_amount: 0 } }, { status: 'REFUNDED', resolution: '余款全部退回' });
-  s.emit('order_status_update', { id: 1, status: 'CANCELLED' }); await s.fire(); assert.equal(s.button('重新申请售后'), undefined); assert.ok(s.text().includes('订单剩余金额：0 兴安币')); s.unmount();
-});
-
 test('partial refund status with a missing summary never invents zero or the original full payment as refunded', async () => {
   const order = { ...baseOrder(), payment_status: 'PARTIALLY_REFUNDED', refund_summary: null };
   const n = native('order-detail'); n.set(order, null); await n.show(); assert.equal(n.page.data.order.refundAmountText, ''); assert.equal(n.page.data.order.refundRemainingText, ''); n.page.onUnload();
-  const s = h5('orders'); s.set(order, null); await s.show(); assert.ok(s.text().includes('退款金额以钱包流水为准')); assert.ok(!s.text().includes('累计已退 0')); assert.ok(!s.text().includes('123.4 兴安币已退回钱包')); s.unmount();
-});
-
-test('aftersale service generates UUID request keys and passes the selected key without regeneration', async () => {
-  const calls = [], module = { exports: {} };
-  vm.runInNewContext(compile('apps/boss-miniapp/src/services/order.ts'), { module, exports: module.exports, require: name => name === '@/utils/request' ? { request: (...args) => calls.push(args) } : {} });
-  const key = module.exports.newAfterSaleRequestId(); assert.match(key, /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/);
-  module.exports.submitAfterSale(1, '本地问题', key); assert.equal(calls[0][2].client_request_id, key); assert.equal(calls[0][2].reason, '本地问题');
 });

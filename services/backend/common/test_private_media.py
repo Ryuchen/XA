@@ -85,6 +85,21 @@ class PrivateMediaTest(APITestCase):
             self.assertEqual(result['Referrer-Policy'], 'no-referrer')
         self.assertEqual(self.fetch(record['result_images'][0]['url']).status_code, 200)
 
+    def test_unmapped_historical_report_uses_current_legacy_account_mapping(self):
+        self.report.provider_account = None
+        self.report.save(update_fields=['provider_account'])
+        token, _ = issue_account_tokens(self.account)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        record = self.client.get('/api/wallet/reports/').data['data'][0]
+        self.client.credentials()
+        self.assertEqual(self.fetch(record['entry_image_url']).status_code, 200)
+        self.assertEqual(self.fetch(record['result_images'][0]['url']).status_code, 200)
+        self.assertEqual(self.url(account=self.other), '')
+        old = record['entry_image_url']
+        self.report.provider_account = self.other
+        self.report.save(update_fields=['provider_account'])
+        self.assertEqual(self.fetch(old).status_code, 404)
+
     def test_anonymous_other_provider_and_boss_cannot_mint_report_grants(self):
         for request in (None, SimpleNamespace(account=self.other), SimpleNamespace(account=self.boss_account)):
             self.assertEqual(build_media_url(request, self.report.entry_image), '')
@@ -176,12 +191,17 @@ class PrivateMediaTest(APITestCase):
 
     def test_chat_image_follows_session_owner_not_sender(self):
         staff = account_for(make_console_user(['chat:view']))
+        supervisor = account_for(make_console_user(['chat:view', 'chat:supervise']))
         session = ChatSession.objects.create(user=self.boss, account=self.boss_account)
         msg = ChatMessage.objects.create(session=session, image=image_file(), content_type='IMAGE', is_from_support=True)
-        for reader in (self.boss_account, staff):
+        for reader in (self.boss_account, supervisor):
             self.assertEqual(self.fetch(self.url(msg.image, reader)).status_code, 200)
-        for reader in (self.account, account_for(make_console_user(['order:view']))):
+        for reader in (staff, self.account, account_for(make_console_user(['order:view']))):
             self.assertEqual(self.url(msg.image, reader), '')
+        session.claimed_by = staff
+        session.save(update_fields=['claimed_by'])
+        self.assertEqual(self.fetch(self.url(msg.image, staff)).status_code, 200)
+        self.assertEqual(self.fetch(self.url(msg.image, supervisor)).status_code, 200)
 
     def test_direct_media_urls_and_encoded_private_paths_are_blocked(self):
         for prefix in ('reports', 'reports/entry', 'reports/results', 'reports/completion', 'recharges', 'chat', 'escorts/cheat_proofs', 'unknown'):

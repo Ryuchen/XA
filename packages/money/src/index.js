@@ -10,27 +10,27 @@
  *   定位保持一致。类型信息由同目录的 `index.d.ts` 提供给 tsc / vue-tsc。
  *
  * 金额口径（与后端完全一致）：
- * - 后端全链路使用「内部账务单位」整数，10 个账务单位 = 1 兴安币。
+ * - 后端全链路使用「内部账务单位」整数，10 个账务单位 = 1 浪花。
  * - 后端任何环节都**不**做 ÷10 / ×10 的换算；换算只在「展示 / 输入」边界发生。
  * - 因此前端也必须在统一的边界函数里做换算，禁止在业务代码里写裸的
  *   `/ 10`、`* 10`、`/ 100` 等，防止再次出现「真实值被缩小 10 倍」的 bug。
  *
  * 调用方约定：
  * - 从后端拿到 / 传给后端的金额一律是「内部账务单位」整数。
- * - 仅在给用户看的时候用 formatXaCoin / toCoin 转成兴安币。
- * - 仅在读取用户输入（兴安币）时用 toRawAmount 转回内部账务单位。
+ * - 仅在给用户看的时候用 formatXaCoin / toCoin 转成浪花。
+ * - 仅在读取用户输入（浪花）时用 toRawAmount 转回内部账务单位。
  * - 微信手续费接口另用人民币分；仅用 parseRmbFen / formatRmbFen 处理，
- *   不通过兴安币或内部账务单位的汇率换算。
+ *   不通过浪花或内部账务单位的汇率换算。
  */
 
 /**
- * 1 兴安币对应的内部账务单位数量。
+ * 1 浪花对应的内部账务单位数量。
  * @type {number}
  */
 export const COIN_UNIT = 10;
 export const RMB_TO_COIN_RATE = 10;
 
-/** 人民币元文本 → 人民币分；与兴安币/账务单位的汇率独立，不接受隐式舍入。 */
+/** 人民币元文本 → 人民币分；与浪花/账务单位的汇率独立，不接受隐式舍入。 */
 export function parseRmbFen(yuan) {
   const text = String(yuan == null ? '' : yuan);
   if (!/^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(text)) return 0;
@@ -39,7 +39,7 @@ export function parseRmbFen(yuan) {
   return Number.isSafeInteger(fen) ? fen : 0;
 }
 
-/** 人民币分整数 → 人民币元，两位小数；不经过兴安币换算。 */
+/** 人民币分整数 → 人民币元，两位小数；不经过浪花换算。 */
 export function formatRmbFen(fen) {
   const value = Number(fen == null ? 0 : fen);
   if (!Number.isSafeInteger(value)) return '0.00';
@@ -59,10 +59,10 @@ export function formatRmb(amount) {
 }
 
 /**
- * 内部账务单位 → 兴安币（浮点）。
+ * 内部账务单位 → 浪花（浮点）。
  *
  * @param {number | null | undefined} amount 内部账务单位整数；非法输入按 0 处理。
- * @returns {number} 兴安币数值。
+ * @returns {number} 浪花数值。
  */
 export function toCoin(amount) {
   const value = Number(amount == null ? 0 : amount);
@@ -71,9 +71,9 @@ export function toCoin(amount) {
 }
 
 /**
- * 兴安币 → 内部账务单位（四舍五入取整）。
+ * 浪花 → 内部账务单位（四舍五入取整）。
  *
- * @param {number | string | null | undefined} coins 用户输入的兴安币数值（字符串或数字均可）；非法输入按 0 处理。
+ * @param {number | string | null | undefined} coins 用户输入的浪花数值（字符串或数字均可）；非法输入按 0 处理。
  * @returns {number} 内部账务单位整数。
  */
 export function toRawAmount(coins) {
@@ -83,13 +83,13 @@ export function toRawAmount(coins) {
 }
 
 /**
- * 内部账务单位 → 兴安币展示字符串。
- * 整数不带小数，否则保留 1 位小数（如 125 → "12.5"）。
+ * 内部账务单位 → 浪花展示字符串。
+ * 保留最多一位店币小数并使用千分位（如 13206 → "1,320.6"）。
  *
  * @param {number | null | undefined} amount 内部账务单位整数。
- * @returns {string} 用于展示的兴安币字符串。
+ * @returns {string} 用于展示的浪花字符串。
  */
 export function formatXaCoin(amount) {
   const coins = toCoin(amount);
-  return Number.isInteger(coins) ? coins.toFixed(0) : coins.toFixed(1);
+  return coins.toLocaleString('en-US', { maximumFractionDigits: 1 });
 }

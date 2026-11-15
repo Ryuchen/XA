@@ -19,7 +19,10 @@ from orders.tests.test_release_flow import screenshot
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class ClaimPaginationJourneyTest(LiveServerTestCase):
-    host, port = '127.0.0.1', 19210
+    # The legacy developer-tools opt-in needs its known API port. Ordinary
+    # real API regressions must not compete with another suite for that port.
+    host = '127.0.0.1'
+    port = 19210 if os.environ.get('XA_NATIVE_CLAIM_PAGES') == '1' else 0
     def test_old_gift_entitlements_remain_reachable_during_new_gifts(self):
         media = TemporaryDirectory(prefix='xa-claim-pages-')
         self.addCleanup(media.cleanup)

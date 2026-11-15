@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'identifiers',
     'club_accounts',
     'users',
     'orders',
@@ -83,12 +84,14 @@ INSTALLED_APPS = [
     'promotions',
     'console',
     'engagement',
+    'stores',
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'stores.middleware.StoreMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -136,6 +139,15 @@ CHANNEL_LAYERS = {
 from config.database import mysql_database
 
 DATABASES = {'default': mysql_database(os.environ)}
+DATABASE_ROUTERS = ['stores.router.StoreRouter']
+# New SaaS deployments keep the directory in `default` and every store in a
+# separately configured alias. Development may explicitly use the legacy
+# combined layout; opting into isolation never moves or deletes existing data.
+ISOLATED_CONTROL_PLANE = env_bool('XA_ISOLATED_CONTROL_PLANE', not DEBUG)
+DEFAULT_STORE_SLUG = 'shenglang'
+STORE_HOST_BINDINGS = {'sl.esports.club': 'shenglang', 'xa.esports.club': 'xinan'}
+ADMIN_STORE_HOST = 'admin.esports.club'
+STORE_DOMAIN_INDEX_DIR = os.environ.get('STORE_DOMAIN_INDEX_DIR', '').strip()
 
 
 # Password validation
@@ -176,7 +188,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
     'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'BACKEND': 'stores.media.StoreFileSystemStorage',
     },
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
@@ -196,21 +208,51 @@ REQUIRE_ORDER_EVIDENCE_IMAGES = env_bool(
     True,
 )
 
-# 资金写接口是否强制要求客户端携带 client_request_id。
-#
-# 默认 False：存量小程序尚未发版，强开会让下单/提现直接不可用。此时后端仍会
-# 用「账户+业务+关键参数」派生键做 60 秒窗口去重（见
-# wallet.services.claim_fund_write），挡得住弱网重试与连点。
-# 各端发版带上 client_request_id 后，把本项置 True，即可升级为永久强幂等。
-REQUIRE_CLIENT_REQUEST_ID = env_bool('REQUIRE_CLIENT_REQUEST_ID', False)
+# 首版资金写请求必须携带稳定请求号；重试复用同一个值。
+# 不能使用按时间窗口去重，否则超时重试可能重复扣款或入账。
+REQUIRE_CLIENT_REQUEST_ID = True
 REQUIRE_RECHARGE_PROOF = env_bool('REQUIRE_RECHARGE_PROOF', True)
+AUDITION_RECORDINGS_REQUIRED = env_bool('AUDITION_RECORDINGS_REQUIRED', False)
+VIP_SAFE_BOX_SUBSIDY_ENABLED = env_bool('VIP_SAFE_BOX_SUBSIDY_ENABLED', False)
+VIP_SAFE_BOX_NEGOTIATION_ENABLED = env_bool('VIP_SAFE_BOX_NEGOTIATION_ENABLED', False)
+VIP_SAFE_BOX_TRANSFER_NEGOTIATION_ENABLED = env_bool('VIP_SAFE_BOX_TRANSFER_NEGOTIATION_ENABLED', False)
+ORDINARY_FOLLOWUP_MYSQL_ENABLED = env_bool('ORDINARY_FOLLOWUP_MYSQL_ENABLED', False)
+ORDINARY_ZERO_FOLLOWUP_MYSQL_ENABLED = env_bool('ORDINARY_ZERO_FOLLOWUP_MYSQL_ENABLED', False)
+ORDINARY_ZERO_POST_ADDON_MYSQL_ENABLED = env_bool('ORDINARY_ZERO_POST_ADDON_MYSQL_ENABLED', False)
+ORDINARY_TRANSFER_REFUND_MYSQL_ENABLED = env_bool('ORDINARY_TRANSFER_REFUND_MYSQL_ENABLED', False)
+NEGOTIATION_FOLLOWUP_ENABLED = env_bool('NEGOTIATION_FOLLOWUP_ENABLED', False)
+VIP_MONTHLY_DECISIONS_ENABLED = env_bool('VIP_MONTHLY_DECISIONS_ENABLED', False)
+VIP_TERMS_FREEZE_ENABLED = env_bool('VIP_TERMS_FREEZE_ENABLED', False)
+DISCOUNT_COMBINATIONS_PAYMENT_ENABLED = env_bool('DISCOUNT_COMBINATIONS_PAYMENT_ENABLED', False)
+DISCOUNT_OPTIONS_PREVIEW_ENABLED = env_bool('DISCOUNT_OPTIONS_PREVIEW_ENABLED', False)
+POINTS_REDEMPTION_PREVIEW_ENABLED = env_bool('POINTS_REDEMPTION_PREVIEW_ENABLED', False)
+SERVICE_ORDER_POINTS_RECEIPT_ENABLED = env_bool('SERVICE_ORDER_POINTS_RECEIPT_ENABLED', False)
+ORDER_TRAFFIC_ENABLED = env_bool('ORDER_TRAFFIC_ENABLED', True)
+PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED = env_bool('PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False)
+# These capabilities remain closed until final integration, but their formal
+# switches must be configurable by deployment without editing Python code.
+SERVICE_POINTS_MYSQL_ENABLED = env_bool('SERVICE_POINTS_MYSQL_ENABLED', False)
+ORDER_CONTINUATION_REWARD_ENABLED = env_bool('ORDER_CONTINUATION_REWARD_ENABLED', False)
+RECEIPT_USAGE_LEDGER_ENABLED = env_bool('RECEIPT_USAGE_LEDGER_ENABLED', False)
+REFERRAL_REFUND_FUNDING_ENABLED = env_bool('REFERRAL_REFUND_FUNDING_ENABLED', False)
+VIP_SAFE_BOX_SEGMENT_CAPTURE_ENABLED = env_bool('VIP_SAFE_BOX_SEGMENT_CAPTURE_ENABLED', False)
+VIP_SAFE_BOX_SEGMENT_TRANSFER_TESTING = env_bool('VIP_SAFE_BOX_SEGMENT_TRANSFER_TESTING', False)
+VIP_SAFE_BOX_SEGMENT_SETTLEMENT_TESTING = env_bool('VIP_SAFE_BOX_SEGMENT_SETTLEMENT_TESTING', False)
+VIP_SAFE_BOX_TRANSFER_NEGOTIATION_PREVIEW_TESTING = env_bool('VIP_SAFE_BOX_TRANSFER_NEGOTIATION_PREVIEW_TESTING', False)
+VIP_SAFE_BOX_TRANSFER_NEGOTIATION_EVIDENCE_TESTING = env_bool('VIP_SAFE_BOX_TRANSFER_NEGOTIATION_EVIDENCE_TESTING', False)
+VIP_SAFE_BOX_TRANSFER_NEGOTIATION_PLAN_TESTING = env_bool('VIP_SAFE_BOX_TRANSFER_NEGOTIATION_PLAN_TESTING', False)
+VIP_SAFE_BOX_TRANSFER_NEGOTIATION_EXECUTION_TESTING = env_bool('VIP_SAFE_BOX_TRANSFER_NEGOTIATION_EXECUTION_TESTING', False)
+VIP_SAFE_BOX_TRANSFER_NEGOTIATION_SETTLEMENT_TESTING = env_bool('VIP_SAFE_BOX_TRANSFER_NEGOTIATION_SETTLEMENT_TESTING', False)
+VIP_SAFE_BOX_TRANSFER_NEGOTIATION_AGREEMENT_TESTING = env_bool('VIP_SAFE_BOX_TRANSFER_NEGOTIATION_AGREEMENT_TESTING', False)
+VIP_THRESHOLD_RECALC_ENABLED = env_bool('VIP_THRESHOLD_RECALC_ENABLED', False)
+STORE_FIRST_OPEN_ENABLED = env_bool('STORE_FIRST_OPEN_ENABLED', True)
 ORDER_SETTLEMENT_MODE = 'REPORT_APPROVAL'
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
 UNFOLD = {
-    'SITE_TITLE': '兴安电竞管理后台',
-    'SITE_HEADER': '兴安电竞',
+    'SITE_TITLE': '声浪电竞管理后台',
+    'SITE_HEADER': '声浪电竞',
     'SITE_SUBHEADER': 'Django 数据管理',
     'SITE_URL': '/',
     'SHOW_HISTORY': True,
@@ -354,6 +396,15 @@ if env_bool('DJANGO_TRUST_PROXY', False):
 # Celery 配置（broker 复用 Redis）
 REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+
+# Minimal WeChat authorization bridge for the browser frontends.
+WECHAT_WEB_LOGIN_ENV = os.environ.get('WECHAT_WEB_LOGIN_ENV', 'release')
+SMS_SECRET_ID = os.environ.get('SMS_SECRET_ID', '')
+SMS_SECRET_KEY = os.environ.get('SMS_SECRET_KEY', '')
+SMS_APP_ID = os.environ.get('SMS_APP_ID', '')
+SMS_TEMPLATE_ID = os.environ.get('SMS_TEMPLATE_ID', '')
+SMS_SIGN_NAME = os.environ.get('SMS_SIGN_NAME', '')
+SMS_REGION = os.environ.get('SMS_REGION', 'ap-guangzhou')
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', f'redis://{REDIS_HOST}:{REDIS_PORT}/1')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', f'redis://{REDIS_HOST}:{REDIS_PORT}/2')
 CELERY_TASK_SERIALIZER = 'json'
@@ -361,15 +412,85 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = False  # 测试时设为 True 即可同步执行
+CHAT_NOTIFICATION_OUTBOX_ENABLED = env_bool('CHAT_NOTIFICATION_OUTBOX_ENABLED', False)
+LICENSE_NOTICE_DISPATCH_ENABLED = env_bool('LICENSE_NOTICE_DISPATCH_ENABLED', True)
+WITHDRAW_AUDIT_AUTO_RECOVERY_ENABLED = env_bool('WITHDRAW_AUDIT_AUTO_RECOVERY_ENABLED', False)
+WITHDRAWAL_NOTICE_RECOVERY_ENABLED = env_bool('WITHDRAWAL_NOTICE_RECOVERY_ENABLED', False)
+CHECKIN_NOTICE_RECOVERY_ENABLED = env_bool('CHECKIN_NOTICE_RECOVERY_ENABLED', False)
+RESERVATION_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_NOTICE_RECOVERY_ENABLED', False)
+RESERVATION_STATUS_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_STATUS_NOTICE_RECOVERY_ENABLED', False)
+RESERVATION_CANCELLATION_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_CANCELLATION_NOTICE_RECOVERY_ENABLED', False)
+RESERVATION_EXPIRY_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_EXPIRY_NOTICE_RECOVERY_ENABLED', False)
+RESERVATION_CONVERSION_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_CONVERSION_NOTICE_RECOVERY_ENABLED', False)
+AUDITION_NOTICE_RECOVERY_ENABLED = env_bool('AUDITION_NOTICE_RECOVERY_ENABLED', False)
+GRAB_RESULT_NOTICE_RECOVERY_ENABLED = env_bool('GRAB_RESULT_NOTICE_RECOVERY_ENABLED', False)
+GRAB_INVITE_NOTICE_RECOVERY_ENABLED = env_bool('GRAB_INVITE_NOTICE_RECOVERY_ENABLED', False)
+ORDER_APPLICATION_NOTICE_RECOVERY_ENABLED = env_bool('ORDER_APPLICATION_NOTICE_RECOVERY_ENABLED', False)
+AFTERSALE_CLOSURE_NOTICE_RECOVERY_ENABLED = env_bool('AFTERSALE_CLOSURE_NOTICE_RECOVERY_ENABLED', False)
+AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED = env_bool('AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED', False)
+EVALUATION_NOTICE_RECOVERY_ENABLED = env_bool('EVALUATION_NOTICE_RECOVERY_ENABLED', False)
+REPORT_APPROVAL_NOTICE_RECOVERY_ENABLED = env_bool('REPORT_APPROVAL_NOTICE_RECOVERY_ENABLED', False)
+EVALUATION_REPLY_NOTICE_RECOVERY_ENABLED = env_bool('EVALUATION_REPLY_NOTICE_RECOVERY_ENABLED', False)
+ORDER_ASSIGNMENT_NOTICE_RECOVERY_ENABLED = env_bool('ORDER_ASSIGNMENT_NOTICE_RECOVERY_ENABLED', False)
+ROOM_CONFIRMATION_NOTICE_RECOVERY_ENABLED = env_bool('ROOM_CONFIRMATION_NOTICE_RECOVERY_ENABLED', False)
+ROOM_REVIEW_NOTICE_RECOVERY_ENABLED = env_bool('ROOM_REVIEW_NOTICE_RECOVERY_ENABLED', False)
+ROOM_OBJECTION_NOTICE_RECOVERY_ENABLED = env_bool('ROOM_OBJECTION_NOTICE_RECOVERY_ENABLED', False)
+ORDER_COMPLETION_NOTICE_RECOVERY_ENABLED = env_bool('ORDER_COMPLETION_NOTICE_RECOVERY_ENABLED', False)
+ORDER_TIMEOUT_NOTICE_RECOVERY_ENABLED = env_bool('ORDER_TIMEOUT_NOTICE_RECOVERY_ENABLED', False)
+CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED = env_bool('CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED', False)
+ORDER_REFUND_NOTICE_RECOVERY_ENABLED = env_bool('ORDER_REFUND_NOTICE_RECOVERY_ENABLED', False)
+POINTS_AFTERSALE_NOTICE_RECOVERY_ENABLED = env_bool('POINTS_AFTERSALE_NOTICE_RECOVERY_ENABLED', False)
+ADDON_REFUND_NOTICE_RECOVERY_ENABLED = env_bool('ADDON_REFUND_NOTICE_RECOVERY_ENABLED', False)
+ZERO_REFUND_CLOSURE_NOTICE_RECOVERY_ENABLED = env_bool('ZERO_REFUND_CLOSURE_NOTICE_RECOVERY_ENABLED', False)
+ADDON_HANDOVER_NOTICE_RECOVERY_ENABLED = env_bool('ADDON_HANDOVER_NOTICE_RECOVERY_ENABLED', False)
+SERVICE_TRANSFER_NOTICE_RECOVERY_ENABLED = env_bool('SERVICE_TRANSFER_NOTICE_RECOVERY_ENABLED', False)
 
 # Celery beat 定时计划
 CELERY_BEAT_SCHEDULE = {
+    'recover-withdrawal-audits': {'task': 'stores.withdrawal_audit_tasks.dispatch', 'schedule': 60.0},
+    'license-notices': {'task': 'stores.license_tasks.deliver_license_notices', 'schedule': 60.0},
+    'recover-pool-group-dispatch': {'task': 'orders.tasks.recover_pool_group_dispatch', 'schedule': 30.0},
     'expire-reservations': {'task': 'orders.tasks.expire_reservations', 'schedule': 30.0},
+    'recover-room-image-uploads': {'task': 'orders.tasks.recover_room_image_uploads', 'schedule': 3600.0},
+    'auto-confirm-room-orders': {'task': 'orders.tasks.auto_confirm_room_orders', 'schedule': 30.0},
     'confirm-member-consumption': {'task': 'engagement.tasks.confirm_due_consumption', 'schedule': 60.0},
+    'award-continuations': {'task': 'orders.tasks.award_continuations', 'schedule': 60.0},
+    'retry-completion-subsidies': {'task': 'engagement.tasks.retry_completion_subsidies', 'schedule': 60.0},
     'release-provider-income': {'task': 'wallet.tasks.release_due_provider_income', 'schedule': 30.0},
+    'recover-withdrawal-notices': {'task': 'wallet.tasks.recover_withdrawal_notice_messages', 'schedule': 30.0},
     'publish-club-birthdays': {'task': 'engagement.tasks.publish_birthdays', 'schedule': 3600.0},
     'drain-club-broadcasts': {'task': 'engagement.tasks.drain_broadcast_outbox', 'schedule': 30.0},
+    'drain-chat-notifications': {'task': 'chat.tasks.drain_chat_notifications', 'schedule': 30.0},
+    'recover-payroll-separation-waivers': {'task': 'console.tasks.recover_separation_performance_waivers', 'schedule': 60.0},
+    'drain-manual-messages': {'task': 'site_messages.tasks.drain_manual_messages', 'schedule': 30.0},
+    'recover-checkin-notices': {'task': 'site_messages.tasks.recover_checkin_notices', 'schedule': 60.0},
+    'recover-reservation-invites': {'task': 'site_messages.tasks.recover_reservation_invites', 'schedule': 60.0},
+    'recover-reservation-status-notices': {'task': 'site_messages.tasks.recover_reservation_status_notices', 'schedule': 60.0},
+    'recover-reservation-event-notices': {'task': 'site_messages.tasks.recover_reservation_event_notices', 'schedule': 60.0},
+    'recover-reservation-seat-timeout-notices': {'task': 'site_messages.tasks.recover_reservation_seat_timeout_notices', 'schedule': 60.0},
+    'recover-audition-notices': {'task': 'site_messages.tasks.recover_audition_notices', 'schedule': 60.0},
+    'recover-grab-result-notices': {'task': 'site_messages.tasks.recover_grab_result_notices', 'schedule': 60.0},
+    'recover-grab-invites': {'task': 'site_messages.tasks.recover_grab_invites', 'schedule': 60.0},
+    'recover-order-application-notices': {'task': 'site_messages.tasks.recover_order_application_notices', 'schedule': 60.0},
+    'recover-aftersale-closure-notices': {'task': 'site_messages.tasks.recover_aftersale_closure_notices', 'schedule': 60.0},
+    'recover-aftersale-open-notices': {'task': 'site_messages.tasks.recover_aftersale_open_notices', 'schedule': 60.0},
+    'recover-evaluation-notices': {'task': 'site_messages.tasks.recover_evaluation_notices', 'schedule': 60.0},
+    'recover-room-confirmation-notices': {'task': 'site_messages.tasks.recover_room_confirmation_notices', 'schedule': 60.0},
+    'recover-room-review-notices': {'task': 'site_messages.tasks.recover_room_review_notices', 'schedule': 60.0},
+    'recover-room-objection-notices': {'task': 'site_messages.tasks.recover_room_objection_notices', 'schedule': 60.0},
+    'recover-order-completion-notices': {'task': 'site_messages.tasks.recover_order_completion_notices', 'schedule': 60.0},
+    'recover-order-timeout-notices': {'task': 'site_messages.tasks.recover_order_timeout_notices', 'schedule': 60.0},
+    'recover-customer-cancellation-notices': {'task': 'site_messages.tasks.recover_customer_cancellation_notices', 'schedule': 60.0},
+    'recover-order-refund-notices': {'task': 'site_messages.tasks.recover_order_refund_notices', 'schedule': 60.0},
+    'recover-points-aftersale-refund-notices': {'task': 'site_messages.tasks.recover_points_aftersale_refund_notices', 'schedule': 60.0},
+    'recover-addon-refund-notices': {'task': 'site_messages.tasks.recover_addon_refund_notices', 'schedule': 60.0},
+    'recover-zero-refund-closure-notices': {'task': 'site_messages.tasks.recover_zero_refund_closure_notices', 'schedule': 60.0},
+    'recover-addon-handover-result-notices': {'task': 'site_messages.tasks.recover_addon_handover_result_notices', 'schedule': 60.0},
+    'recover-service-transfer-notices': {'task': 'site_messages.tasks.recover_service_transfer_notices', 'schedule': 60.0},
+    'recover-grab-team-result-notices': {'task': 'site_messages.tasks.recover_grab_team_result_notices', 'schedule': 60.0},
+    'recover-grab-disqualification-notices': {'task': 'site_messages.tasks.recover_grab_disqualification_notices', 'schedule': 60.0},
     'grant-club-member-coupons': {'task': 'engagement.tasks.grant_member_coupons', 'schedule': 60.0},
+    'retry-addon-vip-recalculations': {'task': 'engagement.tasks.retry_addon_vip_recalculations', 'schedule': 60.0},
     # 每分钟兜底扫描超时未接单订单
     'check-pending-timeouts': {
         'task': 'orders.tasks.check_pending_timeouts',
@@ -386,10 +507,14 @@ CELERY_BEAT_SCHEDULE = {
 # 微信小程序登录配置
 WECHAT_MINIAPP_APPID = os.environ.get('WECHAT_APPID', '')
 WECHAT_MINIAPP_SECRET = os.environ.get('WECHAT_SECRET', '')
-# 未配置真实凭证时回退 mock 登录；可用 WECHAT_MOCK_LOGIN 显式覆盖。
+# 微信公众号网页授权与小程序/未来开放平台身份分开保存。
+WECHAT_H5_APPID = os.environ.get('WECHAT_H5_APPID', os.environ.get('WECHAT_OFFICIAL_APPID', ''))
+WECHAT_H5_SECRET = os.environ.get('WECHAT_H5_SECRET', os.environ.get('WECHAT_OFFICIAL_SECRET', ''))
+WECHAT_H5_ALLOWED_ORIGINS = [value.strip() for value in os.environ.get('WECHAT_H5_ALLOWED_ORIGINS', '').split(',') if value.strip()]
+# 缺少凭证时必须明确不可用；模拟登录只能在明确启用的隔离开发环境使用。
 WECHAT_MOCK_LOGIN = env_bool(
     'WECHAT_MOCK_LOGIN',
-    default=not (WECHAT_MINIAPP_APPID and WECHAT_MINIAPP_SECRET),
+    default=False,
 )
 
 # 平台默认抽成率（百分比）。报单审核入账时若 SystemConfig 未配置则回落此值。
@@ -398,6 +523,8 @@ PLATFORM_COMMISSION_RATE = 20
 # 平台系统账户用户名：承载 shop_income（店铺/平台留存）入账的钱包主体。
 # 该账户禁止登录，仅作记账归集，由数据迁移创建。
 PLATFORM_SYSTEM_USERNAME = os.environ.get('PLATFORM_SYSTEM_USERNAME', '__platform__')
+# Enable only after the control-plane identity migrations have been applied.
+PLATFORM_IDENTITY_ENABLED = env_bool('PLATFORM_IDENTITY_ENABLED', False)
 
 # 试音链接按端拆分，避免陪玩链接被错误地分发到仅支持老板身份的 H5。
 # 保留 AUDITION_LINK_BASE_URL 作为旧部署的向后兼容兜底。
@@ -435,7 +562,7 @@ WECOM_DISPATCH_NEW_ORDERS = env_bool('WECOM_DISPATCH_NEW_ORDERS', True)
 WECOM_DISPATCH_REJECTED_ORDERS = env_bool('WECOM_DISPATCH_REJECTED_ORDERS', True)
 WECOM_REQUEST_TIMEOUT = float(os.environ.get('WECOM_REQUEST_TIMEOUT', '8'))
 
-# 默认最低提现兴安币对应的内部账务值。C 端未配置时回落此值。
+# 默认最低提现浪花对应的内部账务值。C 端未配置时回落此值。
 MIN_WITHDRAW_AMOUNT = 10000
 
 # ---------------------------------------------------------------------------
@@ -453,6 +580,24 @@ if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
+
+from stores.database_config import install_store_databases  # noqa: E402
+
+STORE_DATABASE_ALIASES = install_store_databases(DATABASES, os.environ.get('XA_STORE_DATABASES', '{}'))
+DYNAMIC_STORE_DATABASE_TEMPLATE_ALIAS = os.environ.get('XA_DYNAMIC_STORE_DATABASE_TEMPLATE_ALIAS', '')
+DYNAMIC_STORE_DATABASE_ENABLED = env_bool(
+    'XA_DYNAMIC_STORE_DATABASE_ENABLED', bool(DYNAMIC_STORE_DATABASE_TEMPLATE_ALIAS))
+from stores.conf import parse_store_integrations  # noqa: E402
+STORE_INTEGRATIONS = parse_store_integrations(os.environ.get('XA_STORE_INTEGRATIONS', '{}'))
+
+# Isolate shared cache keys and channel groups as well as SQL rows. Test settings
+# that replace a backend must retain these wrappers for multi-store tests.
+for _cache in CACHES.values():
+    _cache['KEY_FUNCTION'] = 'stores.cache.make_key'
+STORE_CHANNEL_LAYER = CHANNEL_LAYERS['default']
+CHANNEL_LAYERS = {'default': {'BACKEND': 'stores.channels.StoreChannelLayer'}}
+from corsheaders.defaults import default_headers  # noqa: E402
+CORS_ALLOW_HEADERS = (*default_headers, 'x-store-slug')
 
 # ---------------------------------------------------------------------------
 # 启动期配置自检（必须放在文件最末尾，确保校验的是最终生效值）。
@@ -475,3 +620,78 @@ run_startup_checks(
 
 # Production password logins require authenticator app enrollment and TOTP.
 LOGIN_OTP_REQUIRED = not DEBUG
+PROVIDER_WECHAT_GATE_ENABLED = env_bool('PROVIDER_WECHAT_GATE_ENABLED', True)
+GRAB_COMMITTED_OPENING_ENABLED = env_bool('GRAB_COMMITTED_OPENING_ENABLED', False)
+GRAB_SINGLE_WINDOW_ENABLED = env_bool('GRAB_SINGLE_WINDOW_ENABLED', False)
+GRAB_TEAM_WINDOW_ENABLED = env_bool('GRAB_TEAM_WINDOW_ENABLED', False)
+GRAB_POOL_GROUP_DISPATCH_ENABLED = env_bool('GRAB_POOL_GROUP_DISPATCH_ENABLED', False)
+PROVIDER_LIFECYCLE_INTEGRATION_ENABLED = env_bool('PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)
+PROVIDER_RETIREMENT_ENABLED = env_bool('PROVIDER_RETIREMENT_ENABLED', False)
+PRESTART_HANDOFF_ENABLED = env_bool('PRESTART_HANDOFF_ENABLED', False)
+PRESTART_SCOPE_SNAPSHOT_ENABLED = env_bool('PRESTART_SCOPE_SNAPSHOT_ENABLED', False)
+GAME_COMMISSION_PAYMENT_ENABLED = env_bool('GAME_COMMISSION_PAYMENT_ENABLED', False)
+ORIGINAL_ATTRIBUTION_ENABLED = env_bool('ORIGINAL_ATTRIBUTION_ENABLED', False)
+SEGMENT_ECONOMICS_CAPTURE_ENABLED = env_bool('SEGMENT_ECONOMICS_CAPTURE_ENABLED', False)
+SEGMENT_ECONOMICS_ENFORCE_ENABLED = env_bool('SEGMENT_ECONOMICS_ENFORCE_ENABLED', False)
+SEGMENT_GAME_TRANSFER_ENABLED = env_bool('SEGMENT_GAME_TRANSFER_ENABLED', False)
+SEGMENT_STANDARD_TRANSFER_ENABLED = env_bool('SEGMENT_STANDARD_TRANSFER_ENABLED', False)
+SEGMENT_REPORT_ENABLED = env_bool('SEGMENT_REPORT_ENABLED', False)
+SEGMENT_SETTLEMENT_ENABLED = env_bool('SEGMENT_SETTLEMENT_ENABLED', False)
+SEGMENT_SETTLEMENT_ENFORCE_ENABLED = env_bool('SEGMENT_SETTLEMENT_ENFORCE_ENABLED', False)
+SEGMENT_REFUND_PREVIEW_ENABLED = env_bool('SEGMENT_REFUND_PREVIEW_ENABLED', False)
+NEGOTIATION_PROPOSAL_ENABLED = env_bool('NEGOTIATION_PROPOSAL_ENABLED', False)
+NEGOTIATION_REFUND_EXECUTION_ENABLED = env_bool('NEGOTIATION_REFUND_EXECUTION_ENABLED', False)
+NEGOTIATION_ZERO_EXECUTION_ENABLED = env_bool('NEGOTIATION_ZERO_EXECUTION_ENABLED', False)
+REFUND_DEPOSIT_DEFICIT_ENABLED = env_bool('REFUND_DEPOSIT_DEFICIT_ENABLED', False)
+REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED = env_bool('REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED', False)
+REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED = env_bool('REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED', False)
+REFUND_DEPOSIT_RECOVERY_ENFORCE_ENABLED = env_bool('REFUND_DEPOSIT_RECOVERY_ENFORCE_ENABLED', False)
+WECHAT_H5_AVATAR_SYNC_ENABLED = env_bool('WECHAT_H5_AVATAR_SYNC_ENABLED', True)
+POINTS_USAGE_SWITCHES_ENABLED = env_bool('POINTS_USAGE_SWITCHES_ENABLED', True)
+PROVIDER_PASS_POINTS_PAYMENT_ENABLED = env_bool('PROVIDER_PASS_POINTS_PAYMENT_ENABLED', True)
+PLATFORM_PASS_REPAYMENT_ENABLED = env_bool('PLATFORM_PASS_REPAYMENT_ENABLED', False)
+ROOM_COMPLETION_REVIEW_ENABLED = env_bool('ROOM_COMPLETION_REVIEW_ENABLED', True)
+ROOM_BOSS_CONFIRMATION_ENABLED = env_bool('ROOM_BOSS_CONFIRMATION_ENABLED', True)
+ROOM_AUTO_CONFIRMATION_ENABLED = env_bool('ROOM_AUTO_CONFIRMATION_ENABLED', True)
+BOSS_FUNDING_SELECTION_ENABLED = env_bool('BOSS_FUNDING_SELECTION_ENABLED', False)
+ORDINARY_SERVICE_FUNDING_ENABLED = env_bool('ORDINARY_SERVICE_FUNDING_ENABLED', False)
+LICENSE_ACCOUNT_ADMISSION_ENABLED = env_bool('LICENSE_ACCOUNT_ADMISSION_ENABLED', True)
+LICENSE_BENEFIT_ENFORCEMENT_ENABLED = env_bool('LICENSE_BENEFIT_ENFORCEMENT_ENABLED', True)
+LICENSE_SNAPSHOT_CACHE_ENABLED = env_bool('LICENSE_SNAPSHOT_CACHE_ENABLED', True)
+
+PRESTART_HANDOFF_NOTICE_RECOVERY_ENABLED = env_bool('PRESTART_HANDOFF_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-prestart-handoff-notices'] = {'task': 'site_messages.tasks.recover_prestart_handoff_notices', 'schedule': 60.0}
+
+RESERVATION_TEAM_CONFIRMED_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_TEAM_CONFIRMED_NOTICE_RECOVERY_ENABLED', False)
+
+RESERVATION_TEAM_DECLINED_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_TEAM_DECLINED_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-reservation-team-declined-notices'] = {'task': 'site_messages.tasks.recover_reservation_team_declined_notices', 'schedule': 60.0}
+
+RESERVATION_TEAM_REPLACED_NOTICE_RECOVERY_ENABLED = env_bool('RESERVATION_TEAM_REPLACED_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-reservation-team-replaced-notices'] = {'task': 'site_messages.tasks.recover_reservation_team_replaced_notices', 'schedule': 60.0}
+
+NEGOTIATION_PROPOSAL_NOTICE_RECOVERY_ENABLED = env_bool('NEGOTIATION_PROPOSAL_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-negotiation-proposal-notices'] = {'task': 'site_messages.tasks.recover_negotiation_proposal_notices', 'schedule': 60.0}
+
+GIFT_RECEIPT_NOTICE_RECOVERY_ENABLED = env_bool('GIFT_RECEIPT_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-gift-receipt-notices'] = {'task': 'site_messages.tasks.recover_gift_receipt_notices', 'schedule': 60.0}
+
+STAFF_START_NOTICE_RECOVERY_ENABLED = env_bool('STAFF_START_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-staff-start-notices'] = {'task': 'site_messages.tasks.recover_staff_start_notices', 'schedule': 60.0}
+CELERY_BEAT_SCHEDULE['recover-order-assignment-notices'] = {'task': 'site_messages.tasks.recover_order_assignment_notices', 'schedule': 60.0}
+ADDON_PAYMENT_NOTICE_RECOVERY_ENABLED = env_bool('ADDON_PAYMENT_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-addon-payment-notices'] = {'task': 'site_messages.tasks.recover_addon_payment_notices', 'schedule': 60.0}
+ADDON_COMPLETION_NOTICE_RECOVERY_ENABLED = env_bool('ADDON_COMPLETION_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-addon-completion-notices'] = {'task': 'site_messages.tasks.recover_addon_completion_notices', 'schedule': 60.0}
+ADDON_REFUND_PROPOSAL_NOTICE_RECOVERY_ENABLED = env_bool('ADDON_REFUND_PROPOSAL_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-addon-refund-proposal-notices'] = {'task': 'site_messages.tasks.recover_addon_refund_proposal_notices', 'schedule': 60.0}
+ADDON_HANDOVER_PROPOSAL_NOTICE_RECOVERY_ENABLED = env_bool('ADDON_HANDOVER_PROPOSAL_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-addon-handover-proposal-notices'] = {'task': 'site_messages.tasks.recover_addon_handover_proposal_notices', 'schedule': 60.0}
+DEPOSIT_EVENT_NOTICE_RECOVERY_ENABLED = env_bool('DEPOSIT_EVENT_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-deposit-event-notices'] = {'task': 'site_messages.tasks.recover_deposit_event_notices', 'schedule': 60.0}
+DEPOSIT_APPLICATION_NOTICE_RECOVERY_ENABLED = env_bool('DEPOSIT_APPLICATION_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-deposit-application-notices'] = {'task': 'site_messages.tasks.recover_deposit_application_notices', 'schedule': 60.0}
+RECHARGE_RECEIPT_NOTICE_RECOVERY_ENABLED = env_bool('RECHARGE_RECEIPT_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-recharge-receipt-notices'] = {'task': 'site_messages.tasks.recover_recharge_receipt_notices', 'schedule': 60.0}
+RECHARGE_GIFT_DECISION_NOTICE_RECOVERY_ENABLED = env_bool('RECHARGE_GIFT_DECISION_NOTICE_RECOVERY_ENABLED', False)
+CELERY_BEAT_SCHEDULE['recover-recharge-gift-decision-notices'] = {'task': 'site_messages.tasks.recover_recharge_gift_decision_notices', 'schedule': 60.0}

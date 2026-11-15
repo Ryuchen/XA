@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "mode": "desktop",
+      "motion": {
+        "hero": "boss-hero-copy-in",
+        "sound": "boss-hero-sound",
+        "iterations": "2",
+        "dock": "none"
+      },
+      "hoverTransform": "matrix(1, 0, 0, 1, 0, -3)",
+      "pressTransform": "matrix(0.985, 0, 0, 0.985, 0, 1)",
+      "layoutUnchanged": true,
+      "errors": [],
+      "reducedMotion": {
+        "hero": "none",
+        "sound": "none",
+        "dock": "none"
+      }
+    },
+    {
+      "mode": "mobile",
+      "motion": {
+        "hero": "boss-hero-copy-in",
+        "sound": "boss-hero-sound",
+        "iterations": "2",
+        "dock": "none"
+      },
+      "hoverTransform": "matrix(1, 0, 0, 1, 0, -3)",
+      "pressTransform": "matrix(0.985, 0, 0, 0.985, 0, 1)",
+      "layoutUnchanged": true,
+      "errors": [],
+      "reducedMotion": {
+        "hero": "none",
+        "sound": "none",
+        "dock": "none"
+      }
+    }
+  ]
+}

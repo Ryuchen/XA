@@ -1,5 +1,7 @@
 # 兴安电竞（XA）· 数据模型 ER 图
 
+> **2026-11-04 门店补充**：下方业务ER关系在每个门店的独立业务库内各保存一套，不能把相同数字ID当作跨店同一记录。中央默认库另有 `Store(id, slug, name, database_alias, status, initialized_at, boss_url, provider_url, admin_url)` 和 `StorePlatformGrant(account_id, is_active)`；后者只授权默认库的业务后台账户，不与其他门店建立外键。详见[数据库规范](DATABASE_DESIGN.md)与[多门店说明](ops/multitenancy-20261104.md)。
+
 > 配套文档：[PRD.md](./PRD.md) / [DATABASE_DESIGN.md](./DATABASE_DESIGN.md)　│　最后更新：2026-07-30
 >
 > 本文用 Mermaid `erDiagram` 描述系统数据表及其关系。金额字段使用整数内部账务单位，

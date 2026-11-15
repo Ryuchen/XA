@@ -24,8 +24,11 @@ class DispatchRouteTest(APITestCase):
     def setUp(self):
         self.boss = make_user()
         self.boss_account = get_or_create_account_for_legacy_user(self.boss)
-        self.provider = make_provider()
+        self.provider = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         self.provider_account = get_or_create_account_for_legacy_user(self.provider)
+        self.provider_account.openid = 'dispatch-route-provider'
+        self.provider_account.is_openid_bound = True
+        self.provider_account.save(update_fields=['openid', 'is_openid_bound'])
         EscortProfile.objects.filter(user=self.provider).update(account=self.provider_account)
         self.staff = make_console_user(['order:view', 'order:dispatch'])
         self.staff_account = get_or_create_account_for_legacy_user(self.staff)
@@ -46,7 +49,7 @@ class DispatchRouteTest(APITestCase):
         self.auth(self.boss_account)
         return self.client.post('/api/orders/create/', {'service_id': self.service.pk, **kwargs}, format='json')
 
-    def test_staff_route_is_private_and_admin_can_assign_then_provider_rejects(self):
+    def test_legacy_staff_route_assignment_cannot_be_rejected_by_provider(self):
         response = self.create(dispatch_route='STAFF', client_request_id='staff-route')
         self.assertEqual(response.data['code'], 0)
         self.assertEqual(response.data['data']['dispatch_route'], 'STAFF')
@@ -67,6 +70,7 @@ class DispatchRouteTest(APITestCase):
         Order.objects.filter(pk=order.pk).update(requires_boss_selection=True)
         self.assertEqual(self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json').data['code'], 400)
         self.assertFalse(OrderApplication.objects.filter(order=order).exists())
+        Order.objects.filter(pk=order.pk).update(requires_boss_selection=False)
 
         self.auth(self.staff_account)
         public_order = make_order(self.boss, customer_account=self.boss_account, service=self.service)
@@ -80,11 +84,10 @@ class DispatchRouteTest(APITestCase):
 
         self.auth(self.provider_account)
         rejected = self.client.post(f'/api/orders/orders/{order.pk}/reject/', {'reason': '档期变化'}, format='json')
-        self.assertEqual(rejected.data['code'], 0, rejected.data)
+        self.assertEqual(rejected.data['errorCode'], 'ORDER_SELF_REJECTION_DISABLED')
         order.refresh_from_db()
-        self.assertEqual((order.status, order.dispatch_route, order.requires_boss_selection), ('PENDING', 'STAFF', False))
-        self.assertIsNone(order.provider_account_id)
-        self.assertGreater(order.auto_cancel_at, timezone.now())
+        self.assertEqual((order.status, order.dispatch_route, order.requires_boss_selection), ('GRABBED', 'STAFF', False))
+        self.assertEqual(order.provider_account_id, self.provider_account.pk)
         self.enqueue_kook_dispatch.assert_not_called()
         self.enqueue_wecom_dispatch.assert_not_called()
         self.assertEqual(self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json').data['code'], 400)

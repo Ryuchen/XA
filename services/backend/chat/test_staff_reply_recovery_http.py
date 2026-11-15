@@ -31,8 +31,8 @@ class StaffReplyRecoveryHTTPTest(LiveServerTestCase):
     def test_two_staff_sessions_response_loss_and_recovery(self):
         bosses = [ClubAccount.objects.create_account(username=f'staff-recovery-boss-{i}', account_type='BOSS') for i in (1, 2)]
         staff = []
-        for _ in range(2):
-            user = make_console_user(['chat:view', 'chat:reply'])
+        for index in range(2):
+            user = make_console_user(['chat:view', 'chat:reply'] + (['chat:supervise'] if index else []))
             account = get_or_create_account_for_legacy_user(user)
             AdminMembership.objects.filter(user=user).update(account=account)
             staff.append(account)
@@ -43,6 +43,8 @@ class StaffReplyRecoveryHTTPTest(LiveServerTestCase):
         for boss in bosses:
             client = APIClient(); client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss)[0])
             sessions.append(client.get('/api/chat/session/').data['data']['session']['id'])
+        claimant = APIClient(); claimant.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff[0])[0])
+        self.assertEqual(claimant.post(f'/api/admin/chat-sessions/{sessions[0]}/claim/', {'expected_version': 0}, format='json').data['code'], 0)
         repo = Path(__file__).resolve().parents[3]
         image = io.BytesIO(); Image.new('RGB', (3, 3), 'green').save(image, format='PNG')
         result = subprocess.run(['node', str(repo / 'scripts/admin-chat-reply-recovery-live.cjs')],

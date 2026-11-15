@@ -9,6 +9,11 @@ const fixture = JSON.parse(fs.readFileSync(0, 'utf8'));
 const root = path.resolve(process.env.XA_PROVIDER_REPORT_BUILD || '.tools/provider-report-nav-h5-20261101');
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith('/api/')) {
+    const target = new URL(fixture.base);
+    const proxy = http.request({ hostname: target.hostname, port: target.port, path: req.url, method: req.method, headers: { ...req.headers, host: target.host } }, response => { res.writeHead(response.statusCode, response.headers); response.pipe(res); });
+    proxy.on('error', () => res.writeHead(502).end()); req.pipe(proxy); return;
+  }
   const relative = decodeURIComponent(new URL(req.url, 'http://localhost').pathname).replace(/^\/+/, '') || 'index.html';
   const file = path.resolve(root, relative);
   if (!file.startsWith(root + path.sep)) { res.writeHead(404).end(); return; }
@@ -30,7 +35,7 @@ async function main() {
     const page = await context.newPage();
     page.setDefaultTimeout(8000);
     await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
-    await page.goto(`http://127.0.0.1:${server.address().port}/#/pages/report/index`);
+    await page.goto(`http://127.0.0.1:${server.address().port}/#/reports`);
     await page.getByText(fixture.orderNo).first().waitFor({ timeout: 15000 });
     const entry = page.getByText('前往订单', { exact: true }).first();
     await entry.scrollIntoViewIfNeeded();
@@ -40,10 +45,10 @@ async function main() {
     await page.screenshot({ path: path.join(folder, 'report-375.png') });
     await entry.click();
     await page.screenshot({ path: path.join(folder, 'after-click-375.png') });
-    await page.waitForURL(/#\/pages\/orders\/index/, { timeout: 10000 });
+    await page.waitForURL(/#\/orders/, { timeout: 10000 });
     await page.getByText(fixture.orderNo).first().waitFor({ timeout: 10000 });
     await page.getByText('开始服务', { exact: true }).first().waitFor({ timeout: 10000 });
-    await page.getByText('正在查看关联订单', { exact: true }).waitFor({ timeout: 10000 });
+    await page.getByRole('heading', { name: '关联订单', exact: true }).waitFor({ timeout: 10000 });
     assert.equal(await page.getByText(fixture.otherOrderNo).count(), 0, 'other order must not be focused');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'order horizontal overflow');
     await page.screenshot({ path: path.join(folder, 'order-375.png') });

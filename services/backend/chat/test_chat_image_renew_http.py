@@ -29,6 +29,7 @@ def expired_ticket(ticket):
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class ChatImageRenewHTTPTest(LiveServerTestCase):
+    host = '127.0.0.1'
     def test_owner_and_staff_can_reopen_expired_chat_image(self):
         boss = ClubAccount.objects.create_account(username='isolated-image-reader', account_type='BOSS')
         other = ClubAccount.objects.create_account(username='isolated-image-other', account_type='BOSS')
@@ -77,6 +78,8 @@ class ChatImageRenewHTTPTest(LiveServerTestCase):
             self.assertEqual(older['messages'][0]['id'], message_id)
             self.assertEqual(http(older['messages'][0]['image_url'])[0], 200)
             session_id = session['session']['id']
+            status, claimed = api(self.live_server_url + f'/api/admin/chat-sessions/{session_id}/claim/', 1, {'expected_version': 0})
+            self.assertEqual((status, claimed['code']), (200, 0), claimed)
             recent = api(self.live_server_url + f'/api/admin/chat-sessions/{session_id}/messages/?cursor=1', 1)[1]['data']
             self.assertTrue(recent['has_more'])
             earlier = api(self.live_server_url + f'/api/admin/chat-sessions/{session_id}/messages/?cursor=1&before_id=' + str(recent['next_before_id']), 1)[1]['data']

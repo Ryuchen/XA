@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (MemberView, HomeFeedView, ContentView, PointsView, RewardsView,
-    RedeemView, ClaimsView, LotteryView)
+    RedeemView, ClaimsView, LotteryView, OpenLotteryCampaignsView)
 from .kook_views import KookBindingView
 
 urlpatterns = [
@@ -15,4 +15,5 @@ urlpatterns = [
     path('claims/', ClaimsView.as_view()),
     path('claims/<int:pk>/', ClaimsView.as_view()),
     path('lottery/', LotteryView.as_view()),
+    path('lottery/campaigns/', OpenLotteryCampaignsView.as_view()),
 ]

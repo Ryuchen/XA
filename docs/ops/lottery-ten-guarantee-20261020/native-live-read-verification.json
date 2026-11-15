@@ -1,0 +1,202 @@
+{
+  "result": "PASS",
+  "real_local_api": true,
+  "http_writes": 0,
+  "account_unchanged": 1142,
+  "campaign": {
+    "id": 1,
+    "prizes": [
+      {
+        "id": 1,
+        "reward": 52,
+        "name": "68 体验单",
+        "reward_code": "lottery-experience-68",
+        "rarity": "SSR",
+        "kind": "SERVICE",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 0,
+        "probabilityText": "0"
+      },
+      {
+        "id": 2,
+        "reward": 53,
+        "name": "200 积分",
+        "reward_code": "lottery-points-200",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 1,
+        "probabilityText": "0"
+      },
+      {
+        "id": 3,
+        "reward": 54,
+        "name": "150 积分",
+        "reward_code": "lottery-points-150",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 2,
+        "probabilityText": "0"
+      },
+      {
+        "id": 4,
+        "reward": 55,
+        "name": "80 积分",
+        "reward_code": "lottery-points-80",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 3,
+        "probabilityText": "0"
+      },
+      {
+        "id": 5,
+        "reward": 56,
+        "name": "60 积分",
+        "reward_code": "lottery-points-60",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 4,
+        "probabilityText": "0"
+      },
+      {
+        "id": 6,
+        "reward": 57,
+        "name": "40 积分",
+        "reward_code": "lottery-points-40",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 5,
+        "probabilityText": "0"
+      },
+      {
+        "id": 7,
+        "reward": 58,
+        "name": "20 积分",
+        "reward_code": "lottery-points-20",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 6,
+        "probabilityText": "0"
+      },
+      {
+        "id": 8,
+        "reward": 59,
+        "name": "10 积分",
+        "reward_code": "lottery-points-10",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 7,
+        "probabilityText": "0"
+      },
+      {
+        "id": 9,
+        "reward": 60,
+        "name": "5 积分",
+        "reward_code": "lottery-points-5",
+        "rarity": "R",
+        "kind": "POINTS",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 8,
+        "probabilityText": "0"
+      },
+      {
+        "id": 10,
+        "reward": 61,
+        "name": "任选冠名 3 天",
+        "reward_code": "lottery-naming-3",
+        "rarity": "SR",
+        "kind": "NAMING",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 9,
+        "probabilityText": "0"
+      },
+      {
+        "id": 11,
+        "reward": 62,
+        "name": "任选冠名 5 天",
+        "reward_code": "lottery-naming-5",
+        "rarity": "SR",
+        "kind": "NAMING",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 10,
+        "probabilityText": "0"
+      },
+      {
+        "id": 12,
+        "reward": 63,
+        "name": "任选冠名 7 天",
+        "reward_code": "lottery-naming-7",
+        "rarity": "SR",
+        "kind": "NAMING",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 11,
+        "probabilityText": "0"
+      },
+      {
+        "id": 13,
+        "reward": 64,
+        "name": "自定义 TAG",
+        "reward_code": "lottery-custom-tag",
+        "rarity": "SR",
+        "kind": "TAG",
+        "image_url": "",
+        "probability": 0,
+        "sort_order": 12,
+        "probabilityText": "0"
+      }
+    ],
+    "pity": {
+      "enabled": true,
+      "target_reward_code": "lottery-experience-68",
+      "target_prize_id": 1,
+      "target_name": "68 体验单",
+      "limit": 240,
+      "count": 0,
+      "remaining": 240,
+      "percent": 0
+    },
+    "draw_counts": [
+      1,
+      10
+    ],
+    "ten_draw_cost": 1000,
+    "daily_remaining": null,
+    "ten_guarantee": {
+      "enabled": true,
+      "count": 10,
+      "min_non_points": 1,
+      "available": false,
+      "eligible_prize_ids": [],
+      "pity_priority": true,
+      "unavailable_reason": "抽奖活动尚未开始或已经结束"
+    },
+    "name": "兴安幸运转盘",
+    "point_cost": 100,
+    "enabled": false,
+    "starts_at": null,
+    "ends_at": null,
+    "daily_limit": 0,
+    "version": 1,
+    "rules": "每次消耗 100 积分。奖品以中奖记录为准，积分奖励自动到账，其余奖品由俱乐部安排交付。奖项概率由后台配置，总计 100%。",
+    "created_at": "2026-09-23T22:43:11.991290+08:00"
+  },
+  "basic_probabilities_unchanged": true
+}

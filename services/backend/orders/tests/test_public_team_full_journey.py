@@ -1,7 +1,6 @@
 """A purchased public team order from applications through actual settlement."""
 from datetime import timedelta
 from tempfile import TemporaryDirectory
-from unittest.mock import patch
 
 from django.test import override_settings
 from django.utils import timezone
@@ -9,7 +8,7 @@ from rest_framework.test import APITransactionTestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
-from engagement.confirmation import process_order
+from engagement.tasks import confirm_due_consumption
 from orders.models import Order, OrderApplication
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
 from orders.tests.test_release_flow import screenshot
@@ -146,10 +145,22 @@ class PublicTeamFullJourneyTest(APITransactionTestCase):
         self.assertEqual(ok(self.client.get(f'/api/admin/orders/{order.pk}/'))['status'], 'COMPLETED')
         for report in ProviderReport.objects.filter(order=order):
             ok(self.client.post(f'/api/admin/reports/{report.pk}/approve/'))
-        with patch('django.utils.timezone.now', return_value=timezone.now() + timedelta(hours=73)):
-            self.assertTrue(process_order(order.pk))
+        # Keep the real clock and task: in this isolated database the service
+        # finished earlier, while the second provider reported only recently.
+        completed = timezone.now() - timedelta(hours=74)
+        first_submitted = completed + timedelta(minutes=10)
+        Order.objects.filter(pk=order.pk).update(created_at=completed - timedelta(hours=1), completed_at=completed)
+        ProviderReport.objects.filter(order=order, provider=providers[0]).update(submitted_at=first_submitted)
+        self.assertEqual(confirm_due_consumption(), 0)
         order.refresh_from_db()
         self.assertIsNotNone(order.settled_at)
+        self.assertIsNone(order.consumption_confirmed_at)
+        ProviderReport.objects.filter(order=order, provider=providers[1]).update(submitted_at=first_submitted + timedelta(minutes=10))
+        self.assertEqual(confirm_due_consumption(), 1)
+        self.assertEqual(confirm_due_consumption(), 0)
+        order.refresh_from_db()
+        self.assertIsNotNone(order.settled_at)
+        self.assertIsNotNone(order.consumption_confirmed_at)
         wallet.refresh_from_db()
         self.assertEqual(wallet.balance, 50000 - order.amount)
         self.assertEqual(Transaction.objects.filter(order=order, tx_type='PAY').count(), 1)
@@ -157,4 +168,12 @@ class PublicTeamFullJourneyTest(APITransactionTestCase):
             share = shares[accounts[user.pk].pk]
             self.assertEqual(Wallet.objects.get(account=accounts[user.pk]).balance, share.provider_income)
             self.assertEqual(Transaction.objects.filter(order=order, wallet__account=accounts[user.pk], tx_type='INCOME').count(), 1)
+            auth(user)
+            detail = ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+            self.assertEqual(detail['settlement_status'], 'SETTLED')
+            self.assertIsNotNone(detail['consumption_confirmed_at'])
+        auth(boss)
+        self.assertEqual(ok(self.client.get(f'/api/orders/orders/{order.pk}/'))['settlement_status'], 'SETTLED')
+        auth(staff)
+        self.assertEqual(ok(self.client.get(f'/api/admin/orders/{order.pk}/'))['settlement_status'], 'SETTLED')
         self.assertFalse(Transaction.objects.filter(order=order, wallet__account__in=[accounts[p.pk] for p in providers[2:]], tx_type='INCOME').exists())

@@ -1,0 +1,39 @@
+{
+  "run": "XA-PARTIAL-REFUND-20261020-68af85",
+  "result": "PASS",
+  "admin": {
+    "amount_entry_and_requote": true,
+    "frozen_parts_coins": [
+      250,
+      150,
+      600
+    ],
+    "available_parts_coins": [
+      200,
+      100,
+      300
+    ],
+    "remaining_partial_coins": 1000,
+    "insufficient": {
+      "requested_refund_coins": 1000,
+      "provider_required": 800,
+      "provider_available": 600,
+      "provider_shortfall": 200,
+      "confirmation_disabled": true
+    },
+    "source_reversal_link_ui": true
+  },
+  "provider": {
+    "final_available_coins": 800,
+    "final_frozen_coins": 400,
+    "final_net_income_coins": 1200,
+    "no_manual_reload_of_wallet": true
+  },
+  "temporary_audit_tab_closed": true,
+  "only_local_synthetic_funds": true,
+  "original_provider_restored": "local_provider",
+  "original_provider_wallet": {
+    "available_coins": 0,
+    "frozen_coins": 0
+  }
+}

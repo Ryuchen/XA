@@ -72,7 +72,8 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
         self.assertEqual(gift_order.amount, 2100)
         self.assertEqual(Wallet.objects.get(account=accounts[0]).balance, 27900)
         self.assertFalse(Wallet.objects.filter(account=accounts[1], balance__gt=0).exists())
-        self.assertEqual(Wallet.objects.get(account=accounts[2]).balance, 1680)
+        recipient_wallet = Wallet.objects.get(account=accounts[2])
+        self.assertEqual((recipient_wallet.balance, recipient_wallet.frozen_amount), (0, 1680))
         inbox = ok(clients[2].get('/api/messages/'))['messages']
         notices = [row for row in inbox if row['title'] == '收到老板礼物' and row['related_order_id'] == gift_order.pk]
         self.assertEqual(len(notices), 1)
@@ -93,7 +94,8 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
         self.assertEqual(direct.returncode, 0, direct.stdout + direct.stderr)
         direct_order = Order.objects.get(customer_account=accounts[0], is_gift_snapshot=True, source_order__isnull=True)
         self.assertEqual(direct_order.provider_account_id, accounts[1].pk)
-        self.assertEqual(Wallet.objects.get(account=accounts[1]).balance, 1680)
+        direct_recipient_wallet = Wallet.objects.get(account=accounts[1])
+        self.assertEqual((direct_recipient_wallet.balance, direct_recipient_wallet.frozen_amount), (0, 1680))
         self.assertEqual(Wallet.objects.get(account=accounts[0]).balance, 25800)
         self.assertEqual(len([row for row in ok(clients[1].get('/api/messages/'))['messages']
                               if row['title'] == '收到老板礼物' and row['related_order_id'] == direct_order.pk]), 1)
@@ -145,7 +147,8 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
             {'reason': '隔离验收礼物部分退款', 'refund_amount': 500, 'plan_token': preview['plan_token'], 'client_request_id': 'team-gift-partial-refund'}, format='json'))
         check_native_refund(True, '50', '160')
         record = next(row for row in ok(clients[2].get('/api/wallet/provider-benefits/'))['gift_records'] if row['id'] == gift_order.pk)
-        self.assertEqual((record['settlement_status'], record['received_income']), ('PARTIALLY_REFUNDED', 1280))
+        self.assertEqual((record['settlement_status'], record['received_income'], record['frozen_income']),
+                         ('PARTIALLY_REFUNDED_FROZEN', 1280, 1280))
         dashboard = ok(clients[-1].get('/api/admin/dashboard/stats'))
         self.assertEqual((dashboard['order_amount_total'], dashboard['gift_order_net_amount']), (23700, 3700))
         preview = ok(clients[-1].get(f'/api/admin/orders/{gift_order.pk}/refund-preview/'))
@@ -166,8 +169,8 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
                 self.assertEqual(detail['related_order_id'], gift_order.pk)
                 self.assertTrue(detail['is_read'])
             if client is clients[0]:
-                self.assertIn('50 兴安币', next(row['preview'] for row in rows if row['title'] == '订单部分退款'))
-                self.assertIn('160 兴安币', next(row['preview'] for row in rows if row['title'] == '订单已退款'))
+                self.assertIn('50 浪花', next(row['preview'] for row in rows if row['title'] == '订单部分退款'))
+                self.assertIn('160 浪花', next(row['preview'] for row in rows if row['title'] == '订单已退款'))
         self.assertFalse(any(row['related_order_id'] == gift_order.pk
                              for row in ok(clients[1].get('/api/messages/'))['messages']))
         dashboard = ok(clients[-1].get('/api/admin/dashboard/stats'))

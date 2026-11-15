@@ -24,7 +24,7 @@ class TeamProgressWorkflowTest(APITransactionTestCase):
     recharge = flow.ReleaseFlowTest.recharge
 
     def test_staff_dispatch_handoff_and_reports_use_the_same_progress(self):
-        second = make_provider(display_name='客服指派队友')
+        second = make_provider(display_name='客服指派队友', deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         self.accounts[second.pk] = get_or_create_account_for_legacy_user(second)
         second.escort_profile.account = self.accounts[second.pk]
         second.escort_profile.save(update_fields=['account'])
@@ -110,7 +110,7 @@ class TeamProgressWorkflowTest(APITransactionTestCase):
         self.assertFalse(Transaction.objects.filter(order_id=order_id, tx_type='INCOME').exists())
 
     def test_actual_two_person_entry_and_completion_are_visible_to_each_role(self):
-        second = make_provider(display_name='第二陪玩')
+        second = make_provider(display_name='第二陪玩', deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         self.accounts[second.pk] = get_or_create_account_for_legacy_user(second)
         profile = second.escort_profile
         profile.account = self.accounts[second.pk]

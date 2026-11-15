@@ -24,7 +24,7 @@ from orders.tests.factories import (
     make_wallet,
 )
 from users.models import EscortProfile
-from wallet.models import DisposeRecord, RechargeRecord, Wallet
+from wallet.models import DisposeRecord, RechargeRecord, Transaction, Wallet
 
 User = get_user_model()
 
@@ -123,8 +123,23 @@ class RechargeIdSpaceTest(APITestCase):
         wallet = make_wallet(unrelated, balance=0)
         unmapped = ClubAccount.objects.create(pk=collision, username='unmapped-recharge-business',
                                               account_type=ClubAccount.AccountType.BOSS)
-        result = self._recharge({'account_id': unmapped.pk, 'amount': 10000})
-        self.assertEqual(result.data['code'], 404, result.data)
+        payload = {'account_id': unmapped.pk, 'amount': 10000,
+                   'client_request_id': 'independent-account-recharge'}
+        result = self._recharge(payload)
+        self.assertEqual(result.data['code'], 0, result.data)
+        owned_wallet = Wallet.objects.get(account=unmapped)
+        self.assertIsNone(owned_wallet.user_id)
+        self.assertEqual((owned_wallet.balance, owned_wallet.total_recharge), (10000, 10000))
+        own_record = RechargeRecord.objects.get(account=unmapped)
+        self.assertIsNone(own_record.user_id)
+        self.assertEqual(own_record.amount, 10000)
+        self.assertEqual(Transaction.objects.get(wallet=owned_wallet).amount, 10000)
+        repeated = self._recharge(payload)
+        self.assertEqual(repeated.data['code'], 409, repeated.data)
+        owned_wallet.refresh_from_db()
+        self.assertEqual(owned_wallet.balance, 10000)
+        self.assertEqual(RechargeRecord.objects.filter(account=unmapped).count(), 1)
+        self.assertEqual(Transaction.objects.filter(wallet=owned_wallet).count(), 1)
         wallet.refresh_from_db()
         self.assertEqual(wallet.balance, 0)
         self.assertFalse(RechargeRecord.objects.filter(user=unrelated).exists())
@@ -132,7 +147,7 @@ class RechargeIdSpaceTest(APITestCase):
         # not appear under the unrelated business account either.
         RechargeRecord.objects.create(user=unrelated, amount=100)
         rows = self.client.get('/api/admin/recharge-records/', {'account_id': unmapped.pk}).data['data']['list']
-        self.assertEqual(rows, [])
+        self.assertEqual([row['id'] for row in rows], [own_record.pk])
 
     def test_explicit_wallet_link_allows_recharge_without_legacy_mapping(self):
         customer = make_user()

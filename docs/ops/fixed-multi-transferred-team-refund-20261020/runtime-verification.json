@@ -1,0 +1,77 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-20T08:17:01.550Z",
+  "django_check": {
+    "exit_code": 0,
+    "output": "System check identified no issues (0 silenced)."
+  },
+  "migration_check": {
+    "exit_code": 0,
+    "pending_migrations": false
+  },
+  "ordinary_containers": [
+    {
+      "name": "xa-local-validation-provider-h5-1",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-admin-web-1",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-celery-worker-1",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-celery-beat-1",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-web-2",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-web-1",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-gateway-1",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-redis-1",
+      "state": "running"
+    },
+    {
+      "name": "xa-local-validation-db-1",
+      "state": "running"
+    }
+  ],
+  "ordinary_container_count": 9,
+  "tracked_diff_check": {
+    "exit_code": 0
+  },
+  "native_original_session_restored": true,
+  "original_native_account_id": 1142,
+  "temporary_provider_session_logged_out": true,
+  "temporary_tabs_closed": true,
+  "original_provider_tab_untouched": true,
+  "financial_production_code_changed": false,
+  "database_schema_changed": false,
+  "source_hashes_match_tested_sources": {
+    "orders/commission.py": true,
+    "orders/models.py": true,
+    "orders/pricing.py": true,
+    "orders/services.py": true,
+    "orders/notifier.py": true,
+    "orders/serializers.py": true,
+    "orders/refunds.py": true,
+    "orders/state_machine.py": true,
+    "console/views.py": true,
+    "wallet/income.py": true,
+    "engagement/confirmation.py": true,
+    "orders/tests/test_fixed_multi_transferred_refunds.py": true
+  },
+  "new_test_whitespace_check": "PASS",
+  "isolated_mysql_container_absent": true
+}

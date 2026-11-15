@@ -1,0 +1,170 @@
+/* ReservationsPage: source summary, records heading and responsive ReservationCard. */
+.boss-reservations-content .boss-next-reservation { display: flex; align-items: center; flex-wrap: nowrap; gap: 20px; padding: 20px; margin-bottom: 0; }
+.boss-next-reservation-main { display: flex; flex: 1; align-items: flex-start; min-width: 0; gap: 12px; }
+.boss-next-reservation-main > span { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 8px; background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--boss-link); }
+.boss-next-reservation-main > div { min-width: 0; }
+.boss-next-reservation-main .boss-actions { flex-wrap: wrap; gap: 8px; }
+.boss-next-reservation-main h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.boss-next-reservation-main strong { margin-top: 8px; font-size: 18px; font-weight: 600; }
+.boss-next-reservation-main p { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.boss-reservations-content .boss-next-reservation-side { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 16px; padding-left: 20px; border-left: 1px solid var(--border); }
+.boss-next-reservation-side strong { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--boss-link); }
+.boss-next-reservation-side p { margin-top: 4px; font-size: 12px; }
+.boss-next-reservation-side > [data-slot="button"] { min-height: 44px; padding-inline: 16px; background: var(--background); border-radius: 8px; }
+.boss-reservations-records-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 24px 0 12px; }
+.boss-reservations-records-heading h2 { font-size: 16px; font-weight: 600; }
+.boss-reservations-records-heading p { margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.boss-reservations-records-heading > span { flex-shrink: 0; font-size: 12px; color: var(--muted-foreground); }
+.boss-reservations-status-tabs { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; margin-bottom: 12px; }
+.boss-reservations-status-tabs > [data-slot="button"] { min-width: 0; min-height: 44px; padding-inline: 2px; font-size: 12px; white-space: nowrap; }
+.boss-reservations-content .boss-reservations-list { gap: 12px; margin-bottom: 0; }
+.boss-reservations-content .boss-reservation-card { grid-template-columns: minmax(0, 1.35fr) minmax(180px, .85fr) 120px 20px; align-items: center; gap: 20px; padding: 20px; box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a; transition: border-color 150ms; }
+.boss-reservations-content .boss-reservation-card:hover { border-color: color-mix(in oklab, var(--primary) 35%, transparent); }
+.boss-reservations-content .boss-reservation-card:active { background: var(--accent); }
+.boss-reservations-content .boss-reservation-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.boss-reservation-service { min-width: 0; }
+.boss-reservation-number-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boss-reservation-number-row .boss-reservation-number { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boss-reservation-service > .boss-actions { gap: 8px; }
+.boss-reservation-service .boss-reservation-provider { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.boss-reservation-provider > [data-slot="avatar"] { width: 24px; height: 24px; border: 1px solid var(--border); flex-shrink: 0; }
+.boss-reservation-provider [data-slot="avatar-fallback"] { font-size: 12px; background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--boss-link); }
+.boss-reservations-content .boss-status-badge > span { display: none; }
+.boss-reservations-content [data-status="CONFIRMED"] .boss-status-badge { color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); border-color: color-mix(in oklab, var(--primary) 25%, transparent); }
+.boss-reservation-mobile-status, .boss-reservation-mobile-hint, .boss-reservation-mobile-more { display: none; }
+.boss-reservations-content .boss-reservation-time > .boss-reservation-mobile-hint, .boss-reservations-content .boss-reservation-amount > .boss-reservation-mobile-more { display: none; }
+.boss-reservation-amount > div > span { font-size: 12px; color: var(--muted-foreground); }
+.boss-reservations-content .boss-reservation-amount { text-align: right; }
+.boss-reservation-amount strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.boss-reservations-pagination { display: grid; gap: 12px; margin-top: 16px; }
+.boss-reservations-pagination > [data-slot="button"] { width: 100%; min-height: 48px; border-radius: 8px; }
+.boss-reservations-pagination > p { padding-block: 4px; text-align: center; font-size: 12px; color: var(--muted-foreground); }
+.boss-reservations-content > .boss-empty-surface { gap: 0; padding: 32px; margin: 0; box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a; }
+.boss-reservations-content > .boss-empty-surface > span { width: 48px; height: 48px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 50%, transparent); color: var(--muted-foreground); }
+.boss-reservations-content > .boss-empty-surface > span > svg { width: 24px; height: 24px; }
+.boss-reservations-content > .boss-empty-surface > h2 { margin-top: 16px; }
+.boss-reservations-content > .boss-empty-surface > p { margin-top: 8px; }
+.boss-reservations-content > .boss-empty-surface > [data-slot="button"] { min-width: 0; min-height: 48px; margin-top: 24px; }
+@media (max-width: 639px) {
+  .boss-reservations-content .boss-next-reservation { flex-direction: column; align-items: stretch; }
+  .boss-reservations-content .boss-next-reservation-side { width: 100%; border-top: 1px solid var(--border); border-left: 0; padding: 16px 0 0; }
+}
+@media (max-width: 767px) {
+  .boss-reservations-content .boss-reservation-card { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
+  .boss-reservation-mobile-status { display: inline-flex; flex-shrink: 0; }
+  .boss-reservation-desktop-status { display: none; }
+  .boss-reservations-content .boss-reservation-time > .boss-reservation-mobile-hint { display: block; }
+  .boss-reservations-content .boss-reservation-time { padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 45%, transparent); }
+  .boss-reservations-content .boss-reservation-amount { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; text-align: left; }
+  .boss-reservations-content .boss-reservation-amount > .boss-reservation-mobile-more { display: flex; align-items: center; font-size: 12px; font-weight: 500; color: var(--boss-link); }
+  .boss-reservations-content .boss-reservation-arrow { display: none; }
+}
+
+/* CheckInPage: source header, calendar, inline recovery state and confirmation sections. */
+.boss-checkin-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boss-checkin-topline .boss-back-link { min-height: 44px; margin-bottom: 0; padding-inline: 12px; font-size: 12px; }
+.boss-checkin-topline > [data-slot="badge"] { border-color: color-mix(in oklab, var(--primary) 20%, transparent); background: color-mix(in oklab, var(--primary) 5%, transparent); color: var(--boss-link); font-size: 12px; }
+.boss-checkin-header { padding-top: 8px; padding-bottom: 16px; }
+.boss-checkin-header > p:first-child { font-size: 12px; font-weight: 500; color: var(--boss-link); }
+.boss-checkin-header > h1 { margin-top: 8px; font-size: 26px; line-height: 1.3; font-weight: 600; letter-spacing: -.04em; }
+.boss-checkin-header > p:last-child { margin-top: 4px; font-size: 12px; color: var(--muted-foreground); }
+.boss-checkin-content { display: grid; gap: 16px; padding-bottom: 20px; }
+.boss-checkin-content > .boss-panel, .boss-checkin-content > .boss-checkin-full { margin: 0; }
+.boss-checkin-content > .boss-checkin-summary { padding: 16px 0; }
+.boss-checkin-content .boss-checkin-summary .boss-stats { padding: 0; margin: 0; }
+.boss-checkin-content .boss-checkin-summary .boss-stats > div { flex: 1; padding: 0; }
+.boss-checkin-content .boss-checkin-summary strong { font-size: 26px; line-height: 1; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+.boss-checkin-content .boss-checkin-summary strong small { font-size: 12px; }
+.boss-checkin-content .boss-checkin-summary .boss-stats span { font-size: 12px; line-height: 16px; margin-top: 8px; }
+.boss-checkin-content > .boss-checkin-spend { padding: 16px; }
+.boss-checkin-content .boss-checkin-spend h2 { margin: 0; font-size: 14px; }
+.boss-checkin-content .boss-checkin-spend [data-slot="badge"] { font-size: 12px; }
+.boss-checkin-issue { padding: 16px; border: 1px solid color-mix(in oklab, var(--warning) 25%, transparent); border-radius: 12px; background: color-mix(in oklab, var(--warning) 6%, transparent); }
+.boss-checkin-issue > div { display: flex; align-items: flex-start; gap: 8px; }
+.boss-checkin-issue > div > svg { flex-shrink: 0; margin-top: 2px; color: var(--warning-foreground); }
+.dark .boss-checkin-issue > div > svg { color: var(--warning); }
+.boss-checkin-issue p { font-size: 12px; line-height: 20px; color: var(--muted-foreground); }
+.boss-checkin-issue > [data-slot="button"] { width: 100%; min-height: 44px; margin-top: 12px; border-radius: 8px; font-size: 12px; }
+.boss-checkin-feedback { display: flex; align-items: flex-start; gap: 8px; padding: 12px; border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent); border-radius: 8px; background: color-mix(in oklab, var(--primary) 6%, transparent); color: var(--boss-link); font-size: 12px; line-height: 20px; }
+.boss-checkin-feedback > svg { flex-shrink: 0; margin-top: 2px; }
+.boss-checkin-content > .boss-checkin-calendar { padding: 12px; }
+.boss-checkin-content .boss-checkin-spend > p { font-size: 12px; line-height: 16px; }
+.boss-checkin-content .boss-checkin-wallet { font-size: 12px; line-height: 1.65; }
+.boss-checkin-content .boss-checkin-reward-scroll > article > div { font-size: 12px; line-height: 1.65; }
+.boss-checkin-calendar-heading { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 4px; }
+.boss-checkin-calendar-heading > h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.boss-checkin-calendar-heading > span { font-size: 12px; color: var(--muted-foreground); }
+.boss-checkin-content .boss-calendar { gap: 4px; margin-top: 4px; }
+.boss-checkin-content .boss-calendar > strong { font-size: 12px; }
+.boss-checkin-content .boss-calendar > button { min-height: 48px; border-radius: 8px; font-size: 12px; color: var(--muted-foreground); }
+.boss-checkin-content .boss-calendar > button small { min-height: 12px; margin-top: 2px; font-size: 8px; }
+.boss-checkin-content .boss-calendar > button:disabled { opacity: 1; }
+.boss-checkin-content .boss-calendar > button:not(:disabled):hover { background: color-mix(in oklab, var(--warning) 15%, transparent); }
+.boss-checkin-content .boss-calendar > button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.boss-checkin-content .boss-checkin-calendar > [data-slot="button"] { min-height: 48px; margin-top: 16px; border-radius: 8px; }
+.boss-checkin-content > .boss-checkin-rewards { padding: 16px; }
+.boss-checkin-rewards-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boss-checkin-rewards-heading > h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.boss-checkin-rewards-heading > span { font-size: 12px; color: var(--muted-foreground); }
+.boss-checkin-content .boss-checkin-reward-scroll { margin: 12px -16px 0; padding-inline: 16px; }
+.boss-checkin-reward-scroll:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.boss-checkin-rewards-empty { padding: 20px; margin-top: 12px; border: 1px dashed var(--border); border-radius: 8px; text-align: center; }
+.boss-checkin-rewards-empty > svg { margin-inline: auto; color: var(--muted-foreground); }
+.boss-checkin-rewards-empty > p { margin-top: 8px; font-size: 12px; font-weight: 500; }
+.boss-checkin-rewards-empty > small { display: block; margin-top: 4px; font-size: 12px; color: var(--muted-foreground); }
+.boss-checkin-content .boss-checkin-full [data-slot="badge"] { font-size: 12px; color: #ffffff; background: #1e3a8a; }
+.boss-checkin-server-note { display: flex; align-items: flex-start; gap: 8px; padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--primary) 4.5%, transparent); font-size: 12px; line-height: 20px; color: var(--muted-foreground); }
+.boss-checkin-server-note > svg { flex-shrink: 0; margin-top: 2px; color: var(--boss-link); }
+.boss-checkin-content .boss-checkin-wallet { min-height: 44px; padding-inline: 12px; border-radius: 8px; }
+.boss-checkin-makeup-dialog { border-radius: 12px; }
+.boss-checkin-makeup-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 8px; border-radius: 8px; color: var(--primary); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.dark .boss-checkin-makeup-icon { color: var(--sidebar-primary); }
+.boss-checkin-makeup-note { padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 40%, transparent); font-size: 12px; line-height: 20px; color: var(--muted-foreground); }
+.boss-checkin-makeup-dialog [data-slot="dialog-footer"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.boss-checkin-makeup-dialog [data-slot="dialog-footer"] > [data-slot="button"] { min-height: 44px; border-radius: 8px; }
+
+/* Preserve Tailwind text-size line boxes from the source instead of inheriting body 1.65. */
+.boss-next-reservation-main h2, .boss-reservation-time > strong { line-height: 20px; }
+.boss-next-reservation-main > div > strong, .boss-reservation-amount strong { line-height: 28px; }
+.boss-next-reservation-main p, .boss-next-reservation-side p, .boss-reservations-records-heading > span,
+.boss-reservation-number, .boss-reservation-provider, .boss-reservation-time > span, .boss-reservation-time > small,
+.boss-reservation-amount > div > span, .boss-reservation-amount strong > small, .boss-reservation-mobile-more,
+.boss-reservations-pagination > p, .boss-reservations-status-tabs > [data-slot="button"] { line-height: 16px; }
+.boss-reservations-records-heading h2, .boss-reservation-service h2 { line-height: 24px; }
+.boss-reservations-content .boss-status-badge { height: 20px; padding: 0 8px; line-height: 16px; }
+.boss-checkin-content .boss-checkin-summary .boss-stats span { line-height: 1.65; }
+.boss-checkin-content .boss-checkin-spend h2, .boss-checkin-calendar-heading > h2, .boss-checkin-rewards-heading > h2,
+.boss-checkin-reward-scroll strong, .boss-checkin-content .boss-checkin-full h2 { line-height: 20px; }
+.boss-checkin-content .boss-checkin-spend > strong > small { line-height: 16px; }
+.boss-checkin-content .boss-calendar > button { line-height: 16px; }
+.boss-checkin-content .boss-calendar > button small { line-height: 12px; }
+.boss-checkin-reward-scroll h3 { line-height: 16px; }
+.boss-checkin-content .boss-checkin-reward-scroll strong > small,
+.boss-checkin-content .boss-checkin-reward-scroll p { font-size: 12px; }
+.boss-checkin-content .boss-checkin-full p { font-size: 12px; }
+.boss-checkin-makeup-dialog [data-slot="dialog-title"] { font-size: 16px; line-height: 16px; font-weight: 500; }
+.boss-checkin-makeup-dialog [data-slot="dialog-description"] { font-size: 14px; line-height: 24px; }
+.boss-mine-profile-details .boss-member-line > span:last-child, .boss-mine-profile-details .boss-security-line,
+.boss-mine-account .boss-wallet-summary > span:first-child > span:last-child, .boss-mine-account .boss-wallet-foot,
+.boss-mine-orders .boss-section-heading > a, .boss-mine-orders .boss-stats span,
+.boss-mine-shortcuts > div:first-child > span, .boss-mine-shortcuts .boss-quick-grid > a,
+.boss-mine-menu-grid .boss-list-row > small { line-height: 16px; }
+.boss-mine-account .boss-wallet-summary > span:first-child, .boss-mine-account .boss-wallet-summary small,
+.boss-mine-menu-grid .boss-list-row > span { line-height: 20px; }
+.boss-mine-orders .boss-section-heading h2, .boss-mine-shortcuts h2, .boss-mine-menu > h2 { line-height: 24px; }
+.boss-mine-orders .boss-stats > a { gap: 4px; }
+.boss-mine-orders .boss-stats strong { line-height: 32px; }
+.boss-wallet-available > p, .boss-wallet-available small, .boss-wallet-frozen > div > span,
+.boss-wallet-recharge .boss-wallet-recharge-heading p, .boss-transaction-heading h3 { line-height: 20px; }
+.boss-wallet-frozen strong, .boss-transaction-heading > strong { line-height: 28px; }
+.boss-wallet-frozen small, .boss-wallet-transactions-title > span, .boss-wallet-filters button,
+.boss-transaction-heading p, .boss-transaction-heading > strong > small, .boss-transaction-balance,
+.boss-wallet-pagination > span { line-height: 16px; }
+.boss-wallet-transactions-title h2, .boss-wallet-recharge-heading h2 { line-height: 24px; }
+.boss-wallet-recharge .boss-wallet-recharge-heading p { line-height: 16px; }
+.boss-transaction-number { font-size: 12px; line-height: 16px; }
+.boss-wallet-aside > .boss-explanation-button { line-height: 20px; }
+@media (max-width: 767px) {
+  .boss-wallet-filters { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .boss-wallet-filters > div { grid-template-columns: repeat(10, 20%); }
+}

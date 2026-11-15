@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
+  <title id="title">结单截图示例凭证</title>
+  <desc id="desc">用于原型演示的结单凭证，不是真实上传截图。</desc>
+  <rect width="800" height="500" rx="24" fill="#f8fafc"/>
+  <rect x="32" y="32" width="736" height="436" rx="16" fill="#ffffff" stroke="#dbe5f0"/>
+  <rect x="64" y="64" width="8" height="54" rx="4" fill="#0f766e"/>
+  <text x="96" y="92" font-family="sans-serif" font-size="26" font-weight="700" fill="#0f172a">结单截图</text>
+  <text x="96" y="120" font-family="sans-serif" font-size="16" fill="#64748b">示例凭证 · 非真实上传截图</text>
+  <rect x="64" y="160" width="672" height="144" rx="12" fill="#f0fdfa"/>
+  <circle cx="128" cy="232" r="36" fill="#0f766e"/>
+  <path d="m114 232 10 10 20-24" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="188" y="222" font-family="sans-serif" font-size="22" font-weight="600" fill="#115e59">服务已完成</text>
+  <text x="188" y="258" font-family="sans-serif" font-size="16" fill="#475569">服务时长、完成局数与老板确认可在此核对</text>
+  <text x="64" y="358" font-family="sans-serif" font-size="16" fill="#64748b">结单时间</text>
+  <text x="64" y="394" font-family="sans-serif" font-size="24" font-weight="600" fill="#0f172a">2026-11-05 21:30</text>
+  <text x="472" y="358" font-family="sans-serif" font-size="16" fill="#64748b">完成情况</text>
+  <text x="472" y="394" font-family="sans-serif" font-size="24" font-weight="600" fill="#0f766e">5 / 5 局</text>
+</svg>

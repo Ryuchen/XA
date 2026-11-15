@@ -2,6 +2,8 @@
   "name": "@xa/shadcn-vue",
   "version": "0.1.0",
   "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "copyright": "Original project-specific modifications: Copyright (c) 2026 青岛声浪传媒有限公司. All rights reserved. Upstream shadcn-vue copyright and MIT license retained in UPSTREAM-LICENSE.",
   "type": "module",
   "exports": {
     "./button": "./src/components/button/index.ts",

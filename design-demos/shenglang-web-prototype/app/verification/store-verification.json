@@ -1,0 +1,576 @@
+{
+  "routes": {
+    "boss": [
+      "login",
+      "home",
+      "companions",
+      "companion-picker",
+      "companion-detail",
+      "catalog",
+      "service-detail",
+      "checkout",
+      "orders",
+      "order-detail",
+      "wallet",
+      "gifts",
+      "mine",
+      "messages",
+      "message-detail",
+      "chat",
+      "support",
+      "security",
+      "profile",
+      "reservations",
+      "reservation-detail",
+      "reservation-create",
+      "coupons",
+      "membership",
+      "points",
+      "lottery",
+      "reward-claim",
+      "favorites",
+      "checkin",
+      "achievements",
+      "rankings",
+      "announcements",
+      "announcement-detail",
+      "club-content",
+      "club-content-detail",
+      "activities",
+      "activity-detail",
+      "rights",
+      "rights-detail",
+      "point-rules",
+      "point-rules-detail",
+      "audition"
+    ],
+    "provider": [
+      "/provider-login",
+      "/provider-register",
+      "/provider",
+      "/provider/applications",
+      "/provider/applications/105?application=9001&from=history",
+      "/provider/reports",
+      "/provider/reservations",
+      "/provider/messages",
+      "/provider/support-chat?order_no=SHENGLANG202611040105",
+      "/provider/wallet",
+      "/provider/withdraw-accounts",
+      "/provider/mine",
+      "/provider/profile",
+      "/provider/security",
+      "/provider/skills",
+      "/provider/evaluations",
+      "/provider/pass",
+      "/provider/points",
+      "/provider/support",
+      "/provider/auditions",
+      "/provider/audition?token=SL-AUDITION-202611&role=provider"
+    ],
+    "admin": [
+      "login",
+      "stores",
+      "dashboard",
+      "orders",
+      "order-detail",
+      "reservations",
+      "chat",
+      "reports",
+      "commission",
+      "services",
+      "gameplays",
+      "banners",
+      "announcements",
+      "contents",
+      "broadcast-rules",
+      "broadcast-records",
+      "rewards",
+      "lotteries",
+      "claims",
+      "operation-config",
+      "bosses",
+      "providers",
+      "provider-detail",
+      "registrations",
+      "registration-detail",
+      "levels",
+      "passes",
+      "disposes",
+      "auditions",
+      "audition-signups",
+      "withdraw",
+      "wallets",
+      "provider-wallets",
+      "transactions",
+      "recharges",
+      "payment-fee"
+    ]
+  },
+  "interactions": [
+    "陪玩订单卡片使用不接此单与小尺寸低圆角按钮，详情海报动态展示玩法、区服、身份、时间和数量",
+    "报单一次选择 10 张仅保留 9 张，提交后可撤回并查看本机凭证大图，撤回保留全部图片且通过真实 375px 手机视口复测",
+    "陪玩从组队消息进入报名详情，完成确认组队与撤回报名",
+    "陪玩从钱包进入收款账户，绑定并解绑银行卡且保留历史快照说明",
+    "陪玩客服会话保留订单号并核对文字消息发送结果",
+    "公开试音邀请完成微信登录回跳、报名提交、历史记录与无效链接恢复",
+    "后台一级菜单以老板管理替换陪玩管理，老板档案支持筛选与只读详情，原陪玩页面路由保持可用",
+    "老板钱包与陪玩钱包使用独立页面和独立场景状态，账户、押金及平台资金互不混放",
+    "后台业务侧栏默认 72px 收缩，可展开至 232px、锁定后刷新保持，解锁后可收缩并跨页面保留状态",
+    "后台 9 个一级入口按业务域分组，二级页签与全局搜索均可进入原页面，详情页保留所属分组",
+    "三端 PC 预览均为 1440px，后台按外层空间等比完整显示，并支持 1366 × 1024 iPad Pro 12.9 横屏切换",
+    "25 个后台筛选路由逐页校验控件同高、查询按钮宽度、搜索图标居中与容器边界，5 组高级筛选展开后复测",
+    "老板端目标店独立入口加载本店公告",
+    "雾岛店老板账号、会员与零余额独立展示",
+    "陪玩报名、收款、客服、公开试音与订单详情通过 375px 内容溢出检查，报名详情、客服会话与订单详情复测 390px",
+    "陪玩端工作台顶部不提供界面切换店铺入口",
+    "陪玩账号入口固定当前门店并仅保留微信快捷登录",
+    "陪玩仅通过微信完成隐私授权、手机号短信验证与首次 OTP 绑定，并拦截错误动态码",
+    "陪玩微信登录完成后进入本店接单工作台",
+    "陪玩通过绑定微信查询本店入驻审核进度且不强制 OTP",
+    "陪玩微信入驻绑定、材料提交与本店待审核结果，入驻不强制 OTP",
+    "老板端微信资料、手机号短信与首次 OTP 绑定后进入本店首页",
+    "陪玩登录内容在 PC 剩余可视区域内居中",
+    "后台切店重新鉴权后只显示目标店经营快照",
+    "平台空白门店创建、初始化与停用仅改变本地元数据"
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "screenshots": [
+    "verification\\boss-orders-no-manual-refresh-pc.png",
+    "verification\\provider-workbench-no-manual-refresh-pc.png",
+    "verification\\provider-order-detail-poster-pc.png",
+    "verification\\provider-report-evidence-preview-pc.png",
+    "verification\\provider-report-review-pending-pc.png",
+    "verification\\provider-report-withdrawn-375.png",
+    "verification\\admin-bosses-pc.png",
+    "verification\\admin-transactions-no-manual-refresh-pc.png",
+    "verification\\admin-payment-fee-no-manual-refresh-pc.png",
+    "verification\\admin-boss-detail-pc.png",
+    "verification\\admin-boss-wallets-pc.png",
+    "verification\\admin-provider-wallets-pc.png",
+    "verification\\admin-sidebar-collapsed-pc.png",
+    "verification\\admin-sidebar-expanded-locked-pc.png",
+    "verification\\admin-login-pc.png",
+    "verification\\admin-dashboard-ipad-pro.png",
+    "verification\\admin-dashboard-ipad-pro-expanded.png",
+    "verification\\admin-bosses-ipad-pro.png",
+    "verification\\admin-dashboard-pc.png",
+    "verification\\admin-reservations-grouped-pc.png",
+    "verification\\admin-stores-pc-wide.png",
+    "verification\\admin-providers-filters-advanced-pc.png",
+    "verification\\admin-orders-filters-advanced-pc.png",
+    "verification\\admin-wallets-filters-advanced-pc.png",
+    "verification\\admin-services-filters-advanced-pc.png",
+    "verification\\admin-withdraw-filters-advanced-pc.png",
+    "verification\\admin-contents-filters-pc.png",
+    "verification\\boss-wallet-xingchao-375.png",
+    "verification\\provider-applications-375.png",
+    "verification\\provider-application-detail-375.png",
+    "verification\\provider-withdraw-accounts-375.png",
+    "verification\\provider-support-chat-375.png",
+    "verification\\provider-audition-invite-375.png",
+    "verification\\provider-order-detail-poster-375.png",
+    "verification\\provider-order-detail-poster-390.png",
+    "verification\\provider-wallet-xingchao-375.png",
+    "verification\\provider-login-otp-xingchao-375.png",
+    "verification\\provider-login-xingchao-375.png",
+    "verification\\provider-register-wechat-xingchao-375.png",
+    "verification\\provider-register-form-xingchao-375.png",
+    "verification\\provider-register-xingchao-375.png",
+    "verification\\boss-login-otp-xingchao-375.png",
+    "verification\\provider-login-xingchao-1440.png",
+    "verification\\admin-dashboard-xingchao-1440.png",
+    "verification\\admin-stores-1366.png",
+    "verification\\boss-home-shenglang-1440.png"
+  ],
+  "overflow": [
+    {
+      "label": "PC订单详情",
+      "viewport": 576,
+      "document": 576
+    },
+    {
+      "label": "PC 报单凭证预览",
+      "viewport": 672,
+      "document": 672
+    },
+    {
+      "label": "陪玩报单撤回后 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩报单撤回后 375px",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "PC 消息详情",
+      "viewport": 448,
+      "document": 448
+    },
+    {
+      "label": "老板端钱包 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩报名列表 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩报名列表 375px",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "陪玩报名详情 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩报名详情 375px",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "陪玩收款账户 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩收款账户 375px",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "陪玩客服会话 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩客服会话 375px",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "陪玩公开试音邀请 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩公开试音邀请 375px",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "陪玩订单工作台 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩订单工作台 375px",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "375px订单详情",
+      "viewport": 343,
+      "document": 343
+    },
+    {
+      "label": "陪玩报名详情 390px",
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "label": "陪玩报名详情 390px",
+      "viewport": 358,
+      "document": 358
+    },
+    {
+      "label": "陪玩客服会话 390px",
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "label": "陪玩客服会话 390px",
+      "viewport": 358,
+      "document": 358
+    },
+    {
+      "label": "陪玩订单工作台 390px",
+      "viewport": 390,
+      "document": 390
+    },
+    {
+      "label": "陪玩订单工作台 390px",
+      "viewport": 358,
+      "document": 358
+    },
+    {
+      "label": "390px订单详情",
+      "viewport": 358,
+      "document": 358
+    },
+    {
+      "label": "陪玩端钱包 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩 OTP 绑定 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩登录 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩注册材料 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩注册 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "老板 OTP 绑定 375px",
+      "viewport": 375,
+      "document": 375
+    },
+    {
+      "label": "陪玩登录 PC",
+      "viewport": 1440,
+      "document": 1440
+    },
+    {
+      "label": "平台门店管理 1366px",
+      "viewport": 1366,
+      "document": 1366
+    },
+    {
+      "label": "老板端桌面 1440px",
+      "viewport": 1366,
+      "document": 1366
+    }
+  ],
+  "filterLayouts": [
+    {
+      "page": "orders",
+      "advanced": false,
+      "controls": 5,
+      "height": 44
+    },
+    {
+      "page": "chat",
+      "advanced": false,
+      "controls": 1,
+      "height": 40
+    },
+    {
+      "page": "reports",
+      "advanced": false,
+      "controls": 4,
+      "height": 44
+    },
+    {
+      "page": "services",
+      "advanced": false,
+      "controls": 5,
+      "height": 36
+    },
+    {
+      "page": "gameplays",
+      "advanced": false,
+      "controls": 3,
+      "height": 36
+    },
+    {
+      "page": "banners",
+      "advanced": false,
+      "controls": 4,
+      "height": 36
+    },
+    {
+      "page": "announcements",
+      "advanced": false,
+      "controls": 4,
+      "height": 36
+    },
+    {
+      "page": "contents",
+      "advanced": false,
+      "controls": 4,
+      "height": 36
+    },
+    {
+      "page": "broadcast-rules",
+      "advanced": false,
+      "controls": 4,
+      "height": 36
+    },
+    {
+      "page": "broadcast-records",
+      "advanced": false,
+      "controls": 4,
+      "height": 36
+    },
+    {
+      "page": "rewards",
+      "advanced": false,
+      "controls": 5,
+      "height": 36
+    },
+    {
+      "page": "lotteries",
+      "advanced": false,
+      "controls": 3,
+      "height": 36
+    },
+    {
+      "page": "claims",
+      "advanced": false,
+      "controls": 6,
+      "height": 36
+    },
+    {
+      "page": "bosses",
+      "advanced": false,
+      "controls": 5,
+      "height": 44
+    },
+    {
+      "page": "providers",
+      "advanced": false,
+      "controls": 6,
+      "height": 44
+    },
+    {
+      "page": "registrations",
+      "advanced": false,
+      "controls": 4,
+      "height": 44
+    },
+    {
+      "page": "passes",
+      "advanced": false,
+      "controls": 3,
+      "height": 36
+    },
+    {
+      "page": "disposes",
+      "advanced": false,
+      "controls": 3,
+      "height": 36
+    },
+    {
+      "page": "auditions",
+      "advanced": false,
+      "controls": 3,
+      "height": 40
+    },
+    {
+      "page": "audition-signups",
+      "advanced": false,
+      "controls": 4,
+      "height": 40
+    },
+    {
+      "page": "withdraw",
+      "advanced": false,
+      "controls": 6,
+      "height": 40
+    },
+    {
+      "page": "wallets",
+      "advanced": false,
+      "controls": 3,
+      "height": 40
+    },
+    {
+      "page": "provider-wallets",
+      "advanced": false,
+      "controls": 3,
+      "height": 40
+    },
+    {
+      "page": "transactions",
+      "advanced": false,
+      "controls": 4,
+      "height": 40
+    },
+    {
+      "page": "recharges",
+      "advanced": false,
+      "controls": 6,
+      "height": 36
+    },
+    {
+      "page": "providers",
+      "advanced": true,
+      "controls": 5,
+      "height": 44
+    },
+    {
+      "page": "providers",
+      "advanced": false,
+      "controls": 6,
+      "height": 44
+    },
+    {
+      "page": "orders",
+      "advanced": true,
+      "controls": 3,
+      "height": 44
+    },
+    {
+      "page": "orders",
+      "advanced": false,
+      "controls": 5,
+      "height": 44
+    },
+    {
+      "page": "wallets",
+      "advanced": true,
+      "controls": 3,
+      "height": 40
+    },
+    {
+      "page": "wallets",
+      "advanced": false,
+      "controls": 6,
+      "height": 40
+    },
+    {
+      "page": "services",
+      "advanced": true,
+      "controls": 3,
+      "height": 36
+    },
+    {
+      "page": "services",
+      "advanced": false,
+      "controls": 5,
+      "height": 36
+    },
+    {
+      "page": "withdraw",
+      "advanced": true,
+      "controls": 2,
+      "height": 40
+    },
+    {
+      "page": "withdraw",
+      "advanced": false,
+      "controls": 8,
+      "height": 40
+    }
+  ],
+  "status": "passed"
+}

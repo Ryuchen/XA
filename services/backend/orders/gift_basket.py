@@ -1,7 +1,9 @@
 """Atomic multi-gift checkout using the same ledger path as a single gift."""
 import hashlib
 import json
-from django.db import transaction
+from django.conf import settings
+from stores.db import transaction
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from club_accounts.models import ClubAccount
 from wallet.receipts import fund_success
@@ -11,8 +13,9 @@ from .gifts import MAX_GIFT_QUANTITY, MAX_LEDGER_AMOUNT, gift_available
 
 
 class LineRequest:
-    def __init__(self, request, data):
+    def __init__(self, request, data, lifecycle_participants=None):
         self.original, self.data = request, data
+        self.lifecycle_participants = lifecycle_participants
     def __getattr__(self, key):
         return getattr(self.original, key)
 
@@ -39,8 +42,27 @@ def send_basket(view, request, *, order_id=None):
         quantities[pk] = quantities.get(pk, 0) + item['quantity']
         if quantities[pk] > MAX_GIFT_QUANTITY:
             return Response({'code': 400, 'msg': '单款礼物最多赠送 999 件'})
+    lifecycle_participants = None
+    if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
+        from .gift_lifecycle import participants
+        try:
+            lifecycle_participants = participants(request, order_id)
+        except ValidationError as exc:
+            return Response({'code': 400, 'msg': str(exc.detail[0])})
     try:
         with transaction.atomic():
+            if lifecycle_participants:
+                from club_accounts.provider_lifecycle import ProviderLifecycleError
+                from .gift_lifecycle import lock_and_check
+                try:
+                    active = lock_and_check(*lifecycle_participants)
+                except ProviderLifecycleError:
+                    return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验，请联系客服'}, status=503)
+                if not active:
+                    return Response({'code': 409, 'msg': '收礼陪玩状态已变化，请重新选择'}, status=409)
+            if getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
+                from console.payroll_event_barrier import lock_payment_refund_events
+                lock_payment_refund_events()
             if order_id is not None:
                 # Match single gifts and source-order refunds before wallets.
                 list(Order.objects.select_for_update().filter(pk=order_id, customer_account=request.account))
@@ -58,6 +80,9 @@ def send_basket(view, request, *, order_id=None):
                 return Response({'code': 409, 'errorCode': 'PRICE_CHANGED', 'msg': '礼物价格已变化，请刷新后重新确认'})
             if not 0 < total <= MAX_LEDGER_AMOUNT or not wallet.is_active or wallet.balance < total:
                 return Response({'code': 400, 'msg': '钱包不可用或余额不足，请核对赠礼金额'})
+            from engagement.services import wallet_funding_parts
+            if wallet_funding_parts(wallet)['prepaid_balance'] < total:
+                return Response({'code': 400, 'msg': '本金余额不足，礼物只能使用本金支付'})
             allowed, reason = claim_fund_write(account=request.account, request_id=request_id, scope='order.tip',
                 fingerprint=json.dumps({'items': quantities, 'provider': request.data.get('provider_id'), 'source': order_id, 'total': total}, sort_keys=True))
             if not allowed:
@@ -68,7 +93,7 @@ def send_basket(view, request, *, order_id=None):
                     'expected_amount': item.price * quantities[item.pk],
                     'client_request_id': 'giftline:' + hashlib.sha256(f'{request_id}:{item.pk}'.encode()).hexdigest()}
                 payload.pop('items', None)
-                response = view.create_one(LineRequest(request, payload), order_id)
+                response = view.create_one(LineRequest(request, payload, lifecycle_participants), order_id)
                 if response.data.get('code') != 0:
                     raise BasketRejected(response)
                 orders.append(response.data['data'])

@@ -158,6 +158,7 @@ class CustomerGameProfile(models.Model):
 
     user = models.ForeignKey(
         'users.CustomUser', on_delete=models.CASCADE, related_name='game_profiles',
+        null=True, blank=True,
     )
     account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -178,6 +179,8 @@ class CustomerGameProfile(models.Model):
 
     class Meta:
         constraints = [
+            models.CheckConstraint(condition=models.Q(account__isnull=False) | models.Q(user__isnull=False),
+                                   name='game_profile_has_owner'),
             models.UniqueConstraint(
                 fields=['user', 'game_category'], name='uniq_customer_game_profile',
             ),
@@ -189,7 +192,7 @@ class CustomerGameProfile(models.Model):
         ordering = ['game_category__sort_order', 'game_category_id']
 
     def __str__(self):
-        return f'{self.user_id}-{self.game_category.name}'
+        return f'{self.account_id or self.user_id}-{self.game_category.name}'
 
 
 class EscortProfile(models.Model):
@@ -265,14 +268,21 @@ class EscortProfile(models.Model):
         db_index=True,
     )
     is_verified = models.BooleanField(default=False)
+    # A legacy exemption is evidence of prior activity, not a claim that an
+    # old avatar came from WeChat. New providers need the verified timestamp.
+    wechat_avatar_legacy_exempt = models.BooleanField(default=False, editable=False)
+    wechat_avatar_verified_at = models.DateTimeField(null=True, blank=True, editable=False)
+    avatar_source = models.CharField(max_length=12, default='UNKNOWN', editable=False,
+        choices=[('UNKNOWN', '未知'), ('WECHAT', '微信'), ('UPLOAD', '本人上传'), ('STAFF_UPLOAD', '后台上传')])
     escort_no = models.CharField(max_length=32, blank=True, default='', db_index=True)  # 陪玩编号
-    deposit_required = models.PositiveIntegerField(default=0)  # 应缴押金兴安币（内部账务单位）
-    deposit_paid = models.PositiveIntegerField(default=0)  # 已缴押金兴安币（内部账务单位）
+    deposit_required = models.PositiveIntegerField(default=0)  # 应缴押金浪花（内部账务单位）
+    deposit_paid = models.PositiveIntegerField(default=0)  # 已缴押金浪花（内部账务单位）
+    deposit_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     deposit_mode = models.CharField(
         max_length=10, default='CASH', choices=[('CASH', '现金缴纳'), ('EARNINGS', '打单抵扣')],
     )
-    total_reward = models.PositiveIntegerField(default=0)  # 累计奖励兴安币（内部账务单位）
-    total_penalty = models.PositiveIntegerField(default=0)  # 累计罚款兴安币（内部账务单位）
+    total_reward = models.PositiveIntegerField(default=0)  # 累计奖励浪花（内部账务单位）
+    total_penalty = models.PositiveIntegerField(default=0)  # 累计罚款浪花（内部账务单位）
     rating_avg = models.DecimalField(
         max_digits=3,
         decimal_places=2,
@@ -380,23 +390,62 @@ class EscortProfile(models.Model):
             return True
         return self.level_rank >= required.sort_order
 
-    def order_acceptance_error(self, service=None, *, club_rules_enabled=None, provider_gender="ANY"):
+    def order_acceptance_error(self, service=None, *, club_rules_enabled=None, provider_gender="ANY", allow_refund_recovery=False,
+                               refund_recovery_order_id=None, deposit_required_override=None, reservation_confirmed_at=None,
+                               lock_refund_recovery=False, require_current_schedule=True):
         """老板指定、客服派单和抢单共用准入；BUSY 不替代并发名额校验。"""
         account = self.account if self.account_id else None
         if (account and (not account.is_active or not account.can_login)) or not self.user.is_active:
             return '陪玩账号已停用'
+        # A retired account may still have an active login/profile. Never
+        # offer it a new assignment until re-entry has passed the quota gate.
+        # A previously confirmed reservation is a separate commitment; its
+        # conversion validates the recorded participants and cycles itself.
+        if account and not account.license_membership_active and reservation_confirmed_at is None:
+            return '陪玩已退出门店，请重新入驻后接单'
         if not self.is_verified:
             return '陪玩尚未通过认证'
+        from django.conf import settings
+        if settings.PROVIDER_WECHAT_GATE_ENABLED:
+            reason = self.wechat_acceptance_error()
+            if reason:
+                return reason
+        from wallet.refund_deposit import protection_enabled
+        recovery_eligible = False
+        if protection_enabled() and self.account_id:
+            from wallet.models import RefundDepositDeficit
+            deficit_query = RefundDepositDeficit.objects.filter(account_id=self.account_id, remaining__gt=0)
+            if lock_refund_recovery:
+                deficit_query = deficit_query.select_for_update().order_by('created_at', 'pk')
+            deficits = list(deficit_query.values('profile_id', 'remaining', 'created_at'))
+            if deficits:
+                if (reservation_confirmed_at is not None
+                        and all(row['profile_id'] == self.pk and row['created_at'] > reservation_confirmed_at
+                                for row in deficits)
+                        and (self.deposit_mode == 'EARNINGS' or
+                             max((self.effective_deposit_required if deposit_required_override is None
+                                  else deposit_required_override) - self.deposit_paid, 0) <=
+                             sum(row['remaining'] for row in deficits))):
+                    recovery_eligible = True
+                elif not allow_refund_recovery:
+                    return '退款押金缺口待补，补差接单功能尚未开放'
+                else:
+                    from wallet.refund_recovery_order import eligibility_error
+                    reason = eligibility_error(self, existing_order_id=refund_recovery_order_id,
+                                               lock_current=lock_refund_recovery)
+                    if reason:
+                        return reason
+                    recovery_eligible = True
         if self.deposit_mode != 'EARNINGS':
-            if club_rules_enabled is None:
-                required = self.effective_deposit_required
-            else:
-                required = 20000 if club_rules_enabled else self.deposit_required
-            if self.deposit_paid < required:
+            required = self.effective_deposit_required if deposit_required_override is None else deposit_required_override
+            if self.deposit_paid < required and not recovery_eligible:
                 return '陪玩押金未缴齐'
         if self.status == self.Status.OFFLINE:
             return '陪玩当前处于离线状态'
-        if not EscortSchedule.provider_is_scheduled_now(self.user):
+        # A confirmed future reservation holds its own time slot. Paying it
+        # does not require the provider to be on an ordinary shift right now.
+        if (require_current_schedule and reservation_confirmed_at is None
+                and not EscortSchedule.provider_is_scheduled_now(self.user)):
             return '当前时间不在陪玩的接单档期内'
         if provider_gender != 'ANY' and self.gender != provider_gender:
             return '陪玩性别不符合老板选择，请重新选择陪玩'
@@ -409,10 +458,18 @@ class EscortProfile(models.Model):
             return '陪玩尚未配置该服务技能'
         return ''
 
+    def wechat_acceptance_error(self):
+        account = self.account if self.account_id else None
+        if not account or not account.is_openid_bound or not (account.openid or account.wechat_identities.exists()):
+            return '请先绑定本人微信后接单'
+        if not (self.wechat_avatar_legacy_exempt or self.wechat_avatar_verified_at):
+            return '首次接单前请从本人微信获取头像'
+        return ''
+
     @property
     def effective_deposit_required(self):
-        from wallet.club_rules import club_income_rules_enabled, deposit_target
-        return deposit_target(self.deposit_mode) if club_income_rules_enabled() else self.deposit_required
+        from wallet.club_rules import deposit_target
+        return deposit_target(self.deposit_mode)
 
 
 class ProviderQualification(models.Model):
@@ -449,11 +506,13 @@ class ProviderPassPurchase(models.Model):
         blank=True,
         related_name='pass_purchases',
     )
+    business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     tier = models.CharField(max_length=10, choices=EscortProfile.PassTier.choices)
     days = models.PositiveSmallIntegerField()
     daily_price = models.PositiveIntegerField()  # 分
     original_amount = models.PositiveIntegerField()  # 分
     discount_amount = models.PositiveIntegerField(default=0)  # 分
+    point_discount_amount = models.PositiveIntegerField(default=0)  # 积分抵扣等值，内部账务单位
     paid_amount = models.PositiveIntegerField()  # 分
     starts_at = models.DateTimeField()
     expires_at = models.DateTimeField()
@@ -485,17 +544,138 @@ class ProviderPassPurchase(models.Model):
             ),
             models.CheckConstraint(
                 condition=models.Q(
-                    paid_amount=models.F('original_amount') - models.F('discount_amount')
+                    paid_amount=models.F('original_amount') - models.F('discount_amount') - models.F('point_discount_amount')
                 ),
                 name='pass_purchase_amount_valid',
             ),
         ]
 
 
+class ProviderPassPointRedemption(models.Model):
+    """Immutable payment facts for points spent on a pass purchase."""
+    purchase = models.OneToOneField(ProviderPassPurchase, on_delete=models.PROTECT, related_name='point_redemption')
+    ledger = models.OneToOneField('engagement.PointLedger', on_delete=models.PROTECT, related_name='pass_redemption')
+    points_hundredths = models.PositiveBigIntegerField()
+    discount_units = models.PositiveIntegerField()
+    group_points_hundredths = models.PositiveIntegerField()
+    group_coin_units = models.PositiveIntegerField()
+    max_ratio_basis_points = models.PositiveSmallIntegerField()
+    config_version = models.PositiveIntegerField()
+    groups = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(points_hundredths__gt=0, discount_units__gt=0,
+                group_points_hundredths__gt=0, group_coin_units__gt=0, groups__gt=0, config_version__gt=0,
+                max_ratio_basis_points__lt=10000), name='pass_points_values_positive'),
+            models.CheckConstraint(condition=models.Q(points_hundredths=models.F('groups') * models.F('group_points_hundredths')),
+                                   name='pass_points_groups_match'),
+            models.CheckConstraint(condition=models.Q(discount_units=models.F('groups') * models.F('group_coin_units')),
+                                   name='pass_points_value_match'),
+        ]
+
+
+class ProviderPassRefund(models.Model):
+    """一次历史通行证退款及其门店资金缺口，不修改原始付款流水。"""
+    purchase = models.OneToOneField(
+        ProviderPassPurchase, on_delete=models.PROTECT, related_name='refund',
+    )
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    amount = models.PositiveIntegerField()
+    funded_amount = models.PositiveIntegerField()
+    shortfall_amount = models.PositiveIntegerField()
+    points_returned = models.PositiveBigIntegerField(default=0)
+    points_return_ledger = models.OneToOneField('engagement.PointLedger', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='pass_refund_return')
+    provider_transaction = models.OneToOneField(
+        'wallet.Transaction', on_delete=models.PROTECT, related_name='pass_refund',
+    )
+    shop_transaction = models.OneToOneField(
+        'wallet.Transaction', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='shop_pass_refund',
+    )
+    original_starts_at = models.DateTimeField()
+    original_expires_at = models.DateTimeField()
+    # Audit of each later purchase before and after schedule adjustment.
+    schedule_changes = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount=models.F('funded_amount') + models.F('shortfall_amount')),
+                name='pass_refund_amount_conserved',
+            ),
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name='pass_refund_amount_positive'),
+            models.CheckConstraint(
+                condition=(models.Q(funded_amount=0, shop_transaction__isnull=True)
+                           | models.Q(funded_amount__gt=0, shop_transaction__isnull=False)),
+                name='pass_refund_shop_tx_matches_fund',
+            ),
+            models.CheckConstraint(condition=(models.Q(points_returned=0, points_return_ledger__isnull=True)
+                                   | models.Q(points_returned__gt=0, points_return_ledger__isnull=False)),
+                                   name='pass_refund_points_match_ledger'),
+        ]
+
+
+class PassRefundRepaymentReceipt(models.Model):
+    """Store-scoped evidence of an offline payment to the platform advance account."""
+    request_key = models.CharField(max_length=64, unique=True)
+    external_reference = models.CharField(max_length=128, unique=True)
+    amount = models.PositiveIntegerField()  # Internal units, not store-wallet balance.
+    received_at = models.DateTimeField()
+    evidence = models.TextField()
+    registered_by = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified_by = models.CharField(max_length=64, blank=True, default='')
+    verified_at = models.DateTimeField(null=True, blank=True)
+    # NULL means the experimental receipt-local ledger is not initialized.
+    usage_version = models.PositiveBigIntegerField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name='pass_repay_receipt_positive'),
+            models.CheckConstraint(condition=(models.Q(verified_at__isnull=True, verified_by='')
+                | (models.Q(verified_at__isnull=False) & ~models.Q(verified_by=''))),
+                name='pass_repay_receipt_verify_pair'),
+        ]
+
+
+class PassRefundRepaymentAllocation(models.Model):
+    """Append-only allocation of verified receipt funds to one refund shortfall."""
+    request_key = models.CharField(max_length=64, unique=True)
+    receipt = models.ForeignKey(PassRefundRepaymentReceipt, on_delete=models.PROTECT, related_name='allocations')
+    refund = models.ForeignKey(ProviderPassRefund, on_delete=models.PROTECT, related_name='repayment_allocations')
+    amount = models.PositiveIntegerField()
+    allocated_by = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(amount__gt=0), name='pass_repay_allocation_positive')]
+
+
+class PassRefundRepaymentAction(models.Model):
+    """Tenant-side durable result for a platform verification or allocation."""
+    request_key = models.CharField(max_length=64, unique=True)
+    kind = models.CharField(max_length=12)
+    receipt = models.ForeignKey(PassRefundRepaymentReceipt, on_delete=models.PROTECT)
+    allocation = models.OneToOneField(PassRefundRepaymentAllocation, on_delete=models.PROTECT, null=True, blank=True)
+    actor = models.CharField(max_length=64)
+    result = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=(
+            models.Q(kind='VERIFY', allocation__isnull=True) | models.Q(kind='ALLOCATE', allocation__isnull=False)),
+            name='pass_repay_action_kind_link')]
+
+
 class CheckinRecord(models.Model):
     user = models.ForeignKey(
         'users.CustomUser',
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name='checkin_records',
     )
     account = models.ForeignKey(
@@ -507,7 +687,7 @@ class CheckinRecord(models.Model):
     )
     checkin_date = models.DateField(db_index=True)
     seq_in_month = models.PositiveIntegerField()  # 本月第几次签到，决定奖励档位
-    reward_amount = models.IntegerField(default=0)  # 奖励兴安币（内部账务单位）
+    reward_amount = models.IntegerField(default=0)  # 奖励浪花（内部账务单位）
     gift_name = models.CharField(max_length=100, blank=True, default='')
     gift_icon = models.CharField(max_length=20, blank=True, default='')
     is_makeup = models.BooleanField(default=False)
@@ -536,13 +716,13 @@ class CheckinRecord(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.user.username} - {self.checkin_date}"
+        return f"{self.account.username if self.account_id else self.user.username} - {self.checkin_date}"
 
 
 class CheckinRuleConfig(models.Model):
     """签到全局规则。业务只使用 pk=1 的单例配置。"""
 
-    # 188/388 元按 1:10 兑换为 1880/3880 兴安币；账务层再以 10 单位表示 1 兴安币。
+    # 188/388 元按 1:10 兑换为 1880/3880 浪花；账务层再以 10 单位表示 1 浪花。
     daily_spend_required = models.PositiveIntegerField(default=18800)
     makeup_card_spend_required = models.PositiveIntegerField(default=38800)
     max_makeup_cards = models.PositiveSmallIntegerField(default=3)
@@ -586,7 +766,7 @@ class CheckinMonthProgress(models.Model):
     """老板每月补签卡库存与全勤奖励状态；按年月自然隔离即自动月度重置。"""
 
     user = models.ForeignKey(
-        'users.CustomUser', on_delete=models.CASCADE, related_name='checkin_month_progresses',
+        'users.CustomUser', on_delete=models.CASCADE, related_name='checkin_month_progresses', null=True, blank=True,
     )
     account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -603,6 +783,9 @@ class CheckinMonthProgress(models.Model):
     full_attendance_reward_name = models.CharField(max_length=100, blank=True, default='')
     full_attendance_tag_code = models.CharField(max_length=100, blank=True, default='')
     full_attendance_awarded_at = models.DateTimeField(null=True, blank=True)
+    full_attendance_notice_intent = models.BooleanField(default=False, editable=False)
+    full_attendance_notice_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    full_attendance_notice_detail = models.TextField(blank=True, default='', editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -625,15 +808,15 @@ class CheckinMonthProgress(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.user.username} {self.year}-{self.month:02d}'
+        return f'{self.account.username if self.account_id else self.user.username} {self.year}-{self.month:02d}'
 
 
 class Achievement(models.Model):
-    """老板成就配置：后台可定制，解锁状态按已完成订单实时计算。"""
+    """老板成就配置；解锁状态按本店已确认的服务实销计算。"""
 
     class Metric(models.TextChoices):
         ORDERS = 'orders', '完成订单数'
-        AMOUNT = 'amount', '累计消费（兴安币）'
+        AMOUNT = 'amount', '累计消费（浪花）'
 
     code = models.CharField(max_length=50, unique=True)
     title = models.CharField(max_length=50)
@@ -642,7 +825,7 @@ class Achievement(models.Model):
     metric = models.CharField(
         max_length=16, choices=Metric.choices, default=Metric.ORDERS
     )
-    target = models.PositiveIntegerField()  # amount 维度为兴安币内部账务单位
+    target = models.PositiveIntegerField()  # amount 维度为浪花内部账务单位
     sort_order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -661,9 +844,8 @@ class EscortSchedule(models.Model):
     """陪玩每周循环可接单时段。
 
     采用「每周循环」模型：weekday 0=周一 … 6=周日，
-    时段以当日分钟数表示（start_minute/end_minute，0~1440）。
-    前端按四段制勾选（00-06 / 06-12 / 12-18 / 18-24），
-    每勾选一段落库一条；PUT 整表覆盖。
+    时段以当日分钟数表示；结束早于开始时表示次日结束。
+    结束为 1440 表示当日 24:00；旧四段档期保持原语义。
     """
 
     provider = models.ForeignKey(
@@ -682,7 +864,7 @@ class EscortSchedule(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(6)]
     )  # 0=周一 … 6=周日
     start_minute = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(1440)]
+        validators=[MinValueValidator(0), MaxValueValidator(1439)]
     )
     end_minute = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(1440)]
@@ -706,8 +888,10 @@ class EscortSchedule(models.Model):
             models.CheckConstraint(
                 condition=(
                     models.Q(start_minute__gte=0)
+                    & models.Q(start_minute__lt=1440)
+                    & models.Q(end_minute__gte=0)
                     & models.Q(end_minute__lte=1440)
-                    & models.Q(start_minute__lt=models.F('end_minute'))
+                    & ~models.Q(start_minute=models.F('end_minute'))
                 ),
                 name='escort_schedule_period_valid',
             ),
@@ -729,16 +913,60 @@ class EscortSchedule(models.Model):
         if cached is not None:
             minute = now.hour * 60 + now.minute
             return not cached or any(
-                row.weekday == now.weekday() and row.start_minute <= minute < row.end_minute
+                (row.weekday == now.weekday() and row.start_minute <= minute
+                 and (row.end_minute > minute or row.end_minute < row.start_minute))
+                or (row.weekday == (now.weekday() - 1) % 7
+                    and row.end_minute < row.start_minute and minute < row.end_minute)
                 for row in cached
             )
         schedules = cls.objects.filter(provider=provider)
-        if not schedules.exists():
-            return True
         minute = now.hour * 60 + now.minute
-        return schedules.filter(
-            weekday=now.weekday(), start_minute__lte=minute, end_minute__gt=minute,
-        ).exists()
+        today = models.Q(weekday=now.weekday(), start_minute__lte=minute) & (
+            models.Q(end_minute__gt=minute) | models.Q(end_minute__lt=models.F('start_minute')))
+        previous = models.Q(weekday=(now.weekday() - 1) % 7,
+            end_minute__lt=models.F('start_minute'), end_minute__gt=minute)
+        # One database snapshot distinguishes "no schedule" from "no match";
+        # two separate exists() calls can race a whole-schedule replacement.
+        counts = schedules.aggregate(total=models.Count('pk'), matching=models.Count('pk', filter=today | previous))
+        return counts['total'] == 0 or counts['matching'] > 0
+
+    @classmethod
+    def provider_covers_window(cls, provider, start, end, *, lock=False):
+        """Whether weekly availability covers the full half-open booking slot."""
+        from datetime import datetime, time, timedelta
+        from django.utils import timezone
+        if not start or not end or timezone.is_naive(start) or timezone.is_naive(end) or start >= end:
+            raise ValueError('预约时段无效')
+        query = cls.objects.filter(provider=provider).order_by('weekday', 'start_minute', 'pk')
+        if lock:
+            query = query.select_for_update()
+        slots = list(query)
+        if not slots:
+            return True  # Match the existing unconfigured-schedule semantics.
+        start, end = timezone.localtime(start), timezone.localtime(end)
+        day = start.date() - timedelta(days=1)
+        intervals = []
+        while day <= end.date():
+            midnight = timezone.make_aware(datetime.combine(day, time.min), timezone.get_current_timezone())
+            for slot in slots:
+                if slot.weekday != day.weekday():
+                    continue
+                begins = midnight + timedelta(minutes=slot.start_minute)
+                finishes = midnight + timedelta(minutes=slot.end_minute)
+                if slot.end_minute < slot.start_minute:
+                    finishes += timedelta(days=1)
+                if begins < end and finishes > start:
+                    intervals.append((begins, finishes))
+            day += timedelta(days=1)
+        cursor = start
+        for begins, finishes in sorted(intervals):
+            if begins > cursor:
+                break
+            if finishes > cursor:
+                cursor = finishes
+            if cursor >= end:
+                return True
+        return False
 
     def __str__(self) -> str:
         return f"{self.provider_id} - w{self.weekday} {self.start_minute}-{self.end_minute}"
@@ -755,3 +983,7 @@ class WechatPhoneLock(models.Model):
 
 
 from .registration_models import ProviderRegistration  # noqa: E402,F401
+from .boss_registration_models import BossRegistrationChallenge  # noqa: E402,F401
+from .web_login_models import WebLoginSession, PasswordLoginChallenge  # noqa: E402,F401
+from .voice_models import VoiceRecording  # noqa: E402,F401
+from .receipt_usage_models import PassReceiptUsageEvent, PassReceiptUsageState  # noqa: E402,F401

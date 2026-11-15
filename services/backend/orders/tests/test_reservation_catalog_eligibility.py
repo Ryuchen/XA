@@ -1,17 +1,24 @@
 """Reservation creation follows the existing catalog and skill contracts."""
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.test import override_settings
 from django.utils import timezone
 
-from orders.models import GameCategory, Gameplay, Reservation
+from orders.models import GameCategory, Gameplay, Reservation, ServiceItem
 from orders.tests.factories import make_service_category
 from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase
 from users.models import EscortSchedule, ProviderQualification
 
 
-@override_settings(KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
+@override_settings(KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, LEGACY_FORCE_AUTH_COMPAT=False)
 class ReservationCatalogEligibilityTest(ReservationApiTestBase):
+    def setUp(self):
+        super().setUp()
+        from club_accounts.tokens import issue_account_tokens
+        self.client.force_authenticate(user=None)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.boss_account)[0])
+
     def post(self):
         return self.client.post(LIST_URL, self.create_payload(), format='json').data
 
@@ -67,6 +74,12 @@ class ReservationCatalogEligibilityTest(ReservationApiTestBase):
         EscortSchedule.objects.create(provider=self.provider, account=self.provider_account,
             weekday=(now.weekday() + 1) % 7, start_minute=0, end_minute=60)
         result = self.post()
+        self.assertNotEqual(result['code'], 0, result)
+        self.assertIn('离线', result['msg'])
+        self.assertFalse(Reservation.objects.exists())
+        profile.status = profile.Status.AVAILABLE
+        profile.save(update_fields=['status'])
+        result = self.post()
         self.assertEqual(result['code'], 0, result)
         self.assertEqual(result['data']['status'], 'PENDING')
         self.assertTrue(qualification.is_active)
@@ -79,3 +92,19 @@ class ReservationCatalogEligibilityTest(ReservationApiTestBase):
         self.assertNotEqual(result['code'], 0, result)
         self.assertIn('认证', result['msg'])
         self.assertFalse(Reservation.objects.exists())
+
+    def test_catalog_change_after_initial_validation_cannot_hold_slot(self):
+        from orders.gameplay import validate_service_gameplay
+        for change in ({'is_active': False}, {'billing_provider_count': 2}, {'is_addon': True}):
+            calls = []
+            def update_after_read(service, rounds=1, **kwargs):
+                if not calls:
+                    ServiceItem.objects.filter(pk=service.pk).update(**change)
+                calls.append(True)
+                return validate_service_gameplay(service, rounds, **kwargs)
+            with patch('orders.gameplay.validate_service_gameplay', side_effect=update_after_read):
+                result = self.post()
+            self.assertNotEqual(result['code'], 0, result)
+            self.assertFalse(Reservation.objects.exists())
+            ServiceItem.objects.filter(pk=self.service.pk).update(
+                is_active=True, billing_provider_count=1, is_addon=False)

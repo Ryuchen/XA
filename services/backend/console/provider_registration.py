@@ -1,7 +1,9 @@
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
+from stores.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers
+from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
@@ -11,10 +13,10 @@ from common.media import build_media_url
 from console.mixins import EnvelopeViewSetMixin
 from users.models import CustomUser, EscortLevel, EscortProfile, ProviderRegistration
 from users.provider_registration import decrypt_identity
-from wallet.models import Wallet, Transaction, get_platform_wallet
+from wallet.models import CashDepositTopup, Wallet, Transaction, get_platform_wallet
 
 
-class RegistrationAdminSerializer(serializers.ModelSerializer):
+class RegistrationAdminSerializer(EntityNumberModelSerializer):
     id_number_masked = serializers.SerializerMethodField()
     id_number = serializers.SerializerMethodField()
     id_front_url = serializers.SerializerMethodField()
@@ -143,33 +145,33 @@ class ProviderRegistrationViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         account=account, user=user, display_name=row.display_name, level=data['level_id'],
                         is_verified=True, deposit_mode=row.deposit_mode,
                         deposit_required=row.deposit_required, deposit_paid=data['deposit_paid'],
+                        deposit_business_cycle=account.business_cycle if data['deposit_paid'] else None,
                         status='OFFLINE',
                     )
                     if row.deposit_mode == 'CASH':
-                        # Confirmed external cash is credited then earmarked as deposit in one transaction.
-                        # The provider's available balance stays zero; existing paired deposit reports still reconcile.
+                        # External cash goes directly to the store deposit pool;
+                        # it is never a provider wallet recharge.
                         amount = data['deposit_paid']
-                        Transaction.objects.create(
-                            wallet=wallet, amount=amount, tx_type='TOPUP',
-                            balance_before=0, balance_after=amount, operator_account=request.account,
-                            remark=f'注册现金押金凭证核验入账 #{row.pk}',
-                        )
-                        Transaction.objects.create(
-                            wallet=wallet, amount=-amount, tx_type='DEPOSIT',
-                            balance_before=amount, balance_after=0, operator_account=request.account,
-                            remark=f'注册现金押金缴纳 #{row.pk}',
-                        )
-                        wallet.total_recharge += amount
-                        wallet.save(update_fields=['total_recharge'])
                         platform = get_platform_wallet(for_update=True)
                         before = platform.balance
+                        if before + amount > 2147483647:
+                            transaction.set_rollback(True)
+                            return Response({'code': 400, 'msg': '门店押金账户余额超过系统范围'}, status=400)
                         platform.balance += amount
                         platform.save(update_fields=['balance'])
-                        Transaction.objects.create(
+                        platform_tx = Transaction.objects.create(
                             wallet=platform, amount=amount, tx_type='DEPOSIT_INCOME',
                             balance_before=before, balance_after=platform.balance, operator_account=request.account,
                             remark=f'注册现金押金收款 #{row.pk}',
                         )
+                        deposit_topup = CashDepositTopup.objects.create(profile=profile, account=account, operator=request.account,
+                            account_business_cycle=account.business_cycle,
+                            kind=CashDepositTopup.Kind.INITIAL, source_registration=row,
+                            amount=amount, paid_before=0, paid_after=amount, target_snapshot=row.deposit_required,
+                            reason='入驻审核核验现金押金', client_request_id=f'registration-{row.pk}',
+                            platform_transaction=platform_tx)
+                        from site_messages.deposit_event_notice import record_topup
+                        record_topup(deposit_topup)
                     row.account = account
                     row.level = data['level_id']
                     row.deposit_paid = data['deposit_paid']

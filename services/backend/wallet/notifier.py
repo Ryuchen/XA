@@ -45,3 +45,23 @@ def notify_withdraw_update(withdraw):
     _publish(withdraw, 'withdraw_status_update', 'withdraw_reviewers', {
         'withdraw_id': withdraw.pk, 'status': withdraw.status,
     })
+
+
+def notify_withdraw_config_update():
+    try:
+        layer = get_channel_layer()
+        if layer is not None:
+            async_to_sync(layer.group_send)('providers', {'type':'withdraw_config_update'})
+    except Exception:
+        logging.getLogger(__name__).warning('提现规则实时通知失败', exc_info=True)
+
+
+def notify_withdraw_account_update(account_id):
+    try:
+        layer = get_channel_layer()
+        if layer is not None:
+            async_to_sync(layer.group_send)(f'account_{account_id}', {
+                'type':'withdraw_account_update', 'data':{'account_id':account_id},
+            })
+    except Exception:
+        logging.getLogger(__name__).warning('收款账户实时通知失败: account_id=%s', account_id, exc_info=True)

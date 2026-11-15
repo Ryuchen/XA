@@ -1,0 +1,491 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "backend": "mysql",
+  "test_database": "test_xa_test_multi_provider_flow_20261021",
+  "main_http_database": "xa_test_multi_provider_flow_20261021",
+  "main_http_all_rows_unchanged": true,
+  "main_http_tables": 110,
+  "main_http_rows": 905,
+  "main_http_table_checks": {
+    "announcements_announcement": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "audition_auditionlink": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "audition_auditionsignup": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "auth_group": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "auth_group_permissions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "auth_permission": {
+      "rows": 408,
+      "sha256": "26b244a161ada19613ecb6c53963f5e65fb419074af1da54667f14a889a483f3"
+    },
+    "banners_banner": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "chat_chatmessage": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "chat_chatsession": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "club_accounts_clubaccount": {
+      "rows": 4,
+      "sha256": "582f634c57be3327465741c3f53562857261fdf054aabde7cb3e86c03cb78af0"
+    },
+    "club_accounts_legacyaccountmap": {
+      "rows": 4,
+      "sha256": "6d00104093f73e0ce9b3cd93e7ebd462f56cdc2e631d9a28eb5d5147c3699775"
+    },
+    "club_accounts_otpcredential": {
+      "rows": 3,
+      "sha256": "efd6345a241772b4b1cb0f958f13c4e80c7634f2eb8fa810f323c71428f37120"
+    },
+    "club_accounts_otploginchallenge": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "club_accounts_wechatbindingchange": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "console_accountban": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "console_adminauditlog": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "console_adminmembership": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "console_adminmembership_roles": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "console_adminrole": {
+      "rows": 4,
+      "sha256": "f13c090ebcbb94f0e957472f78bdbe9204aaea2f6c73b3770e6f3f1023a59b32"
+    },
+    "console_kookdispatchconfig": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "console_kookdispatchprobe": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "coupons_coupon": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "coupons_usercoupon": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "django_admin_log": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "django_content_type": {
+      "rows": 102,
+      "sha256": "a3f530b7832fef755ce3ef9ea985c336db4cdefcfa538eac1840275d89b8f359"
+    },
+    "django_migrations": {
+      "rows": 199,
+      "sha256": "cb5fd5268868f5ccf02de52d2fa1434fe776155b199ca79fbad0ea4a86104399"
+    },
+    "django_session": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_broadcast": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_broadcastrule": {
+      "rows": 2,
+      "sha256": "4e31c5da2d220a47419577b445d5ed73b85c4fdb95d156b433060f970d66d7ca"
+    },
+    "engagement_clubcontent": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_cluboperationconfig": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_consumptionconfirmation": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_giftbenefitrule": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_giftnaminggrant": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_kookbinding": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_kookbindingchallenge": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_kookpointevent": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_kookpointsconfig": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_lotterybatch": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_lotterycampaign": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_lotterydraw": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_lotterypitystate": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_lotteryprize": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_memberbenefitgrant": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_memberprofile": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_membertag": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_orderpointallocation": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_pointfundinglot": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_pointledger": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_providernaming": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_rechargepackage": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_retirementaudit": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_rewardclaim": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_rewarditem": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "engagement_viptier": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_aftersale": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_evaluation": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_experienceuse": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_gamecategory": {
+      "rows": 1,
+      "sha256": "68de2ec0612b06137821390085d6a9d0a5e02bc2c7d867b3728d695ba49f7767"
+    },
+    "orders_gameplay": {
+      "rows": 9,
+      "sha256": "884a5a3515cba4a8bb69f00f43081bfb31f9e5698a225f52507c8273b31d6339"
+    },
+    "orders_kookdispatchrecord": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_order": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_orderapplication": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_orderfinanciallock": {
+      "rows": 1,
+      "sha256": "354aaef7a5f6ecbb2faee49fbe47a24e024cb62b3183b853a1ecc01e01920e49"
+    },
+    "orders_orderprovider": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_orderrefund": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_orderstatuslog": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_ordertrafficconfig": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_providerdispatchlock": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_refundrecoveryline": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_reservation": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_reservationstatuslog": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_servicecategory": {
+      "rows": 7,
+      "sha256": "3450a86f5bbf83676a0853cc74e270863c84bbb845e326985e259f1e8419987a"
+    },
+    "orders_servicefavorite": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "orders_serviceitem": {
+      "rows": 2,
+      "sha256": "fe03e35eb9026a81078833c99fba129b8481c85100b016c2d2cbf7efe57251b3"
+    },
+    "orders_wecomdispatchrecord": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "promotions_promotion": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "promotions_promotion_items": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "site_messages_message": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "support_supportcontactcard": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_achievement": {
+      "rows": 5,
+      "sha256": "0a5881ef60e4ea3fff800be36174f94082be332c0b067c614d0c93d443c03267"
+    },
+    "users_bosstype": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_checkingift": {
+      "rows": 31,
+      "sha256": "27ed52ab4eca5c3249fc894192e6a8bad7ea280b5159acb20c181097f365a144"
+    },
+    "users_checkinmonthprogress": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_checkinrecord": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_checkinruleconfig": {
+      "rows": 1,
+      "sha256": "1201bac5c4d02b5f68a2eed3ef86faf06d5d5b218b4913dfd73e8344b8d408c7"
+    },
+    "users_customergameprofile": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_customuser": {
+      "rows": 5,
+      "sha256": "a417dd3393bcd164fd6a4de59cca8728eb72ecb90a97074a3321454cb7fb17af"
+    },
+    "users_customuser_groups": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_customuser_user_permissions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_escortlevel": {
+      "rows": 3,
+      "sha256": "8d59d0eb81c84601f3ba89378be197592421f8b51c4828e2af60d4d7b3c6aaeb"
+    },
+    "users_escortprofile": {
+      "rows": 3,
+      "sha256": "ea36534c6df967db418a00f69570ed50d3828581e157e2115bc9fef3f0a02189"
+    },
+    "users_escortprofile_game_categories": {
+      "rows": 3,
+      "sha256": "0d718cf0a97abd5fec36bbf1d72037d82183aabf49e8d752e3fb060b8b9597be"
+    },
+    "users_escortprofile_service_items": {
+      "rows": 6,
+      "sha256": "e9a68260b115fc4e72f5f67f2a18e0ab496b42c99ca9659689432db9d68abd48"
+    },
+    "users_escortschedule": {
+      "rows": 84,
+      "sha256": "eec34f431f0cf2ca87665d4921a9f0a4f5202fb92e1086d3b674aef4cff3e9ec"
+    },
+    "users_providerpasspurchase": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_providerqualification": {
+      "rows": 3,
+      "sha256": "afc703be036e51bd12018ce412ca8de9e79d18621d8cc9b1cfce67c3e5bd465f"
+    },
+    "users_providerregistration": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "users_wechatphonelock": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_disposerecord": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_idempotencykey": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_incomehold": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_providerreport": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_providerreportimage": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_rechargerecord": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_systemconfig": {
+      "rows": 9,
+      "sha256": "228a223a6c49b4df1623024524a23460d00ff1a0a57e7c5ebdcfb4b65f72092d"
+    },
+    "wallet_transaction": {
+      "rows": 1,
+      "sha256": "60a0fc97ddfd9ddd1dc3688d6676c993e1747b47dab198dc7d0c4c9346962cd4"
+    },
+    "wallet_wallet": {
+      "rows": 5,
+      "sha256": "0f684f148e9ca3c4be7c6fc6fc3b73d2aaa9c142e8e081fe575adb4e3d35f8eb"
+    },
+    "wallet_withdrawalaccount": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wallet_withdrawrequest": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "labels": [
+    "orders.tests.test_boss_selected_team",
+    "orders.tests.test_team_package_admission",
+    "orders.tests.test_companion_preferences",
+    "orders.tests.test_order_commission_modes",
+    "orders.tests.test_provider_qualifications",
+    "orders.tests.test_applications",
+    "orders.tests.test_kook_dispatch"
+  ],
+  "tests_run": 91,
+  "failures": 0,
+  "failure_count": 0,
+  "error_count": 0,
+  "skipped": [],
+  "source_sha256": {
+    "orders/serializers.py": "6dfbeb1704f9d684bf928b203546d9b3c4455147812d39eaaf75a4b6218fe3e3",
+    "orders/views.py": "3e778b52cd9019e57f567b51fdd24d240d8549c6a9bbeedb1c10670d6257612c",
+    "orders/models.py": "9101e4d37ac37d94619ceb973c4a38fa72909f39d9c52fe7c203884f3f021154",
+    "orders/dispatching.py": "24f6b9e9ab1c7e25c7de9018edc34d3ff1391c6bbc0d3d23c3820c0f5e03090c",
+    "orders/team_rules.py": "98283d04f191261cc6419824d9b1e2032b79ea9d0134298bfdb672f23c1d5437",
+    "orders/team_fulfillment.py": "bad551e2c88247c63e75ec06443e0ef7ac9b93d04dacf0c42c479a75fbeb64c3",
+    "orders/services.py": "6d5607b54f89a6f239699041ada970350a5064ca6789dfd2d6488ee7eed136b5",
+    "orders/commission.py": "b50d4ec6dc6365c546881066db5e9dde3b1973892e301a834ffca2a9bb35bfa9",
+    "orders/pricing.py": "4f0984fd0417467e7715e92fa2b2a525852ed594e7ee29639cebedc1d86f60db",
+    "orders/settlement.py": "4e3b1311ca904e67a6525440c1357a5f72689a82e2216caf2a263a93f2e9b4f4",
+    "orders/applications.py": "bb5377afd1a04114c93216c115262402d350cd8e52517bda577266f01de66417",
+    "orders/purchase_benefits.py": "a99fc172b98c605a3a0de547737b5eafe89b166455737bcdca591a124e1d00f0",
+    "users/models.py": "9da6b4b9a32ff7625da6e2e1f59ec6a7c0ff6c298f8f5b107b1745971f202aec",
+    "users/qualifications.py": "5686e39d88b2a13f52bba35d696c8dbef249c6ada971d5298ae491f96d397cc8",
+    "wallet/receipts.py": "a51adc1c3cca6377f266181e72c2a15bef298f4fbb4a4f7728e2daa9152ff3e6",
+    "orders/tests/test_boss_selected_team.py": "bea61130a072c3984162ba64433bc053844bd6c3028a23b9b5e4d38c694f314a",
+    "orders/tests/test_team_package_admission.py": "aed2788be629c48500cb85ba33f3088ab0c8651df64a8cdf33b28666b888611d",
+    "orders/tests/test_companion_preferences.py": "dc4769f739c9fed8366a6ff7869f44afac9ccf37ad54f959e92f174b9ce7dd1b",
+    "orders/tests/test_order_commission_modes.py": "4d074df580a22642068b98025d6cd76c677c63c207b0af3bf4e0f68990642407",
+    "orders/tests/test_provider_qualifications.py": "2accbeb7e71e0ca7235bff182f624bf85a20ff6de31bcf1c20899da787f7c919",
+    "orders/tests/test_applications.py": "b5975c4ae1d75c7620e5ffbf30d7b32606de72a43f74cb1d5d23e8495ef7d4d3",
+    "orders/tests/test_kook_dispatch.py": "407dc742748f1ff10eef0bc7b8c200767507cde4d950545cc6d5dacc83f426c1"
+  },
+  "elapsed_seconds": 143.05,
+  "tested_at": "2026-10-20T16:41:52.175287+00:00"
+}

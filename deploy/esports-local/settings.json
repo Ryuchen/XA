@@ -1,0 +1,16 @@
+{
+  "distribution": "XA-Ubuntu-24.04",
+  "project": "xa-esports-local",
+  "backendPort": 18106,
+  "services": ["boss", "provider", "admin", "gateway"],
+  "dependencies": [
+    {"name": "xa-local-validation-db-1", "image": "mysql:8.0", "project": "xa-local-validation", "service": "db", "containerPort": "3306/tcp", "hostPort": "13306"},
+    {"name": "xa-fronted-acceptance-redis", "image": "redis:alpine", "containerPort": "6379/tcp", "hostPort": "26379"}
+  ],
+  "domains": ["esports.club", "sl.esports.club", "xa.esports.club", "admin.esports.club"],
+  "entries": [
+    "http://sl.esports.club/boss/", "http://sl.esports.club/player/",
+    "http://xa.esports.club/boss/", "http://xa.esports.club/player/",
+    "http://admin.esports.club/"
+  ]
+}

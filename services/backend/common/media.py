@@ -28,6 +28,9 @@ def build_media_url(request, field):
         url = bounded_public_image_url(url)
         if not url:
             return ''
+    from urllib.parse import urlsplit
+    if urlsplit(url).netloc:
+        return url
     base = getattr(settings, 'MEDIA_BASE_URL', '')
     if base:
         return f"{base.rstrip('/')}{url}"
@@ -47,6 +50,9 @@ def build_media_url_from_path(request, url):
     if not url:
         return ''
 
+    from urllib.parse import urlsplit
+    if urlsplit(url).netloc:
+        return url
     base = getattr(settings, 'MEDIA_BASE_URL', '')
     if base:
         return f"{base.rstrip('/')}{url}"

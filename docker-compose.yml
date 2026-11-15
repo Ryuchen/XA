@@ -6,6 +6,8 @@ x-backend: &backend
     context: ./services/backend
   image: xa-backend:dev
   environment:
+    XA_STORE_DATABASES: ${XA_STORE_DATABASES:-}
+    XA_STORE_INTEGRATIONS: ${XA_STORE_INTEGRATIONS:-}
     DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
     DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-xa-local-development-key-change-before-production}
     DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
@@ -20,6 +22,13 @@ x-backend: &backend
     REDIS_PORT: 6379
     WECHAT_APPID: ${WECHAT_APPID:-}
     WECHAT_SECRET: ${WECHAT_SECRET:-}
+    WECHAT_WEB_LOGIN_ENV: ${WECHAT_WEB_LOGIN_ENV:-release}
+    SMS_SECRET_ID: ${SMS_SECRET_ID:-}
+    SMS_SECRET_KEY: ${SMS_SECRET_KEY:-}
+    SMS_APP_ID: ${SMS_APP_ID:-}
+    SMS_TEMPLATE_ID: ${SMS_TEMPLATE_ID:-}
+    SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
+    SMS_REGION: ${SMS_REGION:-ap-guangzhou}
     WECHAT_MOCK_LOGIN: ${WECHAT_MOCK_LOGIN:-true}
     KOOK_ENABLED: ${KOOK_ENABLED:-false}
     KOOK_BOT_TOKEN: ${KOOK_BOT_TOKEN:-}
@@ -78,7 +87,7 @@ services:
   migrate:
     <<: *backend
     container_name: xa_backend_migrate
-    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+    command: sh -c "python manage.py migrate_stores && python manage.py collectstatic --noinput"
     restart: "no"
     depends_on:
       db:

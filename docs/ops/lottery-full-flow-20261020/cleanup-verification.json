@@ -1,0 +1,104 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "passed": true,
+  "relay": {
+    "run": "lottery-full-flow-20261020",
+    "stopped_exact_pid": 605053,
+    "bind": "127.0.0.1:18190",
+    "stopped_at": "2026-10-20T15:23:11.538229+00:00"
+  },
+  "isolated_resources": {
+    "run": "lottery-full-flow-20261020",
+    "removed": [
+      {
+        "container_id": "3ddadb9155d545dbb0e8d3fd25231f663e7865e5d673f9d55c325985d2ef7113",
+        "name": "xa-lottery-full-http-20261020",
+        "anonymous_volumes": []
+      },
+      {
+        "container_id": "417066bbf09c5929c4e1ec76a376e650e64892142d8c2c194d192409b40f32c6",
+        "name": "xa-lottery-full-mysql-20261020",
+        "anonymous_volumes": [
+          "40563512006e6d00a87e254ad27816a3302d84bb6110da4eb13bdc8724c7cdf1"
+        ]
+      }
+    ],
+    "network_removed": true,
+    "cleaned_at": "2026-10-20T15:23:14.149312+00:00"
+  },
+  "original_live_database_unchanged": true,
+  "protected_tables": 25,
+  "protected_rows": 3713,
+  "native_original_account_restored": true,
+  "native_original_api_restored": true,
+  "original_container_count_running": 9,
+  "original_containers": [
+    {
+      "id": "9626957a2ccd42534249aa4c233712ed4e6a1bab889f72b098e22147ecb916d4",
+      "name": "xa-local-validation-provider-h5-1",
+      "state": "running",
+      "health": null
+    },
+    {
+      "id": "c7f4fb3a967bbdf4fc696881bf1b280b0c4b2f1bd8429da5204d41b8a5a91abe",
+      "name": "xa-local-validation-admin-web-1",
+      "state": "running",
+      "health": null
+    },
+    {
+      "id": "9fce2cf00cf45043ccb0ebb96ce36679e013aaf50b84565cde516288614a7d20",
+      "name": "xa-local-validation-celery-worker-1",
+      "state": "running",
+      "health": null
+    },
+    {
+      "id": "26757bf6dbb273deba7db4c5f31c548f6de80c4a0dc756954007132072521762",
+      "name": "xa-local-validation-celery-beat-1",
+      "state": "running",
+      "health": null
+    },
+    {
+      "id": "2082f47ec7ddb33f84701c9d0c72e8b39d8b82ebf118edbdf712df33cbc9086e",
+      "name": "xa-local-validation-web-2",
+      "state": "running",
+      "health": null
+    },
+    {
+      "id": "780ca65749f6cabeff835339d71a31570dbdedaf39b8ccd9fd78855a50a40dbf",
+      "name": "xa-local-validation-web-1",
+      "state": "running",
+      "health": null
+    },
+    {
+      "id": "e03eecac929c9fa515adbe4500265a65326aae04feee1c5930ca0ed52e8eba05",
+      "name": "xa-local-validation-gateway-1",
+      "state": "running",
+      "health": null
+    },
+    {
+      "id": "44e0fbd68c6c7e4cd3111ebab697f3627dadeb8cf96bc8627bbac77fb1f94204",
+      "name": "xa-local-validation-redis-1",
+      "state": "running",
+      "health": "healthy"
+    },
+    {
+      "id": "6f148d97cd9c5a4c21fa01b3af335d60333298e450b8f62022431d82a341f254",
+      "name": "xa-local-validation-db-1",
+      "state": "running",
+      "health": "healthy"
+    }
+  ],
+  "excluded_preexisting_stopped_migration_container": [
+    {
+      "id": "7aa8daf49c4eb00cb72b9db88aa2f20b4ebe67153703d9d439ed442ff8834ef8",
+      "name": "xa-local-validation-migrate-1",
+      "state": "exited"
+    }
+  ],
+  "endpoints": {
+    "isolated_port_18190_closed": true,
+    "original_api_18080_status": 200,
+    "checked_at": "2026-10-20T15:24:00.2837778Z"
+  },
+  "checked_at": "2026-10-20T15:24:03.929777+00:00"
+}

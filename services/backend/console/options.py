@@ -20,7 +20,7 @@ OPTION_SOURCES = {
     'escort-levels': (EscortLevel, {'escort:view', 'escort:edit', 'service:view', 'service:edit', 'escort_level:view', 'registration:view'}, ('id', 'name', 'commission_rate', 'is_active')),
     'game-categories': (GameCategory, {'escort:view', 'escort:edit', 'service:view', 'service:edit'}, ('id', 'name', 'is_active')),
     'service-categories': (ServiceCategory, {'promotion:view', 'promotion:edit', 'service:view', 'service:edit'}, ('id', 'name', 'is_gift', 'is_active')),
-    'service-items': (ServiceItem, {'order:dispatch', 'escort:edit', 'promotion:edit', 'service:view', 'banner:edit'}, ('id', 'name', 'price', 'price_unit', 'billing_provider_count', 'service_type', 'game_category_id', 'platform', 'security_level', 'provider_kind','provider_grade', 'commission_rate', 'is_active')),
+    'service-items': (ServiceItem, {'order:dispatch', 'escort:edit', 'promotion:edit', 'service:view', 'banner:edit'}, ('id', 'name', 'price', 'price_unit', 'billing_provider_count', 'fulfillment_provider_count', 'service_type', 'game_category_id', 'platform', 'security_level', 'provider_kind','provider_grade', 'commission_rate', 'is_active')),
     'announcements': (Announcement, {'banner:edit', 'announcement:view'}, ('id', 'title', 'is_active')),
     'gameplays': (Gameplay, {'banner:edit', 'service:view', 'service:edit'}, ('id', 'name', 'is_active')),
     'club-content': (ClubContent, {'banner:edit', 'engagement:view', 'engagement:edit'}, ('id', 'title', 'kind', 'is_active', 'starts_at', 'ends_at')),
@@ -92,13 +92,14 @@ class FormOptionsView(APIView):
                 return Response({'code': 400, 'msg': '陪玩性别筛选无效'}, status=400)
             if service.service_type != 'COMPANION':
                 provider_gender = 'ANY'
-            from orders.services import active_orders_for
+            from orders.services import capacity_orders_for
+            from orders.capacity import current_capacity_limit
             from wallet.club_rules import club_income_rules_enabled
-            active = (active_orders_for(account_id=OuterRef('account_id')).order_by()
+            active = (capacity_orders_for(account_id=OuterRef('account_id')).order_by()
                       .values(group=Value(1)).annotate(total=Count('pk', distinct=True)).values('total'))
-            qs = qs.filter(status=EscortProfile.Status.AVAILABLE).annotate(
+            qs = qs.exclude(status=EscortProfile.Status.OFFLINE).annotate(
                 dispatch_active_count=Coalesce(Subquery(active, output_field=IntegerField()), 0),
-            ).filter(dispatch_active_count__lt=Order.MAX_CONCURRENT_ORDERS)
+            ).filter(dispatch_active_count__lt=current_capacity_limit())
             rules_enabled = club_income_rules_enabled()
             qs=[p for p in qs if not p.order_acceptance_error(service, club_rules_enabled=rules_enabled, provider_gender=provider_gender)]
         pagination = ConsolePagination()

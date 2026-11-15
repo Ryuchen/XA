@@ -1,5 +1,6 @@
 from datetime import timedelta
-from django.db import transaction
+from contextlib import ExitStack
+from stores.db import transaction
 from django.db.models import Count, IntegerField, OuterRef, Q, Subquery, Value
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -7,18 +8,109 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated
+from club_accounts.provider_lifecycle import ProviderLifecycleError
 from users.models import EscortProfile
 from .models import Order, OrderApplication, OrderProvider
 from .notice_text import service_arrangement_hint
-from .services import count_active_orders, lock_provider_dispatch, mark_escort_busy, sync_single_provider_share, push_message_safe
+from .services import count_capacity_orders, ensure_provider_dispatch_locks, lock_provider_dispatch, mark_escort_busy, sync_single_provider_share
 from .state_machine import transition, IllegalTransitionError
 from .notifier import notify_order_update
 from .team_rules import required_team_size, team_size_error
+from .capacity import current_capacity_limit
+from django.conf import settings
 
 class ApplicationError(ValueError):
     pass
 
+
+def _capture_lifecycle_accounts(ids, *, actor=None):
+    """Capture membership cycles before taking the order or funding locks."""
+    if not getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
+        return None
+    ids = {pk for pk in ids if pk is not None}
+    accounts = {account.pk: account for account in ClubAccount.objects.filter(
+        pk__in=ids, account_type=ClubAccount.AccountType.PROVIDER)}
+    if set(accounts) != ids:
+        raise ApplicationError('陪玩账号已变化，请刷新后重试')
+    if actor and actor.pk in accounts:
+        accounts[actor.pk] = actor
+    from club_accounts.provider_lifecycle import ensure_provider_lifecycle
+    for account in sorted(accounts.values(), key=lambda row: row.pk):
+        ensure_provider_lifecycle(account)
+    return list(accounts.values())
+
+
+def _lock_lifecycle_accounts(accounts):
+    if accounts is not None:
+        from club_accounts.provider_lifecycle import lock_provider_operations
+        lock_provider_operations(accounts)
+
+
+def _validate_lifecycle_accounts(accounts, ids, *, active=True):
+    if accounts is None:
+        return
+    if {account.pk for account in accounts} != {pk for pk in ids if pk is not None}:
+        raise ApplicationError('报名队伍已变化，请刷新后重试')
+    if active:
+        from club_accounts.provider_lifecycle import provider_membership_current
+        if not all(provider_membership_current(account) for account in accounts):
+            raise ApplicationError('陪玩门店身份已变化，请重新报名')
+
+def _validate_application_cycles(row, accounts):
+    if accounts is None:
+        return
+    cycles = {account.pk: account.business_cycle for account in accounts}
+    if (cycles.get(row.applicant_id) != row.applicant_business_cycle
+            or not row.applicant_business_cycle
+            or (row.partner_id and (not row.partner_business_cycle
+                or cycles.get(row.partner_id) != row.partner_business_cycle))):
+        raise ApplicationError('报名人员身份已变化，请重新报名')
+
+
+def audition_recordings_required(order):
+    if not (order and order.dispatch_route == Order.DispatchRoute.PUBLIC and order.requires_boss_selection
+            and not order.is_gift_snapshot and not order.source_order_id):
+        return False
+    # The same flag also enables two-person evidence after automatic or
+    # directly specified assignment. Those assignments are not auditions.
+    from .models import OrderGrabPoolOpeningIntent, OrderGrabPoolSnapshot
+    if (OrderGrabPoolOpeningIntent.objects.filter(order=order).exists()
+            or OrderGrabPoolSnapshot.objects.filter(order=order).exists()
+            or order.status_logs.filter(action='ASSIGN', reason='老板指定陪玩').exists()):
+        return False
+    if order.status == Order.Status.PENDING:
+        # In a newly created public order this saved flag represents the
+        # buyer's explicit BOSS_SELECT choice before any candidate exists.
+        return True
+    return OrderApplication.objects.filter(order=order).exists()
+
+def _enter_assignment_scope(stack, order):
+    from .points_service_payment import needs_integrated_processing
+    from .points_business_access import permits, service_order
+    if (needs_integrated_processing(order)
+            and getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+            and not permits(order, phase='assignment', kind='service')):
+        from rest_framework.exceptions import ValidationError
+        try:
+            stack.enter_context(service_order(order.pk, phase='assignment'))
+        except ValidationError as exc:
+            raise ApplicationError('积分订单资金凭证或派单状态待核对') from exc
+
+
 def public_order(order):
+    from .points_service_payment import needs_integrated_processing
+    if needs_integrated_processing(order):
+        from .points_checkout_test import assignment_enabled
+        from .points_business_access import configured, permits
+        if configured() and assignment_enabled() and not (permits(order, phase='assignment', kind='service')
+                or permits(order, phase='checkout', kind='service')):
+            raise ApplicationError('积分派单上下文与订单不一致')
+        if not assignment_enabled():
+            if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is not True:
+                raise ApplicationError('积分订单派单尚未接通')
+            with transaction.atomic(), ExitStack() as stack:
+                _enter_assignment_scope(stack, order)
+                return public_order(order)
     from .direct_payment_models import DirectPaymentIntent
     from .direct_payment_quote import quote_matches_intent
     intent = DirectPaymentIntent.objects.filter(order=order).first()
@@ -31,15 +123,25 @@ def public_order(order):
         or (order.auto_cancel_at and order.auto_cancel_at <= timezone.now())):
         raise ApplicationError('订单已结束报名，请刷新订单')
 
-def eligible(order, account, *, visibility=True, profile=None, active_count=None, club_rules_enabled=None, visibility_delay=None):
+def eligible(order, account, *, visibility=True, profile=None, active_count=None, club_rules_enabled=None, visibility_delay=None, capacity_limit=None,
+             deposit_required_override=None):
     if profile is None:
         profile = EscortProfile.objects.select_related('account','user','level').prefetch_related('qualifications__game_category','service_items__game_category').filter(account=account).first()
     if account.account_type != ClubAccount.AccountType.PROVIDER or not profile:
         raise ApplicationError('陪玩资料不存在')
-    reason = profile.order_acceptance_error(order, provider_gender=order.provider_gender, club_rules_enabled=club_rules_enabled)
+    from .paid_service_scope import acceptance_error
+    reason = acceptance_error(profile, order, club_rules_enabled=club_rules_enabled,
+                              deposit_required_override=deposit_required_override)
     if reason:
         raise ApplicationError(reason)
-    if (count_active_orders(account) if active_count is None else active_count) >= Order.MAX_CONCURRENT_ORDERS:
+    if (order.game_commission_snapshot or {}).get('personal_rules'):
+        from .delta_personal_commission import resolve_order_candidate
+        try:
+            resolve_order_candidate(order, profile)
+        except ValueError as exc:
+            raise ApplicationError(str(exc)) from exc
+    limit = current_capacity_limit() if capacity_limit is None else capacity_limit
+    if (count_capacity_orders(account) if active_count is None else active_count) >= limit:
         raise ApplicationError('陪玩接单名额已满，请重新选择')
     delay = profile.order_visibility_delay_seconds if visibility and visibility_delay is None else visibility_delay
     if visibility and timezone.now() < (order.pool_entered_at or order.created_at) + timedelta(seconds=delay):
@@ -47,6 +149,7 @@ def eligible(order, account, *, visibility=True, profile=None, active_count=None
     return profile
 
 def member_data(account,order=None, *, profiles=None):
+    from stores.display import provider_display_name
     profile = profiles.get(account.pk) if profiles is not None else getattr(account, 'escort_profile', None)
     level = profile.level if profile else None
     from users.qualifications import service_requirement,matching_qualification,grade_options,GRADES
@@ -54,18 +157,107 @@ def member_data(account,order=None, *, profiles=None):
     qualification=matching_qualification(profile,requirement) if profile and requirement else None
     grade_name=GRADES[qualification.grade] if qualification else (level.name if level and level.is_active else '未定级')
     rank=grade_options(qualification.provider_kind,qualification.platform,qualification.security_level).index(qualification.grade) if qualification else (profile.level_rank if profile else -1)
-    return {'id': account.pk, 'nickname': profile.display_name if profile else account.nickname,
+    nickname = profile.display_name if profile else account.nickname
+    return {'id': account.pk, 'nickname': nickname, 'display_name': provider_display_name(nickname),
             'level': grade_name,
             'level_rank': rank,
             'pass_tier': profile.active_pass_tier if profile else '',
             'avatar_url': account.avatar_url or ''}
 
-def application_data(row,order=None, *, profiles=None):
+def application_data(row,order=None, *, profiles=None, request=None):
     members = [member_data(row.applicant,order,profiles=profiles)] + ([member_data(row.partner,order,profiles=profiles)] if row.partner_id else [])
+    voices = None
+    unavailable = set()
+    if request:
+        from common.private_media import private_media_url
+        from users.voice_availability import recording_available
+        voices = {voice.owner_id: voice for voice in row.voices.all()}
+        for member in members:
+            voice = voices.get(member['id'])
+            if voice and not recording_available(voice.recording):
+                unavailable.add(member['id'])
+            url = private_media_url(request, voice.recording.audio) if voice else ''
+            member['recording'] = ({'id': voice.recording_id, 'title': voice.recording.title,
+                'duration_ms': voice.recording.duration_ms, 'audio_url': url} if url else None)
+    if audition_recordings_required(order or row.order):
+        if voices is None:
+            from users.voice_availability import recording_available
+            voices = {voice.owner_id: voice for voice in row.voices.select_related('recording')}
+            unavailable = {owner for owner, voice in voices.items() if not recording_available(voice.recording)}
+        voice_owners = set(voices)
+        complete = {row.applicant_id} | ({row.partner_id} if row.partner_id else set())
+        audio_ready = complete.issubset(voice_owners) and not bool(complete & unavailable)
+    else:
+        audio_ready = True
     return {'id': row.pk, 'team_size': len(members), 'members': members,
             'partner_confirmed': row.partner_confirmed, 'status': row.status,
-            'ready': row.status == 'PENDING' and (not row.partner_id or row.partner_confirmed),
+            'my_recording_submitted': bool(voices is not None and getattr(request, 'account', None)
+                and request.account.pk in voices),
+            'my_recording_unavailable': bool(getattr(request, 'account', None) and request.account.pk in unavailable),
+            'ready': row.status == 'PENDING' and (not row.partner_id or row.partner_confirmed) and audio_ready,
+            'not_ready_reason': ('报名录音暂不可用，请联系陪玩撤回后重新报名' if unavailable else '等待陪玩提交试音录音') if not audio_ready else '',
             'created_at': row.created_at}
+
+
+def attach_voice(row, account, recording_id):
+    from users.models import VoiceRecording
+    from .applications_models import OrderApplicationVoice
+    if recording_id is None:
+        if audition_recordings_required(row.order):
+            raise ApplicationError('请选择本人录音后提交')
+        return False
+    if type(recording_id) is not int or recording_id <= 0:
+        raise ApplicationError('录音选择无效')
+    existing = OrderApplicationVoice.objects.filter(application=row, owner=account).first()
+    if existing:
+        if existing.recording_id != recording_id:
+            raise ApplicationError('报名录音已提交，请先撤回后重新报名')
+        return False
+    recording = VoiceRecording.objects.select_for_update().filter(pk=recording_id, owner=account, deleted_at__isnull=True).first()
+    if recording is None:
+        raise ApplicationError('录音不存在或已移除，请重新选择')
+    from users.voice_availability import recording_available
+    if not recording_available(recording):
+        raise ApplicationError('录音暂不可用，请选择其他录音或重新上传')
+    OrderApplicationVoice.objects.create(application=row, owner=account, recording=recording)
+    return True
+
+
+def _application_notice_safe(*, recipient_account_id, recipient_business_cycle, recipient_id=None,
+                             require_cycle=True, title, preview='', msg_type='ORDER', action_url='',
+                             related_order_id=None, assignment_alert=False):
+    """Fail visibly when a real application recipient cycle cannot be proved."""
+    from site_messages.utils import create_cycle_message
+    message = create_cycle_message(recipient_account_id=recipient_account_id, recipient_id=recipient_id,
+        recipient_business_cycle=recipient_business_cycle, title=title, preview=preview, msg_type=msg_type,
+        action_url=action_url or (f'/pages/orderList/index?orderId={related_order_id}' if related_order_id else ''),
+        related_order_id=related_order_id, assignment_alert=assignment_alert)
+    if message is None:
+        import logging
+        logging.getLogger(__name__).warning('订单试音通知未投递，收件人或原周期待核对 order=%s account=%s',
+                                            related_order_id, recipient_account_id)
+
+
+def notify_audition_boss_ready(application, *, changed):
+    """Notify once when real confirmations and the required recordings exist."""
+    order = application.order
+    if not changed or not audition_recordings_required(order) or not application_data(application, order)['ready']:
+        return
+    if not order.customer_account_id:
+        import logging
+        logging.getLogger(__name__).warning('试音报名通知老板来源待核对 order=%s application=%s', order.pk, application.pk)
+        return
+    title = '试音报名已就绪'
+    preview = f'「{order.service_name_snapshot}」有报名已提交所需录音，可查看并选择陪玩'
+    from site_messages.order_application_notice import enabled, record
+    if enabled():
+        record(application, order.customer_account_id, 'BOSS_READY', title=title, preview=preview,
+               action_url=f'/pages/orderList/index?orderId={order.pk}')
+    else:
+        cycle = order.business_cycle
+        transaction.on_commit(lambda: _application_notice_safe(recipient_id=order.customer_id,
+            recipient_account_id=order.customer_account_id, recipient_business_cycle=cycle, require_cycle=True,
+            title=title, preview=preview, msg_type='ORDER', related_order_id=order.pk), robust=True)
 
 def participant_acceptance_reason(order, row, account):
     """Only disclose the requesting participant's own acceptance reason."""
@@ -80,7 +272,8 @@ def participant_acceptance_reason(order, row, account):
     return ''
 
 def application_rows(order):
-    return order.application_list if hasattr(order,'application_list') else order.applications.select_related('applicant__escort_profile__level', 'partner__escort_profile__level')
+    return order.application_list if hasattr(order,'application_list') else order.applications.select_related(
+        'applicant__escort_profile__level', 'partner__escort_profile__level').prefetch_related('voices__recording')
 
 def applications_data(order, request, *, validate_readiness=False):
     if not request or not getattr(request, 'account', None):
@@ -101,13 +294,19 @@ def applications_data(order, request, *, validate_readiness=False):
                     .select_related('account', 'user', 'level')
                     .prefetch_related('qualifications__game_category', 'service_items__game_category', 'user__schedules')}
         active = {account_id: set() for account_id in accounts}
-        for account_id, order_id in Order.objects.filter(provider_account_id__in=accounts, status__in=ACTIVE_ORDER_STATUSES).values_list('provider_account_id', 'pk'):
+        for account_id, order_id in Order.objects.filter(provider_account_id__in=accounts, status__in=ACTIVE_ORDER_STATUSES).exclude(
+                status='GRABBED', reservation__status='CONVERTED').values_list('provider_account_id', 'pk'):
             active[account_id].add(order_id)
         for account_id, order_id in OrderProvider.objects.filter(provider_account_id__in=accounts,
                 order__status__in=ACTIVE_ORDER_STATUSES, released_at__isnull=True,
-                settled_at__isnull=True).values_list('provider_account_id', 'order_id'):
+                settled_at__isnull=True).exclude(order__status='GRABBED', order__reservation__status='CONVERTED').values_list('provider_account_id', 'order_id'):
             active[account_id].add(order_id)
         rules_enabled = club_income_rules_enabled()
+        capacity_limit = current_capacity_limit()
+        cash_target = None
+        if any(profile.deposit_mode != 'EARNINGS' for profile in profiles.values()):
+            from wallet.club_rules import deposit_target
+            cash_target = deposit_target('CASH')
         tiers = {account_id: profile.active_pass_tier for account_id, profile in profiles.items()}
         delays = {tier: get_pass_delay_seconds(tier) for tier in set(tiers.values())}
         for account_id, member in accounts.items():
@@ -117,13 +316,14 @@ def applications_data(order, request, *, validate_readiness=False):
                 continue
             try:
                 eligible(order, member, profile=profile, active_count=len(active[account_id]),
-                         club_rules_enabled=rules_enabled, visibility_delay=delays[tiers[account_id]])
+                         club_rules_enabled=rules_enabled, visibility_delay=delays[tiers[account_id]],
+                         capacity_limit=capacity_limit, deposit_required_override=cash_target)
                 readiness[account_id] = ''
             except ApplicationError as exc:
                 readiness[account_id] = str(exc)
     rows = []
     for application in applications:
-        data = application_data(application, order, profiles=profiles)
+        data = application_data(application, order, profiles=profiles, request=request)
         if validate_readiness and data['ready']:
             members = [application.applicant] + ([application.partner] if application.partner_id else [])
             for member, member_details in zip(members, data['members']):
@@ -148,7 +348,7 @@ def my_applications_data(order, request):
             latest[row.applicant_id] = row
     rows = [row for row in latest.values() if request.account.pk in (row.applicant_id, row.partner_id)]
     rows.sort(key=lambda row: (row.status != 'PENDING', row.created_at, row.pk))
-    return [dict(application_data(row,order), is_partner=row.partner_id == request.account.pk) for row in rows]
+    return [dict(application_data(row,order,request=request), is_partner=row.partner_id == request.account.pk) for row in rows]
 
 def response_order(order, request, msg):
     from .serializers import OrderSerializer
@@ -159,21 +359,43 @@ def response_order(order, request, msg):
 
 def notify_cancelled_applicants(order):
     """Notify each pending applicant once, with a link to their own record."""
+    from site_messages.order_application_notice import enabled, record
+    if enabled():
+        from site_messages.models import Message, OrderApplicationNotice
+        # Messages already created for pending invitations must no longer ask
+        # their recipients to act on a cancelled order. Intent delivery takes
+        # the same order lock, so no concurrent creation can escape this update.
+        previous = OrderApplicationNotice.objects.filter(application__order=order,
+            application__status='PENDING', kind__in=('INVITE', 'CONFIRM'), message__isnull=False)
+        for kind, title in (('INVITE', '组队邀请已结束'), ('CONFIRM', '组队报名已结束')):
+            ids = previous.filter(kind=kind).values_list('message_id', flat=True)
+            Message.objects.filter(pk__in=ids).update(title=title, preview='订单已取消，本次报名结束。')
+        recipients = set()
+        for application in order.applications.filter(status='PENDING').order_by('pk'):
+            for account_id, cycle in ((application.applicant_id, application.applicant_business_cycle),
+                                      (application.partner_id, application.partner_business_cycle)):
+                if account_id and (account_id, cycle) not in recipients:
+                    recipients.add((account_id, cycle))
+                    record(application, account_id, 'CANCELLED', title='报名订单已取消',
+                        preview=f'订单「{order.order_no}」已取消，本次报名结束。',
+                        action_url=f'/pages/orders/index?application_id={application.pk}')
+        return
     from club_accounts.models import LegacyAccountMap
-    applications = list(order.applications.filter(status='PENDING').values_list('pk', 'applicant_id', 'partner_id'))
+    applications = list(order.applications.filter(status='PENDING').values_list(
+        'pk', 'applicant_id', 'partner_id', 'applicant_business_cycle', 'partner_business_cycle'))
     recipients = {}
-    for application_id, applicant_id, partner_id in applications:
-        for account_id in (applicant_id, partner_id):
+    for application_id, applicant_id, partner_id, applicant_cycle, partner_cycle in applications:
+        for account_id, cycle in ((applicant_id, applicant_cycle), (partner_id, partner_cycle)):
             if account_id:
-                recipients.setdefault(account_id, application_id)
+                recipients.setdefault(account_id, (application_id, cycle))
     legacy = dict(LegacyAccountMap.objects.filter(account_id__in=recipients).values_list('account_id', 'legacy_user_id'))
-    for account_id, application_id in recipients.items():
+    for account_id, (application_id, cycle) in recipients.items():
         user_id = legacy.get(account_id)
-        if user_id:
-            transaction.on_commit(lambda user_id=user_id, account_id=account_id, application_id=application_id:
-                push_message_safe(recipient_id=user_id, recipient_account_id=account_id, title='报名订单已取消',
-                    preview=f'订单「{order.order_no}」已取消，本次报名结束。', msg_type='ORDER',
-                    related_order_id=order.pk, action_url=f'/pages/orders/index?application_id={application_id}'))
+        transaction.on_commit(lambda user_id=user_id, account_id=account_id, application_id=application_id, cycle=cycle:
+            _application_notice_safe(recipient_id=user_id, recipient_account_id=account_id, title='报名订单已取消',
+                recipient_business_cycle=cycle, require_cycle=True,
+                preview=f'订单「{order.order_no}」已取消，本次报名结束。', msg_type='ORDER',
+                related_order_id=order.pk, action_url=f'/pages/orders/index?application_id={application_id}'))
 
 
 def notify_unselected_applicants(order, applications, selected_accounts):
@@ -181,17 +403,21 @@ def notify_unselected_applicants(order, applications, selected_accounts):
     from club_accounts.models import LegacyAccountMap
     recipients = {}
     for application_id, applicant_id, partner_id in applications:
+        source = order.applications.filter(pk=application_id).values(
+            'applicant_business_cycle', 'partner_business_cycle').first()
         for account_id in (applicant_id, partner_id):
             if account_id and account_id not in selected_accounts:
-                recipients.setdefault(account_id, application_id)
+                cycle = (source['applicant_business_cycle'] if account_id == applicant_id else
+                         source['partner_business_cycle']) if source else None
+                recipients.setdefault(account_id, (application_id, cycle))
     legacy = dict(LegacyAccountMap.objects.filter(account_id__in=recipients).values_list('account_id', 'legacy_user_id'))
-    for account_id, application_id in recipients.items():
+    for account_id, (application_id, cycle) in recipients.items():
         user_id = legacy.get(account_id)
-        if user_id:
-            transaction.on_commit(lambda user_id=user_id, account_id=account_id, application_id=application_id:
-                push_message_safe(recipient_id=user_id, recipient_account_id=account_id, title='报名结果已更新',
-                    preview=f'订单「{order.order_no}」已选择其他陪玩，本次报名结束。', msg_type='ORDER',
-                    related_order_id=order.pk, action_url=f'/pages/orders/index?application_id={application_id}'))
+        transaction.on_commit(lambda user_id=user_id, account_id=account_id, application_id=application_id, cycle=cycle:
+            _application_notice_safe(recipient_id=user_id, recipient_account_id=account_id, title='报名结果已更新',
+                recipient_business_cycle=cycle, require_cycle=True,
+                preview=f'订单「{order.order_no}」已选择其他陪玩，本次报名结束。', msg_type='ORDER',
+                related_order_id=order.pk, action_url=f'/pages/orders/index?application_id={application_id}'))
 
 
 def close_applications_for_staff_assignment(order, selected_accounts):
@@ -226,7 +452,7 @@ class MyApplicationDetailView(APIView):
             from .serializers import OrderSerializer
             return Response({'code': 0, 'data': {
                 'order': OrderSerializer(order, context={'request': request}).data,
-                'application': dict(application_data(row, order), is_partner=row.partner_id == request.account.pk),
+                'application': dict(application_data(row, order, request=request), is_partner=row.partner_id == request.account.pk),
                 'can_confirm': False, 'confirm_reason': '', 'closed_reason': '报名已撤回。',
             }})
         if row.status == 'SELECTED':
@@ -254,7 +480,7 @@ class MyApplicationDetailView(APIView):
                                  else '本次报名已选中，请查看订单状态。')
             return Response({'code': 0, 'data': {
                 'order': OrderSerializer(order, context={'request': request}).data,
-                'application': dict(application_data(row, order), is_partner=row.partner_id == request.account.pk),
+                'application': dict(application_data(row, order, request=request), is_partner=row.partner_id == request.account.pk),
                 'can_confirm': False, 'confirm_reason': '', 'closed_reason': closed_reason,
             }})
         if row.status == 'NOT_SELECTED':
@@ -264,14 +490,14 @@ class MyApplicationDetailView(APIView):
                              '订单已选择其他陪玩，本次报名结束。')
             return Response({'code': 0, 'data': {
                 'order': OrderSerializer(order, context={'request': request}).data,
-                'application': dict(application_data(row, order), is_partner=row.partner_id == request.account.pk),
+                'application': dict(application_data(row, order, request=request), is_partner=row.partner_id == request.account.pk),
                 'can_confirm': False, 'confirm_reason': '', 'closed_reason': closed_reason,
             }})
         if order.status == Order.Status.CANCELLED:
             from .serializers import OrderSerializer
             return Response({'code': 0, 'data': {
                 'order': OrderSerializer(order, context={'request': request}).data,
-                'application': dict(application_data(row, order), is_partner=row.partner_id == request.account.pk),
+                'application': dict(application_data(row, order, request=request), is_partner=row.partner_id == request.account.pk),
                 'can_confirm': False, 'confirm_reason': '', 'closed_reason': '订单已取消，本次报名结束。',
             }})
         try:
@@ -294,7 +520,7 @@ class MyApplicationDetailView(APIView):
         from .serializers import OrderSerializer
         return Response({'code': 0, 'data': {
             'order': OrderSerializer(order, context={'request': request, '_provider_pool_view': True}).data,
-            'application': dict(application_data(row, order), is_partner=row.partner_id == request.account.pk),
+            'application': dict(application_data(row, order, request=request), is_partner=row.partner_id == request.account.pk),
             'can_confirm': bool(row.partner_id == request.account.pk and not row.partner_confirmed and not confirm_reason),
             'confirm_reason': confirm_reason, 'selectable': selectable, 'selection_reason': selection_reason,
         }})
@@ -316,23 +542,67 @@ class MyApplicationListView(APIView):
             except ApplicationError as exc:
                 return Response({'code': 409, 'msg': str(exc)}, status=409)
         return Response({'code': 0, 'data': {'applications': [
-            dict(application_data(row, row.order), is_partner=row.partner_id == request.account.pk)
+            dict(application_data(row, row.order, request=request), is_partner=row.partner_id == request.account.pk)
             for row in rows
         ]}})
 
+
+class ProviderApplicationHistoryView(APIView):
+    """The provider's own invitations and applications, including closed rounds."""
+    permission_classes = [IsClubAccountAuthenticated]
+
+    def get(self, request):
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
+            return Response({'code': 403, 'msg': '仅陪玩可查看报名'}, status=403)
+        page_value = request.query_params.get('page', '1')
+        if not page_value.isascii() or not page_value.isdigit() or int(page_value) < 1:
+            return Response({'code': 400, 'msg': '页码须为正整数'}, status=400)
+        rows = (OrderApplication.objects.filter(Q(applicant=request.account) | Q(partner=request.account))
+                .select_related('order', 'applicant__escort_profile', 'partner__escort_profile')
+                .order_by('-created_at', '-pk'))
+        total = rows.count()
+        page = min(int(page_value), max(1, (total + 19) // 20))
+        now = timezone.now()
+        def name(account):
+            profile = getattr(account, 'escort_profile', None)
+            return (profile.display_name if profile else account.nickname) or '陪玩'
+        result = []
+        for row in rows[(page - 1) * 20:page * 20]:
+            order = row.order
+            ended = (order.status != Order.Status.PENDING or order.payment_status != Order.PaymentStatus.PAID
+                     or order.dispatch_route != Order.DispatchRoute.PUBLIC or not order.requires_boss_selection
+                     or order.provider_id or order.provider_account_id or order.source_order_id or order.is_gift_snapshot
+                     or (order.auto_cancel_at and order.auto_cancel_at <= now))
+            result.append({'id': row.pk, 'order_id': order.pk, 'order_no': order.order_no,
+                'service_name': order.service_name_snapshot or '陪玩服务', 'status': row.status,
+                'order_status': order.status, 'registration_ended': bool(ended),
+                'is_partner': row.partner_id == request.account.pk, 'partner_confirmed': row.partner_confirmed,
+                'members': [name(row.applicant)] + ([name(row.partner)] if row.partner_id else []),
+                'created_at': row.created_at})
+        return Response({'code': 0, 'data': {'list': result, 'page': page, 'page_size': 20, 'total': total}})
+
 class ApplyOrderView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
-    def post(self, request, order_id):
+    def post(self, request, order_id, *, recording_id=None, team_size=None, partner_id_override=None, require_audition=False):
         if request.account.account_type != 'PROVIDER':
             return Response({'code': 403, 'msg': '仅陪玩可报名抢单'})
-        size = request.data.get('team_size', 1)
-        partner_id = request.data.get('partner_id')
+        size = team_size if team_size is not None else request.data.get('team_size', 1)
+        partner_id = partner_id_override if team_size is not None else request.data.get('partner_id')
         if type(size) is not int or size not in (1,2) or (size == 1 and partner_id is not None) or (size == 2 and (type(partner_id) is not int or partner_id == request.account.pk)):
             return Response({'code': 400, 'msg': '请选择一人报名，或两人报名并指定另一名陪玩'})
         try:
-            with transaction.atomic():
+            partner = ClubAccount.objects.get(pk=partner_id, account_type='PROVIDER') if size == 2 else None
+            lifecycle = _capture_lifecycle_accounts(
+                [request.account.pk] + ([partner.pk] if partner else []), actor=request.account)
+            ensure_provider_dispatch_locks([request.account.pk] + ([partner.pk] if partner else []))
+            with transaction.atomic(), ExitStack() as stack:
+                _lock_lifecycle_accounts(lifecycle)
+                _validate_lifecycle_accounts(lifecycle, [request.account.pk, partner_id])
                 order = Order.objects.select_for_update().get(pk=order_id)
+                _enter_assignment_scope(stack, order)
                 public_order(order)
+                if require_audition and not audition_recordings_required(order):
+                    raise ApplicationError('该订单不支持试音录音报名')
                 error = team_size_error(order, size)
                 if error:
                     raise ApplicationError(error)
@@ -348,20 +618,39 @@ class ApplyOrderView(APIView):
                 if partner:
                     partner_profile = eligible(order, partner)
                 row = OrderApplication.objects.filter(order=order, applicant=request.account, status='PENDING').first()
+                created_application = False
                 if row:
                     if row.partner_id != partner_id:
                         raise ApplicationError('已有报名，请先撤回后修改人数或队友')
                 else:
+                    cycles = ({account.pk: account.business_cycle for account in lifecycle} if lifecycle is not None
+                              else {account.pk: account.business_cycle for account in [request.account] + ([partner] if partner else [])})
                     row = OrderApplication.objects.create(order=order, applicant=request.account,
-                        partner=partner, partner_confirmed=size == 1, status='PENDING')
+                        partner=partner, partner_confirmed=size == 1, status='PENDING',
+                        applicant_business_cycle=cycles.get(request.account.pk),
+                        partner_business_cycle=cycles.get(partner.pk) if partner else None)
+                    created_application = True
                     if partner_profile:
-                        transaction.on_commit(lambda user_id=partner_profile.user_id, account_id=partner.pk, current=order: push_message_safe(
-                            recipient_id=user_id, recipient_account_id=account_id, title='收到组队邀请',
-                            preview=f'有陪玩邀请你一起报名「{current.service_name_snapshot}」，请及时确认',
-                            msg_type='ORDER', action_url=f'/pages/orders/index?application_id={row.pk}', related_order_id=current.pk))
+                        from site_messages.order_application_notice import enabled, record
+                        if enabled():
+                            record(row, partner.pk, 'INVITE', title='收到组队邀请',
+                                preview=f'有陪玩邀请你一起报名「{order.service_name_snapshot}」，请及时确认',
+                                action_url=f'/pages/orders/index?application_id={row.pk}')
+                        else:
+                            transaction.on_commit(lambda user_id=partner_profile.user_id, account_id=partner.pk,
+                                cycle=row.partner_business_cycle, current=order: _application_notice_safe(
+                                recipient_id=user_id, recipient_account_id=account_id, title='收到组队邀请',
+                                recipient_business_cycle=cycle, require_cycle=True,
+                                preview=f'有陪玩邀请你一起报名「{current.service_name_snapshot}」，请及时确认',
+                                msg_type='ORDER', action_url=f'/pages/orders/index?application_id={row.pk}', related_order_id=current.pk))
+                _validate_application_cycles(row, lifecycle)
+                voice_added = attach_voice(row, request.account, recording_id if recording_id is not None else request.data.get('recording_id'))
+                notify_audition_boss_ready(row, changed=created_application or voice_added)
                 transaction.on_commit(lambda: notify_order_update(order))
         except (Order.DoesNotExist, ClubAccount.DoesNotExist):
             return Response({'code': 404, 'msg': '订单或队友不存在'})
+        except ProviderLifecycleError:
+            return Response({'code': 503, 'msg': '陪玩状态暂不可核验，请稍后重试'}, status=503)
         except ApplicationError as exc:
             return Response({'code': 400, 'msg': str(exc)})
         return response_order(order, request, '报名成功，等待队友确认' if size == 2 else '报名成功，等待老板选择')
@@ -369,19 +658,39 @@ class ApplyOrderView(APIView):
 class ApplicationActionView(APIView):
     throttle_scope = 'order_write'
     permission_classes = [IsClubAccountAuthenticated]
-    def post(self, request, order_id, application_id):
+    def post(self, request, order_id, application_id, *, recording_id=None, require_audition=False):
         action = request.data.get('action')
-        if action not in ('CONFIRM_TEAM','WITHDRAW'):
+        if action not in ('CONFIRM_TEAM','SUBMIT_VOICE','WITHDRAW'):
             return Response({'code': 400, 'msg': '不支持的报名操作'})
         try:
-            with transaction.atomic():
+            participants = None
+            if request.account.account_type == 'PROVIDER':
+                participants = OrderApplication.objects.filter(pk=application_id, order_id=order_id).filter(
+                    Q(applicant_id=request.account.pk) | Q(partner_id=request.account.pk)
+                ).values_list('applicant_id', 'partner_id').first()
+            lifecycle = _capture_lifecycle_accounts(participants or [], actor=request.account)
+            if action == 'CONFIRM_TEAM':
+                ensure_provider_dispatch_locks(participants or [])
+            with transaction.atomic(), ExitStack() as stack:
+                _lock_lifecycle_accounts(lifecycle)
                 order = Order.objects.select_for_update().get(pk=order_id)
+                _enter_assignment_scope(stack, order)
                 public_order(order)
+                if require_audition and not audition_recordings_required(order):
+                    raise ApplicationError('该订单不支持试音录音报名')
                 row = OrderApplication.objects.get(pk=application_id, order=order)
                 if request.account.pk not in (row.applicant_id,row.partner_id) or request.account.account_type != 'PROVIDER':
                     return Response({'code': 403, 'msg': '只能处理自己的抢单报名'})
+                _validate_lifecycle_accounts(lifecycle, [row.applicant_id, row.partner_id],
+                                             active=action == 'CONFIRM_TEAM')
+                _validate_application_cycles(row, lifecycle)
+                if lifecycle is not None and action == 'SUBMIT_VOICE':
+                    from club_accounts.provider_lifecycle import provider_membership_current
+                    if not provider_membership_current(request.account):
+                        raise ApplicationError('陪玩门店身份已变化，请重新登录')
                 if row.status != 'PENDING':
                     raise ApplicationError('该报名已处理')
+                ready_changed = False
                 if action == 'CONFIRM_TEAM':
                     if row.partner_id != request.account.pk:
                         raise ApplicationError('请由队友本人确认')
@@ -392,44 +701,128 @@ class ApplicationActionView(APIView):
                     error = participant_acceptance_reason(order, row, request.account)
                     if error:
                         raise ApplicationError(error)
+                    voice_added = attach_voice(row, request.account, recording_id if recording_id is not None else request.data.get('recording_id'))
                     applicant_profile = EscortProfile.objects.get(account=row.applicant)
                     newly_confirmed = not row.partner_confirmed
                     row.partner_confirmed = True
+                    ready_changed = newly_confirmed or voice_added
                     if newly_confirmed:
-                        transaction.on_commit(lambda user_id=applicant_profile.user_id, account_id=row.applicant_id, current=order: push_message_safe(
-                            recipient_id=user_id, recipient_account_id=account_id, title='队友已确认组队',
-                            preview=f'「{current.service_name_snapshot}」组队报名已确认，等待老板选择',
-                            msg_type='ORDER', action_url=f'/pages/orders/index?application_id={row.pk}', related_order_id=current.pk))
+                        from site_messages.order_application_notice import enabled, record
+                        if enabled():
+                            record(row, row.applicant_id, 'CONFIRM', title='队友已确认组队',
+                                preview=f'「{order.service_name_snapshot}」组队报名已确认，等待老板选择',
+                                action_url=f'/pages/orders/index?application_id={row.pk}')
+                        else:
+                            transaction.on_commit(lambda user_id=applicant_profile.user_id, account_id=row.applicant_id,
+                                cycle=row.applicant_business_cycle, current=order: _application_notice_safe(
+                                recipient_id=user_id, recipient_account_id=account_id, title='队友已确认组队',
+                                recipient_business_cycle=cycle, require_cycle=True,
+                                preview=f'「{current.service_name_snapshot}」组队报名已确认，等待老板选择',
+                                msg_type='ORDER', action_url=f'/pages/orders/index?application_id={row.pk}', related_order_id=current.pk))
+                elif action == 'SUBMIT_VOICE':
+                    if not audition_recordings_required(order):
+                        raise ApplicationError('试音录音暂未启用')
+                    # A pending partner confirms both the invitation and their
+                    # recording together; supplementation cannot imply consent.
+                    if row.partner_id == request.account.pk and not row.partner_confirmed:
+                        raise ApplicationError('请在确认组队时提交录音')
+                    ready_changed = attach_voice(row, request.account, recording_id if recording_id is not None else request.data.get('recording_id'))
                 else:
                     row.status = 'WITHDRAWN'
                     if row.partner_id:
                         other_id = row.partner_id if request.account.pk == row.applicant_id else row.applicant_id
                         other_user_id = EscortProfile.objects.filter(account_id=other_id).values_list('user_id', flat=True).first()
-                        if other_user_id:
+                        if other_id:
                             declined = request.account.pk == row.partner_id and not row.partner_confirmed
                             title = '队友已拒绝组队邀请' if declined else '队友已撤回组队报名'
                             preview = (f'订单 {order.order_no} 的组队邀请已被拒绝，可重新报名或选择其他订单'
                                        if declined else f'订单 {order.order_no} 的组队报名已撤回，可重新报名或选择其他订单')
-                            transaction.on_commit(lambda user_id=other_user_id, account_id=other_id, current=order, title=title, preview=preview: push_message_safe(
-                                recipient_id=user_id, recipient_account_id=account_id, title=title,
-                                preview=preview,
-                                msg_type='ORDER', related_order_id=current.pk,
-                                action_url='/pages/orders/index?tab=pool'))
+                            from site_messages.order_application_notice import enabled, record
+                            if enabled():
+                                record(row, other_id, 'WITHDRAW', title=title, preview=preview,
+                                       action_url='/pages/orders/index?tab=pool')
+                            else:
+                                other_cycle = row.partner_business_cycle if other_id == row.partner_id else row.applicant_business_cycle
+                                transaction.on_commit(lambda user_id=other_user_id, account_id=other_id,
+                                    cycle=other_cycle, current=order, title=title, preview=preview: _application_notice_safe(
+                                    recipient_id=user_id, recipient_account_id=account_id, title=title,
+                                    recipient_business_cycle=cycle, require_cycle=True,
+                                    preview=preview,
+                                    msg_type='ORDER', related_order_id=current.pk,
+                                    action_url='/pages/orders/index?tab=pool'))
                 row.save(update_fields=['partner_confirmed','status','updated_at'])
+                notify_audition_boss_ready(row, changed=ready_changed)
                 transaction.on_commit(lambda: notify_order_update(order))
         except (Order.DoesNotExist, OrderApplication.DoesNotExist):
             return Response({'code': 404, 'msg': '报名不存在'})
+        except ProviderLifecycleError:
+            return Response({'code': 503, 'msg': '陪玩状态暂不可核验，请稍后重试'}, status=503)
         except ApplicationError as exc:
             return Response({'code': 400, 'msg': str(exc)})
-        return response_order(order, request, '队伍已确认，等待老板选择' if action == 'CONFIRM_TEAM' else '报名已撤回')
+        return response_order(order, request, {'CONFIRM_TEAM': '队伍已确认，等待老板选择',
+            'SUBMIT_VOICE': '试音录音已提交', 'WITHDRAW': '报名已撤回'}[action])
+
+
+class ApplicationRecordingSubmitView(APIView):
+    """Upload into the owner's library, then use the normal application path.
+
+    The upload has its own idempotent transaction. A failed application leaves
+    the recording in the library and returns its id for safe recovery.
+    """
+    permission_classes = [IsClubAccountAuthenticated]
+    throttle_scope = 'order_write'
+
+    def post(self, request, order_id, application_id=None):
+        action = request.data.get('action') if application_id is not None else None
+        if application_id is not None and action not in ('CONFIRM_TEAM', 'SUBMIT_VOICE'):
+            return Response({'code': 400, 'msg': '请选择确认组队或提交录音'}, status=400)
+        if request.data.get('recording_id'):
+            return Response({'code': 400, 'msg': '新录音和已有录音只能选择一种'}, status=400)
+        size = None
+        partner = None
+        if application_id is None:
+            raw_size = request.data.get('team_size', '1')
+            raw_partner = request.data.get('partner_id')
+            if (str(raw_size) not in ('1', '2') or (raw_partner and
+                    (not str(raw_partner).isascii() or not str(raw_partner).isdigit()
+                     or len(str(raw_partner)) > 19 or int(raw_partner) > 9223372036854775807))):
+                return Response({'code': 400, 'msg': '报名人数或队友无效'}, status=400)
+            size = int(raw_size)
+            partner = int(raw_partner) if raw_partner else None
+            if (size == 1 and partner is not None) or (size == 2 and (not partner or partner == request.account.pk)):
+                return Response({'code': 400, 'msg': '请选择一人报名，或两人报名并指定另一名陪玩'}, status=400)
+        from users.voice_views import upload_recording
+        uploaded = upload_recording(request)
+        if uploaded.data.get('code') != 0:
+            return uploaded
+        recording = uploaded.data['data']
+        if application_id is None:
+            result = ApplyOrderView().post(request, order_id, recording_id=recording['id'],
+                                           team_size=size, partner_id_override=partner, require_audition=True)
+        else:
+            result = ApplicationActionView().post(request, order_id, application_id,
+                                                  recording_id=recording['id'], require_audition=True)
+        result.data['recording'] = recording
+        result.data['recording_saved'] = True
+        return result
 
 class SelectApplicationView(APIView):
     throttle_scope = 'order_write'
     permission_classes = [IsClubAccountAuthenticated]
     def post(self, request, order_id, application_id):
         try:
-            with transaction.atomic():
+            participants = None
+            if request.account.account_type == 'BOSS':
+                participants = OrderApplication.objects.filter(
+                    pk=application_id, order_id=order_id,
+                    order__customer_account_id=request.account.pk,
+                ).values_list('applicant_id', 'partner_id').first()
+                ensure_provider_dispatch_locks(participants or [])
+            lifecycle = _capture_lifecycle_accounts(participants or [])
+            with transaction.atomic(), ExitStack() as stack:
+                _lock_lifecycle_accounts(lifecycle)
                 order = Order.objects.select_for_update().get(pk=order_id)
+                _enter_assignment_scope(stack, order)
                 if request.account.account_type != 'BOSS' or order.customer_account_id != request.account.pk:
                     return Response({'code': 403, 'msg': '仅下单老板可以选择陪玩'})
                 row = OrderApplication.objects.get(pk=application_id, order=order)
@@ -447,18 +840,40 @@ class SelectApplicationView(APIView):
                         grab.operator_account_id == order.customer_account_id if grab.operator_account_id
                         else bool(grab.operator_id and grab.operator_id == order.customer_id)
                     )
-                    if latest == row.pk and boss_grab and participants == selected:
+                    # A provider may return after an in-service transfer.
+                    # Matching participants then does not make this old
+                    # selection the current assignment again.
+                    transferred = bool(grab and order.status_logs.filter(action='TRANSFER', pk__gt=grab.pk).exists())
+                    if latest == row.pk and boss_grab and participants == selected and not transferred:
                         return response_order(order, request, '已选择该陪玩')
                     raise ApplicationError('报名或订单状态已变化，请刷新后核对')
+                _validate_lifecycle_accounts(lifecycle, [row.applicant_id, row.partner_id])
+                _validate_application_cycles(row, lifecycle)
                 public_order(order)
                 if row.status != 'PENDING' or (row.partner_id and not row.partner_confirmed):
                     raise ApplicationError('报名已撤回或队友尚未确认')
+                if audition_recordings_required(order):
+                    from users.voice_availability import recording_available
+                    expected = {row.applicant_id} | ({row.partner_id} if row.partner_id else set())
+                    voices = {voice.owner_id: voice for voice in row.voices.select_related('recording')}
+                    if not expected.issubset(voices):
+                        raise ApplicationError('报名录音不完整，请等待陪玩提交')
+                    if any(not recording_available(voices[owner].recording) for owner in expected):
+                        raise ApplicationError('报名录音暂不可用，请联系陪玩撤回后重新报名')
                 accounts = [row.applicant] + ([row.partner] if row.partner_id else [])
                 error = team_size_error(order, len(accounts))
                 if error:
                     raise ApplicationError(error)
                 lock_provider_dispatch([a.pk for a in accounts])
                 profiles = [eligible(order,a) for a in accounts]
+                if (order.commission_allocation_pending or
+                        (not order.in_service_at and (order.game_commission_snapshot or {}).get('personal_rules'))):
+                    from .delta_personal_commission import lock_providers
+                    try:
+                        locked_profiles = {p.account_id: p for p in lock_providers([a.pk for a in accounts])}
+                        profiles = [locked_profiles[a.pk] for a in accounts]
+                    except ValueError as exc:
+                        raise ApplicationError(str(exc)) from exc
                 unselected = list(order.applications.filter(status='PENDING').exclude(pk=row.pk)
                                   .values_list('pk', 'applicant_id', 'partner_id'))
                 def assign(current):
@@ -467,42 +882,80 @@ class SelectApplicationView(APIView):
                     current.provider_name_snapshot = profiles[0].display_name
                     current.escort_mode = 'DOUBLE' if len(accounts) == 2 else 'SINGLE'
                     if len(accounts) == 1:
-                        sync_single_provider_share(current)
+                        try:
+                            sync_single_provider_share(current)
+                        except ValueError as exc:
+                            raise ApplicationError(str(exc)) from exc
                     else:
                         from .pricing import club_provider_specs
                         from .settlement import build_provider_shares, aggregate_order_split
-                        specs = club_provider_specs(current, profiles, current.amount)
-                        if specs is None:
-                            specs = [{'commission_rate': current.commission_rate} for _ in profiles]
-                        shares = build_provider_shares(current.amount,specs)
-                        split = aggregate_order_split(current.amount,shares,current.inviter_commission_rate_snapshot if current.inviter_id else 0)
+                        personal_evidence = None
+                        if (current.commission_allocation_pending or
+                                (not current.in_service_at and (current.game_commission_snapshot or {}).get('personal_rules'))):
+                            from .delta_personal_commission import pending_assignment_terms
+                            try:
+                                shares, split, personal_evidence = pending_assignment_terms(current, profiles, allow_reassignment=True)
+                            except ValueError as exc:
+                                raise ApplicationError(str(exc)) from exc
+                            current.commission_allocation_pending = False
+                            current.game_commission_snapshot = personal_evidence[0]
+                        else:
+                            specs = club_provider_specs(current, profiles, current.amount)
+                            if specs is None:
+                                specs = [{'commission_rate': current.commission_rate} for _ in profiles]
+                            shares = build_provider_shares(current.amount,specs)
+                            split = aggregate_order_split(current.amount,shares,current.inviter_commission_rate_snapshot if current.inviter_id or current.inviter_account_id else 0)
                         current.commission_rate = split.commission_rate
                         current.provider_income = split.provider_income
                         current.inviter_commission = split.inviter_commission
                         current.shop_income = split.shop_income
                         current.providers.filter(settled_at__isnull=True).update(released_at=timezone.now(), settlement_base=0, provider_income=0, commission_fixed=0)
-                        for profile, share in zip(profiles,shares):
+                        for index, (profile, share) in enumerate(zip(profiles,shares)):
                             OrderProvider.objects.update_or_create(order=current,provider=profile.user,defaults={
-                                'provider_account':profile.account,'provider_name_snapshot':profile.display_name,
+                                'provider_account':profile.account,'provider_business_cycle':profile.account.business_cycle,
+                                'provider_name_snapshot':profile.display_name,
                                 'settlement_base':share.settlement_base,'commission_type':share.commission_type,
                                 'commission_rate':share.commission_rate,'commission_fixed':share.commission_fixed,
+                                'game_commission_snapshot':(personal_evidence[index] if personal_evidence is not None else current.game_commission_snapshot),
                                 'provider_income':share.provider_income,'released_at':None})
                     mark_escort_busy(account_ids=[a.pk for a in accounts])
                     current.applications.filter(status='PENDING').exclude(pk=row.pk).update(status='NOT_SELECTED')
                     row.status='SELECTED';row.save(update_fields=['status','updated_at'])
                 order = transition(order.pk,Order.Status.GRABBED,operator=request.legacy_user,operator_account=request.account,
                     reason='老板选择抢单陪玩',side_effect=assign,
-                    update_fields=['provider','provider_account','provider_name_snapshot','escort_mode','commission_rate','provider_income','inviter_commission','shop_income'])
-                notify_unselected_applicants(order, unselected, {account.pk for account in accounts})
+                    update_fields=['provider','provider_account','provider_name_snapshot','escort_mode','commission_rate','provider_income','inviter_commission','shop_income','commission_allocation_pending','game_commission_snapshot'])
+                from site_messages.order_application_notice import enabled, record
+                recovery = enabled()
+                selected_ids = {account.pk for account in accounts}
+                if recovery:
+                    seen = set(selected_ids)
+                    for other in order.applications.filter(pk__in=[item[0] for item in unselected]).order_by('pk'):
+                        for account_id in (other.applicant_id, other.partner_id):
+                            if account_id and account_id not in seen:
+                                seen.add(account_id)
+                                record(other, account_id, 'NOT_SELECTED', title='报名结果已更新',
+                                    preview=f'订单「{order.order_no}」已选择其他陪玩，本次报名结束。',
+                                    action_url=f'/pages/orders/index?application_id={other.pk}')
+                else:
+                    notify_unselected_applicants(order, unselected, selected_ids)
                 transaction.on_commit(lambda: notify_order_update(order))
                 service_hint = service_arrangement_hint(order)
                 for profile, account in zip(profiles, accounts):
-                    transaction.on_commit(lambda user_id=profile.user_id, account_id=account.pk, current=order, hint=service_hint: push_message_safe(
-                        recipient_id=user_id, recipient_account_id=account_id, title='老板已选择你服务',
-                        preview=f'你已被选中服务「{current.service_name_snapshot}」，{hint}',
-                        msg_type='ORDER', related_order_id=current.pk, assignment_alert=True))
+                    if recovery:
+                        record(row, account.pk, 'SELECTED', title='老板已选择你服务',
+                            preview=f'你已被选中服务「{order.service_name_snapshot}」，{service_hint}', assignment_alert=True)
+                    else:
+                        cycle = row.applicant_business_cycle if account.pk == row.applicant_id else row.partner_business_cycle
+                        transaction.on_commit(lambda user_id=profile.user_id, account_id=account.pk, cycle=cycle,
+                            current=order, hint=service_hint: _application_notice_safe(
+                            recipient_id=user_id, recipient_account_id=account_id, title='老板已选择你服务',
+                            recipient_business_cycle=cycle, require_cycle=True,
+                            preview=f'你已被选中服务「{current.service_name_snapshot}」，{hint}',
+                            msg_type='ORDER', related_order_id=current.pk, assignment_alert=True))
         except (Order.DoesNotExist, OrderApplication.DoesNotExist):
             return Response({'code': 404, 'msg': '订单或报名不存在'})
+        except ProviderLifecycleError:
+            return Response({'code': 503, 'msg': '陪玩状态暂不可核验，请稍后重试'}, status=503)
         except (ApplicationError, IllegalTransitionError) as exc:
             return Response({'code': 400, 'msg': str(exc)})
         return response_order(order, request, '已选择陪玩，请等待开始服务')
@@ -518,12 +971,12 @@ class TeammateListView(APIView):
                 raise ApplicationError('单陪套餐不支持选择队友')
         except (Order.DoesNotExist, ApplicationError):
             return Response({'code':404,'msg':'订单不可报名'})
-        from .services import active_orders_for
+        from .services import capacity_orders_for
         from wallet.club_rules import club_income_rules_enabled
         from wallet.models import get_pass_delay_seconds
         # Reuse the same active-order predicate as the final acceptance check,
         # but calculate it for the whole roster rather than querying per person.
-        active = (active_orders_for(account_id=OuterRef('account_id')).order_by()
+        active = (capacity_orders_for(account_id=OuterRef('account_id')).order_by()
                   .values(group=Value(1)).annotate(total=Count('pk', distinct=True)).values('total'))
         profiles = list(EscortProfile.objects.select_related('account', 'user', 'level')
             .prefetch_related('qualifications__game_category', 'service_items__game_category', 'user__schedules')
@@ -531,13 +984,15 @@ class TeammateListView(APIView):
             .exclude(account=request.account)
             .annotate(picker_active_count=Coalesce(Subquery(active, output_field=IntegerField()), 0)))
         rules_enabled = club_income_rules_enabled()
+        capacity_limit = current_capacity_limit()
         tiers = {profile.account_id: profile.active_pass_tier for profile in profiles}
         delays = {tier: get_pass_delay_seconds(tier) for tier in set(tiers.values())}
         members=[]
         for profile in profiles:
             try:
                 eligible(order, profile.account, profile=profile, active_count=profile.picker_active_count,
-                         club_rules_enabled=rules_enabled, visibility_delay=delays[tiers[profile.account_id]])
+                         club_rules_enabled=rules_enabled, visibility_delay=delays[tiers[profile.account_id]],
+                         capacity_limit=capacity_limit)
             except ApplicationError: continue
             members.append(member_data(profile.account, order, profiles={profile.account_id: profile}))
         members.sort(key=lambda item:(-item['level_rank'],item['id']))

@@ -1,0 +1,20 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "real_ui": true,
+  "order_id": 1,
+  "status": "COMPLETED",
+  "amount_raw": 10002,
+  "participants": [
+    {
+      "id": 3,
+      "nickname": "隔离联调 p2"
+    },
+    {
+      "id": 4,
+      "nickname": "隔离联调 p3"
+    }
+  ],
+  "synthetic_evidence": true,
+  "actual_service_fulfilled": false
+}

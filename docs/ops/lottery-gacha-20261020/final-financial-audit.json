@@ -1,0 +1,231 @@
+{
+  "result": "PASS",
+  "database_writes": 0,
+  "read_only_transaction": true,
+  "checks": [
+    {
+      "table": "orders_order",
+      "old_rows": 109,
+      "original_columns": 65,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "2416cdfa2b89bb8d0c7aa4513b275b5ae65013574889643fd8313a6e5728bb70",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_wallet",
+      "old_rows": 1173,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "a18eaa629d16a77629f442cd1bb6aa56a95f4a330b30f498246436d6f175abab",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_transaction",
+      "old_rows": 1267,
+      "original_columns": 16,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "a982422fc811032b16077eea2534cc40e350fcef93173e642dd4e93fd245df7b",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_incomehold",
+      "old_rows": 36,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "9aff974cc3f3b0e8dcd3a6b4eb5f7ebe6710ffc663d5235e91a2ef88c2f3a794",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_providerreport",
+      "old_rows": 70,
+      "original_columns": 22,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "83e0a0bdd10bb08c1f77637c3e9074babef8dbbaa340613a5cd0fa90a1f5f837",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_aftersale",
+      "old_rows": 16,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "f31964a33cc4d4fe8a962b395f0af596ab91eb4459fd5b09280202c1851faa14",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "engagement_consumptionconfirmation",
+      "old_rows": 16,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "70cb3526a6effd3e7d1fa23d5c1317caf8302b359628279588a9bb027f316993",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_orderrefund",
+      "old_rows": 31,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "b42e0425d02ad25e1e84ce7c34c7904da8feb0b4e0d9ec0cc7b4a9b288e4f750",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_refundrecoveryline",
+      "old_rows": 164,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "198be5de61d9fa79c4e17536f6adf3573b3f228dd72280b96b7bc1bc54df17b1",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_orderstatuslog",
+      "old_rows": 272,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "b28ee8f6995d73079e6ae147cfc909722a76be3dcb936010f15fba91a0f8ef23",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "engagement_orderpointallocation",
+      "old_rows": 9,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "e59c38d7b7d269f0c5f2459c7c1c3401cef75176de823bed398af37653a3330e",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_orderprovider",
+      "old_rows": 62,
+      "original_columns": 13,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "50fc9589b1071147fb557d6d58865ca6a3446bdc41a7c741b5f4eb38cddd9b55",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_disposerecord",
+      "old_rows": 26,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "71df9aa676b4b066bb93898be9f05bd435938346d56e2250d8791113885ccc1c",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "console_adminauditlog",
+      "old_rows": 280,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "952af12ce114bf5e978393c2a8eecc18bae06939845cfe1a61876a4a149b761d",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_systemconfig",
+      "old_rows": 9,
+      "original_columns": 5,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "95c8d534d0afa1e90136e8f781f1433650275755402bbb7ac0caa395bfe9ceb2",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "engagement_lotterycampaign",
+      "old_rows": 1,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "aa927d68cb4850775a5e1cefd51e6f0095db20cea60e7b969892d8da0abf922e"
+    },
+    {
+      "table": "engagement_lotteryprize",
+      "old_rows": 13,
+      "original_columns": 5,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "e0638d6c828bcbd036cd88ea1d5e2fc736f117cbc684e7f83a5fcb471ada1a9b"
+    },
+    {
+      "table": "engagement_lotterydraw",
+      "old_rows": 0,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "new_columns_verified": [
+        "batch_id",
+        "draw_index",
+        "is_pity",
+        "pity_after",
+        "pity_before",
+        "rarity"
+      ],
+      "original_rows_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table": "engagement_rewarditem",
+      "old_rows": 64,
+      "original_columns": 20,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "b7c12b7a5ca5404ca373411c4c1bfd7d11a3be08802156299d844cae126eec0f"
+    },
+    {
+      "table": "engagement_rewardclaim",
+      "old_rows": 20,
+      "original_columns": 21,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "11c5f39381fbd530ee7c88af18ddac621b77ac59c008680cedf3d4323a104808"
+    },
+    {
+      "table": "engagement_pointledger",
+      "old_rows": 55,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "5a1c291d347e35581a94856cef583cf1737fa768634cd3590d2e228aff1a69b8"
+    },
+    {
+      "table": "engagement_memberprofile",
+      "old_rows": 16,
+      "original_columns": 8,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "973bf2183a170d03470022436bd4f14000e3968f9eca78dc95a827eef07e6dc4"
+    },
+    {
+      "table": "engagement_pointfundinglot",
+      "old_rows": 4,
+      "original_columns": 6,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "d90df7d5b1509f8d4e7be50d267aefdb8b782b9361adad41b02d8ae1ed1cb134"
+    }
+  ],
+  "queries": 52,
+  "backup_bytes": 6605755,
+  "backup_sha256": "f44b0664eec9ab88e3f1fc452c03c4923a115a6ba7109937b6826fb626626e00"
+}

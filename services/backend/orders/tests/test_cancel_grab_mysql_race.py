@@ -14,15 +14,11 @@ from club_accounts.tokens import issue_account_tokens
 from orders.models import Order, OrderStatusLog
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
 from wallet.models import Transaction, Wallet
+from common.mysql_test_support import mysql_locking_statements
 
 
 def waiting_on_order(observer):
-    with observer.cursor() as cursor:
-        cursor.execute('SHOW ENGINE INNODB STATUS')
-        status = cursor.fetchone()[2]
-    transactions = status.split('LIST OF TRANSACTIONS FOR EACH SESSION:', 1)[1].split('FILE I/O', 1)[0]
-    return sum('\nLOCK WAIT ' in entry and '`orders_order`' in entry
-               for entry in transactions.split('---TRANSACTION'))
+    return mysql_locking_statements(observer, 'orders_order')
 
 
 @skipUnless(connection.vendor == 'mysql', 'Requires real MySQL row locks')

@@ -35,7 +35,7 @@ class StaffTeamDispatchTest(APITestCase):
         self.enterContext(override_settings(MEDIA_ROOT=self.media.name))
         self.boss = make_user()
         self.staff = make_console_user(['order:view', 'order:dispatch', 'order:refund', 'report:view', 'report:audit'])
-        self.providers = [make_provider() for _ in range(3)]
+        self.providers = [make_provider(deposit_paid=40000) for _ in range(3)]
         self.accounts = {user.pk: get_or_create_account_for_legacy_user(user)
                          for user in [self.boss, self.staff, *self.providers]}
         self.staff.admin_membership.account = self.accounts[self.staff.pk]
@@ -144,7 +144,7 @@ class StaffTeamDispatchTest(APITestCase):
         self.assertFalse(order.providers.exists())
         self.assertEqual(Transaction.objects.filter(order=order, tx_type='PAY').count(), 1)
         EscortProfile.objects.filter(user=self.providers[1]).update(is_verified=True)
-        EscortProfile.objects.filter(user=self.providers[1]).update(status=EscortProfile.Status.BUSY)
+        EscortProfile.objects.filter(user=self.providers[1]).update(status=EscortProfile.Status.OFFLINE)
         self.assertNotEqual(self.assign(order).data['code'], 0)
         self.assertFalse(order.providers.exists())
         EscortProfile.objects.filter(user=self.providers[1]).update(status=EscortProfile.Status.AVAILABLE)

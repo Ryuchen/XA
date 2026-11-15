@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Report labels reflect real audit state after refunds."""
 import json
 import os
@@ -5,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 from django.conf import settings
+from django.db import connection
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -31,9 +33,9 @@ class ProviderReportLabelHTTPTest(LiveServerTestCase):
     settle_after_window = flow.ReleaseFlowTest.settle_after_window
 
     def exercise(self, approved, *, settled=False):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         order = self.new_order()
         report = self.finish(order)
         self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/images/',
@@ -55,6 +57,14 @@ class ProviderReportLabelHTTPTest(LiveServerTestCase):
         self.ok(self.client.post(url + 'refund/', {'refund_amount': amount, 'reason': '隔离退款核对',
             'plan_token': preview['plan_token'], 'client_request_id': 'report-label-refund'}, format='json'))
         self.login(self.provider)
+        if settled:
+            detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+            self.assertFalse(detail['report_entry']['available'])
+            self.assertIn('已有报单', detail['report_entry']['reason'])
+            choices = self.ok(self.client.get('/api/wallet/report-order-choices/', {'q': order.order_no}))
+            self.assertEqual(choices['total'], 0)
+            reopened = self.client.post('/api/wallet/reports/', {'order_id': order.pk}, format='json')
+            self.assertEqual(reopened.data['code'], 400)
         reports = self.ok(self.client.get('/api/wallet/reports/'))
         record = next(row for row in reports if row['id'] == report.pk)
         self.assertEqual(record['status'], 'APPROVED' if approved else 'REJECTED')
@@ -67,7 +77,9 @@ class ProviderReportLabelHTTPTest(LiveServerTestCase):
                 'id': self.accounts[self.provider.pk].pk, 'orderId': order.pk, 'orderNo': order.order_no,
                 'statusText': record['status_display'], 'label': '原核定单钱' if approved else '原预计单钱',
                 'snapshot': 800, 'refundText': '累计已退 250 币' if settled else '累计已退 1000 币',
-                'netText': '服务净收益 600 币' if settled else '服务净收益 0 币'}),
+                'netText': '服务收益流水净额 600 币' if settled else '服务收益流水净额 0 币',
+                'serializeImages': connection.vendor == 'sqlite' and 'mode=memory' in str(connection.settings_dict['NAME']),
+                'injectImageFailure': settled and not (connection.vendor == 'sqlite' and 'mode=memory' in str(connection.settings_dict['NAME']))}),
             text=True, encoding='utf-8', capture_output=True, timeout=35, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

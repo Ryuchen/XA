@@ -1,0 +1,185 @@
+{
+  "run": "XA-TRANSFERRED-TEAM-REFUND-20261020-18ce30",
+  "result": "PASS",
+  "official_api_only": true,
+  "report_approvals": 0,
+  "stages": [
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 120,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 22,
+          "provider": 1156,
+          "settlement_base": 1600,
+          "provider_income": 1600,
+          "released": true
+        },
+        {
+          "id": 23,
+          "provider": 1157,
+          "settlement_base": 5000,
+          "provider_income": 3500,
+          "released": false
+        },
+        {
+          "id": 28,
+          "provider": 1158,
+          "settlement_base": 3400,
+          "provider_income": 2400,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 120,
+      "provider_key": "p1",
+      "report_id": 32,
+      "amount": 1600,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 120,
+      "provider_key": "p2",
+      "report_id": 33,
+      "amount": 5000,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 120,
+      "provider_key": "p3",
+      "report_id": 34,
+      "amount": 3400,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 121,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 24,
+          "provider": 1156,
+          "settlement_base": 1600,
+          "provider_income": 1600,
+          "released": true
+        },
+        {
+          "id": 25,
+          "provider": 1157,
+          "settlement_base": 5000,
+          "provider_income": 3500,
+          "released": false
+        },
+        {
+          "id": 29,
+          "provider": 1158,
+          "settlement_base": 3400,
+          "provider_income": 2400,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 121,
+      "provider_key": "p1",
+      "report_id": 35,
+      "amount": 1600,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 121,
+      "provider_key": "p2",
+      "report_id": 36,
+      "amount": 5000,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 121,
+      "provider_key": "p3",
+      "report_id": 37,
+      "amount": 3400,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 122,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 26,
+          "provider": 1156,
+          "settlement_base": 800,
+          "provider_income": 800,
+          "released": true
+        },
+        {
+          "id": 27,
+          "provider": 1157,
+          "settlement_base": 2500,
+          "provider_income": 1750,
+          "released": false
+        },
+        {
+          "id": 30,
+          "provider": 1158,
+          "settlement_base": 1700,
+          "provider_income": 1200,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 122,
+      "provider_key": "p1",
+      "report_id": 38,
+      "amount": 800,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 122,
+      "provider_key": "p2",
+      "report_id": 39,
+      "amount": 2500,
+      "payout_amount": 0,
+      "status": "PENDING"
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 122,
+      "provider_key": "p3",
+      "report_id": 40,
+      "amount": 1700,
+      "payout_amount": 0,
+      "status": "PENDING"
+    }
+  ]
+}

@@ -1,0 +1,453 @@
+{
+  "result": "PASS",
+  "prepared_only": true,
+  "money_unit": "10 raw = 1 XA coin",
+  "main_order": {
+    "amount": 10000,
+    "fixed_total": 1001,
+    "initial_bases": [
+      5000,
+      5000
+    ],
+    "initial_cuts": [
+      501,
+      500
+    ],
+    "final_bases": [
+      787,
+      2700,
+      1350,
+      2863,
+      2300
+    ],
+    "final_incomes": [
+      787,
+      2700,
+      1350,
+      2362,
+      1800
+    ],
+    "final_cuts": [
+      0,
+      0,
+      0,
+      501,
+      500
+    ],
+    "steps": [
+      {
+        "from": "p1",
+        "to": "p3",
+        "keep_percent": 40,
+        "rows": {
+          "p1": {
+            "base": 1799,
+            "income": 1799,
+            "fixed": 0,
+            "active": false
+          },
+          "p2": {
+            "base": 5000,
+            "income": 4500,
+            "fixed": 500,
+            "active": true
+          },
+          "p3": {
+            "base": 3201,
+            "income": 2700,
+            "fixed": 501,
+            "active": true
+          }
+        }
+      },
+      {
+        "from": "p3",
+        "to": "p1",
+        "keep_percent": 50,
+        "rows": {
+          "p1": {
+            "base": 3650,
+            "income": 3149,
+            "fixed": 501,
+            "active": true
+          },
+          "p2": {
+            "base": 5000,
+            "income": 4500,
+            "fixed": 500,
+            "active": true
+          },
+          "p3": {
+            "base": 1350,
+            "income": 1350,
+            "fixed": 0,
+            "active": false
+          }
+        }
+      },
+      {
+        "from": "p1",
+        "to": "p4",
+        "keep_percent": 25,
+        "rows": {
+          "p1": {
+            "base": 787,
+            "income": 787,
+            "fixed": 0,
+            "active": false
+          },
+          "p2": {
+            "base": 5000,
+            "income": 4500,
+            "fixed": 500,
+            "active": true
+          },
+          "p3": {
+            "base": 1350,
+            "income": 1350,
+            "fixed": 0,
+            "active": false
+          },
+          "p4": {
+            "base": 2863,
+            "income": 2362,
+            "fixed": 501,
+            "active": true
+          }
+        }
+      },
+      {
+        "from": "p2",
+        "to": "p5",
+        "keep_percent": 60,
+        "rows": {
+          "p1": {
+            "base": 787,
+            "income": 787,
+            "fixed": 0,
+            "active": false
+          },
+          "p2": {
+            "base": 2700,
+            "income": 2700,
+            "fixed": 0,
+            "active": false
+          },
+          "p3": {
+            "base": 1350,
+            "income": 1350,
+            "fixed": 0,
+            "active": false
+          },
+          "p4": {
+            "base": 2863,
+            "income": 2362,
+            "fixed": 501,
+            "active": true
+          },
+          "p5": {
+            "base": 2300,
+            "income": 1800,
+            "fixed": 500,
+            "active": true
+          }
+        }
+      }
+    ]
+  },
+  "protected_order": {
+    "amount": 5000,
+    "fixed_total": 1001,
+    "initial_bases": [
+      2500,
+      2500
+    ],
+    "initial_cuts": [
+      501,
+      500
+    ],
+    "final_bases": [
+      349,
+      1200,
+      600,
+      1551,
+      1300
+    ],
+    "final_incomes": [
+      349,
+      1200,
+      600,
+      1050,
+      800
+    ],
+    "final_cuts": [
+      0,
+      0,
+      0,
+      501,
+      500
+    ],
+    "steps": [
+      {
+        "from": "p1",
+        "to": "p3",
+        "keep_percent": 40,
+        "rows": {
+          "p1": {
+            "base": 799,
+            "income": 799,
+            "fixed": 0,
+            "active": false
+          },
+          "p2": {
+            "base": 2500,
+            "income": 2000,
+            "fixed": 500,
+            "active": true
+          },
+          "p3": {
+            "base": 1701,
+            "income": 1200,
+            "fixed": 501,
+            "active": true
+          }
+        }
+      },
+      {
+        "from": "p3",
+        "to": "p1",
+        "keep_percent": 50,
+        "rows": {
+          "p1": {
+            "base": 1900,
+            "income": 1399,
+            "fixed": 501,
+            "active": true
+          },
+          "p2": {
+            "base": 2500,
+            "income": 2000,
+            "fixed": 500,
+            "active": true
+          },
+          "p3": {
+            "base": 600,
+            "income": 600,
+            "fixed": 0,
+            "active": false
+          }
+        }
+      },
+      {
+        "from": "p1",
+        "to": "p4",
+        "keep_percent": 25,
+        "rows": {
+          "p1": {
+            "base": 349,
+            "income": 349,
+            "fixed": 0,
+            "active": false
+          },
+          "p2": {
+            "base": 2500,
+            "income": 2000,
+            "fixed": 500,
+            "active": true
+          },
+          "p3": {
+            "base": 600,
+            "income": 600,
+            "fixed": 0,
+            "active": false
+          },
+          "p4": {
+            "base": 1551,
+            "income": 1050,
+            "fixed": 501,
+            "active": true
+          }
+        }
+      },
+      {
+        "from": "p2",
+        "to": "p5",
+        "keep_percent": 60,
+        "rows": {
+          "p1": {
+            "base": 349,
+            "income": 349,
+            "fixed": 0,
+            "active": false
+          },
+          "p2": {
+            "base": 1200,
+            "income": 1200,
+            "fixed": 0,
+            "active": false
+          },
+          "p3": {
+            "base": 600,
+            "income": 600,
+            "fixed": 0,
+            "active": false
+          },
+          "p4": {
+            "base": 1551,
+            "income": 1050,
+            "fixed": 501,
+            "active": true
+          },
+          "p5": {
+            "base": 1300,
+            "income": 800,
+            "fixed": 500,
+            "active": true
+          }
+        }
+      }
+    ]
+  },
+  "original_credit_order": [
+    "p1",
+    "p2",
+    "p3",
+    "p4",
+    "p5",
+    "platform"
+  ],
+  "refund_cumulative_targets": {
+    "0": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "2500": [
+      197,
+      675,
+      338,
+      590,
+      450,
+      250
+    ],
+    "4000": [
+      315,
+      1080,
+      540,
+      945,
+      720,
+      400
+    ],
+    "10000": [
+      787,
+      2700,
+      1350,
+      2362,
+      1800,
+      1001
+    ]
+  },
+  "refund_parts": [
+    2500,
+    1500,
+    6000
+  ],
+  "refund_part_recoveries": [
+    [
+      197,
+      675,
+      338,
+      590,
+      450,
+      250
+    ],
+    [
+      118,
+      405,
+      202,
+      355,
+      270,
+      150
+    ],
+    [
+      472,
+      1620,
+      810,
+      1417,
+      1080,
+      601
+    ]
+  ],
+  "deficit_cases": {
+    "p1": {
+      "original": 787,
+      "required": 197,
+      "left": 97,
+      "debit": 690,
+      "shortfall": 100
+    },
+    "p2": {
+      "original": 2700,
+      "required": 675,
+      "left": 575,
+      "debit": 2125,
+      "shortfall": 100
+    },
+    "p3": {
+      "original": 1350,
+      "required": 338,
+      "left": 238,
+      "debit": 1112,
+      "shortfall": 100
+    },
+    "p4": {
+      "original": 2362,
+      "required": 590,
+      "left": 490,
+      "debit": 1872,
+      "shortfall": 100
+    },
+    "p5": {
+      "original": 1800,
+      "required": 450,
+      "left": 350,
+      "debit": 1450,
+      "shortfall": 100
+    }
+  },
+  "final": {
+    "boss_balance": 14000,
+    "provider_available": [
+      472,
+      1620,
+      810,
+      1417,
+      1080
+    ],
+    "provider_frozen": [
+      349,
+      1200,
+      600,
+      1050,
+      800
+    ],
+    "provider_net_income": [
+      821,
+      2820,
+      1410,
+      2467,
+      1880
+    ],
+    "platform_net": 1602,
+    "refund_records": 5,
+    "source_reversal_lines": 45,
+    "original_income_rows": 15,
+    "dispose_records": 10,
+    "dispose_net": 0,
+    "initial_funding": 25000
+  },
+  "oracle": "Exact Fraction midpoint atoms; stable original transaction order breaks ties"
+}

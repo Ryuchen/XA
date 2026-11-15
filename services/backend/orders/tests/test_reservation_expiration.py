@@ -1,4 +1,4 @@
-"""Real reservation API and wallet behaviour when the booked window ends."""
+"""Real reservation API and wallet behavior at confirmation/payment expiry."""
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -36,7 +36,9 @@ class ReservationExpirationTest(ReservationApiTestBase):
 
     def end_window(self, reservation_id):
         now = timezone.now()
-        Reservation.objects.filter(pk=reservation_id).update(start_time=now - timedelta(hours=2), end_time=now - timedelta(hours=1))
+        reservation = Reservation.objects.get(pk=reservation_id)
+        field = 'payment_deadline' if reservation.status == Reservation.Status.CONFIRMED else 'confirmation_deadline'
+        Reservation.objects.filter(pk=reservation_id).update(**{field: now - timedelta(seconds=1)})
 
     def test_pending_expires_for_both_roles_and_cannot_be_confirmed(self):
         reservation_id = self.create()
@@ -84,11 +86,11 @@ class ReservationExpirationTest(ReservationApiTestBase):
         call_command('expire_reservations', verbosity=0)
         self.assertEqual(ReservationStatusLog.objects.filter(reservation_id__in=[pending_id, confirmed_id], action='EXPIRE').count(), 2)
 
-    def test_exact_end_is_expired_but_one_microsecond_before_is_not(self):
+    def test_exact_confirmation_deadline_is_expired_but_one_microsecond_before_is_not(self):
         from orders.reservation_expiration import expire_reservation
         reservation_id = self.create()
         deadline = timezone.now() + timedelta(hours=1)
-        Reservation.objects.filter(pk=reservation_id).update(start_time=deadline - timedelta(hours=1), end_time=deadline)
+        Reservation.objects.filter(pk=reservation_id).update(confirmation_deadline=deadline)
         with patch('django.utils.timezone.now', return_value=deadline - timedelta(microseconds=1)):
             self.assertFalse(expire_reservation(reservation_id))
         with patch('django.utils.timezone.now', return_value=deadline):

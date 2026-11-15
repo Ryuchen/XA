@@ -1,0 +1,11 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "passed": true,
+  "checked_at": "2026-10-20T15:24:17.851Z",
+  "all_runtime_config_restored": true,
+  "original_account_restored": true,
+  "lottery_scoped_storage_exact_restored": true,
+  "restored_storage_key_count": 1,
+  "home_page_loaded": true,
+  "api_base": "http://127.0.0.1:18080/api"
+}

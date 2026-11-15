@@ -1,0 +1,66 @@
+[
+  {
+    "command": [
+      "exec",
+      "xa-local-validation-web-1",
+      "python",
+      "manage.py",
+      "migrate",
+      "engagement",
+      "0017",
+      "--noinput"
+    ],
+    "exit_code": 0,
+    "output": "Operations to perform:\n  Target specific migration: 0017_lottery_ten_guarantee, from engagement\nRunning migrations:\n  Applying engagement.0017_lottery_ten_guarantee... OK\n",
+    "error": ""
+  },
+  {
+    "command": [
+      "exec",
+      "xa-local-validation-web-1",
+      "python",
+      "manage.py",
+      "check"
+    ],
+    "exit_code": 0,
+    "output": "System check identified no issues (0 silenced).\n",
+    "error": ""
+  },
+  {
+    "command": [
+      "exec",
+      "xa-local-validation-web-1",
+      "python",
+      "manage.py",
+      "migrate",
+      "--check"
+    ],
+    "exit_code": 0,
+    "output": "",
+    "error": ""
+  },
+  {
+    "command": [
+      "restart",
+      "xa-local-validation-web-1",
+      "xa-local-validation-web-2",
+      "xa-local-validation-celery-worker-1",
+      "xa-local-validation-celery-beat-1"
+    ],
+    "exit_code": 0,
+    "output": "xa-local-validation-web-1\nxa-local-validation-web-2\nxa-local-validation-celery-worker-1\nxa-local-validation-celery-beat-1\n",
+    "error": ""
+  },
+  {
+    "command": [
+      "ps",
+      "--filter",
+      "name=xa-local-validation-",
+      "--format",
+      "{{.Names}}|{{.State}}"
+    ],
+    "exit_code": 0,
+    "output": "xa-local-validation-provider-h5-1|running\nxa-local-validation-admin-web-1|running\nxa-local-validation-celery-worker-1|running\nxa-local-validation-celery-beat-1|running\nxa-local-validation-web-2|running\nxa-local-validation-web-1|running\nxa-local-validation-gateway-1|running\nxa-local-validation-redis-1|running\nxa-local-validation-db-1|running\n",
+    "error": ""
+  }
+]

@@ -12,13 +12,14 @@ const server=http.createServer((req,res)=>{
   try{
     browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
     const context=await browser.newContext({viewport:{width:375,height:812},isMobile:true,hasTouch:true});
-    await context.addInitScript(({token,id})=>{localStorage.setItem('token',JSON.stringify({data:token}));localStorage.setItem('xa_provider_user',JSON.stringify({data:{id,role:'provider',nickname:'标签陪玩'}}));},input);
-    const page=await context.newPage();await page.goto(`http://127.0.0.1:${server.address().port}/#/pages/points/index?claim_id=${input.claimId}`);
+    await context.addInitScript(({token,id})=>{localStorage.setItem('token',JSON.stringify({data:token}));localStorage.setItem('xa_provider_user',JSON.stringify({data:{id:String(id),role:'provider',nickname:'标签陪玩'}}));},input);
+    const page=await context.newPage();await page.goto(`http://127.0.0.1:${server.address().port}/#/points?claim_id=${input.claimId}`);
     await page.getByText('标签已暂停展示：内容需要重新核实',{exact:true}).waitFor({timeout:20000});
     await page.getByText('可修改后提交复核，有效期不变',{exact:false}).waitFor();
-    await page.getByText('修改 TAG',{exact:true}).click();
-    await page.locator('input[placeholder="希望展示的 TAG"]').fill('清海搭子');
-    await page.getByText('提交复核',{exact:true}).click();
+    await page.getByRole('button',{name:'修改 TAG',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'补充资料 · 陪玩专属TAG'});
+    await dialog.getByLabel('希望展示的 TAG').fill('清海搭子');
+    await dialog.getByRole('button',{name:'提交复核',exact:true}).click();
     await page.getByText('希望展示的 TAG：清海搭子',{exact:true}).waitFor({timeout:20000});
     await page.getByText('已提交修改，等待客服复核。',{exact:true}).waitFor();
     await page.reload();

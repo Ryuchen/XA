@@ -20,20 +20,17 @@ from wallet.models import ProviderReport, Transaction, Wallet
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ReservationMoneyLifecycleTest(APITransactionTestCase):
-    setUp = flow.ReleaseFlowTest.setUp
+    def setUp(self):
+        flow.ReleaseFlowTest.setUp(self)
+        from console.reservation_deadlines import save_deadlines
+        save_deadlines(30, 60, 0, lambda *_: None)
     login = flow.ReleaseFlowTest.login
     ok = flow.ReleaseFlowTest.ok
     recharge = flow.ReleaseFlowTest.recharge
     finish = flow.ReleaseFlowTest.finish
     settle_after_window = flow.ReleaseFlowTest.settle_after_window
 
-    def test_rejected_reservation_order_shows_original_slot_in_public_pool(self):
-        from wallet.models import SystemConfig
-        replacement = make_provider()
-        self.accounts[replacement.pk] = get_or_create_account_for_legacy_user(replacement)
-        replacement.escort_profile.account = self.accounts[replacement.pk]
-        replacement.escort_profile.save(update_fields=['account'])
-        SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_NONE', defaults={'value': '0'})
+    def test_paid_reservation_cannot_be_rejected_into_public_pool(self):
         self.ok(self.recharge())
         start = (timezone.now() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
         self.login(self.boss)
@@ -54,85 +51,17 @@ class ReservationMoneyLifecycleTest(APITransactionTestCase):
         notice = next(row for row in inbox if row['title'] == '预约已转为订单' and row['related_order_id'] == order_id)
         self.assertIn('原预约时段', notice['preview'])
         self.assertNotIn('尽快开始', notice['preview'])
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '档期变化'}, format='json'))
-        self.login(replacement)
-        pool = self.ok(self.client.get('/api/orders/orders/', {'status': 'pending'}))
-        item = next(row for row in pool if row['id'] == order_id)
-        origin = item['reservation_origin']
-        self.assertEqual((origin['id'], origin['can_open']), (booking['id'], False))
-        self.assertEqual(timezone.datetime.fromisoformat(origin['start_time']), start)
-        self.assertEqual(self.client.get(f"/api/orders/reservations/{booking['id']}/").data['code'], 404)
-        applied = self.ok(self.client.post(f'/api/orders/orders/{order_id}/grab/', {}, format='json'))
-        self.assertEqual(applied['reservation_origin']['id'], booking['id'])
-        app_id = applied['my_applications'][0]['id']
-        application = self.ok(self.client.get(f'/api/orders/orders/{order_id}/applications/{app_id}/mine/'))
-        self.assertEqual((application['order']['reservation_origin']['id'], application['order']['reservation_origin']['can_open']),
-                         (booking['id'], False))
-        self.login(self.boss)
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/applications/{app_id}/select/', {}, format='json'))
-        self.login(replacement)
-        inbox = self.ok(self.client.get('/api/messages/'))['messages']
-        notice = next(row for row in inbox if row['title'] == '老板已选择你服务' and row['related_order_id'] == order_id)
-        self.assertIn('原预约时段', notice['preview'])
-        self.assertNotIn('尽快开始', notice['preview'])
-        accepted = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))
-        self.assertEqual((accepted['status'], accepted['reservation_origin']['id'], accepted['reservation_origin']['can_open']),
-                         ('GRABBED', booking['id'], False))
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/start/', {'entry_image': flow.screenshot()}, format='multipart'))
-        self.ok(self.client.post(f'/api/orders/orders/{order_id}/complete/', {'completion_image': flow.screenshot()}, format='multipart'))
-        report = ProviderReport.objects.get(order_id=order_id, provider=replacement)
-        self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/images/', {'kind': 'RESULT', 'image': flow.screenshot()}, format='multipart'))
-        self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/submit/'))
-        self.login(self.admin)
-        self.ok(self.client.post(f'/api/admin/reports/{report.pk}/approve/'))
-        self.settle_after_window()
+        response = self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '档期变化'}, format='json')
+        self.assertEqual(response.data['errorCode'], 'ORDER_SELF_REJECTION_DISABLED')
         order = Order.objects.get(pk=order_id)
-        self.assertIsNotNone(order.settled_at)
-        self.assertEqual(Wallet.objects.get(user=replacement).balance, 8000)
-        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 0)
+        self.assertEqual(order.provider_account_id, self.accounts[self.provider.pk].pk)
+        self.assertEqual(order.status, Order.Status.GRABBED)
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 11000)
-        self.assertEqual(sum(Transaction.objects.filter(order=order).values_list('amount', flat=True)), 0)
+        self.assertEqual(Transaction.objects.filter(order=order, tx_type='PAY').count(), 1)
+        self.assertFalse(Transaction.objects.filter(order=order, tx_type='REFUND').exists())
 
-    def test_rejected_reservation_staff_assignment_notifies_original_slot(self):
-        self.ok(self.recharge())
-        for index, path in enumerate(('/api/admin/orders/{}/assign/', '/api/orders/orders/{}/assign/')):
-            with self.subTest(path=path):
-                replacement = make_provider(display_name='预约接手陪玩')
-                self.accounts[replacement.pk] = get_or_create_account_for_legacy_user(replacement)
-                replacement.escort_profile.account = self.accounts[replacement.pk]
-                replacement.escort_profile.save(update_fields=['account'])
-                start = (timezone.now() + timedelta(days=index + 1)).replace(hour=10, minute=0, second=0, microsecond=0)
-                self.login(self.boss)
-                booking = self.ok(self.client.post('/api/orders/reservations/', {
-                    'service_id': self.service.pk, 'provider_account_id': self.accounts[self.provider.pk].pk,
-                    'start_time': start.isoformat(), 'end_time': (start + timedelta(hours=1)).isoformat(),
-                }, format='json'))
-                self.login(self.provider)
-                self.ok(self.client.post(f"/api/orders/reservations/{booking['id']}/confirm/", {}, format='json'))
-                self.login(self.boss)
-                quote = self.ok(self.client.get(f"/api/orders/reservations/{booking['id']}/quote/"))
-                order_id = self.ok(self.client.post(f"/api/orders/reservations/{booking['id']}/convert/", {
-                    'client_request_id': f'reservation-staff-assign-{index}', 'expected_amount': quote['amount'],
-                    'expected_service': quote['service'],
-                }, format='json'))['order']['id']
-                self.login(self.provider)
-                self.ok(self.client.post(f'/api/orders/orders/{order_id}/reject/', {'reason': '档期变化'}, format='json'))
-                self.login(self.admin)
-                self.ok(self.client.post(path.format(order_id), {'provider_id': self.accounts[replacement.pk].pk}, format='json'))
-                self.assertEqual(Order.objects.get(pk=order_id).provider_name_snapshot, '预约接手陪玩')
-                self.login(replacement)
-                inbox = self.ok(self.client.get('/api/messages/'))['messages']
-                notice = next(row for row in inbox if row['title'] == '客服派单给你' and row['related_order_id'] == order_id)
-                self.assertIn('原预约时段', notice['preview'])
-                self.assertNotIn('尽快开始', notice['preview'])
-                cursor = self.ok(self.client.get('/api/messages/assignment-alerts/', {'after': 0}))
-                self.assertTrue(cursor['pending'])
-                self.assertEqual(cursor['latest_id'], notice['id'])
-                origin = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))['reservation_origin']
-                self.assertEqual(timezone.datetime.fromisoformat(origin['start_time']), start)
-
-    def test_transferred_provider_sees_original_slot_without_foreign_reservation_link(self):
-        replacement = make_provider()
+    def test_transferred_provider_can_open_the_original_reservation_slot(self):
+        replacement = make_provider(deposit_mode='EARNINGS')
         self.accounts[replacement.pk] = get_or_create_account_for_legacy_user(replacement)
         replacement.escort_profile.account = self.accounts[replacement.pk]
         replacement.escort_profile.save(update_fields=['account'])
@@ -163,10 +92,12 @@ class ReservationMoneyLifecycleTest(APITransactionTestCase):
         }, format='json'))
         self.login(replacement)
         origin = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))['reservation_origin']
-        self.assertEqual((origin['id'], origin['can_open']), (booking['id'], False))
+        self.assertEqual((origin['id'], origin['can_open']), (booking['id'], True))
         self.assertEqual(timezone.datetime.fromisoformat(origin['start_time']), start)
-        denied = self.client.get(f"/api/orders/reservations/{booking['id']}/")
-        self.assertEqual(denied.data['code'], 404)
+        reservation = self.ok(self.client.get(f"/api/orders/reservations/{booking['id']}/"))
+        self.assertEqual(reservation['status'], 'CONVERTED')
+        self.assertIn(self.accounts[replacement.pk].pk,
+                      [entry['account_id'] for entry in reservation['current_providers']])
 
     def test_booking_payment_notifies_wallet_then_actual_service_settles(self):
         self.ok(self.recharge())

@@ -72,11 +72,12 @@ def matching_qualification(profile, requirement):
     required=choices.index(requirement['grade']) if requirement['grade'] in choices else len(choices)
     return next((row for row in qualification_rows(profile) if scope_matches(row,requirement) and row.grade in choices and choices.index(row.grade)>=required),None)
 
-def service_skill(profile, item):
+def service_skill(profile, item, *, exclude_service_ids=()):
     service=getattr(item,'service',item)
     if service.game_category_id is None:return True
     items=getattr(profile,'_prefetched_objects_cache',{}).get('service_items')
     if items is None: items=list(profile.service_items.select_related('game_category').all())
+    if exclude_service_ids: items=[row for row in items if row.pk not in exclude_service_ids]
     if any(row.pk==service.pk for row in items):return True
     requirement=service_requirement(item)
     if not requirement or requirement.get('invalid'):return False

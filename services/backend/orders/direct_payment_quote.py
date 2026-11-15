@@ -15,7 +15,7 @@ from .payment_fee_quote import (PaymentFeeQuoteError, ROUND_DOWN, SERVICE_AMOUNT
 
 MAX_ORDER_FEN = 2147483647
 # Test-only compatibility with the current ledger convention: ten internal
-# units per 兴安币, ten 兴安币 per yuan. Production must verify and version
+# units per 浪花, ten 浪花 per yuan. Production must verify and version
 # this exchange rate rather than silently treating internal units as cents.
 TEST_INTERNAL_UNITS_PER_YUAN = 100
 FEN_PER_YUAN = 100

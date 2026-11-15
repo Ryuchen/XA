@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from stores.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -229,10 +229,10 @@ class Command(BaseCommand):
 
         # ---------------- 优惠券 ----------------
         coupon_unused = Coupon.objects.create(
-            name='无门槛100兴安币券', discount_type=Coupon.DiscountType.DIRECT,
+            name='无门槛100浪花券', discount_type=Coupon.DiscountType.DIRECT,
             threshold=0, amount=1000, valid_to=now + timedelta(days=90), is_active=True)
         coupon_used = Coupon.objects.create(
-            name='满500减80兴安币券', discount_type=Coupon.DiscountType.THRESHOLD,
+            name='满500减80浪花券', discount_type=Coupon.DiscountType.THRESHOLD,
             threshold=5000, amount=800, valid_to=now + timedelta(days=90), is_active=True)
 
         # ---------------- 全流程订单 ----------------

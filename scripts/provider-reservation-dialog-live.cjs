@@ -2,7 +2,7 @@
 const fs = require('node:fs'), http = require('node:http'), net = require('node:net'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require('../.tools/club-source-20261003/node_modules/playwright');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-const root = path.resolve('.tools/provider-reservation-dialog-20261101'), target = new URL(input.api);
+const root = path.resolve(input.root || '.tools/provider-reservation-dialog-20261101'), target = new URL(input.api);
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
   if (req.url.startsWith('/api/')) {
@@ -37,7 +37,7 @@ async function main() {
       const timer = setTimeout(() => reject(Error('provider websocket unavailable')), 15000);
       page.on('websocket', ws => ws.on('framereceived', frame => { if (String(frame.payload).includes('pong')) { clearTimeout(timer); resolve(); } }));
     });
-    await page.goto(`http://127.0.0.1:${server.address().port}/#/pages/reservations/index?id=${input.reservationId}`);
+    await page.goto(`http://127.0.0.1:${server.address().port}/#/reservations?id=${input.reservationId}`);
     await page.getByText('拒绝预约', { exact: true }).click({ timeout: 20000 });
     await page.getByRole('textbox', { name: '原因（选填）' }).fill('正在输入的原因');
     await connected;
@@ -56,6 +56,7 @@ async function main() {
     });
     const result = await response.json(); assert.equal(result.code, 0, JSON.stringify(result));
     await page.getByRole('textbox', { name: '原因（选填）' }).waitFor({ state: 'hidden', timeout: 10000 });
+    await page.getByRole('status').filter({hasText:'预约状态已变化，原操作未提交。'}).waitFor({timeout:10000});
     await page.getByText('已取消', { exact: true }).waitFor({ timeout: 10000 });
     await page.getByText('老板计划有变', { exact: true }).waitFor();
     assert.equal(await page.getByText('确认预约', { exact: true }).count(), 0);

@@ -42,7 +42,7 @@ jobs:
           - name: provider
             image: xa-provider-h5
             context: .
-            dockerfile: apps/provider-miniapp/Dockerfile
+            dockerfile: apps/provider-vue/Dockerfile
 
     steps:
       - name: Checkout repository

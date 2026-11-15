@@ -1,0 +1,4021 @@
+{
+  "run": "XA-PARTIAL-REFUND-20261020-68af85",
+  "unit": "raw ledger integer; 10=1 XA coin; 100=1 RMB",
+  "stages": [
+    {
+      "stage": "before-settlement",
+      "checked_at": "2026-10-19T17:48:13.144Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 0,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 0,
+          "frozen": 0,
+          "total_income": 0
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": []
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": null,
+          "can_aftersale": false,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": null,
+          "can_aftersale": false,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": null,
+          "can_aftersale": false,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": null,
+          "can_aftersale": false,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 0,
+        "pending_consumption": 41000
+      }
+    },
+    {
+      "stage": "after-settlement",
+      "checked_at": "2026-10-19T17:49:10.579Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 0,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 20800,
+          "frozen": 12000,
+          "total_income": 32800
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 6000,
+        "pending_consumption": 35000
+      }
+    },
+    {
+      "stage": "after-frozen-partial-2500",
+      "checked_at": "2026-10-19T17:50:27.688Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 2500,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 20800,
+          "frozen": 10000,
+          "total_income": 30800
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 2500,
+            "remaining_amount": 7500,
+            "provider_recovered_amount": 2000,
+            "records": [
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益首次部分退款250币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 6000,
+        "pending_consumption": 32500
+      }
+    },
+    {
+      "stage": "after-available-partial-2000",
+      "checked_at": "2026-10-19T17:51:36.851Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 4500,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 19200,
+          "frozen": 10000,
+          "total_income": 29200
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 2500,
+            "remaining_amount": 7500,
+            "provider_recovered_amount": 2000,
+            "records": [
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益首次部分退款250币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 2000,
+            "remaining_amount": 4000,
+            "provider_recovered_amount": 1600,
+            "records": [
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费首次部分退款200币，按净额调整实销"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 4000,
+        "pending_consumption": 32500
+      }
+    },
+    {
+      "stage": "after-frozen-partial-1500",
+      "checked_at": "2026-10-19T17:52:21.611Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 6000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 19200,
+          "frozen": 8800,
+          "total_income": 28000
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 4000,
+            "remaining_amount": 6000,
+            "provider_recovered_amount": 3200,
+            "records": [
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 2000,
+            "remaining_amount": 4000,
+            "provider_recovered_amount": 1600,
+            "records": [
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费首次部分退款200币，按净额调整实销"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 4000,
+        "pending_consumption": 31000
+      }
+    },
+    {
+      "stage": "after-available-partial-1000",
+      "checked_at": "2026-10-19T17:53:02.809Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 7000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 18400,
+          "frozen": 8800,
+          "total_income": 27200
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 984,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1000,
+            "before": 6000,
+            "after": 7000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 982,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 19200,
+            "after": 18400,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 4000,
+            "remaining_amount": 6000,
+            "provider_recovered_amount": 3200,
+            "records": [
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 3000,
+            "remaining_amount": 3000,
+            "provider_recovered_amount": 2400,
+            "records": [
+              {
+                "id": 9,
+                "amount": 1000,
+                "created_at": "2026-10-19T17:52:53.742875Z"
+              },
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费第二次部分退款100币"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 3000,
+        "pending_consumption": 31000
+      }
+    },
+    {
+      "stage": "after-available-full-remainder",
+      "checked_at": "2026-10-19T17:53:36.332Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 10000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 16000,
+          "frozen": 8800,
+          "total_income": 24800
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 984,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1000,
+            "before": 6000,
+            "after": 7000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 987,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 3000,
+            "before": 7000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 982,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 19200,
+            "after": 18400,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 985,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2400,
+            "before": 18400,
+            "after": 16000,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 4000,
+            "remaining_amount": 6000,
+            "provider_recovered_amount": 3200,
+            "records": [
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 6000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 4800,
+            "records": [
+              {
+                "id": 10,
+                "amount": 3000,
+                "created_at": "2026-10-19T17:53:28.097364Z"
+              },
+              {
+                "id": 9,
+                "amount": 1000,
+                "created_at": "2026-10-19T17:52:53.742875Z"
+              },
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费订单退清300币余款，累计退款600币"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 0,
+        "pending_consumption": 31000
+      }
+    },
+    {
+      "stage": "refund-insufficient-no-change",
+      "checked_at": "2026-10-19T17:54:56.687Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 10000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 6000,
+          "frozen": 18800,
+          "total_income": 24800
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 984,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1000,
+            "before": 6000,
+            "after": 7000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 987,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 3000,
+            "before": 7000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 982,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 19200,
+            "after": 18400,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 985,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2400,
+            "before": 18400,
+            "after": 16000,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 988,
+            "type": "WITHDRAW",
+            "status": "PENDING",
+            "amount": -10000,
+            "before": 16000,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 4000,
+            "remaining_amount": 6000,
+            "provider_recovered_amount": 3200,
+            "records": [
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 6000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 4800,
+            "records": [
+              {
+                "id": 10,
+                "amount": 3000,
+                "created_at": "2026-10-19T17:53:28.097364Z"
+              },
+              {
+                "id": 9,
+                "amount": 1000,
+                "created_at": "2026-10-19T17:52:53.742875Z"
+              },
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费订单退清300币余款，累计退款600币"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "OPEN",
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": false,
+          "refund_summary": null,
+          "ticket": {
+            "id": 8,
+            "status": "OPEN",
+            "resolution": ""
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 0,
+        "pending_consumption": 31000
+      }
+    },
+    {
+      "stage": "old-plan-rejected-no-change",
+      "checked_at": "2026-10-19T17:55:49.640Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 10000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 16000,
+          "frozen": 8800,
+          "total_income": 24800
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 984,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1000,
+            "before": 6000,
+            "after": 7000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 987,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 3000,
+            "before": 7000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 982,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 19200,
+            "after": 18400,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 985,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2400,
+            "before": 18400,
+            "after": 16000,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 988,
+            "type": "WITHDRAW",
+            "status": "FAILED",
+            "amount": -10000,
+            "before": 16000,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 4000,
+            "remaining_amount": 6000,
+            "provider_recovered_amount": 3200,
+            "records": [
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 6000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 4800,
+            "records": [
+              {
+                "id": 10,
+                "amount": 3000,
+                "created_at": "2026-10-19T17:53:28.097364Z"
+              },
+              {
+                "id": 9,
+                "amount": 1000,
+                "created_at": "2026-10-19T17:52:53.742875Z"
+              },
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费订单退清300币余款，累计退款600币"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "OPEN",
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": false,
+          "refund_summary": null,
+          "ticket": {
+            "id": 8,
+            "status": "OPEN",
+            "resolution": ""
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 0,
+        "pending_consumption": 31000
+      }
+    },
+    {
+      "stage": "after-insufficient-partial",
+      "checked_at": "2026-10-19T17:56:15.587Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 20000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 8000,
+          "frozen": 8800,
+          "total_income": 16800
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 984,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1000,
+            "before": 6000,
+            "after": 7000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 987,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 3000,
+            "before": 7000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 991,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 10000,
+            "before": 10000,
+            "after": 20000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 982,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 19200,
+            "after": 18400,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 985,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2400,
+            "before": 18400,
+            "after": 16000,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 988,
+            "type": "WITHDRAW",
+            "status": "FAILED",
+            "amount": -10000,
+            "before": 16000,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 989,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 16000,
+            "after": 8000,
+            "order": null,
+            "reversal_of": 966,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 4000,
+            "remaining_amount": 6000,
+            "provider_recovered_amount": 3200,
+            "records": [
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 6000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 4800,
+            "records": [
+              {
+                "id": 10,
+                "amount": 3000,
+                "created_at": "2026-10-19T17:53:28.097364Z"
+              },
+              {
+                "id": 9,
+                "amount": 1000,
+                "created_at": "2026-10-19T17:52:53.742875Z"
+              },
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费订单退清300币余款，累计退款600币"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 10000,
+            "remaining_amount": 10000,
+            "provider_recovered_amount": 8000,
+            "records": [
+              {
+                "id": 14,
+                "amount": 10000,
+                "created_at": "2026-10-19T17:56:01.743433Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 8,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 模拟提现驳回后部分退款1000币，保留1000币余款u"
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 0,
+        "pending_consumption": 21000
+      }
+    },
+    {
+      "stage": "final-after-replay-protection",
+      "checked_at": "2026-10-19T17:57:08.816Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 26000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 8000,
+          "frozen": 4000,
+          "total_income": 12000
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 984,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1000,
+            "before": 6000,
+            "after": 7000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 987,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 3000,
+            "before": 7000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 991,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 10000,
+            "before": 10000,
+            "after": 20000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 995,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 6000,
+            "before": 20000,
+            "after": 26000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 982,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 19200,
+            "after": 18400,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 985,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2400,
+            "before": 18400,
+            "after": 16000,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 988,
+            "type": "WITHDRAW",
+            "status": "FAILED",
+            "amount": -10000,
+            "before": 16000,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 989,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 16000,
+            "after": 8000,
+            "order": null,
+            "reversal_of": 966,
+            "is_reversal": true
+          },
+          {
+            "id": 992,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 8000,
+            "after": 12800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 993,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -4800,
+            "before": 12800,
+            "after": 8000,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 10000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 8000,
+            "records": [
+              {
+                "id": 15,
+                "amount": 6000,
+                "created_at": "2026-10-19T17:56:59.511611Z"
+              },
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益最后退600币余款，累计精确退清1000币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 6000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 4800,
+            "records": [
+              {
+                "id": 10,
+                "amount": 3000,
+                "created_at": "2026-10-19T17:53:28.097364Z"
+              },
+              {
+                "id": 9,
+                "amount": 1000,
+                "created_at": "2026-10-19T17:52:53.742875Z"
+              },
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费订单退清300币余款，累计退款600币"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 10000,
+            "remaining_amount": 10000,
+            "provider_recovered_amount": 8000,
+            "records": [
+              {
+                "id": 14,
+                "amount": 10000,
+                "created_at": "2026-10-19T17:56:01.743433Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 8,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 模拟提现驳回后部分退款1000币，保留1000币余款u"
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 0,
+        "pending_consumption": 15000
+      }
+    },
+    {
+      "stage": "final-runtime",
+      "checked_at": "2026-10-19T18:01:30.983Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 26000,
+          "frozen": 0
+        },
+        "provider": {
+          "balance": 8000,
+          "frozen": 4000,
+          "total_income": 12000
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 956,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 41000,
+            "before": 0,
+            "after": 41000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 957,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 41000,
+            "after": 31000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 958,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -6000,
+            "before": 31000,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 959,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -20000,
+            "before": 25000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 960,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 974,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 977,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 2500,
+            "after": 4500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 981,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 4500,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 984,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1000,
+            "before": 6000,
+            "after": 7000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 987,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 3000,
+            "before": 7000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 991,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 10000,
+            "before": 10000,
+            "after": 20000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 995,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 6000,
+            "before": 20000,
+            "after": 26000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "provider": [
+          {
+            "id": 961,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 8000,
+            "before": 0,
+            "after": 8000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 962,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 8000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 964,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 0,
+            "after": 4800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 966,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 16000,
+            "before": 4800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 968,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 4000,
+            "before": 20800,
+            "after": 24800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 969,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -4000,
+            "before": 24800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 971,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 2000,
+            "before": 20800,
+            "after": 22800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 972,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2000,
+            "before": 22800,
+            "after": 20800,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 975,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1600,
+            "before": 20800,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 978,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 19200,
+            "after": 20400,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 979,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 20400,
+            "after": 19200,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          },
+          {
+            "id": 982,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 19200,
+            "after": 18400,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 985,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -2400,
+            "before": 18400,
+            "after": 16000,
+            "order": null,
+            "reversal_of": 964,
+            "is_reversal": true
+          },
+          {
+            "id": 988,
+            "type": "WITHDRAW",
+            "status": "FAILED",
+            "amount": -10000,
+            "before": 16000,
+            "after": 6000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 989,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -8000,
+            "before": 16000,
+            "after": 8000,
+            "order": null,
+            "reversal_of": 966,
+            "is_reversal": true
+          },
+          {
+            "id": 992,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 4800,
+            "before": 8000,
+            "after": 12800,
+            "order": null,
+            "reversal_of": 962,
+            "is_reversal": true
+          },
+          {
+            "id": 993,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -4800,
+            "before": 12800,
+            "after": 8000,
+            "order": null,
+            "reversal_of": 961,
+            "is_reversal": true
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 113,
+          "amount": 10000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.702035+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 10000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 8000,
+            "records": [
+              {
+                "id": 15,
+                "amount": 6000,
+                "created_at": "2026-10-19T17:56:59.511611Z"
+              },
+              {
+                "id": 8,
+                "amount": 1500,
+                "created_at": "2026-10-19T17:52:12.622456Z"
+              },
+              {
+                "id": 6,
+                "amount": 2500,
+                "created_at": "2026-10-19T17:50:16.853132Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 6,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益最后退600币余款，累计精确退清1000币"
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 114,
+          "amount": 6000,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T01:49:06.902485+08:00",
+          "can_aftersale": false,
+          "refund_summary": {
+            "amount": 6000,
+            "remaining_amount": 0,
+            "provider_recovered_amount": 4800,
+            "records": [
+              {
+                "id": 10,
+                "amount": 3000,
+                "created_at": "2026-10-19T17:53:28.097364Z"
+              },
+              {
+                "id": 9,
+                "amount": 1000,
+                "created_at": "2026-10-19T17:52:53.742875Z"
+              },
+              {
+                "id": 7,
+                "amount": 2000,
+                "created_at": "2026-10-19T17:51:25.410373Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 7,
+            "status": "REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费订单退清300币余款，累计退款600币"
+          }
+        },
+        {
+          "key": "insufficient_recovery",
+          "id": 115,
+          "amount": 20000,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T01:49:07.100780+08:00",
+          "can_aftersale": true,
+          "refund_summary": {
+            "amount": 10000,
+            "remaining_amount": 10000,
+            "provider_recovered_amount": 8000,
+            "records": [
+              {
+                "id": 14,
+                "amount": 10000,
+                "created_at": "2026-10-19T17:56:01.743433Z"
+              }
+            ]
+          },
+          "ticket": {
+            "id": 8,
+            "status": "PARTIALLY_REFUNDED",
+            "resolution": "XA-PARTIAL-REFUND-20261020-68af85 模拟提现驳回后部分退款1000币，保留1000币余款u"
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 116,
+          "amount": 5000,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": null,
+          "settled_at": "2026-10-20T01:49:07.400775+08:00",
+          "can_aftersale": true,
+          "refund_summary": null,
+          "ticket": null
+        }
+      ],
+      "member": {
+        "confirmed_net_consumption": 0,
+        "pending_consumption": 15000
+      }
+    }
+  ]
+}

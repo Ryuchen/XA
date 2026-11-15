@@ -1,4 +1,5 @@
 from django.test import override_settings
+from rest_framework.test import APITestCase
 from club_accounts.services import get_or_create_account_for_legacy_user
 from orders.models import Order
 from orders.tests import test_release_flow as flow
@@ -6,8 +7,15 @@ from orders.tests.factories import make_provider
 from wallet.models import IncomeHold, SystemConfig, Transaction, Wallet
 
 
-@override_settings(ORDER_SETTLEMENT_MODE='COMPLETION')
-class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
+@override_settings(ORDER_SETTLEMENT_MODE='COMPLETION', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
+                   REQUIRE_RECHARGE_PROOF=True, LEGACY_FORCE_AUTH_COMPAT=False)
+class NegotiatedTransferRefundTest(APITestCase):
+    setUp = flow.ReleaseFlowTest.setUp
+    login = flow.ReleaseFlowTest.login
+    ok = flow.ReleaseFlowTest.ok
+    recharge = flow.ReleaseFlowTest.recharge
+    new_order = flow.ReleaseFlowTest.new_order
+
     def prepare_transfer(self):
         incoming = make_provider()
         self.accounts[incoming.pk] = get_or_create_account_for_legacy_user(incoming)
@@ -32,8 +40,118 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.login(self.admin)
         return order, incoming
 
+    def test_boss_aftersale_during_transfer_ends_with_negotiated_refund(self):
+        order, incoming = self.prepare_transfer()
+        self.login(self.boss)
+        detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertTrue(detail['can_aftersale'])
+        case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '服务中协商终止', 'client_request_id': 'negotiated-boss-case',
+        }, format='json'))
+        self.assertEqual(case['status'], 'OPEN')
+        self.login(self.admin)
+        base = f'/api/admin/orders/{order.pk}/'
+        rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
+        allocation = [{'key': row['key'], 'amount': 1000 if row['role'] == 'PLATFORM' or
+                       row['account_id'] == self.accounts[self.provider.pk].pk else 3000} for row in rows]
+        payload = {'refund_amount': 5000, 'allocations': allocation, 'reason': '服务中协商退款',
+                   'client_request_id': 'negotiated-boss-case-refund', 'reviewed': True}
+        preview = self.ok(self.client.post(base + 'negotiated-refund-preview/', payload, format='json'))
+        self.assertTrue(preview['eligible'], preview)
+        payload['plan_token'] = preview['plan_token']
+        self.ok(self.client.post(base + 'negotiated-refund/', payload, format='json'))
+        for user in (self.boss, self.provider, incoming, self.admin):
+            self.login(user)
+            detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+            self.assertEqual((detail['status'], detail['payment_status'], detail['aftersale_status']),
+                             ('CANCELLED', 'PARTIALLY_REFUNDED', 'PARTIALLY_REFUNDED'))
+        self.login(self.boss)
+        result = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/aftersale/'))
+        self.assertEqual((result['status'], result['resolution']), ('PARTIALLY_REFUNDED', '服务中协商退款'))
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 16000)
+        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 2200)
+        self.assertEqual(Wallet.objects.get(user=incoming).balance, 1800)
+        self.login(self.admin)
+        self.ok(self.client.post(base + 'negotiated-refund/', payload, format='json'))
+        self.assertEqual(order.refund_records.count(), 1)
+
+    def test_completion_waits_until_in_service_aftersale_is_resolved(self):
+        order, incoming = self.prepare_transfer()
+        self.login(self.boss)
+        case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '服务中需要客服处理', 'client_request_id': 'negotiated-hold-case',
+        }, format='json'))
+        self.login(incoming)
+        detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertNotIn('COMPLETE', detail['allowed_actions'])
+        self.assertEqual(detail['completion_block_reason'], '售后处理中，暂不能结单，请等待客服处理')
+        result = self.client.post(f'/api/orders/orders/{order.pk}/complete/',
+                                  {'completion_image': flow.screenshot()}, format='multipart')
+        self.assertEqual(result.data['code'], 400, result.data)
+        self.assertIn('售后处理中', result.data['msg'])
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'IN_SERVICE')
+        self.assertIsNone(order.settled_at)
+        self.assertEqual(order.aftersales.get(pk=case['id']).status, 'OPEN')
+        self.login(self.admin)
+        denied = self.client.post(f'/api/admin/orders/{order.pk}/complete/', {}, format='json')
+        self.assertEqual(denied.data['code'], 400, denied.data)
+        self.assertIn('售后处理中', denied.data['msg'])
+        self.ok(self.client.post(f'/api/admin/aftersales/{case["id"]}/resolve/',
+                                  {'resolution': '双方协商继续服务'}, format='json'))
+        self.login(incoming)
+        detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertIn('COMPLETE', detail['allowed_actions'])
+        self.assertEqual(detail['completion_block_reason'], '')
+        self.login(self.provider)
+        old_report = order.provider_reports.get(provider=self.provider)
+        self.ok(self.client.post(f'/api/wallet/reports/{old_report.pk}/images/',
+            {'kind': 'COMPLETION', 'image': flow.screenshot()}, format='multipart'))
+        self.login(incoming)
+        self.ok(self.client.post(f'/api/orders/orders/{order.pk}/complete/',
+                                  {'completion_image': flow.screenshot()}, format='multipart'))
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'COMPLETED')
+
+    def test_another_transfer_waits_until_aftersale_is_resolved(self):
+        order, incoming = self.prepare_transfer()
+        replacement = make_provider(display_name='再次接手陪玩')
+        account = get_or_create_account_for_legacy_user(replacement)
+        replacement.escort_profile.account = account
+        replacement.escort_profile.save(update_fields=['account'])
+        self.login(self.boss)
+        case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '服务中等待售后处理', 'client_request_id': 'negotiated-transfer-hold',
+        }, format='json'))
+        self.login(self.admin)
+        detail = self.ok(self.client.get(f'/api/admin/orders/{order.pk}/'))
+        self.assertEqual(detail['service_action_block_reason'], '售后处理中，请先处理售后再结单或转单')
+        payload = {'transfers': [{'old_provider_id': self.accounts[incoming.pk].pk,
+                    'new_provider_id': account.pk, 'split_type': 'PERCENT', 'split_value': 40,
+                    'penalty_amount': 0}], 'reason': '再次转单'}
+        before = list(order.transactions.values_list('pk', flat=True))
+        denied = self.client.post(f'/api/admin/orders/{order.pk}/transfer/', payload, format='json')
+        self.assertEqual(denied.data['code'], 400, denied.data)
+        self.assertIn('售后处理中', denied.data['msg'])
+        self.assertEqual(list(order.transactions.values_list('pk', flat=True)), before)
+        self.assertFalse(order.providers.filter(provider_account=account).exists())
+        self.ok(self.client.post(f'/api/admin/aftersales/{case["id"]}/resolve/',
+                                  {'resolution': '协商后继续服务'}, format='json'))
+        detail = self.ok(self.client.get(f'/api/admin/orders/{order.pk}/'))
+        self.assertEqual(detail['service_action_block_reason'], '')
+        self.ok(self.client.post(f'/api/admin/orders/{order.pk}/transfer/', payload, format='json'))
+        self.assertTrue(order.providers.filter(provider_account=account, released_at__isnull=True).exists())
+
     def test_negotiated_partial_and_idempotency(self):
         order, incoming = self.prepare_transfer()
+        self.login(self.provider)
+        transferred = self.ok(self.client.get('/api/orders/orders/', {'status':'in_progress'}))
+        row = next(row for row in transferred if row['id'] == order.pk)
+        self.assertTrue(row['my_assignment_released'])
+        self.assertEqual(row['my_assignment_departure'], 'TRANSFERRED')
+        detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+        self.assertEqual(detail['my_assignment_departure'], 'TRANSFERRED')
+        self.login(self.admin)
         base = f'/api/admin/orders/{order.pk}/'
         options = self.ok(self.client.get(base + 'negotiated-refund-options/'))
         amounts = {self.accounts[self.provider.pk].pk: 1000, self.accounts[incoming.pk].pk: 3000}
@@ -51,6 +169,14 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 16000)
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 2200)
         self.assertEqual(Wallet.objects.get(user=incoming).balance, 1800)
+        role = self.admin.admin_membership.roles.first()
+        role.permissions = [*role.permissions, 'player_dashboard:view']
+        role.save(update_fields=['permissions'])
+        dashboard = self.ok(self.client.get('/api/admin/dashboard/player'))
+        self.assertEqual(dashboard['income_review']['order_count'], 0)
+        income = {row['escort_no']: row['value'] for row in dashboard['rank']['income']}
+        self.assertEqual(income[self.provider.escort_profile.escort_no], 2200)
+        self.assertEqual(income[incoming.escort_profile.escort_no], 1800)
         order.refresh_from_db()
         refund = order.refund_records.get()
         self.assertEqual(refund.recovered_amount, 1000)
@@ -69,6 +195,17 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
             self.login(user)
             detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
             self.assertEqual((detail['status'], detail['refund_summary']['amount']), ('CANCELLED', 5000))
+            summary = detail['refund_summary']
+            if user != self.boss:
+                burden = 1000 if user == self.provider else 3000
+                retained = 2200 if user == self.provider else 1800
+                self.assertEqual((summary['negotiated_provider_burden'], summary['negotiated_provider_retained']),
+                                 (burden, retained))
+                report = next(row for row in self.ok(self.client.get('/api/wallet/reports/')) if row['order_id'] == order.pk)
+                self.assertEqual((report['refund_summary']['negotiated_provider_burden'],
+                                  report['refund_summary']['negotiated_provider_retained']), (burden, retained))
+            else:
+                self.assertNotIn('negotiated_provider_burden', summary)
             if user == self.boss:
                 import json, subprocess
                 from pathlib import Path
@@ -83,6 +220,11 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
 
     def test_shortfall_and_stale_plan_are_atomic(self):
         order, incoming = self.prepare_transfer()
+        self.login(self.boss)
+        case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '协商处理履约', 'client_request_id': 'negotiated-shortfall-case',
+        }, format='json'))
+        self.login(self.admin)
         base = f'/api/admin/orders/{order.pk}/'
         rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
         allocations = [{'key': row['key'], 'amount': 1000 if row['role'] == 'PLATFORM' or row['account_id'] == self.accounts[self.provider.pk].pk else 3000} for row in rows]
@@ -100,6 +242,7 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.assertEqual(result.data['errorCode'], 'REFUND_RECOVERY_INSUFFICIENT', result.data)
         order.refresh_from_db()
         self.assertEqual((order.status, order.payment_status, order.refund_records.count()), ('IN_SERVICE', 'PAID', 0))
+        self.assertEqual(order.aftersales.get(pk=case['id']).status, 'OPEN')
         self.assertEqual(list(order.transactions.values_list('pk', flat=True)), before)
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 11000)
         preview = self.ok(self.client.post(base + 'negotiated-refund-preview/', payload, format='json'))
@@ -173,6 +316,43 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         summary = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))['refund_summary']
         self.assertEqual((summary['net_income'], summary['referral_net_income']), (2200, 500))
 
+    def test_account_only_inviter_receives_retained_share_after_transfer_refund(self):
+        from club_accounts.models import ClubAccount, LegacyAccountMap
+        from wallet.services import get_wallet
+
+        inviter = ClubAccount.objects.create_account(username='transfer-refund-inviter', account_type='BOSS')
+        boss_account = self.accounts[self.boss.pk]
+        boss_account.inviter = inviter
+        boss_account.inviter_commission_rate = 50
+        boss_account.save(update_fields=['inviter', 'inviter_commission_rate'])
+        order, incoming = self.prepare_transfer()
+        order.refresh_from_db()
+        self.assertIsNone(order.inviter_id)
+        self.assertEqual(order.inviter_account_id, inviter.pk)
+        self.assertFalse(LegacyAccountMap.objects.filter(account=inviter).exists())
+
+        base = f'/api/admin/orders/{order.pk}/'
+        rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
+        inviter_row = next(row for row in rows if row['role'] == 'INVITER')
+        self.assertEqual((inviter_row['account_id'], inviter_row['entitlement']), (inviter.pk, 1000))
+        allocation = [{'key': row['key'], 'amount': (
+            500 if row['role'] in ('INVITER', 'PLATFORM') else
+            1000 if row['account_id'] == self.accounts[self.provider.pk].pk else 3000
+        )} for row in rows]
+        payload = {'refund_amount': 5000, 'allocations': allocation, 'reason': '履约协商',
+                   'client_request_id': 'account-only-inviter-transfer', 'reviewed': True}
+        preview = self.ok(self.client.post(base + 'negotiated-refund-preview/', payload, format='json'))
+        self.assertTrue(preview['eligible'], preview)
+        result = self.ok(self.client.post(base + 'negotiated-refund/',
+            dict(payload, plan_token=preview['plan_token']), format='json'))
+        self.assertEqual((result['status'], result['payment_status']), ('CANCELLED', 'PARTIALLY_REFUNDED'))
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 16000)
+        self.assertEqual(Wallet.objects.get(user=self.provider).balance, 2200)
+        self.assertEqual(Wallet.objects.get(user=incoming).balance, 1800)
+        self.assertEqual(get_wallet(account=inviter).balance, 500)
+        self.assertEqual(order.transactions.get(wallet__account=inviter, tx_type='INCOME').amount, 500)
+        self.assertEqual(order.transactions.get(tx_type='SHOP_INCOME').amount, 500)
+
     def test_existing_frozen_and_deposit_income_are_recovered_by_source(self):
         from django.db import transaction
         from wallet.income import hold_provider_income
@@ -203,6 +383,40 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.assertEqual(refund.recovery_lines.filter(source='DEPOSIT').count(), 2)
         money = order.transactions.filter(status='SUCCESS', tx_type__in=['PAY', 'REFUND', 'INCOME', 'SHOP_INCOME'])
         self.assertEqual(sum(money.values_list('amount', flat=True)), 0)
+
+    def test_legacy_deposit_recovery_registers_auditable_deficit_when_enabled(self):
+        from django.db import transaction
+        from django.test import override_settings
+        from unittest.mock import patch
+        from orders.tests.factories import make_provider as make_deposit_provider
+        from wallet.income import hold_provider_income
+        from wallet.models import RefundDepositDeficit
+        self.provider.escort_profile.deposit_paid = 40000
+        self.provider.escort_profile.save(update_fields=['deposit_paid'])
+        with patch('orders.tests.test_negotiated_transfer_refund.make_provider',
+                   side_effect=lambda: make_deposit_provider(deposit_paid=40000)):
+            order, incoming = self.prepare_transfer()
+        SystemConfig.objects.update_or_create(key='club_income_rules_enabled', defaults={'value':'1'})
+        with transaction.atomic():
+            profile = type(self.provider.escort_profile).objects.select_for_update().get(user=self.provider)
+            profile.deposit_mode = 'EARNINGS'; profile.deposit_paid = 0
+            profile.save(update_fields=['deposit_mode', 'deposit_paid'])
+            original = order.transactions.get(tx_type='INCOME', wallet__user=self.provider)
+            hold_provider_income(original, profile=profile, hold_hours=72)
+        base = f'/api/admin/orders/{order.pk}/'
+        rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
+        allocations = [{'key':row['key'], 'amount':500 if row['role'] == 'PLATFORM' else
+                        3000 if row['account_id'] == self.accounts[self.provider.pk].pk else 1500} for row in rows]
+        payload = {'refund_amount':5000, 'allocations':allocations, 'reason':'隔离测试押金扣减',
+                   'client_request_id':'deficit-legacy', 'reviewed':True}
+        with override_settings(REFUND_DEPOSIT_DEFICIT_ENABLED=True):
+            preview = self.ok(self.client.post(base + 'negotiated-refund-preview/', payload, format='json'))
+            self.assertTrue(preview['eligible'], preview)
+            self.ok(self.client.post(base + 'negotiated-refund/', dict(payload, plan_token=preview['plan_token']), format='json'))
+        deficit = RefundDepositDeficit.objects.get(refund__order=order)
+        self.assertEqual((deficit.amount, deficit.remaining, deficit.account_id),
+                         (1720, 1720, self.accounts[self.provider.pk].pk))
+        self.assertEqual((deficit.source_provider_transaction.amount, deficit.source_store_transaction.amount), (1720, -1720))
 
     def test_team_zero_retained_coupon_points_and_vip(self):
         from coupons.models import Coupon, UserCoupon
@@ -240,6 +454,20 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.ok(self.client.post(f'/api/admin/orders/{order.pk}/transfer/', {'transfers': [{
             'old_provider_id': self.accounts[self.provider.pk].pk, 'new_provider_id': self.accounts[incoming.pk].pk,
             'split_type': 'PERCENT', 'split_value': 40, 'penalty_amount': 0}], 'reason': '隔离双陪转单'}, format='json'))
+        self.login(self.boss)
+        case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '双陪服务中协商退款', 'client_request_id': 'negotiated-team-case',
+        }, format='json'))
+        for user in (teammate, incoming):
+            self.login(user)
+            detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
+            self.assertNotIn('COMPLETE', detail['allowed_actions'])
+            result = self.client.post(f'/api/orders/orders/{order.pk}/complete/',
+                                      {'completion_image': flow.screenshot()}, format='multipart')
+            self.assertEqual(result.data['code'], 400, result.data)
+            self.assertIn('售后处理中', result.data['msg'])
+        self.assertFalse(order.provider_reports.exclude(completion_image='').exists())
+        self.login(self.admin)
         base = f'/api/admin/orders/{order.pk}/'
         rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
         self.assertEqual(len(rows), 5)
@@ -261,6 +489,7 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.assertTrue(preview['eligible'], preview)
         self.ok(self.client.post(base + 'negotiated-refund/', dict(payload, plan_token=preview['plan_token']), format='json'))
         order.refresh_from_db()
+        self.assertEqual(order.aftersales.get(pk=case['id']).status, 'PARTIALLY_REFUNDED')
         voucher.refresh_from_db()
         profile.refresh_from_db()
         boss_account.refresh_from_db()
@@ -272,6 +501,14 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 11500)
         self.assertEqual(Wallet.objects.get(user=inviter).balance, 950)
         self.assertEqual(order.transactions.get(tx_type='SHOP_INCOME').amount, 950)
+        role = self.admin.admin_membership.roles.first()
+        role.permissions = [*role.permissions, 'player_dashboard:view']
+        role.save(update_fields=['permissions'])
+        dashboard = self.ok(self.client.get('/api/admin/dashboard/player'))
+        self.assertEqual(dashboard['income_review']['order_count'], 0)
+        income = {row['escort_no']: row['value'] for row in dashboard['rank']['income']}
+        for user in (self.provider, incoming, teammate):
+            self.assertEqual(income[user.escort_profile.escort_no], Wallet.objects.get(user=user).balance)
         for user in (self.provider, incoming):
             self.login(user)
             detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
@@ -286,6 +523,11 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
 
     def test_full_refund_all_remainders_zero(self):
         order, incoming = self.prepare_transfer()
+        self.login(self.boss)
+        case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '申请协商全额退款', 'client_request_id': 'negotiated-full-case',
+        }, format='json'))
+        self.login(self.admin)
         base = f'/api/admin/orders/{order.pk}/'
         rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
         payload = {'refund_amount': order.amount, 'allocations': [
@@ -295,6 +537,7 @@ class NegotiatedTransferRefundTest(flow.ReleaseFlowTest):
         self.assertTrue(preview['eligible'])
         result = self.ok(self.client.post(base + 'negotiated-refund/', dict(payload, plan_token=preview['plan_token']), format='json'))
         self.assertEqual((result['status'], result['payment_status']), ('CANCELLED', 'REFUNDED'))
+        self.assertEqual(order.aftersales.get(pk=case['id']).status, 'REFUNDED')
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 21000)
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 0)
         self.assertFalse(order.transactions.filter(wallet__user=incoming, tx_type='INCOME').exists())
@@ -404,20 +647,22 @@ class NegotiatedRefundAdminBrowserTest(LiveServerTestCase):
         order, incoming = self.prepare_transfer()
         if existing_native_id:
             self.assertEqual(order.pk, existing_native_id)
+        self.login(self.boss)
+        case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '服务中请求协商退款', 'client_request_id': 'admin-ticket-negotiation',
+        }, format='json'))
         repo = Path(settings.BASE_DIR).parent.parent
-        log_path = repo / '.tools/negotiated-refund-browser.log'
-        with log_path.open(mode='w+', encoding='utf-8') as log:
-            result = subprocess.run(['node', str(repo / 'scripts/admin-negotiated-refund-375.cjs')], input=json.dumps({
+        result = subprocess.run(['node', str(repo / 'scripts/admin-negotiated-refund-375.cjs')], input=json.dumps({
                 'root': root, 'base': self.live_server_url, 'token': issue_account_tokens(self.accounts[self.admin.pk])[0],
-                'orderNo': order.order_no, 'orderId': order.pk,
+                'orderNo': order.order_no, 'orderId': order.pk, 'fromAftersale': True,
+                'desktop': os.environ.get('XA_NEGOTIATED_DESKTOP') == '1',
                 'providerRoot': os.environ.get('XA_PROVIDER_VUE_ROOT') or str(repo / '.tools/provider-refund-receipt-20261102'),
                 'providers': [{'id': self.accounts[user.pk].pk, 'token': issue_account_tokens(self.accounts[user.pk])[0],
-                               'recovered': recovered, 'net': net, 'snapshot': snapshot}
-                              for user, recovered, net, snapshot in ((self.provider, 100, 220, 320), (incoming, 0, 180, 480))]}),
-                text=True, encoding='utf-8', stdout=log, stderr=log, timeout=45, cwd=repo)
-            log.seek(0)
-            output = log.read()
-        self.assertEqual(result.returncode, 0, output)
+                               'recovered': recovered, 'net': net, 'snapshot': snapshot, 'burden': burden}
+                              for user, recovered, net, snapshot, burden in ((self.provider, 100, 220, 320, 100), (incoming, 0, 180, 480, 300))]}),
+                text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(order.aftersales.get(pk=case['id']).status, 'PARTIALLY_REFUNDED')
         for user in (self.boss, self.provider, incoming):
             self.login(user)
             detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))

@@ -49,7 +49,7 @@ class TimeoutMessageRealtimeTest(APITransactionTestCase):
         data = self.client.get('/api/messages/', {'type': 'ORDER'}).data['data']
         row = next(item for item in data['messages'] if item['related_order_id'] == order_id)
         self.assertEqual(data['unread'], 1)
-        self.assertIn('已退回兴安币余额', row['preview'])
+        self.assertIn('已退回浪花余额', row['preview'])
         return row['id']
 
     def read(self, message_id):

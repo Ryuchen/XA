@@ -22,7 +22,7 @@ class OrderCommissionModeTest(APITestCase):
     def setUp(self):
         self.admin = make_superuser()
         self.boss = make_user()
-        self.providers = [make_provider() for _ in range(3)]
+        self.providers = [make_provider(deposit_mode='EARNINGS') for _ in range(3)]
         for user in [self.admin,self.boss,*self.providers]:
             account = get_or_create_account_for_legacy_user(user)
             link_legacy_relations(user,account)
@@ -95,26 +95,40 @@ class OrderCommissionModeTest(APITestCase):
         self.assertEqual(self.service.commission_fixed,1001)
         self.assertEqual(self.dispatch().provider_income,7502)
 
-    def test_explicit_dispatch_fixed_and_percent_both_override_scope_only(self):
-        order = self.dispatch(commission_type='FIXED',commission_fixed=7)
-        self.assertEqual((order.commission_fixed,order.provider_income),(7,9995))
-        # Independent next pricing scenario; the first fixture no longer
-        # occupies dispatch capacity (no production state transition is tested).
-        Order.objects.filter(pk=order.pk).update(status='COMPLETED')
-        EscortProfile.objects.filter(user__in=self.providers).update(status='AVAILABLE')
-        order = self.dispatch(commission_type='PERCENT',providers=[
-            {'provider_id':self.providers[0].pk,'commission_rate':10},
-            {'provider_id':self.providers[1].pk,'commission_rate':30}])
-        self.assertEqual(list(order.providers.order_by('pk').values_list('commission_rate',flat=True)),[10,30])
-        self.assertEqual(order.provider_income,8002)
-        ProviderQualification.objects.filter(profile__user=self.providers[2]).delete()
-        before = list(Transaction.objects.values_list('pk','amount'))
-        response = self.client.post('/api/admin/orders/dispatch/',{
-            'customer_id':self.boss.pk,'service_id':self.service.pk,'escort_mode':'DOUBLE',
-            'commission_type':'FIXED','commission_fixed':0,
-            'providers':[{'provider_id':self.providers[0].pk},{'provider_id':self.providers[2].pk}]},format='json')
-        self.assertEqual(response.data['code'],400)
-        self.assertEqual(list(Transaction.objects.values_list('pk','amount')),before)
+    def test_dispatch_rejects_every_per_order_override_without_money_movement(self):
+        before = list(Transaction.objects.values_list('pk', 'amount'))
+        count = Order.objects.count()
+        base = {'customer_id': self.boss.pk, 'service_id': self.service.pk,
+                'escort_mode': 'DOUBLE', 'providers': [
+                    {'provider_id': user.pk} for user in self.providers[:2]]}
+        for extra in (
+            {'commission_type': 'FIXED', 'commission_fixed': 7},
+            {'commission_type': 'PERCENT', 'commission_rate': 10},
+            {'commission_type': 'AUTO', 'commission_rate': 0},
+            {'commission_fixed_total': 0},
+            {'providers': [{'provider_id': self.providers[0].pk, 'commission_rate': 10},
+                           {'provider_id': self.providers[1].pk}]},
+            {'providers': [{'provider_id': self.providers[0].pk, 'commission_type': 'FIXED', 'commission_fixed': 0},
+                           {'provider_id': self.providers[1].pk}]},
+        ):
+            with self.subTest(extra=extra):
+                response = self.client.post('/api/admin/orders/dispatch/', {**base, **extra}, format='json')
+                self.assertEqual(response.status_code, 400, response.data)
+                self.assertIn('不允许修改单笔订单抽成', response.data['msg'])
+        self.assertEqual(Order.objects.count(), count)
+        self.assertEqual(list(Transaction.objects.values_list('pk', 'amount')), before)
+
+    def test_quotes_reject_per_order_override_and_allow_automatic(self):
+        for path, params in (
+            ('/api/admin/orders/dispatch-quote/', {'customer_id': self.boss_account.pk, 'service_id': self.service.pk}),
+            ('/api/admin/orders/suggest-commission/', {'service_id': self.service.pk, 'provider_id': self.providers[0].pk}),
+        ):
+            for override in ({'commission_type': 'FIXED', 'commission_fixed': 7},
+                             {'commission_type': 'AUTO', 'commission_rate': 0}):
+                with self.subTest(path=path, override=override):
+                    response = self.client.get(path, {**params, **override})
+                    self.assertEqual(response.status_code, 400, response.data)
+            self.assertEqual(self.client.get(path, {**params, 'commission_type': 'AUTO'}).data['code'], 0)
 
     def test_global_fixed_ordinary_precedes_level_but_keeps_legacy_report_percent(self):
         plain = make_service(commission_policy='FUN')
@@ -198,14 +212,14 @@ class OrderCommissionModeTest(APITestCase):
             self.assertEqual(response.data['code'],400,response.data)
         self.assertEqual(list(Transaction.objects.values_list('pk','amount')),before)
 
-    def test_legacy_double_slot_fixed_keeps_old_per_person_contract(self):
+    def test_legacy_double_slot_fixed_is_no_longer_accepted(self):
         plain=make_service(price=5000,billing_provider_count=2)
         self.service=plain
-        order=self.dispatch(providers=[{'provider_id':self.providers[0].pk,'commission_type':'FIXED','commission_fixed':700},
-            {'provider_id':self.providers[1].pk,'commission_type':'FIXED','commission_fixed':900}])
-        self.assertEqual((order.commission_type,order.commission_fixed,order.commission_override),('PERCENT',0,False))
-        self.assertEqual((order.provider_income,order.shop_income),(8400,1600))
-        self.assertEqual(list(order.providers.order_by('pk').values_list('commission_fixed',flat=True)),[700,900])
+        response=self.client.post('/api/admin/orders/dispatch/', {'customer_id':self.boss.pk,
+            'service_id':plain.pk,'escort_mode':'DOUBLE',
+            'providers':[{'provider_id':self.providers[0].pk,'commission_type':'FIXED','commission_fixed':700},
+                         {'provider_id':self.providers[1].pk,'commission_type':'FIXED','commission_fixed':900}]}, format='json')
+        self.assertEqual(response.status_code, 400)
 
 
 from orders.tests import test_reservation_api as reservations
@@ -235,6 +249,10 @@ from orders.tests import test_transferred_team_refunds as transferred
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',LEGACY_FORCE_AUTH_COMPAT=False,
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True)
 class CommissionSettlementTest(transferred.TransferredFixtures,APITestCase):
+    def setUp(self):
+        super().setUp()
+        EscortProfile.objects.filter(user__in=[self.provider, self.other, self.new]).update(deposit_mode='EARNINGS')
+
     def test_official_dispatch_transfer_approval_and_refund_never_charge_fixed_twice(self):
         service=make_service(price=5000,billing_provider_count=2,commission_override=True,
             commission_type='FIXED',commission_fixed=1001)

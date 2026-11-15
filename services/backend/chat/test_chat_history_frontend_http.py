@@ -36,6 +36,7 @@ class ChatHistoryFrontendHTTPTest(LiveServerTestCase):
         session = client.get('/api/chat/session/').data['data']['session']
         admin = APIClient()
         admin.credentials(HTTP_AUTHORIZATION='Bearer ' + admin_token)
+        self.assertEqual(admin.post(f"/api/admin/chat-sessions/{session['id']}/claim/", {'expected_version': 0}, format='json').data['code'], 0)
         first_id = None
         for index in range(105):
             response = admin.post(f"/api/admin/chat-sessions/{session['id']}/reply/", {'content': f'历史消息 {index:03}'}, format='json')

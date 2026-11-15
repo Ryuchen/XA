@@ -1,0 +1,74 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "api_base": "http://127.0.0.1:18190/api",
+  "passed": true,
+  "checked_at": "2026-10-20T15:19:57.701Z",
+  "observed_successful_batches": 247,
+  "replayed_representative_batches": 9,
+  "selection": "Every ten batch; first and last single per fixture actor",
+  "cases": [
+    {
+      "case": "normal",
+      "batch_id": 1,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "normal",
+      "batch_id": 2,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "single240",
+      "batch_id": 3,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "cross240",
+      "batch_id": 4,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "tenth240",
+      "batch_id": 5,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "full240",
+      "batch_id": 6,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "full240",
+      "batch_id": 245,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "guard",
+      "batch_id": 246,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    },
+    {
+      "case": "early",
+      "batch_id": 247,
+      "replay_status": 200,
+      "conflict_status": 400,
+      "financial_snapshot_unchanged": true
+    }
+  ]
+}

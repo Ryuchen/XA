@@ -2,6 +2,25 @@
 
 验收日期：2026-09-23。当前工作区已在本机 WSL 2 中构建并运行完整容器环境，使用真实 MySQL、Redis、Daphne、Celery、Caddy、管理端和陪玩 H5。老板端使用微信开发者工具运行原生小程序，已连接此后端。
 
+## 本机固定地址与端口（2026-11-03 核对）
+
+WSL 采用 mirrored 网络，局域网地址可能随网络变化。项目在本机统一使用固定回环地址 `127.0.0.1`，不依赖发行版的局域网 IP；以下端口仅供本机访问。
+
+| 服务 | 固定地址 | 说明 |
+| --- | --- | --- |
+| WSL MySQL | `127.0.0.1:13306` | 本地验证库，容器内使用 `db:3306` |
+| WSL Redis | `127.0.0.1:16380` | 本地验证栈，容器内使用 `redis:6379` |
+| WSL 容器 API 和 WebSocket 网关 | `127.0.0.1:18080` | 容器镜像版本，接口以 `/api/` 开头 |
+| WSL 容器管理端 | `127.0.0.1:18081` | 镜像版本，修改源码后需重建镜像 |
+| WSL 容器陪玩端 | `127.0.0.1:18082` | 镜像版本，修改源码后需重建镜像 |
+| Windows 热更新开发 API | `127.0.0.1:18101` | 独立于容器网关；当前小程序开发配置和热更新前端指向此地址 |
+| 管理端热更新预览 | `127.0.0.1:13032` | 开发进程需单独启动 |
+| 陪玩端热更新预览 | `127.0.0.1:13033` | 开发进程需单独启动 |
+
+另有独立的预览 Redis 使用 `127.0.0.1:16379`，不应与验证栈的 `16380` 混用。业务容器通过 Compose 服务名访问依赖，不需要固定容器 IP。固定端口由 `deploy/compose.local-validation.yml` 声明，并由 `deploy/local-validation.sh config` 校验；不要通过局域网动态地址连接。Docker 和现有业务容器配置了重启策略，但 Windows 重启后仍需启动 WSL，热更新开发进程也需单独启动。`up` 会按现有配置启动容器，不删除数据库或媒体卷；它不会启动 Windows 热更新进程。
+
+2026-11-03 已从 Windows 实测 MySQL、两个 Redis 端口及网关端口可连接；容器 MySQL、Redis 健康，网关 API 和两个镜像页面返回 HTTP 200，开发 API `18101` 返回 HTTP 200。未在本次执行 Windows 或 WSL 重启验收。
+
 ## 访问与账号
 
 | 入口 | 本机地址 |
@@ -112,7 +131,7 @@ bash deploy/local-validation.sh build
 
 ## 隔离与微信凭据
 
-Compose 项目固定 xa-local-validation，数据库 xa_verify 使用非 root 的同名应用账号。数据库、Redis 不映射宿主端口；只有网关的 18080/18081/18082 绑定 127.0.0.1。.tools/local-validation.env 使用随机本地密码并被 Git 忽略。
+Compose 项目固定 xa-local-validation，数据库 xa_verify 使用非 root 的同名应用账号。MySQL、Redis 和网关端口均仅绑定本机回环地址，具体端口见文首固定地址表。.tools/local-validation.env 使用随机本地密码并被 Git 忽略。
 
 用户提供的 AppID 与小程序项目一致，微信官方稳定 token 接口验证返回错误码 0。AppSecret 保存在 WSL /etc/xa-local-validation/wechat.env，目录 root 700、文件 root 600。Windows 仅保留 .tools/wechat.local.env.dpapi 当前用户加密备份，工作区明文副本已删除。脚本自动叠加 deploy/compose.local-wechat.yml，仅在后端运行时注入，未写入前端或镜像。
 

@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from unittest import skipUnless
+from urllib.parse import urlsplit
 
 from django.db import close_old_connections, connection
 from django.test import override_settings
@@ -37,8 +38,17 @@ class LegacyReportOwnershipFlowTest(APITransactionTestCase):
         reports = self.ok(self.client.get('/api/wallet/reports/'))
         own = next(row for row in reports if row['id'] == report.pk)
         self.assertTrue(own['can_edit'])
+        for key in ('entry_image_url', 'completion_image_url'):
+            self.assertIn('/api/media/private/', own[key])
+            image = self.client.get(urlsplit(own[key]).path)
+            self.assertEqual(image.status_code, 200)
+            self.assertTrue(b''.join(image.streaming_content).startswith(b'\x89PNG'))
         self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/images/',
                                  {'kind': 'RESULT', 'image': flow.screenshot()}, format='multipart'))
+        own = next(row for row in self.ok(self.client.get('/api/wallet/reports/')) if row['id'] == report.pk)
+        image = self.client.get(urlsplit(own['result_images'][0]['url']).path)
+        self.assertEqual(image.status_code, 200)
+        self.assertTrue(b''.join(image.streaming_content).startswith(b'\x89PNG'))
         submitted = self.ok(self.client.post(f'/api/wallet/reports/{report.pk}/submit/', {}, format='json'))
         self.assertEqual(submitted['status'], 'PENDING')
         self.login(self.admin)

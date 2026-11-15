@@ -7,7 +7,7 @@
 * R4 取消 / R5 确认 / R6 拒绝（角色 + 状态机白名单）
 * R7 转订单（扣款、分账、派单、幂等、状态回填）
 
-金额一律内部账务单位整数（10 = 1 兴安币）。
+金额一律内部账务单位整数（10 = 1 浪花）。
 """
 
 from datetime import timedelta
@@ -50,13 +50,17 @@ class ReservationApiTestBase(APITestCase):
     """公共夹具：一个老板、一个陪玩、一个服务项，钱包按需注资。"""
 
     def setUp(self):
+        from console.reservation_deadlines import save_deadlines
+        save_deadlines(30, 60, 0, lambda *_: None)
         self.boss = make_user()
         self.boss_account = get_or_create_account_for_legacy_user(self.boss)
         link_legacy_relations(self.boss, self.boss_account)
         make_wallet(self.boss, balance=100000)
         Wallet.objects.filter(user=self.boss).update(account=self.boss_account)
 
-        self.provider = make_provider()
+        # Use a legitimately eligible earnings-deposit provider; the tests
+        # below exercise reservation behavior rather than cash-deposit denial.
+        self.provider = make_provider(deposit_mode='EARNINGS')
         self.provider_account = get_or_create_account_for_legacy_user(self.provider)
         link_legacy_relations(self.provider, self.provider_account)
         EscortProfile.objects.filter(user=self.provider).update(
@@ -258,12 +262,12 @@ class ReservationCreateApiTest(ReservationApiTestBase):
         self.assertEqual(res.data['code'], 400)
         self.assertIn('晚于开始时间', res.data['msg'])
 
-    def test_rejects_too_short_window(self):
+    def test_accepts_quarter_hour_window(self):
         res = self.client.post(LIST_URL, self.create_payload(
             end_time=iso(slot(hour=10, minute=15)),
         ))
-        self.assertEqual(res.data['code'], 400)
-        self.assertIn('30 分钟', res.data['msg'])
+        self.assertEqual(res.data['code'], 0, res.data)
+        self.assertEqual(res.data['data']['duration_minutes'], 15)
 
     def test_rejects_beyond_advance_limit(self):
         res = self.client.post(LIST_URL, self.create_payload(
@@ -370,12 +374,14 @@ class ReservationTransitionApiTest(ReservationApiTestBase):
     def test_boss_cannot_confirm(self):
         res = self.client.post(self.confirm_url, {})
         self.assertEqual(res.data['code'], 403)
-        self.assertIn('仅被预约的大神', res.data['msg'])
+        self.assertIn('仅被预约的陪玩本人', res.data['msg'])
 
-    def test_staff_can_confirm(self):
+    def test_staff_cannot_confirm_or_reject_for_provider(self):
         self.client.force_authenticate(self.staff)
-        res = self.client.post(self.confirm_url, {})
-        self.assertEqual(res.data['code'], 0)
+        self.assertEqual(self.client.post(self.confirm_url, {}).data['code'], 403)
+        self.assertEqual(self.client.post(self.reject_url, {'reason': '档期调整'}).data['code'], 403)
+        self.reservation.refresh_from_db()
+        self.assertEqual(self.reservation.status, Reservation.Status.PENDING)
 
     def test_double_confirm_returns_409(self):
         self.client.force_authenticate(self.provider)
@@ -534,7 +540,7 @@ class ReservationConvertApiTest(ReservationApiTestBase):
         Wallet.objects.filter(user=self.boss).update(balance=100)
         res = self.client.post(self.convert_url, {})
         self.assertEqual(res.data['code'], 400)
-        self.assertIn('兴安币不足', res.data['msg'])
+        self.assertIn('浪花不足', res.data['msg'])
         self.assertFalse(Order.objects.exists())
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.status, Reservation.Status.CONFIRMED)

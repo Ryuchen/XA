@@ -1,5 +1,6 @@
 """Committed wallet changes invalidate only the owner and authorized reviewers."""
 from datetime import timedelta
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
@@ -18,7 +19,7 @@ from config.asgi import application
 from orders.models import Order
 from orders.tests.factories import make_console_user, make_order, make_provider, make_service, make_user
 from wallet.income import hold_provider_income, release_due_income
-from wallet.models import IncomeHold, ProviderReport, Transaction, Wallet, WithdrawRequest, get_platform_wallet
+from wallet.models import IncomeHold, ProviderReport, ProviderReportImage, SystemConfig, Transaction, Wallet, WithdrawRequest, get_platform_wallet
 from wallet.notifier import notify_wallet_update, notify_withdraw_update, owner_account_id
 from wallet.services import get_wallet
 
@@ -73,7 +74,7 @@ class WalletFixtures:
         return events
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, LOGIN_OTP_REQUIRED=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, LOGIN_OTP_REQUIRED=False, PLATFORM_IDENTITY_ENABLED=True)
 class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
     def setUp(self):
         self.user, self.account, self.wallet = self.owner()
@@ -82,6 +83,17 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
         self.client = self.client_for(self.account)
         admin, _ = self.reviewer(['wallet:view', 'withdraw:view', 'withdraw:audit'])
         self.admin = self.client_for(admin)
+        from stores.models import PlatformAccount, PlatformRoleGrant
+        from stores.platform_auth import issue_tokens
+        finance = PlatformAccount(username='realtime-finance', phone='13800001111', is_phone_verified=True)
+        finance.set_password('test-only-password'); finance.save()
+        PlatformRoleGrant.objects.create(account=finance, role='FINANCE', scope_slug='shenglang')
+        self.finance = APIClient(HTTP_HOST='admin.esports.club')
+        self.finance.credentials(HTTP_AUTHORIZATION='Bearer '+issue_tokens(finance, 'SMS', finance.phone)[0])
+        SystemConfig.objects.update_or_create(key='withdraw_tax_rate', defaults={'value':'2'})
+        self.media = TemporaryDirectory(prefix='xa-wallet-realtime-')
+        self.addCleanup(self.media.cleanup)
+        self.enterContext(override_settings(MEDIA_ROOT=self.media.name))
         self.layer = RecordingLayer()
         self.enterContext(patch('wallet.notifier.get_channel_layer', return_value=self.layer))
 
@@ -109,7 +121,7 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
         self.assertEqual(Transaction.objects.filter(wallet=self.wallet, tx_type='WITHDRAW').count(), 1)
 
     def test_approval_and_rejection_notify_after_commit_without_duplicate_money(self):
-        for action, expected_status in (('approve', 'APPROVED'), ('reject', 'REJECTED')):
+        for action in ('paid', 'store_reject', 'finance_reject'):
             with self.subTest(action=action):
                 with self.captureOnCommitCallbacks(execute=True):
                     row = self.create(action)
@@ -119,22 +131,65 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
                 self.wallet.refresh_from_db()
                 before = self.wallet.balance
                 self.layer.sent.clear()
-                data = {'payout_reference': 'LOCAL_SIMULATED_PAYOUT'} if action == 'approve' else {'audit_remark': '本地驳回回归'}
-                data['expected_claimed_at'] = claim['data']['claimed_at']
+                data = {'expected_claimed_at': claim['data']['claimed_at']}
+                if action == 'store_reject':
+                    data['audit_remark'] = '本地驳回回归'
                 with self.captureOnCommitCallbacks(execute=True):
-                    response = self.admin.post(f'/api/admin/withdrawals/{row.pk}/{action}/', data, format='json')
+                    stage = 'reject' if action == 'store_reject' else 'approve'
+                    response = self.admin.post(f'/api/admin/withdrawals/{row.pk}/{stage}/', data, format='json')
                     self.assertEqual(response.data['code'], 0, response.data)
                     self.assertEqual(self.layer.sent, [])
                 row.refresh_from_db()
-                self.assertEqual(row.status, expected_status)
-                self.assertCountEqual(self.layer.sent, self.expected(self.wallet, self.account, row))
+                self.assertEqual(row.status, 'REJECTED' if action == 'store_reject' else 'STORE_APPROVED')
+                expected = self.expected(self.wallet, self.account, row)
+                self.assertCountEqual(self.layer.sent, expected if action == 'store_reject' else expected[2:])
                 self.wallet.refresh_from_db()
-                self.assertEqual((self.wallet.balance, self.wallet.frozen_amount), (before + (row.amount if action == 'reject' else 0), 0))
+                self.assertEqual((self.wallet.balance, self.wallet.frozen_amount),
+                    (before + row.amount, 0) if action == 'store_reject' else (before, row.amount))
+                row.transaction.refresh_from_db()
+                self.assertEqual(row.transaction.status, 'FAILED' if action == 'store_reject' else 'PENDING')
                 self.assertEqual(row.actual_amount + row.tax_amount, row.amount)
                 self.layer.sent.clear()
                 with self.captureOnCommitCallbacks(execute=True):
-                    duplicate = self.admin.post(f'/api/admin/withdrawals/{row.pk}/{action}/', data, format='json')
+                    duplicate = self.admin.post(f'/api/admin/withdrawals/{row.pk}/{stage}/', data, format='json')
                 self.assertNotEqual(duplicate.data['code'], 0)
+                self.assertEqual(self.layer.sent, [])
+                if action == 'store_reject':
+                    continue
+                url=f'/api/admin/platform/withdrawals/shenglang/{row.pk}/'
+                if action == 'finance_reject':
+                    final_action='reject'
+                    final_data={'client_request_id':'realtime-reject', 'reason':'核实未打款', 'confirmed_unpaid':True}
+                else:
+                    with self.captureOnCommitCallbacks(execute=True):
+                        reviewed=self.finance.post(url+'approve', {'client_request_id':'realtime-review'}, format='json')
+                        self.assertEqual(reviewed.data['code'], 0, reviewed.data)
+                        self.assertEqual(self.layer.sent, [])
+                    row.refresh_from_db()
+                    self.assertEqual(row.status, 'PLATFORM_APPROVED')
+                    row.transaction.refresh_from_db(); self.wallet.refresh_from_db()
+                    self.assertEqual((row.transaction.status, self.wallet.frozen_amount), ('PENDING', row.amount))
+                    self.assertFalse(Transaction.objects.filter(tx_type='WITHDRAW_TAX').exists())
+                    self.assertCountEqual(self.layer.sent, self.expected(self.wallet, self.account, row)[2:])
+                    self.layer.sent.clear()
+                    final_action='paid'
+                    final_data={'client_request_id':'realtime-paid', 'payout_reference':'LOCAL_SIMULATED_PAYOUT',
+                                'paid_at':timezone.now().isoformat()}
+                with self.captureOnCommitCallbacks(execute=True):
+                    result=self.finance.post(url+final_action, final_data, format='json')
+                    self.assertEqual(result.data['code'], 0, result.data)
+                    self.assertEqual(self.layer.sent, [])
+                row.refresh_from_db(); self.wallet.refresh_from_db()
+                self.assertEqual(row.status, 'PAID' if action == 'paid' else 'REJECTED')
+                row.transaction.refresh_from_db()
+                self.assertEqual(row.transaction.status, 'SUCCESS' if action == 'paid' else 'FAILED')
+                self.assertEqual((self.wallet.balance, self.wallet.frozen_amount),
+                                 (before, 0) if action == 'paid' else (before+row.amount, 0))
+                self.assertCountEqual(self.layer.sent, self.expected(self.wallet, self.account, row))
+                self.layer.sent.clear()
+                with self.captureOnCommitCallbacks(execute=True):
+                    replay=self.finance.post(url+final_action, final_data, format='json')
+                self.assertTrue(replay.data['data']['replayed'])
                 self.assertEqual(self.layer.sent, [])
         self.assertEqual(Transaction.objects.filter(tx_type='WITHDRAW_TAX').count(), 1)
         self.assertEqual(get_platform_wallet().balance, 400)
@@ -162,7 +217,7 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
         with self.captureOnCommitCallbacks(execute=True):
             with self.assertRaisesRegex(RuntimeError, 'rollback audit'):
                 with transaction.atomic():
-                    response = self.admin.post(f'/api/admin/withdrawals/{row.pk}/approve/', {'payout_reference': 'LOCAL_TEST', 'expected_claimed_at': claim['data']['claimed_at']}, format='json')
+                    response = self.admin.post(f'/api/admin/withdrawals/{row.pk}/approve/', {'expected_claimed_at': claim['data']['claimed_at']}, format='json')
                     self.assertEqual(response.data['code'], 0)
                     raise RuntimeError('rollback audit')
         self.assertEqual(self.layer.sent, [])
@@ -212,8 +267,9 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
         self.assertEqual((self.wallet.balance, self.wallet.frozen_amount), (52000, 0))
         self.assertEqual(Transaction.objects.filter(tx_type='EARNINGS_RELEASE').count(), 1)
 
-    def test_real_report_settlement_waits_72h_then_freezes_and_invalidates_once(self):
+    def test_report_and_aftersale_clocks_overlap_and_invalidate_once_at_settlement(self):
         from engagement.confirmation import process_order
+        from orders.tests.test_release_flow import screenshot
         boss = make_user()
         boss_account = get_or_create_account_for_legacy_user(boss)
         boss_wallet = get_wallet(account=boss_account, user=boss)
@@ -227,16 +283,18 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
             settlement_mode='REPORT_APPROVAL', commission_rate=20,
             provider_income=8000, shop_income=2000,
         )
-        order.income_hold_hours = 72
-        order.save(update_fields=['income_hold_hours'])
+        Order.objects.filter(pk=order.pk).update(service_clock_version=1, service_aftersale_hours=72,
+                                                  service_freeze_hours=72, service_deposit_percent=60)
         Transaction.objects.create(wallet=boss_wallet, order=order, tx_type='PAY', amount=-10000,
                                    balance_before=100000, balance_after=90000)
-        ProviderReport.objects.create(
+        report = ProviderReport.objects.create(
             provider=self.user, provider_account=self.account, order=order,
-            game_name='本地结算样例', amount=10000, status='APPROVED',
+            game_name='本地结算样例', amount=10000, payout_amount=8000, commission_rate=20, status='APPROVED',
+            entry_image=screenshot(), completion_image=screenshot(),
             submitted_at=completed + timedelta(seconds=1),
         )
-        boundary = completed + timedelta(hours=72)
+        ProviderReportImage.objects.create(report=report, image=screenshot())
+        boundary = report.submitted_at + timedelta(hours=72)
         with self.captureOnCommitCallbacks(execute=True):
             with patch('django.utils.timezone.now', return_value=boundary - timedelta(microseconds=1)):
                 self.assertFalse(process_order(order.pk))
@@ -252,11 +310,10 @@ class WalletMutationRealtimeTest(WalletFixtures, APITestCase):
         order.refresh_from_db()
         self.wallet.refresh_from_db()
         self.assertIsNotNone(order.settled_at)
-        self.assertEqual((self.wallet.balance, self.wallet.frozen_amount), (50000, 8000))
-        hold = IncomeHold.objects.get(income_transaction__order=order)
-        self.assertEqual(hold.release_at, boundary + timedelta(hours=72))
+        self.assertEqual((self.wallet.balance, self.wallet.frozen_amount), (58000, 0))
+        self.assertFalse(IncomeHold.objects.filter(income_transaction__order=order).exists())
         self.assertEqual(Transaction.objects.filter(order=order, tx_type='INCOME').count(), 1)
-        self.assertEqual(sum(Transaction.objects.filter(order=order).values_list('amount', flat=True)) + hold.amount, 0)
+        self.assertEqual(sum(Transaction.objects.filter(order=order).values_list('amount', flat=True)), 0)
 
     def test_income_freeze_rollback_discards_money_and_notification(self):
         with self.captureOnCommitCallbacks(execute=True):

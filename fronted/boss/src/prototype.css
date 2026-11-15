@@ -1,0 +1,310 @@
+
+.boss-page-title { align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+.boss-page-title h1 { font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: -.03em; }
+.boss-page-title p { margin-top: 8px; font-size: 14px; line-height: 24px; }
+.boss-page-title-action { display: flex; flex-shrink: 0; align-items: center; gap: 8px; }
+.boss-page-title-action > [data-slot="button"] { min-height: 44px; }
+.boss-back-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; margin: -8px 0 12px -12px; font-size: 14px; border-radius: 8px; }
+.boss-back-link:hover { background: var(--accent); }
+.boss-panel { padding: 20px; border-radius: 12px; }
+.boss-panel > h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.boss-info { gap: 0; }
+.boss-info > div { display: flex; align-items: start; justify-content: space-between; gap: 12px; min-height: 44px; padding-block: 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+.boss-info > div:last-child { border-bottom: 0; }
+.boss-info dt { flex-shrink: 0; }
+.boss-info dd { max-width: 70%; text-align: right; }
+.boss-form { gap: 16px; }
+.boss-field > label, .boss-field > span { font-size: 14px; }
+.boss-form [data-slot="input"], .boss-form [data-slot="select-trigger"] { min-height: 44px; }
+.boss-form [data-slot="textarea"] { min-height: 88px; }
+.boss-columns { grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; }
+.boss-tabs { width: 100%; gap: 0; padding: 4px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 60%, transparent); }
+.boss-tabs > [data-slot="button"] { flex: 1; min-height: 44px; border-radius: 6px; font-size: 14px; padding-inline: 16px; }
+.boss-tabs > [data-variant="secondary"] { background: var(--background); color: var(--foreground); box-shadow: 0 1px 2px #0206170d; }
+.boss-context-banner { display: flex; align-items: center; gap: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent); border-radius: 12px; background: color-mix(in oklab, var(--primary) 5%, transparent); }
+.boss-context-banner > svg { flex-shrink: 0; color: var(--boss-link); }
+.boss-section-heading p { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+.boss-section-heading h2 { font-size: 16px; font-weight: 600; }
+.boss-section-heading h2 small { font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.boss-link-color { color: var(--boss-link); }
+.boss-content[data-page="home"] > .boss-page-title h1 { font-size: 20px; }
+.boss-content[data-page="home"] > .boss-page-title p { font-size: 12px; line-height: 20px; margin-top: 4px; }
+.boss-home-hero { padding: 20px; }
+.boss-home-hero h2 { font-size: 28px; line-height: 1.22; letter-spacing: -.04em; }
+.boss-home-hero p { font-size: 13px; margin-top: 12px; line-height: 20px; }
+.boss-home-hero [data-slot="button"] { margin-top: 20px; border-radius: 8px; width: 100%; }
+.boss-home-hero-art { width: 96px; height: 96px; right: 24px; top: 24px; opacity: .15; }
+.boss-home-shortcuts { padding: 0; }
+.boss-service-progress { padding: 20px; border-radius: 12px; }
+.boss-catalog-header, .boss-companions-header { margin: -12px 0 20px; padding: 16px 0 20px; }
+.boss-catalog-header h1, .boss-companions-header h1 { font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: -.04em; }
+.boss-catalog-header > p { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+.boss-catalog-header .search-shell, .boss-companions-header .search-shell { margin-top: 20px; }
+.boss-companions-header > div:first-child { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.boss-companions-header > div:first-child > svg { box-sizing: content-box; padding: 12px; border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent); border-radius: 8px; color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-game-filter { margin-bottom: 20px; }
+.boss-game-filter > p { font-size: 12px; color: var(--muted-foreground); font-weight: 500; margin-bottom: 8px; }
+.boss-horizontal-options { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.boss-horizontal-options > button { display: flex; flex-shrink: 0; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); font-size: 12px; font-weight: 500; }
+.boss-horizontal-options > button[aria-pressed="true"] { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
+.boss-catalog-filters { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 16px; background: color-mix(in oklab, var(--card) 60%, transparent); }
+.boss-catalog-filters summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; cursor: pointer; font-size: 12px; color: var(--muted-foreground); list-style: none; }
+.boss-catalog-filters summary > span:last-child { display: flex; align-items: center; gap: 8px; }
+.boss-catalog-filters details[open] > .boss-filter { border-top: 1px solid var(--border); padding-top: 12px; }
+.boss-catalog-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.boss-catalog-tabs > button { flex-shrink: 0; min-height: 44px; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+.boss-catalog-tabs > button[aria-pressed="true"] { color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-catalog-results { border-top: 1px solid var(--border); padding-top: 16px; }
+.boss-catalog-results > .boss-field { max-width: 180px; }
+.boss-catalog-results > .boss-field > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.boss-catalog-list { display: grid; gap: 12px; }
+.boss-service-card { overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.boss-service-card:hover { border-color: color-mix(in oklab, var(--primary) 30%, var(--border)); }
+.boss-service-card-main { display: flex; gap: 12px; padding: 12px; }
+.boss-service-thumb { width: 96px; height: 112px; flex-shrink: 0; object-fit: cover; border-radius: 12px; }
+.boss-service-card-content { display: flex; flex: 1; min-width: 0; flex-direction: column; padding-block: 4px; }
+.boss-service-card-title { display: flex; gap: 8px; align-items: start; }
+.boss-service-card-title h3 { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.boss-service-card-title > svg { flex-shrink: 0; color: var(--muted-foreground); }
+.boss-service-card-content > p { font-size: 12px; line-height: 20px; color: var(--muted-foreground); margin-top: 4px; }
+.boss-service-card-content .boss-actions { margin-top: 8px; gap: 6px; }
+.boss-service-card-content [data-slot="badge"] { max-width: 100%; white-space: normal; font-size: 12px; height: auto; min-height: 20px; }
+.boss-service-card-content .boss-price { margin-top: auto; padding-top: 8px; font-size: 20px; }
+.boss-companion-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 20px; }
+.boss-companion-filters .boss-field { gap: 0; position: relative; }
+.boss-companion-filters label { position: absolute; top: 7px; left: 12px; font-size: 12px; font-weight: 400; color: var(--muted-foreground); z-index: 1; pointer-events: none; }
+.boss-companion-filters [data-slot="select-trigger"] { min-height: 56px; padding-top: 24px; padding-left: 12px; padding-bottom: 8px; font-size: 12px; border-radius: 8px; }
+.boss-companion-switches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 448px; margin-bottom: 20px; }
+.boss-companion-switches > button { min-height: 48px; border-radius: 8px; padding-inline: 12px; font-size: 12px; }
+.boss-companion-switches > button[aria-pressed="true"] { color: var(--boss-link); border-color: var(--primary); background: color-mix(in oklab, var(--primary) 5%, transparent); }
+.boss-check { display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 50%; margin-left: auto; }
+.boss-check.selected { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+.boss-companion-results { border-top: 1px solid var(--border); padding-top: 16px; }
+.boss-companion-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.boss-companion-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--card); min-width: 0; }
+.boss-companion-identity { display: flex; align-items: center; gap: 12px; }
+.boss-companion-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.boss-companion-name { display: flex; min-width: 0; min-height: 56px; flex: 1; flex-direction: column; justify-content: center; gap: 4px; }
+.boss-companion-name > span { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.boss-companion-name strong { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.boss-companion-name small { font-size: 12px; color: var(--muted-foreground); }
+.boss-available { color: var(--success); border-color: color-mix(in oklab, var(--success) 25%, transparent); background: color-mix(in oklab, var(--success) 10%, transparent); }
+.boss-companion-tags { margin-top: 12px; gap: 6px; }
+.boss-companion-tags [data-slot="badge"] { white-space: normal; }
+.boss-companion-bio { font-size: 12px; line-height: 20px; color: var(--muted-foreground); margin-top: 12px; }
+.boss-companion-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; color: var(--muted-foreground); margin-top: 12px; }
+.boss-companion-facts > span { display: flex; align-items: center; gap: 4px; }
+.boss-companion-facts > span:empty { display: none; }
+.boss-companion-card > audio { width: 100%; height: 40px; margin-top: 12px; }
+.boss-companion-prices { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+.boss-companion-prices > div { min-width: 0; }
+.boss-companion-prices small { display: block; font-size: 12px; color: var(--muted-foreground); }
+.boss-companion-prices strong { display: block; font-size: 14px; margin-top: 4px; font-weight: 600; }
+.boss-companion-prices strong small { display: inline; font-weight: 400; }
+.boss-companion-prices .right { margin-left: auto; text-align: right; }
+.boss-companion-card-action { margin-top: 16px; }
+.boss-companion-card-action > [data-slot="button"] { width: 100%; min-height: 44px; border-radius: 8px; }
+.boss-picker-service { border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; color: white; background: #0f172a; }
+.boss-picker-service h2 { font-size: 18px; font-weight: 600; margin-top: 6px; }
+.boss-picker-service p { font-size: 12px; color: #bae6fd; margin-top: 4px; }
+.boss-picker-service .boss-actions { margin-top: 16px; }
+.boss-order-filter-summary { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 12px; margin: -8px 0 24px; }
+.boss-order-filter-summary > span { font-size: 12px; color: var(--muted-foreground); }
+.boss-order-filter-summary > button { min-height: 44px; border-radius: 8px; }
+.boss-orders-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.boss-order-card { min-width: 0; min-height: 232px; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 20px; }
+.boss-order-card-number { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boss-order-card-number > span:first-child { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-family: var(--app-font-sans); color: var(--muted-foreground); }
+.boss-status-badge { display: inline-flex; align-items: center; flex-shrink: 0; gap: 6px; border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; }
+.boss-status-badge > span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.boss-status-warning { color: var(--warning-foreground); background: color-mix(in oklab, var(--warning) 10%, transparent); border-color: color-mix(in oklab, var(--warning) 25%, transparent); }
+.dark .boss-status-warning { color: var(--warning); }
+.boss-status-success { color: var(--success); background: color-mix(in oklab, var(--success) 10%, transparent); border-color: color-mix(in oklab, var(--success) 25%, transparent); }
+.boss-status-primary { color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); border-color: color-mix(in oklab, var(--primary) 25%, transparent); }
+.boss-status-muted { color: var(--muted-foreground); background: color-mix(in oklab, var(--muted) 50%, transparent); }
+.boss-order-card-service { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-top: 16px; }
+.boss-order-card-service > div:first-child { min-width: 0; }
+.boss-order-card-service > div:last-child { text-align: right; flex-shrink: 0; }
+.boss-order-card-service p { font-size: 12px; color: var(--muted-foreground); }
+.boss-order-card-service h2 { font-size: 16px; line-height: 24px; font-weight: 600; margin-top: 4px; overflow-wrap: anywhere; }
+.boss-order-card-service strong { font-size: 20px; font-weight: 600; display: block; margin-top: 4px; }
+.boss-order-card-service small { font-size: 12px; font-weight: 400; margin-left: 4px; color: var(--muted-foreground); }
+.boss-order-card-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 40%, transparent); padding: 12px; margin-top: 16px; font-size: 12px; }
+.boss-order-card-meta span { display: block; color: var(--muted-foreground); }
+.boss-order-card-meta strong { display: block; margin-top: 4px; font-weight: 500; overflow-wrap: anywhere; }
+.boss-order-card-note { margin-top: 12px; padding: 12px; font-size: 12px; border-radius: 8px; background: color-mix(in oklab, var(--warning) 5%, transparent); color: var(--warning-foreground); }
+.boss-order-card-refund { margin-top: 12px; font-size: 12px; color: var(--success); }
+.boss-order-card-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding-top: 12px; margin-top: 16px; border-top: 1px solid var(--border); }
+.boss-order-card-footer > p { min-width: 0; font-size: 12px; color: var(--muted-foreground); }
+.boss-order-card-footer .boss-actions > a { display: flex; align-items: center; color: var(--boss-link); font-size: 12px; }
+.boss-next-reservation { display: flex; align-items: start; gap: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid color-mix(in oklab, var(--primary) 15%, transparent); border-radius: 12px; background: color-mix(in oklab, var(--primary) 5.5%, transparent); }
+.boss-next-reservation > svg { flex-shrink: 0; color: var(--boss-link); }
+.boss-next-reservation > div { flex: 1; min-width: 0; }
+.boss-next-reservation h2 { font-size: 14px; font-weight: 600; }
+.boss-next-reservation strong { display: block; margin-top: 8px; font-size: 18px; font-weight: 600; }
+.boss-next-reservation p { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+.boss-reservations-list { display: grid; gap: 16px; margin-bottom: 24px; }
+.boss-reservation-card { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(180px, .85fr) 120px 20px; align-items: center; gap: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.boss-reservation-number { display: block; font-size: 12px; font-family: var(--app-font-sans); color: var(--muted-foreground); overflow-wrap: anywhere; }
+.boss-reservation-service h2 { font-size: 16px; font-weight: 600; }
+.boss-reservation-service > .boss-actions { margin-top: 8px; }
+.boss-reservation-service > p { font-size: 12px; color: var(--muted-foreground); margin-top: 8px; }
+.boss-reservation-time > span, .boss-reservation-amount > span { display: block; font-size: 12px; color: var(--muted-foreground); }
+.boss-reservation-time > strong { display: block; font-size: 14px; font-weight: 600; margin-top: 4px; }
+.boss-reservation-time > small { display: block; font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+.boss-reservation-amount { text-align: right; }
+.boss-reservation-amount strong { display: block; font-size: 18px; font-weight: 600; margin-top: 4px; }
+.boss-reservation-amount small { font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.boss-reservation-arrow { color: var(--muted-foreground); }
+.boss-reservation-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+.boss-reservation-status { padding: 24px; border-radius: 12px; background: color-mix(in oklab, var(--primary) 5%, var(--card)); border: 1px solid color-mix(in oklab, var(--primary) 20%, var(--border)); margin-bottom: 24px; }
+.boss-reservation-status h2 { font-size: 20px; font-weight: 600; margin-top: 16px; }
+.boss-reservation-status strong { display: block; font-size: 24px; font-weight: 600; margin-top: 16px; }
+.boss-reservation-status p { color: var(--muted-foreground); font-size: 14px; margin-top: 8px; }
+.boss-service-detail-hero { padding: 24px; border-radius: 12px; background: #0f172a; color: #fff; margin-bottom: 16px; }
+.boss-service-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boss-service-detail-heading p { font-size: 14px; color: #e2e8f0; }
+.boss-service-detail-heading span { display: block; font-size: 12px; color: #cbd5e1; margin-top: 4px; }
+.boss-service-detail-heading > svg { box-sizing: content-box; padding: 12px; border: 1px solid #ffffff26; border-radius: 8px; background: #ffffff1a; }
+.boss-service-detail-hero h1 { margin-top: 32px; font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: -.03em; }
+.boss-service-detail-hero > p { margin-top: 12px; font-size: 14px; line-height: 24px; color: #cbd5e1; }
+.boss-service-detail-price { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px; padding-top: 24px; }
+.boss-service-detail-price strong { font-size: 32px; font-weight: 600; }
+.boss-service-detail-price small { margin-left: 8px; font-size: 12px; font-weight: 400; color: #cbd5e1; }
+.boss-service-detail-price [data-slot="badge"] { color: white; background: #ffffff1a; border-color: #ffffff26; }
+.boss-service-detail-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.boss-service-detail-facts .boss-panel { margin-bottom: 16px; }
+.boss-service-detail-facts h2 { margin-bottom: 16px; font-size: 12px; color: var(--muted-foreground); }
+.boss-service-detail-facts svg { color: var(--boss-link); }
+.boss-service-detail-facts p { font-size: 14px; font-weight: 600; margin-top: 12px; }
+.boss-variant-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.boss-variant-grid > button { min-height: 84px; text-align: left; padding: 12px; background: color-mix(in oklab, var(--muted) 35%, transparent); border: 1px solid var(--border); border-radius: 8px; }
+.boss-variant-grid > button[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-variant-grid span { display: block; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.boss-variant-grid strong { display: block; margin-top: 8px; font-size: 18px; color: var(--boss-link); }
+.boss-variant-grid small { display: block; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.boss-service-actionbar { display: grid; gap: 8px; }
+.boss-profile-edit { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 24px; align-items: start; }
+.boss-profile-edit > .boss-panel { display: grid; gap: 16px; }
+.boss-profile-edit .boss-list-row { flex-direction: column; align-items: start; border-bottom: 0; padding: 0; }
+.boss-profile-edit .boss-list-row .boss-field { width: 100%; }
+.boss-profile-edit .boss-avatar { width: 80px; height: 80px; border-radius: 12px; }
+.boss-profile-edit > div > .boss-panel { display: grid; gap: 16px; }
+.boss-content[data-page="coupons"] > .boss-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.boss-coupon-card { display: flex; overflow: hidden; min-width: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.boss-coupon-benefit { display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; width: 96px; padding: 16px; font-size: 24px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; text-align: center; color: var(--boss-link); }
+.boss-coupon-body { flex: 1; min-width: 0; padding: 16px; border-left: 1px dashed var(--border); }
+.boss-coupon-body > h2 { font-size: 16px; line-height: 24px; font-weight: 600; overflow-wrap: anywhere; }
+.boss-coupon-threshold { margin-top: 8px; font-size: 14px; font-weight: 500; }
+.boss-coupon-body > .boss-muted { font-size: 12px; line-height: 20px; margin-top: 8px; }
+.boss-coupon-details { margin-top: 12px; }
+.boss-coupon-details summary { cursor: pointer; min-height: 44px; font-size: 14px; color: var(--muted-foreground); }
+.boss-coupon-details .boss-info { margin-bottom: 12px; }
+.boss-coupon-details .boss-info > div { flex-wrap: wrap; font-size: 12px; }
+.boss-coupon-body > button { min-height: 44px; border-radius: 8px; font-size: 14px; }
+.boss-member-summary, .boss-points-summary { border: 1px solid color-mix(in oklab, var(--primary) 25%, transparent); background: linear-gradient(145deg, #1e3a8a6b, #020617 58%); color: #fff; }
+.boss-member-summary .boss-info dt, .boss-member-summary .boss-muted { color: #cbd5e1; }
+.boss-member-summary .boss-info > div { border-color: #ffffff1a; }
+.boss-member-summary .boss-actions > a { background: #ffffff0d; color: #e0f2fe; border-color: #ffffff26; }
+.boss-points-summary > p { font-size: 12px; color: #cbd5e1; }
+.boss-points-summary > strong { display: block; margin-top: 8px; font-size: 38px; line-height: 1.2; font-weight: 600; }
+.boss-points-summary > strong small { font-size: 12px; color: #cbd5e1; font-weight: 400; margin-left: 8px; }
+.boss-points-summary > a { min-height: 44px; margin-top: 20px; background: #7dd3fc; color: #020617; }
+.boss-points-summary > a:hover { background: #bae6fd; }
+.boss-rewards-grid .boss-panel { display: flex; flex-direction: column; padding: 12px; }
+.boss-rewards-grid .boss-panel > h2 { order: 1; font-size: 14px; margin-top: 12px; margin-bottom: 4px; }
+.boss-rewards-grid .boss-cover { order: 0; aspect-ratio: 4 / 3; }
+.boss-rewards-grid .boss-panel > p { order: 2; font-size: 12px; }
+.boss-rewards-grid .boss-panel > .boss-price { order: 3; margin-top: 8px; font-size: 18px; }
+.boss-rewards-grid .boss-panel > button { order: 4; margin-top: 12px; min-height: 44px; }
+.boss-checkin-summary .boss-stats { flex-wrap: nowrap; gap: 0; }
+.boss-checkin-summary .boss-stats > div { min-width: 0; text-align: center; }
+.boss-checkin-summary .boss-stats > div + div { border-left: 1px solid var(--border); }
+.boss-checkin-summary .boss-stats strong { font-size: 26px; color: var(--boss-link); }
+.boss-checkin-summary .boss-stats small { font-size: 12px; font-weight: 400; color: var(--muted-foreground); margin-left: 4px; }
+.boss-checkin-summary .boss-stats span { display: block; margin-top: 8px; font-size: 12px; }
+.boss-checkin-rules { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 12px; }
+.boss-checkin-rules summary { font-size: 12px; color: var(--muted-foreground); min-height: 32px; cursor: pointer; }
+.boss-checkin-calendar { padding: 12px; }
+.boss-checkin-calendar .boss-calendar { gap: 4px; }
+.boss-calendar > strong { padding-block: 4px; font-size: 12px; color: var(--muted-foreground); font-weight: 400; }
+.boss-calendar > button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; border: 0; font-size: 12px; }
+.boss-calendar > button small { font-size: 10px; min-height: 12px; margin-top: 2px; }
+.boss-checkin-calendar > button { width: 100%; min-height: 48px; }
+.boss-achievement-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; border: 1px solid color-mix(in oklab, var(--primary) 25%, transparent); border-radius: 12px; padding: 20px; margin-bottom: 20px; background: linear-gradient(145deg, #1e3a8a61, #020617b8 72%); color: #fff; }
+.boss-achievement-summary p { color: #bae6fd; font-size: 12px; }
+.boss-achievement-summary strong { display: block; margin-top: 8px; font-size: 34px; line-height: 1.2; font-weight: 600; }
+.boss-achievement-summary small { font-size: 16px; font-weight: 400; color: #cbd5e1; }
+.boss-achievement-summary span { display: block; margin-top: 8px; font-size: 12px; color: #cbd5e1; }
+.boss-achievement-summary > svg { color: #bae6fd; box-sizing: content-box; padding: 14px; border: 1px solid #bae6fd33; border-radius: 12px; background: #7dd3fc1a; }
+.boss-achievement-summary > [data-slot="progress"] { flex-basis: 100%; background: #ffffff1a; }
+.boss-achievement-group { margin-bottom: 20px; }
+.boss-achievement-group > h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+.boss-achievement-active { display: grid; gap: 12px; }
+.boss-achievement-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--card); }
+.boss-achievement-card.nearest { border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); background: color-mix(in oklab, var(--primary) 5.5%, var(--card)); }
+.boss-achievement-card-title { display: flex; align-items: start; gap: 12px; }
+.boss-achievement-card-title > svg { flex-shrink: 0; box-sizing: content-box; padding: 11px; border-radius: 12px; color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-achievement-card-title > div { flex: 1; min-width: 0; }
+.boss-achievement-card h3 { font-size: 14px; font-weight: 600; }
+.boss-achievement-card p { font-size: 12px; color: var(--muted-foreground); margin-top: 4px; }
+.boss-achievement-progress-label { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-top: 16px; margin-bottom: 8px; }
+.boss-achievement-progress-label > span { font-size: 12px; color: var(--muted-foreground); }
+.boss-achievement-progress-label strong { font-size: 18px; font-weight: 600; }
+.boss-achievement-progress-label small { font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.boss-achievement-unlocked { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.boss-achievement-unlocked article { min-width: 0; border: 1px solid color-mix(in oklab, var(--success) 20%, transparent); border-radius: 12px; padding: 12px; background: color-mix(in oklab, var(--success) 3.5%, var(--card)); }
+.boss-achievement-unlocked svg { color: var(--success); }
+.boss-achievement-unlocked h3 { font-size: 12px; margin-top: 12px; font-weight: 600; }
+.boss-achievement-unlocked span { font-size: 12px; color: var(--success); }
+.boss-achievement-unlocked p { font-size: 12px; color: var(--muted-foreground); border-top: 1px solid var(--border); padding-top: 8px; margin-top: 8px; }
+@media (min-width: 1280px) { .boss-companion-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1100px) {
+  .boss-columns, .boss-profile-edit, .boss-reservation-detail-layout { grid-template-columns: minmax(0, 1fr); }
+  .boss-orders-list { grid-template-columns: minmax(0, 1fr); }
+  .boss-reservation-card { grid-template-columns: minmax(0, 1fr) minmax(180px, .85fr); }
+  .boss-reservation-amount { text-align: left; }
+  .boss-reservation-arrow { justify-self: end; }
+}
+@media (max-width: 767px) {
+  .boss-page-title h1 { font-size: 26px; }
+  .boss-page-title p { font-size: 14px; }
+  .boss-page-title > .boss-page-title-action { flex-shrink: 0; }
+  .boss-panel { padding: 16px; margin-bottom: 16px; }
+  .boss-columns { gap: 8px; }
+  .boss-home-shortcuts { padding: 0; }
+  .boss-home-hero-art { right: 12px; }
+  .boss-content[data-page="home"] > .boss-page-title h1 { font-size: 20px; }
+  .boss-service-progress { padding: 20px; }
+  .boss-catalog-header, .boss-companions-header { margin-top: 0; }
+  .boss-companion-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .boss-companion-list { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .boss-picker-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .boss-picker-list .boss-companion-identity { flex-direction: column; align-items: start; }
+  .boss-picker-list .boss-companion-name strong { font-size: 14px; }
+  .boss-picker-list .boss-companion-prices { flex-wrap: wrap; }
+  .boss-picker-list .boss-companion-prices .right { text-align: left; margin-left: 0; }
+  .boss-next-reservation { flex-wrap: wrap; }
+  .boss-next-reservation > a { width: 100%; min-height: 44px; }
+  .boss-reservation-card { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
+  .boss-reservation-time { padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 45%, transparent); }
+  .boss-reservation-amount { text-align: left; }
+  .boss-reservation-arrow { display: none; }
+  .boss-reservation-status { padding: 20px; }
+  .boss-reservation-status strong { font-size: 20px; }
+  .boss-orders-list { grid-template-columns: minmax(0, 1fr); }
+  .boss-order-card { padding: 16px; }
+  .boss-order-card-service { gap: 12px; }
+  .boss-service-detail-hero { padding: 20px; }
+  .boss-service-detail-facts .boss-panel { padding: 16px; }
+  .boss-content[data-page="coupons"] > .boss-grid { grid-template-columns: minmax(0, 1fr); }
+  .boss-content[data-page="points"] .boss-rewards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .boss-profile-edit { gap: 16px; }
+  .boss-checkin-calendar { padding: 12px; }
+  .boss-content:is([data-page="service"], [data-page="checkout"]) { padding-bottom: calc(200px + env(safe-area-inset-bottom)); }
+  .boss-service-actionbar, .boss-checkout-submit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); position: fixed; bottom: calc(88px + env(safe-area-inset-bottom)); left: 0; right: 0; z-index: 30; padding: 12px 16px; gap: 8px; border-top: 1px solid var(--border); background: color-mix(in oklab, var(--background) 95%, transparent); backdrop-filter: blur(20px); }
+  .boss-service-actionbar { grid-template-columns: 76px 104px minmax(0, 1fr); }
+  .boss-service-actionbar > button:first-child { grid-column: auto; flex-direction: column; gap: 0; font-size: 12px; white-space: normal; }
+  .boss-service-actionbar:has(> [data-slot="button"]:nth-child(2):last-child) { grid-template-columns: 88px minmax(0, 1fr); }
+  .boss-service-actionbar > [data-slot="button"], .boss-checkout-submit > [data-slot="button"] { min-height: 44px; border-radius: 8px; width: 100%; }
+}

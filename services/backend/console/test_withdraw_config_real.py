@@ -18,7 +18,7 @@ class WithdrawConfigRealTest(APITestCase):
         return client
 
     def test_rule_changes_do_not_rewrite_real_withdrawal_snapshot(self):
-        staff = make_console_user(['withdraw:view', 'withdraw:audit'])
+        staff = make_console_user(['withdraw:view', 'withdraw:config'])
         staff_account = get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account = staff_account
         staff.admin_membership.save(update_fields=['account'])
@@ -40,7 +40,9 @@ class WithdrawConfigRealTest(APITestCase):
         withdrawal_id = submitted.data['data']['request']['id']
         changed = admin.put(config, {'min_amount': 15000, 'tax_rate': 3}, format='json')
         self.assertEqual(changed.data['code'], 0, changed.data)
-        self.assertEqual(admin.get(config).data['data'], {'min_amount': 15000, 'tax_rate': 3})
+        current = admin.get(config).data['data']
+        self.assertEqual((current['min_amount'], current['tax_rate'], current['balance_threshold']), (15000, 3, None))
+        self.assertEqual(len(current['version']), 64)
         details = admin.get(f'/api/admin/withdrawals/{withdrawal_id}/').data['data']
         self.assertEqual((details['status'], details['tax_rate'], details['tax_amount'], details['actual_amount']),
                          ('PENDING', 2, 400, 19600))

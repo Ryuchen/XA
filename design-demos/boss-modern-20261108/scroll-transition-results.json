@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "initial": {
+    "animation": "boss-hero-scroll-drift",
+    "timeline": "scroll(root)",
+    "translate": "0px",
+    "snap": "x"
+  },
+  "scrolled": {
+    "translate": "0px 10px",
+    "title": "0px 3px",
+    "scrollY": 240
+  },
+  "forwardCalls": 1,
+  "backwardCalls": 2,
+  "errors": [],
+  "consoleErrors": [],
+  "reducedMotion": {
+    "transitionCalls": 0,
+    "navigation": "passed"
+  },
+  "desktop": {
+    "transitionCalls": 1,
+    "navigation": "passed"
+  }
+}

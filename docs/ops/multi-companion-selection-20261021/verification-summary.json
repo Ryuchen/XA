@@ -1,0 +1,179 @@
+{
+  "passed": true,
+  "completed_at": "2026-10-20T16:49:22.961Z",
+  "user_rules": {
+    "single_count": 1,
+    "double_count": 2,
+    "package_price_unchanged": true
+  },
+  "behavior": {
+    "selected_cards_highlighted": true,
+    "explicit_selected_label": true,
+    "unselect_and_replace": true,
+    "reentry_keeps_committed_selection": true,
+    "search_keeps_selection": true,
+    "both_names_returned_to_checkout": true,
+    "partial_specification_blocked": true,
+    "empty_selection_platform_arrangement": true,
+    "legacy_single_compatible": true
+  },
+  "native_tests": {
+    "passed": 91,
+    "failed": 0
+  },
+  "mysql_tests": {
+    "passed": 91,
+    "failed": 0,
+    "skipped": 0,
+    "real_migrations": true
+  },
+  "official_compilers": {
+    "wxml_templates": 49,
+    "wxss_stylesheets": 52,
+    "passed": true
+  },
+  "isolated_http": {
+    "real_requests": true,
+    "mocked_order_results": false,
+    "synthetic_balance_only": true,
+    "created_orders": 1,
+    "active_participants": 2,
+    "new_payment_transactions": 1,
+    "replay_no_second_debit": true,
+    "amount_raw": 10002,
+    "wallet_before_raw": 500000,
+    "wallet_after_raw": 489998,
+    "provider_expected_income_raw": {
+      "p1": 4501,
+      "p2": 4001
+    },
+    "actual_service_fulfilled": false,
+    "provider_earnings_credited": false
+  },
+  "local_runtime": {
+    "updated_application_processes": 4,
+    "original_nine_services_running": true,
+    "migrations_required": false,
+    "original_account_and_config_restored": true
+  },
+  "protected_live_database": {
+    "tables": 25,
+    "rows": 3713,
+    "all_columns_and_rows_exact_unchanged": true,
+    "campaign_still_disabled": true,
+    "all_13_lottery_probabilities_still_zero": true
+  },
+  "temporary_environment_cleaned": true,
+  "screenshots": [
+    {
+      "name": "double-checkout.png",
+      "bytes": 87249
+    },
+    {
+      "name": "double-one-selected.png",
+      "bytes": 78389
+    },
+    {
+      "name": "double-real-order-detail.png",
+      "bytes": 73479
+    },
+    {
+      "name": "double-reentered.png",
+      "bytes": 79140
+    },
+    {
+      "name": "double-replaced-checkout.png",
+      "bytes": 87535
+    },
+    {
+      "name": "double-service-entry.png",
+      "bytes": 93453
+    },
+    {
+      "name": "double-two-highlighted.png",
+      "bytes": 90573
+    },
+    {
+      "name": "single-selected.png",
+      "bytes": 83497
+    }
+  ],
+  "source_sha256": [
+    {
+      "path": "apps/boss-miniapp/native/core/provider-selection.js",
+      "sha256": "20cec125ca1a070a60ebce8a9ad3b854a134b1f6906c27459358f1b2daecd349"
+    },
+    {
+      "path": "apps/boss-miniapp/native/core/companions-page.js",
+      "sha256": "f4d83c1312b42b00c54bfc9802fe7f7e6b5dbb8ad94607f8957f2003e867aa97"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/companion-picker/index.wxml",
+      "sha256": "0ba47ff56fe9c56871b8f140bd788f9a92cb654415d12e45bca99860fa80307f"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/companion-picker/index.wxss",
+      "sha256": "b1052bef12e8e05e1a7333c61c3f84c7b17b731612aa59a1a574eed69169a2e3"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/companion-detail/index.js",
+      "sha256": "59f0b61f625afdcdec99857a7c03b5d06a5ef916e1b0ceeb1f3c70139cec5401"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/companion-detail/index.wxml",
+      "sha256": "25651109746d4c81c1083816f8d5820a53fe2c19a0b74571e1487695ba200c0b"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/checkout/index.js",
+      "sha256": "98af40700b4c057330bf6a2ceacd4aad562fe8c22578bb434f4dc49f301ec218"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/checkout/index.wxml",
+      "sha256": "668c022a6d097e7a1da6374f7b75f7f35ab6296abdcf3579f982a5ca62af0c6d"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/checkout/index.wxss",
+      "sha256": "591ead94274bc7ddebccdac3e8e0f34e8358e0f0b852032468854d605f60f030"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/service/index.js",
+      "sha256": "26709bdd41c8acbde7f2ad5876095e3d6429432a4e7fc9810abf5a94b0960eb9"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/service/index.wxml",
+      "sha256": "9d9e397ae89bc83e93bc8f1eb41b27970715d2bd9f9ab4dcac9b803083658935"
+    },
+    {
+      "path": "services/backend/orders/models.py",
+      "sha256": "9101e4d37ac37d94619ceb973c4a38fa72909f39d9c52fe7c203884f3f021154"
+    },
+    {
+      "path": "services/backend/orders/serializers.py",
+      "sha256": "6dfbeb1704f9d684bf928b203546d9b3c4455147812d39eaaf75a4b6218fe3e3"
+    },
+    {
+      "path": "services/backend/orders/views.py",
+      "sha256": "3e778b52cd9019e57f567b51fdd24d240d8549c6a9bbeedb1c10670d6257612c"
+    },
+    {
+      "path": "services/backend/orders/dispatching.py",
+      "sha256": "24f6b9e9ab1c7e25c7de9018edc34d3ff1391c6bbc0d3d23c3820c0f5e03090c"
+    },
+    {
+      "path": "services/backend/orders/tests/test_boss_selected_team.py",
+      "sha256": "bea61130a072c3984162ba64433bc053844bd6c3028a23b9b5e4d38c694f314a"
+    },
+    {
+      "path": "services/backend/orders/tests/test_team_package_admission.py",
+      "sha256": "aed2788be629c48500cb85ba33f3088ab0c8651df64a8cdf33b28666b888611d"
+    },
+    {
+      "path": "scripts/test-native-core.cjs",
+      "sha256": "425271e4164da4ae98f64fab627ab0ae17af2e2a27e2c9280678488d6396390d"
+    },
+    {
+      "path": "scripts/test-native-companion-selection.cjs",
+      "sha256": "d8cb798893535f5ae328f3dde8492b075f14468941d5f27ef2dffe103e33f883"
+    }
+  ]
+}

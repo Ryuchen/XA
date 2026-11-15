@@ -2,6 +2,14 @@ from django.conf import settings
 from django.db import models
 
 
+class CatalogWriteLock(models.Model):
+    """Serialize platform initialization and store catalogue edits."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='catalog_write_lock_singleton')]
+
+
 class KookDispatchConfig(models.Model):
     """单机器人、多频道路由；凭据只保存密文，不通过 API 回显。"""
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
@@ -247,3 +255,24 @@ class AccountBan(models.Model):
 
     def __str__(self):
         return f'封禁#{self.pk} 账户{self.account_id} [{self.status}]'
+
+
+# Operations dictionaries retain stable keys and protect historical references.
+from .dictionary_models import BusinessDictionaryItem  # noqa: E402,F401
+from .payroll_models import (  # noqa: E402,F401
+    OperatingCost, PayrollConfig, PayrollEventBarrier, PayrollLock, PayrollRun,
+    SalaryActivity, SalaryAssignment, SalaryPlan, PayrollRefundDeduction, PayrollRefundApplication, PayrollRefundPerformanceRevision,
+    PayrollRefundPerformanceAdjustment, PayrollRefundPerformanceApplication,
+    PayrollRefundWriteOff, PayrollSeparationSettlement,
+)
+
+
+class WecomDispatchConfig(models.Model):
+    """Store-local encrypted group robot configuration."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    enabled = models.BooleanField(default=False)
+    auto_new_orders = models.BooleanField(default=False)
+    auto_rejected_orders = models.BooleanField(default=False)
+    webhook_ciphertext = models.TextField(blank=True, default='')
+    revision = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)

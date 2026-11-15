@@ -75,6 +75,8 @@ process.stdin.on('end', async () => {
     await page.send();
     const own = await realFetch(`${fixture.base}/api/chat/session/`, {headers:{Authorization:`Bearer ${fixture.sessions[0].token}`}}).then(r => r.json());
     assert.equal(own.code, 0); const sessionId = own.data.session.id;
+    const claimed = await realFetch(`${fixture.base}/api/admin/chat-sessions/${sessionId}/claim/`, {method:'POST', headers:{Authorization:`Bearer ${fixture.staffToken}`, 'Content-Type':'application/json'}, body:JSON.stringify({expected_version:0})}).then(r => r.json());
+    assert.equal(claimed.code, 0);
     const staff = await realFetch(`${fixture.base}/api/admin/chat-sessions/${sessionId}/messages/`, {headers:{Authorization:`Bearer ${fixture.staffToken}`}}).then(r => r.json());
     assert.equal(staff.code, 0);
     assert.equal(staff.data.list.at(-1).content, `我想咨询订单 ${fixture.orderNo} 的服务情况。`);
@@ -121,6 +123,8 @@ process.stdin.on('end', async () => {
     assert.equal(page.data.contextOrderNo, '');
     await page.sendImage({tempFilePath:imagePath, size:fs.statSync(imagePath).size});
     const otherSession = await realFetch(`${fixture.base}/api/chat/session/`, {headers:{Authorization:`Bearer ${fixture.sessions[1].token}`}}).then(r => r.json());
+    const otherClaim = await realFetch(`${fixture.base}/api/admin/chat-sessions/${otherSession.data.session.id}/claim/`, {method:'POST', headers:{Authorization:`Bearer ${fixture.staffToken}`, 'Content-Type':'application/json'}, body:JSON.stringify({expected_version:0})}).then(r => r.json());
+    assert.equal(otherClaim.code, 0);
     const otherMessages = await realFetch(`${fixture.base}/api/admin/chat-sessions/${otherSession.data.session.id}/messages/`, {headers:{Authorization:`Bearer ${fixture.staffToken}`}}).then(r => r.json());
     assert.equal(otherMessages.data.list.at(-1).content, '');
     page.onUnload();

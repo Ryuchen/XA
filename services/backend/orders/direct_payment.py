@@ -14,7 +14,8 @@ from datetime import timedelta
 from datetime import datetime
 
 from django.conf import settings
-from django.db import IntegrityError, connections, transaction
+from django.db import IntegrityError
+from stores.db import connections, transaction
 from django.utils import timezone
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
@@ -153,7 +154,8 @@ def prepare_direct_order(request, *, appid, mchid):
         # Serialize product price updates against the reprice and contract.
         # Other purchase flows take the buyer wallet before service rows too.
         data['service'] = type(data['service']).objects.select_for_update().get(pk=data['service'].pk)
-        lock_purchase(account, data['service'], data['game_rounds'], None, data['pricing'])
+        lock_purchase(account, data['service'], data['game_rounds'], None, data['pricing'],
+                      expected_promotion=data['promotion'])
         from .direct_payment_quote import quote_direct_payment, snapshot_values
         from .direct_payment_quote_models import DirectPaymentQuote
         if any(key in request.data for key in ('fee_fen', 'rate_numerator', 'rate_denominator', 'fee_basis', 'rounding', 'policy_id',
@@ -171,6 +173,8 @@ def prepare_direct_order(request, *, appid, mchid):
         if data.get('expected_timeout_minutes') is not None and data['expected_timeout_minutes'] != timeout:
             raise DirectPaymentError('待接单时限已变化，请刷新后重新确认')
         inviter = data.get('inviter')
+        if data['inviter_account'] and not inviter:
+            raise DirectPaymentError('微信支付暂不支持仅有业务账号的推荐人')
         inviter_mapping = LegacyAccountMap.objects.filter(legacy_user_id=inviter.pk).first() if inviter else None
         split = compute_split(data['amount'], inviter_commission_rate=data['inviter_commission_rate'], **data['commission_spec'])
         order = Order.objects.create(

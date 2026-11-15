@@ -3,9 +3,10 @@ from collections import defaultdict
 from .refunds import proportional_targets,with_net_amount
 
 
-def partial_share_rows(queryset):
-    orders = with_net_amount(queryset.filter(payment_status='PARTIALLY_REFUNDED')).prefetch_related(
-        'providers','transactions__wallet')
+def partial_share_rows(queryset, *, include_refunded=False):
+    states = ('PARTIALLY_REFUNDED', 'REFUNDED') if include_refunded else ('PARTIALLY_REFUNDED',)
+    orders = with_net_amount(queryset.filter(payment_status__in=states, amount__gt=0)).prefetch_related(
+        'providers','transactions__wallet', 'refund_records')
     result = []
     for order in orders:
         members = [row for row in order.providers.all() if not row.released_at or row.settlement_base > 0 or row.provider_income > 0]
@@ -24,7 +25,32 @@ def partial_share_rows(queryset):
         for tx in txs:
             if tx.reversal_of_id:
                 reversals[tx.reversal_of_id] += tx.amount
-        for account_id,user_id,amount,snapshot,accepted_at in entries:
+        refunds = list(order.refund_records.all())
+        allocations = refunds[0].negotiated_allocation if len(refunds) == 1 else []
+        negotiated = {row['share_id']: row for row in allocations
+                      if row.get('role') == 'PROVIDER' and row.get('share_id')}
+        # A negotiated termination credits an unsettled share only after its
+        # agreed burden is deducted. Validate the retained totals against the
+        # actual wallet entries, including reversals of earlier settlements.
+        negotiated_income = {}
+        if negotiated and members and all(row.pk in negotiated for row in members):
+            groups = defaultdict(list)
+            for row in members:
+                groups[(row.provider_account_id, row.provider_id)].append(row)
+            for (account_id, user_id), shares in groups.items():
+                original = [tx for tx in txs if not tx.reversal_of_id and tx.amount > 0
+                    and tx.tx_type in ('INCOME', 'GIFT')
+                    and ((account_id and tx.wallet.account_id == account_id)
+                         or (user_id and tx.wallet.user_id == user_id))
+                    and not tx.remark.startswith(('推荐分佣：', '礼物推荐分佣：'))]
+                allocated = [negotiated[row.pk] for row in shares]
+                expected_original = sum(item['entitlement'] if item['settled'] else item['retained'] for item in allocated)
+                actual_net = sum(tx.amount + reversals[tx.pk] for tx in original)
+                if (all(item['entitlement'] == row.provider_income for item, row in zip(allocated, shares))
+                        and sum(tx.amount for tx in original) == expected_original
+                        and actual_net == sum(item['retained'] for item in allocated)):
+                    negotiated_income.update({row.pk: item['retained'] for item, row in zip(allocated, shares)})
+        for index, (account_id,user_id,amount,snapshot,accepted_at) in enumerate(entries):
             originals = [tx for tx in txs if not tx.reversal_of_id and tx.amount > 0
                 and tx.tx_type in ('INCOME','GIFT')
                 and ((account_id and tx.wallet.account_id == account_id) or (user_id and tx.wallet.user_id == user_id))
@@ -33,7 +59,9 @@ def partial_share_rows(queryset):
             # inviter credit even when both belong to the very same wallet.
             # When the original entries cannot prove the split, never replace
             # the missing evidence with a proportional estimate.
-            if sum(tx.amount for tx in originals) == snapshot:
+            if negotiated:
+                income = negotiated_income.get(members[index].pk) if members else None
+            elif sum(tx.amount for tx in originals) == snapshot:
                 income = sum(tx.amount+reversals[tx.pk] for tx in originals)
             else:
                 income = None

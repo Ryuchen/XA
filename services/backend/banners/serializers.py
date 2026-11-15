@@ -1,10 +1,11 @@
 from rest_framework import serializers
+from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
 
 from common.media import build_media_url
 from .models import Banner
 
 
-class BannerSerializer(serializers.ModelSerializer):
+class BannerSerializer(EntityNumberModelSerializer):
     image_url = serializers.SerializerMethodField()
     link_available = serializers.BooleanField(read_only=True, default=True)
     link_unavailable_reason = serializers.CharField(read_only=True, default='')

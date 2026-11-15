@@ -13,14 +13,25 @@ from unittest import skipUnless
 from django.test import override_settings
 from django.utils import timezone
 from django.db import close_old_connections, connection
-from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient, APITransactionTestCase
 
-from club_accounts.services import get_or_create_account_for_legacy_user
+from club_accounts.services import get_or_create_account_for_legacy_user as account_for_user
 from club_accounts.tokens import issue_account_tokens
 from orders.models import Order, OrderApplication
 from orders.tests import test_release_flow as release_flow
-from orders.tests.factories import make_provider, make_service
+from orders.tests.factories import make_provider as provider_factory, make_service
+
+
+def make_provider():
+    return provider_factory(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
+
+
+def get_or_create_account_for_legacy_user(user):
+    account = account_for_user(user)
+    account.openid = f'team-invitation-test-{account.pk}'
+    account.is_openid_bound = True
+    account.save(update_fields=['openid', 'is_openid_bound'])
+    return account
 
 
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_RECHARGE_PROOF=True,
@@ -176,8 +187,15 @@ class TeamInvitationDetailTest(APITransactionTestCase):
         self.ok(self.client.post(self.action, {'action': 'CONFIRM_TEAM'}, format='json'))
         detail_path = f'/api/orders/orders/{self.order.pk}/'
         self.login(self.boss)
-        with CaptureQueriesContext(connection) as first:
+        # Count executed queries directly: request_started resets Django's
+        # query log, so slicing that log can discard the first request's work.
+        queries = []
+        def count_query(execute, sql, params, many, context):
+            queries.append(sql)
+            return execute(sql, params, many, context)
+        with connection.execute_wrapper(count_query):
             self.assertTrue(self.ok(self.client.get(detail_path))['applications'][0]['ready'])
+        first_count = len(queries)
         for _ in range(4):
             applicant = make_provider()
             account = get_or_create_account_for_legacy_user(applicant)
@@ -196,11 +214,29 @@ class TeamInvitationDetailTest(APITransactionTestCase):
             self.ok(self.client.post(f'/api/orders/orders/{self.order.pk}/applications/{application.pk}/action/',
                                      {'action': 'CONFIRM_TEAM'}, format='json'))
         self.login(self.boss)
-        with CaptureQueriesContext(connection) as many:
+        queries.clear()
+        with connection.execute_wrapper(count_query):
             rows = self.ok(self.client.get(detail_path))['applications']
         self.assertEqual(len(rows), 5)
         self.assertTrue(all(row['ready'] for row in rows))
-        self.assertLessEqual(len(many), len(first) + 2, f'queries grew {len(first)} -> {len(many)}')
+        self.assertLessEqual(len(queries), first_count + 2, f'queries grew {first_count} -> {len(queries)}')
+
+    def test_batched_readiness_uses_current_store_cash_target(self):
+        from wallet.club_rules import DEPOSIT_TARGET_KEY
+        from wallet.models import SystemConfig
+        self.invite()
+        self.login(self.partner)
+        self.ok(self.client.post(self.action, {'action': 'CONFIRM_TEAM'}, format='json'))
+        config, _ = SystemConfig.objects.update_or_create(key=DEPOSIT_TARGET_KEY, defaults={
+            'value': json.dumps({'cash_target': 50000, 'earnings_target': 90000, 'version': 1})})
+        self.login(self.boss)
+        path = f'/api/orders/orders/{self.order.pk}/'
+        item = self.ok(self.client.get(path))['applications'][0]
+        self.assertFalse(item['ready'])
+        self.assertIn('押金', item['not_ready_reason'])
+        config.value = json.dumps({'cash_target': 40000, 'earnings_target': 90000, 'version': 2})
+        config.save(update_fields=['value'])
+        self.assertTrue(self.ok(self.client.get(path))['applications'][0]['ready'])
 
     def test_legacy_order_notice_lists_both_invitations_without_guessing(self):
         self.invite()
@@ -265,7 +301,7 @@ class TeamInvitationDetailTest(APITransactionTestCase):
         if node and not declined:
             repo = Path(__file__).resolve().parents[4]
             env = {**os.environ, 'XA_WITHDRAWN_TEAM_NOTICE': json.dumps(detail, ensure_ascii=False)}
-            result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/message-order-navigation.cjs')],
+            result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-message-contracts.test.mjs')],
                                     cwd=repo, env=env, capture_output=True, text=True, encoding='utf-8', timeout=30)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn('real withdrawn-team notice opens the pool', result.stdout)

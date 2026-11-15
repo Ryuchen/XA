@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "host": "sl.esports.club",
+      "initial": {
+        "slide": "announcement-7",
+        "animation": "boss-announcement-roll",
+        "height": 52,
+        "width": 358
+      },
+      "changed": {
+        "slide": "announcement-1",
+        "animation": "boss-announcement-roll",
+        "height": 52,
+        "width": 358
+      },
+      "hoverPause": true,
+      "focusPause": true,
+      "errors": []
+    },
+    {
+      "host": "xa.esports.club",
+      "initial": {
+        "slide": "announcement-7",
+        "animation": "boss-announcement-roll",
+        "height": 52,
+        "width": 358
+      },
+      "changed": {
+        "slide": "announcement-1",
+        "animation": "boss-announcement-roll",
+        "height": 52,
+        "width": 358
+      },
+      "hoverPause": true,
+      "focusPause": true,
+      "errors": []
+    },
+    {
+      "reducedMotion": {
+        "animation": "none",
+        "autoRotate": false
+      }
+    }
+  ]
+}

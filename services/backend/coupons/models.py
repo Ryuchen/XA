@@ -20,8 +20,8 @@ class Coupon(models.Model):
         default=DiscountType.THRESHOLD,
         verbose_name='类型',
     )
-    threshold = models.IntegerField(default=0, verbose_name='使用门槛（兴安币账务值）')
-    amount = models.IntegerField(verbose_name='面额（兴安币账务值）')
+    threshold = models.IntegerField(default=0, verbose_name='使用门槛（浪花账务值）')
+    amount = models.IntegerField(verbose_name='面额（浪花账务值）')
     discount_rate = models.PositiveSmallIntegerField(default=100, validators=[MaxValueValidator(100)])
     scope = models.CharField(max_length=20, default='ALL', choices=[('ALL','通用'),('COMPANION','陪玩'),('SAFE_BOX','33 安全箱'),('EXPERIENCE','68 体验单')])
     scope_variant = models.CharField(max_length=60, blank=True, default='')
@@ -57,7 +57,8 @@ class Coupon(models.Model):
             ),
             models.CheckConstraint(
                 condition=(models.Q(discount_type='QUALIFICATION', amount=0)
-                           | (~models.Q(discount_type='QUALIFICATION') & models.Q(amount__gt=0))),
+                           | models.Q(discount_type='RATE', amount__gte=0)
+                           | models.Q(discount_type__in=['THRESHOLD', 'DIRECT'], amount__gt=0)),
                 name='coupon_amount_positive',
             ),
             models.CheckConstraint(
@@ -102,6 +103,8 @@ class UserCoupon(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='coupons',
+        null=True,
+        blank=True,
     )
     account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -137,6 +140,8 @@ class UserCoupon(models.Model):
     used_at = models.DateTimeField(null=True, blank=True)
     # 核销时冻结；后续修改券模板不能改变已用资格的退款政策。
     restore_on_refund = models.BooleanField(default=True, editable=False)
+    # Kept under its historical field name; grade changes preserve issued terms.
+    vip_terms_locked_by_downgrade = models.BooleanField(default=False, editable=False)
 
     class Meta:
         verbose_name = '用户优惠券'
@@ -161,7 +166,7 @@ class UserCoupon(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.user_id} - {self.coupon.name}'
+        return f'{self.account_id or self.user_id} - {self.coupon.name}'
 
     @property
     def is_usable(self):
@@ -187,3 +192,43 @@ class UserCoupon(models.Model):
         if self.account_id and self.business_cycle != self.account.business_cycle:
             return 'PREVIOUS_CYCLE'
         return self.Status.UNUSED
+
+
+class VipMonthlyCutover(models.Model):
+    """Store-local one-time boundary; there is deliberately no edit API."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    activated_at = models.DateTimeField()
+    platform_actor_id = models.CharField(max_length=64)
+    operation_id = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='vip_monthly_cutover_singleton')]
+
+
+class VipMonthlyCouponGrant(models.Model):
+    """One store-local issuance decision per account, cycle and month."""
+    class Source(models.TextChoices):
+        SYSTEM = 'SYSTEM', '系统发放'
+        LEGACY = 'LEGACY', '历史已发券'
+
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                related_name='vip_monthly_coupon_grants')
+    business_cycle = models.PositiveIntegerField()
+    month = models.DateField()
+    source = models.CharField(max_length=12, choices=Source.choices)
+    # Snapshot IDs, not foreign keys: deleting a tier must not erase an issuance.
+    tier_id_snapshot = models.PositiveBigIntegerField(null=True, blank=True)
+    tier_level_snapshot = models.PositiveSmallIntegerField(null=True, blank=True)
+    issued_count = models.PositiveIntegerField()
+    issued_discount = models.PositiveSmallIntegerField(null=True, blank=True)
+    terms_frozen = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['account', 'business_cycle', 'month'], name='uniq_vip_monthly_grant'),
+            models.CheckConstraint(condition=models.Q(source__in=['SYSTEM', 'LEGACY']), name='vip_monthly_grant_source'),
+            models.CheckConstraint(condition=models.Q(issued_discount__isnull=True) | models.Q(issued_discount__lte=100),
+                                   name='vip_monthly_grant_discount'),
+        ]

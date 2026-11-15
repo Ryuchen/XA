@@ -1,0 +1,1152 @@
+{
+  "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+  "stages": [
+    {
+      "stage": "settle-samples",
+      "checked_at": "2026-10-20T03:04:48.253Z",
+      "result": "PASS",
+      "reports": [
+        {
+          "order_id": 123,
+          "report_id": 41,
+          "provider": "p1",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 123,
+          "report_id": 42,
+          "provider": "p2",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 123,
+          "report_id": 43,
+          "provider": "p3",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 123,
+          "report_id": 44,
+          "provider": "p4",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 123,
+          "report_id": 45,
+          "provider": "p5",
+          "pre_final_report_no_income": false
+        },
+        {
+          "order_id": 124,
+          "report_id": 46,
+          "provider": "p1",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 124,
+          "report_id": 47,
+          "provider": "p2",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 124,
+          "report_id": 48,
+          "provider": "p3",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 124,
+          "report_id": 49,
+          "provider": "p4",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 124,
+          "report_id": 50,
+          "provider": "p5",
+          "pre_final_report_no_income": false
+        },
+        {
+          "order_id": 125,
+          "report_id": 51,
+          "provider": "p1",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 125,
+          "report_id": 52,
+          "provider": "p2",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 125,
+          "report_id": 53,
+          "provider": "p3",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 125,
+          "report_id": 54,
+          "provider": "p4",
+          "pre_final_report_no_income": true
+        },
+        {
+          "order_id": 125,
+          "report_id": 55,
+          "provider": "p5",
+          "pre_final_report_no_income": false
+        }
+      ]
+    },
+    {
+      "stage": "preview-frozen_recovery",
+      "checked_at": "2026-10-20T03:09:43.718Z",
+      "result": "PASS",
+      "preview": {
+        "order_id": 123,
+        "is_settled": true,
+        "eligible": true,
+        "original_amount": 10000,
+        "refunded_amount": 0,
+        "remaining_amount": 10000,
+        "refund_amount": 2500,
+        "remaining_after_refund": 7500,
+        "full_refund": false,
+        "recovery_total": 2500,
+        "recoveries": [
+          {
+            "wallet_id": 1,
+            "account_id": null,
+            "role": "PLATFORM",
+            "income_amount": 625,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 625,
+            "available_balance": 80600,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1115
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "role": "PROVIDER",
+            "income_amount": 175,
+            "held_amount": 175,
+            "deposit_amount": 0,
+            "available_required": 0,
+            "available_balance": 700,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1105
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 525,
+            "deposit_amount": 0,
+            "available_required": 0,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1107
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "role": "PROVIDER",
+            "income_amount": 300,
+            "held_amount": 300,
+            "deposit_amount": 0,
+            "available_required": 0,
+            "available_balance": 1200,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1109
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 525,
+            "deposit_amount": 0,
+            "available_required": 0,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1111
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "role": "PROVIDER",
+            "income_amount": 350,
+            "held_amount": 350,
+            "deposit_amount": 0,
+            "available_required": 0,
+            "available_balance": 1400,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1113
+            ],
+            "source_safe": true,
+            "explanation": ""
+          }
+        ],
+        "shortfalls": []
+      }
+    },
+    {
+      "stage": "replay-last-frozen_recovery",
+      "checked_at": "2026-10-20T03:11:15.039Z",
+      "result": "PASS",
+      "successful_replay_code": 0,
+      "conflicting_intent_code": 409,
+      "refund_id": 34,
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "deplete-p1",
+      "checked_at": "2026-10-20T03:12:00.265Z",
+      "result": "PASS",
+      "provider": "p1",
+      "profile_id": 437,
+      "record_id": 7,
+      "amount": 625,
+      "before": 700,
+      "after": 75,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "insufficient-p1",
+      "checked_at": "2026-10-20T03:12:14.073Z",
+      "result": "PASS",
+      "preview": {
+        "order_id": 124,
+        "is_settled": true,
+        "eligible": false,
+        "original_amount": 10000,
+        "refunded_amount": 0,
+        "remaining_amount": 10000,
+        "refund_amount": 2500,
+        "remaining_after_refund": 7500,
+        "full_refund": false,
+        "recovery_total": 2500,
+        "recoveries": [
+          {
+            "wallet_id": 1,
+            "account_id": null,
+            "role": "PLATFORM",
+            "income_amount": 625,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 625,
+            "available_balance": 78100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1121
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "role": "PROVIDER",
+            "income_amount": 175,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 175,
+            "available_balance": 75,
+            "protected_deposit_amount": 0,
+            "shortfall": 100,
+            "original_transaction_ids": [
+              1116
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1117
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "role": "PROVIDER",
+            "income_amount": 300,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 300,
+            "available_balance": 1200,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1118
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1119
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "role": "PROVIDER",
+            "income_amount": 350,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 350,
+            "available_balance": 1400,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1120
+            ],
+            "source_safe": true,
+            "explanation": ""
+          }
+        ],
+        "shortfalls": [
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "required": 175,
+            "available": 75,
+            "shortfall": 100
+          }
+        ]
+      },
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_RECOVERY_INSUFFICIENT",
+        "shortfalls": [
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "required": 175,
+            "available": 75,
+            "shortfall": 100
+          }
+        ]
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "restore-p1",
+      "checked_at": "2026-10-20T03:12:24.034Z",
+      "result": "PASS",
+      "provider": "p1",
+      "profile_id": 437,
+      "record_id": 8,
+      "amount": 625,
+      "before": 75,
+      "after": 700,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "stale-plan-p1",
+      "checked_at": "2026-10-20T03:12:24.575Z",
+      "result": "PASS",
+      "refused": {
+        "code": 409,
+        "errorCode": "REFUND_PLAN_CHANGED"
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "deplete-p2",
+      "checked_at": "2026-10-20T03:12:39.222Z",
+      "result": "PASS",
+      "provider": "p2",
+      "profile_id": 438,
+      "record_id": 9,
+      "amount": 1675,
+      "before": 2100,
+      "after": 425,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "insufficient-p2",
+      "checked_at": "2026-10-20T03:12:54.318Z",
+      "result": "PASS",
+      "preview": {
+        "order_id": 124,
+        "is_settled": true,
+        "eligible": false,
+        "original_amount": 10000,
+        "refunded_amount": 0,
+        "remaining_amount": 10000,
+        "refund_amount": 2500,
+        "remaining_after_refund": 7500,
+        "full_refund": false,
+        "recovery_total": 2500,
+        "recoveries": [
+          {
+            "wallet_id": 1,
+            "account_id": null,
+            "role": "PLATFORM",
+            "income_amount": 625,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 625,
+            "available_balance": 78100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1121
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "role": "PROVIDER",
+            "income_amount": 175,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 175,
+            "available_balance": 700,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1116
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 425,
+            "protected_deposit_amount": 0,
+            "shortfall": 100,
+            "original_transaction_ids": [
+              1117
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "role": "PROVIDER",
+            "income_amount": 300,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 300,
+            "available_balance": 1200,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1118
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1119
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "role": "PROVIDER",
+            "income_amount": 350,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 350,
+            "available_balance": 1400,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1120
+            ],
+            "source_safe": true,
+            "explanation": ""
+          }
+        ],
+        "shortfalls": [
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "required": 525,
+            "available": 425,
+            "shortfall": 100
+          }
+        ]
+      },
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_RECOVERY_INSUFFICIENT",
+        "shortfalls": [
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "required": 525,
+            "available": 425,
+            "shortfall": 100
+          }
+        ]
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "restore-p2",
+      "checked_at": "2026-10-20T03:12:56.205Z",
+      "result": "PASS",
+      "provider": "p2",
+      "profile_id": 438,
+      "record_id": 10,
+      "amount": 1675,
+      "before": 425,
+      "after": 2100,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "stale-plan-p2",
+      "checked_at": "2026-10-20T03:12:56.730Z",
+      "result": "PASS",
+      "refused": {
+        "code": 409,
+        "errorCode": "REFUND_PLAN_CHANGED"
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "deplete-p3",
+      "checked_at": "2026-10-20T03:13:11.361Z",
+      "result": "PASS",
+      "provider": "p3",
+      "profile_id": 439,
+      "record_id": 11,
+      "amount": 1000,
+      "before": 1200,
+      "after": 200,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "insufficient-p3",
+      "checked_at": "2026-10-20T03:13:25.941Z",
+      "result": "PASS",
+      "preview": {
+        "order_id": 124,
+        "is_settled": true,
+        "eligible": false,
+        "original_amount": 10000,
+        "refunded_amount": 0,
+        "remaining_amount": 10000,
+        "refund_amount": 2500,
+        "remaining_after_refund": 7500,
+        "full_refund": false,
+        "recovery_total": 2500,
+        "recoveries": [
+          {
+            "wallet_id": 1,
+            "account_id": null,
+            "role": "PLATFORM",
+            "income_amount": 625,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 625,
+            "available_balance": 78100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1121
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "role": "PROVIDER",
+            "income_amount": 175,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 175,
+            "available_balance": 700,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1116
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1117
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "role": "PROVIDER",
+            "income_amount": 300,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 300,
+            "available_balance": 200,
+            "protected_deposit_amount": 0,
+            "shortfall": 100,
+            "original_transaction_ids": [
+              1118
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1119
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "role": "PROVIDER",
+            "income_amount": 350,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 350,
+            "available_balance": 1400,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1120
+            ],
+            "source_safe": true,
+            "explanation": ""
+          }
+        ],
+        "shortfalls": [
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "required": 300,
+            "available": 200,
+            "shortfall": 100
+          }
+        ]
+      },
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_RECOVERY_INSUFFICIENT",
+        "shortfalls": [
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "required": 300,
+            "available": 200,
+            "shortfall": 100
+          }
+        ]
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "restore-p3",
+      "checked_at": "2026-10-20T03:13:27.983Z",
+      "result": "PASS",
+      "provider": "p3",
+      "profile_id": 439,
+      "record_id": 12,
+      "amount": 1000,
+      "before": 200,
+      "after": 1200,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "stale-plan-p3",
+      "checked_at": "2026-10-20T03:13:28.589Z",
+      "result": "PASS",
+      "refused": {
+        "code": 409,
+        "errorCode": "REFUND_PLAN_CHANGED"
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "deplete-p4",
+      "checked_at": "2026-10-20T03:13:43.809Z",
+      "result": "PASS",
+      "provider": "p4",
+      "profile_id": 440,
+      "record_id": 13,
+      "amount": 1675,
+      "before": 2100,
+      "after": 425,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "insufficient-p4",
+      "checked_at": "2026-10-20T03:13:58.111Z",
+      "result": "PASS",
+      "preview": {
+        "order_id": 124,
+        "is_settled": true,
+        "eligible": false,
+        "original_amount": 10000,
+        "refunded_amount": 0,
+        "remaining_amount": 10000,
+        "refund_amount": 2500,
+        "remaining_after_refund": 7500,
+        "full_refund": false,
+        "recovery_total": 2500,
+        "recoveries": [
+          {
+            "wallet_id": 1,
+            "account_id": null,
+            "role": "PLATFORM",
+            "income_amount": 625,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 625,
+            "available_balance": 78100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1121
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "role": "PROVIDER",
+            "income_amount": 175,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 175,
+            "available_balance": 700,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1116
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1117
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "role": "PROVIDER",
+            "income_amount": 300,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 300,
+            "available_balance": 1200,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1118
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 425,
+            "protected_deposit_amount": 0,
+            "shortfall": 100,
+            "original_transaction_ids": [
+              1119
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "role": "PROVIDER",
+            "income_amount": 350,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 350,
+            "available_balance": 1400,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1120
+            ],
+            "source_safe": true,
+            "explanation": ""
+          }
+        ],
+        "shortfalls": [
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "required": 525,
+            "available": 425,
+            "shortfall": 100
+          }
+        ]
+      },
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_RECOVERY_INSUFFICIENT",
+        "shortfalls": [
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "required": 525,
+            "available": 425,
+            "shortfall": 100
+          }
+        ]
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "restore-p4",
+      "checked_at": "2026-10-20T03:13:59.991Z",
+      "result": "PASS",
+      "provider": "p4",
+      "profile_id": 440,
+      "record_id": 14,
+      "amount": 1675,
+      "before": 425,
+      "after": 2100,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "stale-plan-p4",
+      "checked_at": "2026-10-20T03:14:00.566Z",
+      "result": "PASS",
+      "refused": {
+        "code": 409,
+        "errorCode": "REFUND_PLAN_CHANGED"
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "deplete-p5",
+      "checked_at": "2026-10-20T03:14:13.513Z",
+      "result": "PASS",
+      "provider": "p5",
+      "profile_id": 441,
+      "record_id": 15,
+      "amount": 1150,
+      "before": 1400,
+      "after": 250,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "insufficient-p5",
+      "checked_at": "2026-10-20T03:14:27.567Z",
+      "result": "PASS",
+      "preview": {
+        "order_id": 124,
+        "is_settled": true,
+        "eligible": false,
+        "original_amount": 10000,
+        "refunded_amount": 0,
+        "remaining_amount": 10000,
+        "refund_amount": 2500,
+        "remaining_after_refund": 7500,
+        "full_refund": false,
+        "recovery_total": 2500,
+        "recoveries": [
+          {
+            "wallet_id": 1,
+            "account_id": null,
+            "role": "PLATFORM",
+            "income_amount": 625,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 625,
+            "available_balance": 78100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1121
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1161,
+            "account_id": 1160,
+            "role": "PROVIDER",
+            "income_amount": 175,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 175,
+            "available_balance": 700,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1116
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1162,
+            "account_id": 1161,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1117
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1163,
+            "account_id": 1162,
+            "role": "PROVIDER",
+            "income_amount": 300,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 300,
+            "available_balance": 1200,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1118
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1164,
+            "account_id": 1163,
+            "role": "PROVIDER",
+            "income_amount": 525,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 525,
+            "available_balance": 2100,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              1119
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "role": "PROVIDER",
+            "income_amount": 350,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 350,
+            "available_balance": 250,
+            "protected_deposit_amount": 0,
+            "shortfall": 100,
+            "original_transaction_ids": [
+              1120
+            ],
+            "source_safe": true,
+            "explanation": ""
+          }
+        ],
+        "shortfalls": [
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "required": 350,
+            "available": 250,
+            "shortfall": 100
+          }
+        ]
+      },
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_RECOVERY_INSUFFICIENT",
+        "shortfalls": [
+          {
+            "wallet_id": 1165,
+            "account_id": 1164,
+            "required": 350,
+            "available": 250,
+            "shortfall": 100
+          }
+        ]
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "restore-p5",
+      "checked_at": "2026-10-20T03:14:29.439Z",
+      "result": "PASS",
+      "provider": "p5",
+      "profile_id": 441,
+      "record_id": 16,
+      "amount": 1150,
+      "before": 250,
+      "after": 1400,
+      "only_new_fixture": true,
+      "real_payment": false
+    },
+    {
+      "stage": "stale-plan-p5",
+      "checked_at": "2026-10-20T03:14:29.995Z",
+      "result": "PASS",
+      "refused": {
+        "code": 409,
+        "errorCode": "REFUND_PLAN_CHANGED"
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "replay-last-available_recovery",
+      "checked_at": "2026-10-20T03:16:09.008Z",
+      "result": "PASS",
+      "successful_replay_code": 0,
+      "conflicting_intent_code": 409,
+      "refund_id": 46,
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    },
+    {
+      "stage": "exceed-remaining-available_recovery",
+      "checked_at": "2026-10-20T03:16:11.489Z",
+      "result": "PASS",
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_INVALID_AMOUNT"
+      },
+      "all_six_wallets_order_aftersale_platform_ledger_unchanged": true
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "checked_at": "2026-10-20T16:46:06.535372+00:00",
+  "containers": [
+    {
+      "name": "xa-local-validation-web-1",
+      "container_id": "780ca65749f6cabeff835339d71a31570dbdedaf39b8ccd9fd78855a50a40dbf",
+      "running": true,
+      "source_sha256_verified": true,
+      "web_health_200": true
+    },
+    {
+      "name": "xa-local-validation-web-2",
+      "container_id": "2082f47ec7ddb33f84701c9d0c72e8b39d8b82ebf118edbdf712df33cbc9086e",
+      "running": true,
+      "source_sha256_verified": true,
+      "web_health_200": true
+    },
+    {
+      "name": "xa-local-validation-celery-worker-1",
+      "container_id": "9fce2cf00cf45043ccb0ebb96ce36679e013aaf50b84565cde516288614a7d20",
+      "running": true,
+      "source_sha256_verified": true,
+      "web_health_200": null
+    },
+    {
+      "name": "xa-local-validation-celery-beat-1",
+      "container_id": "26757bf6dbb273deba7db4c5f31c548f6de80c4a0dc756954007132072521762",
+      "running": true,
+      "source_sha256_verified": true,
+      "web_health_200": null
+    }
+  ],
+  "tested_source_sha256": {
+    "orders/models.py": "9101e4d37ac37d94619ceb973c4a38fa72909f39d9c52fe7c203884f3f021154",
+    "orders/serializers.py": "6dfbeb1704f9d684bf928b203546d9b3c4455147812d39eaaf75a4b6218fe3e3",
+    "orders/views.py": "3e778b52cd9019e57f567b51fdd24d240d8549c6a9bbeedb1c10670d6257612c",
+    "orders/dispatching.py": "24f6b9e9ab1c7e25c7de9018edc34d3ff1391c6bbc0d3d23c3820c0f5e03090c"
+  },
+  "migrations_required": false,
+  "database_or_volume_mutations": false,
+  "system_check_passed": true
+}

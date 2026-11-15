@@ -1,0 +1,214 @@
+{
+  "status": "PASS",
+  "tested_at": "2026-10-20T10:08:55.968640+00:00",
+  "unique_test_cases": 47,
+  "results": {
+    "sqlite": {
+      "executed": 39,
+      "passed": 39,
+      "skipped": 0,
+      "failed": 0,
+      "complete_migrations": false,
+      "elapsed_seconds": 3.31,
+      "log": "backend-sqlite.log"
+    },
+    "mysql": {
+      "executed": 47,
+      "passed": 47,
+      "skipped": 0,
+      "failed": 0,
+      "complete_migrations": true,
+      "elapsed_seconds": 142.66,
+      "log": "backend-mysql.log"
+    }
+  },
+  "new_test_cases": [
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_ten_costs_and_awards_each_draw_once_with_ordered_claims"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_ten_requires_upfront_total_without_borrowing_its_point_prizes"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_single_on_240_forces_target_then_ten_continues_counting_in_order"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_ten_crosses_hard_pity_in_its_middle_without_extra_charge"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_early_natural_target_resets_without_falsely_marking_hard_pity"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_probability_zero_target_is_still_obtained_on_hard_pity"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_batch_replay_uses_original_snapshot_and_rejects_other_count_or_campaign"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_sixth_claim_failure_rolls_back_every_draw_cost_stock_and_pity"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_selected_inventory_exhaustion_mid_batch_rolls_back_entire_batch"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_exhausted_hard_pity_reward_blocks_even_zero_probability_pool"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_daily_remaining_less_than_ten_rejects_all_ten"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_legacy_history_counts_only_after_last_target_and_survives_version_change"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_account_business_cycle_and_pool_have_independent_pity"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_legacy_single_replay_remains_compatible_but_cannot_be_reused_as_ten"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_legacy_no_target_pool_keeps_weighted_single_and_ten_behavior"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_http_single_keeps_flat_response_and_ten_returns_immutable_batch"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_http_invalid_count_never_writes_financial_or_pity_data"
+    },
+    {
+      "file": "engagement/test_lottery_gacha.py",
+      "name": "test_http_daily_remaining_is_current_while_replay_results_are_snapshotted"
+    },
+    {
+      "file": "engagement/test_lottery_gacha_concurrency.py",
+      "name": "test_same_ten_request_in_parallel_has_one_batch_ten_claims_and_one_charge"
+    },
+    {
+      "file": "engagement/test_lottery_gacha_concurrency.py",
+      "name": "test_single_and_ten_compete_for_upfront_balance_without_overspending"
+    },
+    {
+      "file": "engagement/test_lottery_gacha_concurrency.py",
+      "name": "test_concurrent_single_and_ten_at_239_share_one_atomic_hard_pity_counter"
+    },
+    {
+      "file": "engagement/test_lottery_gacha_concurrency.py",
+      "name": "test_same_request_with_different_counts_has_one_success_and_one_conflict"
+    },
+    {
+      "file": "engagement/test_lottery_gacha_concurrency.py",
+      "name": "test_disjoint_campaign_locks_still_recheck_shared_request_after_points_lock"
+    }
+  ],
+  "hard_assertions": {
+    "count_options": [
+      1,
+      10
+    ],
+    "pity_limit": 240,
+    "pity_scope": [
+      "account",
+      "business_cycle",
+      "campaign"
+    ],
+    "hard_pity_cases": [
+      "239 then first of ten guaranteed, then nine normal draws",
+      "235 then fifth of ten guaranteed",
+      "natural early target resets",
+      "zero probability target still hard guaranteed",
+      "legacy historical rows since last 68 initialize counter",
+      "version change does not reset"
+    ],
+    "financial_cases": [
+      "upfront total required; point prizes cannot fund initial ten",
+      "10 independent cost, claim, award and broadcast rows in one transaction",
+      "sixth claim failure restores all draws/points/inventory/pity/broadcasts",
+      "stock depleted within ten restores entire batch",
+      "68 remains pending dedicated claim with no UserCoupon and catalog experience paid price unchanged"
+    ],
+    "real_mysql_races": [
+      "same request ten twice, one batch only",
+      "single and ten share balance without overspend",
+      "single and ten at239 share exactly one guarantee and end counter10",
+      "same request different count: one success and one validation conflict",
+      "same request disjoint campaign/reward locks: shared points lock rechecks uniqueness"
+    ],
+    "compatibility": [
+      "original single flat API fields",
+      "pre-upgrade single replay without rewriting history",
+      "batch replay retains original points/pity/draw snapshots after later draws",
+      "daily remaining is current while replay financial results stay snapshotted",
+      "daily remainder below10 rejects entire ten",
+      "old no68 pool remains weighted with pity disabled"
+    ]
+  },
+  "source_sha256": {
+    "engagement/models.py": "70fce830fee97a5f9eef2e67116587243f1c0b7c3a908b454f4424dbe133aa34",
+    "engagement/services.py": "0b1ae20b4ebc6e5b57de95d3c5b09a66602206bb6834f93fa3833e8d8d229fc4",
+    "engagement/views.py": "cdc9285abd0ee6292b18c562f240da0e95760bbb05d85772810f1dce6258fd14",
+    "engagement/serializers.py": "1a19942f4d638e4df3e45bd14d6c9ede8de83c56497a00f60af5ac3694e6386d",
+    "engagement/migrations/0016_lottery_batches_and_pity.py": "15eb27ee7a71b1b671f743b0999582bd01e311b1fbae5343096dcb2750495ad7",
+    "engagement/tests.py": "c080025483cf6c65a2e1e77d46bc35a222735384768ce5390742eff11c5794b2",
+    "engagement/test_lottery_gacha.py": "efba75db639017532c516379791b4ef5644671df4afa5bfa7098194a73af389a",
+    "engagement/test_lottery_gacha_concurrency.py": "21194f7efd538343e7f0e70ebbc62ec671f7865d747d372284e9cc6883d7568c"
+  },
+  "isolation": {
+    "mysql_container": "xa-lottery-gacha-mysql-20261020",
+    "network_mode": "none",
+    "published_ports": [],
+    "mysql_database": "test_xa_test_lottery_gacha",
+    "sqlite_database": ":memory:",
+    "source_mount": "read-only",
+    "media": "temporary directories",
+    "queue_and_channel_layer": "memory",
+    "live_database_accessed": false,
+    "external_notifications": false,
+    "ordinary_services_restarted": false
+  },
+  "cleanup": {
+    "removed": true,
+    "anonymous_volumes_removed": true,
+    "container_name": "xa-lottery-gacha-mysql-20261020",
+    "exact_container_id": "0c4e60f519102d8ba184fe932487d779b144e1606d794d17314cb03f8e7070d8",
+    "network_mode": "none",
+    "published_ports": [],
+    "no_host_bind_mounts": true,
+    "tested_at": "2026-10-20T10:08:41.571885+00:00"
+  },
+  "initial_attempts": [
+    {
+      "stage": "MySQL image initialization",
+      "business_tests_executed": 0,
+      "issue": "Socket-only initialization server passed readiness before TCP started",
+      "fix": "Test TCP127.0.0.1:3306 and actual named test database SELECT1 before app starts",
+      "log": "backend-mysql-initialization.log"
+    },
+    {
+      "stage": "MySQL historical fixture portability",
+      "issue": "bulk_create does not return generated MySQL PKs",
+      "fix": "Fixture resolves real PKs through unique event keys; no production code change",
+      "log": "backend-mysql-fixture-portability.log"
+    }
+  ],
+  "limits": [
+    "These are isolated automated tests; local native UI/API checks are reported separately.",
+    "Concurrent cases use simultaneous independent MySQL connections once per scenario; not a long duration load test.",
+    "Random ticket outcomes are deterministic fixtures; no statistical probability estimation was performed."
+  ]
+}

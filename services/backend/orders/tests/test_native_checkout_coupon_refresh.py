@@ -18,6 +18,47 @@ from orders.tests.factories import make_boss_type, make_console_user, make_servi
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)
 class NativeCheckoutCouponRefreshTest(LiveServerTestCase):
+    def _open_checkout_with_admin_coupon_change(self, race, change_amount=False):
+        import os
+        if os.environ.get('XA_CHECKIN_REDIS_REALTIME') != '1':
+            self.skipTest('requires isolated Redis and ASGI')
+        from users.test_native_checkin_order_realtime import isolated_redis_asgi
+        boss, staff = make_user(), make_console_user(['coupon:view', 'coupon:edit'])
+        account = get_or_create_account_for_legacy_user(boss)
+        link_legacy_relations(boss, account)
+        admin = get_or_create_account_for_legacy_user(staff)
+        staff.admin_membership.account = admin
+        staff.admin_membership.save(update_fields=['account'])
+        wallet = make_wallet(boss, balance=50000)
+        service = make_service(price=10000)
+        coupon = Coupon.objects.create(name='结算页实时优惠券', discount_type='DIRECT', amount=1000)
+        token, refresh = issue_account_tokens(account)
+        buyer = APIClient()
+        buyer.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        self.assertEqual(buyer.post(f'/api/coupons/{coupon.pk}/claim/').data['code'], 0)
+        voucher = UserCoupon.objects.get(account=account, coupon=coupon)
+        repo = Path(settings.BASE_DIR).parent.parent
+        with isolated_redis_asgi() as (base, ws_base):
+            result = subprocess.run(['node',str(repo/'scripts/native-checkout-coupon-live.cjs')],
+                input=json.dumps({'base':base, 'wsBase':ws_base, 'race':race, 'changeAmount':change_amount, 'couponId':coupon.pk, 'voucherId':voucher.pk,
+                    'serviceId':service.pk, 'adminToken':issue_account_tokens(admin)[0],
+                    'session':{'token':token, 'refresh':refresh, 'user':{'id':str(account.pk), 'role':'customer'}}}),
+                text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        order = Order.objects.get(customer_account=account)
+        self.assertEqual((order.amount, order.coupon_discount), (8000, 2000) if change_amount else (10000, 0))
+        wallet.refresh_from_db(); voucher.refresh_from_db()
+        self.assertEqual((wallet.balance, voucher.status), (42000, 'USED') if change_amount else (40000, 'UNUSED'))
+
+    def test_open_checkout_updates_after_admin_disables_selected_coupon(self):
+        self._open_checkout_with_admin_coupon_change(False)
+
+    def test_coupon_disabled_while_confirming_requires_new_quote(self):
+        self._open_checkout_with_admin_coupon_change(True)
+
+    def test_coupon_amount_change_refreshes_quote_and_notifies_customer(self):
+        self._open_checkout_with_admin_coupon_change(False, change_amount=True)
+
     def _zero_payable_breakdown_change(self, race):
         node = shutil.which('node')
         if not node:

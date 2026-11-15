@@ -1,0 +1,34 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "ready": true,
+  "isolated_database": "xa_test_lottery_full_flow_20261020",
+  "internal_network": true,
+  "database_published_ports": [],
+  "http_bind": "127.0.0.1:18190",
+  "normal_otp_required": true,
+  "no_mocked_lottery_results": true,
+  "no_live_env_read": true,
+  "fixture_bosses": 8,
+  "source_mount_readonly": true,
+  "started_at": "2026-10-20T15:10:30.156480+00:00",
+  "network_id": "23a669b923237c090e93dbf08a235d81fd03cff90064801fccec55bd5cd16f71",
+  "db_id": "417066bbf09c5929c4e1ec76a376e650e64892142d8c2c194d192409b40f32c6",
+  "app_id": "3ddadb9155d545dbb0e8d3fd25231f663e7865e5d673f9d55c325985d2ef7113",
+  "readiness_resumed_without_resource_or_db_changes": true,
+  "transport": "loopback-transparent-tcp-relay",
+  "docker_requested_host_binding": {
+    "8000/tcp": [
+      {
+        "HostIp": "127.0.0.1",
+        "HostPort": "18190"
+      }
+    ]
+  },
+  "docker_actual_published_ports": {
+    "8000/tcp": null
+  },
+  "docker_internal_network_suppressed_publishing": true,
+  "relay_pid": 605053,
+  "relay_source_sha256": "b7aa44450ed2c4ff68fefc0023bfc0f596c93ef5446ac6c63d9e6c05c3905803",
+  "windows_loopback_unauthenticated_http_status": 401
+}

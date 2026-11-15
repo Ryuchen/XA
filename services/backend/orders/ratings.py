@@ -1,6 +1,6 @@
 """陪玩师评分聚合：按真实评价重算，避免逐次四舍五入造成偏差。
 
-评分聚合的单一来源，供 C 端提交评价与后台删除评价复用。
+评分聚合的单一来源，供老板提交评价与后台作废评价复用。
 调用方需自行包裹 transaction.atomic()。
 """
 
@@ -37,7 +37,7 @@ def escort_rating_summary(profile, *, provider_account_id=None, exclude_evaluati
             ownership |= Q(provider_account__isnull=True, provider_id=mapped_legacy_id)
     else:
         ownership = Q(provider_account__isnull=True, provider_id=profile.user_id)
-    evaluations = Evaluation.objects.filter(ownership)
+    evaluations = Evaluation.objects.filter(ownership, voided_at__isnull=True)
     if exclude_evaluation_id is not None:
         evaluations = evaluations.exclude(pk=exclude_evaluation_id)
     summary = evaluations.aggregate(count=Count('id'), total=Sum('score'))

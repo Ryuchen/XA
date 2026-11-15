@@ -1,0 +1,812 @@
+{
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "result": "PASS",
+  "dispatch_operations": 3,
+  "start_operations": 3,
+  "official_transfer_operations": 12,
+  "completion_operations": 3,
+  "provider_submissions": 15,
+  "report_approvals": 0,
+  "refund_operations": 0,
+  "synthetic_evidence": true,
+  "stages": [
+    {
+      "stage": "dispatch-intent",
+      "key": "frozen_recovery",
+      "client_request_id": "fixed-multi-48c176-frozen_recovery",
+      "amount": 10000,
+      "commission_fixed": 1001
+    },
+    {
+      "stage": "new-fixture-hold-snapshot",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "income_hold_hours": 72,
+      "changed_fields": [
+        "income_hold_hours"
+      ],
+      "official_order_pay_shares_unchanged": true
+    },
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "phase": 1,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 48,
+          "settlement_base": 1799,
+          "provider_income": 1799,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 49,
+          "settlement_base": 5000,
+          "provider_income": 4500,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 50,
+          "settlement_base": 3201,
+          "provider_income": 2700,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "phase": 2,
+      "original_A_row_reused": true,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 48,
+          "settlement_base": 3650,
+          "provider_income": 3149,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        },
+        {
+          "provider_key": "p2",
+          "id": 49,
+          "settlement_base": 5000,
+          "provider_income": 4500,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 50,
+          "settlement_base": 1350,
+          "provider_income": 1350,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "phase": 3,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 48,
+          "settlement_base": 787,
+          "provider_income": 787,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 49,
+          "settlement_base": 5000,
+          "provider_income": 4500,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 50,
+          "settlement_base": 1350,
+          "provider_income": 1350,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p4",
+          "id": 51,
+          "settlement_base": 2863,
+          "provider_income": 2362,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "phase": 4,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 48,
+          "settlement_base": 787,
+          "provider_income": 787,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 49,
+          "settlement_base": 2700,
+          "provider_income": 2700,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p3",
+          "id": 50,
+          "settlement_base": 1350,
+          "provider_income": 1350,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p4",
+          "id": 51,
+          "settlement_base": 2863,
+          "provider_income": 2362,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        },
+        {
+          "provider_key": "p5",
+          "id": 52,
+          "settlement_base": 2300,
+          "provider_income": 1800,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "provider_key": "p1",
+      "report_id": 56,
+      "amount": 787,
+      "expected_income": 787,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "provider_key": "p2",
+      "report_id": 57,
+      "amount": 2700,
+      "expected_income": 2700,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "provider_key": "p3",
+      "report_id": 58,
+      "amount": 1350,
+      "expected_income": 1350,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "provider_key": "p4",
+      "report_id": 59,
+      "amount": 2863,
+      "expected_income": 2362,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "provider_key": "p5",
+      "report_id": 60,
+      "amount": 2300,
+      "expected_income": 1800,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "dispatch-intent",
+      "key": "available_recovery",
+      "client_request_id": "fixed-multi-48c176-available_recovery",
+      "amount": 10000,
+      "commission_fixed": 1001
+    },
+    {
+      "stage": "new-fixture-hold-snapshot",
+      "key": "available_recovery",
+      "order_id": 128,
+      "income_hold_hours": 0,
+      "changed_fields": [],
+      "official_order_pay_shares_unchanged": true
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 128,
+      "phase": 1,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 53,
+          "settlement_base": 1799,
+          "provider_income": 1799,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 54,
+          "settlement_base": 5000,
+          "provider_income": 4500,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 55,
+          "settlement_base": 3201,
+          "provider_income": 2700,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 128,
+      "phase": 2,
+      "original_A_row_reused": true,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 53,
+          "settlement_base": 3650,
+          "provider_income": 3149,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        },
+        {
+          "provider_key": "p2",
+          "id": 54,
+          "settlement_base": 5000,
+          "provider_income": 4500,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 55,
+          "settlement_base": 1350,
+          "provider_income": 1350,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 128,
+      "phase": 3,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 53,
+          "settlement_base": 787,
+          "provider_income": 787,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 54,
+          "settlement_base": 5000,
+          "provider_income": 4500,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 55,
+          "settlement_base": 1350,
+          "provider_income": 1350,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p4",
+          "id": 56,
+          "settlement_base": 2863,
+          "provider_income": 2362,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 128,
+      "phase": 4,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 53,
+          "settlement_base": 787,
+          "provider_income": 787,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 54,
+          "settlement_base": 2700,
+          "provider_income": 2700,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p3",
+          "id": 55,
+          "settlement_base": 1350,
+          "provider_income": 1350,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p4",
+          "id": 56,
+          "settlement_base": 2863,
+          "provider_income": 2362,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        },
+        {
+          "provider_key": "p5",
+          "id": 57,
+          "settlement_base": 2300,
+          "provider_income": 1800,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 128,
+      "provider_key": "p1",
+      "report_id": 61,
+      "amount": 787,
+      "expected_income": 787,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 128,
+      "provider_key": "p2",
+      "report_id": 62,
+      "amount": 2700,
+      "expected_income": 2700,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 128,
+      "provider_key": "p3",
+      "report_id": 63,
+      "amount": 1350,
+      "expected_income": 1350,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 128,
+      "provider_key": "p4",
+      "report_id": 64,
+      "amount": 2863,
+      "expected_income": 2362,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 128,
+      "provider_key": "p5",
+      "report_id": 65,
+      "amount": 2300,
+      "expected_income": 1800,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "dispatch-intent",
+      "key": "protected_foreign_hold",
+      "client_request_id": "fixed-multi-48c176-protected_foreign_hold",
+      "amount": 5000,
+      "commission_fixed": 1001
+    },
+    {
+      "stage": "new-fixture-hold-snapshot",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "income_hold_hours": 72,
+      "changed_fields": [
+        "income_hold_hours"
+      ],
+      "official_order_pay_shares_unchanged": true
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "phase": 1,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 58,
+          "settlement_base": 799,
+          "provider_income": 799,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 59,
+          "settlement_base": 2500,
+          "provider_income": 2000,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 60,
+          "settlement_base": 1701,
+          "provider_income": 1200,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "phase": 2,
+      "original_A_row_reused": true,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 58,
+          "settlement_base": 1900,
+          "provider_income": 1399,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        },
+        {
+          "provider_key": "p2",
+          "id": 59,
+          "settlement_base": 2500,
+          "provider_income": 2000,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 60,
+          "settlement_base": 600,
+          "provider_income": 600,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "phase": 3,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 58,
+          "settlement_base": 349,
+          "provider_income": 349,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 59,
+          "settlement_base": 2500,
+          "provider_income": 2000,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        },
+        {
+          "provider_key": "p3",
+          "id": 60,
+          "settlement_base": 600,
+          "provider_income": 600,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p4",
+          "id": 61,
+          "settlement_base": 1551,
+          "provider_income": 1050,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "phase": 4,
+      "original_A_row_reused": false,
+      "commission_fixed_once": 1001,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "provider_key": "p1",
+          "id": 58,
+          "settlement_base": 349,
+          "provider_income": 349,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p2",
+          "id": 59,
+          "settlement_base": 1200,
+          "provider_income": 1200,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p3",
+          "id": 60,
+          "settlement_base": 600,
+          "provider_income": 600,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 0,
+          "released": true
+        },
+        {
+          "provider_key": "p4",
+          "id": 61,
+          "settlement_base": 1551,
+          "provider_income": 1050,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 501,
+          "released": false
+        },
+        {
+          "provider_key": "p5",
+          "id": 62,
+          "settlement_base": 1300,
+          "provider_income": 800,
+          "commission_type": "FIXED",
+          "commission_rate": 0,
+          "commission_fixed": 500,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "provider_key": "p1",
+      "report_id": 66,
+      "amount": 349,
+      "expected_income": 349,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "provider_key": "p2",
+      "report_id": 67,
+      "amount": 1200,
+      "expected_income": 1200,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "provider_key": "p3",
+      "report_id": 68,
+      "amount": 600,
+      "expected_income": 600,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "provider_key": "p4",
+      "report_id": 69,
+      "amount": 1551,
+      "expected_income": 1050,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "provider_key": "p5",
+      "report_id": 70,
+      "amount": 1300,
+      "expected_income": 800,
+      "status": "PENDING",
+      "synthetic_evidence_bytes": 220
+    }
+  ],
+  "old_wallets_unchanged": true,
+  "old_orders_hash_equal": true
+}

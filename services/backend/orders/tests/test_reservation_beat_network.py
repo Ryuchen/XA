@@ -61,6 +61,8 @@ class ReservationBeatNetworkTest(TransactionTestCase):
             port = probe.getsockname()[1]
         password = secrets.token_hex(16)
         token = secrets.token_hex(10)
+        container_name = 'xa-reservation-beat-' + token
+        docker = ['wsl.exe', '-d', 'XA-Ubuntu-24.04', '-u', 'root', '--', 'docker']
         repo = Path(settings.BASE_DIR).parent.parent
         broker = f'redis://:{password}@127.0.0.1:{port}/0'
         env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.reservation_beat_test_settings',
@@ -70,15 +72,11 @@ class ReservationBeatNetworkTest(TransactionTestCase):
         processes = []
         redis_client = redis.Redis(host='127.0.0.1', port=port, password=password, socket_timeout=.2)
         try:
-            server = subprocess.Popen(['wsl.exe', '-d', 'XA-Ubuntu-24.04', '--', 'env',
-                'LD_LIBRARY_PATH=/tmp/xa-report-redis-qa/root/usr/lib/x86_64-linux-gnu',
-                '/tmp/xa-report-redis-qa/root/usr/bin/redis-server', '--bind', '127.0.0.1', '--port', str(port),
-                '--save', '', '--appendonly', 'no', '--requirepass', password],
+            subprocess.run(docker + ['run', '-d', '--rm', '--name', container_name,
+                '-p', f'127.0.0.1:{port}:6379', 'redis:alpine', 'redis-server',
+                '--save', '', '--appendonly', 'no', '--requirepass', password], check=True,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
-            processes.append(server)
             for _ in range(150):
-                if server.poll() is not None:
-                    self.fail('isolated Redis exited')
                 try:
                     if redis_client.ping():
                         break
@@ -111,9 +109,9 @@ class ReservationBeatNetworkTest(TransactionTestCase):
             self.assertEqual(Message.objects.filter(title='预约已过期', recipient_account=boss_account).count(), 2)
             self.assertEqual(Message.objects.filter(title='预约已过期', recipient_account=provider_account).count(), 2)
         finally:
-            for process in processes[1:]:
+            for process in processes:
                 process.terminate()
-            for process in processes[1:]:
+            for process in processes:
                 try:
                     process.wait(timeout=10)
                 except subprocess.TimeoutExpired:
@@ -123,9 +121,6 @@ class ReservationBeatNetworkTest(TransactionTestCase):
                 redis_client.shutdown(nosave=True)
             except redis.RedisError:
                 pass
-            if processes:
-                try:
-                    processes[0].wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    processes[0].terminate()
-                    processes[0].wait(timeout=10)
+            redis_client.close()
+            subprocess.run(docker + ['stop', container_name], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, creationflags=flags)

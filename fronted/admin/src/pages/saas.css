@@ -1,0 +1,38 @@
+.saas-section { padding: 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--card-foreground); min-width: 0; }
+.saas-section h2 { font-size: 18px; font-weight: 600; }
+.saas-note { color: var(--muted-foreground); font-size: 13px; line-height: 1.8; margin-top: 12px; max-width: 90ch; }
+.saas-table { width: 100%; text-align: left; font-size: 14px; border-collapse: collapse; margin-top: 16px; }
+.saas-table th { color: var(--muted-foreground); font-weight: 500; }
+.saas-table th, .saas-table td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.7; overflow-wrap: anywhere; }
+.saas-table tbody th { color: var(--foreground); font-weight: 600; }
+.saas-table tbody tr:last-child > * { border-bottom: 0; }
+.saas-select { min-height: 40px; border: 1px solid var(--input); border-radius: 6px; background: var(--background); color: var(--foreground); padding: 8px 12px; font-size: 14px; }
+.saas-select:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.saas-definition { display: flex; flex-wrap: wrap; gap: 24px 40px; margin-top: 16px; }
+.saas-definition dt { color: var(--muted-foreground); font-size: 13px; }
+.saas-definition dd { margin-top: 4px; font-size: 14px; }
+.saas-customization-grid { display: grid; grid-template-columns: minmax(440px, 1fr) 340px; gap: 24px; align-items: start; }
+.saas-h5-preview { position: sticky; top: 88px; }
+.saas-preview-screen { border: 1px solid var(--border); border-radius: 12px; background: var(--background); color: var(--foreground); overflow: hidden; }
+.saas-preview-screen header { display: grid; gap: 4px; padding: 20px; font-weight: 600; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.saas-preview-screen header span { font-size: 12px; color: var(--muted-foreground); font-weight: 400; }
+.saas-preview-welcome { padding: 40px 24px; background: var(--h5-preview-primary); color: var(--h5-preview-foreground); }
+.saas-preview-welcome h3 { font-size: 24px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.saas-preview-welcome p { font-size: 13px; margin-top: 16px; }
+.saas-preview-content { padding: 32px 24px; display: grid; gap: 12px; }
+.saas-preview-content h4 { font-size: 18px; font-weight: 600; }
+.saas-preview-content p { font-size: 13px; color: var(--muted-foreground); }
+.saas-preview-action { display: block; text-align: center; padding: 12px; border-radius: 6px; background: var(--h5-preview-primary); color: var(--h5-preview-foreground); font-size: 14px; }
+.saas-preview-screen footer { padding: 16px 8px; text-align: center; border-top: 1px solid var(--border); font-size: 12px; }
+.saas-preview-screen[data-density="compact"] .saas-preview-welcome { padding: 24px; }
+.saas-preview-screen[data-density="compact"] .saas-preview-content { padding: 20px 24px; }
+.platform-shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100dvh; min-width: 1366px; background: var(--background); color: var(--foreground); }
+.platform-sidebar { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 24px; padding: 24px 16px; border-right: 1px solid var(--border); background: var(--sidebar); }
+.platform-sidebar nav { display: grid; gap: 4px; }
+.platform-sidebar a { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+.platform-sidebar a[aria-current="page"] { color: var(--primary); background: var(--accent); font-weight: 600; }
+.platform-sidebar a:hover { background: var(--accent); }
+.platform-main { min-width: 0; padding: 24px; }
+.platform-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.platform-order-filters { display: grid; grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(136px, .7fr)) auto; gap: 12px; align-items: end; }
+.platform-order-filters label { display: grid; gap: 8px; font-size: 13px; }

@@ -20,9 +20,9 @@
 ``tax_amount`` / ``actual_amount`` 逐字段相等**。只要有人日后在 GET 里另写一份
 算法，这条断言立刻红。
 
-为什么用 125（= 12.5 兴安币）
+为什么用 125（= 12.5 浪花）
 -----------------------------
-用户已拍板保留 0.1 兴安币粒度、不加整币校验，所以非整币是合法提现额。而整币金额
+用户已拍板保留 0.1 浪花粒度、不加整币校验，所以非整币是合法提现额。而整币金额
 （如 10000）在任何舍入策略下结果都一样，**会把舍入分歧整个掩盖掉**；125 在 2% 税率
 下恰好落在 2.5 这个 ROUND_HALF_UP 与银行家舍入结果不同的临界点上，是真正的压力点。
 """
@@ -49,7 +49,7 @@ class WithdrawPreviewApiTest(APITestCase):
     def setUp(self):
         self.provider = make_provider()
         make_wallet(self.provider, balance=50000)
-        # 默认最低提现 10000（1000 兴安币），会让 125 这类小额被 POST 拦下，
+        # 默认最低提现 10000（1000 浪花），会让 125 这类小额被 POST 拦下，
         # 而核心用例必须让同一个 125 同时走通试算与落库，故调低门槛。
         SystemConfig.objects.create(key=MIN_WITHDRAW_AMOUNT_KEY, value='10')
         self.client.force_authenticate(self.provider)
@@ -215,11 +215,11 @@ class WithdrawPreviewApiTest(APITestCase):
     # ------------------------------------------------------------------
     # 向后兼容：不带 amount 时行为不变
     # ------------------------------------------------------------------
-    def test_without_amount_response_shape_is_unchanged(self):
+    def test_without_amount_includes_a_configuration_snapshot_version(self):
         data = self.client.get(URL).data['data']
         self.assertEqual(
             set(data),
-            {'balance', 'frozen_amount', 'min_amount', 'tax_rate', 'requests'},
+            {'balance', 'frozen_amount', 'min_amount', 'tax_rate', 'requests', 'config_version'},
         )
 
     def test_blank_amount_is_treated_as_absent(self):

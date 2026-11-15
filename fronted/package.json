@@ -1,0 +1,22 @@
+{
+  "name": "xa-fronted",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "copyright": "Copyright (c) 2026 青岛声浪传媒有限公司. All rights reserved.",
+  "author": "青岛声浪传媒有限公司",
+  "type": "module",
+  "workspaces": ["admin", "boss", "provider", "shared"],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "vite boss --config boss/vite.config.ts",
+    "dev:admin": "npm run dev --workspace @xa/fronted-admin",
+    "dev:boss": "npm run dev --workspace @xa/fronted-boss",
+    "dev:provider": "npm run dev --workspace @xa/fronted-provider",
+    "test": "node --experimental-strip-types --test shared/tests/*.test.ts",
+    "test:ui": "node ../.tools/web-design-review-20261108/run-regression.cjs"
+  },
+  "engines": { "node": ">=22.12.0" },
+  "devDependencies": { "typescript": "~5.9.3", "@types/node": "^22.0.0" }
+}

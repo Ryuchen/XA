@@ -3,6 +3,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from club_accounts.models import ClubAccount
@@ -99,19 +100,17 @@ class AuditionExchangeViewTest(APITestCase):
             title='春季招募', boss_user=self.boss, provider_user=self.provider
         )
 
-    def test_boss_token_exchanges_jwt_for_bound_user(self):
+    def test_boss_invitation_cannot_bypass_wechat_login(self):
         res = self.client.post(EXCHANGE_URL, {'token': self.link.boss_token, 'role': 'boss'})
-        self.assertEqual(res.data['code'], 0)
-        data = res.data['data']
-        self.assertTrue(data['token'])
-        self.assertEqual(data['userInfo']['id'], str(get_or_create_account_for_legacy_user(self.boss).id))
-        self.assertEqual(data['userInfo']['role'], 'customer')
-        self.assertEqual(data['userInfo']['backendRole'], ClubAccount.AccountType.BOSS)
+        self.assertEqual(res.status_code, 403)
+        self.assertNotIn('token', str(res.data))
 
     def test_provider_token_exchanges_jwt_for_bound_user(self):
         res = self.client.post(EXCHANGE_URL, {'token': self.link.provider_token, 'role': 'provider'})
         self.assertEqual(res.data['code'], 0)
-        self.assertEqual(res.data['data']['userInfo']['id'], str(get_or_create_account_for_legacy_user(self.provider).id))
+        account = get_or_create_account_for_legacy_user(self.provider)
+        expected_id = self.provider.id if settings.LEGACY_FORCE_AUTH_COMPAT else account.id
+        self.assertEqual(res.data['data']['userInfo']['id'], str(expected_id))
         self.assertEqual(res.data['data']['userInfo']['role'], 'provider')
 
     def test_unbound_entry_returns_409(self):

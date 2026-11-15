@@ -1,5 +1,6 @@
 from django.conf import settings
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
+from stores.db import transaction
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -7,13 +8,6 @@ from rest_framework.views import APIView
 
 from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated
-from club_accounts.services import (
-    get_or_create_account_for_legacy_user,
-    link_legacy_relations,
-)
-from club_accounts.tokens import issue_account_tokens
-from users.views import ROLE_REVERSE_MAP
-
 from .models import AuditionLink, AuditionSignup
 from .serializers import (
     AuditionPublicSerializer,
@@ -22,6 +16,30 @@ from .serializers import (
 )
 
 VALID_ROLES = ('boss', 'provider')
+
+
+class AuditionEnterView(APIView):
+    """Validate an invitation against the authenticated owner, without issuing credentials."""
+    permission_classes = [IsClubAccountAuthenticated]
+
+    def get(self, request):
+        if request.account.account_type != ClubAccount.AccountType.BOSS:
+            return Response({'code': 403, 'msg': '请登录对应的老板账号'}, status=403)
+        token = request.query_params.get('token', '')
+        if not isinstance(token, str) or not token or len(token) > 64 or request.query_params.get('role', 'boss') != 'boss':
+            return Response({'code': 400, 'msg': '邀请参数无效'}, status=400)
+        link = AuditionLink.objects.filter(boss_token=token).first()
+        if not link:
+            return Response({'code': 404, 'msg': '邀请不存在或已撤销'}, status=404)
+        if not link.is_active or (link.expire_at and link.expire_at <= timezone.now()):
+            return Response({'code': 410, 'msg': '邀请已停用或过期'}, status=410)
+        owner_id = link.boss_account_id
+        if not owner_id and link.boss_user_id:
+            from club_accounts.models import LegacyAccountMap
+            owner_id = LegacyAccountMap.objects.filter(legacy_user_id=link.boss_user_id).values_list('account_id', flat=True).first()
+        if owner_id != request.account.pk:
+            return Response({'code': 403, 'msg': '当前老板账号与邀请不匹配，请联系平台客服'}, status=403)
+        return Response({'code': 0, 'data': {'matched': True, 'link': AuditionPublicSerializer(link).data}})
 
 
 class AuditionPublicView(APIView):
@@ -47,7 +65,7 @@ class AuditionPublicView(APIView):
 
         if not link.is_active:
             return Response({'code': 410, 'msg': '该试音活动已停用'})
-        if link.expire_at and link.expire_at < timezone.now():
+        if link.expire_at and link.expire_at <= timezone.now():
             return Response({'code': 410, 'msg': '该试音链接已过期'})
 
         data = AuditionPublicSerializer(link).data
@@ -56,15 +74,9 @@ class AuditionPublicView(APIView):
 
 
 class AuditionExchangeView(APIView):
-    """免登录换发 JWT：凭分享 token 换取链接绑定用户的真正登录态。
+    """Check a bound invitation against an already authenticated account."""
 
-    POST /api/audition/exchange  body: {token, role}
-    校验链接有效性后，签发 boss_user / provider_user 的 JWT，
-    返回结构与微信/账号登录完全一致（{token, userInfo}）。
-    未绑定用户时返回明确提示，不创建临时用户。
-    """
-
-    permission_classes = [AllowAny]
+    permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
         token = (request.data.get('token') or '').strip()
@@ -85,15 +97,10 @@ class AuditionExchangeView(APIView):
 
         if not link.is_active:
             return Response({'code': 410, 'msg': '该试音活动已停用'})
-        if link.expire_at and link.expire_at < timezone.now():
+        if link.expire_at and link.expire_at <= timezone.now():
             return Response({'code': 410, 'msg': '该试音链接已过期'})
 
         bound_account = link.boss_account if role == 'boss' else link.provider_account
-        if bound_account is None:
-            legacy_user = link.boss_user if role == 'boss' else link.provider_user
-            if legacy_user is not None:
-                bound_account = get_or_create_account_for_legacy_user(legacy_user)
-                link_legacy_relations(legacy_user, bound_account)
         if bound_account is None:
             return Response({'code': 409, 'msg': '该入口尚未绑定账号，请联系客服'})
         expected_type = (
@@ -103,49 +110,15 @@ class AuditionExchangeView(APIView):
         )
         if bound_account.account_type != expected_type:
             return Response({'code': 409, 'msg': '入口绑定账号类型错误，请联系客服'})
+        if request.account.pk != bound_account.pk or request.account.account_type != expected_type:
+            return Response({'code': 403, 'msg': '当前账号与邀请不匹配，请使用受邀账号登录'}, status=403)
         if not bound_account.is_active or not bound_account.can_login:
-            return Response({'code': 403, 'msg': '该账号已被禁用'})
-
-        from club_accounts.otp import otp_required
-        if otp_required(bound_account):
-            return Response({'code':403,'msg':'请使用账号密码并绑定验证器后登录陪玩端'})
-        access_token, refresh_token = issue_account_tokens(bound_account)
-        frontend_role = ROLE_REVERSE_MAP.get(bound_account.account_type, 'customer')
-        legacy_user = link.boss_user if role == 'boss' else link.provider_user
-        response_id = (
-            legacy_user.id
-            if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False) and legacy_user
-            else bound_account.id
-        )
-        backend_role = (
-            legacy_user.role
-            if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False) and legacy_user
-            else bound_account.account_type
-        )
-
-        return Response({
-            'code': 0,
-            'msg': 'success',
-            'data': {
-                'token': access_token,
-                'refreshToken': refresh_token,
-                'userInfo': {
-                    'id': str(response_id),
-                    'username': bound_account.username,
-                    'nickname': bound_account.nickname or bound_account.username,
-                    'role': frontend_role,
-                    'backendRole': backend_role,
-                    'openid': bound_account.openid,
-                    'phone': bound_account.phone,
-                    'bindCode': None,
-                    'bindStatus': 'direct' if frontend_role == 'customer' else 'bound',
-                },
-            },
-        })
+            return Response({'code': 403, 'msg': '该账号已被禁用'}, status=403)
+        return Response({'code': 0, 'data': {'matched': True, 'link': AuditionPublicSerializer(link).data}})
 
 
 class AuditionSignupView(APIView):
-    """登录态下提交试音报名：陪玩换发 JWT 后，凭 provider_token 报名。
+    """登录态下提交试音报名：陪玩凭 provider_token 报名。
 
     POST /api/audition/signup  body: {token, contact, game, remark}
     报名人取自登录态，仅 PROVIDER 角色可提交；同一链接同一人只能报名一次。
@@ -169,18 +142,42 @@ class AuditionSignupView(APIView):
 
         if not link.is_active:
             return Response({'code': 410, 'msg': '该试音活动已停用'})
-        if link.expire_at and link.expire_at < timezone.now():
+        if link.expire_at and link.expire_at <= timezone.now():
             return Response({'code': 410, 'msg': '该试音链接已过期'})
+        if link.provider_account_id and link.provider_account_id != request.account.pk:
+            return Response({'code': 403, 'msg': '当前陪玩账号与邀请不匹配'}, status=403)
 
         serializer = AuditionSignupCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        guarded = getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)
+        if guarded:
+            from club_accounts.provider_lifecycle import ensure_provider_lifecycle, ProviderLifecycleError
+            try:
+                ensure_provider_lifecycle(request.account)
+            except ProviderLifecycleError:
+                return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验'}, status=503)
         try:
             with transaction.atomic():
+                if guarded:
+                    from club_accounts.provider_lifecycle import lock_active_provider_operation
+                    try:
+                        if not lock_active_provider_operation(request.account):
+                            return Response({'code': 409, 'msg': '陪玩账号状态已变化，请重新登录'}, status=409)
+                    except ProviderLifecycleError:
+                        return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验'}, status=503)
+                # Staff can revoke or rebind an invitation while the request
+                # is in flight; serialize the final check with that change.
+                link = AuditionLink.objects.select_for_update().filter(pk=link.pk, provider_token=token).first()
+                if not link or not link.is_active or (link.expire_at and link.expire_at <= timezone.now()):
+                    return Response({'code': 410, 'msg': '该试音链接已停用或过期'}, status=410)
+                if link.provider_account_id and link.provider_account_id != request.account.pk:
+                    return Response({'code': 403, 'msg': '当前陪玩账号与邀请不匹配'}, status=403)
                 signup = serializer.save(
                     link=link,
-                    applicant=request.legacy_user,
+                    applicant=getattr(request, 'legacy_user', None),
                     applicant_account=request.account,
+                    applicant_business_cycle=request.account.business_cycle,
                 )
         except IntegrityError:
             return Response({'code': 409, 'msg': '您已报名该试音活动，请勿重复提交'})

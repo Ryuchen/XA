@@ -4,18 +4,17 @@ from dataclasses import dataclass, field
 import hashlib
 
 from cryptography.fernet import Fernet, InvalidToken
-from django.conf import settings
+from stores.conf import settings
 
 
 DEFAULT_TEMPLATE = (
-    '兴安电竞 · {trigger}\n'
-    '打手单钱：{provider_income} 兴安币（¥{provider_income_yuan}）\n'
+    '声浪电竞 · {trigger}\n'
+    '服务原价：{original_amount} {currency_name}\n'
     '订单号：{order_no}\n'
     '服务：{service_name}\n'
     '模式：{escort_mode} · {game_rounds} {price_unit}\n'
     '区服：{game_region}\n'
     '玩法要求：{gameplay_requirements}\n'
-    '以上为本单打手分账金额，实际入账以订单结算和钱包流水为准。\n'
     '请到打手端确认订单状态并接单。'
 )
 TEMPLATE_FIELDS = {
@@ -23,8 +22,15 @@ TEMPLATE_FIELDS = {
     'escort_mode': '单陪模式', 'game_rounds': '数量', 'price_unit': '单位',
     'game_region': '区服', 'gameplay_name': '玩法名称', 'platform': '平台',
     'security_level': '难度', 'gameplay_requirements': '履约要求',
-    'provider_income': '打手实得（兴安币）', 'provider_income_yuan': '打手实得（人民币元）',
+    'original_amount': '服务原价（店币）', 'currency_name': '门店店币名称',
 }
+
+
+def default_template():
+    from stores.conf import store_name
+    # The name is literal text, never another format placeholder.
+    name = store_name().replace('{', '{{').replace('}', '}}')
+    return DEFAULT_TEMPLATE.replace('声浪电竞', name)
 
 
 def _fernet(secret):

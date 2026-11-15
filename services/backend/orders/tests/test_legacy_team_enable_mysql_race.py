@@ -14,6 +14,7 @@ from orders.models import Order
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
 from orders.tests.test_release_flow import screenshot
 from wallet.models import ProviderReport
+from common.mysql_test_support import mysql_locking_statements
 
 
 @skipUnless(connection.vendor == 'mysql', 'Requires real MySQL row locks')
@@ -58,10 +59,7 @@ class LegacyTeamEnableMySQLRaceTest(TransactionTestCase):
                     future = pool.submit(create_report)
                     deadline = monotonic() + 10
                     while monotonic() < deadline:
-                        with observer.cursor() as cursor:
-                            cursor.execute('SHOW ENGINE INNODB STATUS')
-                            status = cursor.fetchone()[2]
-                        if 'LOCK WAIT' in status and '`orders_order`' in status:
+                        if mysql_locking_statements(observer, 'orders_order'):
                             break
                         sleep(.02)
                     else:
@@ -123,10 +121,7 @@ class LegacyTeamEnableMySQLRaceTest(TransactionTestCase):
                     future = pool.submit(start)
                     deadline = monotonic() + 10
                     while monotonic() < deadline:
-                        with observer.cursor() as cursor:
-                            cursor.execute('SHOW ENGINE INNODB STATUS')
-                            status = cursor.fetchone()[2]
-                        if 'LOCK WAIT' in status and '`orders_order`' in status:
+                        if mysql_locking_statements(observer, 'orders_order'):
                             break
                         sleep(.02)
                     else:

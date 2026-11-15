@@ -7,8 +7,8 @@ import logging
 import uuid
 from datetime import timedelta
 
-from django.conf import settings
-from django.db import transaction
+from stores.conf import settings
+from stores.db import transaction
 from django.utils import timezone
 
 from .direct_payment import _require_test_domain
@@ -72,16 +72,26 @@ def process_payment_outbox(outbox_id, *, lease_seconds=120):
                 event.lease_token, event.lease_until = '', None
                 event.save(update_fields=['status', 'last_error', 'lease_token', 'lease_until', 'updated_at'])
                 return 'review'
-            if order.dispatch_route == Order.DispatchRoute.PUBLIC:
+            if order.dispatch_route == Order.DispatchRoute.PUBLIC and not order.requires_boss_selection:
                 from integrations.kook_config import get_kook_config
                 from .dispatching import MODELS, queue_dispatch, send_task_safely
-                active = [('KOOK', bool(get_kook_config().auto_new_orders)),
-                          ('WECOM', bool(settings.WECOM_DISPATCH_NEW_ORDERS))]
+                runtime = get_kook_config()
+                from integrations.wecom_config import get_wecom_config
+                wecom = get_wecom_config()
+                active = [('KOOK', bool(runtime.auto_new_orders and runtime.enabled)),
+                          ('WECOM', bool(wecom.ready and wecom.auto_new_orders))]
                 for channel, enabled in active:
                     if not enabled:
                         continue
                     model = MODELS[channel]
                     existed = model.objects.filter(order=order, sequence=order.reject_count).exists()
+                    if not existed:
+                        from stores.license_benefits import check_new_benefits
+                        outcome, _ = check_new_benefits('CONTENT_OPERATIONS')
+                        if outcome == 'DENY':
+                            continue
+                        if outcome == 'UNKNOWN':
+                            raise RuntimeError('dispatch license decision unavailable')
                     record = queue_dispatch(order, channel)
                     if record is None:
                         raise RuntimeError('enabled dispatch channel is unavailable')

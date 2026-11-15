@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """The real order's frozen gameplay is visible before and after acceptance."""
 import json
 import os
@@ -20,9 +21,9 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
 class ProviderVueGameplaySnapshotHTTPTest(LiveServerTestCase):
     def test_public_pool_and_assigned_order_keep_real_draw_and_rules(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         boss = make_user()
         provider = make_provider(deposit_mode='EARNINGS', pass_tier='BLACK', pass_expires_at=timezone.now()+timedelta(days=7))
         staff = make_console_user(['order:view','service:view','service:edit'])

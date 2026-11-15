@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Real multi-image uploads report limits and partial failures accurately."""
 import json
 import os
@@ -28,9 +29,9 @@ class ProviderVueReportBatchUploadHTTPTest(LiveServerTestCase):
     new_order = flow.ReleaseFlowTest.new_order
 
     def exercise(self, scenario):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         order = self.new_order()
         self.login(self.provider)
         self.ok(self.client.post(f'/api/orders/orders/{order.pk}/start/', {'entry_image': flow.screenshot()}, format='multipart'))
@@ -50,11 +51,11 @@ class ProviderVueReportBatchUploadHTTPTest(LiveServerTestCase):
                 'id': self.accounts[self.provider.pk].pk, 'token': issue_account_tokens(self.accounts[self.provider.pk])[0],
                 'bossToken': issue_account_tokens(self.accounts[self.boss.pk])[0],
                 'staffToken': issue_account_tokens(self.accounts[self.admin.pk])[0],
-                'scenario': scenario, 'fixed': os.environ.get('XA_BATCH_UPLOAD_FIXED') == '1'}),
+                'scenario': scenario, 'fixed': True}),
             text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout.strip())
-        self.assertEqual(report.result_images.count(), 9 if scenario == 'limit' else 3 if scenario in ('lost', 'partial') else 2 if os.environ.get('XA_BATCH_UPLOAD_FIXED') == '1' else 1)
+        self.assertEqual(report.result_images.count(), 9 if scenario == 'limit' else 3 if scenario in ('lost', 'partial') else 2 if True else 1)
 
     def test_ten_selected_images_respect_nine_image_limit(self):
         self.exercise('limit')
@@ -63,11 +64,7 @@ class ProviderVueReportBatchUploadHTTPTest(LiveServerTestCase):
         self.exercise('invalid')
 
     def test_lost_response_is_not_treated_as_definite_failure(self):
-        if os.environ.get('XA_BATCH_UPLOAD_FIXED') != '1':
-            self.skipTest('requires updated upload feedback')
         self.exercise('lost')
 
     def test_truncated_response_remains_uncertain(self):
-        if os.environ.get('XA_BATCH_UPLOAD_FIXED') != '1':
-            self.skipTest('requires updated upload feedback')
         self.exercise('partial')

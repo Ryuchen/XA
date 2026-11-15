@@ -1,4 +1,4 @@
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -14,7 +14,7 @@ from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_console_user, make_provider, make_service
 from users.models import EscortLevel, EscortProfile, ProviderRegistration
 from users.provider_registration import decrypt_identity, validate_identity
-from wallet.models import Transaction, Wallet, get_platform_wallet
+from wallet.models import CashDepositTopup, Transaction, Wallet, get_platform_wallet
 
 
 @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'], WECHAT_MOCK_LOGIN=False)
@@ -65,7 +65,7 @@ class ProviderRegistrationTests(APITestCase):
         return self.client.post(
             f'/api/admin/provider-registrations/{row.pk}/approve/',
             {'revision':row.revision,'level_id':self.level.pk,'identity_confirmed':True,
-             'deposit_confirmed':True,'deposit_paid':20000,**changes},format='json',
+             'deposit_confirmed':True,'deposit_paid':40000,**changes},format='json',
         )
 
     def test_pending_is_encrypted_private_and_cannot_login(self):
@@ -111,7 +111,7 @@ class ProviderRegistrationTests(APITestCase):
             self.assertEqual(self.client.post(self.url,data,format='multipart').status_code,409)
         self.assertEqual(ProviderRegistration.objects.count(),1)
 
-    def test_approval_is_atomic_idempotent_and_requires_self_bound_otp(self):
+    def test_approval_is_atomic_idempotent_and_login_requires_sms_without_otp(self):
         row = self.submit()
         self.authenticate_admin()
         before = get_platform_wallet().balance
@@ -123,16 +123,27 @@ class ProviderRegistrationTests(APITestCase):
         self.assertEqual(LegacyAccountMap.objects.filter(account=account).count(),1)
         profile = EscortProfile.objects.get(account=account)
         self.assertEqual((profile.display_name,profile.is_verified,profile.deposit_mode,profile.deposit_paid),
-                         ('测试结单昵称',True,'CASH',20000))
-        self.assertEqual(Wallet.objects.get(account=account).balance,0)
-        self.assertEqual(get_platform_wallet().balance-before,20000)
+                         ('测试结单昵称',True,'CASH',40000))
+        wallet = Wallet.objects.get(account=account)
+        self.assertEqual((wallet.balance, wallet.total_recharge), (0, 0))
+        self.assertEqual(get_platform_wallet().balance-before,40000)
         self.assertEqual(Transaction.objects.filter(tx_type='DEPOSIT_INCOME').count(),1)
-        self.assertEqual(Transaction.objects.filter(tx_type='DEPOSIT',wallet__account=account).count(),1)
+        self.assertFalse(Transaction.objects.filter(tx_type__in=['TOPUP', 'DEPOSIT'],wallet__account=account).exists())
+        receipt = CashDepositTopup.objects.get(source_registration=row)
+        self.assertEqual((receipt.kind, receipt.amount, receipt.account_id), ('INITIAL', 40000, account.pk))
+        self.assertEqual(receipt.platform_transaction.amount, 40000)
+        from django.core.management import call_command
+        report = StringIO()
+        call_command('backfill_deposit_platform_income', stdout=report)
+        self.assertIn('差额 [1]+[1a]-[2]：0', report.getvalue())
+        self.assertIn('待回补金额 [1]+[1a]-[4]：0', report.getvalue())
         self.assertFalse(OtpCredential.objects.filter(account=account).exists())
         self.client.credentials()
         with override_settings(LOGIN_OTP_REQUIRED=True):
-            response=self.client.post('/api/users/account-login/',{'username':row.username,'password':'test-password-only'})
-            self.assertTrue(response.data['data']['requiresOTPSetup'])
+            with patch('users.password_login.send_verification_code'):
+                response=self.client.post('/api/users/password-login/',{'audience':'provider',
+                    'username':row.username,'password':'test-password-only'},format='json')
+            self.assertTrue(response.data['data']['requiresSms'])
             self.assertNotIn('token',response.data['data'])
 
     def test_audit_requires_read_and_audit_permissions(self):
@@ -202,6 +213,19 @@ class ProviderRegistrationTests(APITestCase):
         self.assertFalse(ClubAccount.objects.filter(username=row.username).exists())
         self.assertEqual(get_platform_wallet().balance,before)
 
+    def test_cash_receipt_failure_rolls_back_registration_and_store_ledger(self):
+        row = self.submit()
+        self.authenticate_admin()
+        before = get_platform_wallet().balance
+        with patch('wallet.cash_deposit_models.CashDepositTopup.save', side_effect=RuntimeError('receipt failure')):
+            with self.assertRaises(RuntimeError):
+                self.approve(row)
+        row.refresh_from_db()
+        self.assertEqual(row.status, 'PENDING')
+        self.assertFalse(ClubAccount.objects.filter(username=row.username).exists())
+        self.assertFalse(CashDepositTopup.objects.filter(source_registration=row).exists())
+        self.assertEqual(get_platform_wallet().balance, before)
+
     def test_password_protected_status_and_post_approval_resubmit_refused(self):
         row=self.submit()
         self.assertEqual(self.client.post(self.url+'status/',{'username':row.username,'password':'wrong-password'}).status_code,400)
@@ -216,7 +240,7 @@ class ProviderRegistrationTests(APITestCase):
         response=self.client.post(self.url,data,format='multipart')
         self.assertEqual(response.status_code,201,response.data)
         row=ProviderRegistration.objects.get(pk=response.data['data']['id'])
-        self.assertEqual(row.deposit_required,40000)
+        self.assertEqual(row.deposit_required,80000)
         self.assertFalse(row.deposit_proof)
         self.authenticate_admin()
         self.assertEqual(self.approve(row,deposit_paid=20000).status_code,400)
@@ -224,7 +248,7 @@ class ProviderRegistrationTests(APITestCase):
         self.assertEqual(result.status_code,200,result.data)
         row.refresh_from_db()
         profile=EscortProfile.objects.get(account=row.account)
-        self.assertEqual((profile.deposit_mode,profile.deposit_required,profile.deposit_paid),('EARNINGS',40000,0))
+        self.assertEqual((profile.deposit_mode,profile.deposit_required,profile.deposit_paid),('EARNINGS',80000,0))
         self.assertFalse(Transaction.objects.filter(wallet__account=row.account).exists())
         self.assertEqual(get_platform_wallet().balance,0)
 

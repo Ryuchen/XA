@@ -1,7 +1,7 @@
 """Safe, portable catalog content shared by the console, H5 and WeChat."""
 from html import escape
 from html.parser import HTMLParser
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from .private_media import public_media_path
 
@@ -21,7 +21,12 @@ def image_source(value):
     except ValueError:
         return ''
     if value.startswith('/media/'):
-        return value if public_media_path(value) and not parts.query and not parts.fragment else ''
+        if parts.query:
+            from stores.context import current_store
+            store = current_store()
+            if store is None or parse_qs(parts.query, keep_blank_values=True) != {'store': [store.slug]}:
+                return ''
+        return value if public_media_path(value) and not parts.fragment else ''
     if parts.scheme != 'https' or not parts.netloc or parts.username or parts.password:
         return ''
     # A public URL must never make private business images public.

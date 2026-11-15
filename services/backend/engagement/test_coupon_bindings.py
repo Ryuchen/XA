@@ -1,5 +1,6 @@
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from django.test import override_settings
+from rest_framework.test import APIClient, APITestCase
 from rest_framework.exceptions import ValidationError
 from club_accounts.models import ClubAccount
 from orders.models import ServiceCategory
@@ -14,6 +15,7 @@ from .services import update_vip
 from .serializers import TierSerializer
 
 
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=True, CELERY_TASK_ALWAYS_EAGER=False)
 class CouponBindingTests(APITestCase):
     def setUp(self):
         self.user = make_user()
@@ -74,10 +76,26 @@ class CouponBindingTests(APITestCase):
         self.assertFalse(applies_to(empty, self.single))
         self.assertFalse(applies_to(legacy, self.single))
 
-    def test_missing_legacy_mapping_does_not_report_successful_award(self):
-        account = ClubAccount.objects.create(username='unlinked-award', account_type='BOSS')
-        with self.assertRaises(ValidationError): issue(account, 'unmapped', name='赠券', rate=0)
-        self.assertFalse(Coupon.objects.exists())
+    @override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
+    def test_independent_account_award_is_owned_and_cannot_leak_to_same_numbered_legacy_user(self):
+        from club_accounts.tokens import issue_account_tokens
+        collision = max(self.user.pk, self.account.pk) + 100
+        unrelated = make_user(pk=collision)
+        unrelated_account = mapped(unrelated)
+        account = ClubAccount.objects.create(pk=collision, username='unlinked-award', account_type='BOSS')
+        rows = issue(account, 'unmapped', name='赠券', rate=0)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].account_id, account.pk)
+        self.assertIsNone(rows[0].user_id)
+        self.assertEqual(issue(account, 'unmapped', name='赠券', rate=0)[0].pk, rows[0].pk)
+        self.assertEqual(UserCoupon.objects.filter(account=account).count(), 1)
+        self.assertFalse(UserCoupon.objects.filter(user=unrelated).exists())
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        owned = client.get('/api/coupons/mine/').data['data']
+        self.assertEqual([row['id'] for row in owned], [rows[0].pk])
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(unrelated_account)[0])
+        self.assertNotIn(rows[0].pk, {row['id'] for row in client.get('/api/coupons/mine/').data['data']})
 
     def test_binding_options_need_operations_permission_and_exclude_gifts(self):
         operator = make_console_user(perms=['engagement:view'])
@@ -87,3 +105,47 @@ class CouponBindingTests(APITestCase):
         self.assertIn(self.single.pk, [row['id'] for row in response.data['data']])
         self.client.force_authenticate(self.user)
         self.assertEqual(self.client.get('/api/admin/vip-tiers/service-options/').status_code, 403)
+
+    def test_binding_options_match_each_business_category(self):
+        safe = make_service(name='单陪安全箱', benefit_kind='SAFEBOX_33', platform='PC', billing_provider_count=1)
+        double_safe = make_service(name='双陪安全箱', benefit_kind='SAFEBOX_33', platform='PC', billing_provider_count=2)
+        non_hour = make_service(name='按局陪玩', benefit_kind='COMPANION_HOUR', platform='PC', price_unit='局')
+        operator = make_console_user(perms=['engagement:view'])
+        from club_accounts.services import get_or_create_account_for_legacy_user
+        from club_accounts.tokens import issue_account_tokens
+        account = get_or_create_account_for_legacy_user(operator)
+        operator.admin_membership.account = account
+        operator.admin_membership.save(update_fields=['account'])
+        self.client.force_authenticate(None)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        def ids(kind):
+            response = self.client.get('/api/admin/vip-tiers/service-options/', {'benefit_kind': kind})
+            self.assertEqual(response.data['code'], 0, response.data)
+            return {item['id'] for item in response.data['data']}
+        self.assertEqual(ids('COMPANION_HOUR'), {self.single.pk})
+        self.assertEqual(ids('SAFEBOX_33'), {safe.pk})
+        self.assertNotIn(double_safe.pk, ids('SAFEBOX_33'))
+        self.assertNotIn(non_hour.pk, ids('COMPANION_HOUR'))
+        self.assertEqual(self.client.get('/api/admin/vip-tiers/service-options/', {'benefit_kind': 'UNKNOWN'}).status_code, 400)
+
+    def test_existing_binding_beyond_first_page_remains_available(self):
+        from orders.models import ServiceItem
+        ServiceItem.objects.bulk_create([ServiceItem(name=f'安全箱 {i}', price=10000, benefit_kind='SAFEBOX_33',
+            platform='PC', billing_provider_count=1) for i in range(501)])
+        last = ServiceItem.objects.filter(benefit_kind='SAFEBOX_33').order_by('-pk').first()
+        operator = make_console_user(perms=['engagement:view'])
+        from club_accounts.services import get_or_create_account_for_legacy_user
+        from club_accounts.tokens import issue_account_tokens
+        account = get_or_create_account_for_legacy_user(operator)
+        operator.admin_membership.account = account
+        operator.admin_membership.save(update_fields=['account'])
+        self.client.force_authenticate(None)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        response = self.client.get('/api/admin/vip-tiers/service-options/',
+                                   {'benefit_kind': 'SAFEBOX_33', 'selected_ids': str(last.pk)})
+        self.assertEqual(response.data['code'], 0, response.data)
+        self.assertEqual(len(response.data['data']), 501)
+        self.assertIn(last.pk, {row['id'] for row in response.data['data']})
+        found = self.client.get('/api/admin/vip-tiers/service-options/',
+                                {'benefit_kind': 'SAFEBOX_33', 'keyword': last.name})
+        self.assertEqual([row['id'] for row in found.data['data']], [last.pk])

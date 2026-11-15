@@ -1,0 +1,37 @@
+{
+  "mode": "WeChat functional UI; all HTTP mocked; no live draw or point deduction",
+  "cases": [
+    {
+      "name": "tenth-guarantee",
+      "result": "PASS",
+      "result_count": 10,
+      "ten_guarantee_cards": 1,
+      "hard_pity_cards": 0,
+      "non_points_cards": 1,
+      "skip_preserves_results": true
+    },
+    {
+      "name": "hard-priority",
+      "result": "PASS",
+      "result_count": 10,
+      "ten_guarantee_cards": 0,
+      "hard_pity_cards": 1,
+      "non_points_cards": 1,
+      "skip_preserves_results": true
+    },
+    {
+      "name": "no-positive-non-points",
+      "result": "PASS",
+      "ten_disabled": true,
+      "single_disabled": false
+    }
+  ],
+  "failures": [],
+  "posts": 2,
+  "unknown_requests": [],
+  "result": "PASS",
+  "original_page": "pages/home/index",
+  "restored_page": "pages/home/index",
+  "original_page_restored": true,
+  "real_http_writes": 0
+}

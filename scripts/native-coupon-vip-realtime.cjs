@@ -1,0 +1,20 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const x=JSON.parse(fs.readFileSync(0,'utf8')),root=path.resolve('apps/boss-miniapp/native'),ws=new URL(x.wsBase),store=new Map();let opened,reads=0;
+const connected=new Promise(resolve=>{opened=resolve});
+global.wx={getStorageSync:k=>store.get(k),setStorageSync:(k,v)=>store.set(k,v),removeStorageSync:k=>store.delete(k),getAccountInfoSync:()=>({miniProgram:{envVersion:'develop'}}),showToast(){},stopPullDownRefresh(){},request(o){const u=new URL(o.url);if(u.pathname==='/api/coupons/mine/')reads++;fetch(x.base+u.pathname+u.search,{method:o.method,headers:o.header,...(o.data===undefined?{}:{body:JSON.stringify(o.data)})}).then(async r=>o.success({statusCode:r.status,data:await r.json()})).catch(o.fail)},connectSocket({url}){const u=new URL(url),s=new WebSocket(`ws://${ws.host}${u.pathname}${u.search}`);return{onOpen(f){s.addEventListener('open',()=>{f();opened()})},onMessage(f){s.addEventListener('message',e=>f({data:e.data}))},onClose(f){s.addEventListener('close',f)},onError(f){s.addEventListener('error',f)},send({data}){s.send(data)},close(){s.close()}}}};
+async function wait(predicate,message){for(let i=0;i<400;i++){if(predicate())return;await new Promise(resolve=>setTimeout(resolve,25))}throw Error(message)}
+(async()=>{require(path.join(root,'core/auth')).setSession({token:x.token,user:{id:x.account,role:'customer'}});let def;global.Page=value=>{def=value};require(path.join(root,'pages/coupons/index.js'));
+  const page={...def,data:structuredClone(def.data),setData(value){Object.assign(this.data,value)}};for(const [key,value] of Object.entries(page))if(typeof value==='function')page[key]=value.bind(page);
+  page.onLoad({tab:'mine'});page._visible=true;await page.load();assert.equal(page.data.items.length,0);
+  const realtime=require(path.join(root,'core/realtime'));const other=new WebSocket(`ws://${ws.host}/ws/orders/?token=${encodeURIComponent(x.otherToken)}`),otherEvents=[];
+  other.addEventListener('message',e=>{const data=JSON.parse(e.data);if(data.type==='coupon_catalog_update')otherEvents.push(data)});
+  try{await new Promise((resolve,reject)=>{other.addEventListener('open',resolve,{once:true});other.addEventListener('error',reject,{once:true})});realtime.show();await connected;await wait(()=>!page._couponOrderTimer&&!page.data.loading,'initial refresh incomplete');
+    let response=await fetch(`${x.base}/api/admin/club-config/`,{method:'PUT',headers:{Authorization:'Bearer '+x.staffToken,'Content-Type':'application/json'},body:JSON.stringify({vip_enabled:true})});let data=await response.json();assert.equal(data.code,0,JSON.stringify(data));
+    response=await fetch(`${x.base}/api/coupons/mine/`,{headers:{Authorization:'Bearer '+x.token}});data=await response.json();assert.equal(data.code,0,JSON.stringify(data));assert.equal(data.data.length,2);
+    await wait(()=>page.data.items.length===2,'VIP coupons did not refresh on open page');
+    await new Promise(resolve=>setTimeout(resolve,1200));const settledReads=reads;await new Promise(resolve=>setTimeout(resolve,900));assert.equal(reads,settledReads,'coupon refresh loop');assert.equal(otherEvents.length,0,'other boss received private coupon update');
+    response=await fetch(`${x.base}/api/admin/vip-tiers/${x.tierId}/`,{method:'PATCH',headers:{Authorization:'Bearer '+x.staffToken,'Content-Type':'application/json'},body:JSON.stringify({safe_box_service_ids:[x.serviceId]})});data=await response.json();assert.equal(data.code,0,JSON.stringify(data));
+    await wait(()=>page.data.items.some(item=>item.scope==='SAFE_BOX'&&item.service_ids?.includes(x.serviceId)),'safe box scope did not refresh after tier edit');
+    response=await fetch(`${x.base}/api/coupons/mine/?usable=1&service_id=${x.serviceId}`,{headers:{Authorization:'Bearer '+x.token}});data=await response.json();assert.equal(data.code,0,JSON.stringify(data));assert.ok(data.data.some(item=>item.scope==='SAFE_BOX'));
+  }finally{realtime.hide();page.onUnload();other.close()}
+})().catch(error=>{console.error(error.stack||error);process.exitCode=1});

@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "mode": "desktop",
+      "text": "闭\n闭环验收-1106022045aceb-shenglangboss\n\n本店账号 ID 72\n\n声浪电竞 · 微信账号\n\n微信尚未绑定\n账号安全",
+      "errors": []
+    },
+    {
+      "mode": "mobile",
+      "text": "闭\n闭环验收-1106022045aceb-shenglangboss\n\n本店账号 ID 72\n\n声浪电竞 · 微信账号\n\n微信尚未绑定\n账号安全",
+      "errors": []
+    },
+    {
+      "guest": {
+        "text": "游\n游客预览\n\n登录后读取本店账号\n\n声浪电竞 · 完整功能预览\n\n登录后核对微信绑定\n账号安全",
+        "privateRequests": []
+      }
+    }
+  ]
+}

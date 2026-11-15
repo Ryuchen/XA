@@ -22,7 +22,7 @@ from wallet.models import Wallet
 class GiftBasketRefundJourneyTest(LiveServerTestCase):
     host = '127.0.0.1'
     port = 19210
-    def test_refunding_one_line_updates_naming_and_keeps_other_line(self):
+    def test_refunding_gifts_preserves_naming_and_cumulative_rights(self):
         media = TemporaryDirectory(prefix='xa-basket-refund-')
         self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
@@ -65,7 +65,7 @@ class GiftBasketRefundJourneyTest(LiveServerTestCase):
         naming = ProviderNaming.objects.get(provider=accounts[1], sponsor=accounts[0])
         initial_expiry = naming.expires_at
         details = []
-        for amount, expected_grants in ((1000, 2), (None, 1)):
+        for amount in (1000, None):
             params = {'refund_amount': amount} if amount else {}
             preview = ok(clients[2].get(f'/api/admin/orders/{first.pk}/refund-preview/', params))
             payload = {'reason': '隔离冠名退款', 'plan_token': preview['plan_token'],
@@ -76,32 +76,16 @@ class GiftBasketRefundJourneyTest(LiveServerTestCase):
             naming.refresh_from_db()
             detail = ok(clients[0].get(f'/api/orders/orders/{first.pk}/'))
             result = detail['refund_summary']['records'][0]['gift_naming_result']
-            self.assertEqual(result['remaining_paid_grants'], expected_grants)
+            self.assertTrue(result['preserved'])
             self.assertEqual(result['expires_at'], naming.expires_at.isoformat())
             provider_detail = ok(clients[1].get(f'/api/orders/orders/{first.pk}/'))
             self.assertEqual(provider_detail['refund_summary']['records'][0]['gift_naming_result'], result)
-            self.assertLess(naming.expires_at, initial_expiry)
+            self.assertEqual(naming.expires_at, initial_expiry)
             claim.refresh_from_db()
-            if amount:
-                self.assertEqual(claim.status, 'PENDING')
-                self.assertNotIn('gift_claim_results', detail['refund_summary']['records'][0])
-            else:
-                self.assertEqual(claim.status, 'CANCELLED')
-                self.assertEqual(detail['refund_summary']['records'][0]['gift_claim_results'],
-                    [{'id': claim.pk, 'name': '累计赠礼权益', 'outcome': 'CANCELLED'}])
-                self.assertIn('赠礼退款', ok(clients[0].get(f'/api/club/claims/{claim.pk}/'))['delivery_note'])
-                notices = [item for item in ok(clients[0].get('/api/messages/'))['messages'] if item['title'] == '权益状态已调整']
-                self.assertEqual(len(notices), 1)
-                self.assertIn('1 项未交付权益已撤销', notices[0]['preview'])
-                self.assertEqual(ok(clients[0].get(f"/api/messages/{notices[0]['id']}/"))['action_url'], '/pages/points/index?tab=claims')
-                if os.environ.get('XA_NATIVE_CLAIM_REFUND_NOTICE') == '1':
-                    repo = Path(settings.BASE_DIR).parent.parent
-                    check = subprocess.run(['node', str(repo / 'scripts/native-claim-refund-notice-375.cjs')], cwd=repo,
-                        input=json.dumps({'noticeId': notices[0]['id'], 'claimId': claim.pk,
-                            'session': {'token': issue_account_tokens(accounts[0])[0],
-                                'user': {'id': str(accounts[0].pk), 'role': 'customer'}}}),
-                        text=True, encoding='utf-8', capture_output=True, timeout=55)
-                    self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+            self.assertEqual(claim.status, 'PENDING')
+            self.assertTrue(detail['refund_summary']['records'][0]['gift_rights_preserved'])
+            notices = [item for item in ok(clients[0].get('/api/messages/'))['messages'] if item['title'] == '权益状态已调整']
+            self.assertEqual(notices, [])
             admin = ok(clients[2].get(f'/api/admin/orders/{first.pk}/'))
             self.assertEqual(admin['refund_summary']['records'][0]['benefit_effects']['gift_naming']['expires_at'], result['expires_at'])
             if amount and os.environ.get('XA_TEAM_GIFT_BROWSER') == '1':
@@ -122,18 +106,20 @@ class GiftBasketRefundJourneyTest(LiveServerTestCase):
         self.assertEqual(second.payment_status, 'PAID')
         self.assertEqual(Wallet.objects.get(account=accounts[0]).balance, 14000)
         benefits = ok(clients[1].get('/api/wallet/provider-benefits/'))['gift_records']
-        self.assertEqual({row['id']: row['settlement_status'] for row in benefits}, {first.pk: 'REFUNDED', second.pk: 'SETTLED'})
+        self.assertEqual({row['id']: row['settlement_status'] for row in benefits}, {first.pk: 'REFUNDED', second.pk: 'FROZEN'})
         preview = ok(clients[2].get(f'/api/admin/orders/{second.pk}/refund-preview/'))
         ok(clients[2].post(f'/api/admin/orders/{second.pk}/refund/', {'reason': '隔离剩余礼物退款',
             'plan_token': preview['plan_token'], 'client_request_id': 'basket-refund-second'}, format='json'))
         final = ok(clients[0].get(f'/api/orders/orders/{second.pk}/'))
-        self.assertEqual(final['refund_summary']['records'][0]['gift_naming_result']['remaining_paid_grants'], 0)
+        self.assertTrue(final['refund_summary']['records'][0]['gift_naming_result']['preserved'])
+        naming.refresh_from_db()
+        self.assertEqual(naming.expires_at, initial_expiry)
         if os.environ.get('XA_TEAM_GIFT_BROWSER') == '1':
             repo = Path(settings.BASE_DIR).parent.parent
             browser = subprocess.run(['node', str(repo / 'scripts/team-gift-origin-375.cjs')], cwd=repo,
                 input=json.dumps({'base': self.live_server_url, 'sourceNo': '', 'giftNo': second.order_no,
                     'refundStatus': 'FULL', 'walletIncome': '0币', 'serviceIncome': '0',
-                    'recoveredIncome': '480', 'hasNaming': True, 'noNaming': True,
+                    'recoveredIncome': '480', 'hasNaming': True, 'namingExpiry': initial_expiry.isoformat(),
                     'staffToken': issue_account_tokens(accounts[2])[0],
                     'providerRoot': os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'], 'adminRoot': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
                     'provider': {'token': issue_account_tokens(accounts[1])[0], 'id': accounts[1].pk}}),

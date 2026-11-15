@@ -10,14 +10,27 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from stores.db import transaction
 
 from announcements.models import Announcement
 from orders.models import GameCategory, Gameplay, ServiceCategory, ServiceItem
 from orders.catalog import catalog_labels
+from orders.catalog_initial_prices import approved_initial_prices, current_price_rules
 
 
 CATALOG = Path(__file__).resolve().parents[2] / 'data' / 'club_catalog_20260922.json'
+# The reference explicitly describes these seven services as two providers
+# billed per person.  The fishing service is a two-provider package price.
+DOUBLE_PER_PERSON_KEYS = frozenset({
+    'xa-price-d21528e53ffc2f1ced4cfbc7',
+    'xa-price-30188862464e20e9b210bf2c',
+    'xa-price-3db569222f4a7e2daba3a70d',
+    'xa-price-59fc61d3f110aa677ba1bfc9',
+    'xa-price-1b2992ca8c03e0148638e445',
+    'xa-price-158aba82b80bb8ac821f0a71',
+    'xa-price-4e941b23a85af83f6cf04a72',
+})
+DOUBLE_PACKAGE_KEYS = frozenset({'xa-price-2c8c0204a352f1e0b012bb55'})
 GROUPS = {
     'experience': ('体验与每日', '新客体验与每日专享', 'experience'),
     'supplies': ('物资护航', '常规物资、嘉豪与超额累计', 'extraction'),
@@ -43,7 +56,7 @@ def validate_import_database():
 
 
 class Command(BaseCommand):
-    help = '导入经核对的兴安价目到本地测试库；不删除订单、用户或钱包。默认仅检查。'
+    help = '导入经核对的俱乐部价目到本地测试库；不删除订单、用户或钱包。默认仅检查。'
 
     def add_arguments(self, parser):
         parser.add_argument('--apply', action='store_true')
@@ -61,6 +74,7 @@ class Command(BaseCommand):
         keys = [row['catalog_key'] for row in rows]
         if len(keys) != len(set(keys)):
             raise CommandError('价目键重复，导入中止。')
+        initial_prices = approved_initial_prices(rows)
         for row in rows:
             if type(row['price']) is not int or row['price'] <= 0:
                 raise CommandError('价格必须是正整数账务单位。')
@@ -71,7 +85,7 @@ class Command(BaseCommand):
             except (KeyError, InvalidOperation, ValueError):
                 valid_price = False
             if not valid_price:
-                raise CommandError('价格换算不符：1元应为10兴安币（100账务单位）：' + row['name'])
+                raise CommandError('价格换算不符：1元应为10浪花（100账务单位）：' + row['name'])
             if row['purchase_mode'] == 'DIRECT' and not row['is_gift'] and (not row['platform'] or not row['security_level']):
                 raise CommandError('直接下单项缺少平台或适用难度：' + row['name'])
         existing = ServiceItem.objects.filter(catalog_key__in=keys).count()
@@ -104,11 +118,22 @@ class Command(BaseCommand):
             fields = ['name','description','price','platform','security_level','rules','price_unit','is_addon','purchase_mode','purchase_note','catalog_source','is_active','commission_rate','highlights']
             for order,row in enumerate(rows,1):
                 defaults = {field: row[field] for field in fields}
+                defaults['price'] = initial_prices.get(row['catalog_key'], row['price'])
+                defaults['rules'] = current_price_rules(row)
+                if row['catalog_key'] in DOUBLE_PER_PERSON_KEYS:
+                    defaults.update(fulfillment_provider_count=2, billing_provider_count=2)
+                elif row['catalog_key'] in DOUBLE_PACKAGE_KEYS:
+                    defaults.update(fulfillment_provider_count=2, billing_provider_count=1)
                 defaults.update(catalog_labels(row))
                 defaults.update(gameplay=plays.get(row['group']), game_category=games[row['game']], service_category=gifts if row['is_gift'] else category, sort_order=order)
                 if row['cover'] in media:
                     defaults['cover_url'] = media[row['cover']]
-                item, was_created = ServiceItem.objects.update_or_create(catalog_key=row['catalog_key'], defaults=defaults)
+                # The reference can seed a new service, but a repeated local
+                # import must not erase the store's own price or gameplay rules.
+                update_defaults = {key: value for key, value in defaults.items() if key not in
+                                   ('price', 'rules', 'fulfillment_provider_count', 'billing_provider_count')}
+                item, was_created = ServiceItem.objects.update_or_create(catalog_key=row['catalog_key'],
+                    defaults=update_defaults, create_defaults=defaults)
                 item.full_clean()
                 created += was_created
                 updated += not was_created

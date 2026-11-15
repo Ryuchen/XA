@@ -29,19 +29,6 @@ ROLE_SEEDS = [
         ],
     },
     {
-        'code': 'finance',
-        'name': '财务',
-        'description': '钱包与订单结算',
-        'sort_order': 2,
-        'permissions': [
-            'dashboard:view',
-            'user:view',
-            'order:view', 'order:refund', 'order:cancel',
-            'wallet:view', 'wallet:adjust', 'transaction:view',
-            'coupon:view',
-        ],
-    },
-    {
         'code': 'support',
         'name': '客服',
         'description': '用户支持与消息',

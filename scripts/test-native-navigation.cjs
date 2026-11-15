@@ -18,9 +18,19 @@ function navigation(route) {
     setData(patch) { Object.assign(this.data, patch); },
   };
   definition.lifetimes.attached.call(component);
-  return { component, show: () => definition.pageLifetimes.show.call(component) };
+  return { component, show: () => definition.pageLifetimes.show.call(component), detach: () => definition.lifetimes.detached.call(component) };
 }
 const tap = key => ({ currentTarget: { dataset: { key } } });
+
+test('detail navigation reflects unread changes and unsubscribes on detach', () => {
+  const events = require(path.join(root, 'core/events'));
+  const { component, detach } = navigation('pages/checkout/index');
+  events.emit('site-message.badge.updated', 3);
+  assert.equal(component.data.unread, 3);
+  detach();
+  events.emit('site-message.badge.updated', 8);
+  assert.equal(component.data.unread, 3);
+});
 
 test('all registered pages provide native tabs or one persistent navigation outside conditional content', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'));
@@ -36,7 +46,7 @@ test('all registered pages provide native tabs or one persistent navigation outs
 
 test('nested pages highlight their primary destination and refresh it on page show', () => {
   for (const [route, expected] of [
-    ['pages/catalog/index', 'home'], ['pages/service/index', 'home'], ['pages/checkout/index', 'home'],
+    ['pages/catalog/index', 'home'], ['pages/service/index', 'home'], ['pages/checkout/index', 'orders'],
     ['pages/companion-detail/index', 'companions'], ['pages/order-detail/index', 'orders'],
     ['pages/chat/index', 'messages'], ['pages/message-detail/index', 'messages'],
     ['pages/customer/wallet/index', 'mine'], ['pages/coupon/mine/index', 'mine'],

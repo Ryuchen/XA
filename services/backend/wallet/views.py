@@ -1,7 +1,9 @@
 from django.utils import timezone
-from django.db import transaction
+from django.conf import settings
+from stores.db import transaction
+from stores.context import current_currency_name
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import BigIntegerField, Count, Exists, F, OuterRef, Q, Subquery, Sum, Value
+from django.db.models import BigIntegerField, Count, Exists, F, Max, OuterRef, Q, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -9,11 +11,15 @@ from rest_framework.views import APIView
 
 from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated
+from orders.models import Order, OrderProvider
+from orders.points_business_access import scoped_report_action
 from users.models import EscortProfile
 
 from .models import (
+    DepositPaymentSnapshot,
     DisposeRecord,
     IdempotencyKey,
+    IncomeHold,
     ProviderReport,
     ProviderReportImage,
     RechargeRecord,
@@ -29,6 +35,7 @@ from .serializers import ReportSerializer, WithdrawRequestSerializer
 from .services import claim_fund_write, get_wallet, peek_fund_write
 from .receipts import fund_success, recover_fund_result
 from .payees import validate_payee
+from .report_lifecycle import provider_report_operation
 from common.logging_utils import log_money_event, new_trace_id
 
 
@@ -48,12 +55,21 @@ def _get_wallet(request, *, for_update=False):
     ), False
 
 
+def _wallet_overview(wallet):
+    from engagement.services import wallet_funding_parts
+    return {
+        'balance': wallet.balance,
+        'frozen_amount': wallet.frozen_amount,
+        **wallet_funding_parts(wallet),
+    }
+
+
 class WalletInfoView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
         wallet, _ = _get_wallet(request)
-        return Response({'code': 0, 'data': {'balance': wallet.balance}})
+        return Response({'code': 0, 'data': _wallet_overview(wallet)})
 
 
 class TopupView(APIView):
@@ -61,10 +77,10 @@ class TopupView(APIView):
 
     def post(self, request):
         # 客户端不再允许直接修改余额。企微客服确认收款后，
-        # 再由管理端按 1:10 兑换规则确认兴安币入账。
+        # 再由管理端按 1:10 兑换规则确认浪花入账。
         return Response({
             'code': 403,
-            'msg': '请联系企业微信客服充值，确认收款后按 1:10 兑换规则入账兴安币',
+            'msg': f'请联系企业微信客服充值，确认收款后按 1:10 兑换规则入账{current_currency_name()}',
         })
 
 
@@ -112,8 +128,6 @@ class ProviderBenefitRecordsView(APIView):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可查看此记录'})
 
-        from orders.models import Order, OrderProvider
-
         try:
             page_size = _withdraw_integer(request.query_params.get('page_size', 20), maximum=100)
             dispose_page = _withdraw_integer(request.query_params.get('dispose_page', 1), maximum=1000000)
@@ -147,9 +161,10 @@ class ProviderBenefitRecordsView(APIView):
         if request.legacy_user is not None:
             ownership |= Q(provider_account__isnull=True, provider=request.legacy_user, provider__wallet__account__isnull=True)
         assignments = OrderProvider.objects.filter(order_id=OuterRef('pk'))
-        own_assignments = assignments.filter(ownership).filter(
-            Q(released_at__isnull=True) | Q(settlement_base__gt=0) | Q(provider_income__gt=0)
-        )
+        meaningful = Q(released_at__isnull=True) | Q(settlement_base__gt=0) | Q(provider_income__gt=0)
+        if getattr(settings, 'VIP_SAFE_BOX_SUBSIDY_ENABLED', False):
+            meaningful |= Q(platform_subsidy_share__amount__gt=0)
+        own_assignments = assignments.filter(ownership).filter(meaningful)
         credit_owner = Q(wallet__account=request.account)
         if request.legacy_user is not None:
             credit_owner |= Q(wallet__account__isnull=True, wallet__user=request.legacy_user)
@@ -186,13 +201,22 @@ class ProviderBenefitRecordsView(APIView):
 
         gift_records = []
         gift_start = (gift_page - 1) * page_size
-        for order in gift_orders[gift_start:gift_start + page_size]:
+        gift_page_orders = list(gift_orders[gift_start:gift_start + page_size])
+        held_rows = IncomeHold.objects.filter(credit_owner,
+            income_transaction__order_id__in=[item.pk for item in gift_page_orders],
+            released_at__isnull=True, cancelled_at__isnull=True).values('income_transaction__order_id').annotate(
+                amount=Sum(F('amount') - F('recovered_amount')), release_at=Max('release_at'))
+        holds = {item['income_transaction__order_id']: item for item in held_rows}
+        for order in gift_page_orders:
             customer = order.customer_account if order.customer_account_id else order.customer
             settled_at = order.assignment_settled_at or order.settled_at
+            hold = holds.get(order.pk)
             if order.payment_status == 'REFUNDED':
                 settlement_status = 'REFUNDED'
             elif order.payment_status == 'PARTIALLY_REFUNDED':
-                settlement_status = 'PARTIALLY_REFUNDED'
+                settlement_status = 'PARTIALLY_REFUNDED_FROZEN' if hold else 'PARTIALLY_REFUNDED'
+            elif hold:
+                settlement_status = 'FROZEN'
             elif (order.has_credit or settled_at) and order.received_income == order.expected_income:
                 settlement_status = 'SETTLED'
             elif settled_at or order.received_income > order.expected_income:
@@ -209,6 +233,8 @@ class ProviderBenefitRecordsView(APIView):
                 'provider_income': order.expected_income,
                 'received_income': order.received_income,
                 'settlement_status': settlement_status,
+                'frozen_income': hold['amount'] if hold else 0,
+                'release_at': hold['release_at'].isoformat() if hold and hold['release_at'] else None,
                 'completed_at': (order.completed_at or order.updated_at).isoformat(),
             })
 
@@ -262,18 +288,40 @@ class WithdrawView(APIView):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可查看提现信息'})
         wallet, _ = _get_wallet(request)
-        requests_qs = WithdrawRequest.objects.filter(account=request.account)
+        requests_qs = WithdrawRequest.objects.filter(account=request.account).order_by('-created_at', '-id')
+        page_info = None
+        if 'requests_page' in request.query_params:
+            try:
+                page = _withdraw_integer(request.query_params['requests_page'], maximum=1000000)
+                page_size = _withdraw_integer(request.query_params.get('requests_page_size', 20), maximum=100)
+            except ValueError:
+                return Response({'code': 400, 'msg': '分页参数非法'})
+            total = requests_qs.count()
+            start = (page - 1) * page_size
+            requests_qs = requests_qs[start:start + page_size]
+            page_info = {'page': page, 'page_size': page_size, 'total': total}
         serializer = WithdrawRequestSerializer(requests_qs, many=True)
-        tax_rate = get_withdraw_tax_rate()
+        from .withdraw_rules import withdraw_rule_snapshot
+        rules = withdraw_rule_snapshot()
+        tax_rate = rules['tax_rate']
         data = {
             'balance': wallet.balance,
             'frozen_amount': wallet.frozen_amount,
-            'min_amount': get_min_withdraw_amount(),
+            'min_amount': rules['min_amount'],
             'tax_rate': tax_rate,
+            'config_version': rules['version'],
             'requests': serializer.data,
         }
-        from .club_rules import withdraw_balance_threshold
-        threshold = withdraw_balance_threshold()
+        if 'request_id' in request.query_params:
+            try:
+                request_id = _withdraw_integer(request.query_params['request_id'])
+            except ValueError:
+                return Response({'code': 400, 'msg': '提现申请编号无效'})
+            selected = WithdrawRequest.objects.filter(account=request.account, pk=request_id).first()
+            data['requested_withdrawal'] = WithdrawRequestSerializer(selected).data if selected else None
+        if page_info is not None:
+            data['requests_pagination'] = page_info
+        threshold = rules['balance_threshold']
         if threshold is not None:
             data['balance_threshold'] = threshold
             data['can_withdraw'] = wallet.balance > threshold
@@ -293,6 +341,7 @@ class WithdrawView(APIView):
             data['amount'] = amount
             data['tax_amount'] = tax_amount
             data['actual_amount'] = amount - tax_amount
+            data['payout_eligible'] = data['actual_amount'] > 0
 
         return Response({'code': 0, 'data': data})
 
@@ -351,31 +400,50 @@ class WithdrawView(APIView):
             )
             return Response({'code': 409, 'msg': replay_reason})
 
+        expected_version = request.data.get('expected_config_version')
+        if expected_version is not None and (not isinstance(expected_version, str) or len(expected_version) != 64):
+            return Response({'code': 400, 'msg': '提现规则版本无效，请重新试算'})
         with transaction.atomic():
+            if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
+                from club_accounts.provider_lifecycle import ProviderLifecycleError, lock_active_provider_operation
+                try:
+                    active = lock_active_provider_operation(request.account)
+                except ProviderLifecycleError:
+                    return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验，请联系客服'}, status=503)
+                if not active:
+                    return Response({'code': 409, 'msg': '陪玩账号状态已变化，请重新登录'}, status=409)
+            from .withdraw_rules import lock_withdraw_rules, withdraw_rule_snapshot
+            lock_withdraw_rules()
+            rules = withdraw_rule_snapshot(lock=True)
+            if expected_version is not None and expected_version != rules['version']:
+                return Response({'code': 400, 'errorCode': 'WITHDRAW_QUOTE_CHANGED', 'msg': '提现规则已更新，请重新确认试算金额'})
             wallet, _ = _get_wallet(request, for_update=True)
-            from .club_rules import withdraw_balance_threshold
-            threshold = withdraw_balance_threshold()
+            threshold = rules['balance_threshold']
             if threshold is not None and wallet.balance <= threshold:
-                return Response({'code': 400, 'msg': '可用余额须大于50元才可提现'})
+                return Response({'code': 400, 'msg': f'可用余额须大于人民币 {threshold / 100:g} 元才可提现'})
             if wallet.balance < amount:
-                return Response({'code': 400, 'msg': '兴安币余额不足'})
+                return Response({'code': 400, 'msg': f'{current_currency_name()}余额不足'})
 
             if saved_id is not None:
-                saved = WithdrawalAccount.objects.select_for_update().filter(pk=saved_id, account=request.account).first()
+                saved = WithdrawalAccount.objects.select_for_update().filter(pk=saved_id, account=request.account,
+                    business_cycle=request.account.business_cycle).first()
                 if saved is None or saved.version != saved_version:
                     return Response({'code': 400, 'errorCode': 'PAYEE_CHANGED',
                                      'msg': '收款账户已修改或解绑，请重新选择并核对'})
                 payee_method, payee_account, payee_name = saved.payee_method, saved.payee_account, saved.payee_name
 
             # 与用户看到的试算不一致时不占幂等键、不冻结余额。
-            min_amount = get_min_withdraw_amount()
+            min_amount = rules['min_amount']
             if amount < min_amount:
-                return Response({'code': 400, 'errorCode': 'WITHDRAW_QUOTE_CHANGED', 'msg': f'最低提现为 {min_amount / 10:g} 兴安币，请重新确认'})
-            tax_rate = get_withdraw_tax_rate()
+                return Response({'code': 400, 'errorCode': 'WITHDRAW_QUOTE_CHANGED', 'msg': f'最低提现为 {min_amount / 10:g} {current_currency_name()}，请重新确认'})
+            tax_rate = rules['tax_rate']
             tax_amount = compute_withdraw_tax(amount, tax_rate)
             actual_amount = amount - tax_amount
             if expected_quote is not None and expected_quote != (tax_rate, tax_amount, actual_amount):
                 return Response({'code': 400, 'errorCode': 'WITHDRAW_QUOTE_CHANGED', 'msg': '提现规则已更新，请重新确认试算金额'})
+            if actual_amount <= 0:
+                return Response({'code': 400, 'errorCode': 'WITHDRAW_ZERO_PAYOUT',
+                                 'msg': '预计实际打款为零，请调整金额或核对费率'})
 
             # 幂等闸门放在「全部校验通过之后、第一次动钱之前」。
             #
@@ -416,13 +484,15 @@ class WithdrawView(APIView):
                 status=Transaction.Status.PENDING,
                 remark=(
                     f'提现申请（税前 {amount / 10:g}，代扣税 {tax_amount / 10:g}，'
-                    f'预计到账 {actual_amount / 10:g} 兴安币）'
+                    f'预计到账 {actual_amount / 10:g} {current_currency_name()}）'
                     if tax_amount else '提现申请'
                 ),
             )
             withdraw = WithdrawRequest.objects.create(
                 user=request.legacy_user,
                 account=request.account,
+                account_business_cycle=request.account.business_cycle,
+                workflow_version=2,
                 amount=amount,
                 tax_rate=tax_rate,
                 tax_amount=tax_amount,
@@ -448,13 +518,15 @@ class WithdrawView(APIView):
             submit_msg = '提现申请已提交，等待审核'
             if tax_amount:
                 submit_msg += (
-                    f'；代扣税 {tax_rate}% 计 {tax_amount / 10:g} 兴安币，'
+                    f'；代扣税 {tax_rate}% 计 {tax_amount / 10:g} {current_currency_name()}，'
                     f'预计打款人民币 ¥{actual_amount / 100:g}'
                 )
             result = fund_success(request, 'withdraw', msg=submit_msg, data={
                 'balance': wallet.balance, 'frozen_amount': wallet.frozen_amount,
                 'request': WithdrawRequestSerializer(withdraw).data,
             })
+            from .withdraw_notifications import withdrawal_message
+            withdrawal_message(withdraw, 'submitted')
             from .notifier import notify_wallet_update, notify_withdraw_update
             transaction.on_commit(lambda: notify_wallet_update(wallet))
             transaction.on_commit(lambda: notify_withdraw_update(withdraw))
@@ -481,7 +553,9 @@ class TransactionsView(APIView):
 
         total = qs.count()
         start = (page - 1) * page_size
-        items = list(qs.select_related('reversal_of').order_by('-created_at', '-id')[start:start + page_size])
+        items = list(qs.select_related('reversal_of', 'order').order_by('-created_at', '-id')[start:start + page_size])
+        from .addon_transactions import addon_links
+        addon_by_transaction = addon_links(t.pk for t in items)
         # A GIFT can be an order gift, a recharge bonus, or an activity award.
         # Use persisted relations rather than the editable transaction remark.
         original_gift_ids = [t.reversal_of_id or t.id for t in items if t.tx_type == Transaction.TxType.GIFT]
@@ -514,6 +588,9 @@ class TransactionsView(APIView):
             'status': t.status,
             'remark': t.remark,
             'created_at': t.created_at.isoformat(),
+            'order_id': addon_by_transaction[t.pk]['order_id'] if t.pk in addon_by_transaction else t.order_id,
+            'order_no': addon_by_transaction[t.pk]['order_no'] if t.pk in addon_by_transaction else (t.order.order_no if t.order_id else None),
+            'addon': addon_by_transaction.get(t.pk),
         } for t in items]
 
         return Response({
@@ -526,8 +603,7 @@ class TransactionsView(APIView):
                 'total': total,
                 'page': page,
                 'page_size': page_size,
-                'balance': wallet.balance,
-                'frozen_amount': wallet.frozen_amount,
+                **_wallet_overview(wallet),
             }
         })
 
@@ -540,6 +616,117 @@ def _report_owner_q(request):
     return owner
 
 
+class ReportOrderChoicesView(APIView):
+    """可创建报单的订单，按当前陪玩和现有报单资格过滤。"""
+    permission_classes = [IsClubAccountAuthenticated]
+
+    def get(self, request):
+        if request.account.account_type != ClubAccount.AccountType.PROVIDER:
+            return Response({'code': 403, 'msg': '仅陪玩可提交报单'})
+        try:
+            page = max(1, int(request.query_params.get('page', 1)))
+            size = max(1, min(100, int(request.query_params.get('page_size', 20))))
+        except (TypeError, ValueError):
+            return Response({'code': 400, 'msg': '分页参数无效'})
+        from orders.models import Order, OrderProvider
+        owner = _report_owner_q(request)
+        shares = OrderProvider.objects.filter(owner, order_id=OuterRef('pk')).order_by('id')
+        reports = ProviderReport.objects.filter(owner, order_id=OuterRef('pk'))
+        direct = Q(provider_account=request.account)
+        if request.legacy_user is not None:
+            direct |= Q(provider_account__isnull=True, provider=request.legacy_user)
+        orders = (Order.objects.filter(status__in=[Order.Status.GRABBED, Order.Status.IN_SERVICE, Order.Status.COMPLETED],
+                    payment_status=Order.PaymentStatus.PAID,
+                    source_order__isnull=True, is_gift_snapshot=False)
+                  .annotate(_has_share=Exists(shares), _has_report=Exists(reports),
+                            _released=Subquery(shares.values('released_at')[:1]),
+                            _share_base=Subquery(shares.values('settlement_base')[:1]))
+                  .filter(direct | Q(_has_share=True), _has_report=False))
+        # Points-paid reports are not integrated yet; exclude independently
+        # recorded evidence before pagination, including damaged markers.
+        from engagement.models import PointLedger
+        from orders.models import OrderPointsRedemption
+        from django.db import DatabaseError
+        from orders.points_service_payment import MARKER, points_receipt_table_exists
+        orders = orders.annotate(_has_points_ledger=Exists(PointLedger.objects.filter(
+            order_id=OuterRef('pk'), kind='ORDER_POINTS_REDEEM')))
+        points_filter = Q(funding_terms__has_key=MARKER) | Q(_has_points_ledger=True)
+        try:
+            has_points_receipts = points_receipt_table_exists()
+        except DatabaseError:
+            orders = orders.none()
+            has_points_receipts = False
+        if has_points_receipts:
+            orders = orders.annotate(_has_points_receipt=Exists(OrderPointsRedemption.objects.filter(order_id=OuterRef('pk'))))
+            points_filter |= Q(_has_points_receipt=True)
+        from orders.points_checkout_test import report_enabled
+        verify_points = report_enabled()
+        if verify_points:
+            from django.db.models import BooleanField, Case, Value, When
+            orders = orders.annotate(_verify_points=Case(
+                When(points_filter, then=Value(True)), default=Value(False), output_field=BooleanField()))
+        else:
+            orders = orders.exclude(points_filter)
+        from orders.segment_financial_capture import enforcement_enabled
+        segment_enforced = enforcement_enabled()
+        if segment_enforced:
+            from orders.models import OrderOriginalShareTransfer
+            retained = OrderOriginalShareTransfer.objects.filter(
+                previous_segment__attribution__order_id=OuterRef('pk'),
+                previous_segment__attribution__financial_coverage__isnull=False,
+                previous_segment__provider_account=request.account,
+                previous_segment__started_at__isnull=False, retained_share__gt=0)
+            orders = orders.annotate(_has_retained_segment=Exists(retained))
+        retained_filter = {'_has_retained_segment': False} if segment_enforced else {}
+        if getattr(settings, 'VIP_SAFE_BOX_SUBSIDY_ENABLED', False):
+            funded = shares.filter(platform_subsidy_share__amount__gt=0)
+            orders = orders.annotate(_has_funded_share=Exists(funded)).exclude(
+                _released__isnull=False, _share_base__lte=0, _has_funded_share=False, **retained_filter)
+        else:
+            orders = orders.exclude(_released__isnull=False, _share_base__lte=0, **retained_filter)
+        query = request.query_params.get('q', '').strip()
+        if query:
+            from identifiers.services import entity_ids_for_code
+            orders = orders.filter(Q(order_no__icontains=query) | Q(service_name_snapshot__icontains=query)
+                                   | Q(id__in=entity_ids_for_code(query, 'orders.order'))
+                                   | Q(service_name_snapshot='', service__name__icontains=query))
+        orders = orders.order_by('-created_at', '-id').select_related('service')
+        start = (page - 1) * size
+        if verify_points:
+            # Verify every real candidate before counting and paging, without
+            # truncating history or building a database-sized IN clause.
+            from orders.points_funding_plan import PointsFundingPlanError
+            from orders.points_report_test import verified_report_snapshot
+            total, page_orders, cursor = 0, [], None
+            while True:
+                batch_query = orders
+                if cursor is not None:
+                    batch_query = batch_query.filter(Q(created_at__lt=cursor[0])
+                        | Q(created_at=cursor[0], pk__lt=cursor[1]))
+                batch = list(batch_query[:256])
+                if not batch:
+                    break
+                for candidate in batch:
+                    if candidate._verify_points:
+                        try:
+                            verified_report_snapshot(candidate, request.account.pk, getattr(request.legacy_user, 'pk', None))
+                        except PointsFundingPlanError:
+                            continue
+                    if start <= total < start + size:
+                        page_orders.append(candidate)
+                    total += 1
+                cursor = (batch[-1].created_at, batch[-1].pk)
+        else:
+            total = orders.count()
+            page_orders = list(orders[start:start + size])
+        from identifiers.services import get_entity_number, prime_entity_numbers
+        prime_entity_numbers(page_orders)
+        rows = [{'id': order.id, 'order_no': order.order_no, 'entity_no': get_entity_number(order),
+                 'service_name': order.service_name_snapshot or order.service.name}
+                for order in page_orders]
+        return Response({'code': 0, 'data': {'list': rows, 'total': total, 'page': page, 'page_size': size}})
+
+
 class ReportListCreateView(APIView):
     """陪玩报单：GET 查询记录，POST 按已完成订单创建上传草稿。"""
 
@@ -547,10 +734,29 @@ class ReportListCreateView(APIView):
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request):
-        reports = ProviderReport.objects.filter(_report_owner_q(request)).select_related('order').prefetch_related('result_images')
-        serializer = ReportSerializer(reports, many=True, context={'request': request})
-        return Response({'code': 0, 'data': serializer.data})
+        reports = ProviderReport.objects.filter(_report_owner_q(request))
+        if request.query_params.get('only_order_ids') == '1':
+            ids = list(reports.filter(order__isnull=False).order_by('order_id').values_list('order_id', flat=True).distinct())
+            return Response({'code': 0, 'data': ids})
+        order_id = request.query_params.get('order_id')
+        if order_id:
+            if not order_id.isascii() or not order_id.isdigit() or int(order_id) < 1:
+                return Response({'code':400, 'msg':'订单编号无效'})
+            reports = reports.filter(order_id=int(order_id))
+        reports = reports.select_related('order').prefetch_related('result_images').order_by('-created_at', '-id')
+        if 'page' not in request.query_params:
+            return Response({'code': 0, 'data': ReportSerializer(reports, many=True, context={'request': request}).data})
+        try:
+            page = max(1, int(request.query_params.get('page', 1)))
+            size = max(1, min(100, int(request.query_params.get('page_size', 20))))
+        except (TypeError, ValueError):
+            return Response({'code':400, 'msg':'分页参数无效'})
+        total = reports.count()
+        start = (page - 1) * size
+        rows = ReportSerializer(reports[start:start + size], many=True, context={'request': request}).data
+        return Response({'code':0, 'data':{'list':rows, 'total':total, 'page':page, 'page_size':size}})
 
+    @provider_report_operation
     @transaction.atomic
     def post(self, request):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
@@ -565,6 +771,9 @@ class ReportListCreateView(APIView):
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order:
             return Response({'code': 400, 'msg': '订单不存在、未完成或不属于当前陪玩'})
+        from .report_lifecycle import report_order_cycle_matches
+        if not report_order_cycle_matches(order, request.account):
+            return Response({'code': 409, 'msg': '订单陪玩来源周期待核对'}, status=409)
         # 与开始/完成服务入口统一用 provider + order 唯一键，兼容历史未回填账户的草稿。
         share_owner = Q(provider_account=request.account)
         if request.legacy_user is not None:
@@ -574,19 +783,30 @@ class ReportListCreateView(APIView):
         error = report_entry_error(order, request.account, share, legacy_user=request.legacy_user)
         if error:
             return Response({'code': 400, 'msg': error})
+        from orders.points_service_payment import needs_integrated_processing
+        snapshot = None
+        if needs_integrated_processing(order):
+            from orders.points_funding_plan import PointsFundingPlanError
+            from orders.points_report_test import verified_report_snapshot
+            try:
+                snapshot = verified_report_snapshot(order, request.account.pk, getattr(request.legacy_user, 'pk', None))
+            except PointsFundingPlanError:
+                return Response({'code': 400, 'msg': '积分订单报单或收益快照待核对'})
         report, created = ProviderReport.objects.get_or_create(
             provider=request.legacy_user,
             order=order,
             defaults={
                 'provider_account': request.account,
                 'game_name': order.service_name_snapshot or order.service.name,
-                'description': order.remark, 'amount': share.settlement_base if share else order.amount,
-                'commission_rate': share.commission_rate if share else order.commission_rate,
+                'description': order.remark, 'amount': snapshot.incoming_basis if snapshot else share.settlement_base if share else order.amount,
+                'commission_rate': snapshot.commission_rate if snapshot else share.commission_rate if share else order.commission_rate,
                 'status': ProviderReport.Status.DRAFT,
             },
         )
         if report.provider_account_id and report.provider_account_id != request.account.pk:
             return Response({'code': 409, 'msg': '报单归属需客服核对'}, status=409)
+        if snapshot and (report.amount != snapshot.incoming_basis or report.commission_rate != snapshot.commission_rate):
+            return Response({'code': 409, 'msg': '积分订单报单金额或抽成快照待核对'}, status=409)
         if not report.provider_account_id:
             report.provider_account = request.account
             report.save(update_fields=['provider_account'])
@@ -605,7 +825,10 @@ def _locked_report(request, pk):
     if initial is None:
         return None
     if initial.order_id:
-        Order.objects.select_for_update().get(pk=initial.order_id)
+        order = Order.objects.select_for_update().get(pk=initial.order_id)
+        from .report_lifecycle import report_order_cycle_matches
+        if not report_order_cycle_matches(order, request.account):
+            return None
     return ProviderReport.objects.select_for_update().get(_report_owner_q(request), pk=pk)
 
 
@@ -613,7 +836,9 @@ class ReportImageUploadView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
+    @provider_report_operation
     @transaction.atomic
+    @scoped_report_action
     def post(self, request, pk):
         import hashlib
         from orders.services import report_edit_error
@@ -650,6 +875,11 @@ class ReportImageUploadView(APIView):
         error = report_edit_error(report)
         if error:
             return Response({'code': 400, 'msg': error})
+        if kind == 'COMPLETION' and report.order_id and report.order.room_required_snapshot is True:
+            from orders.models import OrderRoomCompletionRequest
+            if OrderRoomCompletionRequest.objects.filter(room__order_id=report.order_id, status='VERIFIED',
+                    confirmation__status__in=['RUNNING', 'PAUSED']).exists():
+                return Response({'code': 409, 'msg': '结单申请已核实，凭证不能再修改'}, status=409)
         # 双陪的首次入队/结单截图同时是履约动作，必须由订单入口提交，
         # 否则报单草稿会显示已提交，但订单不会触发两人齐备后的状态流转。
         from orders.team_fulfillment import team_report_evidence_error
@@ -680,13 +910,17 @@ class ReportImageUploadView(APIView):
                 receipt.response = {'image_id': result_image.pk}
                 receipt.save(update_fields=['response'])
         report.refresh_from_db()
+        from orders.notifier import notify_report_update
+        transaction.on_commit(lambda: notify_report_update(report))
         return Response({'code': 0, 'data': ReportSerializer(report, context={'request': request}).data})
 
 
 class ReportImageDeleteView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
+    @provider_report_operation
     @transaction.atomic
+    @scoped_report_action
     def delete(self, request, pk, image_id):
         from orders.services import report_edit_error
         report = _locked_report(request, pk)
@@ -698,13 +932,17 @@ class ReportImageDeleteView(APIView):
             return Response({'code': 404, 'msg': '截图不存在'})
         # 只移除草稿引用，原文件留给媒体保留策略统一清理。
         picture.delete()
+        from orders.notifier import notify_report_update
+        transaction.on_commit(lambda: notify_report_update(report))
         return Response({'code': 0, 'data': ReportSerializer(report, context={'request': request}).data})
 
 
 class ReportSubmitView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
+    @provider_report_operation
     @transaction.atomic
+    @scoped_report_action
     def post(self, request, pk):
         from orders.services import report_edit_error
         report = _locked_report(request, pk)
@@ -712,8 +950,14 @@ class ReportSubmitView(APIView):
         if error:
             return Response({'code': 400, 'msg': error})
         from orders.models import Order
-        if report.order_id and (report.order.status != Order.Status.COMPLETED or report.order.payment_status != Order.PaymentStatus.PAID):
+        # report_edit_error already verifies the special negotiated refund;
+        # completing the whole order remains mandatory before submission.
+        if report.order_id and report.order.status != Order.Status.COMPLETED:
             return Response({'code': 400, 'msg': '服务完成后才能提交报单，已退款订单不可提交'})
+        if report.order_id:
+            from orders.segment_reports import supports as segment_reports_support
+            if segment_reports_support(report.order):
+                return Response({'code':400, 'msg':'请按各次履约记录分别提交报单'})
         raw_commission_rate = request.data.get('commission_rate')
         if raw_commission_rate in (None, ''):
             commission_rate = (
@@ -730,10 +974,21 @@ class ReportSubmitView(APIView):
             return Response({'code': 400, 'msg': '平台抽成比例需在 0 到 100 之间'})
         if report.order_id:
             share = report.order.providers.filter(provider_id=report.provider_id).first()
-            if share and share.released_at and share.settlement_base <= 0:
+            from orders.services import required_report_providers
+            if share and share.released_at and report.provider_id not in required_report_providers(report.order):
                 return Response({'code': 400, 'msg': '本人无结算份额，无需提交报单'})
-            commission_rate = share.commission_rate if share else report.order.commission_rate
-            report.amount = share.settlement_base if share else report.order.amount
+            from orders.points_service_payment import needs_integrated_processing
+            if needs_integrated_processing(report.order):
+                from orders.points_funding_plan import PointsFundingPlanError
+                from orders.points_report_test import verified_report_snapshot
+                try:
+                    snapshot = verified_report_snapshot(report.order, report.provider_account_id, report.provider_id)
+                except PointsFundingPlanError:
+                    return Response({'code': 400, 'msg': '积分订单报单或收益快照待核对'})
+                commission_rate, report.amount = snapshot.commission_rate, snapshot.incoming_basis
+            else:
+                commission_rate = share.commission_rate if share else report.order.commission_rate
+                report.amount = share.settlement_base if share else report.order.amount
         missing = []
         if not report.entry_image: missing.append('入队截图')
         if not report.completion_image: missing.append('结单截图')
@@ -759,6 +1014,29 @@ class ReportSubmitView(APIView):
         return Response({'code': 0, 'msg': '报单已提交，等待审核', 'data': ReportSerializer(report, context={'request': request}).data})
 
 
+class ReportWithdrawView(APIView):
+    """陪玩撤回自己的待审核报单，保留凭证并开启新的编辑轮次。"""
+    permission_classes = [IsClubAccountAuthenticated]
+
+    @provider_report_operation
+    @transaction.atomic
+    def post(self, request, pk):
+        report = _locked_report(request, pk)
+        if not report:
+            return Response({'code': 400, 'msg': '当前报单不可撤回'})
+        if report.status != ProviderReport.Status.PENDING:
+            return Response({'code': 400, 'msg': '仅待审核报单可撤回，请刷新核对审核结果'})
+        report.status = ProviderReport.Status.DRAFT
+        report.submitted_at = None
+        report.save(update_fields=['status', 'submitted_at', 'updated_at'])
+        if report.order_id:
+            from engagement.confirmation import refresh_report_clock
+            refresh_report_clock(report.order)
+        from orders.notifier import notify_report_update
+        transaction.on_commit(lambda: notify_report_update(report))
+        return Response({'code': 0, 'msg': '报单已撤回，可修改后重新提交', 'data': ReportSerializer(report, context={'request': request}).data})
+
+
 class DepositView(APIView):
     """陪玩押金：GET 返回应缴/已缴/差额与钱包余额，POST 用余额缴纳押金。
 
@@ -776,7 +1054,7 @@ class DepositView(APIView):
     throttle_scope = 'wallet_write'
 
     def _overview(self, profile, wallet):
-        from .club_rules import deposit_income_percent, order_hold_hours
+        from .club_rules import deposit_income_percent, service_clock_overview
         deposit_required = profile.effective_deposit_required
         deposit_paid = profile.deposit_paid
         return {
@@ -786,7 +1064,7 @@ class DepositView(APIView):
             'balance': wallet.balance,
             'deposit_mode': profile.deposit_mode,
             'deposit_percent': deposit_income_percent(),
-            'hold_hours': order_hold_hours(),
+            **service_clock_overview(),
         }
 
     def get(self, request):
@@ -796,7 +1074,10 @@ class DepositView(APIView):
         if profile is None:
             return Response({'code': 403, 'msg': '当前账号未创建大神资料'})
         wallet, _ = _get_wallet(request)
-        return Response({'code': 0, 'data': self._overview(profile, wallet)})
+        from console.deposit_refund import preview_deposit_refund
+        data = self._overview(profile, wallet)
+        data['refund_eligibility'] = preview_deposit_refund(profile)
+        return Response({'code': 0, 'data': data})
 
     @recover_fund_result('deposit')
     def post(self, request):
@@ -828,7 +1109,19 @@ class DepositView(APIView):
             )
             return Response({'code': 409, 'msg': replay_reason})
 
+        from .deposit_payment import snapshot_storage_available
+        if not snapshot_storage_available():
+            return Response({'code': 503, 'msg': '押金缴纳记录尚未就绪，请联系门店处理'}, status=503)
+
         with transaction.atomic():
+            if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
+                from club_accounts.provider_lifecycle import ProviderLifecycleError, lock_active_provider_operation
+                try:
+                    active = lock_active_provider_operation(request.account)
+                except ProviderLifecycleError:
+                    return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验，请联系客服'}, status=503)
+                if not active:
+                    return Response({'code': 409, 'msg': '陪玩账号状态已变化，请重新登录'}, status=409)
             profile = (
                 EscortProfile.objects.select_for_update()
                 .filter(account=request.account)
@@ -839,15 +1132,23 @@ class DepositView(APIView):
 
             if profile.deposit_mode == 'EARNINGS':
                 return Response({'code': 400, 'msg': '打单抵扣模式由订单净收益自动抵扣押金'})
-            remaining = profile.effective_deposit_required - profile.deposit_paid
+            target = profile.effective_deposit_required
+            paid_before = profile.deposit_paid
+            remaining = target - paid_before
             if remaining <= 0:
                 return Response({'code': 400, 'msg': '押金已缴清，无需再缴'})
             if amount > remaining:
-                return Response({'code': 400, 'msg': f'缴纳金额超过应缴差额 {remaining / 10:g} 兴安币'})
+                return Response({'code': 400, 'msg': f'缴纳金额超过应缴差额 {remaining / 10:g} {current_currency_name()}'})
+
+            from .deposit_cycle import deposit_cycle
+            try:
+                cycle = deposit_cycle(profile, increase=True)
+            except ValueError as exc:
+                return Response({'code': 409, 'msg': str(exc)}, status=409)
 
             wallet, _ = _get_wallet(request, for_update=True)
             if wallet.balance < amount:
-                return Response({'code': 400, 'msg': '钱包兴安币不足'})
+                return Response({'code': 400, 'msg': f'钱包{current_currency_name()}不足'})
 
             # 全部校验通过后再占幂等键：校验失败的 `return` 会正常提交事务，
             # 提前占键会让用户补足余额后无法用同一个 client_request_id 重试。
@@ -873,10 +1174,12 @@ class DepositView(APIView):
             wallet.save(update_fields=['balance'])
 
             profile.deposit_paid += amount
-            profile.save(update_fields=['deposit_paid'])
+            profile.save(update_fields=['deposit_paid', 'deposit_business_cycle'])
 
-            Transaction.objects.create(
+            provider_deposit = Transaction.objects.create(
                 wallet=wallet,
+                deposit_owner_id=profile.account_id,
+                deposit_business_cycle=cycle,
                 amount=-amount,
                 tx_type=Transaction.TxType.DEPOSIT,
                 balance_before=balance_before,
@@ -901,8 +1204,11 @@ class DepositView(APIView):
             platform_before = platform_wallet.balance
             platform_wallet.balance += amount
             platform_wallet.save(update_fields=['balance'])
-            Transaction.objects.create(
+            platform_deposit = Transaction.objects.create(
                 wallet=platform_wallet,
+                deposit_owner_id=profile.account_id,
+                deposit_business_cycle=cycle,
+                deposit_pair=provider_deposit,
                 amount=amount,
                 tx_type=Transaction.TxType.DEPOSIT_INCOME,
                 balance_before=platform_before,
@@ -910,6 +1216,10 @@ class DepositView(APIView):
                 status=Transaction.Status.SUCCESS,
                 remark=f'收取押金：{profile.display_name or request.account.username}',
             )
+            DepositPaymentSnapshot.objects.create(profile=profile, account=request.account,
+                account_business_cycle=cycle,
+                provider_transaction=provider_deposit, platform_transaction=platform_deposit,
+                amount=amount, paid_before=paid_before, paid_after=profile.deposit_paid, target_snapshot=target)
 
             log_money_event(
                 'deposit.pay',
@@ -933,4 +1243,6 @@ class DepositView(APIView):
 
             result = fund_success(request, 'deposit', msg='押金缴纳成功',
                                   data=self._overview(profile, wallet))
+            from .notifier import notify_wallet_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
         return result

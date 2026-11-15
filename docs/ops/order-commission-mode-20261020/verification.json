@@ -1,0 +1,128 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-20T04:20:47.251Z",
+  "environment": "local XA validation only",
+  "commission_contract": {
+    "modes": [
+      "PERCENT",
+      "FIXED"
+    ],
+    "fixed_scope": "once per whole order; shared by providers",
+    "ui_currency": "兴安币",
+    "raw_units_per_coin": 10
+  },
+  "checks": {
+    "backend_sqlite": {
+      "executed": 107,
+      "passed": 104,
+      "skipped": 3
+    },
+    "backend_mysql": {
+      "executed": 14,
+      "passed": 14,
+      "skipped": 0
+    },
+    "frontend": {
+      "command": "node --test scripts/test-admin-order-commission.cjs scripts/test-admin-refund-aftersale-realtime.cjs scripts/test-admin-order-income-display.cjs apps/admin-web/tests/report-realtime.test.cjs",
+      "exit_code": 0,
+      "total": 71,
+      "passed": 71,
+      "failed": 0,
+      "skipped": 0,
+      "breakdown": [
+        {
+          "path": "scripts/test-admin-order-commission.cjs",
+          "new_for_feature": true,
+          "passed": 13
+        },
+        {
+          "path": "scripts/test-admin-refund-aftersale-realtime.cjs",
+          "passed": 41
+        },
+        {
+          "path": "scripts/test-admin-order-income-display.cjs",
+          "passed": 6
+        },
+        {
+          "path": "apps/admin-web/tests/report-realtime.test.cjs",
+          "passed": 11
+        }
+      ]
+    },
+    "frontend_typecheck": "PASS",
+    "admin_typecheck_and_vite_build": "PASS",
+    "django_check": "PASS",
+    "applied_migrations": [
+      "orders.0055_order_commission_modes",
+      "promotions.0003_order_commission_modes"
+    ],
+    "makemigrations_check": "No changes detected",
+    "tested_source_hashes_match": true
+  },
+  "runtime": {
+    "service_id": 1201,
+    "order_id": 126,
+    "total_coins": 200,
+    "fixed_total_coins": 20,
+    "per_provider": [
+      {
+        "base_coins": 100,
+        "allocated_fixed_coins": 10,
+        "saved_income_coins": 90
+      },
+      {
+        "base_coins": 100,
+        "allocated_fixed_coins": 10,
+        "saved_income_coins": 90
+      }
+    ],
+    "configuration_edits": {
+      "result": "PASS",
+      "run": "XA-ORDER-COMMISSION-20261020-d02fb6",
+      "order_id": 126,
+      "original_fee_raw": 200,
+      "changed_service_fee_raw": 700,
+      "changed_new_quote_shares_raw": [
+        350,
+        350
+      ],
+      "changed_to_percent": 30,
+      "existing_order_snapshot_unchanged": true,
+      "fixture_service_hidden": true
+    },
+    "closed_test_order": "CANCELLED",
+    "closed_payment_status": "REFUNDED",
+    "new_boss_final_balance_coins": 500,
+    "new_provider_posted_balances_coins": [
+      0,
+      0
+    ],
+    "new_service_is_active": false,
+    "real_payment": false
+  },
+  "preservation": {
+    "migration_financial_tables": 14,
+    "migration_configuration_tables": 3,
+    "migration_old_rows_unchanged": true,
+    "final_old_wallets_unchanged": 1164,
+    "final_old_orders_unchanged": 105,
+    "platform_delta_raw": 0
+  },
+  "screenshots": [
+    {
+      "name": "01-double-fixed-preview.png",
+      "bytes": 78745,
+      "sha256": "f16db09bcb8c01d7126a8ece14834363b071aa691f6770c4dcc12420086d1842"
+    },
+    {
+      "name": "02-double-fixed-order.png",
+      "bytes": 99165,
+      "sha256": "48bdffba8d40fa5630514678521822361cc224402ff5b044aa4a637e3c9c3d5a"
+    },
+    {
+      "name": "03-service-fixed-config.png",
+      "bytes": 68317,
+      "sha256": "6525788f1000de4399c42ab6c5e9db47bac065d9d158f067037b0cc0d14fbcaa"
+    }
+  ]
+}

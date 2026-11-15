@@ -8,7 +8,7 @@ on:
 
 jobs:
   frontend:
-    name: Frontend build (apps/*)
+    name: Frontend build (fronted/*)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -17,16 +17,16 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
+          cache: npm
+          cache-dependency-path: fronted/package-lock.json
       - run: pnpm install --frozen-lockfile
+      - run: npm --prefix fronted ci
       - run: pnpm run typecheck
       - name: Client regression tests
-        run: node --test scripts/test-*.cjs scripts/test-*.mjs apps/admin-web/tests/*.test.cjs apps/provider-miniapp/tests/*.cjs
+        run: pnpm run test:frontend
       - run: python3 scripts/test-managed-compose.py
-      - run: pnpm run admin:build
-      - run: pnpm run build:mini
-      - run: pnpm run provider:build:h5
-      - run: pnpm run style:check
+      - run: pnpm run bridge:check
+      - run: pnpm run build:all
 
   backend:
     name: Backend check (services/backend)

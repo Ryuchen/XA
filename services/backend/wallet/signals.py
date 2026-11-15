@@ -31,6 +31,17 @@ def create_user_wallet(sender, instance, created, **kwargs):
 def ensure_platform_wallet(sender, **kwargs):
     if getattr(sender, 'name', '') != 'wallet':
         return
+    if getattr(settings, 'ISOLATED_CONTROL_PLANE', False) and kwargs.get('using') == 'default':
+        return
     from .models import get_platform_wallet
-
-    get_platform_wallet()
+    from stores.context import current_store, store_context
+    alias = kwargs.get('using') or 'default'
+    store = current_store()
+    if store is None or store.database_alias != alias:
+        # post_migrate/flush may run without the migrate command's store
+        # context; never write a tenant's bookkeeping wallet to another DB.
+        from types import SimpleNamespace
+        store = SimpleNamespace(database_alias=alias,
+                                slug='shenglang' if alias == 'default' else alias.replace('_', '-'))
+    with store_context(store):
+        get_platform_wallet()

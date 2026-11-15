@@ -8,7 +8,7 @@ from urllib.parse import quote, urlencode
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from stores.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
@@ -50,18 +50,47 @@ def recovery_hash(code,key=None):
 def _failure(message):
     return Response({'code':400,'msg':message,'errorCode':'OTP_INVALID'})
 
-def otp_login_gate(account,data,scope):
-    if not otp_required(account):return None
+def _challenge_fingerprint(account, *, setup_only=False):
+    value = account.password
+    if account.account_type in ('BOSS', 'PROVIDER'):
+        value = f'{value}|membership:{account.business_cycle}'
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def otp_login_gate(account,data,scope,*,existing_only=False,setup_only=False):
+    if not existing_only and not setup_only and not otp_required(account):return None
+    authenticated_password = account.password
+    authenticated_cycle = account.business_cycle
+    account_type = account.account_type
+    if setup_only and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
+        from stores.context import current_database
+        if account._state.db != current_database():
+            return _failure('账号所属门店已变化，请重新登录')
     with transaction.atomic():
         account=ClubAccount.objects.select_for_update().get(pk=account.pk)
+        # The password was checked before acquiring this row lock. Do not
+        # issue a fresh challenge or accept an existing one if credentials or
+        # login access changed while authentication was waiting for the lock.
+        if not account.is_active or not account.can_login or account.password != authenticated_password:
+            return _failure('账号状态或密码已变更，请重新登录')
+        if (account.account_type != account_type or (account_type in ('BOSS', 'PROVIDER')
+                and account.business_cycle != authenticated_cycle)):
+            return _failure('账号所属门店身份已变化，请重新登录')
+        if (setup_only and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)
+                and (account.account_type != account_type or (account_type in ('BOSS', 'PROVIDER')
+                     and (not account.license_membership_active or type(authenticated_cycle) is not int
+                          or authenticated_cycle <= 0 or account.business_cycle != authenticated_cycle)))):
+            return _failure('账号所属门店身份已变化，请重新登录')
         credential=OtpCredential.objects.select_for_update().filter(account=account).first()
+        if existing_only and credential is None:return _failure('验证器未绑定或已失效，请重新选择短信验证')
+        if setup_only and credential is not None:return _failure('验证器已绑定，不能重复绑定')
         attempts=OtpLoginChallenge.objects.filter(account=account,created_at__gte=timezone.now()-timedelta(minutes=5)).aggregate(total=Sum('attempts'))['total'] or 0
         if attempts>=20:return _failure('动态验证码尝试过多，请5分钟后再试')
         raw=data.get('otpChallenge')
         if not raw:
             secret='' if credential else base64.b32encode(secrets.token_bytes(20)).decode().rstrip('=')
             challenge=OtpLoginChallenge.objects.create(account=account,scope=scope,
-                password_fingerprint=hashlib.sha256(account.password.encode()).hexdigest(),
+                password_fingerprint=_challenge_fingerprint(account, setup_only=setup_only),
                 secret_ciphertext=encrypt_secret(secret) if secret else '',
                 expires_at=timezone.now()+timedelta(minutes=10))
             payload={'requiresOTP':True,'requiresOTPSetup':credential is None,'otpChallenge':str(challenge.pk),'expiresIn':600}
@@ -79,7 +108,7 @@ def otp_login_gate(account,data,scope):
         try:challenge=OtpLoginChallenge.objects.select_for_update().get(pk=raw,account=account,scope=scope)
         except (OtpLoginChallenge.DoesNotExist,ValueError,ValidationError):
             return _failure('验证请求无效，请重新输入账号密码')
-        if challenge.consumed or challenge.expires_at<=timezone.now() or challenge.attempts>=5 or challenge.password_fingerprint!=hashlib.sha256(account.password.encode()).hexdigest():
+        if challenge.consumed or challenge.expires_at<=timezone.now() or challenge.attempts>=5 or challenge.password_fingerprint!=_challenge_fingerprint(account, setup_only=setup_only):
             return _failure('验证请求已失效，请重新输入账号密码')
         challenge.attempts+=1
         challenge.save(update_fields=['attempts'])

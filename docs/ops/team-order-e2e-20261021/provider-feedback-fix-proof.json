@@ -1,0 +1,170 @@
+{
+  "run": "team-order-e2e-client-20261021",
+  "purpose": "Accurate provider team-evidence success feedback",
+  "verified_at": "2026-10-20T17:33:18.680Z",
+  "passed": true,
+  "production_change": {
+    "file": "apps/provider-miniapp/src/pages/orders/index.tsx",
+    "compared_source_files": 181,
+    "changed_files": [
+      "apps/provider-miniapp/src/pages/orders/index.tsx"
+    ],
+    "before_sha256": "c5d9a4feabefbb3c1cf5c799a59baf3c80cba44c13d8bc86b354eeaecc9567dc",
+    "after_sha256": "49cf947fd79ec5703ad3ea3ec4e62a809e9246e400682f87d92c91915c35e5fc",
+    "exact_delta_scopes": [
+      "runAction",
+      "handleStart",
+      "handleComplete"
+    ],
+    "exact_baseline_reconstruction_passed": true,
+    "reconstructed_before_sha256": "c5d9a4feabefbb3c1cf5c799a59baf3c80cba44c13d8bc86b354eeaecc9567dc"
+  },
+  "feedback": {
+    "method": "Execute production TSX-extracted runAction and start/complete toast resolvers locally against saved GET data; no HTTP requests or UI actions",
+    "repeated_order_buttons": false,
+    "fabricated_post_ack": false,
+    "real_stage_cases": [
+      {
+        "stage": "p2-started",
+        "actor": "p2",
+        "real_observed_order_status": "GRABBED",
+        "state_source": "saved read-only HTTP GET audit",
+        "audit_sha256": "092e8a23c1182bd7f470f429db5face42d3adf2be50614638c151e0f58883f15",
+        "message_source": "backend source literal supplied by local unit-test adapter",
+        "captured_post_ack": false,
+        "expected_toast": "截图已提交，等待队友提交",
+        "actual_toast": "截图已提交，等待队友提交",
+        "passed": true
+      },
+      {
+        "stage": "both-started",
+        "actor": "p3",
+        "real_observed_order_status": "IN_SERVICE",
+        "state_source": "saved read-only HTTP GET audit",
+        "audit_sha256": "fc3cf1145dfafc8a1738543128291e769739360d434341a87c1c4e967a9d55e3",
+        "message_source": "backend source literal supplied by local unit-test adapter",
+        "captured_post_ack": false,
+        "expected_toast": "已开始服务",
+        "actual_toast": "已开始服务",
+        "passed": true
+      },
+      {
+        "stage": "p2-completed",
+        "actor": "p2",
+        "real_observed_order_status": "IN_SERVICE",
+        "state_source": "saved read-only HTTP GET audit",
+        "audit_sha256": "e8dd79d6992529e095ffb299984ce7e0d7596244e215c68bfd694ddff38fa8e8",
+        "message_source": "backend source literal supplied by local unit-test adapter",
+        "captured_post_ack": false,
+        "expected_toast": "截图已提交，等待队友提交",
+        "actual_toast": "截图已提交，等待队友提交",
+        "passed": true
+      },
+      {
+        "stage": "both-completed",
+        "actor": "p3",
+        "real_observed_order_status": "COMPLETED",
+        "state_source": "saved read-only HTTP GET audit",
+        "audit_sha256": "728b5927eec4032322ea5acfc42a32ed3cfc758cc0540f26fede917eeaa730e4",
+        "message_source": "backend source literal supplied by local unit-test adapter",
+        "captured_post_ack": false,
+        "expected_toast": "订单已完成",
+        "actual_toast": "订单已完成",
+        "passed": true
+      }
+    ],
+    "missing_msg_cases": [
+      {
+        "stage": "p2-started",
+        "msg_omitted": true,
+        "actual_toast": "截图已提交，请刷新订单核对状态",
+        "passed": true
+      },
+      {
+        "stage": "p2-completed",
+        "msg_omitted": true,
+        "actual_toast": "截图已提交，请刷新订单核对状态",
+        "passed": true
+      }
+    ],
+    "other_string_success_message_unchanged": true,
+    "total_cases": 7,
+    "passed": true
+  },
+  "typecheck": {
+    "command": "node apps/provider-miniapp/node_modules/typescript/bin/tsc --noEmit -p apps/provider-miniapp/tsconfig.json",
+    "exit_code": 0,
+    "passed": true
+  },
+  "h5_build": {
+    "command": "official Taro CLI build --type h5",
+    "api_base": "/api",
+    "output_directory": ".tools/team-order-e2e-client-20261021/provider-feedback-dist",
+    "exit_code": 0,
+    "passed": true,
+    "artifact_files": 54,
+    "artifacts_sha256": "c1202daf0fe695924024fe83845b4b5991f6dfacd078721bccd7e1c6b858f183",
+    "warnings": 2,
+    "warnings_summary": "Existing bundle/entrypoint size recommendations",
+    "original_dist_unchanged": true,
+    "original_dist_checks": {
+      "dist": {
+        "exists": true,
+        "files": 81,
+        "sha256": "26c35dbf40909e66845bf54c33bc8b92a489dcb90b8a4e1f6c9074cec762307b"
+      },
+      "dist-h5": {
+        "exists": true,
+        "files": 0,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+    },
+    "original_dist_checks_scope": "Before/after this isolated H5 build; the existing port 3001 watch may already have compiled the authorized source fix"
+  },
+  "no_preview_started": true,
+  "no_business_requests_issued": true,
+  "existing_provider_hot_build": {
+    "method": "Read-only HTTP GET of existing port 3001 HTML and its actual script src assets",
+    "observed_at": "2026-10-20T17:35:14.935Z",
+    "no_user_tab_operations": true,
+    "no_watch_process_restart": true,
+    "http_api_requests": false,
+    "html_sha256": "803d5c974429971c7be7edad53eeccada665a558aa67c2d3cb87f15f950a2223",
+    "script_assets": [
+      {
+        "path": "/js/runtime.e0fa81d5.js",
+        "bytes": 52389,
+        "sha256": "66bd9424c52d7cac5971b4b5d4f4e192fae4cb304e7539d7da3711a04e9c5613",
+        "fallback_present": false,
+        "start_status_present": false,
+        "complete_status_present": false
+      },
+      {
+        "path": "/js/taro.e0fa81d5.js",
+        "bytes": 1461826,
+        "sha256": "ac4e083be9c14985f4f06396e2a48417b843ba82aa7aa65a1c80939feaa03650",
+        "fallback_present": false,
+        "start_status_present": false,
+        "complete_status_present": false
+      },
+      {
+        "path": "/js/app.e0fa81d5.js",
+        "bytes": 5667058,
+        "sha256": "6d20996e79c37da19b5280b4db93f91401a19c3df7918a947c05907c155d199a",
+        "fallback_present": false,
+        "start_status_present": false,
+        "complete_status_present": false
+      },
+      {
+        "path": "/js/src_pages_orders_index_tsx.375a1a7d.js",
+        "bytes": 4357481,
+        "sha256": "4b74a7c0385109d36027083e44d46fbd574f56f4404ad9bc6d65ddcda32217e0",
+        "fallback_present": true,
+        "start_status_present": true,
+        "complete_status_present": true
+      }
+    ],
+    "passed": true
+  },
+  "finalized_at": "2026-10-20T17:35:58.028Z"
+}

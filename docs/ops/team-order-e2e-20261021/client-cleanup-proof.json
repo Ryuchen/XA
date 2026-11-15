@@ -1,0 +1,14 @@
+{
+  "run": "team-order-e2e-20261021",
+  "stopped": true,
+  "ports_closed": true,
+  "ports": [
+    3002,
+    3003,
+    5182
+  ],
+  "logged_out_accounts": 3,
+  "temporary_browser_tabs_closed": 3,
+  "exact_pid_identity_checked": true,
+  "source_files_unchanged_at_shutdown": 181
+}

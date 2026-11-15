@@ -1,0 +1,22 @@
+import * as React from "react"
+import { cn } from "cn"
+
+function Input({ className, type, id, name, autoComplete = "off", ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type={type}
+      id={id}
+      name={name ?? id ?? props["aria-label"]}
+      autoComplete={autoComplete}
+      data-slot="input"
+      data-ui-size="medium"
+      className={cn(
+        "h-10 w-full min-w-0 rounded-4xl border border-input bg-input/30 px-3 py-1 text-base transition-colors outline-none file:inline-flex file:h-8 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export { Input }

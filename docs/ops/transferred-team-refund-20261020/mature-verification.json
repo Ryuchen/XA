@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "run": "XA-TRANSFERRED-TEAM-REFUND-20261020-18ce30",
+  "scope": "new fixture clocks only",
+  "funds_changed": false,
+  "unrelated_order_hash_equal": true,
+  "clocks": [
+    {
+      "key": "frozen_recovery",
+      "order_id": 120,
+      "completed_at": "2026-10-16T18:07:21.673741+00:00",
+      "report_ready_at": "2026-10-19T19:06:58.573350+00:00",
+      "consumption_ready_at": "2026-10-22T19:06:58.573350+00:00",
+      "changed_fields": [
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at"
+      ]
+    },
+    {
+      "key": "available_recovery",
+      "order_id": 121,
+      "completed_at": "2026-10-16T16:07:21.673741+00:00",
+      "report_ready_at": "2026-10-16T17:07:21.673741+00:00",
+      "consumption_ready_at": "2026-10-19T17:07:21.673741+00:00",
+      "changed_fields": [
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at",
+        "three submitted_at"
+      ]
+    },
+    {
+      "key": "protected_foreign_hold",
+      "order_id": 122,
+      "completed_at": "2026-10-16T18:07:21.673741+00:00",
+      "report_ready_at": "2026-10-19T19:07:01.409311+00:00",
+      "consumption_ready_at": "2026-10-22T19:07:01.409311+00:00",
+      "changed_fields": [
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at"
+      ]
+    }
+  ]
+}

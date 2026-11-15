@@ -1,8 +1,9 @@
 from django.urls import path
 
-from .views import ChatMessageStatusView, ChatReadView, ChatSendView, ChatSessionView, ChatUnreadView
+from .views import ChatMessageStatusView, ChatParticipationDetailView, ChatReadView, ChatSendView, ChatSessionView, ChatUnreadView
 
 urlpatterns = [
+    path('messages/<int:message_id>/participation/', ChatParticipationDetailView.as_view()),
     path('session/', ChatSessionView.as_view()),
     path('unread/', ChatUnreadView.as_view()),
     path('send/', ChatSendView.as_view()),

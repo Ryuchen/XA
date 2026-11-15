@@ -1,0 +1,78 @@
+{
+  "archived_at": "2026-10-20T12:57:53.133Z",
+  "files": [
+    {
+      "name": "verification.json",
+      "bytes": 1488,
+      "sha256": "2ebf37bb7d1c46de11de36f7fc17ca87b9dc08742424e01bdce28b5fee0ea578"
+    },
+    {
+      "name": "backend-isolated-tests.json",
+      "bytes": 10836,
+      "sha256": "45bc1fead34979c0f74f3a3c835acd048ea54ef45d9dbe924cd9b301e46bbf30"
+    },
+    {
+      "name": "native-unit-verification.json",
+      "bytes": 2086,
+      "sha256": "e2ee8d32b6781d89f24a8f24fa91a870ec858de9a79c31384e1ac0819ad38b5f"
+    },
+    {
+      "name": "native-ui-verification.json",
+      "bytes": 896,
+      "sha256": "f0f0a428205f1fd9dfac9ce13700c866a01e10921e04265075f8c80518b7f389"
+    },
+    {
+      "name": "native-live-read-verification.json",
+      "bytes": 4948,
+      "sha256": "d2597f532347621a9b2aee3025d13bb6561ca7e83199106c2e52ac156a5eddb1"
+    },
+    {
+      "name": "backup-financial-audit.json",
+      "bytes": 8298,
+      "sha256": "3704080e657e234f0ff4360f93ac80e493dbc054f236ee0a39852e5890a23c81"
+    },
+    {
+      "name": "final-financial-audit.json",
+      "bytes": 8358,
+      "sha256": "6d498db0566a6c3208c52b0b6fe57ba5b4f6a15c1a0ce256b04d54151cb82b0f"
+    },
+    {
+      "name": "local-deployment-log.json",
+      "bytes": 1794,
+      "sha256": "e36a7ab6bcf44897d3313abd99fa33ed4348557d1cfc2ce7564721e81c7db2b9"
+    },
+    {
+      "name": "tenth-guarantee-before.png",
+      "bytes": 165359,
+      "sha256": "068b2074557182c85d876fbedfbbe4bc584bee062d970dd05716c3a414638f73"
+    },
+    {
+      "name": "tenth-guarantee-result-top.png",
+      "bytes": 96700,
+      "sha256": "ebc9ec564ffb0b3c8aee7996a44033253ca6ad4faf9253dad0ab1a43fcd6eece"
+    },
+    {
+      "name": "tenth-guarantee-result-bottom.png",
+      "bytes": 178472,
+      "sha256": "70d441c3a48db56c93fcdd8b87d4db93b6e2f5365e01c2da96d5bf23d6810be2"
+    },
+    {
+      "name": "hard-priority-result-top.png",
+      "bytes": 110047,
+      "sha256": "99e4152c88602cc54ec9ae9b4428f5e9ab0278a2f5b83696550d177b5989639d"
+    },
+    {
+      "name": "no-positive-non-points.png",
+      "bytes": 164598,
+      "sha256": "d8e872964e76a0d638943ecdf9e7e8d45eb2c1b91af309be6e2efbd881b4841c"
+    },
+    {
+      "name": "native-live-disabled.png",
+      "bytes": 181028,
+      "sha256": "86e58533a40ea0b24cc2702e523e3ca1130dd6a0298244ab54084db12560e3db"
+    }
+  ],
+  "source_hashes_match": true,
+  "all_images_below_200000_bytes": true,
+  "private_credentials_and_sql_excluded": true
+}

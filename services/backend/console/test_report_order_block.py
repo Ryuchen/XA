@@ -125,3 +125,20 @@ class RefundedReportWorkQueueTest(APITransactionTestCase):
         self.assertEqual([row['id'] for row in rows['list']], [self.report.pk])
         response = self.client.post(f'/api/admin/reports/{self.report.pk}/approve/', {}, format='json')
         self.assertEqual(response.data['code'], 400)
+
+    def test_regular_pending_reports_do_not_scan_receipt_tables_or_each_report(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from console.serializers import pending_report_order_block_q
+        self.prepare()
+        ProviderReport.objects.bulk_create([ProviderReport(provider=self.provider,
+            provider_account=self.accounts[self.provider.pk], game_name=f'隔离普通报单 {i}',
+            amount=1000, status='PENDING') for i in range(100)])
+        with CaptureQueriesContext(connection) as queries:
+            self.assertEqual(ProviderReport.objects.filter(pending_report_order_block_q()).count(), 0)
+        sql = [query['sql'].lower() for query in queries.captured_queries]
+        # One bounded tenant-schema check protects independently recorded
+        # points receipts on stores that have applied the new migration.
+        self.assertLessEqual(len(sql), 3)
+        self.assertFalse(any('orders_negotiationexecution' in query for query in sql))
+        self.assertFalse(any(query.lstrip().startswith(('insert ', 'update ', 'delete ')) for query in sql))

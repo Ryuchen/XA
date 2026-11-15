@@ -25,6 +25,17 @@ def validate_pool(pool):
 
 
 def validate_service_gameplay(service, rounds=1, *, companion_assignment=False):
+    if service.room_enabled:
+        from django.conf import settings
+        if not all(getattr(settings, key, True) for key in (
+                'ROOM_COMPLETION_REVIEW_ENABLED', 'ROOM_BOSS_CONFIRMATION_ENABLED',
+                'ROOM_AUTO_CONFIRMATION_ENABLED')):
+            raise serializers.ValidationError('本店房间结单流程暂不可用，请联系管理员')
+        from .room_confirmation_config import required_rules
+        try:
+            required_rules()
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
     from users.qualifications import service_requirement
     requirement=service_requirement(service)
     if requirement and requirement.get('invalid'):
@@ -37,12 +48,12 @@ def validate_service_gameplay(service, rounds=1, *, companion_assignment=False):
         raise serializers.ValidationError('该服务分类已停用')
     if service.is_addon:
         raise serializers.ValidationError(service.purchase_note or '该费用须关联主订单，请联系客服办理')
-    if (service.billing_provider_count == 2 and service.service_type == 'COMPANION'
+    if (service.fulfillment_provider_count == 2 and service.service_type == 'COMPANION'
             and service.price_unit in ('小时', '时', 'hour') and rounds != 1):
         raise serializers.ValidationError('双陪小时套餐每单1小时，请分单购买')
-    if service.billing_provider_count == 2 and not companion_assignment:
+    if service.fulfillment_provider_count == 2 and not companion_assignment:
         raise serializers.ValidationError('该双陪套餐需联系客服安排两名打手')
-    if service.purchase_mode == 'CONSULT' and not (service.billing_provider_count == 2 and companion_assignment):
+    if service.purchase_mode == 'CONSULT' and not (service.fulfillment_provider_count == 2 and companion_assignment):
         raise serializers.ValidationError(service.purchase_note or '该服务需先联系客服确认方案与报价')
     if not service.gameplay_id:
         return
@@ -74,6 +85,7 @@ def make_order_snapshot(service, rounds, *, companion_assignment=False):
         'rules': service.rules or service.gameplay.rules,
         'service_name': service.name, 'price_unit': service.price_unit,
         'billing_provider_count': service.billing_provider_count,
+        'fulfillment_provider_count': service.fulfillment_provider_count,
     }
     if service.gameplay.kind != 'ROULETTE':
         return snapshot, {}

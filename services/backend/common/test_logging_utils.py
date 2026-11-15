@@ -15,6 +15,7 @@ from common.logging_utils import (
     JsonLogFormatter,
     log_money_event,
     new_trace_id,
+    redact_sensitive_urls,
 )
 
 
@@ -31,6 +32,14 @@ def _make_record(msg='hello', **extra):
 class JsonLogFormatterTest(SimpleTestCase):
     def setUp(self):
         self.formatter = JsonLogFormatter()
+
+    def test_web_login_and_wechat_capabilities_are_redacted_from_url_logs(self):
+        value = '/api/users/web-login/status/?ticket=public-ticket&poll_token=browser-secret&bridge_token=wechat-secret&access_token=external-secret'
+        result = redact_sensitive_urls(value)
+        for secret in ('browser-secret', 'wechat-secret', 'external-secret'):
+            self.assertNotIn(secret, result)
+        self.assertIn('ticket=public-ticket', result)
+        self.assertEqual(result.count('[redacted]'), 3)
 
     def test_output_is_single_line_json(self):
         output = self.formatter.format(_make_record())

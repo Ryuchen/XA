@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Approval messages describe posted, frozen and deposit amounts without claiming availability."""
 import json
 import os
@@ -25,8 +26,8 @@ class ProviderVueSettlementNoticeHTTPTest(LiveServerTestCase):
     ok=flow.ProviderAfterSaleStatusTest.ok
 
     def test_approval_after_window_with_frozen_income(self):
-        root=os.environ.get('XA_PROVIDER_VUE_ROOT')
-        if not root or not shutil.which('node'): self.skipTest('Requires current Vue build and Node')
+        root=fronted_root('provider')
+        if not root or not shutil.which('node'): self.skipTest('Requires the current React source and Node')
         SystemConfig.objects.update_or_create(key='club_income_rules_enabled',defaults={'value':'1'})
         profile=self.provider.escort_profile; profile.deposit_mode='EARNINGS'; profile.save(update_fields=['deposit_mode'])
         self.login(self.boss)

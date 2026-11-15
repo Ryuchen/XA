@@ -52,7 +52,7 @@ class LegacyGiftNamingReceiptTest(APITransactionTestCase):
             return ok(client.get(f'/api/orders/orders/{order_id}/'))['refund_summary']['records'][0]
         expected = result(clients[0])['gift_naming_result']
         self.assertEqual(result(clients[1])['gift_naming_result'], expected)
-        self.assertEqual(expected['remaining_paid_grants'], 0)
+        self.assertTrue(expected['preserved'])
         self.assertIn('gift_naming', ok(clients[3].get(f'/api/admin/orders/{order_id}/'))['refund_summary']['records'][0]['benefit_effects'])
         self.assertEqual(clients[2].get(f'/api/orders/orders/{order_id}/').status_code, 404)
         # Represent a pre-account migration order while keeping the same real refund ledger.

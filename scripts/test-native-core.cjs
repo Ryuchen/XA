@@ -954,7 +954,7 @@ test('club feed is separate from private unread notifications and rejects old-se
   await loading;
   assert.deepEqual(page.data.feed, []);
   assert.equal(page.data.feedLoading, false);
-  assert.equal(page.data.section, 'feed');
+  assert.equal(page.data.section, 'private');
   page.onUnload();
 });
 
@@ -978,15 +978,15 @@ test('native 429 retains the payment identity and cools down only the affected t
   } finally { Date.now = original; }
 });
 
-test('home retains five working quick entries and retired self-order routes cannot be opened', () => {
+test('home quick entries retain their real routes and retired self-order routes cannot be opened', () => {
   const env = environment();
   const home = env.page('home');
   const template = fs.readFileSync(path.join(root, 'pages/home/index.wxml'), 'utf8');
   const quickGrid = template.match(/<view class="quick-grid">([\s\S]*?)\n  <\/view>/)[1];
   const actions = Array.from(quickGrid.matchAll(/bindtap="([^"]+)"/g), match => match[1]);
-  assert.deepEqual(actions, ['checkin', 'companions', 'coupons', 'rankings', 'gifts']);
+  assert.deepEqual(actions, ['companions', 'catalog', 'coupons', 'gifts', 'checkin', 'rankings']);
   for (const action of actions) {
-    home[action]();
+    home[action]({ currentTarget: { dataset: {} } });
     assert.equal(env.navigation.at(-1), '/pages/' + action + '/index');
   }
   assert.equal(home.selfOrder, undefined);

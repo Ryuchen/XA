@@ -2,7 +2,7 @@
 const fs = require('node:fs'), http = require('node:http'), path = require('node:path'), assert = require('node:assert/strict');
 const { chromium } = require('../.tools/club-source-20261003/node_modules/playwright');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-const root = path.resolve(process.env.XA_WITHDRAW_H5_ROOT || '.tools/provider-withdraw-h5-v2-20261101');
+const root = path.resolve(input.vueRoot || process.env.XA_WITHDRAW_H5_ROOT || '.tools/provider-withdraw-h5-v2-20261101');
 const target = new URL(input.base);
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
@@ -22,16 +22,17 @@ async function main() {
     const context = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
     await context.addInitScript(({ token, id }) => {
       localStorage.setItem('token', JSON.stringify({ data: token }));
-      localStorage.setItem('xa_provider_user', JSON.stringify({ data: { id, role: 'provider', nickname: '隔离陪玩', username: '隔离陪玩', avatar: '' } }));
+      localStorage.setItem('xa_provider_user', JSON.stringify({ data: { id: String(id), role: 'provider', nickname: '隔离陪玩', username: '隔离陪玩', avatar: '' } }));
     }, input);
     const page = await context.newPage();
-    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    const errors = [], authFailures = []; page.on('pageerror', error => errors.push(error.message));
+    page.on('response', async response => { if (response.status() === 401) authFailures.push(await response.text().catch(() => '')); });
     await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
     const base = `http://127.0.0.1:${server.address().port}`;
-    await page.goto(`${base}/#/pages/wallet/index`);
+    await page.goto(`${base}/#/${input.vueRoot ? 'wallet' : 'pages/wallet/index'}`);
     await page.locator('[aria-pressed]').filter({ hasText: /^提现$/ }).click({ timeout: 15000 });
-    try { await page.getByText('已打款 ¥196.00', { exact: true }).waitFor({ timeout: 10000 }); }
-    catch (error) { throw new Error(`${error.message}\n${await page.locator('body').innerText()}`); }
+    try { await page.getByText(input.vueRoot ? '已登记打款 ¥196.00' : '已打款 ¥196.00', { exact: true }).waitFor({ timeout: 10000 }); }
+    catch (error) { throw new Error(`${error.message}\n${await page.locator('body').innerText()}\n认证失败响应：${authFailures.join('; ')}`); }
     await page.getByText('打款凭证：ISOLATED-QA-TRANSFER', { exact: true }).waitFor();
     if (input.pendingProgress) {
       await page.getByText('客服已领取，等待处理', { exact: true }).waitFor();
@@ -42,7 +43,7 @@ async function main() {
     const folder = path.resolve('.tools/provider-withdraw-mobile-20261101'); fs.mkdirSync(folder, { recursive: true });
     await page.getByText('打款凭证：ISOLATED-QA-TRANSFER', { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(folder, 'wallet.png'), fullPage: true });
-    await page.goto(`${base}/#/pages/messages/index`);
+    await page.goto(`${base}/#/${input.vueRoot ? 'messages' : 'pages/messages/index'}`);
     await page.getByText('提现审核通过', { exact: true }).waitFor({ timeout: 15000 });
     await page.getByText(/¥196\.00/).waitFor({ timeout: 15000 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);

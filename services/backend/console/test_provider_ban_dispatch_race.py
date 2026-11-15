@@ -14,8 +14,8 @@ from club_accounts.tokens import issue_account_tokens
 from console.ban_utils import apply_ban
 from console.models import AccountBan
 from console.views import _capacity_reject_reason, _provider_active_orders
-from orders.models import Order
-from orders.services import lock_provider_dispatch
+from orders.models import Order, ProviderDispatchLock
+from orders.services import ensure_provider_dispatch_locks, lock_provider_dispatch
 from orders.tests.factories import make_console_user, make_order, make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile
 from wallet.models import Transaction, Wallet
@@ -41,6 +41,7 @@ class ProviderBanDispatchRaceTest(TransactionTestCase):
         self.service = make_service(price=10000)
         self.order = make_order(self.boss, service=self.service, customer_account=self.boss_account,
             dispatch_route='STAFF', auto_cancel_at=timezone.now() + timedelta(minutes=5))
+        self.assertFalse(ProviderDispatchLock.objects.exists())
 
     def post(self, token, path, data):
         close_old_connections()
@@ -85,6 +86,8 @@ class ProviderBanDispatchRaceTest(TransactionTestCase):
             assign = workers.submit(self.assign)
             try:
                 self.assertTrue(checked.wait(10), 'Assignment did not hold the capacity lock')
+                self.assertTrue(ProviderDispatchLock.objects.filter(account=self.provider_account).exists(),
+                                'The capacity row must commit before assignment takes business locks')
                 ban = workers.submit(self.ban)
                 self.assertTrue(ban_started.wait(10), 'Ban did not attempt the provider lock')
                 self.assertFalse(ban_checked.wait(1), 'Ban checked the order before taking the provider lock')
@@ -121,6 +124,8 @@ class ProviderBanDispatchRaceTest(TransactionTestCase):
             ban = workers.submit(self.ban)
             try:
                 self.assertTrue(locked.wait(10), 'Ban did not hold the capacity lock')
+                self.assertTrue(ProviderDispatchLock.objects.filter(account=self.provider_account).exists(),
+                                'The capacity row must commit before ban takes business locks')
                 assign = workers.submit(self.assign)
                 self.assertTrue(attempted.wait(10), 'Assignment did not attempt the provider lock')
             finally:
@@ -166,3 +171,57 @@ class ProviderBanDispatchRaceTest(TransactionTestCase):
         self.assertEqual(Wallet.objects.get(pk=self.wallet.pk).balance, 50000)
         self.assertFalse(Transaction.objects.filter(wallet_id=self.wallet.pk, tx_type='PAY').exists())
         self.assertEqual(Order.objects.count(), 1)  # The original pending test order only.
+
+    def _assert_ban_wins_grab(self, *, with_receipt):
+        Order.objects.filter(pk=self.order.pk).update(
+            dispatch_route='PUBLIC', pool_entered_at=timezone.now() - timedelta(days=1),
+        )
+        token, _ = issue_account_tokens(self.provider_account)
+        locked, release, attempted = Event(), Event(), Event()
+
+        def hold_ban(*args, **kwargs):
+            locked.set()
+            if not release.wait(15):
+                raise AssertionError('Ban lock was not released')
+            return apply_ban(*args, **kwargs)
+
+        def observe_grab_lock(ids):
+            attempted.set()
+            return lock_provider_dispatch(ids)
+
+        payload = {'client_request_id': 'ban-race-grab'} if with_receipt else {}
+        with patch('console.views.apply_ban', side_effect=hold_ban), \
+             patch('orders.services.lock_provider_dispatch', side_effect=observe_grab_lock), \
+             patch('orders.views.notify_order_update'), patch('orders.views._push_message_safe'), \
+             ThreadPoolExecutor(max_workers=2) as workers:
+            ban = workers.submit(self.ban)
+            try:
+                self.assertTrue(locked.wait(10), 'Ban did not hold the capacity lock')
+                self.assertTrue(ProviderDispatchLock.objects.filter(account=self.provider_account).exists())
+                grab = workers.submit(self.post, token, f'/api/orders/orders/{self.order.pk}/grab/', payload)
+                self.assertTrue(attempted.wait(10), 'Grab did not attempt the provider lock')
+            finally:
+                release.set()
+            ban_status, ban_data = ban.result(timeout=15)
+            _, grab_data = grab.result(timeout=15)
+        self.assertEqual((ban_status, ban_data.get('code')), (200, 0), ban_data)
+        self.assertNotEqual(grab_data.get('code'), 0, grab_data)
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.provider_account_id), ('PENDING', None))
+        self.assertEqual(Wallet.objects.get(pk=self.wallet.pk).balance, 50000)
+        self.assertFalse(Transaction.objects.filter(wallet=self.wallet, tx_type='PAY').exists())
+        self.assertFalse(self.order.providers.exists())
+
+    def test_ban_wins_grab_rechecks_fresh_account(self):
+        self._assert_ban_wins_grab(with_receipt=False)
+
+    def test_ban_wins_grab_with_receipt_rechecks_fresh_account(self):
+        self._assert_ban_wins_grab(with_receipt=True)
+
+
+class ProviderBanDispatchWarmRaceTest(ProviderBanDispatchRaceTest):
+    """The same real races also work after the provider's first dispatch."""
+
+    def setUp(self):
+        super().setUp()
+        ensure_provider_dispatch_locks([self.provider_account.pk])

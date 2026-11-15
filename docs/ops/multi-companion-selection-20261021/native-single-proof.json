@@ -1,0 +1,46 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "passed": true,
+  "real_http": true,
+  "mocked_requests": false,
+  "order_submitted": false,
+  "selected": {
+    "provider_ids": [
+      3
+    ],
+    "names": [
+      "隔离联调 p2"
+    ],
+    "quote_amount": 5001,
+    "payload": {
+      "dispatch_mode": "BOSS_SELECT",
+      "service_id": 1,
+      "game_rounds": 1,
+      "game_region": "",
+      "game_nickname": "",
+      "game_uid": "",
+      "remark": "",
+      "provider_gender": "ANY",
+      "provider_id": 3
+    },
+    "selected_names_visible": true
+  },
+  "platform": {
+    "provider_ids": [],
+    "names": [],
+    "quote_amount": 5001,
+    "payload": {
+      "dispatch_mode": "BOSS_SELECT",
+      "service_id": 1,
+      "game_rounds": 1,
+      "game_region": "",
+      "game_nickname": "",
+      "game_uid": "",
+      "remark": "",
+      "provider_gender": "ANY"
+    },
+    "selected_names_visible": true
+  },
+  "single_replacement": true,
+  "reentry_preserved": true
+}

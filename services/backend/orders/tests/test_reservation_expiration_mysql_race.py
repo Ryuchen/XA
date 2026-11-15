@@ -14,6 +14,7 @@ from club_accounts.tokens import issue_account_tokens
 from orders.models import Reservation
 from orders.tests.factories import make_provider, make_service, make_user, make_wallet
 from wallet.models import IdempotencyKey, Transaction, Wallet
+from common.mysql_test_support import mysql_locking_statements
 
 
 @skipUnless(connection.vendor == 'mysql', 'Requires real MySQL row locks')
@@ -74,10 +75,7 @@ class ReservationExpirationMySQLRaceTest(TransactionTestCase):
                         future = pool.submit(post, token, path, payload)
                         timeout = monotonic() + 10
                         while monotonic() < timeout:
-                            with observer.cursor() as cursor:
-                                cursor.execute('SHOW ENGINE INNODB STATUS')
-                                status = cursor.fetchone()[2]
-                            if 'LOCK WAIT' in status and '`orders_reservation`' in status:
+                            if mysql_locking_statements(observer, 'orders_reservation'):
                                 break
                             sleep(.02)
                         else:
@@ -125,12 +123,7 @@ class ReservationExpirationMySQLRaceTest(TransactionTestCase):
                     futures = [pool.submit(read, token) for token in tokens]
                     deadline = monotonic() + 10
                     while monotonic() < deadline:
-                        with observer.cursor() as cursor:
-                            cursor.execute('SHOW ENGINE INNODB STATUS')
-                            status = cursor.fetchone()[2]
-                        sections = status.split('LIST OF TRANSACTIONS FOR EACH SESSION:', 1)[1].split('FILE I/O', 1)[0]
-                        waiting = sum('LOCK WAIT' in part and '`orders_reservation`' in part
-                                      for part in sections.split('---TRANSACTION'))
+                        waiting = mysql_locking_statements(observer, 'orders_reservation')
                         if waiting >= 2:
                             break
                         sleep(.02)
@@ -157,10 +150,7 @@ class ReservationExpirationMySQLRaceTest(TransactionTestCase):
                                          {'client_request_id': 'expired-waiting-wallet'})
                     timeout = monotonic() + 10
                     while monotonic() < timeout:
-                        with observer.cursor() as cursor:
-                            cursor.execute('SHOW ENGINE INNODB STATUS')
-                            status = cursor.fetchone()[2]
-                        if 'LOCK WAIT' in status and '`wallet_wallet`' in status:
+                        if mysql_locking_statements(observer, 'wallet_wallet'):
                             break
                         sleep(.02)
                     else:

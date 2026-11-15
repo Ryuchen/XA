@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "recorded_at": "2026-10-20T18:11:41.8090650+08:00",
+  "workspace": "G:\\Github\\XA",
+  "tests": {
+    "command": "node --test scripts/test-native*.cjs",
+    "total": 105,
+    "passed": 105,
+    "failed": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "new_lottery_tests": 12,
+    "duration_ms": 220.2286,
+    "status": "previously_executed_pass",
+    "rerun_for_archival": false
+  },
+  "compiler": {
+    "command": "node scripts/check-native.mjs",
+    "official_wechat_wxml_templates_passed": 49,
+    "official_wechat_wxss_stylesheets_passed": 52,
+    "native_pages": 47,
+    "package_kb": 526.6,
+    "status": "previously_executed_pass",
+    "rerun_for_archival": false
+  },
+  "resources": {
+    "packaged_image_audio_files": 27,
+    "packaged_image_audio_bytes": 30641,
+    "combined_budget_bytes": 200000,
+    "new_images": 0
+  },
+  "scope": "Native page unit/integration harness and official WeChat compiler; no live API or database writes by this subagent.",
+  "sha256": {
+    "apps/boss-miniapp/native/pages/lottery/index.wxss": "62bad86a144eb7d21edfd54a1143378fd09db6df5e7f8f6d7e62273301252dbd",
+    "scripts/test-native-lottery.cjs": "152d9497408c20901b3df71262dc34e6a07be58cff0d2f7a1fa1b597350522f1",
+    "apps/boss-miniapp/native/pages/lottery/index.wxml": "901890146915ca5db2b93591604bf739419cd80699cdb954f6a904d1ecf64c14",
+    "apps/boss-miniapp/native/core/api.js": "f28126a9914fc4c0f8ecd056e3decb32058653249bc0c37000fa8c3beb70cac4",
+    "apps/boss-miniapp/native/pages/lottery/presentation.js": "afd60544dd8f1bec0ff18ca517e9fd6a6257370a308d561905e6acd175b32e15",
+    "apps/boss-miniapp/native/pages/lottery/index.js": "aa47db4961413337f8fd3efa8a32792f2f5a4e0cc9c194825c9a767c4b32009a"
+  }
+}

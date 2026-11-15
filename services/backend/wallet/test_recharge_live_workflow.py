@@ -1,4 +1,5 @@
 """Real operator recharge/adjustment, customer spending, and refund updates."""
+import asyncio
 import io
 import tempfile
 from uuid import uuid4
@@ -167,16 +168,36 @@ class RechargeLiveWorkflowTest(APITransactionTestCase):
             for socket in sockets:
                 self.assertTrue((await socket.connect())[0])
 
-            async def read_events(socket):
+            async def read_events(socket, ready=None):
                 events = []
+                if ready is not None:
+                    # Permission and wallet reads use the database executor.
+                    # A short empty interval is not an end-of-basket marker on
+                    # MySQL; wait for the known committed notifications first.
+                    deadline = asyncio.get_running_loop().time() + 5
+                    while not ready(events):
+                        remaining = deadline - asyncio.get_running_loop().time()
+                        self.assertGreater(remaining, 0, f'Gift notifications missing: {events}')
+                        events.append(await socket.receive_json_from(timeout=remaining))
                 while not await socket.receive_nothing(timeout=0.15):
                     events.append(await socket.receive_json_from(timeout=1))
                 return events
 
+            def count(events, event_type):
+                return sum(event['type'] == event_type for event in events)
+
+            def wallet_accounts(events):
+                return {event['data']['account_id'] for event in events if event['type'] == 'wallet_update'}
+
             try:
                 result = await database_sync_to_async(send)()
                 self.assertEqual(result['code'], 0, result)
-                owner_events, recipient_events, reviewer_events, other_events = [await read_events(socket) for socket in sockets]
+                owner_events = await read_events(sockets[0], lambda events: count(events, 'wallet_update') >= 2)
+                recipient_events = await read_events(sockets[1], lambda events:
+                    count(events, 'wallet_update') >= 2 and count(events, 'site_message_update') >= 2)
+                required_accounts = {self.accounts[self.boss.pk].pk, provider_account.pk}
+                reviewer_events = await read_events(sockets[2], lambda events: required_accounts.issubset(wallet_accounts(events)))
+                other_events = await read_events(sockets[3])
                 owner, recipient, reviewer, other = [[event['data'] for event in events if event['type'] == 'wallet_update']
                     for events in (owner_events, recipient_events, reviewer_events, other_events)]
                 self.assertEqual(len(owner), 2)

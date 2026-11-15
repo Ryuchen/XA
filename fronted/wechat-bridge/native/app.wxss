@@ -1,0 +1,2 @@
+page { --xa-s-2:16rpx; --xa-s-3:24rpx; --xa-s-4:32rpx; --xa-s-5:40rpx; }
+button { border-radius:16rpx; }

@@ -5,8 +5,10 @@ from django.utils import timezone
 from django.db.models import CharField, Exists, OuterRef, Q, Subquery, Value
 from django.db.models.functions import Cast, Concat
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
+from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
 from .models import (Broadcast, BroadcastRule, ClubContent, ClubOperationConfig, LotteryCampaign,
-    LotteryPrize, MemberProfile, MemberTag, PointLedger, RechargePackage, RewardClaim, RewardItem, VipTier, GiftBenefitRule, ProviderNaming)
+    LotteryPrize, MemberProfile, MemberTag, PointLedger, RechargePackage, RewardClaim, RewardItem, VipTier, VipUpgradeReview, GiftBenefitRule, ProviderNaming)
 from .services import validate_template
 
 
@@ -62,7 +64,7 @@ def rich_text(value):
     return ''.join(parser.output)
 
 
-class RewardSerializer(serializers.ModelSerializer):
+class RewardSerializer(EntityNumberModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if self.context.get('display_images'):
@@ -70,7 +72,9 @@ class RewardSerializer(serializers.ModelSerializer):
             data['image_url'] = catalog_display_url(data['image_url'])
         return data
 
-    kind_label = serializers.CharField(source='get_kind_display', read_only=True)
+    kind_label = serializers.SerializerMethodField()
+    def get_kind_label(self, instance):
+        return '余额奖品（仅抽奖）' if instance.kind == RewardItem.Kind.BALANCE else instance.get_kind_display()
     class Meta:
         model = RewardItem
         fields = '__all__'
@@ -83,6 +87,8 @@ class RewardSerializer(serializers.ModelSerializer):
         active = attrs.get('is_active', getattr(self.instance, 'is_active', False))
         shop = attrs.get('in_shop', getattr(self.instance, 'in_shop', True))
         cost = attrs.get('point_cost', getattr(self.instance, 'point_cost', 0))
+        if active and shop and kind == RewardItem.Kind.BALANCE:
+            raise serializers.ValidationError('余额奖品仅可用于抽奖，不能在积分商城上架')
         if active and shop and cost < 1:
             raise serializers.ValidationError('上架兑换商品前请设置积分价格')
         if active and kind == 'BALANCE' and attrs.get('balance_amount', getattr(self.instance, 'balance_amount', 0)) < 1:
@@ -113,7 +119,7 @@ def with_claim_return_status(queryset):
             suspended_at__isnull=False).values('suspension_reason')[:1]))
 
 
-class ClaimSerializer(serializers.ModelSerializer):
+class ClaimSerializer(EntityNumberModelSerializer):
     status_label = serializers.CharField(source='get_status_display', read_only=True)
     account_name = serializers.CharField(source='account.nickname', read_only=True)
     account_type = serializers.CharField(source='account.account_type', read_only=True)
@@ -122,6 +128,10 @@ class ClaimSerializer(serializers.ModelSerializer):
     tag_suspension_reason = serializers.SerializerMethodField()
     tag_editable = serializers.SerializerMethodField()
     tag_revision_submitted = serializers.SerializerMethodField()
+    tag_expired = serializers.SerializerMethodField()
+    def get_tag_expired(self, claim):
+        return bool(claim.kind_snapshot == 'TAG' and claim.status == 'COMPLETED'
+                    and claim.expires_at and claim.expires_at <= timezone.now())
     def get_tag_revision_submitted(self, claim):
         if not self.get_tag_editable(claim):
             return False
@@ -162,7 +172,7 @@ class ClaimSerializer(serializers.ModelSerializer):
         model = RewardClaim
         fields = ['id', 'account', 'account_name', 'account_type', 'reward', 'source', 'source_order', 'name_snapshot', 'kind_snapshot',
             'duration_days', 'duration_months', 'highlighted', 'expires_at', 'points_spent', 'points_returned', 'balance_amount', 'status', 'status_label', 'details',
-            'delivery_note', 'created_at', 'completed_at', 'tag_reviewed', 'tag_suspension_reason', 'tag_revision_required', 'tag_editable', 'tag_revision_submitted']
+            'delivery_note', 'created_at', 'completed_at', 'tag_reviewed', 'tag_suspension_reason', 'tag_revision_required', 'tag_editable', 'tag_revision_submitted', 'tag_expired']
         read_only_fields = fields
 
 
@@ -186,7 +196,7 @@ class MemberEditSerializer(serializers.Serializer):
         return value
 
 
-class BroadcastRuleSerializer(serializers.ModelSerializer):
+class BroadcastRuleSerializer(EntityNumberModelSerializer):
     class Meta:
         model = BroadcastRule
         fields = '__all__'
@@ -195,14 +205,14 @@ class BroadcastRuleSerializer(serializers.ModelSerializer):
         return value
 
 
-class BroadcastSerializer(serializers.ModelSerializer):
+class BroadcastSerializer(EntityNumberModelSerializer):
     class Meta:
         model = Broadcast
         fields = ['id', 'kind', 'content', 'is_visible', 'starts_at', 'expires_at', 'sort_order', 'created_at', 'published_at']
         read_only_fields = ['id', 'kind', 'content', 'starts_at', 'created_at', 'published_at']
 
 
-class ProviderNamingSerializer(serializers.ModelSerializer):
+class ProviderNamingSerializer(EntityNumberModelSerializer):
     provider_name = serializers.CharField(source='provider.nickname', read_only=True)
     sponsor_name = serializers.CharField(source='sponsor.nickname', read_only=True)
     class Meta:
@@ -214,7 +224,7 @@ class ProviderNamingSerializer(serializers.ModelSerializer):
         return naming_title(value, required=True)
 
 
-class ContentSerializer(serializers.ModelSerializer):
+class ContentSerializer(EntityNumberModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if self.context.get('display_images'):
@@ -239,7 +249,7 @@ class ContentSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class ConfigSerializer(serializers.ModelSerializer):
+class ConfigSerializer(EntityNumberModelSerializer):
     class Meta:
         model = ClubOperationConfig
         fields = '__all__'
@@ -252,16 +262,63 @@ class ConfigSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class PackageSerializer(serializers.ModelSerializer):
+class PackageSerializer(EntityNumberModelSerializer):
+    amount = serializers.IntegerField(min_value=1, max_value=2147483647,
+        validators=[UniqueValidator(queryset=RechargePackage.objects.all())])
+    points_rule = serializers.SerializerMethodField()
+
+    def get_points_rule(self, obj):
+        return 'VIP_AT_PAYMENT'
+
+    def to_internal_value(self, data):
+        if 'points_rate' in data:
+            raise serializers.ValidationError({'points_rate': '预存档位不设置积分倍率；消费积分按付款时会员等级及门店规则计算'})
+        return super().to_internal_value(data)
+
     class Meta:
         model = RechargePackage
-        fields = '__all__'
+        fields = ['id', 'amount', 'gift_amount', 'active', 'points_rule']
 
 
-class TierSerializer(serializers.ModelSerializer):
+def eligible_benefit_services(kind):
+    from orders.models import ServiceItem
+    rows = ServiceItem.objects.filter(is_active=True, is_addon=False, purchase_mode='DIRECT',
+        billing_provider_count=1, fulfillment_provider_count=1, platform__in=['PC', 'MOBILE'], benefit_kind=kind).exclude(service_category__is_gift=True)
+    return rows.filter(price_unit__in=['小时', '时', 'hour']) if kind == 'COMPANION_HOUR' else rows
+
+
+class VipUpgradeReviewSerializer(serializers.ModelSerializer):
+    account_name = serializers.CharField(source='account.nickname', read_only=True)
+    account_no = serializers.CharField(source='account.account_no', read_only=True)
+    tier_name = serializers.CharField(source='tier.boss_type.name', read_only=True)
+    tier_level = serializers.IntegerField(source='tier.level', read_only=True)
+    tier_active = serializers.BooleanField(source='tier.active', read_only=True)
+    current_rewards = serializers.SerializerMethodField()
+    companion_quantity = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VipUpgradeReview
+        fields = ['id', 'account', 'account_name', 'account_no', 'tier', 'tier_name', 'tier_level', 'tier_active', 'current_rewards', 'companion_quantity',
+                  'business_cycle', 'epoch', 'status', 'evidence', 'resolution', 'resolution_note',
+                  'resolved_by', 'resolved_at', 'created_at']
+        read_only_fields = fields
+
+    def get_current_rewards(self, review):
+        bundles = review.tier.upgrade_rewards or []
+        rewards = {item.pk: item for item in RewardItem.objects.filter(pk__in=[row['reward'] for row in bundles])}
+        return [{'id': row['reward'], 'name': rewards[row['reward']].name, 'quantity': row['quantity']}
+                for row in bundles if row['reward'] in rewards and rewards[row['reward']].vip_quota_kind != 'BIRTHDAY_GIFT']
+
+    def get_companion_quantity(self, review):
+        from .vip_policy import issuance_policy
+        return issuance_policy(review.tier)['companion_quantity']
+
+
+class TierSerializer(EntityNumberModelSerializer):
     name = serializers.CharField(source='boss_type.name', read_only=True)
     discount_rate = serializers.IntegerField(source='boss_type.discount_rate', read_only=True)
     consumption_threshold = serializers.IntegerField(source='recharge_threshold', min_value=1, required=False)
+    recharge_threshold = serializers.IntegerField(min_value=0, required=False)
     upgrade_basis = serializers.CharField(read_only=True, default='CONFIRMED_CONSUMPTION')
     class Meta:
         model = VipTier
@@ -271,11 +328,7 @@ class TierSerializer(serializers.ModelSerializer):
             return []
         if not isinstance(value, list) or len(value) > 100 or any(type(pk) is not int or pk < 1 for pk in value) or len(set(value)) != len(value):
             raise serializers.ValidationError('请选择不重复的服务编号')
-        from orders.models import ServiceItem
-        valid = ServiceItem.objects.filter(pk__in=value, is_active=True, is_addon=False,
-            purchase_mode='DIRECT', billing_provider_count=1, platform__in=['PC','MOBILE'], benefit_kind=kind).exclude(service_category__is_gift=True)
-        if kind == 'COMPANION_HOUR':
-            valid = valid.filter(price_unit__in=['小时','时','hour'])
+        valid = eligible_benefit_services(kind).filter(pk__in=value)
         if valid.count() != len(value):
             raise serializers.ValidationError('绑定须为已确认权益分类的端游/手游单陪主套餐；陪玩按小时计价')
         return sorted(value)
@@ -283,8 +336,55 @@ class TierSerializer(serializers.ModelSerializer):
         return self._binding(value, 'COMPANION_HOUR')
     def validate_safe_box_service_ids(self, value):
         return self._binding(value, 'SAFEBOX_33')
+    def validate_benefits(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('会员权益须为对象')
+        saved = self.instance.benefits if self.instance and isinstance(self.instance.benefits, dict) else {}
+        if ('_issuance_template_level' in value and
+                value['_issuance_template_level'] != saved.get('_issuance_template_level')):
+            raise serializers.ValidationError('不可修改内部权益模板标记')
+        if '_issuance_template_level' in saved:
+            value.setdefault('_issuance_template_level', saved['_issuance_template_level'])
+        rules = value.get('issuance')
+        if 'issuance' in value:
+            allowed = {'companion_quantity', 'companion_variant', 'birthday', 'safety_box',
+                       'safety_box_refresh', 'highlighted', 'birthday_discount',
+                       'birthday_max_discount', 'monthly_max_discount', 'birthday_valid_days',
+                       'birthday_multiplier', 'birthday_reward_id', 'birthday_reward_quantity'}
+            if not isinstance(rules, dict) or set(rules) - allowed:
+                raise serializers.ValidationError('会员发放规则格式无效')
+            for key in ('birthday', 'safety_box', 'safety_box_refresh', 'highlighted'):
+                if key in rules and type(rules[key]) is not bool:
+                    raise serializers.ValidationError('会员发放开关须为布尔值')
+            quantity = rules.get('companion_quantity', 0)
+            variant = rules.get('companion_variant', '')
+            if type(quantity) is not int or not 0 <= quantity <= 100 or not isinstance(variant, str) or len(variant) > 60:
+                raise serializers.ValidationError('陪玩赠券数量或名称无效')
+            if ('birthday_discount' in rules and (type(rules['birthday_discount']) is not int
+                    or not 1 <= rules['birthday_discount'] <= 100)):
+                raise serializers.ValidationError('生日券折扣须为 1–100')
+            for key in ('birthday_max_discount', 'monthly_max_discount'):
+                if key in rules and (type(rules[key]) is not int or not 0 <= rules[key] <= 2147483647):
+                    raise serializers.ValidationError('优惠封顶金额无效')
+            for key, maximum in (('birthday_valid_days', 365), ('birthday_multiplier', 10)):
+                if key in rules and (type(rules[key]) is not int or not 1 <= rules[key] <= maximum):
+                    raise serializers.ValidationError('生日有效天数或积分倍率无效')
+            reward_id = rules.get('birthday_reward_id')
+            reward_count = rules.get('birthday_reward_quantity', 0)
+            if (type(reward_count) is not int or not 0 <= reward_count <= 100
+                    or (reward_id is not None and (type(reward_id) is not int or reward_id <= 0))
+                    or (reward_count and not reward_id)):
+                raise serializers.ValidationError('生日奖励项目或数量无效')
+            if reward_id and not RewardItem.objects.filter(pk=reward_id, vip_quota_kind='BIRTHDAY_GIFT',
+                                                            in_shop=False, is_active=True).exists():
+                raise serializers.ValidationError('请选择本店启用的生日奖励项目')
+            if rules.get('safety_box_refresh', False) and not rules.get('safety_box', False):
+                raise serializers.ValidationError('重复发放安全箱券须先启用安全箱权益')
+        return value
     def validate(self, attrs):
         data = getattr(self, 'initial_data', {})
+        if self.instance is None and 'recharge_threshold' not in attrs:
+            raise serializers.ValidationError('请填写累计确认消费门槛')
         if 'consumption_threshold' in data and 'recharge_threshold' in data:
             if data['consumption_threshold'] != data['recharge_threshold']:
                 raise serializers.ValidationError('累计消费门槛参数不一致，请刷新后再保存')
@@ -293,11 +393,12 @@ class TierSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError('折扣比例必须为 1–100')
         level = attrs.get('level', getattr(self.instance, 'level', None))
         if level is not None:
-            if not 1 <= level <= 6:
-                raise serializers.ValidationError('VIP等级须为1至6')
-            attrs['monthly_discount'] = 85 if level == 6 else 90
-            attrs['monthly_coupon_count'] = [0,1,2,4,10,10][level-1]
-            attrs['season_discount'] = [80,80,80,70,60,0][level-1]
+            if not 1 <= level <= 32767:
+                raise serializers.ValidationError('VIP等级须为 1 至 32767')
+            if self.instance is None:
+                attrs.setdefault('monthly_discount', (85 if level == 6 else 90) if level <= 6 else 100)
+                attrs.setdefault('monthly_coupon_count', [0,1,2,4,10,10][level-1] if level <= 6 else 0)
+                attrs.setdefault('season_discount', [80,80,80,70,60,0][level-1] if level <= 6 else 100)
         bundles = attrs.get('upgrade_rewards', [])
         if not isinstance(bundles, list) or len(bundles) > 30:
             raise serializers.ValidationError('升级权益配置格式错误')
@@ -306,8 +407,8 @@ class TierSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError('升级权益须指定 reward 和 quantity')
             if type(item['quantity']) is not int or not 1 <= item['quantity'] <= 100:
                 raise serializers.ValidationError('权益份数应为 1–100')
-            if not RewardItem.objects.filter(pk=item['reward'], kind__in=['SERVICE', 'NAMING', 'TAG'], in_shop=False).exists():
-                raise serializers.ValidationError('VIP 权益请选择不在积分商城上架的服务、冠名或 TAG')
+            if not RewardItem.objects.filter(pk=item['reward'], kind__in=['SERVICE', 'NAMING', 'TAG'], in_shop=False).exclude(vip_quota_kind='BIRTHDAY_GIFT').exists():
+                raise serializers.ValidationError('VIP 升级权益请选择不在商城的服务、冠名或 TAG，生日礼物请单独配置')
         return attrs
 
 
@@ -321,7 +422,7 @@ def lottery_daily_remaining(account, campaign):
     return max(0, campaign.daily_limit - used)
 
 
-class CampaignSerializer(serializers.ModelSerializer):
+class CampaignSerializer(EntityNumberModelSerializer):
     prizes = serializers.SerializerMethodField()
     pity = serializers.SerializerMethodField()
     draw_counts = serializers.SerializerMethodField()
@@ -332,11 +433,15 @@ class CampaignSerializer(serializers.ModelSerializer):
         model = LotteryCampaign
         fields = '__all__'
         read_only_fields = ['version']
+    def validate_pity_limit(self, value):
+        if value < 1:
+            raise serializers.ValidationError('保底次数必须大于 0')
+        return value
     def get_prizes(self, obj):
         from common.catalog_images import catalog_display_url
         from .services import lottery_rarity
         return [{'id': row.pk, 'reward': row.reward_id, 'name': row.reward.name,
-            'reward_code': row.reward.code, 'rarity': lottery_rarity(row.reward),
+            'reward_code': row.reward.code, 'rarity': lottery_rarity(row.reward, obj),
             'kind': row.reward.kind, 'image_url': catalog_display_url(row.reward.image_url) if self.context.get('display_images') else row.reward.image_url,
             'probability': row.probability, 'sort_order': row.sort_order}
             for row in obj.prizes.select_related('reward').all()]
@@ -360,7 +465,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         return lottery_ten_guarantee(obj)
 
 
-class GiftBenefitSerializer(serializers.ModelSerializer):
+class GiftBenefitSerializer(EntityNumberModelSerializer):
     class Meta:
         model = GiftBenefitRule
         fields = '__all__'

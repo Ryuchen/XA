@@ -1,0 +1,380 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "stages_passed": [
+    "created",
+    "p2-started",
+    "both-started",
+    "p2-completed",
+    "both-completed"
+  ],
+  "stages": {
+    "created": {
+      "stage": "created",
+      "passed": true,
+      "source": "root-observed-real-h5-ui",
+      "http_audit_only": true,
+      "order_status": "GRABBED",
+      "payment_status": "PAID",
+      "amount_raw": 10002,
+      "participant_account_ids": [
+        3,
+        4
+      ],
+      "provider_actions": {
+        "p2": [
+          "START"
+        ],
+        "p3": [
+          "START"
+        ]
+      },
+      "provider_report_ids": {
+        "p2": [],
+        "p3": []
+      },
+      "provider_report_statuses": {
+        "p2": [],
+        "p3": []
+      },
+      "evidence_images": {},
+      "wallet_balances_raw": {
+        "boss": 489998,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "wallet_frozen_raw": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "boss_pay_count": 1,
+      "provider_income_count": 0,
+      "site_message_counts": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 1,
+        "p3": 1
+      },
+      "two_selected_provider_site_messages_received": true,
+      "unselected_provider_cannot_view": true,
+      "admin_names_and_shares_match": true,
+      "draft_reports_hidden_from_admin_queue": true,
+      "checked_at": "2026-10-20T17:24:38.331Z"
+    },
+    "p2-started": {
+      "stage": "p2-started",
+      "passed": true,
+      "source": "root-observed-real-h5-ui",
+      "http_audit_only": true,
+      "order_status": "GRABBED",
+      "payment_status": "PAID",
+      "amount_raw": 10002,
+      "participant_account_ids": [
+        3,
+        4
+      ],
+      "provider_actions": {
+        "p2": [],
+        "p3": [
+          "START"
+        ]
+      },
+      "provider_report_ids": {
+        "p2": [
+          1
+        ],
+        "p3": []
+      },
+      "provider_report_statuses": {
+        "p2": [
+          "DRAFT"
+        ],
+        "p3": []
+      },
+      "evidence_images": {
+        "p2": {
+          "entry": {
+            "bytes": 2697,
+            "sha256": "fff2a66c444cc54bab8467eb15e9ac715240653601a5efc1295a68e09ac80332"
+          }
+        }
+      },
+      "wallet_balances_raw": {
+        "boss": 489998,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "wallet_frozen_raw": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "boss_pay_count": 1,
+      "provider_income_count": 0,
+      "site_message_counts": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 1,
+        "p3": 1
+      },
+      "two_selected_provider_site_messages_received": true,
+      "unselected_provider_cannot_view": true,
+      "admin_names_and_shares_match": true,
+      "draft_reports_hidden_from_admin_queue": true,
+      "checked_at": "2026-10-20T17:25:29.252Z"
+    },
+    "both-started": {
+      "stage": "both-started",
+      "passed": true,
+      "source": "root-observed-real-h5-ui",
+      "http_audit_only": true,
+      "order_status": "IN_SERVICE",
+      "payment_status": "PAID",
+      "amount_raw": 10002,
+      "participant_account_ids": [
+        3,
+        4
+      ],
+      "provider_actions": {
+        "p2": [
+          "COMPLETE"
+        ],
+        "p3": [
+          "COMPLETE"
+        ]
+      },
+      "provider_report_ids": {
+        "p2": [
+          1
+        ],
+        "p3": [
+          2
+        ]
+      },
+      "provider_report_statuses": {
+        "p2": [
+          "DRAFT"
+        ],
+        "p3": [
+          "DRAFT"
+        ]
+      },
+      "evidence_images": {
+        "p2": {
+          "entry": {
+            "bytes": 2697,
+            "sha256": "fff2a66c444cc54bab8467eb15e9ac715240653601a5efc1295a68e09ac80332"
+          }
+        },
+        "p3": {
+          "entry": {
+            "bytes": 2731,
+            "sha256": "6b672276af56086953380e64e1fe76a4ef56678ec336de2540a9850e3731fe0f"
+          }
+        }
+      },
+      "wallet_balances_raw": {
+        "boss": 489998,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "wallet_frozen_raw": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "boss_pay_count": 1,
+      "provider_income_count": 0,
+      "site_message_counts": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 1,
+        "p3": 1
+      },
+      "two_selected_provider_site_messages_received": true,
+      "unselected_provider_cannot_view": true,
+      "admin_names_and_shares_match": true,
+      "draft_reports_hidden_from_admin_queue": true,
+      "checked_at": "2026-10-20T17:26:00.871Z"
+    },
+    "p2-completed": {
+      "stage": "p2-completed",
+      "passed": true,
+      "source": "root-observed-real-h5-ui",
+      "http_audit_only": true,
+      "order_status": "IN_SERVICE",
+      "payment_status": "PAID",
+      "amount_raw": 10002,
+      "participant_account_ids": [
+        3,
+        4
+      ],
+      "provider_actions": {
+        "p2": [],
+        "p3": [
+          "COMPLETE"
+        ]
+      },
+      "provider_report_ids": {
+        "p2": [
+          1
+        ],
+        "p3": [
+          2
+        ]
+      },
+      "provider_report_statuses": {
+        "p2": [
+          "DRAFT"
+        ],
+        "p3": [
+          "DRAFT"
+        ]
+      },
+      "evidence_images": {
+        "p2": {
+          "entry": {
+            "bytes": 2697,
+            "sha256": "fff2a66c444cc54bab8467eb15e9ac715240653601a5efc1295a68e09ac80332"
+          },
+          "completion": {
+            "bytes": 2738,
+            "sha256": "c9649a62cefe8bee8685e6265dbb8dfe55863271fab35185d7eebe9095e4bdce"
+          }
+        },
+        "p3": {
+          "entry": {
+            "bytes": 2731,
+            "sha256": "6b672276af56086953380e64e1fe76a4ef56678ec336de2540a9850e3731fe0f"
+          }
+        }
+      },
+      "wallet_balances_raw": {
+        "boss": 489998,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "wallet_frozen_raw": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "boss_pay_count": 1,
+      "provider_income_count": 0,
+      "site_message_counts": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 1,
+        "p3": 1
+      },
+      "two_selected_provider_site_messages_received": true,
+      "unselected_provider_cannot_view": true,
+      "admin_names_and_shares_match": true,
+      "draft_reports_hidden_from_admin_queue": true,
+      "checked_at": "2026-10-20T17:27:08.796Z"
+    },
+    "both-completed": {
+      "stage": "both-completed",
+      "passed": true,
+      "source": "root-observed-real-h5-ui",
+      "http_audit_only": true,
+      "order_status": "COMPLETED",
+      "payment_status": "PAID",
+      "amount_raw": 10002,
+      "participant_account_ids": [
+        3,
+        4
+      ],
+      "provider_actions": {
+        "p2": [],
+        "p3": []
+      },
+      "provider_report_ids": {
+        "p2": [
+          1
+        ],
+        "p3": [
+          2
+        ]
+      },
+      "provider_report_statuses": {
+        "p2": [
+          "DRAFT"
+        ],
+        "p3": [
+          "DRAFT"
+        ]
+      },
+      "evidence_images": {
+        "p2": {
+          "entry": {
+            "bytes": 2697,
+            "sha256": "fff2a66c444cc54bab8467eb15e9ac715240653601a5efc1295a68e09ac80332"
+          },
+          "completion": {
+            "bytes": 2738,
+            "sha256": "c9649a62cefe8bee8685e6265dbb8dfe55863271fab35185d7eebe9095e4bdce"
+          }
+        },
+        "p3": {
+          "entry": {
+            "bytes": 2731,
+            "sha256": "6b672276af56086953380e64e1fe76a4ef56678ec336de2540a9850e3731fe0f"
+          },
+          "completion": {
+            "bytes": 2758,
+            "sha256": "d19a3fa9cfc2e4e3ae82990f4fb53641ca044348502762bf5629ff707795b5e5"
+          }
+        }
+      },
+      "wallet_balances_raw": {
+        "boss": 489998,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "wallet_frozen_raw": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 0,
+        "p3": 0
+      },
+      "boss_pay_count": 1,
+      "provider_income_count": 0,
+      "site_message_counts": {
+        "boss": 0,
+        "p1": 0,
+        "p2": 1,
+        "p3": 1
+      },
+      "two_selected_provider_site_messages_received": true,
+      "unselected_provider_cannot_view": true,
+      "admin_names_and_shares_match": true,
+      "draft_reports_hidden_from_admin_queue": true,
+      "checked_at": "2026-10-20T17:28:24.677Z"
+    }
+  },
+  "api_origin": "http://127.0.0.1:18192",
+  "order_id": 1,
+  "order_created_by_real_native_ui": true,
+  "helper_created_orders": 0,
+  "final_selection": [
+    "p2",
+    "p3"
+  ],
+  "real_http": true,
+  "synthetic_fixture_and_images": true,
+  "real_service_fulfilled": false,
+  "earnings_settled": false,
+  "report_audit_performed": false,
+  "note": "隔离合成凭证验证履约状态；实际动作来源逐阶段标注。仅两张履约凭证后报单仍为DRAFT，未提交战绩或报单审核。老板站内消息数量如实记录；下单站内通知对象为两名陪玩。"
+}

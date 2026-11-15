@@ -13,7 +13,7 @@ import hashlib
 import json
 import re
 
-from django.db import connection, transaction
+from stores.db import connection, transaction
 
 from integrations.wechatpay_gateway import WeChatPayOutcomeUnknown
 from integrations.wechatpay_refund_evidence import parse_refund_notification

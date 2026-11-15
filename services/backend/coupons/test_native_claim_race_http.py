@@ -7,6 +7,7 @@ from pathlib import Path
 from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 
+from club_accounts.models import ClubAccount, LegacyAccountMap
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from coupons.models import Coupon, UserCoupon
@@ -16,10 +17,17 @@ from orders.tests.factories import make_user
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
 class NativeClaimRaceTest(LiveServerTestCase):
     def test_account_switch_and_lost_committed_response(self):
+        self.run_native_claim_flow(account_only=False)
+
+    def test_account_only_switch_and_lost_committed_response(self):
+        self.run_native_claim_flow(account_only=True)
+
+    def run_native_claim_flow(self, *, account_only):
         node = shutil.which('node')
         if not node:
             self.skipTest('Node runtime required')
-        accounts = [get_or_create_account_for_legacy_user(make_user()) for _ in range(2)]
+        accounts = ([ClubAccount.objects.create_account(username=f'native-claim-only-{index}', account_type='BOSS') for index in range(2)]
+                    if account_only else [get_or_create_account_for_legacy_user(make_user()) for _ in range(2)])
         coupons = [Coupon.objects.create(name=name, amount=100) for name in ('隔离优惠券', '隔离补充券')]
         sessions = []
         for account in accounts:
@@ -38,3 +46,6 @@ class NativeClaimRaceTest(LiveServerTestCase):
         coupons[1].refresh_from_db()
         self.assertEqual(coupons[0].claimed_qty, 2)
         self.assertEqual(coupons[1].claimed_qty, 1)
+        if account_only:
+            self.assertFalse(LegacyAccountMap.objects.filter(account__in=accounts).exists())
+            self.assertFalse(UserCoupon.objects.filter(account__in=accounts).exclude(user__isnull=True).exists())

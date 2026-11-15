@@ -48,9 +48,9 @@ class EngagementTests(APITestCase):
             award_order_points(order)
             award_order_points(order)
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.points_balance, 117500)
+        self.assertEqual(self.profile.points_balance, 115000)
         self.assertEqual(PointLedger.objects.count(), 1)
-        # 生日后改、后续充值倍率改变，均不重新计算已支付的订单。
+        # 生日后改不会重新计算已支付订单；充值批次倍率不影响本次积分。
         self.profile.birthday = timezone.localdate().replace(year=2000)
         self.profile.save()
         with transaction.atomic():
@@ -62,7 +62,7 @@ class EngagementTests(APITestCase):
         self.assertEqual(self.profile.points_balance, 100000)
         self.assertEqual((one.remaining, two.remaining), (10000, 10000))
 
-    def test_birthday_and_prepaid_multipliers_are_frozen_at_payment(self):
+    def test_birthday_and_member_multipliers_are_frozen_at_payment(self):
         today = timezone.localdate()
         self.profile.birthday = date(2000, today.month, today.day); self.profile.save()
         PointFundingLot.objects.create(account=self.account, source_key='prepaid', remaining=10000, points_rate=110)
@@ -71,7 +71,7 @@ class EngagementTests(APITestCase):
             allocate_order_points(order, self.wallet, 10000)
             award_order_points(order)
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.points_balance, 122000)
+        self.assertEqual(self.profile.points_balance, 120000)
 
     def test_redeem_retry_returns_same_claim_and_stock_is_not_negative(self):
         reward = RewardItem.objects.create(code='headset', name='耳机', kind='PHYSICAL', point_cost=600, stock=1, is_active=True)

@@ -1,0 +1,143 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "passed": true,
+  "read_only_transaction": true,
+  "database": "xa_test_multi_provider_flow_20261021",
+  "counts": {
+    "orders": 1,
+    "order_providers": 2,
+    "order_status_logs": 2,
+    "order_applications": 0,
+    "wallets": 4,
+    "transactions": 2,
+    "services": 2,
+    "profiles": 3,
+    "qualifications": 3,
+    "schedules": 84,
+    "game_categories": 1,
+    "service_categories": 1,
+    "gameplays": 1
+  },
+  "snapshot_sha256": "1df78868d36bf0846516b00f3d68956aca0b93c594351964539823193a8a7e5b",
+  "fixture_summary": {
+    "actors": {
+      "boss": {
+        "account_id": 1,
+        "legacy_user_id": 2,
+        "wallet_id": 2,
+        "initial_balance_raw": 500000,
+        "initial_frozen_raw": 0
+      },
+      "p1": {
+        "account_id": 2,
+        "legacy_user_id": 3,
+        "wallet_id": 3,
+        "initial_balance_raw": 0,
+        "initial_frozen_raw": 0
+      },
+      "p2": {
+        "account_id": 3,
+        "legacy_user_id": 4,
+        "wallet_id": 4,
+        "initial_balance_raw": 0,
+        "initial_frozen_raw": 0
+      },
+      "p3": {
+        "account_id": 4,
+        "legacy_user_id": 5,
+        "wallet_id": 5,
+        "initial_balance_raw": 0,
+        "initial_frozen_raw": 0
+      }
+    },
+    "services": {
+      "single": {
+        "id": 1,
+        "name": "隔离联调 单陪",
+        "price": 5001,
+        "unit_price": 5001,
+        "billing_provider_count": 1,
+        "purchase_mode": "DIRECT",
+        "expected_amount_units_1": 5001,
+        "game_category_id": 1,
+        "service_category_id": 9,
+        "provider_kind": "COMPANION",
+        "provider_grade": "",
+        "platform": "PC",
+        "security_level": "ANY",
+        "commission_policy": "REGULAR"
+      },
+      "double": {
+        "id": 2,
+        "name": "隔离联调 双陪",
+        "price": 10002,
+        "unit_price": 5001,
+        "billing_provider_count": 2,
+        "purchase_mode": "CONSULT",
+        "expected_amount_units_1": 10002,
+        "game_category_id": 1,
+        "service_category_id": 9,
+        "provider_kind": "COMPANION",
+        "provider_grade": "",
+        "platform": "PC",
+        "security_level": "ANY",
+        "commission_policy": "REGULAR"
+      }
+    }
+  },
+  "checked_at": "2026-10-20T16:45:11.930707+00:00",
+  "orders": [
+    {
+      "id": 1,
+      "status": "GRABBED",
+      "payment_status": "PAID",
+      "amount": 10002,
+      "required_provider_count": 2,
+      "provider_income": 8502,
+      "shop_income": 1500,
+      "inviter_commission": 0
+    }
+  ],
+  "shares": [
+    {
+      "order_id": 1,
+      "provider_account_id": 2,
+      "settlement_base": 5001,
+      "commission_rate": 10,
+      "commission_type": "PERCENT",
+      "commission_fixed": 0,
+      "provider_income": 4501
+    },
+    {
+      "order_id": 1,
+      "provider_account_id": 3,
+      "settlement_base": 5001,
+      "commission_rate": 20,
+      "commission_type": "PERCENT",
+      "commission_fixed": 0,
+      "provider_income": 4001
+    }
+  ],
+  "wallets": [
+    {
+      "account_id": 1,
+      "balance": 489998,
+      "frozen_amount": 0
+    },
+    {
+      "account_id": 2,
+      "balance": 0,
+      "frozen_amount": 0
+    },
+    {
+      "account_id": 3,
+      "balance": 0,
+      "frozen_amount": 0
+    },
+    {
+      "account_id": 4,
+      "balance": 0,
+      "frozen_amount": 0
+    }
+  ]
+}

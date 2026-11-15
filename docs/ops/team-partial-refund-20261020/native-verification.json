@@ -1,0 +1,169 @@
+{
+  "run": "XA-TEAM-PARTIAL-REFUND-20261020-a3267c",
+  "stages": [
+    {
+      "stage": "original-session-backed-up",
+      "account_id": "1142"
+    },
+    {
+      "stage": "fixture-session-active",
+      "account_id": "1152"
+    },
+    {
+      "stage": "opened-frozen_recovery",
+      "id": 117,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 117,
+      "aftersale_id": 9,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 117,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-TEAM-PARTIAL-REFUND-20261020-a3267c 双陪冻结订单首退250币，按两人实际收益追回100币和87.5币",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 117,
+      "aftersale_id": 9,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 117,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-TEAM-PARTIAL-REFUND-20261020-a3267c 双陪冻结订单再退150币，保留600币余款",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 117,
+      "aftersale_id": 9,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 117,
+      "status": "CANCELLED",
+      "payment_status": "REFUNDED",
+      "aftersale_status": "REFUNDED",
+      "resolution": "XA-TEAM-PARTIAL-REFUND-20261020-a3267c 双陪冻结订单退清600币，核销两人本单剩余冻结并保留其他订单冻结",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 118,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 118,
+      "aftersale_id": 10,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-available_recovery",
+      "id": 118,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-TEAM-PARTIAL-REFUND-20261020-a3267c 测试资金补回后重新试算，双陪可用收益部分退款250币",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 118,
+      "aftersale_id": 10,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "wallet-open",
+      "balance": "1250",
+      "frozen": "0"
+    },
+    {
+      "stage": "wallet-refund-realtime",
+      "balance": "1400",
+      "frozen": "0",
+      "refunds": [
+        {
+          "id": 1040,
+          "amount": 1500,
+          "displayAmount": "+150",
+          "after": "1400"
+        },
+        {
+          "id": 1036,
+          "amount": 2500,
+          "displayAmount": "+250",
+          "after": "1250"
+        },
+        {
+          "id": 1030,
+          "amount": 6000,
+          "displayAmount": "+600",
+          "after": "1000"
+        },
+        {
+          "id": 1024,
+          "amount": 1500,
+          "displayAmount": "+150",
+          "after": "400"
+        },
+        {
+          "id": 1018,
+          "amount": 2500,
+          "displayAmount": "+250",
+          "after": "250"
+        }
+      ],
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 118,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "canAfterSale": true,
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-TEAM-PARTIAL-REFUND-20261020-a3267c 双陪可用收益再退150币，累计退款400币，保留600币及两人剩余收益"
+    },
+    {
+      "stage": "partial-refund-summary-captured",
+      "order_id": 118,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_coins": "400",
+      "remaining_coins": "600"
+    },
+    {
+      "stage": "original-session-restored",
+      "account_id": "1142",
+      "home_error": ""
+    }
+  ]
+}

@@ -18,7 +18,7 @@ class CompanionDetailTest(APITestCase):
         self.boss_account = get_or_create_account_for_legacy_user(self.boss)
         self.client.force_authenticate(self.boss)
         self.service = make_service()
-        user = make_provider(display_name='听风', gender='FEMALE', bio='一起开心开黑',
+        user = make_provider(display_name='听风', gender='FEMALE', bio='一起开心开黑', deposit_mode='EARNINGS',
                              pass_tier='BLACK', pass_expires_at=timezone.now() + timedelta(days=1))
         self.profile = user.escort_profile
         self.profile.account = get_or_create_account_for_legacy_user(user)
@@ -50,8 +50,8 @@ class CompanionDetailTest(APITestCase):
         Order.objects.filter(pk=order.pk).update(payment_status='REFUNDED')
         self.assertEqual(self.detail()['monthly_order_amount'], 0)
 
-    def test_unavailable_and_busy_profiles_remain_readable_with_selection_reason(self):
-        for status in ('OFFLINE', 'BUSY'):
+    def test_offline_is_unavailable_but_busy_with_capacity_is_selectable(self):
+        for status in ('OFFLINE',):
             with self.subTest(status=status):
                 self.profile.status = status
                 self.profile.save(update_fields=['status'])
@@ -59,6 +59,9 @@ class CompanionDetailTest(APITestCase):
                 self.assertEqual(row['nickname'], '听风')
                 self.assertFalse(row['can_order'])
                 self.assertTrue(row['order_unavailable_reason'])
+        self.profile.status = 'BUSY'
+        self.profile.save(update_fields=['status'])
+        self.assertTrue(self.detail(service_item=self.service.pk)['can_order'])
 
     def test_gender_and_removed_service_skill_block_selection_without_hiding_detail(self):
         self.service.game_category = GameCategory.objects.create(name='测试游戏')
@@ -97,11 +100,13 @@ class CompanionDetailTest(APITestCase):
         self.assertEqual(self.client.get(self.url).status_code, 404)
         self.assertEqual(self.client.get('/api/users/escorts/999999999/').status_code, 404)
 
-    def test_detail_requires_login_and_valid_current_service(self):
+    def test_detail_validation_and_anonymous_browsing(self):
         self.assertEqual(self.client.get(self.url, {'gender': 'INVALID'}).status_code, 400)
         self.assertEqual(self.client.get(self.url, {'service_item': 'invalid'}).status_code, 400)
         self.service.is_active = False
         self.service.save(update_fields=['is_active'])
         self.assertEqual(self.client.get(self.url, {'service_item': self.service.pk}).status_code, 404)
         self.client.force_authenticate(None)
-        self.assertIn(self.client.get(self.url).status_code, (401, 403))
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['data']['nickname'], '听风')

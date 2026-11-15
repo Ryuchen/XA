@@ -1,0 +1,546 @@
+/* Latest high-fidelity boss visual contract. Business values and states stay server-driven. */
+.boss-app .boss-page-title h1,
+.boss-app .boss-content[data-page="home"] > .boss-page-title h1 {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -.03em;
+}
+.boss-app .boss-content[data-page="home"] > .boss-page-title p { margin-top: 8px; font-size: 14px; line-height: 24px; }
+.boss-header-support { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%; color: var(--boss-link); }
+.boss-header-support:hover { color: var(--boss-link); background: color-mix(in oklab, var(--primary) 9%, transparent); }
+.boss-mine-orders .boss-stats { padding: 8px 0; }
+.boss-mine-orders .boss-stats > a { border-radius: 0; min-height: 64px; }
+.boss-mine-orders .boss-stats > a:hover { background: color-mix(in oklab, var(--accent) 50%, transparent); }
+.boss-mine-orders .boss-stats > a + a { border-left: 1px solid var(--border); }
+.boss-companion-search { margin: -4px 0 20px; }
+.boss-voice-wave { display: flex; height: 24px; align-items: center; justify-content: center; gap: 2px; }
+.boss-voice-wave > i { display: block; width: 2px; border-radius: 999px; background: currentColor; transform-origin: center; animation: boss-voice-wave 720ms ease-in-out infinite alternate; }
+@keyframes boss-voice-wave { from { transform: scaleY(.45); opacity: .65; } to { transform: scaleY(1); opacity: 1; } }
+.boss-home-announcement { position: relative; min-height: 52px; padding: 10px 12px; overflow: hidden; }
+.boss-home-announcement > .boss-home-announcement-copy { flex: 1; min-width: 0; }
+.boss-home-announcement-copy > span { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; color: var(--boss-link); font-size: 11px; font-weight: 600; }
+.boss-home-announcement-copy > p { display: inline; font-size: 12px; line-height: 20px; }
+.boss-home-announcement-count { flex: 0 0 auto; color: var(--muted-foreground); font-size: 11px; font-variant-numeric: tabular-nums; }
+.boss-home-announcement-progress { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; }
+.boss-home-announcement-progress > button { display: grid; width: 20px; height: 32px; place-items: center; padding: 0; border-radius: 4px; }
+.boss-home-announcement-progress > button::after { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--border); }
+.boss-home-announcement-progress > button[aria-pressed="true"]::after { width: 12px; border-radius: 999px; background: var(--primary); }
+.boss-wallet-layout > .boss-wallet-balance { display: block; padding: 0; overflow: hidden; }
+.boss-wallet-balance-main { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 24px; }
+.boss-wallet-balance-parts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #ffffff26; padding: 16px 0; }
+.boss-wallet-balance-parts > div { min-width: 0; padding: 0 20px; text-align: center; }
+.boss-wallet-balance-parts > div + div { border-left: 1px solid #ffffff26; }
+.boss-wallet-balance-parts span { display: block; color: #cbd5e1; font-size: 12px; }
+.boss-wallet-balance-parts strong { display: block; margin-top: 4px; color: #f8fafc; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.boss-member-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 16px; }
+.boss-member-tags .boss-choice-button { min-height: 36px; height: auto; padding: 7px 14px; border-radius: 999px; font-size: 12px; }
+.boss-member-tags .boss-choice-button svg { flex-shrink: 0; }
+.boss-member-tier > .boss-field { display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: center; gap: 12px; }
+.boss-member-tier .boss-field > label { font-size: 14px; }
+.boss-member-tier [data-slot="select-trigger"] { width: 112px; min-height: 32px; height: 32px; padding: 4px 8px; font-size: 12px; }
+.boss-login-layout { grid-template-columns: minmax(0, 480px) 420px; justify-content: center; gap: 32px; }
+.boss-login-welcome > .boss-muted { margin-top: 12px; }
+.boss-login-authorization { padding: 24px; border-radius: 12px; }
+.boss-login-authorization .boss-form { gap: 16px; }
+.boss-login-primary-icon { display: grid; width: 48px; height: 48px; margin-inline: auto; place-items: center; border-radius: 12px; color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-login-code { align-self: center; width: min(100%, 240px); }
+.boss-login-status { margin: 0; text-align: center; color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+.boss-login-agreement { padding-top: 16px; border-top: 1px solid var(--border); }
+.boss-login-agreement-row { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+.boss-login-agreement-row > input { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; accent-color: var(--primary); }
+.boss-login-agreement-row > span { min-width: 0; }
+.boss-login-agreement-row button { display: inline; min-height: 32px; padding: 0; color: var(--boss-link); vertical-align: baseline; }
+.boss-login-agreement-error { margin-top: 4px; color: var(--destructive); font-size: 12px; }
+.boss-login-support { width: 100%; min-height: 44px; color: var(--muted-foreground); font-size: 12px; }
+.boss-login-privacy-note { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0; color: var(--muted-foreground); font-size: 12px; line-height: 20px; text-align: center; }
+.boss-login-support-code { width: min(100%, 240px); margin: 16px auto; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+@media (max-width: 767px) {
+  .boss-app .boss-topbar { background: color-mix(in oklab, var(--background) 82%, transparent); }
+  .boss-app .boss-bottom-nav { inset-inline: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 8px; border: 1px solid rgb(255 255 255 / 20%); border-radius: 16px; background: color-mix(in oklab, var(--background) 55%, transparent); box-shadow: 0 12px 36px rgb(2 6 23 / 22%), inset 0 1px 0 rgb(255 255 255 / 16%); backdrop-filter: blur(32px) saturate(150%); }
+  .boss-app .boss-bottom-nav > a { display: flex; width: 48px; min-height: 48px; height: 52px; flex-direction: column; align-items: center; justify-content: center; justify-self: center; gap: 4px; padding: 0; border-radius: 12px; color: var(--muted-foreground); font-size: 10px; font-weight: 500; }
+  .boss-bottom-nav-icon { display: grid; width: 28px; height: 28px; flex: 0 0 28px; place-items: center; border-radius: 9px; transition: transform 300ms cubic-bezier(.16,1,.3,1), background-color 300ms, box-shadow 300ms, color 300ms; }
+  .boss-app .boss-bottom-nav > a.active { color: var(--boss-link); background: transparent; }
+  .boss-app .boss-bottom-nav > a.active .boss-bottom-nav-icon { transform: translateY(-4px) scale(1.1); color: #fff; background: linear-gradient(to bottom, #38bdf8, #2563eb); box-shadow: 0 8px 18px rgb(37 99 235 / 32%), inset 0 1px 0 rgb(255 255 255 / 45%); }
+  .boss-app .boss-bottom-nav > a > span:last-child { line-height: 1; }
+  .boss-app .boss-bottom-nav > a.active > span:last-child { font-weight: 600; }
+  .boss-wallet-balance-main { display: block; padding: 20px; }
+  .boss-wallet-frozen { max-width: none; min-width: 0; margin-top: 20px; padding: 16px 0 0; border-top: 1px solid #ffffff26; border-left: 0; }
+  .boss-wallet-balance-parts > div { padding: 0 8px; }
+  .boss-login-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-height: 0; padding-top: 0; }
+  .boss-login-welcome { padding-top: 0; }
+  .boss-login-welcome .boss-page-title { margin-bottom: 0; }
+  .boss-login-welcome .boss-page-title h1 { margin-top: 12px; font-size: 26px; }
+  .boss-login-authorization { padding: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-bottom-nav-icon { transition: none; }
+  .boss-app .boss-bottom-nav > a.active .boss-bottom-nav-icon { transform: none; }
+  .boss-voice-wave > i { animation: none; transform: none; }
+}
+
+
+/* UX motion only: preserve the current layout, content and business states. */
+.boss-home-hero-content {
+  animation: boss-hero-copy-in 560ms cubic-bezier(.16, 1, .3, 1) both;
+}
+.boss-home-hero-ring {
+  transform-origin: center;
+  animation: boss-hero-ring-in 680ms cubic-bezier(.16, 1, .3, 1) both;
+}
+.boss-home-hero-ring.second { animation-delay: 80ms; }
+.boss-home-hero-art path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: boss-hero-sound 1400ms ease-in-out 2 alternate;
+}
+.boss-home-hero-art path:nth-child(2n) { animation-delay: -420ms; }
+.boss-home-hero-art path:nth-child(3n) { animation-delay: -760ms; }
+@keyframes boss-hero-copy-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes boss-hero-ring-in {
+  from { opacity: 0; transform: scale(.88); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes boss-hero-sound {
+  from { opacity: .6; transform: scaleY(.72); }
+  to { opacity: 1; transform: scaleY(1.12); }
+}
+.boss-content [data-slot="button"] {
+  transition: transform 160ms cubic-bezier(.16, 1, .3, 1), color 160ms, background-color 160ms, border-color 160ms, box-shadow 160ms, opacity 160ms;
+}
+.boss-content [data-slot="button"]:not(:disabled):active {
+  transform: translateY(1px) scale(.985);
+  transition-duration: 80ms;
+}
+.boss-quick-grid > a,
+.boss-home-gameplay-card,
+.boss-service-card,
+.boss-companion-card,
+.boss-order-card {
+  transition: transform 220ms cubic-bezier(.16, 1, .3, 1), border-color 180ms, box-shadow 220ms, background-color 180ms;
+}
+.boss-quick-grid > a > svg,
+.boss-home-gameplay-art > svg,
+.boss-companion-avatar {
+  transition: transform 220ms cubic-bezier(.16, 1, .3, 1);
+}
+.boss-quick-grid > a:active,
+.boss-home-gameplay-card:active,
+.boss-service-card:active,
+.boss-companion-card:active,
+.boss-order-card:active {
+  transform: scale(.99);
+  transition-duration: 80ms;
+}
+@media (hover: hover) {
+  .boss-quick-grid > a:hover > svg,
+  .boss-home-gameplay-card:hover .boss-home-gameplay-art > svg {
+    transform: translateY(-2px) rotate(-4deg);
+  }
+  .boss-home-gameplay-card:hover,
+  .boss-service-card:hover,
+  .boss-companion-card:hover,
+  .boss-order-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgb(2 6 23 / 8%), 0 2px 6px rgb(2 6 23 / 5%);
+  }
+  .boss-companion-card:hover .boss-companion-avatar { transform: scale(1.04); }
+}
+.boss-status-warning > span {
+  animation: boss-status-pulse 1600ms ease-out 2;
+}
+@keyframes boss-status-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.78); }
+}
+.boss-header-nav > a {
+  transition: color 180ms, background-color 180ms, transform 120ms;
+}
+.boss-header-nav > a:active { transform: scale(.98); }
+@media (max-width: 767px) {
+  .boss-app .boss-bottom-nav > a:active .boss-bottom-nav-icon {
+    transform: translateY(-1px) scale(.96);
+    transition-duration: 80ms;
+  }
+  .boss-app .boss-content[data-page="login"] {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+  .boss-bottom-nav { view-transition-name: boss-dock; }
+}
+::view-transition-group(boss-dock),
+::view-transition-old(boss-dock),
+::view-transition-new(boss-dock) {
+  animation: none !important;
+  mix-blend-mode: normal;
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-home-hero-content,
+  .boss-home-hero-ring,
+  .boss-home-hero-art path,
+  .boss-status-warning > span,
+  .boss-app .boss-bottom-nav > a.active .boss-bottom-nav-icon {
+    animation: none !important;
+  }
+  .boss-home-hero-art path { opacity: 1; transform: none; }
+  .boss-content [data-slot="button"],
+  .boss-quick-grid > a,
+  .boss-home-gameplay-card,
+  .boss-service-card,
+  .boss-companion-card,
+  .boss-order-card,
+  .boss-quick-grid > a > svg,
+  .boss-home-gameplay-art > svg,
+  .boss-companion-avatar,
+  .boss-header-nav > a {
+    transition-duration: .01ms !important;
+  }
+  .boss-content [data-slot="button"]:not(:disabled):active,
+  .boss-quick-grid > a:active,
+  .boss-home-gameplay-card:active,
+  .boss-service-card:active,
+  .boss-companion-card:active,
+  .boss-order-card:active,
+  .boss-header-nav > a:active,
+  .boss-app .boss-bottom-nav > a:active .boss-bottom-nav-icon,
+  .boss-quick-grid > a:hover > svg,
+  .boss-home-gameplay-card:hover .boss-home-gameplay-art > svg,
+  .boss-companion-card:hover .boss-companion-avatar,
+  .boss-home-gameplay-card:hover,
+  .boss-service-card:hover,
+  .boss-companion-card:hover,
+  .boss-order-card:hover {
+    transform: none;
+  }
+}
+
+
+/* Scroll continuity and directional page transitions. */
+.boss-content { view-transition-name: boss-page; }
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; }
+::view-transition-old(boss-page) {
+  animation: boss-page-old 180ms ease-in both;
+}
+::view-transition-new(boss-page) {
+  animation: boss-page-new 300ms cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes boss-page-old {
+  to { opacity: 0; transform: translateX(calc(var(--boss-page-shift, 12px) * -1)); }
+}
+@keyframes boss-page-new {
+  from { opacity: 0; transform: translateX(var(--boss-page-shift, 12px)); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes boss-hero-scroll-drift {
+  from { translate: 0 0; }
+  to { translate: 0 20px; }
+}
+@keyframes boss-title-scroll-drift {
+  from { translate: 0 0; }
+  to { translate: 0 4px; }
+}
+@media (max-width: 767px) {
+  .boss-home-gameplay-grid {
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+  }
+  .boss-home-gameplay-card { scroll-snap-align: start; }
+  @supports (animation-timeline: scroll()) {
+    .boss-home-hero-art {
+      animation: boss-hero-scroll-drift linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 480px;
+    }
+    .boss-content .boss-page-title {
+      animation: boss-title-scroll-drift linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 320px;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(boss-page),
+  ::view-transition-new(boss-page) { animation: none !important; }
+  .boss-home-hero-art,
+  .boss-content .boss-page-title {
+    animation: none !important;
+    translate: none;
+  }
+  .boss-home-gameplay-grid { scroll-behavior: auto; }
+}
+
+
+/* Announcement, activity and rights carousel: content rolls without layout shift. */
+.boss-home-announcement-copy {
+  animation: boss-announcement-roll 300ms cubic-bezier(.16, 1, .3, 1) both;
+}
+@keyframes boss-announcement-roll {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-home-announcement-copy { animation: none; transform: none; }
+}
+
+
+/* Card material: bounded list arrival, pointer light and selection feedback. */
+:is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card) {
+  position: relative;
+  isolation: isolate;
+  animation: boss-card-enter 360ms cubic-bezier(.16, 1, .3, 1) backwards;
+}
+:is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card):nth-child(2) { animation-delay: 45ms; }
+:is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card):nth-child(3) { animation-delay: 90ms; }
+:is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card):nth-child(n+4) { animation-delay: 135ms; }
+:is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(240px circle at var(--card-pointer-x, 50%) var(--card-pointer-y, 50%), color-mix(in oklab, var(--primary) 12%, transparent), transparent 72%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease-out;
+}
+@keyframes boss-card-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card):hover::after { opacity: .55; }
+}
+:is(.boss-picker-card:has(.boss-picker-card-main[aria-pressed="true"]), .boss-service-fidelity-variants > button[aria-pressed="true"], .boss-horizontal-options > button[aria-pressed="true"]) {
+  animation: boss-card-confirm 260ms cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes boss-card-confirm {
+  from { transform: scale(.985); }
+  to { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card),
+  :is(.boss-picker-card, .boss-service-fidelity-variants > button, .boss-horizontal-options > button) {
+    animation: none !important;
+  }
+  :is(.boss-home-gameplay-card, .boss-service-card, .boss-companion-card, .boss-order-card)::after { display: none; }
+}
+
+
+/* Selected direction: six acrylic VIP levels, driven by member.vip.level. */
+.boss-member-summary {
+  --vip-bg: linear-gradient(135deg, #e1efff9c, #7dd3fc70);
+  --vip-fg: #10285b;
+  --vip-muted: #486581;
+  --vip-edge: #ffffffa0;
+  --vip-orb: #7dd3fc66;
+  --vip-accent: #2563eb;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid var(--vip-edge);
+  border-radius: 20px;
+  background: var(--vip-bg);
+  color: var(--vip-fg);
+  box-shadow: inset 0 1px 0 #ffffff80, 0 16px 36px #1e3a8a14;
+  backdrop-filter: blur(18px);
+  transition: transform 240ms cubic-bezier(.16, 1, .3, 1), box-shadow 240ms, border-color 240ms;
+}
+.boss-member-summary.vip-level-2 {
+  --vip-bg: linear-gradient(135deg, #f4f6f9a8, #b6c1d170);
+  --vip-fg: #1e293b;
+  --vip-muted: #475569;
+  --vip-orb: #94a3b866;
+  --vip-accent: #64748b;
+}
+.boss-member-summary.vip-level-3 {
+  --vip-bg: linear-gradient(135deg, #fff3c4a8, #eac87365);
+  --vip-fg: #4a3509;
+  --vip-muted: #6b4f16;
+  --vip-orb: #facc1566;
+  --vip-accent: #a16207;
+}
+.boss-member-summary.vip-level-4 {
+  --vip-bg: linear-gradient(135deg, #f8fbffb8, #d4dce880);
+  --vip-fg: #1e293b;
+  --vip-muted: #475569;
+  --vip-orb: #cbd5e166;
+  --vip-accent: #64748b;
+}
+.boss-member-summary.vip-level-5 {
+  --vip-bg: linear-gradient(135deg, #e0f2fea8, #93c5fd70, #c4b5fd55);
+  --vip-fg: #172554;
+  --vip-muted: #3f4f78;
+  --vip-orb: #818cf866;
+  --vip-accent: #4f46e5;
+}
+.boss-member-summary.vip-level-6 {
+  --vip-bg: linear-gradient(135deg, #1e293bd9, #020617e8);
+  --vip-fg: #f1f5f9;
+  --vip-muted: #cbd5e1;
+  --vip-edge: #64748b66;
+  --vip-orb: #1e3a8a66;
+  --vip-accent: #94a3b8;
+}
+.boss-member-summary::before {
+  content: "";
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  right: -68px;
+  top: -84px;
+  border-radius: 50%;
+  background: var(--vip-orb);
+  filter: blur(24px);
+  pointer-events: none;
+}
+.boss-member-summary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, #ffffff24, transparent 42%);
+  pointer-events: none;
+}
+.boss-member-summary > :not(.boss-member-orbit):not(.boss-member-waves) { z-index: 1; }
+.boss-member-summary .boss-member-orbit { display: none; }
+.boss-member-summary .boss-member-waves { right: 16px; top: 48px; width: 112px; height: 112px; color: var(--vip-muted); opacity: .12; }
+.boss-member-brand-mark { position: absolute; left: 24px; top: 24px; width: 32px; height: 32px; }
+.boss-member-card-material { position: absolute; right: 24px; top: 24px; font-size: 12px; color: var(--vip-muted); }
+.boss-member-card-chip {
+  position: absolute;
+  left: 24px;
+  top: 68px;
+  width: 42px;
+  height: 32px;
+  border: 1px solid #ffffff80;
+  border-radius: 6px;
+  background: #ffffff26;
+  box-shadow: inset 0 1px 0 #ffffff70;
+}
+.boss-member-card-chip::after { content: ""; position: absolute; inset: 6px; border: 1px solid #ffffff70; border-radius: 2px; }
+.boss-member-summary .boss-member-level { padding-top: 56px; }
+.boss-member-summary .boss-member-level h2 { margin-top: 8px; font-size: 32px; line-height: 1.2; letter-spacing: -.05em; }
+.boss-member-summary :is(p, span, small, dt) { color: var(--vip-muted); }
+.boss-member-summary :is(h2, h3, strong, dd) { color: var(--vip-fg); }
+.boss-member-summary [data-slot="badge"] { border-color: var(--vip-edge); background: #ffffff26; color: var(--vip-muted); }
+.boss-member-summary .boss-member-growth,
+.boss-member-summary .boss-info > div { border-color: var(--vip-edge); }
+.boss-member-summary .boss-member-benefit > a { border-color: var(--vip-edge); background: #ffffff20; color: var(--vip-fg); }
+.boss-member-summary .boss-member-related-links > a { color: var(--vip-muted); }
+.boss-member-summary .boss-member-benefit > a:hover,
+.boss-member-summary .boss-member-related-links > a:hover { background: #ffffff30; color: var(--vip-fg); }
+.boss-member-summary .boss-member-progress { background: #ffffff38; }
+.boss-member-summary .boss-member-progress > div { background: var(--vip-accent); }
+@media (hover: hover) {
+  .boss-member-summary:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 #ffffff90, 0 22px 44px #1e3a8a1f; }
+}
+@media (max-width: 767px) {
+  .boss-member-summary { padding: 20px; }
+  .boss-member-brand-mark { left: 20px; top: 20px; }
+  .boss-member-card-material { right: 20px; top: 20px; }
+  .boss-member-card-chip { left: 20px; top: 64px; }
+  .boss-member-summary .boss-member-level { padding-top: 52px; }
+  .boss-member-summary .boss-member-level h2 { font-size: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-member-summary { transition: none; }
+  .boss-member-summary:hover { transform: none; }
+}
+
+
+/* Acrylic cards keep their reading contrast in the dark application theme. */
+.dark .boss-member-summary { --vip-bg: linear-gradient(135deg, #e1efff, #8ccff7); }
+.dark .boss-member-summary.vip-level-2 { --vip-bg: linear-gradient(135deg, #f4f6f9, #b6c1d1); }
+.dark .boss-member-summary.vip-level-3 { --vip-bg: linear-gradient(135deg, #fff3c4, #eac873); }
+.dark .boss-member-summary.vip-level-4 { --vip-bg: linear-gradient(135deg, #f8fbff, #d4dce8); }
+.dark .boss-member-summary.vip-level-5 { --vip-bg: linear-gradient(135deg, #e0f2fe, #93c5fd, #c4b5fd); }
+.dark .boss-member-summary.vip-level-6 { --vip-bg: linear-gradient(135deg, #1e293b, #020617); }
+.boss-app .boss-member-summary > .boss-member-brand-mark { position: absolute; }
+.boss-app .boss-member-summary > .boss-member-card-material { position: absolute; }
+.boss-app .boss-member-summary > .boss-member-card-chip { position: absolute; }
+.boss-app .boss-member-summary > .boss-member-waves { position: absolute; }
+
+
+.boss-member-card-chip {
+  border-color: #ffffffa8;
+  background: #ffffff42;
+  box-shadow: inset 0 1px 0 #ffffff90, 0 1px 2px #1e3a8a10;
+}
+.boss-member-card-chip::after { border-color: #ffffff80; }
+
+
+/* Compact acrylic summary on the personal-center page. */
+.boss-mine-vip-card {
+  display: block;
+  min-height: 200px;
+}
+.boss-mine-vip-card .boss-mine-vip-main {
+  display: grid;
+  gap: 4px;
+  padding-top: 56px;
+}
+.boss-mine-vip-main > small { font-size: 12px; }
+.boss-mine-vip-main > strong { font-size: 24px; line-height: 1.3; letter-spacing: -.03em; }
+.boss-mine-vip-main > span { font-size: 13px; }
+.boss-mine-vip-card .boss-mine-vip-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-right: 96px;
+}
+.boss-mine-vip-card .boss-mine-vip-more {
+  position: absolute;
+  right: 24px;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--vip-muted);
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .boss-mine-vip-card .boss-mine-vip-main { padding-top: 52px; }
+  .boss-mine-vip-card .boss-mine-vip-more { right: 20px; }
+}
+
+
+/* Merge profile and VIP summary into one acrylic account card. */
+.boss-profile-card.boss-member-summary .boss-mine-profile-link { padding-top: 56px; }
+.boss-profile-card.boss-member-summary .boss-mine-vip-main { padding-top: 0; }
+.boss-profile-card.boss-member-summary .boss-mine-vip-tags { padding-right: 0; }
+.boss-profile-card.boss-member-summary .boss-mine-vip-more { position: static; }
+
+
+/* The merged account card owns the acrylic surface, not the legacy white/dark card. */
+.boss-app .boss-mine-layout .boss-profile-card.boss-member-summary {
+  padding: 24px;
+  border: 1px solid var(--vip-edge);
+  border-radius: 20px;
+  background: var(--vip-bg);
+  color: var(--vip-fg);
+  box-shadow: inset 0 1px 0 #ffffff80, 0 16px 36px #1e3a8a14;
+}
+@media (max-width: 767px) {
+  .boss-app .boss-mine-layout .boss-profile-card.boss-member-summary { padding: 20px; }
+}
+
+
+/* Profile card only inherits the current VIP level color, not VIP content. */
+.boss-profile-card.vip-level-1 { --profile-vip-bg: linear-gradient(135deg, #e1efff, #8ccff7); --profile-vip-fg: #10285b; --profile-vip-muted: #486581; --profile-vip-edge: #ffffffa0; }
+.boss-profile-card.vip-level-2 { --profile-vip-bg: linear-gradient(135deg, #f4f6f9, #b6c1d1); --profile-vip-fg: #1e293b; --profile-vip-muted: #475569; --profile-vip-edge: #ffffffa0; }
+.boss-profile-card.vip-level-3 { --profile-vip-bg: linear-gradient(135deg, #fff3c4, #eac873); --profile-vip-fg: #4a3509; --profile-vip-muted: #6b4f16; --profile-vip-edge: #f3dfa0a0; }
+.boss-profile-card.vip-level-4 { --profile-vip-bg: linear-gradient(135deg, #f8fbff, #d4dce8); --profile-vip-fg: #1e293b; --profile-vip-muted: #475569; --profile-vip-edge: #ffffffa0; }
+.boss-profile-card.vip-level-5 { --profile-vip-bg: linear-gradient(135deg, #e0f2fe, #93c5fd, #c4b5fd); --profile-vip-fg: #172554; --profile-vip-muted: #3f4f78; --profile-vip-edge: #ffffffa0; }
+.boss-profile-card.vip-level-6 { --profile-vip-bg: linear-gradient(135deg, #1e293b, #020617); --profile-vip-fg: #f1f5f9; --profile-vip-muted: #cbd5e1; --profile-vip-edge: #64748b66; }
+.boss-app .boss-mine-layout .boss-profile-card[class*="vip-level-"] {
+  border-color: var(--profile-vip-edge);
+  background: var(--profile-vip-bg);
+  color: var(--profile-vip-fg);
+}
+.boss-profile-card[class*="vip-level-"] h2 { color: var(--profile-vip-fg); }
+.boss-profile-card[class*="vip-level-"] p { color: var(--profile-vip-muted); }
+.boss-profile-card[class*="vip-level-"] .boss-security-line { color: var(--profile-vip-muted); }

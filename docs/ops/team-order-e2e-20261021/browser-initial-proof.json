@@ -1,0 +1,8 @@
+{
+  "run": "team-order-e2e-20261021",
+  "normal_password_otp_logins": true,
+  "separate_provider_origins": true,
+  "admin_orders": "Browser tab: 19, Title: \"兴安电竞 · 后台管理\", URL: \"http://127.0.0.1:5182/dashboard\".\nThere has been no change in the accessibility tree.\nThe focused UI element is 13 link Description: 订单中心, URL: 127.0.0.1:5182/orders",
+  "p2": "Browser tab: 17, Title: \"接单\", URL: \"http://127.0.0.1:3002/#/pages/orders/index\".\nThere has been no change in the accessibility tree.\nThe focused UI element is 44 checkbox 已接单, Value: 1",
+  "p3": "Browser tab: 18, Title: \"接单\", URL: \"http://127.0.0.1:3003/#/pages/orders/index\".\nThere has been no change in the accessibility tree.\nThe focused UI element is 44 checkbox 已接单, Value: 1"
+}

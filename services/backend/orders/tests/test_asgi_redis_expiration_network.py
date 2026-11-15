@@ -72,6 +72,8 @@ class ReservationExpiryRedisNetworkTest(TransactionTestCase):
             ports.add(unused_port())
         redis_port, http_port, socket_port = ports
         password, prefix = secrets.token_hex(16), 'xa_asgi_test_' + secrets.token_hex(8)
+        container_name = 'xa-reservation-expiry-' + secrets.token_hex(6)
+        docker = ['wsl.exe', '-d', 'XA-Ubuntu-24.04', '-u', 'root', '--', 'docker']
         repo = Path(settings.BASE_DIR).parent.parent
         env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.asgi_redis_network_test_settings',
                'XA_ASGI_TEST_REDIS_URL': f'redis://:{password}@127.0.0.1:{redis_port}/0',
@@ -81,15 +83,11 @@ class ReservationExpiryRedisNetworkTest(TransactionTestCase):
         redis_client = redis.Redis(host='127.0.0.1', port=redis_port, password=password, socket_timeout=.2)
         creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
         try:
-            server = subprocess.Popen(['wsl.exe', '-d', 'XA-Ubuntu-24.04', '--', 'env',
-                'LD_LIBRARY_PATH=/tmp/xa-report-redis-qa/root/usr/lib/x86_64-linux-gnu',
-                '/tmp/xa-report-redis-qa/root/usr/bin/redis-server', '--bind', '127.0.0.1',
-                '--port', str(redis_port), '--save', '', '--appendonly', 'no', '--requirepass', password],
+            subprocess.run(docker + ['run', '-d', '--rm', '--name', container_name,
+                '-p', f'127.0.0.1:{redis_port}:6379', 'redis:alpine', 'redis-server',
+                '--save', '', '--appendonly', 'no', '--requirepass', password], check=True,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creationflags)
-            processes.append(server)
             for _ in range(150):
-                if server.poll() is not None:
-                    self.fail('isolated Redis process exited before accepting connections')
                 try:
                     if redis_client.ping():
                         break
@@ -111,7 +109,7 @@ class ReservationExpiryRedisNetworkTest(TransactionTestCase):
                         time.sleep(.1)
                 else:
                     self.fail('isolated ASGI process did not start')
-            self.assertNotEqual(processes[1].pid, processes[2].pid)
+            self.assertNotEqual(processes[0].pid, processes[1].pid)
             result = subprocess.run([node, str(repo / 'scripts/asgi-expired-reservation-network.cjs')],
                 input=json.dumps({'httpPort': http_port, 'socketPort': socket_port, 'tokens': tokens, 'ids': ids,
                     'deadline': deadline.isoformat(), 'python': sys.executable, 'backend': str(settings.BASE_DIR)}),
@@ -121,9 +119,9 @@ class ReservationExpiryRedisNetworkTest(TransactionTestCase):
             self.assertEqual(ReservationStatusLog.objects.filter(reservation_id__in=ids, action='EXPIRE').count(), 2)
             self.assertEqual(Message.objects.filter(title='预约已过期', recipient_account_id__in=[accounts[0].pk, accounts[1].pk]).count(), 4)
         finally:
-            for process in processes[1:]:
+            for process in processes:
                 process.terminate()
-            for process in processes[1:]:
+            for process in processes:
                 try:
                     process.wait(timeout=10)
                 except subprocess.TimeoutExpired:
@@ -133,9 +131,6 @@ class ReservationExpiryRedisNetworkTest(TransactionTestCase):
                 redis_client.shutdown(nosave=True)
             except redis.RedisError:
                 pass
-            if processes:
-                try:
-                    processes[0].wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    processes[0].terminate()
-                    processes[0].wait(timeout=10)
+            redis_client.close()
+            subprocess.run(docker + ['stop', container_name], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, creationflags=creationflags)

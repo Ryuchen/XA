@@ -32,9 +32,14 @@ class BossMessageFrontendHTTPTest(LiveServerTestCase):
         def session(account):
             token, refresh = issue_account_tokens(account)
             return {'token': token, 'refresh': refresh, 'user': {'id': str(account.pk), 'role': 'customer'}}
+        # MySQL does not populate instance PKs after bulk_create. Select the
+        # actual persisted cursor inside this owner's history on every backend.
+        oldest = (Message.objects.filter(recipient_account=accounts[0])
+                  .order_by('created_at', 'pk').values_list('pk', flat=True).first())
+        self.assertIsNotNone(oldest)
         inputs = {'base': self.live_server_url, 'first': session(accounts[0]), 'second': session(accounts[1]),
                   'staffToken': issue_account_tokens(admin)[0], 'firstAccount': accounts[0].pk,
-                  'oldest': messages[0].pk}
+                  'oldest': oldest}
         script = Path(__file__).resolve().parents[3] / 'scripts' / 'native-boss-messages-live.cjs'
         result = subprocess.run(['node', str(script)], input=json.dumps(inputs), text=True, encoding='utf-8',
                                 capture_output=True, timeout=45)

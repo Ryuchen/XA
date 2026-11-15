@@ -22,19 +22,15 @@
 约定：业务代码不得再直接调用 ``Wallet.objects.get_or_create``。
 """
 
-import hashlib
-
-from django.conf import settings
-from django.db import IntegrityError, transaction
-from django.utils import timezone
+from django.db import IntegrityError
+from stores.db import transaction
 
 from .models import IdempotencyKey, Wallet
 
 #: 幂等键的最大长度，与 ``IdempotencyKey.request_id`` 字段保持一致。
 MAX_REQUEST_ID_LENGTH = 64
 
-#: 旧客户端未带 client_request_id 时，服务端派生键的去重窗口（秒）。
-#: 窗口内的同参数重复提交视为误触；超出窗口视为用户真实的第二次操作。
+#: 保留函数参数的默认值，实际资金写入不再按时间窗口放行。
 DEFAULT_FALLBACK_WINDOW_SECONDS = 60
 
 #: 服务端派生键的前缀，便于排障时与客户端真实键区分。
@@ -119,18 +115,6 @@ def require_idempotency_key(*, account, request_id, scope=''):
         raise DuplicateRequestError('请求重复提交，请勿重复操作')
 
 
-def _derive_request_id(*, scope, fingerprint):
-    """为未携带幂等键的旧客户端派生一个稳定的键。
-
-    同一账户 + 同一业务 + 同一组关键参数 => 同一个键，因此短时间内的
-    重复提交会落到同一行上而被拦下。
-    """
-    digest = hashlib.sha256(
-        f'{scope}|{fingerprint}'.encode('utf-8')
-    ).hexdigest()[:40]
-    return f'{DERIVED_KEY_PREFIX}{digest}'
-
-
 def peek_fund_write(*, account, request_id):
     """只读探测：本次请求是否是一次**已成功**请求的重放。不占键、无副作用。
 
@@ -147,8 +131,7 @@ def peek_fund_write(*, account, request_id):
 
     因此在状态相关校验**之前**先做一次只读探测：键已存在就明确回 409。
 
-    仅对客户端显式携带的 ``client_request_id`` 生效 —— 派生键依赖校验后才
-    确定的参数指纹，此刻算不出来，那条降级路径仍由 ``claim_fund_write`` 兜底。
+    缺少请求号和保留前缀的错误由后续 ``claim_fund_write`` 处理。
 
     Args:
         account: ``ClubAccount`` 实例。
@@ -160,8 +143,7 @@ def peek_fund_write(*, account, request_id):
     if account is None:
         return False, ''
     normalized = normalize_request_id(request_id)
-    # 空键走降级通道；派生键前缀由服务端保留，客户端传来即为伪造，
-    # 两种都留给 claim_fund_write 判定，这里一律不拦。
+    # 请求号是否合法由 claim_fund_write 判定。
     if not normalized or normalized.startswith(DERIVED_KEY_PREFIX):
         return False, ''
     if IdempotencyKey.objects.filter(
@@ -181,22 +163,15 @@ def claim_fund_write(
 ):
     """资金写接口的统一幂等闸门。**必须在业务事务内调用。**
 
-    两种模式：
-
-    * **客户端携带 ``client_request_id``（推荐）**：走 ``IdempotencyKey``
-      的唯一约束做永久去重，键一旦用过就永不放行，语义最强。
-    * **旧客户端未携带**：由 ``scope`` + ``fingerprint`` 派生一个稳定键，
-      在 ``window_seconds`` 窗口内去重。这是**降级**保护 —— 挡得住弱网重试
-      和用户连点，挡不住跨窗口的重复提交。把
-      ``REQUIRE_CLIENT_REQUEST_ID=True`` 打开即可关闭该降级通道，届时未带键
-      的请求一律拒绝（等各端小程序都发版带上键之后再开）。
+    客户端必须携带 ``client_request_id``，以数据库唯一约束永久去重；
+    同一次操作重试复用原请求号，新的业务操作使用新的请求号。
 
     Args:
         account: ``ClubAccount`` 实例。
-        request_id: 客户端原始幂等键，可为空。
+        request_id: 客户端原始幂等键，不能为空。
         scope: 业务标注，如 ``withdraw`` / ``order.create``。
-        fingerprint: 参与派生键的关键参数串（金额、订单号等），仅降级模式使用。
-        window_seconds: 降级模式的去重窗口。
+        fingerprint: 原调用方提供的业务指纹，不用于派生或复用请求号。
+        window_seconds: 原调用方参数，不影响永久去重。
 
     Returns:
         tuple[bool, str]: ``(是否放行, 拒绝原因)``；放行时原因为空串。
@@ -205,39 +180,13 @@ def claim_fund_write(
         return False, '缺少业务账户，无法受理资金操作'
 
     normalized = normalize_request_id(request_id)
-    if normalized:
-        if normalized.startswith(DERIVED_KEY_PREFIX):
-            # 防止客户端伪造服务端派生键，绕过降级窗口的去重。
-            return False, 'client_request_id 非法'
-        if claim_idempotency_key(
-            account=account, request_id=normalized, scope=scope
-        ):
-            return True, ''
-        return False, '请求重复提交，请勿重复操作'
-
-    if getattr(settings, 'REQUIRE_CLIENT_REQUEST_ID', False):
+    if not normalized:
         return False, '缺少 client_request_id'
-
-    derived = _derive_request_id(scope=scope, fingerprint=fingerprint)
-    now = timezone.now()
-    # 加行锁：并发的两次重复提交必须串行地看到彼此，否则双方都以为自己是第一个。
-    existing = (
-        IdempotencyKey.objects.select_for_update()
-        .filter(account=account, request_id=derived)
-        .first()
-    )
-    if existing is not None:
-        if (now - existing.created_at).total_seconds() < window_seconds:
-            return False, '操作过于频繁，请勿重复提交'
-        # 超出窗口：视为一次全新操作，顺延窗口继续放行。
-        IdempotencyKey.objects.filter(pk=existing.pk).update(created_at=now)
+    if normalized.startswith(DERIVED_KEY_PREFIX):
+        return False, 'client_request_id 非法'
+    if claim_idempotency_key(account=account, request_id=normalized, scope=scope):
         return True, ''
-
-    if claim_idempotency_key(
-        account=account, request_id=derived, scope=scope
-    ):
-        return True, ''
-    return False, '操作过于频繁，请勿重复提交'
+    return False, '请求重复提交，请勿重复操作'
 
 
 def resolve_identity(*, account=None, account_id=None, user=None, user_id=None):
@@ -293,7 +242,7 @@ def get_wallet(
         create: 未命中时是否创建；False 时返回 None
 
     Raises:
-        WalletAddressingError: 入参不足、两维度指向不同钱包、或缺少 user 无法建号
+        WalletAddressingError: 入参不足，或两维度指向不同钱包
     """
     account_id, user_id = resolve_identity(
         account=account, account_id=account_id, user=user, user_id=user_id
@@ -323,18 +272,12 @@ def get_wallet(
     if not create:
         return None
 
-    # user 是 non-null 外键，没有 legacy user 就建不出钱包
-    if not user_id:
-        raise WalletAddressingError(
-            f'account={account_id} 缺少旧账户映射，无法创建钱包'
-        )
-
     try:
         with transaction.atomic():
             wallet = Wallet.objects.create(user_id=user_id, account_id=account_id)
     except IntegrityError:
         # 并发下被其它事务抢先创建，重查一次即可
-        wallet = _qs().filter(user_id=user_id).first()
+        wallet = _qs().filter(user_id=user_id).first() if user_id else None
         if wallet is None and account_id:
             wallet = _qs().filter(account_id=account_id).first()
         if wallet is None:
@@ -355,8 +298,11 @@ def _backfill(wallet, *, account_id, user_id):
         wallet.account_id = account_id
         wallet.save(update_fields=['account', 'updated_at'])
     if user_id and wallet.user_id != user_id:
-        raise WalletAddressingError(
-            f'钱包#{wallet.pk} 已绑定 user={wallet.user_id}，'
-            f'与目标 user={user_id} 冲突'
-        )
+        if wallet.user_id is not None:
+            raise WalletAddressingError(
+                f'钱包#{wallet.pk} 已绑定 user={wallet.user_id}，'
+                f'与目标 user={user_id} 冲突'
+            )
+        wallet.user_id = user_id
+        wallet.save(update_fields=['user', 'updated_at'])
     return wallet

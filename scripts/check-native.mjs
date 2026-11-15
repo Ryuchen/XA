@@ -50,6 +50,8 @@ for (const tab of manifest.tabBar.list) {
   if (!manifest.pages.includes(tab.pagePath)) errors.push(`Unregistered tab ${tab.pagePath}`);
   for (const icon of [tab.iconPath, tab.selectedIconPath]) if (icon && !fs.existsSync(path.join(root, icon))) errors.push(`Missing tab icon ${icon}`);
 }
+const spacingCheck = spawnSync(process.execPath, [path.join(repo, 'scripts/snap-spacing-scale.mjs'), '--check'], { cwd: repo, encoding: 'utf8' });
+if (spacingCheck.status !== 0) errors.push('Native component spacing is outside the shared 4pt token scale. Run node scripts/snap-spacing-scale.mjs --write.');
 const totalBytes = files.reduce((size, file) => size + fs.statSync(file).size, 0);
 if (totalBytes > 2 * 1024 * 1024) errors.push(`Main package exceeds 2MB: ${totalBytes} bytes`);
 if (errors.length) { console.error(errors.join('\n')); process.exit(1); }

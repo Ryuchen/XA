@@ -16,6 +16,7 @@ from orders.tests.factories import make_console_user
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class ChatReadFrontendHTTPTest(LiveServerTestCase):
+    host = '127.0.0.1'
     def test_native_marks_only_history_actually_loaded(self):
         node = shutil.which('node')
         if not node:
@@ -31,6 +32,10 @@ class ChatReadFrontendHTTPTest(LiveServerTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
         response = client.get('/api/chat/session/')
         self.assertEqual(response.data['code'], 0, response.data)
+        admin_client = APIClient()
+        admin_client.credentials(HTTP_AUTHORIZATION='Bearer ' + admin_token)
+        claimed = admin_client.post(f"/api/admin/chat-sessions/{response.data['data']['session']['id']}/claim/", {'expected_version': 0}, format='json')
+        self.assertEqual(claimed.data['code'], 0, claimed.data)
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run([node, str(repo / 'scripts/native-chat-read-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'sessionId': response.data['data']['session']['id'],
@@ -55,6 +60,10 @@ class ChatReadFrontendHTTPTest(LiveServerTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
         response = client.get('/api/chat/session/')
         self.assertEqual(response.data['code'], 0, response.data)
+        admin_client = APIClient()
+        admin_client.credentials(HTTP_AUTHORIZATION='Bearer ' + admin_token)
+        claimed = admin_client.post(f"/api/admin/chat-sessions/{response.data['data']['session']['id']}/claim/", {'expected_version': 0}, format='json')
+        self.assertEqual(claimed.data['code'], 0, claimed.data)
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run([node, str(repo / 'scripts/admin-chat-read-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'sessionId': response.data['data']['session']['id'],

@@ -1,15 +1,17 @@
 """DP-1 押金退还的验收断言。
 
 覆盖：四件事同生共死、两道平台侧护栏、状态校验、幂等（peek / claim）、
-权限与绑定前置、缴→退恒等式、以及 active_order_count 只软提示不拦截。
+权限与绑定前置、缴→退恒等式，以及在途订单禁止退押金。
 
-金额一律内部账务单位整数（10 = 1 兴安币）。
+金额一律内部账务单位整数（10 = 1 浪花）。
 """
 
 from unittest.mock import patch
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
+from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from club_accounts.services import (
@@ -69,6 +71,16 @@ def fund_platform_deposit_pool(amount):
     return platform
 
 
+def seed_closed_order(provider, account, *, closed_at=None):
+    """A real, unpaid-cancelled order whose closure anchors the wait."""
+    closed_at = closed_at or timezone.now() - timedelta(days=8)
+    order = make_order(make_user(), provider=provider, provider_account=account,
+        status=Order.Status.CANCELLED, payment_status=Order.PaymentStatus.UNPAID,
+        amount=0, cancelled_at=closed_at)
+    Order.objects.filter(pk=order.pk).update(created_at=closed_at-timedelta(hours=1))
+    return order
+
+
 class DepositRefundApiTest(APITestCase):
     """后台押金退还接口 ``POST /api/admin/escorts/<id>/deposit-refund/``。"""
 
@@ -79,6 +91,7 @@ class DepositRefundApiTest(APITestCase):
         make_wallet(self.provider, balance=1000)
         Wallet.objects.filter(user=self.provider).update(account=self.account)
         fund_platform_deposit_pool(3000)
+        seed_closed_order(self.provider, self.account)
         self.client.force_authenticate(self.admin)
 
     @property
@@ -121,8 +134,8 @@ class DepositRefundApiTest(APITestCase):
 
         data = res.data['data']
         self.assertEqual(data['deposit_paid'], 2000)
-        self.assertEqual(data['deposit_required'], 5000)
-        self.assertEqual(data['deposit_remaining'], 3000)
+        self.assertEqual(data['deposit_required'], 40000)
+        self.assertEqual(data['deposit_remaining'], 38000)
         self.assertEqual(data['balance'], 2000)
 
     # ---- ② 平台钱包总余额不足 ----
@@ -164,7 +177,7 @@ class DepositRefundApiTest(APITestCase):
         res = self._post(amount=5000)
         self.assertEqual(res.data['code'], 400)
         self.assertIn('退还金额超过已缴押金', res.data['msg'])
-        # 文案按兴安币展示：3000 内部单位 = 300 兴安币
+        # 文案按浪花展示：3000 内部单位 = 300 浪花
         self.assertIn('300', res.data['msg'])
         self._assert_nothing_moved()
 
@@ -277,8 +290,8 @@ class DepositRefundApiTest(APITestCase):
         self.assertEqual(res.data['code'], 404)
         self.assertEqual(res.data['msg'], '陪玩不存在')
 
-    # ---- ⑫ active_order_count 是软提示，不拦截 ----
-    def test_active_orders_do_not_block_refund(self):
+    # ---- ⑫ 在途订单必须先处理完 ----
+    def test_active_orders_block_refund(self):
         boss = make_user()
         service = make_service()
         make_order(
@@ -296,8 +309,9 @@ class DepositRefundApiTest(APITestCase):
             provider_account=self.account,
         )
         res = self._post(amount=1000)
-        self.assertEqual(res.data['code'], 0)
+        self.assertEqual(res.data['code'], 409)
         self.assertEqual(res.data['data']['active_order_count'], 2)
+        self._assert_nothing_moved()
 
     def _assert_nothing_moved(self):
         """校验失败的分支必须一分钱都没动。"""
@@ -337,13 +351,16 @@ class DepositPayRefundIdentityTest(APITestCase):
         self.assertEqual(pay.data['code'], 0)
         self.assertEqual(self._sum(Transaction.TxType.DEPOSIT), -3000)
         self.assertEqual(self._sum(Transaction.TxType.DEPOSIT_INCOME), 3000)
+        closed_at = timezone.now()
+        seed_closed_order(self.provider, self.account, closed_at=closed_at)
 
         # 退还：运营在后台退一半
         self.client.force_authenticate(self.admin)
-        refund = self.client.post(
-            f'/api/admin/escorts/{self.provider.escort_profile.id}/deposit-refund/',
-            {'amount': 1200, 'reason': '部分退还'},
-        )
+        with patch('django.utils.timezone.now', return_value=closed_at+timedelta(days=7)):
+            refund = self.client.post(
+                f'/api/admin/escorts/{self.provider.escort_profile.id}/deposit-refund/',
+                {'amount': 1200, 'reason': '部分退还'},
+            )
         self.assertEqual(refund.data['code'], 0)
 
         deposit_sum = self._sum(Transaction.TxType.DEPOSIT)
@@ -359,12 +376,15 @@ class DepositPayRefundIdentityTest(APITestCase):
     def test_full_refund_zeroes_out_both_sides(self):
         self.client.force_authenticate(self.provider)
         self.client.post('/api/wallet/deposit/', {'amount': 3000})
+        closed_at = timezone.now()
+        seed_closed_order(self.provider, self.account, closed_at=closed_at)
 
         self.client.force_authenticate(self.admin)
-        res = self.client.post(
-            f'/api/admin/escorts/{self.provider.escort_profile.id}/deposit-refund/',
-            {'amount': 3000, 'reason': '全额退还'},
-        )
+        with patch('django.utils.timezone.now', return_value=closed_at+timedelta(days=7)):
+            res = self.client.post(
+                f'/api/admin/escorts/{self.provider.escort_profile.id}/deposit-refund/',
+                {'amount': 3000, 'reason': '全额退还'},
+            )
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(self._sum(Transaction.TxType.DEPOSIT), 0)
         self.assertEqual(self._sum(Transaction.TxType.DEPOSIT_INCOME), 0)
@@ -388,6 +408,7 @@ class RefundDepositServiceTest(APITestCase):
         make_wallet(self.provider, balance=0)
         Wallet.objects.filter(user=self.provider).update(account=self.account)
         fund_platform_deposit_pool(2000)
+        seed_closed_order(self.provider, self.account)
 
     class _Req:
         """最小请求替身：服务函数只用到 account / legacy_user。"""

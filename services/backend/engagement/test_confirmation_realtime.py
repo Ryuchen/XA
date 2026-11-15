@@ -9,10 +9,10 @@ from django.utils import timezone
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from engagement.confirmation import process_order
 from engagement.models import ConsumptionConfirmation
-from orders.models import AfterSale, Order
+from orders.models import AfterSale, Order, OrderProvider
 from orders.direct_payment_models import DirectPaymentIntent
 from orders.tests.factories import make_order, make_provider, make_service, make_user
-from wallet.models import ProviderReport, Transaction
+from wallet.models import ProviderReport, ProviderReportImage, Transaction
 from wallet.services import get_wallet
 
 
@@ -26,6 +26,8 @@ class ConfirmationRealtimeTest(TransactionTestCase):
         link_legacy_relations(self.provider, self.provider_account)
         self.wallet = get_wallet(user=self.provider, account=self.provider_account)
         self.customer_wallet = get_wallet(user=self.boss, account=self.boss_account)
+        self.customer_wallet.balance = 100000
+        self.customer_wallet.save(update_fields=['balance'])
         self.service = make_service(price=1000)
         self.now = timezone.now()
 
@@ -36,13 +38,20 @@ class ConfirmationRealtimeTest(TransactionTestCase):
             shop_income=200, commission_rate=20, status='COMPLETED', payment_status='PAID',
             completed_at=self.now-timedelta(hours=73), settlement_mode='REPORT_APPROVAL',
         )
-        Transaction.objects.create(wallet=self.customer_wallet, order=order, tx_type='PAY', amount=-1000)
-        ProviderReport.objects.create(provider=self.provider, provider_account=self.provider_account,
-                                      order=order, amount=1000, game_name='本地确认样例', status='APPROVED',
-                                      submitted_at=self.now-timedelta(hours=report_age))
+        self.customer_wallet.refresh_from_db()
+        before = self.customer_wallet.balance
+        self.customer_wallet.balance -= 1000
+        self.customer_wallet.save(update_fields=['balance'])
+        Transaction.objects.create(wallet=self.customer_wallet, order=order, tx_type='PAY', amount=-1000,
+                                   balance_before=before, balance_after=self.customer_wallet.balance)
+        report = ProviderReport.objects.create(provider=self.provider, provider_account=self.provider_account,
+                                      order=order, amount=1000, payout_amount=800, game_name='本地确认样例',
+                                      entry_image='test/entry.png', completion_image='test/completion.png',
+                                      status='APPROVED', submitted_at=self.now-timedelta(hours=report_age))
+        ProviderReportImage.objects.create(report=report, image='test/result.png')
         return order
 
-    def test_settlement_then_later_confirmation_each_publish_once_after_commit(self):
+    def test_overlapping_clocks_delay_settlement_and_confirmation_until_report_matures(self):
         order = self.order(report_age=1)
         with patch('engagement.confirmation.notify_order_update') as notify:
             with transaction.atomic():
@@ -50,13 +59,16 @@ class ConfirmationRealtimeTest(TransactionTestCase):
                 notify.assert_not_called()
             notify.assert_called_once()
             order.refresh_from_db()
-            self.assertIsNotNone(order.settled_at)
+            self.assertIsNone(order.settled_at)
             self.assertIsNone(order.consumption_confirmed_at)
             self.assertFalse(process_order(order.pk))
             notify.assert_called_once()
             with patch('django.utils.timezone.now', return_value=self.now+timedelta(hours=73)):
                 self.assertTrue(process_order(order.pk))
                 self.assertFalse(process_order(order.pk))
+            order.refresh_from_db()
+            self.assertIsNotNone(order.settled_at)
+            self.assertIsNotNone(order.consumption_confirmed_at)
             self.assertEqual(notify.call_count, 2)
         self.assertEqual(order.transactions.filter(tx_type='INCOME').count(), 1)
 
@@ -72,9 +84,42 @@ class ConfirmationRealtimeTest(TransactionTestCase):
             self.assertFalse(process_order(order.pk))
             notify.assert_called_once()
 
-    def test_gift_settlement_notifies_even_when_confirmation_is_skipped(self):
+    def test_double_order_notifies_once_per_person_release_and_final_confirmation(self):
         order = self.order()
-        Order.objects.filter(pk=order.pk).update(is_gift_snapshot=True)
+        other = make_provider(deposit_mode='CASH')
+        other_account = get_or_create_account_for_legacy_user(other)
+        link_legacy_relations(other, other_account)
+        other_wallet = get_wallet(user=other, account=other_account)
+        Order.objects.filter(pk=order.pk).update(escort_mode='DOUBLE', required_provider_count=2)
+        for user, account in ((self.provider, self.provider_account), (other, other_account)):
+            OrderProvider.objects.create(order=order, provider=user, provider_account=account,
+                                         settlement_base=500, provider_income=400, commission_rate=20)
+        order.provider_reports.update(amount=500, payout_amount=400)
+        report = ProviderReport.objects.create(provider=other, provider_account=other_account, order=order,
+            amount=500, payout_amount=400, game_name='本地双陪', entry_image='test/entry.png',
+            completion_image='test/completion.png', status='APPROVED', submitted_at=self.now-timedelta(hours=1))
+        ProviderReportImage.objects.create(report=report, image='test/result.png')
+        with patch('engagement.confirmation.notify_order_update') as notify:
+            self.assertFalse(process_order(order.pk))
+            order.refresh_from_db(); self.wallet.refresh_from_db(); other_wallet.refresh_from_db()
+            self.assertEqual((self.wallet.balance, other_wallet.balance), (400, 0))
+            self.assertIsNone(order.settled_at)
+            self.assertIsNone(order.consumption_confirmed_at)
+            notify.assert_called_once()
+            self.assertFalse(process_order(order.pk))
+            notify.assert_called_once()
+            with patch('django.utils.timezone.now', return_value=self.now+timedelta(hours=73)):
+                self.assertTrue(process_order(order.pk))
+                self.assertFalse(process_order(order.pk))
+            order.refresh_from_db(); self.wallet.refresh_from_db(); other_wallet.refresh_from_db()
+            self.assertEqual((self.wallet.balance, other_wallet.balance), (400, 400))
+            self.assertIsNotNone(order.settled_at)
+            self.assertIsNotNone(order.consumption_confirmed_at)
+            self.assertEqual(notify.call_count, 2)
+
+    def test_settled_gift_is_not_confirmed_as_service_consumption(self):
+        order = self.order()
+        Order.objects.filter(pk=order.pk).update(is_gift_snapshot=True, settled_at=self.now-timedelta(hours=1))
         with patch('engagement.confirmation.notify_order_update') as notify:
             self.assertFalse(process_order(order.pk))
             self.assertFalse(process_order(order.pk))

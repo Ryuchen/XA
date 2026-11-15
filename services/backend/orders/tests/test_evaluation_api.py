@@ -34,6 +34,9 @@ class EvaluateOrderTest(APITestCase):
         res = self.client.post('/api/orders/evaluate/', {
             'order_id': self.order.id,
             'score': 4,
+            'skill_score': 4,
+            'attitude_score': 4,
+            'communication_score': 4,
             'content': '服务很好',
         })
         self.assertEqual(res.data['code'], 0)
@@ -45,26 +48,30 @@ class EvaluateOrderTest(APITestCase):
     def test_evaluate_rejects_uncompleted_order(self):
         pending = make_order(self.customer, service=self.service, provider=self.provider)
         self.client.force_authenticate(self.customer)
-        res = self.client.post('/api/orders/evaluate/', {'order_id': pending.id, 'score': 5})
+        res = self.client.post('/api/orders/evaluate/', {'order_id': pending.id, 'score': 5,
+            'skill_score': 5, 'attitude_score': 5, 'communication_score': 5})
         self.assertEqual(res.data['code'], 400)
         self.assertFalse(Evaluation.objects.filter(order=pending).exists())
 
     def test_evaluate_rejects_non_owner(self):
         other = make_user()
         self.client.force_authenticate(other)
-        res = self.client.post('/api/orders/evaluate/', {'order_id': self.order.id, 'score': 5})
+        res = self.client.post('/api/orders/evaluate/', {'order_id': self.order.id, 'score': 5,
+            'skill_score': 5, 'attitude_score': 5, 'communication_score': 5})
         self.assertEqual(res.data['code'], 400)
 
     def test_evaluate_rejects_duplicate(self):
         make_evaluation(self.order, score=3)
         self.client.force_authenticate(self.customer)
-        res = self.client.post('/api/orders/evaluate/', {'order_id': self.order.id, 'score': 5})
+        res = self.client.post('/api/orders/evaluate/', {'order_id': self.order.id, 'score': 5,
+            'skill_score': 5, 'attitude_score': 5, 'communication_score': 5})
         self.assertEqual(res.data['code'], 400)
         self.assertEqual(Evaluation.objects.filter(order=self.order).count(), 1)
 
     def test_evaluate_rejects_invalid_score(self):
         self.client.force_authenticate(self.customer)
-        res = self.client.post('/api/orders/evaluate/', {'order_id': self.order.id, 'score': 6})
+        res = self.client.post('/api/orders/evaluate/', {'order_id': self.order.id, 'score': 6,
+            'skill_score': 5, 'attitude_score': 5, 'communication_score': 5})
         self.assertEqual(res.data['code'], 400)
 
     def test_evaluate_requires_auth(self):
@@ -99,17 +106,14 @@ class DimensionEvaluationTest(APITestCase):
         self.assertEqual(ev.avg_score, 4.0)
         self.assertEqual(res.data['data']['avg_score'], 4.0)
 
-    def test_dimensions_default_to_overall_score(self):
+    def test_missing_dimensions_do_not_default_to_overall_score(self):
         self.client.force_authenticate(self.customer)
         res = self.client.post('/api/orders/evaluate/', {
             'order_id': self.order.id,
             'score': 3,
         })
-        self.assertEqual(res.data['code'], 0)
-        ev = Evaluation.objects.get(order=self.order)
-        self.assertEqual(ev.skill_score, 3)
-        self.assertEqual(ev.attitude_score, 3)
-        self.assertEqual(ev.communication_score, 3)
+        self.assertEqual(res.data['code'], 400)
+        self.assertFalse(Evaluation.objects.filter(order=self.order).exists())
 
     def test_rejects_invalid_dimension_score(self):
         self.client.force_authenticate(self.customer)
@@ -117,6 +121,8 @@ class DimensionEvaluationTest(APITestCase):
             'order_id': self.order.id,
             'score': 4,
             'skill_score': 6,
+            'attitude_score': 4,
+            'communication_score': 4,
         })
         self.assertEqual(res.data['code'], 400)
         self.assertFalse(Evaluation.objects.filter(order=self.order).exists())

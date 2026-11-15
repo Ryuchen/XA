@@ -1,4 +1,5 @@
-from django.db import transaction
+from .db_conflict import api_lock_conflict
+from stores.db import transaction
 from django.db.models import Q, Sum, Count
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
@@ -16,6 +17,7 @@ from .models import (Broadcast, ClubContent, LotteryCampaign, LotteryDraw, Membe
 from .serializers import (CampaignSerializer, ClaimDetailsSerializer, ClaimSerializer, ContentSerializer,
     MemberEditSerializer, RewardSerializer, TierSerializer, lottery_daily_remaining, with_claim_return_status)
 from .services import draw_batch, lottery_batch_draws, lottery_rarity, lottery_ten_guarantee, locked_profile, redeem, completed_consumption
+from .provider_entitlement_lifecycle import provider_entitlement_edit
 
 
 class IsBoss(IsClubAccountAuthenticated):
@@ -35,15 +37,12 @@ def available_tags(account):
         for tag in MemberTag.objects.filter(account=account, is_active=True)
         .filter(~Q(event_key__startswith='claim:') | Q(reviewed_at__isnull=False, suspended_at__isnull=True))
         .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))]
-    from orders.refunds import with_net_amount
-    stats = with_net_amount(Order.objects.filter(customer_account=account,business_cycle=account.business_cycle,is_gift_snapshot=False,
-        consumption_confirmed_at__isnull=False,status='COMPLETED',payment_status__in=['PAID','PARTIALLY_REFUNDED'])).aggregate(amount=Sum('_net_paid_amount'),count=Count('id'))
-    for item in Achievement.objects.filter(is_active=True):
-        metric = (stats['amount'] or 0) if item.metric == 'amount' else (stats['count'] or 0)
-        if metric >= item.target:
-            tags.append({'key': f'achievement:{item.pk}', 'title': item.title,
-                'priority': item.target if item.metric == 'amount' else 0,
-                'highlighted': False, 'expires_at': None})
+    from .models import EarnedAchievement
+    earned = EarnedAchievement.objects.filter(account=account, business_cycle=account.business_cycle)
+    for item in Achievement.objects.filter(pk__in=earned.values('achievement_id')):
+        tags.append({'key': f'achievement:{item.pk}', 'title': item.title,
+            'priority': item.target if item.metric == 'amount' else 0,
+            'highlighted': False, 'expires_at': None})
     return sorted(tags, key=lambda tag: (-tag['priority'], tag['key']))
 
 
@@ -159,18 +158,44 @@ class PointsView(APIView):
 class RewardsView(APIView):
     permission_classes = [IsPointsMember]
     def get(self, request):
-        rows = RewardItem.objects.filter(is_active=True, in_shop=True,audience__in=['ALL',request.account.account_type])
+        rows = RewardItem.objects.filter(is_active=True, in_shop=True,
+            audience__in=['ALL',request.account.account_type]).exclude(kind=RewardItem.Kind.BALANCE)
         return Response({'code': 0, 'data': RewardSerializer(rows, many=True, context={'display_images':True}).data})
 
 
 class RedeemView(APIView):
     permission_classes = [IsPointsMember]
+    @api_lock_conflict
     def post(self, request):
         reward_id = serializers.IntegerField(min_value=1).run_validation(request.data.get('reward_id'))
         get_object_or_404(RewardItem, pk=reward_id)
         details = ClaimDetailsSerializer(data=request.data.get('details', {}))
         details.is_valid(raise_exception=True)
-        claim = redeem(request.account, reward_id, request.data.get('client_request_id'), details.validated_data)
+        expected = request.data.get('expected_point_cost')
+        if expected is not None:
+            expected = serializers.IntegerField(min_value=1).run_validation(expected)
+        terms = request.data.get('expected_terms')
+        if terms is not None:
+            class TermsSerializer(serializers.Serializer):
+                name = serializers.CharField(max_length=100)
+                kind = serializers.ChoiceField(choices=RewardItem.Kind.choices)
+                description = serializers.CharField(allow_blank=True, trim_whitespace=False)
+                balance_amount = serializers.IntegerField(min_value=0)
+                point_value = serializers.IntegerField(min_value=0)
+                duration_days = serializers.IntegerField(min_value=0)
+                duration_months = serializers.IntegerField(min_value=0)
+                highlighted = serializers.BooleanField()
+                service_id = serializers.IntegerField(min_value=1, allow_null=True)
+            validated = TermsSerializer(data=terms); validated.is_valid(raise_exception=True); terms = dict(validated.validated_data)
+        from .services import RewardPriceChanged, RewardTermsChanged, RewardUnavailable
+        try:
+            claim = redeem(request.account, reward_id, request.data.get('client_request_id'), details.validated_data, expected, terms)
+        except RewardPriceChanged:
+            return Response({'code':409,'errorCode':'REWARD_PRICE_CHANGED','msg':'兑换积分已变化，请核对最新价格后重新兑换'},status=409)
+        except RewardTermsChanged:
+            return Response({'code':409,'errorCode':'REWARD_TERMS_CHANGED','msg':'兑换权益内容已变化，请核对最新内容后重新兑换'},status=409)
+        except RewardUnavailable as error:
+            return Response({'code':400,'errorCode':'REWARD_UNAVAILABLE','msg':error.message_text},status=400)
         return Response({'code': 0, 'data': ClaimSerializer(claim).data})
 
 
@@ -197,6 +222,7 @@ class ClaimsView(APIView):
         page = window[:size]
         return Response({'code': 0, 'data': {'items': ClaimSerializer(page, many=True).data,
                                              'next': page[-1].pk if len(window) > size else None}})
+    @provider_entitlement_edit
     @transaction.atomic
     def patch(self, request, pk):
         claim = get_object_or_404(RewardClaim.objects.select_for_update(), pk=pk, account=request.account)
@@ -209,6 +235,9 @@ class ClaimsView(APIView):
         if claim.status != 'PENDING' and not suspended_tag:
             return Response({'code': 409, 'errorCode': 'CLAIM_NOT_EDITABLE',
                 'msg': '权益状态已变化或标签已到期，资料未保存，请联系客服'}, status=409)
+        expected = request.data.get('expected_details')
+        if expected is not None and not isinstance(expected, dict):
+            raise serializers.ValidationError('交付资料格式无效')
         details = ClaimDetailsSerializer(data=request.data.get('details', {}))
         details.is_valid(raise_exception=True)
         if suspended_tag:
@@ -216,23 +245,38 @@ class ClaimsView(APIView):
             if not title:
                 raise serializers.ValidationError('请填写需要重新审核的 TAG')
             # 保留已发放内容和到期时间；新内容仅在客服审核通过后应用。
-            claim.details = {**claim.details, 'tag': title}
+            desired = {**claim.details, 'tag': title}
         else:
-            old_tag = str(claim.details.get('tag', '')).strip()
-            claim.details = details.validated_data
-            if claim.kind_snapshot == 'TAG' and str(claim.details.get('tag', '')).strip() != old_tag:
-                claim.tag_revision_required = False
+            desired = details.validated_data
+        # A lost response can be retried even though the previously observed
+        # version is stale, provided the stored result already matches exactly.
+        if claim.details == desired:
+            return Response({'code':0,'data':ClaimSerializer(claim).data})
+        if expected is not None and claim.details != expected:
+            return Response({'code':409,'errorCode':'CLAIM_DETAILS_CHANGED',
+                'msg':'交付资料已在其他位置更新，请核对最新资料'},status=409)
+        old_tag = str(claim.details.get('tag', '')).strip()
+        claim.details = desired
+        if not suspended_tag and claim.kind_snapshot == 'TAG' and str(claim.details.get('tag', '')).strip() != old_tag:
+            claim.tag_revision_required = False
         claim.save(update_fields=['details', 'tag_revision_required'])
-        from .notifier import notify_claims_after_commit
+        from .notifier import notify_claims_after_commit, notify_member_points_after_commit
         notify_claims_after_commit()
+        notify_member_points_after_commit(claim.account_id)
         return Response({'code': 0, 'data': ClaimSerializer(claim).data})
 
 
 class LotteryView(APIView):
     permission_classes = [IsBoss]
     def get(self, request):
-        campaign = LotteryCampaign.objects.order_by('-id').first()
+        selected = request.query_params.get('campaign_id')
+        if selected is None:
+            campaign = _open_lottery_campaigns().order_by('-id').first()
+        else:
+            campaign_id = serializers.IntegerField(min_value=1).run_validation(selected)
+            campaign = get_object_or_404(_open_lottery_campaigns(), pk=campaign_id)
         return Response({'code': 0, 'data': CampaignSerializer(campaign, context={'display_images':True, 'account':request.account}).data if campaign else None})
+    @api_lock_conflict
     def post(self, request):
         campaign_id = serializers.IntegerField(min_value=1).run_validation(request.data.get('campaign_id'))
         version = serializers.IntegerField(min_value=1).run_validation(request.data.get('version'))
@@ -255,3 +299,35 @@ class LotteryView(APIView):
         if count == 1:
             data.update({key: draws[0][key] for key in ['id', 'prize_id', 'point_cost', 'claim']})
         return Response({'code': 0, 'data': data})
+
+
+def _open_lottery_campaigns():
+    from django.db.models import Q
+    now = timezone.now()
+    return (LotteryCampaign.objects.filter(enabled=True)
+            .filter(Q(starts_at__isnull=True) | Q(starts_at__lte=now))
+            .filter(Q(ends_at__isnull=True) | Q(ends_at__gt=now)))
+
+
+class OpenLotteryCampaignsView(APIView):
+    """List only this store's currently open campaigns for the signed-in boss."""
+    permission_classes = [IsBoss]
+
+    def get(self, request):
+        try:
+            size = int(request.query_params.get('page_size', 20))
+            before = request.query_params.get('before')
+            before = int(before) if before is not None else None
+            if not 1 <= size <= 100 or (before is not None and before < 1):
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response({'code': 400, 'msg': '活动列表页码无效'}, status=400)
+        campaigns = _open_lottery_campaigns().order_by('-id')
+        if before is not None:
+            campaigns = campaigns.filter(id__lt=before)
+        window = list(campaigns[:size + 1])
+        items = window[:size]
+        return Response({'code': 0, 'data': {
+            'items': CampaignSerializer(items, many=True, context={'display_images': True, 'account': request.account}).data,
+            'next': items[-1].pk if len(window) > size else None,
+        }})

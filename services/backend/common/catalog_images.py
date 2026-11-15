@@ -1,7 +1,7 @@
 """Size-bounded catalog thumbnails shared by all customer-facing catalog APIs."""
 from hashlib import sha256
 from io import BytesIO
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from django.conf import settings
 from django.core.files.base import ContentFile
@@ -12,7 +12,7 @@ DISPLAY_MAX_WIDTH = 1080
 # Use decimal KB as the stricter interpretation of the product requirement.
 DISPLAY_MAX_BYTES = 200_000
 DISPLAY_PREFIX = 'club-catalog/thumbnails/v4/'
-CATALOG_PREFIXES = ('club-catalog/', 'banners/', 'game_categories/',
+CATALOG_PREFIXES = ('club-catalog/', 'banners/', 'game_categories/', 'stores/logos/',
                     'accounts/avatars/', 'customers/avatars/', 'escorts/avatars/')
 
 
@@ -49,8 +49,13 @@ def _catalog_path(value):
         parts = urlsplit(value)
     except ValueError:
         return ''
-    if parts.query or parts.fragment or parts.username or parts.password:
+    if parts.fragment or parts.username or parts.password:
         return ''
+    if parts.query:
+        from stores.context import current_store
+        store = current_store()
+        if store is None or parse_qs(parts.query, keep_blank_values=True) != {'store': [store.slug]}:
+            return ''
     if parts.netloc:
         # Never fetch arbitrary URLs or resolve another host against local storage.
         hosts = {'api.xaesports.club', 'admin.xaesports.club', 'provider.xaesports.club'}
@@ -121,6 +126,8 @@ def bounded_public_image_url(value):
     local_value = value[len(base):] if base and str(value).startswith(base + '/media/') else value
     path = _catalog_path(local_value)
     if path:
+        if path.startswith('stores/logos/') and path.endswith('.png'):
+            return value
         try:
             if default_storage.size(path) > DISPLAY_MAX_BYTES:
                 return catalog_display_url(local_value)

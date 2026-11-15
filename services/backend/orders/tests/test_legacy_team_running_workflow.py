@@ -69,7 +69,7 @@ class LegacyTeamRunningWorkflowTest(APITransactionTestCase):
             self.fail('Node runtime required for provider presentation')
         repo = Path(settings.BASE_DIR).parent.parent
         presented = subprocess.run([node, '--test', '--test-name-pattern=real running legacy team response',
-                                    str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+                                    str(repo / 'scripts/fronted-order-contracts.test.mjs')],
             env={**os.environ, 'XA_REAL_LEGACY_TEAM_ORDER': json.dumps(detail, cls=DjangoJSONEncoder)},
             text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
         self.assertEqual(presented.returncode, 0, presented.stdout + presented.stderr)

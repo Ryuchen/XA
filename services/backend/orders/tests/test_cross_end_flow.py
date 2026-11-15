@@ -20,7 +20,7 @@ from users.models import EscortProfile
 class SelectedProviderOrderFlowTest(APITestCase):
     def setUp(self):
         self.customer = make_user()
-        self.provider = make_provider()
+        self.provider = make_provider(deposit_mode='EARNINGS')
         self.service = make_service(price=10000, commission_rate=20)
         make_wallet(self.customer, balance=50000)
         self.client.force_authenticate(self.customer)
@@ -42,8 +42,18 @@ class SelectedProviderOrderFlowTest(APITestCase):
         self.provider.escort_profile.refresh_from_db()
         self.assertEqual(self.provider.escort_profile.status, EscortProfile.Status.BUSY)
 
-    def test_busy_selected_provider_is_rejected_before_payment(self):
+    def test_busy_provider_with_capacity_can_receive_order(self):
         self.provider.escort_profile.status = EscortProfile.Status.BUSY
+        self.provider.escort_profile.save(update_fields=['status'])
+        response = self.client.post('/api/orders/create/', {
+            'service_id': self.service.id,
+            'provider_id': self.provider.id,
+        })
+        self.assertEqual(response.data['code'], 0, response.data)
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_offline_selected_provider_is_rejected_before_payment(self):
+        self.provider.escort_profile.status = EscortProfile.Status.OFFLINE
         self.provider.escort_profile.save(update_fields=['status'])
         response = self.client.post('/api/orders/create/', {
             'service_id': self.service.id,

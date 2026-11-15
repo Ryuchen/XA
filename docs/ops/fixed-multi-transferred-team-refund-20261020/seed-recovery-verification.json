@@ -1,0 +1,39 @@
+{
+  "result": "PASS",
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "recovered_committed_seed": true,
+  "checked_at": "2026-10-20T07:46:48.897709+00:00",
+  "changed_existing_new_provider_accounts": 5,
+  "changed_existing_new_legacy_users": 5,
+  "changed_fields": [
+    "password"
+  ],
+  "database_password_updates": 10,
+  "other_database_writes": 0,
+  "created_accounts": 0,
+  "created_wallets": 0,
+  "created_services": 0,
+  "created_orders": 0,
+  "created_reports": 0,
+  "created_transactions": 0,
+  "otp_credentials": 0,
+  "otp_challenges": 0,
+  "old_wallets_unchanged": true,
+  "old_orders_hash_equal": true,
+  "old_transactions_hash_equal": true,
+  "untouched_account_and_user_rows_equal": true,
+  "new_wallets_and_funding_unchanged": true,
+  "boss_credential_unchanged": true,
+  "select_queries": 79,
+  "secrets_in_report": false,
+  "source_sha256": {
+    "recover_seed.py": "ab28eefb9ab60765a2ec691458f78283a3c94dee499a3dd6251a49586c4b1e6c",
+    "recover_seed.cjs": "156a5c69866874e2f0091b1fe6f51afcf655d12e2dc0ddcd0064aa5c761ce378",
+    "common.cjs": "4f940fa11ee4beff6f5c317e74441db4bc4fec3060e6aba82e76330af20bbf37",
+    "plan.cjs": "e57abf1c601712dc52366b7856703a2269517608263ef231bd5dcf44e2caacf0"
+  },
+  "baseline_sha256": "068bf61ef24e71c25770fc0c332a92a0b385b579e73c21cb299e17900a2ea49f",
+  "actors_file_created": true,
+  "private_output_durable": true,
+  "credentials_or_tokens_printed": false
+}

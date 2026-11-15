@@ -12,7 +12,7 @@ def required_team_size(order):
     # Older SINGLE rows only permit a team when their original snapshot says 2.
     # Never infer this from the current service price, title or participant rows.
     snapshot = order.gameplay_snapshot or {}
-    return 2 if snapshot.get('billing_provider_count') == 2 else 1
+    return 2 if snapshot.get('fulfillment_provider_count', snapshot.get('billing_provider_count')) == 2 else 1
 
 
 def team_size_error(order, size):

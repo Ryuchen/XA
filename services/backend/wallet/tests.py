@@ -348,6 +348,9 @@ class DepositPayTest(APITestCase):
     DEPOSIT_URL = '/api/wallet/deposit/'
 
     def setUp(self):
+        # 押金目标由门店配置决定，不再从陪玩档案读取。
+        SystemConfig.objects.create(key='provider_deposit_targets',
+            value='{"cash_target":50000,"earnings_target":100000,"version":0}')
         self.provider = make_provider(deposit_required=50000)
         make_wallet(self.provider, balance=80000)
 

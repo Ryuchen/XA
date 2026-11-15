@@ -1,0 +1,168 @@
+{
+  "run": "XA-PARTIAL-REFUND-20261020-68af85",
+  "stages": [
+    {
+      "stage": "settle-samples",
+      "checked_at": "2026-10-19T17:49:06.147Z",
+      "result": "PASS",
+      "reports": [
+        {
+          "order_id": 113,
+          "report_id": 22,
+          "code": 0
+        },
+        {
+          "order_id": 114,
+          "report_id": 23,
+          "code": 0
+        },
+        {
+          "order_id": 115,
+          "report_id": 24,
+          "code": 0
+        },
+        {
+          "order_id": 116,
+          "report_id": 25,
+          "code": 0
+        }
+      ]
+    },
+    {
+      "stage": "replay-last-available_recovery",
+      "checked_at": "2026-10-19T17:53:37.018Z",
+      "result": "PASS",
+      "same_intent_replay_code": 0,
+      "conflicting_intent_code": 409,
+      "refund_id": 10,
+      "refusal_changed_no_money_or_state": true
+    },
+    {
+      "stage": "changed-amount-insufficient_recovery",
+      "checked_at": "2026-10-19T17:54:55.311Z",
+      "result": "PASS",
+      "refused": {
+        "code": 409,
+        "errorCode": "REFUND_PLAN_CHANGED"
+      },
+      "refusal_changed_no_money_or_state": true
+    },
+    {
+      "stage": "insufficient-insufficient_recovery-10000",
+      "checked_at": "2026-10-19T17:54:56.011Z",
+      "result": "PASS",
+      "refusal_changed_no_money_or_state": true,
+      "preview": {
+        "order_id": 115,
+        "is_settled": true,
+        "eligible": false,
+        "original_amount": 20000,
+        "refunded_amount": 0,
+        "remaining_amount": 20000,
+        "refund_amount": 10000,
+        "remaining_after_refund": 10000,
+        "full_refund": false,
+        "recovery_total": 10000,
+        "recoveries": [
+          {
+            "wallet_id": 1,
+            "account_id": null,
+            "role": "PLATFORM",
+            "income_amount": 2000,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 2000,
+            "available_balance": 72050,
+            "protected_deposit_amount": 0,
+            "shortfall": 0,
+            "original_transaction_ids": [
+              967
+            ],
+            "source_safe": true,
+            "explanation": ""
+          },
+          {
+            "wallet_id": 1152,
+            "account_id": 1151,
+            "role": "PROVIDER",
+            "income_amount": 8000,
+            "held_amount": 0,
+            "deposit_amount": 0,
+            "available_required": 8000,
+            "available_balance": 6000,
+            "protected_deposit_amount": 0,
+            "shortfall": 2000,
+            "original_transaction_ids": [
+              966
+            ],
+            "source_safe": true,
+            "explanation": ""
+          }
+        ],
+        "shortfalls": [
+          {
+            "wallet_id": 1152,
+            "account_id": 1151,
+            "required": 8000,
+            "available": 6000,
+            "shortfall": 2000
+          }
+        ]
+      },
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_RECOVERY_INSUFFICIENT",
+        "msg": "追回余额不足，本次退款未执行",
+        "shortfalls": [
+          {
+            "wallet_id": 1152,
+            "account_id": 1151,
+            "required": 8000,
+            "available": 6000,
+            "shortfall": 2000
+          }
+        ]
+      }
+    },
+    {
+      "stage": "stale-plan-insufficient_recovery",
+      "checked_at": "2026-10-19T17:55:48.942Z",
+      "result": "PASS",
+      "refused": {
+        "code": 409,
+        "errorCode": "REFUND_PLAN_CHANGED",
+        "msg": "退款试算已变化或过期，请重新试算确认"
+      },
+      "refusal_changed_no_money_or_state": true
+    },
+    {
+      "stage": "replay-last-insufficient_recovery",
+      "checked_at": "2026-10-19T17:56:16.280Z",
+      "result": "PASS",
+      "same_intent_replay_code": 0,
+      "conflicting_intent_code": 409,
+      "refund_id": 14,
+      "refusal_changed_no_money_or_state": true
+    },
+    {
+      "stage": "exceed-remaining-insufficient_recovery",
+      "checked_at": "2026-10-19T17:56:17.001Z",
+      "result": "PASS",
+      "refused": {
+        "code": 400,
+        "errorCode": "REFUND_INVALID_AMOUNT",
+        "msg": "退款金额须为正整数且不能超过可退余款"
+      },
+      "refusal_changed_no_money_or_state": true
+    },
+    {
+      "stage": "replay-last-frozen_recovery",
+      "checked_at": "2026-10-19T17:57:08.052Z",
+      "result": "PASS",
+      "same_intent_replay_code": 0,
+      "conflicting_intent_code": 409,
+      "refund_id": 15,
+      "refusal_changed_no_money_or_state": true
+    }
+  ]
+}

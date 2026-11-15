@@ -140,7 +140,7 @@ class WithdrawTaxAccountingTest(APITestCase):
         msg = Message.objects.filter(
             recipient=self.provider, title='提现审核通过',
         ).latest('id')
-        # 实际登记打款 180 元，折合 1800 兴安币；税前 2000 兴安币。
+        # 实际登记打款 180 元，折合 1800 浪花；税前 2000 浪花。
         self.assertIn('人民币 ¥180.00', msg.preview)
         self.assertIn('1800', msg.detail)
         self.assertIn('代扣税', msg.detail)

@@ -1,17 +1,5 @@
+# 根 workspace 只管理共享金额包与 Playwright 工具。
+# fronted/ 使用独立 npm workspaces 和 package-lock.json，不纳入 pnpm。
+# 旧 Vue/Sass 包保留在原位置以保护未提交工作，不参与当前安装与构建。
 packages:
-  - 'apps/*'
-  - 'packages/*'
-
-# 依赖需要执行构建脚本的原生/编译型包白名单（pnpm v9+）。
-# 汇总三端所需的构建型依赖，供本地 workspace 安装时放行构建脚本。
-# 各 app 的 package.json 内也各自声明了 pnpm.onlyBuiltDependencies，
-# 以保证独立 docker build（仅读取 package.json）时同样生效。
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - '@swc/core'
-  - '@tarojs/binding'
-  - '@tarojs/cli'
-  - core-js
-  - core-js-pure
-  - esbuild
-  - vue-demi
+  - 'packages/money'

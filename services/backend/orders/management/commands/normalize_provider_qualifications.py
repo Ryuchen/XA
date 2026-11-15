@@ -1,7 +1,7 @@
 """Enrich confirmed companion catalog; update only the ten explicitly requested UI test providers."""
 import json
 from django.core.management.base import BaseCommand,CommandError
-from django.db import transaction
+from stores.db import transaction
 from orders.models import ServiceItem
 from users.models import EscortProfile,ProviderQualification
 from users.qualifications import GRADES,grade_options,service_requirement,matching_qualification

@@ -1,0 +1,236 @@
+{
+  "result": "PASS",
+  "tested_at": "2026-10-19T18:41:55.996014+00:00",
+  "scope": "Unequal dual-provider settled partial refunds and recipient-scoped order WebSocket payloads",
+  "production_changes": [
+    "orders/notifier.py: render each private owner with its own account/legacy request; preserve full personal payload and JSON date conversion; deduplicate recipients and isolate group transport failure",
+    "orders/serializers.py: expose settled_at as read-only"
+  ],
+  "financial_algorithm_changes": false,
+  "schema_changes": false,
+  "discovered_and_fixed": [
+    {
+      "issue": "A shared unscoped full WebSocket order representation exposed team aggregate expected income to each provider and omitted role-scoped refund information",
+      "fix": "Per-account complete serialization, including fresh requester-specific assignments and LegacyAccountMap resolution",
+      "verified": [
+        "own HTTP/WS expected_income and refund_summary match",
+        "own recovered/net income/remaining hold only",
+        "secondary owner receives once",
+        "legacy user ID differs from account ID",
+        "public groups stay minimal",
+        "dates remain JSON strings",
+        "full provider property preserved",
+        "one failed private channel does not block the other owner"
+      ]
+    }
+  ],
+  "isolation": {
+    "mysql_container": "xa-team-partial-refund-mysql-20261020",
+    "mysql_image": "mysql:8.0",
+    "mysql_network": "none",
+    "published_ports": 0,
+    "app_network": "container:xa-team-partial-refund-mysql-20261020",
+    "database_host": "127.0.0.1",
+    "configured_database": "xa_test_team_partial_refund",
+    "actual_test_database": "test_xa_test_team_partial_refund",
+    "guarded_test_settings": "config.mysql_test_settings",
+    "full_migrations_applied": 195,
+    "source_mount": "read-only",
+    "media": "independent TemporaryDirectory",
+    "celery_broker": "memory://",
+    "cache": "LocMemCache",
+    "channels": "InMemoryChannelLayer",
+    "kook_enabled": false,
+    "wecom_enabled": false,
+    "live_database_accessed": false,
+    "external_network_access": false,
+    "real_payment_or_message_delivery": false
+  },
+  "mysql": {
+    "labels": [
+      "orders.tests.test_team_partial_refunds"
+    ],
+    "tests_run": 13,
+    "passed": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "wall_seconds": 24.039,
+    "test_seconds": 21.078,
+    "real_row_lock_concurrency_tests": 4,
+    "test_cases": {
+      "TeamPartialRefundTest": [
+        "test_unequal_actual_credits_override_unchanged_team_bases",
+        "test_each_mixed_direction_uses_only_own_hold_or_available_income",
+        "test_one_raw_multiple_refunds_match_independent_midpoint_prefix_and_final_cap",
+        "test_second_provider_shortfall_rolls_back_every_row_and_protects_foreign_and_withdraw_funds",
+        "test_refund_notifies_both_wallet_owners_once_only_after_commit",
+        "test_http_and_private_events_have_only_each_providers_own_financial_summary",
+        "test_legacy_secondary_map_is_resolved_without_guessing_equal_numeric_ids",
+        "test_failed_primary_channel_does_not_block_secondary_or_boss"
+      ],
+      "TeamPartialRefundConcurrencyTest": [
+        "test_same_key_mixed_team_refund_commits_once_and_replays",
+        "test_different_keys_same_team_plan_cannot_double_spend",
+        "test_partial_refund_racing_secondary_release_preserves_both_sources_and_foreign_hold",
+        "test_partial_refund_racing_secondary_withdrawal_is_all_or_nothing"
+      ],
+      "TeamOrderWebSocketTest": [
+        "test_real_private_sockets_receive_own_full_payload_once_and_recheck_active_account"
+      ]
+    }
+  },
+  "sqlite_regression": {
+    "labels": [
+      "orders.tests.test_team_partial_refunds.TeamPartialRefundTest",
+      "orders.tests.test_team_partial_refunds.TeamOrderWebSocketTest",
+      "orders.tests.test_release_websocket",
+      "orders.tests.test_console_refund_notifications",
+      "orders.tests.test_order_closure_audit",
+      "orders.tests.test_aftersale_refund_realtime"
+    ],
+    "tests_run": 73,
+    "passed": 73,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "wall_seconds": 40.154,
+    "test_seconds": 38.439,
+    "note": "Includes 15 existing ReleaseFlowTest cases imported by the selected original test modules; actual runner count is 73."
+  },
+  "final_supplemental_test": {
+    "name": "test_legacy_secondary_map_is_resolved_without_guessing_equal_numeric_ids",
+    "change": "Strengthened test fixture so account PK explicitly differs from legacy user PK, and old account receives no event; production source unchanged",
+    "mysql": {
+      "tests_run": 1,
+      "passed": 1,
+      "skipped": 0,
+      "wall_seconds": 3.646
+    },
+    "sqlite": {
+      "tests_run": 1,
+      "passed": 1,
+      "skipped": 0,
+      "wall_seconds": 2.254
+    },
+    "note": "This is the same unique test case counted in the suites, not an additional unique case."
+  },
+  "money_cases": [
+    {
+      "case": "65:35 settlement bases",
+      "original_raw": 10000,
+      "successful_credits_raw": [
+        5200,
+        2800,
+        2000
+      ],
+      "refund_raw": 1000,
+      "recovered_raw": [
+        520,
+        280,
+        200
+      ]
+    },
+    {
+      "case": "Different actual approval payouts with same bases",
+      "bases_raw": [
+        6500,
+        3500
+      ],
+      "successful_credits_raw": [
+        4000,
+        3000,
+        3000
+      ],
+      "refund_raw": 2000,
+      "recovered_raw": [
+        800,
+        600,
+        600
+      ]
+    },
+    {
+      "case": "One provider frozen, one available in both directions",
+      "same_order_hold_only": true,
+      "completion_settlement_release_clocks_preserved": true
+    },
+    {
+      "case": "Smallest-unit multiple refunds",
+      "original_raw": 43,
+      "successful_credits_raw": [
+        23,
+        12,
+        8
+      ],
+      "one_raw_refunds": 13,
+      "oracle": "Independent exact Fraction midpoint atom sorting",
+      "path_independence_at_cumulative_raw": 13,
+      "final_recovery_matches_each_original": true,
+      "above_remaining_rejected_without_mutation": true
+    },
+    {
+      "case": "Only secondary provider short, first provider and platform sufficient",
+      "other_order_holds_preserved": true,
+      "pending_withdrawal_frozen_preserved": true,
+      "all_model_rows_unchanged_on_rejection": true,
+      "stale_plan_rejected_after_withdrawal_rejection": true,
+      "same_unsuccessful_request_id_can_succeed_after_fresh_quote": true
+    },
+    {
+      "case": "Four real MySQL races",
+      "races": [
+        "same key refund vs refund",
+        "different keys same plan vs refund",
+        "partial refund vs secondary-provider hold release",
+        "partial refund vs secondary-provider withdrawal"
+      ],
+      "no_deadlocks_or_partial_commit_observed": true
+    }
+  ],
+  "notification_checks": {
+    "on_commit_only": true,
+    "wallets_notified_once": [
+      "boss",
+      "provider1",
+      "provider2",
+      "platform"
+    ],
+    "successful_replay_emits_nothing": true,
+    "real_three_private_sockets": true,
+    "inactive_account_rechecked": true,
+    "existing_otp_and_staff_permission_regressions": true
+  },
+  "initial_test_attempts": {
+    "sqlite": {
+      "tests_run": 72,
+      "passed": 71,
+      "failures": 1
+    },
+    "mysql": {
+      "tests_run": 12,
+      "passed": 11,
+      "failures": 1
+    },
+    "cause": "New test compared unrendered DRF datetime objects with the already-JSON-rendered WebSocket payload. Test now compares HTTP response.json(); no money-path defect."
+  },
+  "review": {
+    "independent_read_only_review": "PASS; no required findings",
+    "python_ast": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "cleanup": {
+    "container_identity_verified": "/xa-team-partial-refund-mysql-20261020 mysql:8.0 none 0",
+    "exact_container_removed_with_volumes": true,
+    "absence_verified": true
+  },
+  "limitations": [
+    "Isolated tests do not constitute live UI or external payment testing; parent agent runs the separately tagged local three-client flow.",
+    "Concurrency tests validate four specified real MySQL schedules; they do not prove every possible interleaving."
+  ],
+  "source_sha256": {
+    "services/backend/orders/notifier.py": "50336e096c8cb88ed86a5d3c7fc810c28fd95561a45102e6b69d81198db24080",
+    "services/backend/orders/serializers.py": "0952da8b818d41b3d2747a239e107d1d9190f8c9d30ccf0071555518ed3e4a73",
+    "services/backend/orders/tests/test_team_partial_refunds.py": "7fc16d985c4ff9ef0035777317cbf6a5c3a67406337ca0ba1f91ac9682222bd9"
+  },
+  "secrets_in_report": false
+}

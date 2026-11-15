@@ -8,6 +8,9 @@ x-backend: &backend
   init: true
   restart: unless-stopped
   environment:
+    XA_STORE_DATABASES: ${XA_STORE_DATABASES:-}
+    XA_STORE_INTEGRATIONS: ${XA_STORE_INTEGRATIONS:-}
+    XA_ISOLATED_CONTROL_PLANE: ${XA_ISOLATED_CONTROL_PLANE:-true}
     DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
     DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
     DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?DJANGO_ALLOWED_HOSTS is required}
@@ -24,6 +27,13 @@ x-backend: &backend
     WECHAT_APPID: ${WECHAT_APPID:-}
     WECHAT_SECRET: ${WECHAT_SECRET:-}
     WECHAT_MOCK_LOGIN: ${WECHAT_MOCK_LOGIN:-true}
+    WECHAT_WEB_LOGIN_ENV: ${WECHAT_WEB_LOGIN_ENV:-release}
+    SMS_SECRET_ID: ${SMS_SECRET_ID:-}
+    SMS_SECRET_KEY: ${SMS_SECRET_KEY:-}
+    SMS_APP_ID: ${SMS_APP_ID:-}
+    SMS_TEMPLATE_ID: ${SMS_TEMPLATE_ID:-}
+    SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
+    SMS_REGION: ${SMS_REGION:-ap-guangzhou}
     KOOK_ENABLED: ${KOOK_ENABLED:-false}
     KOOK_BOT_TOKEN: ${KOOK_BOT_TOKEN:-}
     KOOK_DISPATCH_CHANNEL_ID: ${KOOK_DISPATCH_CHANNEL_ID:-}
@@ -79,7 +89,7 @@ services:
     restart: "no"
     command: >-
       sh -c "for attempt in $(seq 1 30); do
-      python manage.py migrate --noinput &&
+      python manage.py migrate_stores &&
       python manage.py collectstatic --noinput && exit 0;
       echo 'Database not ready, retrying...'; sleep 2;
       done; exit 1"
@@ -115,9 +125,7 @@ services:
   provider-h5:
     build:
       context: .
-      dockerfile: apps/provider-miniapp/Dockerfile
-      args:
-        TARO_APP_API: /api
+      dockerfile: apps/provider-vue/Dockerfile
     image: ${DOCKERHUB_NAMESPACE:-ryuchen}/xa-provider-h5:${XA_IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:

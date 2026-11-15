@@ -1,0 +1,8 @@
+{
+  "result": "PASS",
+  "order_id": 118,
+  "confirmed_consumption_raw": 10000,
+  "confirmed": true,
+  "repeat_no_duplicate": true,
+  "cash_transactions_unchanged": true
+}

@@ -14,6 +14,9 @@ from rest_framework.test import APITransactionTestCase
 from club_accounts.tokens import issue_account_tokens
 from config.asgi import application
 from orders.tests import test_release_flow as flow
+from orders.tests.factories import make_provider
+from club_accounts.services import get_or_create_account_for_legacy_user
+from orders.models import Order
 
 
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
@@ -21,12 +24,63 @@ from orders.tests import test_release_flow as flow
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class EvaluationPartyUpdatesTest(APITransactionTestCase):
-    setUp = flow.ReleaseFlowTest.setUp
+    def setUp(self):
+        flow.ReleaseFlowTest.setUp(self)
+        self.provider.escort_profile.deposit_mode = 'EARNINGS'
+        self.provider.escort_profile.save(update_fields=['deposit_mode'])
     login = flow.ReleaseFlowTest.login
     ok = flow.ReleaseFlowTest.ok
     recharge = flow.ReleaseFlowTest.recharge
     new_order = flow.ReleaseFlowTest.new_order
     finish = flow.ReleaseFlowTest.finish
+
+    def test_low_rating_realtime_is_scoped_to_the_affected_provider(self):
+        self.service.price = 5000
+        self.service.billing_provider_count = 2
+        self.service.save(update_fields=['price', 'billing_provider_count'])
+        second = make_provider(deposit_mode='EARNINGS')
+        second_account = get_or_create_account_for_legacy_user(second)
+        self.accounts[second.pk] = second_account
+        second.escort_profile.account = second_account
+        second.escort_profile.save(update_fields=['account'])
+        self.ok(self.recharge())
+        order_data = self.ok(self.client.post('/api/admin/orders/dispatch/', {
+            'customer_id': self.accounts[self.boss.pk].pk, 'service_id': self.service.pk,
+            'client_request_id': 'realtime-low-rating', 'escort_mode': 'DOUBLE',
+            'providers': [{'provider_id': self.accounts[self.provider.pk].pk, 'commission_rate': 20},
+                          {'provider_id': second_account.pk, 'commission_rate': 20}],
+        }, format='json'))
+        order = Order.objects.get(pk=order_data['id'])
+        for action, field in [('start', 'entry_image'), ('complete', 'completion_image')]:
+            for user in (self.provider, second):
+                self.login(user)
+                self.ok(self.client.post(f'/api/orders/orders/{order.pk}/{action}/',
+                                         {field: flow.screenshot()}, format='multipart'))
+        self.login(self.boss)
+        tokens = [issue_account_tokens(self.accounts[user.pk])[0] for user in (self.provider, second)]
+
+        async def run():
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            for socket in sockets:
+                self.assertTrue((await socket.connect())[0])
+            try:
+                response = await database_sync_to_async(self.client.post)('/api/orders/evaluate/', {
+                    'order_id': order.pk, 'provider_account_id': self.accounts[self.provider.pk].pk,
+                    'score': 5, 'skill_score': 1, 'attitude_score': 5, 'communication_score': 5,
+                }, format='json')
+                self.ok(response)
+                for socket, expected in zip(sockets, ('OPEN', '')):
+                    for _ in range(8):
+                        event = await socket.receive_json_from(timeout=3)
+                        if event['type'] == 'order_status_update' and event['data']['id'] == order.pk:
+                            self.assertEqual(event['data']['aftersale_status'], expected)
+                            break
+                    else:
+                        self.fail('未收到角色隔离的订单状态')
+            finally:
+                for socket in sockets:
+                    await socket.disconnect()
+        async_to_sync(run)()
 
     def test_evaluation_only_staff_receives_live_queue_updates(self):
         from club_accounts.services import get_or_create_account_for_legacy_user
@@ -57,7 +111,7 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
                 self.assertEqual(received, {'dashboard_order_update', 'evaluation_status_update'})
             try:
                 response = await database_sync_to_async(clients[0].post)('/api/orders/evaluate/',
-                    {'order_id': order.pk, 'score': 4}, format='json')
+                    {'order_id': order.pk, 'score': 4, 'skill_score': 4, 'attitude_score': 4, 'communication_score': 4}, format='json')
                 evaluation = self.ok(response)
                 await assert_queue_refreshes()
                 stats = self.ok(await database_sync_to_async(clients[2].get)('/api/admin/dashboard/stats'))
@@ -70,7 +124,7 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
                 stats = self.ok(await database_sync_to_async(clients[2].get)('/api/admin/dashboard/stats'))
                 self.assertEqual(stats['unreplied_evaluation_total'], 0)
                 response = await database_sync_to_async(clients[2].delete)(
-                    f"/api/admin/evaluations/{evaluation['id']}/", {'reply_version': 1}, format='json')
+                    f"/api/admin/evaluations/{evaluation['id']}/", {'reply_version': 1, 'void_reason': '评价违规'}, format='json')
                 self.ok(response)
                 await assert_queue_refreshes()
                 role.permissions = ['dashboard:view']
@@ -78,8 +132,11 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
                 await socket.send_json_to({'type': 'ping'})
                 self.assertEqual(await socket.receive_json_from(), {'type': 'pong'})
                 response = await database_sync_to_async(clients[0].post)('/api/orders/evaluate/',
-                    {'order_id': order.pk, 'score': 3}, format='json')
-                self.ok(response)
+                    {'order_id': order.pk, 'score': 3, 'skill_score': 3, 'attitude_score': 3, 'communication_score': 3}, format='json')
+                self.assertNotEqual(response.data['code'], 0)
+                from orders.notifier import notify_order_update, notify_evaluation_update
+                await database_sync_to_async(notify_order_update)(order)
+                await database_sync_to_async(notify_evaluation_update)()
                 self.assertEqual((await socket.receive_json_from(timeout=3))['type'], 'dashboard_order_update')
                 self.assertTrue(await socket.receive_nothing(timeout=0.2))
                 stats = self.ok(await database_sync_to_async(clients[2].get)('/api/admin/dashboard/stats'))
@@ -93,7 +150,8 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
         self.finish(order)
         self.login(self.boss)
         evaluation = self.ok(self.client.post('/api/orders/evaluate/', {
-            'order_id': order.pk, 'score': 3, 'content': '隔离评价', 'is_anonymous': True,
+            'order_id': order.pk, 'score': 3, 'skill_score': 3, 'attitude_score': 3, 'communication_score': 3,
+            'content': '隔离评价', 'is_anonymous': True,
         }, format='json'))
         role = self.admin.admin_membership.roles.first()
         role.permissions = [*role.permissions, 'evaluation:view', 'evaluation:reply', 'evaluation:delete']
@@ -139,13 +197,13 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
                                       and item['related_order_id'] == order.pk]), 1)
                 self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + staff_token)
                 deleted = await database_sync_to_async(self.client.delete)(
-                    f"/api/admin/evaluations/{evaluation['id']}/", {'reply_version': 1}, format='json')
+                    f"/api/admin/evaluations/{evaluation['id']}/", {'reply_version': 1, 'void_reason': '评价违规'}, format='json')
                 self.ok(deleted)
                 for socket in sockets:
                     for _ in range(8):
                         event = await socket.receive_json_from(timeout=3)
                         if event['type'] == 'order_status_update' and event['data']['id'] == order.pk:
-                            self.assertFalse(event['data']['is_evaluated'])
+                            self.assertTrue(event['data']['is_evaluated'])
                             self.assertIsNone(event['data']['evaluation'])
                             break
                     else:
@@ -178,7 +236,8 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
             try:
                 self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
                 evaluated = await database_sync_to_async(self.client.post)('/api/orders/evaluate/', {
-                    'order_id': order.pk, 'score': 3, 'content': '私人评价内容', 'is_anonymous': True,
+                    'order_id': order.pk, 'score': 3, 'skill_score': 3, 'attitude_score': 3, 'communication_score': 3,
+                    'content': '私人评价内容', 'is_anonymous': True,
                 }, format='json')
                 evaluation = self.ok(evaluated)
                 for socket in sockets:
@@ -199,7 +258,7 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
                     repo = Path(__file__).resolve().parents[4]
                     env = {**os.environ, 'XA_EVALUATION_NOTICE': json.dumps(notice_detail, ensure_ascii=False)}
                     result = await database_sync_to_async(subprocess.run)(
-                        [node, '--test', str(repo / 'apps/provider-miniapp/tests/message-order-navigation.cjs')],
+                        [node, '--test', str(repo / 'scripts/fronted-message-contracts.test.mjs')],
                         env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=30)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertIn('real evaluation notice opens', result.stdout)
@@ -223,7 +282,7 @@ class EvaluationPartyUpdatesTest(APITransactionTestCase):
                 detail = self.ok(await database_sync_to_async(self.client.get)(f'/api/orders/orders/{order.pk}/'))
                 self.assertEqual(detail['evaluation']['reply_content'], '感谢你的建议')
                 duplicate = await database_sync_to_async(self.client.post)('/api/orders/evaluate/',
-                    {'order_id': order.pk, 'score': 3}, format='json')
+                    {'order_id': order.pk, 'score': 3, 'skill_score': 3, 'attitude_score': 3, 'communication_score': 3}, format='json')
                 self.assertNotEqual(duplicate.data['code'], 0)
                 self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[1])
                 stale = await database_sync_to_async(self.client.post)(

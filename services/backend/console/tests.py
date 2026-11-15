@@ -93,13 +93,15 @@ class EvaluationAdminTest(APITestCase):
         res = self.client.post(f'/api/admin/evaluations/{ev.id}/reply/', {'reply_content': '  '})
         self.assertEqual(res.data['code'], 400)
 
-    def test_destroy_rolls_back_rating(self):
+    def test_void_preserves_record_and_excludes_rating(self):
         ev = self._eval(score=4)
         refresh_escort_rating(self.provider.id)
         self.client.force_authenticate(self.admin)
-        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0}, format='json')
+        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0, 'void_reason': '评价违规'}, format='json')
         self.assertEqual(res.data['code'], 0)
-        self.assertFalse(Evaluation.objects.filter(id=ev.id).exists())
+        ev.refresh_from_db()
+        self.assertIsNotNone(ev.voided_at)
+        self.assertEqual(ev.void_reason, '评价违规')
         self.provider.escort_profile.refresh_from_db()
         self.assertEqual(self.provider.escort_profile.rating_count, 0)
         self.assertEqual(self.provider.escort_profile.rating_avg, Decimal('0.00'))
@@ -115,17 +117,18 @@ class EvaluationAdminTest(APITestCase):
         user = make_console_user(perms=['evaluation:view'])
         self.client.force_authenticate(user)
         self.assertEqual(self.client.get('/api/admin/evaluations/').status_code, 200)
-        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0}, format='json')
+        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0, 'void_reason': '评价违规'}, format='json')
         self.assertEqual(res.status_code, 403)
         self.assertTrue(Evaluation.objects.filter(id=ev.id).exists())
 
-    def test_perm_delete_allows_destroy(self):
+    def test_perm_delete_allows_void(self):
         ev = self._eval(score=5)
         user = make_console_user(perms=['evaluation:view', 'evaluation:delete'])
         self.client.force_authenticate(user)
-        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0}, format='json')
+        res = self.client.delete(f'/api/admin/evaluations/{ev.id}/', {'reply_version': 0, 'void_reason': '评价违规'}, format='json')
         self.assertEqual(res.status_code, 200)
-        self.assertFalse(Evaluation.objects.filter(id=ev.id).exists())
+        ev.refresh_from_db()
+        self.assertIsNotNone(ev.voided_at)
 
 
 class ProviderReportApproveTest(APITestCase):
@@ -322,7 +325,7 @@ class RechargeAdminTest(APITestCase):
         self.assertEqual(res.data['code'], 0)
         self.assertEqual(res.data['data']['credited_coins'], 1000)
         self.assertEqual(res.data['data']['exchange_rate'], 10)
-        self.assertIn('入账兴安币', res.data['msg'])
+        self.assertIn('入账浪花', res.data['msg'])
         wallet = Wallet.objects.get(user=self.boss)
         self.assertEqual(wallet.balance, 10000)
         self.assertEqual(wallet.total_recharge, 10000)

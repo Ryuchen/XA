@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A browser transport retry after committed fulfillment uses real APIs."""
 import json
 import os
@@ -28,9 +29,9 @@ class ProviderVueFulfillmentRetryHTTPTest(LiveServerTestCase):
     invite = invitation_flow.TeamInvitationDetailTest.invite
 
     def run_browser(self, order, provider, operation, partial=False):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         file = Path(self.media.name) / 'fulfillment.png'
         file.write_bytes(flow.screenshot().read())
         repo = Path(settings.BASE_DIR).parent.parent
@@ -40,7 +41,7 @@ class ProviderVueFulfillmentRetryHTTPTest(LiveServerTestCase):
                 'image': str(file), 'token': issue_account_tokens(self.accounts[provider.pk])[0],
                 'bossToken': issue_account_tokens(self.accounts[self.boss.pk])[0],
                 'staffToken': issue_account_tokens(self.accounts[self.admin.pk])[0],
-                'fixed': os.environ.get('XA_FULFILLMENT_RECEIPT_FIXED') == '1', 'partial': partial}),
+                'fixed': True, 'partial': partial}),
             text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout.strip())
@@ -59,18 +60,12 @@ class ProviderVueFulfillmentRetryHTTPTest(LiveServerTestCase):
         self.exercise('complete')
 
     def test_start_response_truncated(self):
-        if os.environ.get('XA_FULFILLMENT_RECEIPT_FIXED') != '1':
-            self.skipTest('requires updated fulfillment receipt')
         self.exercise('start', partial=True)
 
     def test_complete_response_truncated(self):
-        if os.environ.get('XA_FULFILLMENT_RECEIPT_FIXED') != '1':
-            self.skipTest('requires updated fulfillment receipt')
         self.exercise('complete', partial=True)
 
     def test_team_last_completion_response_reset(self):
-        if os.environ.get('XA_FULFILLMENT_RECEIPT_FIXED') != '1':
-            self.skipTest('requires updated fulfillment receipt')
         self.invite()
         self.login(self.partner)
         self.ok(self.client.post(self.action, {'action': 'CONFIRM_TEAM'}, format='json'))

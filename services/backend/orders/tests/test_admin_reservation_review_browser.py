@@ -18,7 +18,7 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
 @skipUnless(os.environ.get('XA_RESERVATION_BROWSER') == '1', 'Requires isolated browser build and database')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class AdminReservationReviewBrowserTest(LiveServerTestCase):
-    def test_conversion_confirmation_at_375px(self):
+    def test_conversion_confirmation_at_ipad_landscape(self):
         from orders.models import Order
         from wallet.models import Wallet
         node = shutil.which('node')
@@ -60,7 +60,7 @@ class AdminReservationReviewBrowserTest(LiveServerTestCase):
             self.assertEqual((reservation['status'], reservation['order']), ('CONVERTED', order.pk))
             self.assertEqual((linked_order['id'], linked_order['status'], linked_order['amount']), (order.pk, 'GRABBED', 10000))
 
-    def test_workbench_queue_orders_soonest_first_at_375px(self):
+    def test_workbench_queue_orders_soonest_first_at_ipad_landscape(self):
         node = shutil.which('node')
         if not node:
             self.skipTest('Node runtime required')
@@ -96,7 +96,7 @@ class AdminReservationReviewBrowserTest(LiveServerTestCase):
             capture_output=True, timeout=90, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
-    def test_reload_review_at_375px(self):
+    def test_reload_review_at_ipad_landscape(self):
         node = shutil.which('node')
         if not node:
             self.skipTest('Node runtime required')

@@ -65,7 +65,7 @@ class SelectedInvitationNavigationTest(LiveServerTestCase):
         env = {**os.environ, 'XA_TEAM_CANCELLED_HTTP': json.dumps({'base': self.live_server_url,
             'bossToken': tokens[0], 'tokens': tokens[1:], 'outsiderToken': outsider_token,
             'orderId': order_id, 'applicationId': application.pk})}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/application-detail.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-application-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         if os.environ.get('XA_CANCELLED_TEAM_BROWSER') == '1':
@@ -112,7 +112,7 @@ class SelectedInvitationNavigationTest(LiveServerTestCase):
         repo = Path(settings.BASE_DIR).parent.parent
         env = {**os.environ, 'XA_REJECTED_SELECTION_HTTP': json.dumps({'base': self.live_server_url,
             'providerToken': provider_token, 'orderId': order_id, 'applicationId': application.pk})}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/application-detail.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-application-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -158,6 +158,6 @@ class SelectedInvitationNavigationTest(LiveServerTestCase):
         repo = Path(settings.BASE_DIR).parent.parent
         env = {**os.environ, 'XA_TEAM_SELECTED_HTTP': json.dumps({'base': self.live_server_url,
             'partnerToken': tokens[2], 'orderId': order.pk, 'applicationId': invitation.pk})}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/application-detail.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-application-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

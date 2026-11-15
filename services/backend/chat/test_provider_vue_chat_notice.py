@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A real staff reply reaches the provider message-center entry and chat."""
 import json
 import os
@@ -16,11 +17,11 @@ from orders.tests.test_provider_vue_team_progress_http import isolated_realtime
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)
-class ProviderVueChatNoticeTest(TransactionTestCase):
+class ProviderVueChatNoticeTest(ReactLiveHTTPTestCase):
     def test_staff_reply_is_visible_outside_conversation_and_clears_on_read(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         provider = make_provider(display_name='隔离咨询陪玩')
         staff = make_console_user(['chat:view', 'chat:reply', 'message:push'])
         accounts = [get_or_create_account_for_legacy_user(user) for user in (provider, staff)]
@@ -33,15 +34,16 @@ class ProviderVueChatNoticeTest(TransactionTestCase):
         for client, token in zip(clients, tokens):
             client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
         session = clients[0].get('/api/chat/session/').data['data']['session']
+        self.assertEqual(clients[1].post(f"/api/admin/chat-sessions/{session['id']}/claim/", {'expected_version': 0}, format='json').data['code'], 0)
         pushed = clients[1].post('/api/admin/messages/push/', {'recipient_account_ids':[accounts[0].pk],
             'title':'隔离站内通知', 'preview':'隔离通知内容'}, format='json')
         self.assertEqual(pushed.data['code'], 0, pushed.data)
         repo = Path(settings.BASE_DIR).parent.parent
-        with isolated_realtime() as (base, ws_base):
+        with current_http(self, isolated_realtime) as (base, ws_base):
             result = subprocess.run(['node', str(repo / 'scripts/provider-vue-chat-notice-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'token':tokens[0],
                     'id':accounts[0].pk, 'staffToken':tokens[1], 'sessionId':session['id'],
-                    'fixed':os.environ.get('XA_CHAT_NOTICE_FIXED') == '1'}),
+                    'fixed':True}),
                 text=True, encoding='utf-8', capture_output=True, cwd=repo, timeout=60)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             print(result.stdout.strip())

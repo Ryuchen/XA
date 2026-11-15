@@ -2,7 +2,9 @@ import uuid
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.conf import settings
-from django.db import IntegrityError, models, transaction
+from django.db import IntegrityError, models
+from stores.db import transaction
+from stores.context import current_currency_name
 
 # 抽成率配置在 SystemConfig 中的键名
 COMMISSION_RATE_KEY = 'platform_commission_rate'
@@ -38,7 +40,7 @@ DEFAULT_PASS_DELAY_SECONDS = {
 
 
 class Wallet(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet', null=True, blank=True)
     account = models.OneToOneField(
         'club_accounts.ClubAccount',
         on_delete=models.CASCADE,
@@ -46,10 +48,10 @@ class Wallet(models.Model):
         blank=True,
         related_name='wallet',
     )
-    balance = models.IntegerField(default=0)  # 余额，内部账务单位；10 单位 = 1 兴安币
+    balance = models.IntegerField(default=0)  # 余额，内部账务单位；10 单位 = 1 浪花
     frozen_amount = models.PositiveIntegerField(default=0)
-    total_recharge = models.IntegerField(default=0)  # 累计充值兴安币（内部账务单位）
-    total_gift = models.IntegerField(default=0)  # 累计赠送兴安币（内部账务单位）
+    total_recharge = models.IntegerField(default=0)  # 累计充值浪花（内部账务单位）
+    total_gift = models.IntegerField(default=0)  # 累计赠送浪花（内部账务单位）
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -58,6 +60,7 @@ class Wallet(models.Model):
         verbose_name = 'Wallet'
         verbose_name_plural = 'Wallets'
         constraints = [
+            models.CheckConstraint(condition=models.Q(user__isnull=False) | models.Q(account__isnull=False), name='wallet_has_owner'),
             models.CheckConstraint(
                 condition=models.Q(balance__gte=0),
                 name='wallet_balance_nonnegative',
@@ -73,7 +76,8 @@ class Wallet(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.user.username} - 余额: {self.balance / 10:g}兴安币"
+        owner = self.account if self.account_id else self.user
+        return f"{owner.username} - 余额: {self.balance / 10:g}{current_currency_name()}"
 
 
 class Transaction(models.Model):
@@ -113,6 +117,7 @@ class Transaction(models.Model):
         WITHDRAW_TAX = 'WITHDRAW_TAX', '提现税费'
         # 后台人工调账：金额正负即调增/调减，原因见 remark；不再借用 REWARD/WITHDRAW 语义。
         ADJUST = 'ADJUST', '后台调账'
+        SUBSIDY_EXPENSE = 'SUBSIDY_EXPENSE', '平台补贴支出'
         EARNINGS_FREEZE = 'EARNINGS_FREEZE', '订单收益冻结'
         EARNINGS_RELEASE = 'EARNINGS_RELEASE', '订单收益解冻'
 
@@ -122,6 +127,11 @@ class Transaction(models.Model):
         FAILED = 'FAILED', '失败'
 
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions')
+    deposit_owner = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='+', editable=False)
+    deposit_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    deposit_pair = models.OneToOneField('self', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='+', editable=False)
     order = models.ForeignKey('orders.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
     operator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -174,7 +184,7 @@ class Transaction(models.Model):
                         'TOPUP', 'PAY', 'INCOME', 'WITHDRAW', 'REWARD', 'GIFT',
                         'PENALTY', 'DEPOSIT', 'DEPOSIT_INCOME', 'SHOP_INCOME',
                         'REFUND', 'PASS_PURCHASE', 'PASS_INCOME', 'WITHDRAW_TAX', 'ADJUST',
-                        'EARNINGS_FREEZE', 'EARNINGS_RELEASE',
+                        'EARNINGS_FREEZE', 'EARNINGS_RELEASE', 'SUBSIDY_EXPENSE',
                     ]
                 ),
                 name='transaction_type_valid',
@@ -196,17 +206,48 @@ class Transaction(models.Model):
 class IncomeHold(models.Model):
     wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='income_holds')
     income_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, related_name='income_hold')
+    freeze_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                              related_name='created_income_hold')
+    account_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     amount = models.PositiveIntegerField()
     deposit_amount = models.PositiveIntegerField(default=0)
     release_at = models.DateTimeField(db_index=True)
     released_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    release_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                               related_name='released_income_hold')
     cancelled_at = models.DateTimeField(null=True, blank=True, db_index=True)
     cancelled_by_refund = models.ForeignKey('orders.OrderRefund', on_delete=models.PROTECT, null=True, blank=True, related_name='cancelled_holds')
     recovered_amount = models.PositiveIntegerField(default=0)
+    deferred_deposit_percent = models.PositiveSmallIntegerField(null=True, blank=True)
+    deferred_deposit_debit = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                                  related_name='deferred_deposit_hold')
+    deferred_deposit_credit = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                                   related_name='deferred_deposit_platform_hold')
+    initial_deposit_debit = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                                 related_name='initial_deposit_hold')
+    initial_deposit_credit = models.OneToOneField(Transaction, on_delete=models.PROTECT, null=True, blank=True,
+                                                  related_name='initial_deposit_platform_hold')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [models.CheckConstraint(condition=models.Q(amount__gt=0), name='income_hold_amount_positive')]
+
+
+class IncomeAfterSaleClosureEvidence(models.Model):
+    """A real after-sale closure bounded by observations around its commit."""
+    case = models.ForeignKey('orders.AfterSale', on_delete=models.PROTECT, related_name='income_closure_evidence', null=True, blank=True)
+    hold = models.OneToOneField(IncomeHold, on_delete=models.PROTECT, related_name='priority_opening_evidence', null=True, blank=True)
+    barrier = models.BooleanField(default=False)
+    case_opened_at = models.DateTimeField(null=True, blank=True)
+    lower_at = models.DateTimeField()
+    upper_at = models.DateTimeField(null=True, blank=True)
+    clock_evidence = models.JSONField(default=dict)
+    observed_cases = models.JSONField(default=list, blank=True)
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['case', 'case_opened_at'], name='income_case_episode_once'),
+            models.CheckConstraint(condition=(models.Q(case__isnull=False, case_opened_at__isnull=False, hold__isnull=True, barrier=False)
+                | models.Q(case__isnull=True, case_opened_at__isnull=True, hold__isnull=False, barrier=False)
+                | models.Q(case__isnull=True, case_opened_at__isnull=True, hold__isnull=True, barrier=True)), name='income_priority_event_kind')]
 
 
 class IdempotencyKey(models.Model):
@@ -305,24 +346,12 @@ def get_commission_rate():
 
 
 def get_min_withdraw_amount():
-    """返回当前最低提现兴安币对应的内部账务值（非负整数）。
+    """返回当前最低提现浪花对应的内部账务值（非负整数）。
 
     优先读取 SystemConfig，未配置或非法时回落 settings.MIN_WITHDRAW_AMOUNT。
     """
-    from .club_rules import club_income_rules_enabled
-    if club_income_rules_enabled():
-        return 0
-    default = getattr(settings, 'MIN_WITHDRAW_AMOUNT', 10000)
-    config = SystemConfig.objects.filter(key=MIN_WITHDRAW_AMOUNT_KEY).first()
-    if not config:
-        return default
-    try:
-        amount = int(config.value)
-    except (TypeError, ValueError):
-        return default
-    if amount < 0:
-        return default
-    return amount
+    from .withdraw_rules import withdraw_rule_snapshot
+    return withdraw_rule_snapshot()['min_amount']
 
 
 def get_withdraw_tax_rate():
@@ -330,17 +359,8 @@ def get_withdraw_tax_rate():
 
     优先读取 SystemConfig，未配置或非法时回落 settings.WITHDRAW_TAX_RATE（默认 2）。
     """
-    default = getattr(settings, 'WITHDRAW_TAX_RATE', 2)
-    config = SystemConfig.objects.filter(key=WITHDRAW_TAX_RATE_KEY).first()
-    if not config:
-        return default
-    try:
-        rate = int(config.value)
-    except (TypeError, ValueError):
-        return default
-    if rate < 0 or rate > 100:
-        return default
-    return rate
+    from .withdraw_rules import withdraw_rule_snapshot
+    return withdraw_rule_snapshot()['tax_rate']
 
 
 def compute_withdraw_tax(amount, tax_rate):
@@ -360,7 +380,7 @@ def compute_withdraw_tax(amount, tax_rate):
     return min(int(tax), int(amount))
 
 
-def _get_int_config(key, default, *, minimum=0, maximum=None):
+def _get_int_config(key, default, *, minimum=0, maximum=None, lock=False):
     """读取一条整数型 SystemConfig，非法值一律回落默认值。
 
     Args:
@@ -369,7 +389,13 @@ def _get_int_config(key, default, *, minimum=0, maximum=None):
         minimum: 允许的最小值（含）。
         maximum: 允许的最大值（含）；None 表示不设上限。
     """
-    config = SystemConfig.objects.filter(key=key).only('value').first()
+    rows = SystemConfig.objects.filter(key=key).only('value')
+    if lock:
+        from stores.db import transaction
+        if not transaction.get_connection().in_atomic_block:
+            raise RuntimeError('通行证配置当前读须在持锁事务内执行')
+        rows = rows.select_for_update()
+    config = rows.first()
     if config is None:
         return default
     try:
@@ -383,7 +409,7 @@ def _get_int_config(key, default, *, minimum=0, maximum=None):
     return value
 
 
-def get_pass_daily_price(tier):
+def get_pass_daily_price(tier, *, lock=False):
     """返回指定通行证档位的日价（内部账务单位整数）。
 
     档位取值同 ``users.EscortProfile.PassTier``；空串代表「无通行证」。
@@ -392,7 +418,7 @@ def get_pass_daily_price(tier):
     normalized = (tier or PASS_TIER_NONE).upper()
     default = DEFAULT_PASS_DAILY_PRICES.get(normalized, 0)
     return _get_int_config(
-        f'{PASS_DAILY_PRICE_KEY_PREFIX}{normalized}', default, minimum=0,
+        f'{PASS_DAILY_PRICE_KEY_PREFIX}{normalized}', default, minimum=0, lock=lock,
     )
 
 
@@ -418,14 +444,6 @@ def get_pass_delay_seconds(tier):
     return _get_int_config(
         f'{PASS_DELAY_SECONDS_KEY_PREFIX}{key_tier}', default, minimum=0,
     )
-
-
-def get_pass_delays():
-    """返回全部档位的可见延迟映射 ``{tier: seconds}``（含空串档位）。"""
-    return {
-        tier: get_pass_delay_seconds(tier)
-        for tier in DEFAULT_PASS_DELAY_SECONDS
-    }
 
 
 def get_platform_wallet(for_update=False):
@@ -483,7 +501,7 @@ class ProviderReport(models.Model):
     )
     game_name = models.CharField(max_length=100)
     description = models.CharField(max_length=255, blank=True, default='')
-    amount = models.PositiveIntegerField()  # 报单兴安币金额（内部账务单位）
+    amount = models.PositiveIntegerField()  # 报单浪花金额（内部账务单位）
     proof_image = models.ImageField(upload_to='reports/', blank=True, null=True)
     entry_image = models.ImageField(upload_to='reports/entry/', blank=True, null=True)
     completion_image = models.ImageField(upload_to='reports/completion/', blank=True, null=True)
@@ -491,7 +509,7 @@ class ProviderReport(models.Model):
         max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True
     )
     commission_rate = models.PositiveSmallIntegerField(default=0)  # 审核时固化的抽成率快照(%)
-    payout_amount = models.PositiveIntegerField(default=0)  # 审核通过陪玩实得兴安币（内部账务单位）
+    payout_amount = models.PositiveIntegerField(default=0)  # 审核通过陪玩实得浪花（内部账务单位）
     remark = models.CharField(max_length=255, blank=True, default='')
     audit_remark = models.CharField(max_length=255, blank=True, default='')
     auditor = models.ForeignKey(
@@ -555,7 +573,7 @@ class ProviderReport(models.Model):
         ]
 
     def __str__(self):
-        return f"报单#{self.pk} {self.game_name} {self.amount / 10:g}兴安币 [{self.status}]"
+        return f"报单#{self.pk} {self.game_name} {self.amount / 10:g}{current_currency_name()} [{self.status}]"
 
 
 class ProviderReportImage(models.Model):
@@ -581,6 +599,11 @@ class WithdrawRequest(models.Model):
         PENDING = 'PENDING', '待审核'
         APPROVED = 'APPROVED', '已通过'
         REJECTED = 'REJECTED', '已驳回'
+        STORE_APPROVED = 'STORE_APPROVED', '门店初审通过'
+        PLATFORM_APPROVED = 'PLATFORM_APPROVED', '平台终审通过，待打款'
+        PAYMENT_UNKNOWN = 'PAYMENT_UNKNOWN', '打款结果待核实'
+        PAID = 'PAID', '已打款'
+        CANCELLED = 'CANCELLED', '已取消'
 
     class PayeeMethod(models.TextChoices):
         WECHAT = 'WECHAT', '微信'
@@ -588,7 +611,8 @@ class WithdrawRequest(models.Model):
         BANK = 'BANK', '银行卡'
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='withdraw_requests'
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='withdraw_requests',
+        null=True, blank=True,
     )
     account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -597,7 +621,8 @@ class WithdrawRequest(models.Model):
         blank=True,
         related_name='withdraw_requests',
     )
-    amount = models.PositiveIntegerField()  # 提现兴安币（内部账务单位）
+    account_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    amount = models.PositiveIntegerField()  # 提现浪花（内部账务单位）
     tax_rate = models.PositiveIntegerField(
         default=0, help_text='申请时快照的提现税率（百分比，0-100）',
     )
@@ -613,6 +638,11 @@ class WithdrawRequest(models.Model):
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True
     )
+    workflow_version = models.PositiveSmallIntegerField(default=1, help_text='1: 历史单级审核；2: 门店初审及平台财务终审')
+    platform_reviewer_id = models.UUIDField(null=True, blank=True)
+    platform_reviewed_at = models.DateTimeField(null=True, blank=True)
+    platform_payer_id = models.UUIDField(null=True, blank=True)
+    payout_recorded_at = models.DateTimeField(null=True, blank=True)
     remark = models.CharField(max_length=255, blank=True, default='')
     audit_remark = models.CharField(max_length=255, blank=True, default='')
     payout_reference = models.CharField(
@@ -660,6 +690,10 @@ class WithdrawRequest(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
+                condition=models.Q(user__isnull=False) | models.Q(account__isnull=False),
+                name='withdraw_has_owner',
+            ),
+            models.CheckConstraint(
                 condition=models.Q(amount__gt=0),
                 name='withdraw_amount_positive',
             ),
@@ -678,7 +712,8 @@ class WithdrawRequest(models.Model):
                 name='withdraw_actual_amount_valid',
             ),
             models.CheckConstraint(
-                condition=models.Q(status__in=['PENDING', 'APPROVED', 'REJECTED']),
+                condition=models.Q(status__in=['PENDING', 'APPROVED', 'REJECTED', 'STORE_APPROVED',
+                                               'PLATFORM_APPROVED', 'PAYMENT_UNKNOWN', 'PAID', 'CANCELLED']),
                 name='withdraw_status_valid',
             ),
             models.CheckConstraint(
@@ -697,13 +732,63 @@ class WithdrawRequest(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"提现#{self.pk} {self.user.username} {self.amount / 10:g}兴安币 [{self.status}]"
+        owner = self.account if self.account_id else self.user
+        return f"提现#{self.pk} {owner.username if owner else ''} {self.amount / 10:g}{current_currency_name()} [{self.status}]"
+
+
+class WithdrawalRelease(models.Model):
+    """Actual return of one unpaid withdrawal's frozen balance."""
+    withdrawal = models.OneToOneField(WithdrawRequest, on_delete=models.PROTECT, related_name='release')
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name='+')
+    original_transaction = models.OneToOneField(Transaction, on_delete=models.PROTECT, related_name='+')
+    amount = models.PositiveIntegerField()
+    balance_before = models.IntegerField()
+    balance_after = models.IntegerField()
+    frozen_before = models.IntegerField()
+    frozen_after = models.IntegerField()
+    actor_kind = models.CharField(max_length=12, choices=[('OWNER', '本人'), ('STORE', '门店'), ('PLATFORM', '平台')])
+    actor_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                      null=True, blank=True, related_name='+')
+    platform_actor_id = models.UUIDField(null=True, blank=True)
+    reason = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name='withdraw_release_amount_positive'),
+            models.CheckConstraint(condition=models.Q(balance_after=models.F('balance_before') + models.F('amount')),
+                                   name='withdraw_release_balance_valid'),
+            models.CheckConstraint(condition=models.Q(frozen_before=models.F('frozen_after') + models.F('amount')),
+                                   name='withdraw_release_frozen_valid'),
+            models.CheckConstraint(condition=(
+                models.Q(actor_kind__in=['OWNER', 'STORE'], actor_account__isnull=False, platform_actor_id__isnull=True)
+                | models.Q(actor_kind='PLATFORM', actor_account__isnull=True, platform_actor_id__isnull=False)),
+                name='withdraw_release_actor_valid'),
+        ]
+
+
+class WithdrawalPlatformEvent(models.Model):
+    """门店库内的持久事实，不把平台账号误作门店员工外键。"""
+    withdrawal = models.ForeignKey(WithdrawRequest, on_delete=models.PROTECT, related_name='platform_events')
+    platform_actor_id = models.UUIDField()
+    actor_name = models.CharField(max_length=150)
+    action = models.CharField(max_length=32)
+    request_id = models.CharField(max_length=64)
+    request_fingerprint = models.CharField(max_length=64)
+    from_status = models.CharField(max_length=20)
+    to_status = models.CharField(max_length=20)
+    detail = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['platform_actor_id', 'request_id'], name='withdraw_platform_request_unique')]
 
 
 class WithdrawalAccount(models.Model):
     """陪玩保存的收款资料；提现申请另存快照，不引用可变字段。"""
     account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.CASCADE,
                                 related_name='withdrawal_accounts')
+    business_cycle = models.PositiveIntegerField(editable=False)
     payee_method = models.CharField(max_length=20, choices=WithdrawRequest.PayeeMethod.choices)
     payee_account = models.CharField(max_length=100)
     payee_name = models.CharField(max_length=50)
@@ -714,7 +799,7 @@ class WithdrawalAccount(models.Model):
     class Meta:
         ordering = ['payee_method']
         constraints = [
-            models.UniqueConstraint(fields=['account', 'payee_method'], name='unique_withdraw_account_method'),
+            models.UniqueConstraint(fields=['account', 'business_cycle', 'payee_method'], name='withdraw_cycle_method_unique'),
             models.CheckConstraint(condition=models.Q(payee_method__in=['WECHAT', 'ALIPAY', 'BANK']),
                                    name='saved_payee_method_valid'),
             models.CheckConstraint(condition=models.Q(version__gte=1), name='saved_payee_version_positive'),
@@ -722,13 +807,13 @@ class WithdrawalAccount(models.Model):
 
 
 class RechargeRecord(models.Model):
-    """企微充值记录：按 1:10 兑换规则录入兴安币，可附带赠送兴安币。
+    """企微充值记录：按 1:10 兑换规则录入浪花，可附带赠送浪花。
 
     实充与赠送各落一条对应流水（TOPUP / GIFT），并累加进钱包统计字段。
     """
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recharge_records'
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recharge_records', null=True, blank=True
     )
     account = models.ForeignKey(
         'club_accounts.ClubAccount',
@@ -737,8 +822,10 @@ class RechargeRecord(models.Model):
         blank=True,
         related_name='recharge_records',
     )
-    amount = models.PositiveIntegerField()  # 充值兴安币（内部账务单位）
-    gift_amount = models.PositiveIntegerField(default=0)  # 赠送兴安币（内部账务单位）
+    account_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    amount = models.PositiveIntegerField()  # 充值浪花（内部账务单位）
+    gift_amount = models.PositiveIntegerField(default=0)  # 赠送浪花（内部账务单位）
+    bonus_snapshot = models.JSONField(null=True, blank=True, editable=False)  # 新规则档位及计算快照；历史不补造
     trade_no = models.CharField(
         max_length=64, blank=True, default='',
         help_text='第三方交易/转账流水号，用于对账溯源',
@@ -783,6 +870,7 @@ class RechargeRecord(models.Model):
             ),
         ]
         constraints = [
+            models.CheckConstraint(condition=models.Q(user__isnull=False) | models.Q(account__isnull=False), name='recharge_has_owner'),
             models.CheckConstraint(
                 condition=models.Q(amount__gt=0),
                 name='recharge_amount_positive',
@@ -795,9 +883,30 @@ class RechargeRecord(models.Model):
 
     def __str__(self):
         return (
-            f"企微充值#{self.pk} {self.user.username} "
-            f"充值{self.amount / 10:g}兴安币，到账{self.total_amount / 10:g}兴安币"
+            f"企微充值#{self.pk} {(self.account if self.account_id else self.user).username} "
+            f"充值{self.amount / 10:g}{current_currency_name()}，到账{self.total_amount / 10:g}{current_currency_name()}"
         )
+
+
+class RechargeGiftApproval(models.Model):
+    """Approval and final credit of a deviation from the prepaid bonus."""
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', '待审批'
+        APPROVED = 'APPROVED', '已通过'
+        REJECTED = 'REJECTED', '已驳回'
+
+    recharge = models.OneToOneField(RechargeRecord, on_delete=models.PROTECT, related_name='gift_approval')
+    standard_amount = models.PositiveIntegerField()
+    requested_amount = models.PositiveIntegerField()
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    decision_reason = models.CharField(max_length=255, blank=True, default='')
+    decided_by = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(status__in=['PENDING', 'APPROVED', 'REJECTED']),
+                                               name='recharge_gift_approval_status_valid')]
 
 
 class DisposeRecord(models.Model):
@@ -820,7 +929,7 @@ class DisposeRecord(models.Model):
     dispose_type = models.CharField(
         max_length=16, choices=DisposeType.choices, db_index=True
     )
-    amount = models.PositiveIntegerField()  # 奖励/罚款兴安币（内部账务单位）
+    amount = models.PositiveIntegerField()  # 奖励/罚款浪花（内部账务单位）
     reason = models.CharField(max_length=255, blank=True, default='')
     operator = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -860,4 +969,11 @@ class DisposeRecord(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.get_dispose_type_display()}#{self.pk} {self.user.username} {self.amount / 10:g}兴安币"
+        return f"{self.get_dispose_type_display()}#{self.pk} {self.user.username} {self.amount / 10:g}{current_currency_name()}"
+
+
+from .cash_deposit_models import CashDepositTopup  # noqa: E402,F401
+from .deposit_payment_models import DepositPaymentSnapshot  # noqa: E402,F401
+from .deposit_application_models import DepositRefundApplication  # noqa: E402,F401
+from .refund_deposit_models import RefundDepositCashRepayment, RefundDepositDeficit, RefundDepositIncomeApplication, RefundDepositRepayment  # noqa: E402,F401
+from .refund_deposit_models import RefundDepositRecoveryPermit  # noqa: E402,F401

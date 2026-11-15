@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A real review notice and new report keep their correct browser location."""
 import json
 import os
@@ -25,9 +26,9 @@ class ProviderVueReportNavigationHTTPTest(LiveServerTestCase):
     ok = flow.ProviderAfterSaleStatusTest.ok
 
     def exercise(self, leave_early=''):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         self.login(self.boss)
         first = self.ok(self.client.post('/api/orders/create/', {'service_id':self.service.pk,
             'provider_id':self.accounts[self.provider.pk].pk, 'client_request_id':'report-navigation-a'}, format='json'))
@@ -47,7 +48,7 @@ class ProviderVueReportNavigationHTTPTest(LiveServerTestCase):
         result = subprocess.run(['node', str(repo / 'scripts/provider-vue-report-navigation-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'first':first, 'second':second,
                 'messageId':notice.pk, 'id':self.accounts[self.provider.pk].pk,
-                'token':self.tokens[self.provider.pk], 'fixed':os.environ.get('XA_REPORT_ROUTE_FIXED') == '1',
+                'token':self.tokens[self.provider.pk], 'fixed':True,
                 'leaveEarly':leave_early}), text=True, encoding='utf-8', capture_output=True, timeout=50, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout.strip())
@@ -64,11 +65,7 @@ class ProviderVueReportNavigationHTTPTest(LiveServerTestCase):
         self.exercise()
 
     def test_leaving_while_new_report_is_pending(self):
-        if os.environ.get('XA_REPORT_ROUTE_FIXED') != '1':
-            self.skipTest('requires updated report navigation')
         self.exercise(leave_early='leave')
 
     def test_changing_report_route_while_creation_is_pending(self):
-        if os.environ.get('XA_REPORT_ROUTE_FIXED') != '1':
-            self.skipTest('requires updated report navigation')
         self.exercise(leave_early='same')

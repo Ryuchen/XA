@@ -41,7 +41,7 @@ class ProviderAfterSaleStatusTest(APITransactionTestCase):
         self.media_settings = override_settings(MEDIA_ROOT=self.media.name)
         self.media_settings.enable()
         self.addCleanup(self.media_settings.disable)
-        self.boss, self.provider = make_user(), make_provider()
+        self.boss, self.provider = make_user(), make_provider(deposit_paid=40000)
         self.staff = make_console_user(['report:view', 'report:audit', 'order:view', 'order:settle'])
         self.accounts = {u.pk: get_or_create_account_for_legacy_user(u) for u in (self.boss, self.provider, self.staff)}
         self.tokens = {pk: issue_account_tokens(account)[0] for pk, account in self.accounts.items()}

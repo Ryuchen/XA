@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
-from django.conf import settings
+from stores.conf import settings
 
 
 class KookError(Exception):

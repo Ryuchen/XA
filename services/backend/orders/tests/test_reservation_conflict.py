@@ -100,16 +100,16 @@ class ValidateReservationWindowTest(TestCase):
             validate_reservation_window(start, end)
         self.assertIn('晚于当前时间', str(ctx.exception))
 
-    def test_rejects_too_short(self):
+    def test_rejects_unaligned_short_duration(self):
         start = slot(hour=10)
-        end = slot(hour=10, minute=15)
+        end = slot(hour=10, minute=10)
         with self.assertRaises(ReservationWindowError) as ctx:
             validate_reservation_window(start, end)
-        self.assertIn(f'{MIN_DURATION_MINUTES} 分钟', str(ctx.exception))
+        self.assertIn(f'{SLOT_MINUTES} 分钟刻度', str(ctx.exception))
 
     def test_accepts_exact_min_duration(self):
         start = slot(hour=10)
-        end = slot(hour=10, minute=30)
+        end = slot(hour=10, minute=15)
         self.assertEqual(
             validate_reservation_window(start, end), MIN_DURATION_MINUTES,
         )
@@ -144,10 +144,12 @@ class ReservationConflictBoundaryTest(TestCase):
     """九个边界位置的冲突判定。"""
 
     def setUp(self):
+        from console.reservation_deadlines import save_deadlines
+        save_deadlines(30, 60, 0, lambda *_: None)
         self.boss = make_user()
         self.boss_account = get_or_create_account_for_legacy_user(self.boss)
         link_legacy_relations(self.boss, self.boss_account)
-        self.provider = make_provider()
+        self.provider = make_provider(deposit_mode='EARNINGS')
         self.provider_account = bind(self.provider)
         self.provider_account.account_type = ClubAccount.AccountType.PROVIDER
         self.provider_account.save(update_fields=['account_type'])
@@ -207,14 +209,20 @@ class ReservationConflictBoundaryTest(TestCase):
         self.existing.save(update_fields=['status'])
         self.assertFalse(self._conflicts(10, 12))
 
-    def test_converted_reservation_frees_the_slot(self):
+    def test_converted_reservation_without_an_order_requires_reconciliation(self):
         self.existing.status = Reservation.Status.CONVERTED
-        self.existing.save(update_fields=['status'])
-        self.assertFalse(self._conflicts(10, 12))
+        self.existing.payment_deadline = timezone.now()+timedelta(minutes=60)
+        self.existing.payment_timeout_minutes = 60
+        self.existing.payment_config_version = 1
+        self.existing.save(update_fields=['status', 'payment_deadline', 'payment_timeout_minutes', 'payment_config_version'])
+        self.assertTrue(self._conflicts(10, 12))
 
     def test_confirmed_reservation_still_occupies(self):
         self.existing.status = Reservation.Status.CONFIRMED
-        self.existing.save(update_fields=['status'])
+        self.existing.payment_deadline = timezone.now()+timedelta(minutes=60)
+        self.existing.payment_timeout_minutes = 60
+        self.existing.payment_config_version = 1
+        self.existing.save(update_fields=['status', 'payment_deadline', 'payment_timeout_minutes', 'payment_config_version'])
         self.assertTrue(self._conflicts(10, 12))
 
     def test_other_provider_is_not_affected(self):
@@ -277,10 +285,12 @@ class ReservationPessimisticLockTest(TransactionTestCase):
     reset_sequences = True
 
     def setUp(self):
+        from console.reservation_deadlines import save_deadlines
+        save_deadlines(30, 60, 0, lambda *_: None)
         self.boss = make_user()
         self.boss_account = get_or_create_account_for_legacy_user(self.boss)
         link_legacy_relations(self.boss, self.boss_account)
-        self.provider = make_provider()
+        self.provider = make_provider(deposit_mode='EARNINGS')
         self.provider_account = bind(self.provider)
         self.provider_account.account_type = ClubAccount.AccountType.PROVIDER
         self.provider_account.save(update_fields=['account_type'])

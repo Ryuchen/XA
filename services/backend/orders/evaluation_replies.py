@@ -18,7 +18,7 @@ def reply_notice_preview(evaluation):
 
 def write_reply_if_current(evaluation, content, version, author):
     now = timezone.now()
-    changed = Evaluation.objects.filter(pk=evaluation.pk, reply_version=version).update(
+    changed = Evaluation.objects.filter(pk=evaluation.pk, reply_version=version, voided_at__isnull=True).update(
         reply_content=content, reply_author=author, replied_at=now, updated_at=now,
         reply_version=F('reply_version') + 1,
     )

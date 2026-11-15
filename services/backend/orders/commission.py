@@ -20,25 +20,20 @@ def integer(value, label, maximum=MAX_AMOUNT):
 
 
 def override_from(data):
-    mode = data.get('commission_type', 'AUTO')
-    if mode not in ('AUTO','PERCENT','FIXED'):
-        raise PricingError('抽成方式须为AUTO、PERCENT或FIXED')
-    if mode == 'FIXED':
-        value = data.get('commission_fixed', data.get('commission_fixed_total'))
-        fixed = integer(value, '整单固定抽成金额')
-        if 'commission_fixed_total' in data and integer(data['commission_fixed_total'],'整单固定抽成金额') != fixed:
-            raise PricingError('整单固定抽成金额不一致')
-        return {'commission_type':mode,'commission_fixed':fixed}
-    result = {'commission_type':mode}
-    if mode == 'PERCENT' and data.get('commission_rate') not in (None,''):
-        result['commission_rate'] = integer(data['commission_rate'],'抽成率',100)
-    return result
+    # This parses a *per-order* request, not the independent store, service,
+    # promotion, gift or historical snapshot configuration.
+    if (data.get('commission_type', 'AUTO') != 'AUTO'
+            or any(data.get(key) not in (None, '') for key in
+                   ('commission_rate', 'commission_fixed', 'commission_fixed_total'))):
+        raise PricingError('不允许修改单笔订单抽成，请使用门店适用规则')
+    return {'commission_type': 'AUTO'}
 
 
-def global_config():
+def global_config(*, values=None):
     from django.conf import settings
     from wallet.models import SystemConfig, COMMISSION_RATE_KEY
-    values = dict(SystemConfig.objects.filter(key__in=[TYPE_KEY,FIXED_KEY,COMMISSION_RATE_KEY]).values_list('key','value'))
+    if values is None:
+        values = dict(SystemConfig.objects.filter(key__in=[TYPE_KEY,FIXED_KEY,COMMISSION_RATE_KEY]).values_list('key','value'))
     mode = values.get(TYPE_KEY, 'PERCENT')
     if mode not in ('PERCENT','FIXED'):
         mode = 'PERCENT'
@@ -79,25 +74,55 @@ def automatic(service, amount):
 LABELS = {'club_experience':'体验单自动规则','order_grade':'订单档位自动规则',
           'club_companion':'陪玩单自动20%','gift':'礼物独立抽成规则',
           'promotion':'活动配置','service':'服务配置','global':'全局订单配置',
-          'level':'陪玩等级','manual':'手工派单','order_snapshot':'订单快照'}
+          'level':'陪玩等级','manual':'手工派单','order_snapshot':'订单快照',
+          'game_commission':'门店游戏抽成'}
 
 
-def resolve(service, amount, *, profile=None, promotion=None, override=None):
+_GAME_PROFILE_UNSET = object()
+
+
+def resolve(service, amount, *, profile=None, promotion=None, override=None, global_rate=None,
+            existing_game_order=False, game_profile=_GAME_PROFILE_UNSET, global_rules=None):
     requested = override or {'commission_type':'AUTO'}
     mode = requested['commission_type']
     is_order = hasattr(service,'provider_requirement_snapshot')
     if is_order:
+        game_snapshot = getattr(service, 'game_commission_snapshot', None)
+        if game_snapshot:
+            if 'rate' not in game_snapshot:
+                raise PricingError('订单陪玩抽成和收益仍待分配')
+            plan = metadata('PERCENT',game_snapshot['rate'],0,'game_commission',locked=True)
+            plan['game_commission_snapshot'] = game_snapshot
+            return plan
         # Never adopt a changed service/global fixed mode for an existing order.
         if getattr(service,'commission_type','PERCENT') == 'FIXED':
             result = ('FIXED',0,min(service.commission_fixed,amount),'order_snapshot')
         elif service.commission_override:
             result = ('PERCENT',service.commission_rate,0,'order_snapshot')
         else:
-            rate,source = resolve_commission_rate_with_source(service,profile,None)
+            rate,source = resolve_commission_rate_with_source(service,profile,None,global_rate=global_rate)
             result = ('PERCENT',rate,0,source)
         return metadata(*result,locked=service.commission_override,custom=service.commission_override)
+    from .game_commission import payment_snapshot
+    try:
+        game_args = {'existing_order': existing_game_order, 'provider': profile,
+                     'legacy_service_rate': existing_game_order}
+        if game_profile is not _GAME_PROFILE_UNSET:
+            game_args['profile'] = game_profile
+        game_snapshot = payment_snapshot(service, **game_args)
+    except ValueError as exc:
+        raise PricingError(str(exc)) from exc
+    if game_snapshot:
+        if promotion is not None and (promotion.commission_type == 'FIXED' or promotion.commission_rate is not None):
+            raise PricingError('活动独立抽成与游戏规则尚未完成衔接，请联系管理员')
+        pending = bool(game_snapshot.get('personal_rules') and 'rate' not in game_snapshot)
+        plan = metadata('PERCENT',None if pending else game_snapshot['rate'],0,'game_commission',locked=True)
+        if pending:
+            plan['commission_allocation_pending'] = True
+        plan['game_commission_snapshot'] = game_snapshot
+        return plan
     forced = automatic(service,amount)
-    rate,source = resolve_commission_rate_with_source(service,profile,promotion)
+    rate,source = resolve_commission_rate_with_source(service,profile,promotion,global_rate=global_rate)
     # Gift/standalone report rules are independent of order commission settings.
     if forced and forced[3] == 'gift':
         if mode == 'FIXED' or getattr(service,'commission_override',False):
@@ -126,7 +151,7 @@ def resolve(service, amount, *, profile=None, promotion=None, override=None):
     # service/global default; existing REGULAR/FUN percentage paths are intact.
     if source == 'promotion':
         return metadata('PERCENT',rate,0,source)
-    config = global_config()
+    config = global_rules if global_rules is not None else global_config()
     if config['commission_type'] == 'FIXED':
         return metadata('FIXED',0,min(config['commission_fixed'],amount),'global',custom=True)
     if source == 'global':
@@ -143,11 +168,19 @@ def metadata(mode, rate, fixed, source, *, locked=False, custom=False):
 
 
 def snapshot(plan):
-    return {key:plan[key] for key in ('commission_type','commission_fixed','commission_override','commission_source')}
+    return {**{key:plan[key] for key in ('commission_type','commission_fixed','commission_override','commission_source')},
+            'game_commission_snapshot': plan.get('game_commission_snapshot', {})}
 
 
-def provider_specs(service, profiles, amount, *, promotion=None, override=None):
-    plan = resolve(service,amount,profile=profiles[0] if profiles else None,promotion=promotion,override=override)
+def provider_specs(service, profiles, amount, *, promotion=None, override=None, global_rate=None):
+    plan = resolve(service,amount,profile=profiles[0] if profiles else None,promotion=promotion,override=override,global_rate=global_rate)
+    if plan.get('commission_allocation_pending'):
+        raise PricingError('订单陪玩抽成和收益仍待分配')
+    if plan['commission_source'] == 'game_commission':
+        if plan.get('game_commission_snapshot', {}).get('personal_rules') and not hasattr(service, 'provider_requirement_snapshot'):
+            return [{'commission_type': 'PERCENT', 'commission_rate': resolve(
+                service, amount, profile=person, promotion=promotion)['commission_rate']} for person in profiles]
+        return [{'commission_type':'PERCENT','commission_rate':plan['commission_rate']} for _ in profiles]
     if plan['commission_type'] == 'FIXED':
         return fixed_specs(amount,len(profiles),plan['commission_fixed'])
     if plan['commission_override']:
@@ -173,7 +206,7 @@ def fixed_specs(amount, count, total):
 
 def quote(service, amount, *, profile=None, promotion=None, override=None, count=None):
     data = resolve(service,amount,profile=profile,promotion=promotion,override=override)
-    count = count or getattr(service,'billing_provider_count',1)
+    count = count or getattr(service,'fulfillment_provider_count',1)
     if data['commission_type'] == 'FIXED':
         shares = build_provider_shares(amount,fixed_specs(amount,count,data['commission_fixed']))
         data['commission_fixed_shares'] = [share.commission_fixed for share in shares]

@@ -60,7 +60,7 @@ class ProviderStaleGrabHTTPTest(LiveServerTestCase):
             'base': self.live_server_url, 'providerToken': tokens[0], 'otherToken': tokens[1],
             'orderId': order.pk, 'orderNo': order.order_no,
         })}
-        result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+        result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-order-contracts.test.mjs')],
                                 env=env, cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=60)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         order.refresh_from_db()

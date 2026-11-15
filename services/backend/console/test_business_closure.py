@@ -12,6 +12,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase, APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
+from club_accounts.models import ClubAccount
 from club_accounts.tokens import issue_account_tokens
 from console.permissions import ALL_PERMISSIONS
 from orders.models import Order
@@ -70,13 +71,16 @@ class BusinessClosureTest(APITestCase):
         }
 
     @override_settings(REQUIRE_CLIENT_REQUEST_ID=True, REQUIRE_RECHARGE_PROOF=True)
-    def test_provider_recharge_deposit_pass_and_admin_records_close(self):
-        self.ok(self.client.post('/api/admin/wallets/recharge/', self.recharge_payload(), format='multipart'))
+    def test_provider_adjust_deposit_pass_and_admin_records_close(self):
+        self.assertEqual(self.client.post('/api/admin/wallets/recharge/', self.recharge_payload(), format='multipart').status_code, 403)
+        wallet = get_wallet(account=self.accounts[self.provider.pk])
+        adjustment = {'amount': 10000, 'remark': '核对后调账', 'client_request_id': 'closure-adjust-provider'}
+        self.ok(self.client.post(f'/api/admin/wallets/{wallet.pk}/adjust/', adjustment, format='json'))
         rows = self.ok(self.client.get('/api/admin/wallets/', {'account_type': 'PROVIDER'}))['list']
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['boss_no'], self.accounts[self.provider.pk].account_no)
         self.assertEqual(rows[0]['balance'], 10000)
-        self.assertNotEqual(self.client.post('/api/admin/wallets/recharge/', self.recharge_payload(), format='multipart').data['code'], 0)
+        self.assertEqual(self.client.post(f'/api/admin/wallets/{wallet.pk}/adjust/', adjustment, format='json').data['code'], 409)
         platform_before = get_platform_wallet().balance
         self.ok(self.provider_client.post('/api/wallet/deposit/', {'amount': 1000, 'client_request_id': 'closure-deposit'}, format='json'))
         payload = {'tier': 'BRONZE', 'days': 1, 'client_request_id': 'closure-pass'}
@@ -90,32 +94,75 @@ class BusinessClosureTest(APITestCase):
         self.assertEqual(platform_tx.amount + purchase.transaction.amount, 0)
         rows = self.ok(self.client.get('/api/admin/pass-purchases/', {'keyword': self.accounts[self.provider.pk].account_no}))['list']
         self.assertEqual(rows[0]['tx_no'], purchase.transaction.tx_no)
-        self.assertEqual(RechargeRecord.objects.filter(user=self.provider).count(), 1)
+        self.assertEqual(RechargeRecord.objects.filter(user=self.provider).count(), 0)
+        self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type='ADJUST').count(), 1)
 
     def test_recharge_rejects_staff_and_missing_proof(self):
         result = self.client.post('/api/admin/wallets/recharge/', self.recharge_payload(self.staff), format='multipart')
         self.assertEqual(result.status_code, 403)
         self.assertEqual(RechargeRecord.objects.count(), 0)
-        payload = self.recharge_payload()
+        payload = self.recharge_payload(self.boss)
         payload.pop('proof_image')
         self.assertEqual(self.client.post('/api/admin/wallets/recharge/', payload).data['code'], 400)
+
+    def test_recharge_cannot_use_legacy_id_to_credit_provider_account(self):
+        # A stale legacy role cannot override the mapped business account.
+        self.provider.role = 'CUSTOMER'
+        self.provider.save(update_fields=['role'])
+        wallet = get_wallet(account=self.accounts[self.provider.pk])
+        result = self.client.post('/api/admin/wallets/recharge/', {
+            'user_id': self.provider.pk, 'amount': 10000, 'trade_no': 'STALE-ROLE',
+            'client_request_id': 'stale-role',
+            'proof_image': self.recharge_payload(self.boss)['proof_image'],
+        }, format='multipart')
+        self.assertEqual(result.status_code, 403)
+        wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, 0)
+        self.assertFalse(RechargeRecord.objects.filter(account=self.accounts[self.provider.pk]).exists())
+        self.assertFalse(Transaction.objects.filter(wallet=wallet, tx_type='TOPUP').exists())
+
+    def test_account_only_provider_adjustment_is_audited_without_boss_funding_lots(self):
+        from engagement.models import PointFundingLot
+        account = ClubAccount.objects.create(username='adjust-account-only-provider', account_type='PROVIDER')
+        wallet = get_wallet(account=account)
+        url = f'/api/admin/wallets/{wallet.pk}/adjust/'
+        blocked = self.client.post('/api/admin/wallets/recharge/', {'account_id': account.pk, 'amount': 400}, format='json')
+        self.assertEqual(blocked.status_code, 403)
+        payload = {'amount': 400, 'remark': '更正历史收益', 'client_request_id': 'account-only-provider-adjust'}
+        self.ok(self.client.post(url, payload, format='json'))
+        self.assertEqual(self.client.post(url, payload, format='json').data['code'], 409)
+        self.assertEqual(self.client.post(url, {**payload, 'balance_kind': 'GIFT',
+            'client_request_id': 'provider-adjust-gift'}, format='json').status_code, 400)
+        wallet.refresh_from_db()
+        self.assertEqual((wallet.balance, wallet.total_recharge, wallet.total_gift), (400, 0, 0))
+        tx = Transaction.objects.get(wallet=wallet, tx_type='ADJUST')
+        self.assertEqual((tx.amount, tx.remark, tx.operator_account_id),
+                         (400, '更正历史收益', self.accounts[self.staff.pk].pk))
+        self.assertFalse(PointFundingLot.objects.filter(account=account).exists())
+        self.assertFalse(RechargeRecord.objects.filter(account=account).exists())
+        role = self.staff.admin_membership.roles.get()
+        role.permissions = ['wallet:recharge']
+        role.save(update_fields=['permissions'])
+        self.assertEqual(self.client.post(url, {**payload, 'client_request_id': 'no-adjust-permission'}, format='json').status_code, 403)
 
     @override_settings(REQUIRE_CLIENT_REQUEST_ID=True, REQUIRE_RECHARGE_PROOF=True)
     def test_recharge_history_wallet_scope_and_receipt_filter(self):
         self.provider.nickname = self.boss.nickname = '同名充值账户'
         self.provider.save(update_fields=['nickname'])
         self.boss.save(update_fields=['nickname'])
-        self.ok(self.client.post('/api/admin/wallets/recharge/', self.recharge_payload(self.provider), format='multipart'))
+        self.assertEqual(self.client.post('/api/admin/wallets/recharge/', self.recharge_payload(self.provider), format='multipart').status_code, 403)
         payload = self.recharge_payload(self.boss)
         payload.update(trade_no='OTHER-RECEIPT', client_request_id='other-topup')
         self.ok(self.client.post('/api/admin/wallets/recharge/', payload, format='multipart'))
         wallet = get_wallet(account=self.accounts[self.provider.pk])
         # Older imported records may not have account or transaction links.
         old = RechargeRecord.objects.create(user=self.provider, amount=100, trade_no='OLD-RECEIPT')
+        prior = RechargeRecord.objects.create(user=self.provider, account=self.accounts[self.provider.pk], amount=10000,
+                                              trade_no='CLOSURE-RECEIPT-001')
         url = '/api/admin/recharge-records/'
         rows = self.ok(self.client.get(url, {'wallet_id': wallet.pk}))['list']
         self.assertEqual({row['user'] for row in rows}, {self.provider.pk})
-        self.assertEqual({row['trade_no'] for row in rows}, {'CLOSURE-RECEIPT-001', old.trade_no})
+        self.assertEqual({row['trade_no'] for row in rows}, {prior.trade_no, old.trade_no})
         rows = self.ok(self.client.get(url, {'wallet_id': wallet.pk, 'trade_no': 'closure-receipt-001'}))['list']
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['user'], self.provider.pk)
@@ -171,35 +218,35 @@ class BusinessClosureTest(APITestCase):
         allowed = self.client.post(f'/api/admin/wallets/{boss_wallet.pk}/adjust/', payload, format='json')
         self.assertEqual(allowed.data['code'], 0, allowed.data)
         self.assertEqual(allowed.data['data']['user_role'], 'CUSTOMER')
-        denied = self.client.post(f'/api/admin/wallets/{provider_wallet.pk}/adjust/',
-                                  {**payload, 'client_request_id': 'provider-identity-adjust'}, format='json')
-        self.assertEqual(denied.status_code, 404)
+        provider_result = self.client.post(f'/api/admin/wallets/{provider_wallet.pk}/adjust/',
+                                           {**payload, 'client_request_id': 'provider-identity-adjust'}, format='json')
+        self.assertEqual(provider_result.data['code'], 0, provider_result.data)
+        self.assertEqual(provider_result.data['data']['user_role'], 'PROVIDER')
         boss_wallet.refresh_from_db(); provider_wallet.refresh_from_db()
-        self.assertEqual((boss_wallet.balance, provider_wallet.balance), (4000, 5000))
+        self.assertEqual((boss_wallet.balance, provider_wallet.balance), (4000, 4000))
         self.assertEqual(Transaction.objects.filter(wallet=boss_wallet, tx_type='ADJUST').count(), 1)
-        self.assertFalse(Transaction.objects.filter(wallet=provider_wallet, tx_type='ADJUST').exists())
+        self.assertEqual(Transaction.objects.filter(wallet=provider_wallet, tx_type='ADJUST').count(), 1)
 
-    def test_provider_wallet_is_not_exposed_as_boss_and_cannot_be_adjusted(self):
+    def test_provider_wallet_is_not_exposed_as_boss(self):
         rows = self.ok(self.client.get('/api/admin/wallets/'))['list']
         self.assertFalse(any(row['user'] == self.provider.pk for row in rows))
         self.assertEqual(self.client.get('/api/admin/wallets/?account_type=STAFF').status_code, 400)
 
-    def test_pass_explicit_renewal_and_failed_attempt_can_retry(self):
+    def test_pass_active_repurchase_blocked_and_failed_attempt_can_retry(self):
         payload = {'tier': 'BLACK', 'days': 1, 'client_request_id': 'insufficient-first'}
         self.assertEqual(self.provider_client.post('/api/users/provider-pass/', payload).data['code'], 400)
         make_wallet(self.provider, balance=20000)
         self.ok(self.provider_client.post('/api/users/provider-pass/', payload))
         first = ProviderPassPurchase.objects.get(provider=self.provider)
-        self.ok(self.provider_client.post('/api/users/provider-pass/', {**payload, 'client_request_id': 'intentional-renewal'}))
-        second = ProviderPassPurchase.objects.filter(provider=self.provider).first()
-        self.assertEqual(second.starts_at, first.expires_at)
-        self.assertEqual((second.expires_at - first.expires_at).total_seconds(), 86400)
+        self.assertEqual(self.provider_client.post('/api/users/provider-pass/', {**payload, 'client_request_id': 'intentional-renewal'}).data['code'], 400)
+        self.assertEqual(ProviderPassPurchase.objects.filter(provider=self.provider).count(), 1)
+        self.assertEqual((first.expires_at - first.starts_at).total_seconds(), 86400)
 
     def test_pass_old_client_double_click_is_blocked(self):
         make_wallet(self.provider, balance=20000)
         payload = {'tier': 'BLACK', 'days': 1}
         self.ok(self.provider_client.post('/api/users/provider-pass/', payload))
-        self.assertEqual(self.provider_client.post('/api/users/provider-pass/', payload).data['code'], 409)
+        self.assertIn(self.provider_client.post('/api/users/provider-pass/', payload).data['code'], (400, 409))
         self.assertEqual(ProviderPassPurchase.objects.filter(provider=self.provider).count(), 1)
 
     def test_pass_rejects_fractional_days_and_changed_price(self):

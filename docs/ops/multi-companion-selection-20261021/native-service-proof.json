@@ -1,0 +1,7 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "passed": true,
+  "double_service_can_select": true,
+  "price_unchanged": true,
+  "order_submitted": false
+}

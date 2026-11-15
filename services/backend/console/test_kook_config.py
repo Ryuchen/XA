@@ -69,7 +69,7 @@ class KookConfigTest(APITestCase):
         self.game = GameCategory.objects.create(name='测试游戏')
         self.gameplay = Gameplay.objects.create(name='测试玩法', code='kook-test')
         self.service = make_service(game_category=self.game, gameplay=self.gameplay, platform='PC', security_level='ANY')
-        self.order = make_order(make_user(), service=self.service, amount=8000, provider_income=6400,
+        self.order = make_order(make_user(), service=self.service, amount=8000, original_amount=10000, provider_income=6400,
             remark='内部原价100元老板实付80元', game_region='微信区',
             gameplay_snapshot={'id': self.gameplay.pk, 'name': '测试玩法', 'platform': 'PC', 'price_unit': '小时'})
         self.url = '/api/admin/config/kook-dispatch/'
@@ -166,8 +166,8 @@ class KookConfigTest(APITestCase):
         self.assertEqual(route_for_order(get_kook_config(), self.order)['id'], 'default')
 
     def test_preview_distinguishes_queued_snapshot_from_current_retry_configuration(self):
-        old_template = '旧频道 {order_no} {provider_income}'
-        new_template = '新频道 {order_no} {provider_income}'
+        old_template = '旧频道 {order_no} {original_amount}'
+        new_template = '新频道 {order_no} {original_amount}'
         self.save(routes=[self.route(template=old_template)])
         url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
         key = self.client.get(url).data['data']['channels'][0]['confirmation_key']
@@ -207,13 +207,13 @@ class KookConfigTest(APITestCase):
 
     @override_settings(WECOM_DISPATCH_ENABLED=True, WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=isolated-test')
     def test_stale_multi_channel_confirmation_never_partially_queues(self):
-        self.save(routes=[self.route(template='旧规则 {order_no} {provider_income}')])
+        self.save(routes=[self.route(template='旧规则 {order_no} {original_amount}')])
         url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
         def keys():
             return {item['channel']: item['confirmation_key'] for item in self.client.get(url).data['data']['channels']}
         old = keys()
         self.assertEqual(self.client.post(url, {'channels': ['KOOK']}, format='json').status_code, 400)
-        self.save(revision=1, routes=[self.route(channel_id='999999', template='新规则 {order_no} {provider_income}')])
+        self.save(revision=1, routes=[self.route(channel_id='999999', template='新规则 {order_no} {original_amount}')])
         rejected = self.client.post(url, {'channels': ['KOOK', 'WECOM'], 'confirmation_keys': old}, format='json')
         self.assertEqual((rejected.status_code, rejected.data['errorCode']), (409, 'DISPATCH_PREVIEW_CHANGED'))
         self.assertFalse(KookDispatchRecord.objects.filter(order=self.order).exists())
@@ -253,9 +253,9 @@ class KookConfigTest(APITestCase):
             self.assertNotIn('test-only-secret', json.dumps(data, default=str))
             return data['channels'][0]['confirmation_key']
         changes = [
-            {'routes': [self.route(template='改动 {order_no} {provider_income}')]},
-            {'routes': [self.route(template='改动 {order_no} {provider_income}')], 'provider_order_url': 'https://example.test/new'},
-            {'routes': [self.route(template='改动 {order_no} {provider_income}', mention_role_ids=['456'])], 'provider_order_url': 'https://example.test/new'},
+            {'routes': [self.route(template='改动 {order_no} {original_amount}')]},
+            {'routes': [self.route(template='改动 {order_no} {original_amount}')], 'provider_order_url': 'https://example.test/new'},
+            {'routes': [self.route(template='改动 {order_no} {original_amount}', mention_role_ids=['456'])], 'provider_order_url': 'https://example.test/new'},
         ]
         for revision, change in enumerate(changes, start=1):
             old = key()
@@ -265,9 +265,9 @@ class KookConfigTest(APITestCase):
             self.assertFalse(KookDispatchRecord.objects.filter(order=self.order).exists())
 
     def test_prepared_plan_is_queued_unchanged_if_configuration_changes_after_check(self):
-        self.save(routes=[self.route(template='已确认 {order_no} {provider_income}')])
+        self.save(routes=[self.route(template='已确认 {order_no} {original_amount}')])
         _, plans = dispatch_preview(self.order, include_plans=True)
-        self.save(revision=1, routes=[self.route(channel_id='999999', template='后改 {order_no} {provider_income}')])
+        self.save(revision=1, routes=[self.route(channel_id='999999', template='后改 {order_no} {original_amount}')])
         record = queue_dispatch(self.order, 'KOOK', manual=True, prepared=plans['KOOK'])
         self.assertEqual(record.channel_id, '123456')
         self.assertIn('已确认', record.content)
@@ -312,17 +312,17 @@ class KookConfigTest(APITestCase):
     @patch('orders.kook_dispatch._send_task_safely')
     @patch('integrations.kook.KookClient.send_channel_message', return_value=KookMessageResult('msg-1'))
     def test_actual_queued_card_matches_preview_and_retains_template_snapshot(self, send, enqueue):
-        self.save(routes=[self.route(template='指定频道\n{order_no}\n单钱 {provider_income} 币 / ¥{provider_income_yuan}')])
+        self.save(routes=[self.route(template='指定频道\n{order_no}\n原价 {original_amount} {currency_name}')])
         preview = dispatch_preview(self.order)['channels'][0]
         self.assertEqual(preview['target_id'], '123456')
-        self.assertIn('640 币 / ¥64.00', preview['content'])
+        self.assertIn('原价 1000 浪花', preview['content'])
         with self.captureOnCommitCallbacks(execute=True):
             record = queue_dispatch(self.order, 'KOOK')
             again = queue_dispatch(self.order, 'KOOK')
         self.assertEqual(record.pk, again.pk)
         enqueue.assert_called_once()
         self.assertEqual(record.content, preview['content'])
-        self.save(revision=1, routes=[self.route(template='新文案 {order_no} {provider_income}')])
+        self.save(revision=1, routes=[self.route(template='新文案 {order_no} {original_amount}')])
         self.assertEqual(deliver_dispatch('KOOK', record.pk), 'sent:msg-1')
         self.assertIn('指定频道', send.call_args.kwargs['content'])
         self.assertNotIn('test-only-secret', send.call_args.kwargs['content'])

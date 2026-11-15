@@ -1,0 +1,28 @@
+.admin-application { font-size: 16px; line-height: 1.65; }
+.admin-page-header h1 { line-height: calc(32 / 24); }
+.admin-table-panel [data-slot="table-cell"] { line-height: calc(20 / 14); }
+.admin-table-panel [data-slot="table-head"] { color: var(--muted-foreground); }
+.admin-table-panel { box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
+.admin-topbar { background: color-mix(in oklab, var(--background) 90%, transparent); backdrop-filter: blur(20px); }
+.admin-sidebar .admin-navigation { padding-top: 8px; }
+.admin-navigation a { font-weight: 400; }
+.admin-navigation a[aria-current="page"] { font-weight: 500; }
+.admin-feature-header { padding: 20px; }
+.admin-feature-header [data-variant="default"] { font-weight: 500; }
+.admin-dashboard > [data-slot="card"] { gap: 24px; }
+.admin-dashboard [data-slot="chart"] { font-family: var(--app-font-sans); }
+.admin-login-brand { background-image: radial-gradient(circle at 18% 12%, rgb(56 189 248 / 15%), transparent 35%), radial-gradient(circle at 90% 72%, rgb(37 99 235 / 21%), transparent 38%); }
+.admin-login-brand > :not(.admin-login-grid) { position: relative; z-index: 1; }
+.admin-login-grid { position: absolute; inset: 0; opacity: .08; pointer-events: none; background-image: linear-gradient(rgb(255 255 255 / 70%) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 70%) 1px, transparent 1px); background-size: 32px 32px; }
+.admin-login-brand h1 { font-size: 42px; line-height: 1.2; letter-spacing: -.04em; }
+.admin-login-form h2 { font-size: 20px; line-height: 28px; letter-spacing: normal; }
+.admin-function-results { display: grid; gap: 8px; max-height: 380px; overflow-y: auto; }
+.admin-function-results > a { display: flex; align-items: center; justify-content: space-between; min-height: var(--control-size-medium); gap: 12px; border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 14px; line-height: 20px; }
+.admin-function-results > a:hover { background: var(--accent); border-color: color-mix(in oklab, var(--primary) 35%, var(--border)); }
+.admin-function-results > a:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.admin-support-header { font-size: 16px; line-height: 1.65; }
+.admin-audition-editor [data-slot="input"] { min-height: var(--control-size-medium); }
+.admin-chat-page [data-chat-session] { font-size: 16px; line-height: 1.65; }
+.admin-chat-page [data-chat-session] > section:first-child input { min-height: 40px; }
+.admin-chat-search input { height: 40px; min-height: 40px; }
+@media (min-width: 768px) { .admin-feature-header { padding: 24px; } }

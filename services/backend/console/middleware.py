@@ -10,8 +10,9 @@ from .permissions import is_console_account
 
 WRITE_METHODS = {'POST', 'PUT', 'PATCH', 'DELETE'}
 API_ADMIN_PREFIX = '/api/admin/'
-SENSITIVE_KEYS = {'id_number', 'id_number_ciphertext', 'id_number_hash', 'id_front', 'id_back', 'deposit_proof', 'password', 'old_password', 'new_password', 'token', 'refresh', 'secret',
-                  'bot_token', 'bot_token_ciphertext', 'kook_bot_token','otpcode','otpchallenge','otpsecret','otpuri','otpqr','recoverycodes','otprecoverycodes'}
+STORE_ADMIN_PREFIX = '/api/stores/manage/'
+SENSITIVE_KEYS = {'license_code', 'licensecode', 'id_number', 'id_number_ciphertext', 'id_number_hash', 'id_front', 'id_back', 'deposit_proof', 'password', 'admin_password', 'adminpassword', 'old_password', 'new_password', 'token', 'refresh', 'secret',
+                  'bot_token', 'bot_token_ciphertext', 'kook_bot_token', 'webhook', 'webhook_ciphertext','otpcode','otpchallenge','otpsecret','otpuri','otpqr','recoverycodes','otprecoverycodes'}
 MAX_BODY_CHARS = 4000
 
 
@@ -35,6 +36,9 @@ def _client_ip(request):
 
 def _parse_resource(path):
     """从 /api/admin/orders/12/refund/ 解析出 resource=orders、object_id=12。"""
+    if path.startswith(STORE_ADMIN_PREFIX):
+        tail = path[len(STORE_ADMIN_PREFIX):].strip('/')
+        return 'stores', tail[:64] if tail.isdigit() else ''
     tail = path[len(API_ADMIN_PREFIX):].strip('/')
     parts = tail.split('/') if tail else []
     resource = parts[0] if parts else ''
@@ -51,7 +55,7 @@ class AdminAuditMiddleware:
         method = request.method
         need_audit = (
             method in WRITE_METHODS
-            and path.startswith(API_ADMIN_PREFIX)
+            and path.startswith((API_ADMIN_PREFIX, STORE_ADMIN_PREFIX))
         )
         # 在视图消费请求流之前缓存 body，避免响应阶段无法再读取
         raw_body = b''

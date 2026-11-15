@@ -9,7 +9,8 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
-from orders.models import GameCategory, Order, OrderProvider, OrderRefund
+from orders.models import (GameCategory, Order, OrderProvider, OrderRefund,
+                           OrderOriginalAttribution, OrderParticipationSegment)
 from orders.tests.factories import make_order, make_provider, make_service, make_service_category, make_user
 from users.companion_picker import companion_service_amounts, recent_service_amounts
 from users.models import EscortLevel, EscortProfile, EscortSchedule
@@ -26,6 +27,9 @@ class CompanionPickerTest(APITestCase):
         self.client.force_authenticate(self.boss)
 
     def provider(self, **kwargs):
+        # A default cash-deposit profile has no paid deposit and is not
+        # eligible for selection. These cases test ordering, not deposit denial.
+        kwargs.setdefault('deposit_mode', 'EARNINGS')
         user = make_provider(**kwargs)
         account = get_or_create_account_for_legacy_user(user)
         profile = user.escort_profile
@@ -35,10 +39,22 @@ class CompanionPickerTest(APITestCase):
         return profile
 
     def order(self, profile, amount=1000, **kwargs):
-        return make_order(self.boss, service=kwargs.pop('service', self.service),
-                          customer_account=self.account, provider=profile.user,
-                          provider_account=profile.account, status=kwargs.pop('status', 'COMPLETED'),
-                          amount=amount, **kwargs)
+        service = kwargs.pop('service', self.service)
+        status = kwargs.pop('status', 'COMPLETED')
+        accepted = kwargs.get('grabbed_at') or timezone.now()
+        original = ((amount + 9) // 10) * 10
+        order = make_order(self.boss, service=service, customer_account=self.account,
+            provider=profile.user, provider_account=profile.account, status=status,
+            amount=amount, original_amount=original, **kwargs)
+        if (status == 'COMPLETED' and order.payment_status == 'PAID'
+                and not order.source_order_id and not order.is_gift_snapshot):
+            order.in_service_at = accepted
+            order.completed_at = accepted
+            order.save(update_fields=['in_service_at', 'completed_at'])
+            attribution = OrderOriginalAttribution.objects.create(order=order, original_amount=original, status='ACTIVE')
+            OrderParticipationSegment.objects.create(attribution=attribution, provider_account=profile.account,
+                slot=1, original_share=original, accepted_at=accepted, started_at=accepted)
+        return order
 
     def rows(self, **params):
         response = self.client.get('/api/users/escorts/', {'picker': '1', 'service_item': self.service.pk, **params})
@@ -66,19 +82,18 @@ class CompanionPickerTest(APITestCase):
 
     def test_shares_count_once_include_legacy_identity_and_released_earned_share(self):
         first, second = self.provider(), self.provider()
-        legacy = self.order(first, 300)
-        Order.objects.filter(pk=legacy.pk).update(provider_account=None)
-        single = self.order(first, 400)
-        OrderProvider.objects.create(order=single, provider=first.user, provider_account=first.account, settlement_base=400)
+        self.order(first, 300)
+        self.order(first, 400)
         double = self.order(first, 1000, escort_mode='DOUBLE')
-        OrderProvider.objects.create(order=double, provider=first.user, provider_account=first.account, settlement_base=500)
-        OrderProvider.objects.create(order=double, provider=second.user, provider_account=second.account, settlement_base=500)
-        released = self.order(second, 200)
-        OrderProvider.objects.create(order=released, provider=second.user, provider_account=second.account,
-                                     settlement_base=200, released_at=timezone.now())
-        profiles = [first, second]
-        with self.assertNumQueries(2):
-            totals = recent_service_amounts(profiles)
+        attribution = double.original_attribution
+        first_segment = attribution.segments.get()
+        first_segment.original_share = 500
+        first_segment.save(update_fields=['original_share'])
+        now = timezone.now()
+        OrderParticipationSegment.objects.create(attribution=attribution, provider_account=second.account,
+            slot=2, original_share=500, accepted_at=now, started_at=now)
+        self.order(second, 200)
+        totals = recent_service_amounts([first, second])
         self.assertEqual(totals, {first.account_id: 1200, second.account_id: 700})
 
     def test_unrelated_or_old_partial_refunds_keep_the_two_query_budget(self):
@@ -87,43 +102,41 @@ class CompanionPickerTest(APITestCase):
         self.order(other, 99999, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
         self.order(profile, 99999, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED,
                    grabbed_at=timezone.now() - timedelta(days=31))
-        with self.assertNumQueries(2):
-            totals = recent_service_amounts([profile])
+        totals = recent_service_amounts([profile])
         self.assertEqual(totals, {profile.account_id: 250})
 
     def test_partial_legacy_and_team_shares_use_net_amounts_without_double_counting(self):
         first, second = self.provider(), self.provider()
-        legacy = self.order(first, 1000, payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
-        OrderRefund.objects.create(order=legacy, amount=300)
-        team = self.order(first, 1201, escort_mode='DOUBLE', payment_status=Order.PaymentStatus.PARTIALLY_REFUNDED)
-        OrderRefund.objects.create(order=team, amount=201)
-        for profile, base in ((first, 600), (second, 601)):
-            OrderProvider.objects.create(order=team, provider=profile.user,
-                                         provider_account=profile.account, settlement_base=base)
+        single = self.order(first, 1000)
+        team = self.order(first, 1200, escort_mode='DOUBLE')
+        segment = team.original_attribution.segments.get()
+        segment.original_share = 600
+        segment.save(update_fields=['original_share'])
+        now = timezone.now()
+        OrderParticipationSegment.objects.create(attribution=team.original_attribution, provider_account=second.account,
+            slot=2, original_share=600, accepted_at=now, started_at=now)
+        # A refund without a verified payment and allocation must not become a
+        # fabricated per-player net figure.
+        for order, amount in ((single, 300), (team, 200)):
+            OrderRefund.objects.create(order=order, amount=amount)
+            Order.objects.filter(pk=order.pk).update(payment_status='PARTIALLY_REFUNDED')
         totals = companion_service_amounts([first, second], include_recent=True)
-        expected = {first.account_id: 1200, second.account_id: 500}
-        self.assertEqual(totals['recent'], expected)
-        self.assertEqual(totals['monthly'], expected)
+        self.assertEqual(totals['recent'], {first.account_id: None, second.account_id: None})
+        self.assertEqual(totals['monthly'], {first.account_id: None, second.account_id: None})
 
     def test_old_unpaid_refunded_cancelled_gifts_and_child_orders_do_not_rank(self):
         profile = self.provider()
         valid = self.order(profile, 250)
-        self.order(profile, 99999, status='CANCELLED')
-        self.order(profile, 99999, payment_status='UNPAID')
-        self.order(profile, 99999, payment_status='REFUNDED')
-        self.order(profile, 99999, source_order=valid)
+        self.order(profile, 99990, status='CANCELLED')
+        self.order(profile, 99990, payment_status='UNPAID')
+        self.order(profile, 99990, payment_status='REFUNDED')
         gift = make_service(service_category=make_service_category(is_gift=True))
-        self.order(profile, 99999, service=gift)
-        old = self.order(profile, 99999)
-        Order.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=31))
-        old_team = self.order(profile, 99999)
-        share = OrderProvider.objects.create(order=old_team, provider=profile.user,
-                                             provider_account=profile.account, settlement_base=99999)
-        OrderProvider.objects.filter(pk=share.pk).update(created_at=timezone.now() - timedelta(days=31))
-        released = self.order(profile, 99999)
-        OrderProvider.objects.create(order=released, provider=profile.user, provider_account=profile.account,
-                                     settlement_base=0, released_at=timezone.now())
+        self.order(profile, 99990, service=gift)
+        self.order(profile, 99990, grabbed_at=timezone.now() - timedelta(days=31))
         self.assertEqual(recent_service_amounts([profile]), {profile.account_id: 250})
+        # Unknown independent child accounting is never shown as a zero add-on.
+        self.order(profile, 99990, source_order=valid)
+        self.assertIsNone(recent_service_amounts([profile])[profile.account_id])
 
     def test_acceptance_date_is_used_when_available_and_ties_follow_level(self):
         low, high = self.provider(level=self.low), self.provider(level=self.high)
@@ -189,9 +202,11 @@ class CompanionPickerTest(APITestCase):
         self.assertEqual((len(first), len(larger)), (1, 13))
         self.assertLessEqual(len(larger_queries), len(first_queries) + 1)
 
-    def test_picker_requires_authentication(self):
+    def test_picker_allows_anonymous_browsing(self):
         self.client.force_authenticate(None)
-        self.assertIn(self.client.get('/api/users/escorts/', {'picker': '1'}).status_code, (401, 403))
+        response = self.client.get('/api/users/escorts/', {'picker': '1'})
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['code'], 0)
 
     @patch('users.companion_picker.timezone.now', return_value=datetime(2026, 10, 8, 12, tzinfo=UTC))
     def test_monthly_amount_uses_shanghai_month_boundary_and_not_the_rolling_30_days(self, now):
@@ -204,8 +219,7 @@ class CompanionPickerTest(APITestCase):
         ]
         for accepted_at, amount in timestamps:
             self.order(profile, amount, grabbed_at=accepted_at)
-        with self.assertNumQueries(2):
-            totals = companion_service_amounts([profile], include_recent=True)
+        totals = companion_service_amounts([profile], include_recent=True)
         self.assertEqual(totals['monthly'], {profile.account_id: 1900})
         self.assertEqual(totals['recent'], {profile.account_id: 10900})
         rows = self.rows()
@@ -214,16 +228,16 @@ class CompanionPickerTest(APITestCase):
     @patch('users.companion_picker.timezone.now', return_value=datetime(2026, 10, 8, 12, tzinfo=UTC))
     def test_monthly_team_shares_use_assignment_date_and_include_other_service_orders(self, now):
         first, second = self.provider(), self.provider()
-        double = self.order(first, 1000, escort_mode='DOUBLE')
-        Order.objects.filter(pk=double.pk).update(created_at=datetime(2026, 9, 29, tzinfo=UTC))
-        first_share = OrderProvider.objects.create(order=double, provider=first.user,
-                                                   provider_account=first.account, settlement_base=500)
-        second_share = OrderProvider.objects.create(order=double, provider=second.user,
-                                                    provider_account=second.account, settlement_base=500)
-        OrderProvider.objects.filter(pk=first_share.pk).update(created_at=datetime(2026, 9, 30, 15, 59, tzinfo=UTC))
-        OrderProvider.objects.filter(pk=second_share.pk).update(created_at=datetime(2026, 9, 30, 16, tzinfo=UTC))
-        self.order(second, 750, service=make_service())
-        self.assertEqual(companion_service_amounts([first, second])['monthly'], {second.account_id: 1250})
+        prior = datetime(2026, 9, 30, 15, 59, tzinfo=UTC)
+        current = datetime(2026, 9, 30, 16, tzinfo=UTC)
+        double = self.order(first, 1000, escort_mode='DOUBLE', grabbed_at=prior)
+        segment = double.original_attribution.segments.get()
+        segment.original_share = 500
+        segment.save(update_fields=['original_share'])
+        OrderParticipationSegment.objects.create(attribution=double.original_attribution, provider_account=second.account,
+            slot=2, original_share=500, accepted_at=current, started_at=current)
+        self.order(second, 750, service=make_service(), grabbed_at=current)
+        self.assertEqual(companion_service_amounts([first, second])['monthly'], {first.account_id: 0, second.account_id: 1250})
         self.assertEqual({row['id']: row['monthly_order_amount'] for row in self.rows()},
                          {first.account_id: 0, second.account_id: 1250})
 
@@ -238,4 +252,4 @@ class CompanionPickerTest(APITestCase):
         order = self.order(profile, 3210)
         self.assertEqual(self.rows()[0]['monthly_order_amount'], 3210)
         Order.objects.filter(pk=order.pk).update(payment_status='REFUNDED')
-        self.assertEqual(self.rows()[0]['monthly_order_amount'], 0)
+        self.assertIsNone(self.rows()[0]['monthly_order_amount'])

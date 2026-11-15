@@ -33,9 +33,13 @@ class ReleaseFlowTest(APITestCase):
         self.settings_override.enable()
         self.addCleanup(self.settings_override.disable)
         self.boss = make_user()
-        self.provider = make_provider()
+        self.provider = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         self.admin = make_console_user(['wallet:recharge', 'report:view', 'report:audit', 'order:dispatch', 'order:view', 'order:refund', 'order:settle'])
         self.accounts = {user.pk: get_or_create_account_for_legacy_user(user) for user in (self.boss, self.provider, self.admin)}
+        provider_account = self.accounts[self.provider.pk]
+        provider_account.openid = 'release-flow-provider'
+        provider_account.is_openid_bound = True
+        provider_account.save(update_fields=['openid', 'is_openid_bound'])
         membership = self.admin.admin_membership
         membership.account = self.accounts[self.admin.pk]
         membership.save(update_fields=['account'])
@@ -44,6 +48,8 @@ class ReleaseFlowTest(APITestCase):
         profile.save(update_fields=['account'])
         self.service = make_service(price=10000, commission_rate=20)
         self.card = SupportContactCard.objects.create(name='负责客服', wecom_corp_id='wwtest', wecom_service_url='https://work.weixin.qq.com/kfid/kf-test')
+        from engagement.models import RechargePackage
+        RechargePackage.objects.create(amount=20000, gift_amount=1000, active=True)
 
     def login(self, user):
         token, _ = issue_account_tokens(self.accounts[user.pk])
@@ -110,7 +116,7 @@ class ReleaseFlowTest(APITestCase):
         self.ok(self.recharge())
         self.assertEqual(self.recharge(request_id='different-request').data['code'], 409)
         self.assertEqual(self.recharge(trade_no='different-receipt').data['code'], 409)
-        self.assertEqual(self.recharge(account=self.accounts[self.provider.pk], request_id='other-boss').data['code'], 409)
+        self.assertEqual(self.recharge(account=self.accounts[self.provider.pk], request_id='other-boss').data['code'], 403)
         self.assertEqual(RechargeRecord.objects.count(), 1)
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 21000)
 
@@ -263,8 +269,11 @@ class ReleaseFlowTest(APITestCase):
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 0)
 
     def prepare_transfer(self):
-        second = make_provider()
+        second = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         account = get_or_create_account_for_legacy_user(second)
+        account.openid = f'release-flow-transfer-{account.pk}'
+        account.is_openid_bound = True
+        account.save(update_fields=['openid', 'is_openid_bound'])
         self.accounts[second.pk] = account
         profile = second.escort_profile
         profile.account = account
@@ -318,12 +327,17 @@ class ReleaseFlowTest(APITestCase):
         self.assertEqual(Wallet.objects.get(user=second).balance, 0)
         self.assertIsNone(OrderProvider.objects.get(order=order, provider=second).released_at)
 
-    def test_double_dispatch_settles_only_after_both_reports_pass(self):
+    def test_double_dispatch_releases_each_after_own_report_is_ready(self):
+        # The direct staff-dispatch entry remains a legacy path; the two
+        # providers' earnings must be independently releasable after review.
         self.service.price = 5000
         self.service.billing_provider_count = 2
         self.service.save(update_fields=['price', 'billing_provider_count'])
-        second = make_provider()
+        second = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         second_account = get_or_create_account_for_legacy_user(second)
+        second_account.openid = f'release-flow-double-{second_account.pk}'
+        second_account.is_openid_bound = True
+        second_account.save(update_fields=['openid', 'is_openid_bound'])
         self.accounts[second.pk] = second_account
         profile = second.escort_profile
         profile.account = second_account
@@ -333,8 +347,8 @@ class ReleaseFlowTest(APITestCase):
             'customer_id': self.accounts[self.boss.pk].pk, 'service_id': self.service.pk,
             'client_request_id': 'double-dispatch-1',
             'escort_mode': 'DOUBLE', 'providers': [
-                {'provider_id': self.accounts[self.provider.pk].pk, 'commission_rate': 20},
-                {'provider_id': second_account.pk, 'commission_rate': 30},
+                {'provider_id': self.accounts[self.provider.pk].pk},
+                {'provider_id': second_account.pk},
             ],
         }
         data = self.ok(self.client.post('/api/admin/orders/dispatch/', dispatch_request, format='json'))
@@ -357,10 +371,10 @@ class ReleaseFlowTest(APITestCase):
             self.ok(self.client.post(f"/api/admin/reports/{report['id']}/approve/"))
             self.settle_after_window()
             if user.pk == self.provider.pk:
-                self.assertEqual(Wallet.objects.get(user=self.provider).balance, 0)
+                self.assertEqual(Wallet.objects.get(user=self.provider).balance, 4000)
                 self.assertEqual(Wallet.objects.get(user=second).balance, 0)
         self.assertEqual(Wallet.objects.get(user=self.provider).balance, 4000)
-        self.assertEqual(Wallet.objects.get(user=second).balance, 3500)
+        self.assertEqual(Wallet.objects.get(user=second).balance, 4000)
         self.assertEqual(sum(Transaction.objects.filter(order=order).values_list('amount', flat=True)), 0)
 
     def test_zero_base_double_member_can_report_and_does_not_block_settlement(self):
@@ -455,8 +469,11 @@ class ReleaseFlowTest(APITestCase):
 
     def test_transfer_defers_old_and_new_provider_income_until_audit(self):
         from orders.services import count_active_orders
-        second = make_provider()
+        second = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         account = get_or_create_account_for_legacy_user(second)
+        account.openid = f'release-flow-transfer-{account.pk}'
+        account.is_openid_bound = True
+        account.save(update_fields=['openid', 'is_openid_bound'])
         self.accounts[second.pk] = account
         profile = second.escort_profile
         profile.account = account

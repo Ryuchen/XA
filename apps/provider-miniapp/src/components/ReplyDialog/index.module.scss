@@ -1,5 +1,0 @@
-@use '@/styles/variables.scss' as *;
-.textarea { display:block; width:100%; min-height:160PX; height:160PX; margin:0; padding:12PX; border:1PX solid $color-border; border-radius:8PX; background:var(--xa-color-surface-subtle); font-size:15PX; color:$color-text-primary; line-height:1.65; }
-.meta { display:flex; justify-content:space-between; align-items:flex-start; gap:16PX; margin-top:10PX; }
-.hint,.counter { color:$color-text-secondary; font-size:12PX; line-height:1.6; }.counter { flex:none; }
-.submit { @include button-reset; @include primary-control-state; margin:0; padding:10PX 24PX; min-height:44PX; border:0; border-radius:8PX; font-size:14PX; }

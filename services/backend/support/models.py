@@ -5,6 +5,8 @@ class SupportContactCard(models.Model):
     """客服名片：运营在 admin 后台维护，前端拉取展示。"""
 
     name = models.CharField(max_length=50, verbose_name='客服名')
+    staff_account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT,
+                                      null=True, blank=True, related_name='support_cards')
     company = models.CharField(max_length=100, blank=True, default='', verbose_name='公司')
     wechat_id = models.CharField(max_length=50, blank=True, default='', verbose_name='微信号')
     wecom_corp_id = models.CharField(

@@ -1,0 +1,5 @@
+{
+  "result": "FAIL",
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "error": "Readonly audit failed; private diagnostics retained; do not repair data or retry blindly"
+}

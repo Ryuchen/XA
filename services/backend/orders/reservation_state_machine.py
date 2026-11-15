@@ -17,7 +17,7 @@
 
 from typing import Callable, Dict, List, Optional, Tuple
 
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 
 from .models import Reservation, ReservationStatusLog
@@ -133,7 +133,38 @@ def transition_reservation(
 
     reservation.save(update_fields=sorted(set(fields_to_save)))
 
-    ReservationStatusLog.objects.create(
+    from django.conf import settings
+    notice_intent = None
+    notification_intents = None
+    if (reservation.required_provider_count == 1 and to_status in ('CONFIRMED', 'REJECTED')
+            and getattr(settings, 'RESERVATION_STATUS_NOTICE_RECOVERY_ENABLED', False)
+            and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)):
+        confirmed = to_status == 'CONFIRMED'
+        notice_intent = {'account_id': reservation.customer_account_id,
+            'business_cycle': reservation.customer_business_cycle, 'user_id': reservation.customer_id,
+            'title': '预约已确认' if confirmed else '预约已拒绝',
+            'preview': (f'预约 {reservation.reservation_no} 已确认，请核对报价后转为订单' if confirmed
+                        else f'预约 {reservation.reservation_no} 已拒绝' + (f'：{reason}' if reason else ''))}
+    if reservation.required_provider_count == 2 and to_status == 'CONFIRMED':
+        from site_messages.reservation_team_confirmed import enabled, intents
+        if enabled():
+            notification_intents = intents(reservation)
+    if (to_status == 'CANCELLED'
+            and getattr(settings, 'RESERVATION_CANCELLATION_NOTICE_RECOVERY_ENABLED', False)
+            and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)):
+        from .reservation_event_notice import cancellation_intents
+        notification_intents = cancellation_intents(reservation, operator_account, reason) or None
+    if (to_status == 'EXPIRED'
+            and getattr(settings, 'RESERVATION_EXPIRY_NOTICE_RECOVERY_ENABLED', False)
+            and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)):
+        from .reservation_event_notice import expiration_intents
+        notification_intents = expiration_intents(reservation, from_status) or None
+    if (to_status == 'CONVERTED'
+            and getattr(settings, 'RESERVATION_CONVERSION_NOTICE_RECOVERY_ENABLED', False)
+            and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)):
+        from .reservation_event_notice import conversion_intents
+        notification_intents = conversion_intents(reservation, operator_account) or None
+    log = ReservationStatusLog.objects.create(
         reservation=reservation,
         action=action or RESERVATION_TRANSITIONS[(from_status, to_status)],
         from_status=from_status,
@@ -141,7 +172,15 @@ def transition_reservation(
         operator=operator,
         operator_account=operator_account,
         reason=reason,
+        status_notice_intent=notice_intent,
+        notification_intents=notification_intents,
     )
+    if notice_intent:
+        from site_messages.reservation_status import schedule
+        schedule('status', log.pk)
+    if notification_intents:
+        from site_messages.reservation_event import schedule
+        schedule(log.pk)
 
     return reservation
 

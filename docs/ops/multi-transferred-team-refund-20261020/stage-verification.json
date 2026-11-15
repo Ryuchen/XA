@@ -1,0 +1,98 @@
+{
+  "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+  "stages": [
+    {
+      "result": "PASS",
+      "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "order_no": "ORD6300B0268EAA41C1A7BA",
+      "amount_raw": 10000,
+      "pay_transaction_id": 1102,
+      "initial_shares": [
+        {
+          "provider_key": "p1",
+          "id": 31,
+          "settlement_base": 5000,
+          "provider_income": 4000,
+          "commission_rate": 20
+        },
+        {
+          "provider_key": "p2",
+          "id": 32,
+          "settlement_base": 5000,
+          "provider_income": 3500,
+          "commission_rate": 30
+        }
+      ],
+      "previous_orders_officially_completed": true,
+      "all_five_were_available_without_override": true,
+      "busy_via_existing_service": true,
+      "old_order_hash_equal": true,
+      "old_wallets_unchanged": true,
+      "new_provider_income_posted": false
+    },
+    {
+      "result": "PASS",
+      "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+      "key": "available_recovery",
+      "order_id": 124,
+      "order_no": "ORD23186229C3A746A1852A",
+      "amount_raw": 10000,
+      "pay_transaction_id": 1103,
+      "initial_shares": [
+        {
+          "provider_key": "p1",
+          "id": 36,
+          "settlement_base": 5000,
+          "provider_income": 4000,
+          "commission_rate": 20
+        },
+        {
+          "provider_key": "p2",
+          "id": 37,
+          "settlement_base": 5000,
+          "provider_income": 3500,
+          "commission_rate": 30
+        }
+      ],
+      "previous_orders_officially_completed": true,
+      "all_five_were_available_without_override": true,
+      "busy_via_existing_service": true,
+      "old_order_hash_equal": true,
+      "old_wallets_unchanged": true,
+      "new_provider_income_posted": false
+    },
+    {
+      "result": "PASS",
+      "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "order_no": "ORDECF8E82B1A944FC39F71",
+      "amount_raw": 5000,
+      "pay_transaction_id": 1104,
+      "initial_shares": [
+        {
+          "provider_key": "p1",
+          "id": 41,
+          "settlement_base": 2500,
+          "provider_income": 2000,
+          "commission_rate": 20
+        },
+        {
+          "provider_key": "p2",
+          "id": 42,
+          "settlement_base": 2500,
+          "provider_income": 1750,
+          "commission_rate": 30
+        }
+      ],
+      "previous_orders_officially_completed": true,
+      "all_five_were_available_without_override": true,
+      "busy_via_existing_service": true,
+      "old_order_hash_equal": true,
+      "old_wallets_unchanged": true,
+      "new_provider_income_posted": false
+    }
+  ]
+}

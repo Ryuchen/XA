@@ -53,7 +53,7 @@ class TimeoutCustomerNoticeTest(APITransactionTestCase):
         self.assertEqual(len(messages), 1)
         message = messages[0]
         self.assertEqual(message['title'], '订单超时已取消')
-        self.assertIn('已退回兴安币余额', message['preview'])
+        self.assertIn('已退回浪花余额', message['preview'])
         self.assertFalse(message['is_read'])
         self.assertEqual(message['action_url'], f'/pages/orderList/index?orderId={order_id}')
         detail = self.client.get(f'/api/orders/orders/{order_id}/').data['data']

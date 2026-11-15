@@ -1,14 +1,17 @@
 from rest_framework import serializers
+from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from orders.models import Gameplay
 from .mixins import EnvelopeViewSetMixin
+from .catalog_write_lock import CatalogMutationMixin, lock_catalog
 from engagement.console import ContentImageUploadView
+from stores.db import transaction
 
 
-class GameplaySerializer(serializers.ModelSerializer):
+class GameplaySerializer(EntityNumberModelSerializer):
     rules = serializers.CharField(max_length=5000, allow_blank=True, required=False)
     details_html = serializers.CharField(max_length=100000, allow_blank=True, required=False)
 
@@ -30,7 +33,7 @@ class GameplaySerializer(serializers.ModelSerializer):
         return attrs
 
 
-class GameplayViewSet(EnvelopeViewSetMixin, ModelViewSet):
+class GameplayViewSet(CatalogMutationMixin, EnvelopeViewSetMixin, ModelViewSet):
     queryset = Gameplay.objects.all()
     serializer_class = GameplaySerializer
     default_perm = 'service:view'
@@ -48,10 +51,12 @@ class GameplayViewSet(EnvelopeViewSetMixin, ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
-        instance = self.get_object()
-        instance.is_archived = False
-        instance.save(update_fields=['is_archived'])
-        return Response({'code': 0, 'data': self.get_serializer(instance).data})
+        with transaction.atomic():
+            lock_catalog()
+            instance = self.get_object()
+            instance.is_archived = False
+            instance.save(update_fields=['is_archived'])
+            return Response({'code': 0, 'data': self.get_serializer(instance).data})
 
 
 class CatalogImageUploadView(ContentImageUploadView):

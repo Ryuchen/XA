@@ -1,0 +1,32 @@
+{
+  "mode": "WeChat Developer Tools functional UI with all HTTP mocked; no live draw or point writes",
+  "cases": [
+    {
+      "name": "ten-at-235-pity",
+      "result": "PASS",
+      "posts": 1,
+      "count": 10,
+      "visible_results": 10,
+      "hard_pity_result": 5,
+      "points_after": 4045,
+      "pity_after": 5,
+      "skip_preserves_result": true,
+      "viewport": {
+        "width": 388,
+        "height": 717
+      },
+      "bottom_navigation_items": 5
+    },
+    {
+      "name": "disabled-preserves-ten-and-pity",
+      "result": "PASS"
+    }
+  ],
+  "failures": [],
+  "unknown_requests": [],
+  "result": "PASS",
+  "original_page": "pages/home/index",
+  "restored_page": "pages/home/index",
+  "original_page_restored": true,
+  "real_http_writes": 0
+}

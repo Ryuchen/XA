@@ -1,0 +1,15 @@
+{
+  "result": "PASS_AFTER_AUDIT_FIXTURE_CORRECTION",
+  "first_attempt": {
+    "result": "FAIL",
+    "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+    "error": "Readonly audit failed; private diagnostics retained; do not repair data or retry blindly"
+  },
+  "failed_assertion": "final_database.py original line168 incorrectly expected no OrderPointAllocation from official dispatch",
+  "confirmed_cause": "Official dispatch tracks payment funding. Three exact allocations, restored lot balance and proportional point reversals are expected.",
+  "correction": "Retained unique consumption confirmation assertion; added exact allocation/funding/point-ledger checks.",
+  "business_data_changed_for_correction": false,
+  "first_source_sha256": "b31b4a1b7f4ba5718d0545742e46c94704e7233c5ea3f0f2482ed6108961e04c",
+  "corrected_source_sha256": "71df4fd55b83394bf4e91dfd054b664b38db600fb642d3197b484b6f94f02c25",
+  "rerun_result": "PASS"
+}

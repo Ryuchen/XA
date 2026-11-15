@@ -310,8 +310,9 @@ class SettledRefundTest(APITestCase):
         self.assertEqual(self.refund(order,token=preview['plan_token']).data['errorCode'],'REFUND_RECOVERY_INSUFFICIENT')
         self.assertEqual(before,self.snapshot())
 
-    def test_confirmed_refund_downgrades_vip_and_restores_only_requalified_unused_rights(self):
+    def test_confirmed_refund_downgrades_vip_but_preserves_issued_rights_and_terms(self):
         from coupons.models import UserCoupon
+        from coupons.benefits import grant_periodic
         from engagement.models import MemberTag
         custom = RewardItem.objects.create(code='custom-refund',name='自定义权益',kind='SERVICE',in_shop=False)
         birthday = RewardItem.objects.create(code='birthday-refund',name='生日礼品',kind='PHYSICAL',in_shop=False,
@@ -330,22 +331,64 @@ class SettledRefundTest(APITestCase):
         coupons[0].status,coupons[0].order = 'USED',first
         coupons[0].save(update_fields=['status','order'])
         birthday_claim = RewardClaim.objects.get(account=self.boss_account,reward=birthday)
+        safety = UserCoupon.objects.select_related('coupon').get(account=self.boss_account,
+            coupon__grant_key__startswith=f'vip-safe:{self.boss_account.pk}:1:')
+        safety_terms = (safety.coupon.discount_rate, safety.coupon.service_ids, safety.coupon.valid_to)
+        coupon_terms = (coupons[1].coupon.discount_rate, coupons[1].coupon.service_ids, coupons[1].coupon.valid_to)
         self.ok(self.refund(order))
         record = OrderRefund.objects.get(order=order)
         self.boss_account.refresh_from_db(); profile.refresh_from_db();birthday_claim.refresh_from_db()
         self.assertEqual((self.boss_account.boss_type_id,profile.points_balance),(low.boss_type_id,4000))
-        self.assertEqual(birthday_claim.status,'CANCELLED')
-        self.assertIn(coupons[0].pk,record.benefit_effects['consumed_coupon_ids'])
-        coupons[1].refresh_from_db();self.assertEqual(coupons[1].status,'EXPIRED')
+        self.assertEqual(birthday_claim.status,'PENDING')
+        self.assertTrue(record.benefit_effects['vip_rights_preserved'])
+        coupons[0].refresh_from_db(); coupons[1].refresh_from_db()
+        self.assertTrue(coupons[0].vip_terms_locked_by_downgrade)
+        self.assertTrue(coupons[1].vip_terms_locked_by_downgrade)
+        self.assertEqual(coupons[1].status,'UNUSED')
         custom_claims = list(RewardClaim.objects.filter(account=self.boss_account,reward=custom).order_by('pk'))
-        self.assertEqual([row.status for row in custom_claims],['PENDING','CANCELLED','CANCELLED'])
+        self.assertEqual([row.status for row in custom_claims],['PENDING','PENDING','PENDING'])
         self.assertEqual(ConsumptionConfirmation.objects.get(order=order).reversed_by_refund_id,record.pk)
         self.assertEqual(completed_consumption(self.boss_account),2000)
+        grant_periodic(self.boss_account)
+        safety.refresh_from_db(); safety.coupon.refresh_from_db(); coupons[1].coupon.refresh_from_db()
+        self.assertTrue(safety.vip_terms_locked_by_downgrade)
+        self.assertEqual((safety.coupon.discount_rate, safety.coupon.service_ids, safety.coupon.valid_to), safety_terms)
+        self.assertEqual((coupons[1].coupon.discount_rate, coupons[1].coupon.service_ids, coupons[1].coupon.valid_to), coupon_terms)
+        self.admin_user.admin_membership.roles.update(permissions=['coupon:view', 'coupon:edit'])
+        denied = self.admin.patch(f'/api/admin/coupons/{safety.coupon_id}/', {'discount_rate': 80}, format='json')
+        self.assertEqual(denied.status_code, 400, denied.data)
+        disabled = self.admin.patch(f'/api/admin/coupons/{safety.coupon_id}/', {'is_active': False}, format='json')
+        self.assertEqual(disabled.status_code, 400, disabled.data)
+        published = self.admin.patch(f'/api/admin/coupons/{safety.coupon_id}/', {'is_public': True}, format='json')
+        self.assertEqual(published.status_code, 400, published.data)
+        safety.coupon.refresh_from_db()
+        self.assertEqual((safety.coupon.discount_rate, safety.coupon.service_ids, safety.coupon.valid_to), safety_terms)
+        self.assertTrue(safety.coupon.is_active)
+        self.assertFalse(safety.coupon.is_public)
         count = RewardClaim.objects.filter(account=self.boss_account).count()
         self.settled(confirmed=True)
         coupons[0].refresh_from_db();coupons[1].refresh_from_db();birthday_claim.refresh_from_db()
         self.assertEqual((coupons[0].status,coupons[1].status,birthday_claim.status),('USED','UNUSED','PENDING'))
         self.assertEqual(RewardClaim.objects.filter(account=self.boss_account).count(),count)
+
+    def test_later_upgrade_does_not_change_downgrade_locked_monthly_coupon(self):
+        from coupons.models import UserCoupon
+        low = VipTier.objects.create(level=1, boss_type=make_boss_type(), recharge_threshold=1000)
+        VipTier.objects.create(level=2, boss_type=make_boss_type(), recharge_threshold=10000)
+        top = VipTier.objects.create(level=6, boss_type=make_boss_type(), recharge_threshold=50000)
+        self.settled(amount=2000, confirmed=True)
+        refunded = self.settled(amount=10000, confirmed=True)
+        monthly = UserCoupon.objects.select_related('coupon').get(account=self.boss_account,
+            coupon__grant_key__startswith=f'vip-month:{self.boss_account.pk}:1:')
+        self.assertEqual(monthly.coupon.discount_rate, 90)
+        self.ok(self.refund(refunded))
+        monthly.refresh_from_db(); self.boss_account.refresh_from_db()
+        self.assertTrue(monthly.vip_terms_locked_by_downgrade)
+        self.assertEqual(self.boss_account.boss_type_id, low.boss_type_id)
+        self.settled(amount=60000, confirmed=True)
+        monthly.coupon.refresh_from_db(); self.boss_account.refresh_from_db()
+        self.assertEqual(self.boss_account.boss_type_id, top.boss_type_id)
+        self.assertEqual(monthly.coupon.discount_rate, 90)
 
     def test_refund_summary_hides_other_recipients_from_boss_and_provider(self):
         order = self.settled(double=True,inviter=make_user())
@@ -372,7 +415,7 @@ class SettledRefundTest(APITestCase):
         response = self.admin.get(f'/api/admin/orders/{order.pk}/refund-preview/')
         self.assertEqual(response.data['errorCode'],'REFUND_LEDGER_INCOMPLETE')
 
-    def test_legacy_gift_refund_reverses_gift_credit_and_only_its_naming_extension(self):
+    def test_gift_refund_reverses_income_but_preserves_rights_and_full_naming(self):
         from orders.models import ServiceCategory
         from engagement.models import GiftBenefitRule, GiftNamingGrant, ProviderNaming
         category = ServiceCategory.objects.create(name='隔离礼物退款',is_gift=True)
@@ -394,21 +437,22 @@ class SettledRefundTest(APITestCase):
         first.refresh_from_db();profile.refresh_from_db()
         self.assertEqual((first.status,first.payment_status,profile.completed_order_count),('CANCELLED','REFUNDED',5))
         self.assertEqual(first.transactions.filter(wallet=self.provider_wallet,tx_type='GIFT').aggregate(v=Sum('amount'))['v'],0)
-        self.assertEqual(OrderRefund.objects.get(order=first).recovery_lines.count(),2)
-        self.assertEqual(RewardClaim.objects.get(source_order=first).status,'CANCELLED')
+        self.assertEqual(OrderRefund.objects.get(order=first).recovery_lines.count(),3)
+        self.assertEqual(RewardClaim.objects.get(source_order=first).status,'PENDING')
         self.assertEqual(RewardClaim.objects.get(source_order=second).status,'PENDING')
         naming = ProviderNaming.objects.get()
         self.assertEqual(naming.title,'隔离冠名2')
-        self.assertAlmostEqual((naming.expires_at-second_grant.created_at).total_seconds(),2*86400,delta=1)
+        self.assertEqual(naming.expires_at, second_grant.expires_at)
 
-    def test_refund_of_earlier_gift_rechecks_later_cumulative_claims(self):
+    def test_refund_of_earlier_gift_preserves_later_cumulative_claims(self):
         from orders.models import ServiceCategory
-        from engagement.models import GiftBenefitRule
+        from engagement.models import GiftBenefitRule, MemberTag
         category = ServiceCategory.objects.create(name='累计赠礼退款',is_gift=True)
         gift = make_service(price=2000,commission_rate=20,service_category=category)
         pending = RewardItem.objects.create(code='cumulative-refund-pending',name='未交付累计权益',kind='SERVICE',in_shop=False)
         delivered = RewardItem.objects.create(code='cumulative-refund-delivered',name='已交付累计权益',kind='PHYSICAL',in_shop=False)
-        for reward in (pending,delivered):
+        tagged = RewardItem.objects.create(code='cumulative-refund-tag',name='赠礼标签',kind='TAG',in_shop=False)
+        for reward in (pending,delivered,tagged):
             GiftBenefitRule.objects.create(name=reward.name,reward=reward,category=category,
                 threshold=3000,cumulative=True,once_per_account=True,enabled=True)
         gifts=[]
@@ -424,10 +468,15 @@ class SettledRefundTest(APITestCase):
         completed.status = 'COMPLETED'
         completed.completed_at = timezone.now()
         completed.save(update_fields=['status','completed_at'])
+        tag_claim = RewardClaim.objects.get(reward=tagged)
+        tag_claim.status = 'COMPLETED'
+        tag_claim.save(update_fields=['status'])
+        tag = MemberTag.objects.create(account=self.boss_account, event_key=f'claim:{tag_claim.pk}:tag', title='赠礼标签')
         self.ok(self.refund(first))
         claim.refresh_from_db();completed.refresh_from_db();self.provider_wallet.refresh_from_db()
         effects = OrderRefund.objects.get(order=first).benefit_effects
-        self.assertEqual((claim.status,completed.status),('CANCELLED','COMPLETED'))
-        self.assertIn(claim.pk,effects['cancelled_claim_ids'])
-        self.assertIn(completed.pk,effects['delivered_claim_ids'])
-        self.assertEqual(self.provider_wallet.balance,1600)
+        self.assertEqual((claim.status,completed.status),('PENDING','COMPLETED'))
+        tag.refresh_from_db()
+        self.assertTrue(tag.is_active)
+        self.assertTrue(effects['gift_rights_preserved'])
+        self.assertEqual((self.provider_wallet.balance,self.provider_wallet.frozen_amount),(0,1600))

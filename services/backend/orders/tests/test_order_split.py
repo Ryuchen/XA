@@ -18,27 +18,28 @@ from wallet.models import COMMISSION_RATE_KEY
 
 
 class ComputeSplitTest(APITestCase):
-    def test_invariant_sum_equals_amount(self):
+    def test_invariant_includes_required_store_funding(self):
         split = compute_split(10000, 20, 50)
         self.assertEqual(
             split.provider_income + split.inviter_commission + split.shop_income,
-            10000,
+            10000 + split.funding_required,
         )
 
     def test_basic_split(self):
         # 平台抽成 = 10000*20% = 2000；陪玩实得 8000
-        # 推荐人 = 2000*50% = 1000；店铺 = 1000
+        # 推荐人 = 10000*50% = 5000；门店补足 3000。
         split = compute_split(10000, 20, 50)
         self.assertEqual(split.commission_rate, 20)
         self.assertEqual(split.provider_income, 8000)
-        self.assertEqual(split.inviter_commission, 1000)
-        self.assertEqual(split.shop_income, 1000)
+        self.assertEqual(split.inviter_commission, 5000)
+        self.assertEqual((split.shop_income, split.funding_required), (0, 3000))
 
     def test_zero_commission(self):
         split = compute_split(10000, 0, 50)
         self.assertEqual(split.provider_income, 10000)
-        self.assertEqual(split.inviter_commission, 0)
+        self.assertEqual(split.inviter_commission, 5000)
         self.assertEqual(split.shop_income, 0)
+        self.assertEqual(split.funding_required, 5000)
 
     def test_no_inviter_rate_all_to_shop(self):
         split = compute_split(10000, 30, 0)
@@ -58,7 +59,7 @@ class ComputeSplitTest(APITestCase):
         # 333*? 取整余项归店铺，仍满足恒等式
         split = compute_split(333, 33, 33)
         total = split.provider_income + split.inviter_commission + split.shop_income
-        self.assertEqual(total, 333)
+        self.assertEqual(total, 333 + split.funding_required)
 
 
 class CreateOrderSplitTest(APITestCase):
@@ -102,9 +103,15 @@ class CreateOrderSplitTest(APITestCase):
         res = self._create(service)
         order = Order.objects.get(id=res.data['data']['id'])
         self.assertEqual(order.inviter_id, inviter.id)
-        self.assertEqual(order.inviter_commission, 1000)
-        self.assertEqual(order.shop_income, 1000)
+        self.assertEqual(order.inviter_commission, 5000)
+        self.assertEqual(order.shop_income, 0)
         self.assertEqual(order.provider_income, 8000)
+        # A projected shortfall is valid while pending, but cannot be marked
+        # settled without verified funding recorded by the settlement flow.
+        from django.db import IntegrityError, transaction
+        from django.utils import timezone
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Order.objects.filter(pk=order.pk).update(settled_at=timezone.now())
 
     def test_boss_type_discount_applied(self):
         boss_type = make_boss_type(discount_rate=90)  # 九折

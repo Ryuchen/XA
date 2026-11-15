@@ -1,0 +1,595 @@
+{
+  "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+  "result": "PASS",
+  "official_transfer_operations": 12,
+  "completion_operations": 3,
+  "provider_submissions": 15,
+  "report_approvals": 0,
+  "stages": [
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "phase": 1,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 31,
+          "provider": 1160,
+          "base": 1600,
+          "income": 1600,
+          "released": true
+        },
+        {
+          "id": 32,
+          "provider": 1161,
+          "base": 5000,
+          "income": 3500,
+          "released": false
+        },
+        {
+          "id": 33,
+          "provider": 1162,
+          "base": 3400,
+          "income": 2400,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "phase": 2,
+      "return_original_row_reused": true,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 31,
+          "provider": 1160,
+          "base": 3800,
+          "income": 2800,
+          "released": false
+        },
+        {
+          "id": 32,
+          "provider": 1161,
+          "base": 5000,
+          "income": 3500,
+          "released": false
+        },
+        {
+          "id": 33,
+          "provider": 1162,
+          "base": 1200,
+          "income": 1200,
+          "released": true
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "phase": 3,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 31,
+          "provider": 1160,
+          "base": 700,
+          "income": 700,
+          "released": true
+        },
+        {
+          "id": 32,
+          "provider": 1161,
+          "base": 5000,
+          "income": 3500,
+          "released": false
+        },
+        {
+          "id": 33,
+          "provider": 1162,
+          "base": 1200,
+          "income": 1200,
+          "released": true
+        },
+        {
+          "id": 34,
+          "provider": 1163,
+          "base": 3100,
+          "income": 2100,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "phase": 4,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 31,
+          "provider": 1160,
+          "base": 700,
+          "income": 700,
+          "released": true
+        },
+        {
+          "id": 32,
+          "provider": 1161,
+          "base": 2100,
+          "income": 2100,
+          "released": true
+        },
+        {
+          "id": 33,
+          "provider": 1162,
+          "base": 1200,
+          "income": 1200,
+          "released": true
+        },
+        {
+          "id": 34,
+          "provider": 1163,
+          "base": 3100,
+          "income": 2100,
+          "released": false
+        },
+        {
+          "id": 35,
+          "provider": 1164,
+          "base": 2900,
+          "income": 1400,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "provider_key": "p1",
+      "report_id": 41,
+      "amount": 700,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "provider_key": "p2",
+      "report_id": 42,
+      "amount": 2100,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "provider_key": "p3",
+      "report_id": 43,
+      "amount": 1200,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "provider_key": "p4",
+      "report_id": 44,
+      "amount": 3100,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "frozen_recovery",
+      "order_id": 123,
+      "provider_key": "p5",
+      "report_id": 45,
+      "amount": 2900,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 124,
+      "phase": 1,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 36,
+          "provider": 1160,
+          "base": 1600,
+          "income": 1600,
+          "released": true
+        },
+        {
+          "id": 37,
+          "provider": 1161,
+          "base": 5000,
+          "income": 3500,
+          "released": false
+        },
+        {
+          "id": 38,
+          "provider": 1162,
+          "base": 3400,
+          "income": 2400,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 124,
+      "phase": 2,
+      "return_original_row_reused": true,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 36,
+          "provider": 1160,
+          "base": 3800,
+          "income": 2800,
+          "released": false
+        },
+        {
+          "id": 37,
+          "provider": 1161,
+          "base": 5000,
+          "income": 3500,
+          "released": false
+        },
+        {
+          "id": 38,
+          "provider": 1162,
+          "base": 1200,
+          "income": 1200,
+          "released": true
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 124,
+      "phase": 3,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 36,
+          "provider": 1160,
+          "base": 700,
+          "income": 700,
+          "released": true
+        },
+        {
+          "id": 37,
+          "provider": 1161,
+          "base": 5000,
+          "income": 3500,
+          "released": false
+        },
+        {
+          "id": 38,
+          "provider": 1162,
+          "base": 1200,
+          "income": 1200,
+          "released": true
+        },
+        {
+          "id": 39,
+          "provider": 1163,
+          "base": 3100,
+          "income": 2100,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "available_recovery",
+      "order_id": 124,
+      "phase": 4,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 36,
+          "provider": 1160,
+          "base": 700,
+          "income": 700,
+          "released": true
+        },
+        {
+          "id": 37,
+          "provider": 1161,
+          "base": 2100,
+          "income": 2100,
+          "released": true
+        },
+        {
+          "id": 38,
+          "provider": 1162,
+          "base": 1200,
+          "income": 1200,
+          "released": true
+        },
+        {
+          "id": 39,
+          "provider": 1163,
+          "base": 3100,
+          "income": 2100,
+          "released": false
+        },
+        {
+          "id": 40,
+          "provider": 1164,
+          "base": 2900,
+          "income": 1400,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 124,
+      "provider_key": "p1",
+      "report_id": 46,
+      "amount": 700,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 124,
+      "provider_key": "p2",
+      "report_id": 47,
+      "amount": 2100,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 124,
+      "provider_key": "p3",
+      "report_id": 48,
+      "amount": 1200,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 124,
+      "provider_key": "p4",
+      "report_id": 49,
+      "amount": 3100,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "available_recovery",
+      "order_id": 124,
+      "provider_key": "p5",
+      "report_id": 50,
+      "amount": 2900,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "phase": 1,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 41,
+          "provider": 1160,
+          "base": 800,
+          "income": 800,
+          "released": true
+        },
+        {
+          "id": 42,
+          "provider": 1161,
+          "base": 2500,
+          "income": 1750,
+          "released": false
+        },
+        {
+          "id": 43,
+          "provider": 1162,
+          "base": 1700,
+          "income": 1200,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "phase": 2,
+      "return_original_row_reused": true,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 41,
+          "provider": 1160,
+          "base": 1900,
+          "income": 1400,
+          "released": false
+        },
+        {
+          "id": 42,
+          "provider": 1161,
+          "base": 2500,
+          "income": 1750,
+          "released": false
+        },
+        {
+          "id": 43,
+          "provider": 1162,
+          "base": 600,
+          "income": 600,
+          "released": true
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "phase": 3,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 41,
+          "provider": 1160,
+          "base": 350,
+          "income": 350,
+          "released": true
+        },
+        {
+          "id": 42,
+          "provider": 1161,
+          "base": 2500,
+          "income": 1750,
+          "released": false
+        },
+        {
+          "id": 43,
+          "provider": 1162,
+          "base": 600,
+          "income": 600,
+          "released": true
+        },
+        {
+          "id": 44,
+          "provider": 1163,
+          "base": 1550,
+          "income": 1050,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "transferred",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "phase": 4,
+      "return_original_row_reused": false,
+      "no_income_before_approval": true,
+      "shares": [
+        {
+          "id": 41,
+          "provider": 1160,
+          "base": 350,
+          "income": 350,
+          "released": true
+        },
+        {
+          "id": 42,
+          "provider": 1161,
+          "base": 1050,
+          "income": 1050,
+          "released": true
+        },
+        {
+          "id": 43,
+          "provider": 1162,
+          "base": 600,
+          "income": 600,
+          "released": true
+        },
+        {
+          "id": 44,
+          "provider": 1163,
+          "base": 1550,
+          "income": 1050,
+          "released": false
+        },
+        {
+          "id": 45,
+          "provider": 1164,
+          "base": 1450,
+          "income": 700,
+          "released": false
+        }
+      ]
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "provider_key": "p1",
+      "report_id": 51,
+      "amount": 350,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "provider_key": "p2",
+      "report_id": 52,
+      "amount": 1050,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "provider_key": "p3",
+      "report_id": 53,
+      "amount": 600,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "provider_key": "p4",
+      "report_id": 54,
+      "amount": 1550,
+      "status": "PENDING",
+      "payout_amount": 0
+    },
+    {
+      "stage": "submitted",
+      "key": "protected_foreign_hold",
+      "order_id": 125,
+      "provider_key": "p5",
+      "report_id": 55,
+      "amount": 1450,
+      "status": "PENDING",
+      "payout_amount": 0
+    }
+  ]
+}

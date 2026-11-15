@@ -1,0 +1,20 @@
+{
+  "run": "team-order-e2e-20261021",
+  "removed": [
+    {
+      "name": "xa-team-order-e2e-http-20261021",
+      "container_id": "6dd82deefbaa959d6db9933e3dd3287ccc09592d4decc37f959c0574e1591a4a",
+      "anonymous_volumes_removed": []
+    },
+    {
+      "name": "xa-team-order-e2e-mysql-20261021",
+      "container_id": "fadcbaacea9f6a2c1e7323853820312514d3d403ce381e4714f2a2421f1b192d",
+      "anonymous_volumes_removed": [
+        "5c44b1a81d9df03a108d0561166f9cd0748d6b0a1675ff88415f4556d3ed7eb6"
+      ]
+    }
+  ],
+  "network_removed": true,
+  "network_id": "2c5467fc1981356f8c3bf80d22a79f92fc02c0de1a93a565e553e470e282fd07",
+  "cleaned_at": "2026-10-20T17:32:57.652436+00:00"
+}

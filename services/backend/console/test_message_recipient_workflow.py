@@ -47,16 +47,25 @@ class MessageRecipientWorkflowTest(APITestCase):
         msg.refresh_from_db()
         self.assertTrue(msg.is_read)
 
-    def test_unmapped_collision_or_disabled_account_never_partially_sends(self):
-        response = self.client.post('/api/admin/messages/push/', {'title': '不得发送',
-            'recipient_account_ids': [self.account.pk, self.unmapped.pk]}, format='json')
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(Message.objects.filter(title='不得发送').exists())
+    def test_current_account_without_mapping_and_disabled_account(self):
+        response = self.client.post('/api/admin/messages/push/', {'title': '隔离账号通知',
+            'recipient_account_ids': [self.account.pk, self.unmapped.pk],
+            'recipient_ids': [self.first.pk]}, format='json')
+        self.assertEqual(response.data['code'], 0, response.data)
+        self.assertEqual(response.data['data']['count'], 2)
+        messages = Message.objects.filter(title='隔离账号通知')
+        self.assertEqual(set(messages.values_list('recipient_account_id', flat=True)), {self.account.pk, self.unmapped.pk})
+        current = messages.get(recipient_account=self.unmapped)
+        self.assertIsNone(current.recipient_id)
+        self.assertFalse(messages.filter(recipient_id=self.colliding_user.pk).exists())
+        boss = APIClient()
+        boss.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.unmapped)[0])
+        self.assertEqual(boss.get(f'/api/messages/{current.pk}/').data['code'], 0)
         self.assertFalse(LegacyAccountMap.objects.filter(account=self.unmapped).exists())
         self.account.can_login = False
         self.account.save(update_fields=['can_login'])
         response = self.client.post('/api/admin/messages/push/', {'title': '不得发送',
-            'recipient_account_ids': [self.account.pk]}, format='json')
+            'recipient_account_ids': [self.account.pk, self.unmapped.pk]}, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Message.objects.filter(title='不得发送').exists())
 

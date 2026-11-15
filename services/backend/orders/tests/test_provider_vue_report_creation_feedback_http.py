@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A stale report picker shows an actual rejection in the active dialog."""
 import json
 import os
@@ -28,9 +29,9 @@ class ProviderVueReportCreationFeedbackHTTPTest(LiveServerTestCase):
     new_order = flow.ReleaseFlowTest.new_order
 
     def test_rejected_order_is_reported_inside_picker(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         order = self.new_order()
         self.assertFalse(ProviderReport.objects.filter(order=order).exists())
         repo = Path(settings.BASE_DIR).parent.parent
@@ -41,12 +42,12 @@ class ProviderVueReportCreationFeedbackHTTPTest(LiveServerTestCase):
                 'token': issue_account_tokens(self.accounts[self.provider.pk])[0],
                 'bossToken': issue_account_tokens(self.accounts[self.boss.pk])[0],
                 'staffToken': issue_account_tokens(self.accounts[self.admin.pk])[0],
-                'fixed': os.environ.get('XA_REPORT_PICKER_FIXED') == '1'}),
+                'fixed': True}),
             text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout.strip())
         order.refresh_from_db()
         self.assertEqual(order.status, 'PENDING')
         self.assertFalse(ProviderReport.objects.filter(order=order).exists())
-        if os.environ.get('XA_REPORT_PICKER_FIXED') == '1':
+        if True:
             self.assertTrue(ProviderReport.objects.filter(provider=self.provider).exclude(order=order).exists())

@@ -1,0 +1,425 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>侧边栏六格候选</title><style>/* Brand: real transparent SVG logos; MiSans; Blue Planet; 4pt spacing. */
+:root { font-family: MiSans, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: #0f172a; background: #e8edf3; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; font-size: 14px; line-height: 1.65; }
+button, input { font: inherit; }
+button { cursor: pointer; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+button { min-height: 44px; }
+button svg, a svg { width: 16px; height: 16px; flex-shrink: 0; }
+button { color: inherit; }
+[hidden] { display: none !important; }
+.prototype-app { --page: #f5f7fa; --panel: #fff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --brand: #2563eb; --brand-soft: #eaf1ff; --rail: #fff; --rail-ink: #1e293b; --rail-muted: #64748b; --rail-line: #e2e8f0; --nav-width: 256px; position: relative; width: 100%; height: 100vh; display: grid; grid-template-columns: var(--nav-width) minmax(0,1fr); background: var(--page); color: var(--ink); transition: grid-template-columns .2s ease; overflow: hidden; }
+.prototype-app.is-collapsed { --nav-width: 72px; }
+.prototype-sidebar, .prototype-rail, .prototype-subnav { background: var(--rail); color: var(--rail-ink); min-width: 0; min-height: 0; }
+.prototype-sidebar { display: flex; flex-direction: column; border-right: 1px solid var(--rail-line); z-index: 4; }
+.prototype-brand { display: flex; align-items: center; gap: 12px; min-height: 80px; padding: 16px 20px; border-bottom: 1px solid var(--rail-line); }
+.brand-logo { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+.brand-copy, .store-copy { min-width: 0; text-align: left; }
+.brand-copy strong, .store-copy strong { display: block; font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-copy small, .store-copy small { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--rail-muted); }
+.store-switcher { position: relative; margin: 12px; flex-shrink: 0; z-index: 8; }
+.store-current { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 52px; padding: 8px 12px; border: 1px solid var(--rail-line); border-radius: 8px; background: transparent; }
+.store-current .store-logo { width: 24px; height: 24px; object-fit: contain; }
+.store-current > svg { margin-left: auto; color: var(--rail-muted); }
+.store-label { display: block; padding: 0 12px 6px; color: var(--rail-muted); font-size: 12px; }
+.store-menu { position: absolute; top: calc(100% + 4px); left: 0; right: 0; padding: 4px; border: 1px solid var(--rail-line); border-radius: 8px; background: var(--panel); box-shadow: 0 12px 28px #0f172a20; color: var(--ink); }
+.store-option { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px; border: 0; border-radius: 6px; background: transparent; text-align: left; }
+.store-option:hover { background: var(--brand-soft); }
+.store-option img { width: 24px; height: 24px; }
+.store-option small { margin-left: auto; color: var(--muted); font-size: 12px; }
+.prototype-navigation { flex: 1; min-height: 0; padding: 8px 12px 20px; overflow-y: auto; scrollbar-width: none; }
+.prototype-navigation::-webkit-scrollbar, .subnav-scroll::-webkit-scrollbar { display: none; }
+.nav-section-label { margin: 20px 12px 8px; font-size: 12px; line-height: 16px; color: var(--rail-muted); font-weight: 500; }
+.nav-section-label:first-child { margin-top: 8px; }
+.workspace-link, .domain-trigger, .child-link, .rail-domain { width: 100%; display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; text-align: left; color: var(--rail-muted); }
+.workspace-link span, .domain-trigger .domain-label { flex: 1; }
+.workspace-link:hover, .domain-trigger:hover, .child-link:hover, .rail-domain:hover { color: var(--rail-ink); background: var(--brand-soft); }
+.workspace-link.is-active, .child-link.is-active, .domain-trigger.is-current { color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.domain-trigger .chevron { transition: transform .16s ease; }
+.domain-trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+.domain-children { margin: 4px 0 8px 20px; padding-left: 12px; border-left: 1px solid var(--rail-line); }
+.domain-center { margin: 12px 0 4px; }
+.domain-center h3 { margin: 0 12px 4px; font-size: 12px; font-weight: 500; color: var(--rail-muted); line-height: 18px; }
+.child-link { position: relative; min-height: 44px; font-size: 14px; }
+.child-link.is-active::before { content: ""; width: 2px; height: 16px; position: absolute; left: -13px; top: 14px; background: var(--brand); border-radius: 2px; }
+.child-link svg { margin-left: auto; }
+.sidebar-footer { display: flex; align-items: center; gap: 4px; padding: 12px; border-top: 1px solid var(--rail-line); }
+.collapse-button, .pin-button, .subnav-collapse { display: flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--rail-muted); }
+.collapse-button { flex: 1; justify-content: flex-start; padding: 0 12px; }
+.pin-button { width: 44px; }
+.pin-button[aria-pressed="true"] { color: var(--brand); background: var(--brand-soft); }
+.prototype-main { min-width: 0; min-height: 0; overflow: auto; }
+.prototype-topbar { position: sticky; top: 0; z-index: 3; min-height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.breadcrumbs { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.breadcrumbs strong { color: var(--ink); font-weight: 500; }
+.prototype-search { margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: transparent; }
+.prototype-search kbd { padding: 2px 4px; border: 1px solid var(--line); border-radius: 4px; font-size: 12px; font-family: inherit; }
+.prototype-content { max-width: 1440px; margin: 0 auto; padding: 32px; }
+.prototype-eyebrow { color: var(--brand); font-size: 12px; font-weight: 600; }
+.prototype-content h1 { margin: 8px 0; font-size: 28px; line-height: 40px; letter-spacing: -.02em; }
+.prototype-intro { margin: 0; color: var(--muted); font-size: 14px; }
+.prototype-ribbon { display: inline-flex; align-items: center; min-height: 28px; margin-left: 12px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: 12px; vertical-align: middle; letter-spacing: normal; }
+.prototype-notes { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin-top: 32px; }
+.prototype-note { padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.prototype-note svg { color: var(--brand); }
+.prototype-note h2 { margin: 16px 0 8px; font-size: 16px; line-height: 24px; }
+.prototype-note p { margin: 0; color: var(--muted); font-size: 14px; }
+.prototype-stage { margin-top: 24px; min-height: 300px; padding: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.prototype-stage h2 { margin: 0 0 12px; font-size: 16px; }
+.prototype-stage p { max-width: 600px; color: var(--muted); font-size: 14px; }
+.prototype-skeleton { display: grid; gap: 16px; margin-top: 28px; }
+.prototype-skeleton span { display: block; height: 44px; border: 1px solid var(--line); border-radius: 6px; background: var(--page); }
+.prototype-skeleton span:nth-child(2) { width: 80%; }
+.prototype-skeleton span:nth-child(3) { width: 60%; }
+.prototype-rail { display: none; }
+.prototype-subnav { display: none; }
+.search-dialog { width: min(520px,calc(100vw - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); box-shadow: 0 24px 64px #02061733; }
+.search-dialog::backdrop { background: #02061766; }
+.search-dialog form { padding: 16px; }
+.search-dialog input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--page); color: var(--ink); }
+.search-results { max-height: 320px; padding: 8px; overflow-y: auto; }
+.search-result { display: flex; width: 100%; align-items: center; gap: 12px; padding: 8px 12px; border: 0; border-radius: 6px; background: transparent; text-align: left; }
+.search-result:hover { background: var(--brand-soft); }
+.search-result small { margin-left: auto; color: var(--muted); }
+.prototype-toast { position: fixed; left: 50%; bottom: 24px; z-index: 20; max-width: calc(100vw - 32px); padding: 12px 16px; border: 1px solid #1e3a8a; border-radius: 8px; background: #0f172a; color: #f8fafc; transform: translateX(-50%); box-shadow: 0 12px 24px #02061722; font-size: 14px; }
+/* C: floating store console. */
+.variant-C { --nav-width: 280px; --page: #eef2f7; --rail: #fff; padding: 12px; gap: 16px; }
+.variant-C .prototype-sidebar { border: 1px solid #dce4ef; border-radius: 12px; box-shadow: 0 4px 18px #1e3a8a08; overflow: visible; }
+.variant-C .prototype-brand { border-bottom: 0; min-height: 76px; }
+.variant-C .store-switcher { padding: 12px; margin: 0 12px 12px; border: 1px solid #dce4ef; border-radius: 8px; background: #f8faff; }
+.variant-C .store-current { border: 0; padding: 0; min-height: 44px; }
+.variant-C .prototype-navigation { padding-top: 0; }
+.variant-C .domain-children { margin-left: 16px; border-left-color: #cbdaf0; }
+.variant-C .child-link.is-active { box-shadow: inset 0 0 0 1px #2563eb1a; }
+.variant-C .prototype-topbar { border: 1px solid var(--line); border-radius: 12px; }
+.variant-C .prototype-content { padding-top: 28px; }
+.variant-C.is-collapsed { --nav-width: 84px; }
+/* D: quiet deep-ocean tree. */
+.variant-D { --nav-width: 264px; --page: #0b1220; --panel: #101a2b; --ink: #f1f5f9; --muted: #94a3b8; --line: #24344a; --rail: #0f172a; --rail-ink: #f1f5f9; --rail-muted: #94a3b8; --rail-line: #26364c; --brand: #7dd3fc; --brand-soft: #173257; }
+.variant-D .prototype-brand { background: #0b1426; }
+.variant-D .store-current { background: #15253b; }
+.variant-D .prototype-navigation { padding-top: 12px; }
+.variant-D .nav-section-label { margin-top: 24px; }
+.variant-D .domain-trigger, .variant-D .workspace-link { border-radius: 4px; }
+.variant-D .domain-children { margin-left: 12px; padding-left: 16px; }
+.variant-D .child-link { border-radius: 4px; }
+.variant-D .child-link.is-active { background: #173257; box-shadow: inset 2px 0 #38bdf8; }
+.variant-D .child-link.is-active::before { display: none; }
+.variant-D .prototype-note, .variant-D .prototype-stage { box-shadow: none; }
+/* A: functional hierarchy. */
+.variant-A .prototype-brand { min-height: 72px; }
+.variant-A .store-switcher { margin-block: 8px; }
+.variant-A .store-current { border: 0; border-bottom: 1px solid var(--rail-line); border-radius: 0; }
+.variant-A .domain-children { border-left-color: #c7d7ef; }
+.variant-A .child-link.is-active { box-shadow: inset 3px 0 #2563eb; }
+.variant-A .child-link.is-active::before { display: none; }
+/* B: quiet workbook. */
+.variant-B { --nav-width: 272px; --page: #fafbfc; --rail: #fafbfc; --rail-line: #edf0f3; --brand-soft: #eff5ff; }
+.variant-B .prototype-brand { border-bottom: 0; padding-top: 28px; }
+.variant-B .store-switcher { margin: 16px 20px 24px; }
+.variant-B .store-current { border: 0; padding: 0; }
+.variant-B .store-current .store-logo { width: 20px; height: 20px; }
+.variant-B .prototype-navigation { padding-inline: 20px; }
+.variant-B .nav-section-label { margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--rail-line); }
+.variant-B .domain-trigger, .variant-B .workspace-link { padding-inline: 0; }
+.variant-B .domain-children { margin-left: 4px; border: 0; padding-left: 16px; }
+.variant-B .child-link.is-active { background: transparent; box-shadow: inset 2px 0 #2563eb; }
+.variant-B .child-link.is-active::before { display: none; }
+/* E: indexed grid, without editorial decoration. */
+.variant-E { --nav-width: 288px; --rail: #f8fafc; --rail-line: #cbd5e1; }
+.variant-E .prototype-brand, .variant-E .workspace-link, .variant-E .domain-trigger { border-radius: 0; }
+.variant-E .prototype-brand { border-bottom-width: 2px; }
+.variant-E .nav-section-label { color: #0f172a; font-weight: 700; border-bottom: 2px solid #0f172a; padding-bottom: 8px; }
+.variant-E .domain-trigger { border-bottom: 1px solid var(--rail-line); }
+.variant-E .domain-children { margin: 0; padding: 8px; border: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.variant-E .domain-center { grid-column: 1/-1; }
+.variant-E .child-link { padding-inline: 8px; border-radius: 0; font-size: 14px; }
+.variant-E .child-link.is-active { border: 1px solid #2563eb; }
+.variant-E .child-link.is-active::before { display: none; }
+.variant-E .child-link svg { display: none; }
+/* F: persistent first-level rail and current domain panel. */
+.variant-F { --nav-width: 304px; --rail: #f9fbfd; }
+.variant-F .prototype-rail { display: flex; flex-direction: column; align-items: center; width: 72px; border-right: 1px solid #cbd5e1; background: #0f172a; }
+.variant-F .prototype-sidebar { display: contents; }
+.variant-F .prototype-brand { width: 72px; height: 72px; min-height: 72px; padding: 20px; border-bottom-color: #334155; }
+.variant-F .prototype-brand .brand-logo { width: 32px; height: 32px; }
+.variant-F .prototype-navigation { width: 72px; padding: 12px 8px; }
+.variant-F .prototype-navigation > .nav-section-label, .variant-F .prototype-navigation > .workspace-link, .variant-F .prototype-navigation > .store-switcher { display: none; }
+.variant-F .rail-domain { width: 48px; height: 48px; min-height: 48px; justify-content: center; padding: 0; margin-bottom: 8px; color: #94a3b8; border-radius: 8px; }
+.variant-F .rail-domain:hover { background: #1e3a8a; color: #fff; }
+.variant-F .rail-domain.is-current { color: #7dd3fc; background: #1e3a8a; box-shadow: inset 0 0 0 1px #38bdf84d; }
+.variant-F .rail-domain .domain-label, .variant-F .rail-domain .chevron { display: none; }
+.variant-F .sidebar-footer { margin-top: auto; padding: 12px 8px; border-top-color: #334155; }
+.variant-F .sidebar-footer .pin-button { display: none; }
+.variant-F .sidebar-footer .collapse-button { padding: 0; justify-content: center; color: #cbd5e1; }
+.variant-F .prototype-subnav { display: flex; flex-direction: column; position: absolute; left: 72px; top: 0; bottom: 0; width: 232px; border-right: 1px solid #cbd5e1; z-index: 3; }
+.variant-F .prototype-subnav-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--rail-line); }
+.variant-F .prototype-subnav-header strong { font-size: 16px; }
+.variant-F .prototype-subnav-header p { margin: 4px 0 0; font-size: 12px; color: var(--rail-muted); }
+.variant-F .prototype-subnav .store-switcher { margin: 12px; }
+.variant-F .subnav-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 8px 12px 20px; }
+.variant-F .subnav-scroll .domain-center:first-child { margin-top: 4px; }
+.variant-F .subnav-scroll .child-link { min-height: 44px; }
+.variant-F .subnav-collapse { margin: 12px; color: var(--rail-muted); }
+.variant-F.is-collapsed .prototype-subnav { display: none; }
+/* Collapse the single-column variants without removing access to primary domains. */
+.prototype-app:not(.variant-F).is-collapsed .brand-copy,
+.prototype-app:not(.variant-F).is-collapsed .store-switcher,
+.prototype-app:not(.variant-F).is-collapsed .nav-section-label,
+.prototype-app:not(.variant-F).is-collapsed .domain-label,
+.prototype-app:not(.variant-F).is-collapsed .domain-trigger .chevron,
+.prototype-app:not(.variant-F).is-collapsed .domain-children,
+.prototype-app:not(.variant-F).is-collapsed .workspace-link span,
+.prototype-app:not(.variant-F).is-collapsed .collapse-button span,
+.prototype-app:not(.variant-F).is-collapsed .pin-button { display: none; }
+.prototype-app:not(.variant-F).is-collapsed .prototype-brand { padding: 20px; justify-content: center; }
+.prototype-app:not(.variant-F).is-collapsed .workspace-link,
+.prototype-app:not(.variant-F).is-collapsed .domain-trigger { justify-content: center; padding: 0; }
+.prototype-app:not(.variant-F).is-collapsed .sidebar-footer { justify-content: center; }
+.prototype-app:not(.variant-F).is-collapsed .collapse-button { justify-content: center; padding: 0; }
+.prototype-context { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.gallery-return { display: inline-flex; align-items: center; min-height: 44px; color: var(--brand); font-size: 12px; text-decoration: none; }
+.gallery-return:hover { text-decoration: underline; }
+/* Thumbnail shells. */
+.thumb-board { display: grid; grid-template-columns: repeat(3,480px); gap: 16px; padding: 16px; }
+.thumb-card { overflow: hidden; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; }
+.thumb-card > header { height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #e2e8f0; }
+.thumb-card > header strong { font-size: 14px; }
+.thumb-card > header span { color: #64748b; font-size: 12px; }
+.thumb-card .prototype-app { height: 300px; font-size: 12px; }
+.thumb-card .prototype-brand { min-height: 52px; padding: 8px 12px; gap: 8px; }
+.thumb-card .brand-logo { width: 24px; height: 24px; }
+.thumb-card .brand-copy strong { font-size: 12px; }
+.thumb-card .brand-copy small, .thumb-card .store-label { display: none; }
+.thumb-card .store-switcher { margin: 8px; }
+.thumb-card .store-current { min-height: 36px; padding: 4px 8px; }
+.thumb-card .store-copy strong { font-size: 12px; }
+.thumb-card .prototype-navigation { padding: 4px 8px; }
+.thumb-card .nav-section-label { margin: 8px; font-size: 12px; }
+.thumb-card .workspace-link, .thumb-card .domain-trigger, .thumb-card .child-link { min-height: 32px; font-size: 12px; gap: 8px; }
+.thumb-card .domain-center { margin-top: 4px; }
+.thumb-card .domain-center h3 { font-size: 12px; }
+.thumb-card .sidebar-footer { padding: 4px 8px; }
+.thumb-card .sidebar-footer button { min-height: 32px; height: 32px; }
+.thumb-card .prototype-topbar { min-height: 44px; padding: 0 16px; }
+.thumb-card .prototype-search { min-height: 32px; font-size: 12px; }
+.thumb-card .prototype-content { padding: 20px; }
+.thumb-card .prototype-content h1 { font-size: 20px; line-height: 28px; }
+.thumb-card .prototype-intro, .thumb-card .prototype-notes, .thumb-card .prototype-stage, .thumb-card .prototype-eyebrow { display: none; }
+.thumb-card .variant-C { padding: 8px; gap: 8px; }
+.thumb-card .prototype-subnav-header { padding: 12px; }
+.thumb-card .prototype-subnav .store-switcher { margin: 8px; }
+.thumb-card .prototype-subnav .child-link { min-height: 36px; }
+.thumb-card .prototype-rail { width: 72px; }
+/* The prototype gallery may be inspected on narrow screens; the actual admin stays desktop-first. */
+@media (max-width: 600px) {
+  .prototype-app:not(.variant-F) { --nav-width: 72px; }
+  .prototype-app:not(.variant-F) .brand-copy, .prototype-app:not(.variant-F) .store-switcher, .prototype-app:not(.variant-F) .nav-section-label, .prototype-app:not(.variant-F) .domain-label, .prototype-app:not(.variant-F) .domain-trigger .chevron, .prototype-app:not(.variant-F) .domain-children, .prototype-app:not(.variant-F) .workspace-link span, .prototype-app:not(.variant-F) .collapse-button span, .prototype-app:not(.variant-F) .pin-button { display: none; }
+  .prototype-app:not(.variant-F) .prototype-brand { padding: 20px; justify-content: center; }
+  .prototype-app:not(.variant-F) .workspace-link, .prototype-app:not(.variant-F) .domain-trigger { justify-content: center; padding: 0; }
+  .prototype-app.variant-F { --nav-width: 72px; }
+  .prototype-app.variant-F .prototype-subnav { display: none; }
+  .prototype-topbar { padding: 0 12px; }
+  .prototype-search span, .prototype-search kbd { display: none; }
+  .prototype-content { padding: 20px; }
+  .prototype-content h1 { font-size: 22px; line-height: 32px; }
+  .prototype-ribbon { display: flex; margin: 8px 0 0; width: fit-content; }
+  .prototype-notes { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition: none !important; } }
+</style></head><body><main class="thumb-board"><section class="thumb-card"><header><strong>A · 任务层级</strong><span>最佳设计师</span></header><div id="thumb-A"></div></section><section class="thumb-card"><header><strong>B · 门店工作簿</strong><span>最佳设计师</span></header><div id="thumb-B"></div></section><section class="thumb-card"><header><strong>C · 悬浮导航台</strong><span>现实参照</span></header><div id="thumb-C"></div></section><section class="thumb-card"><header><strong>D · 深色业务树</strong><span>现实参照</span></header><div id="thumb-D"></div></section><section class="thumb-card"><header><strong>E · 业务索引</strong><span>轮盘网页 01</span></header><div id="thumb-E"></div></section><section class="thumb-card"><header><strong>F · 双栏界栏</strong><span>轮盘东亚 02</span></header><div id="thumb-F"></div></section></main><script>window.XA_BRANDS={"platform":{"slug":"platform","name":"电竞管理系统","logo":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsbGVkYnk9InRpdGxlIj4KICA8dGl0bGUgaWQ9InRpdGxlIj7nlLXnq57ov5DokKXnrqHnkIblubPlj7A8L3RpdGxlPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI1NjNlYiIgc3Ryb2tlLXdpZHRoPSIxLjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNMTIgMi43NSAyMCA3LjI1djkuNUwxMiAyMS4yNSA0IDE2Ljc1di05LjVaIi8+CiAgICA8cGF0aCBkPSJNMTUuNSA4SDkuNXY4aDZNOS41IDEyaDUiLz4KICA8L2c+Cjwvc3ZnPgo="},"shenglang":{"slug":"shenglang","name":"声浪电竞","currency":"浪花","logo":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsbGVkYnk9InRpdGxlIj4KICA8dGl0bGUgaWQ9InRpdGxlIj7lo7DmtarnlLXnq548L3RpdGxlPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI1NjNlYiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPHBhdGggZD0iTTIgMTB2M002IDZ2MTFNMTAgM3YxOE0xNCA4djdNMTggNXYxM00yMiAxMHYzIi8+CiAgPC9nPgo8L3N2Zz4K"},"xinan":{"slug":"xinan","name":"兴安电竞","currency":"星辉","logo":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsbGVkYnk9InRpdGxlIj4KICA8dGl0bGUgaWQ9InRpdGxlIj7lhbTlronnlLXnq54gwrcg54ix5b+D5bGxPC90aXRsZT4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiMyNTYzZWIiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPgogICAgPHBhdGggZD0iTTEyIDIxIDQuMTUgMTMuM0MtMS4yIDguMSA1Ljk1IDEuMzUgMTIgNi45NWM2LjA1LTUuNiAxMy4yIDEuMTUgNy44NSA2LjM1WiIvPgogICAgPHBhdGggZD0ibTYgMTQgMy00IDIuNSAyLjUgMy00IDMuNSA1Ii8+CiAgPC9nPgo8L3N2Zz4K"}};window.XA_NAVIGATION=[{"id":"platform-stores","title":"平台管理","centers":[{"id":"stores","title":"门店","icon":"Shop","features":[{"path":"stores","title":"门店管理","keywords":["多门店","租户","入口","店名"]}]}]},{"id":"overview","title":"工作台","centers":[{"id":"overview","title":"数据概览","icon":"Odometer","features":[{"path":"dashboard","title":"运营工作台","keywords":["平台总览","统计","营收"]}]}]},{"id":"orders","title":"订单中心","centers":[{"id":"order-flow","title":"订单处理","icon":"Tickets","features":[{"path":"orders","title":"订单与派单","keywords":["派单管理","抢单","指派","转单","退款","售后"]},{"path":"reservations","title":"预约管理","keywords":["预约","档期","预约转单"]}]},{"id":"fulfillment","title":"履约与售后","icon":"Finished","features":[{"path":"reports","title":"报单审核","keywords":["订单审核","结单","完成凭证"]},{"path":"evaluations","title":"订单评价","keywords":["评分","评价回复"]}]},{"id":"dispatch-settings","title":"派单配置","icon":"Setting","features":[{"path":"kook-dispatch","title":"群派单配置","keywords":["KOOK","机器人","频道","派单设置"]}]}]},{"id":"providers","title":"陪玩中心","centers":[{"id":"provider-operations","title":"陪玩运营","icon":"Avatar","features":[{"path":"player-dashboard","title":"陪玩业绩","keywords":["陪玩概览","排行","数据分析"]},{"path":"escorts","title":"陪玩档案","keywords":["陪玩管理","打手","认证","封禁","退押金"]},{"path":"provider-registrations","title":"入驻审核","keywords":["入驻","报名","身份证","实名"]}]},{"id":"recruitment","title":"招募与试音","icon":"Headset","features":[{"path":"audition-links","title":"试音招募","keywords":["声卡管理","招募链接","报名入口"]},{"path":"audition-signups","title":"试音审核","keywords":["试音报名","招募审核"]}]},{"id":"provider-benefits","title":"等级与权益","icon":"Medal","features":[{"path":"escort-levels","title":"等级配置","keywords":["陪玩等级","抽成"]},{"path":"provider-passes","title":"通行证","keywords":["通行证管理","陪玩权益"]}]},{"id":"provider-settlement","title":"结款与奖惩","icon":"Money","features":[{"path":"deposit-rules","title":"押金与结款规则","keywords":["单抵","现金押金","比例","6:4","60%","押金设置"]},{"path":"dispose-records","title":"奖惩记录","keywords":["奖励","处罚","罚款"]}]}]},{"id":"bosses","title":"老板中心","centers":[{"id":"boss-members","title":"老板与会员","icon":"User","features":[{"path":"users","title":"老板资料","keywords":["信息管理","用户","账号","手机号","封禁"]},{"path":"boss-types","title":"老板分级","keywords":["类型管理","老板折扣"]},{"path":"club-operations","title":"积分礼品与会员","keywords":["积分礼品","VIP","会员权益","预存","转盘","生日","KOOK积分","冠名"]}]},{"id":"boss-growth","title":"成长与权益","icon":"Present","features":[{"path":"achievements","title":"成就配置","keywords":["成就","成长","消费目标"]},{"path":"checkin","title":"签到打卡","keywords":["全勤","补签","签到奖励"]},{"path":"coupons","title":"优惠券","keywords":["领券","核销","折扣券"]}]}]},{"id":"finance","title":"资金与核算","centers":[{"id":"accounts","title":"资金账目","icon":"Wallet","features":[{"path":"wallets","title":"钱包账户","keywords":["老板钱包","打手钱包","钱包管理","余额","充值","调账"]},{"path":"recharge-records","title":"充值记录","keywords":["账目记录","充值凭证"]},{"path":"transactions","title":"资金流水","keywords":["流水记录","收支","账务"]},{"path":"withdrawals","title":"提现审核","keywords":["打款","结款","收款账户"]},{"path":"payment-fee","title":"微信支付费率","keywords":["微信支付","商户费率","手续费"]}]},{"id":"payroll","title":"薪资核算","icon":"Money","features":[{"path":"salary-plans","title":"岗位薪资方案","keywords":["底薪","绩效","提成","薪资说明"]},{"path":"salary-assignments","title":"员工薪资安排","keywords":["岗位","人员","月份"]},{"path":"salary-activities","title":"业绩归属核实","keywords":["客服","充值提成","售后计次","考官"]},{"path":"payroll","title":"月度薪资核算","keywords":["工资","核算","确认"]}]},{"id":"operating-analysis","title":"经营核算","icon":"DataAnalysis","features":[{"path":"operating-costs","title":"每日投流与成本","keywords":["广告","投放","投流","运营成本"]},{"path":"operating-roi","title":"经营 ROI","keywords":["ROI","投产比","人力成本","利润"]}]}]},{"id":"support","title":"客服与消息","centers":[{"id":"support","title":"客服工作台","icon":"ChatLineRound","features":[{"path":"chat","title":"会话接待","keywords":["消息与客服","在线客服","聊天","回复"]},{"path":"support-cards","title":"客服名片","keywords":["联系入口","微信客服","企微"]}]},{"id":"messages","title":"站内消息","icon":"ChatDotRound","features":[{"path":"messages","title":"站内消息","keywords":["消息推送","通知","收件人"]}]}]},{"id":"operations","title":"店铺运营","centers":[{"id":"catalog","title":"商品与玩法","icon":"Goods","features":[{"path":"service-items","title":"服务商品","keywords":["游玩项目","套餐","价目","商品分类"]},{"path":"gameplays","title":"玩法配置","keywords":["玩法管理","游戏"]}]},{"id":"content-marketing","title":"促销与内容","icon":"Sell","features":[{"path":"promotions","title":"促销活动","keywords":["营销管理","活动价","折扣"]},{"path":"banners","title":"首页轮播","keywords":["横幅","首页图片","轮播图"]},{"path":"announcements","title":"公告管理","keywords":["公告","通知发布"]}]}]},{"id":"system","title":"团队与系统","centers":[{"id":"members","title":"成员与权限","icon":"Lock","features":[{"path":"admins","title":"后台成员","keywords":["客服信息管理","管理员","客服账号"]},{"path":"roles","title":"角色权限","keywords":["职位权限管理","角色","职位","授权"]}]},{"id":"audit","title":"操作日志","icon":"Document","features":[{"path":"audit-logs","title":"操作审计日志","keywords":["审计","操作记录","追溯"]}]}]}];window.XA_ICONS={"DashboardIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M2.8 1L2.74967 0.99997C2.52122 0.999752 2.32429 0.999564 2.14983 1.04145C1.60136 1.17312 1.17312 1.60136 1.04145 2.14983C0.999564 2.32429 0.999752 2.52122 0.99997 2.74967L1 2.8V5.2L0.99997 5.25033C0.999752 5.47878 0.999564 5.67572 1.04145 5.85017C1.17312 6.39864 1.60136 6.82688 2.14983 6.95856C2.32429 7.00044 2.52122 7.00025 2.74967 7.00003L2.8 7H5.2L5.25033 7.00003C5.47878 7.00025 5.67572 7.00044 5.85017 6.95856C6.39864 6.82688 6.82688 6.39864 6.95856 5.85017C7.00044 5.67572 7.00025 5.47878 7.00003 5.25033L7 5.2V2.8L7.00003 2.74967C7.00025 2.52122 7.00044 2.32429 6.95856 2.14983C6.82688 1.60136 6.39864 1.17312 5.85017 1.04145C5.67572 0.999564 5.47878 0.999752 5.25033 0.99997L5.2 1H2.8ZM2.38328 2.01382C2.42632 2.00348 2.49222 2 2.8 2H5.2C5.50779 2 5.57369 2.00348 5.61672 2.01382C5.79955 2.05771 5.94229 2.20045 5.98619 2.38328C5.99652 2.42632 6 2.49222 6 2.8V5.2C6 5.50779 5.99652 5.57369 5.98619 5.61672C5.94229 5.79955 5.79955 5.94229 5.61672 5.98619C5.57369 5.99652 5.50779 6 5.2 6H2.8C2.49222 6 2.42632 5.99652 2.38328 5.98619C2.20045 5.94229 2.05771 5.79955 2.01382 5.61672C2.00348 5.57369 2 5.50779 2 5.2V2.8C2 2.49222 2.00348 2.42632 2.01382 2.38328C2.05771 2.20045 2.20045 2.05771 2.38328 2.01382ZM9.8 1L9.74967 0.99997C9.52122 0.999752 9.32429 0.999564 9.14983 1.04145C8.60136 1.17312 8.17312 1.60136 8.04145 2.14983C7.99956 2.32429 7.99975 2.52122 7.99997 2.74967L8 2.8V5.2L7.99997 5.25033C7.99975 5.47878 7.99956 5.67572 8.04145 5.85017C8.17312 6.39864 8.60136 6.82688 9.14983 6.95856C9.32429 7.00044 9.52122 7.00025 9.74967 7.00003L9.8 7H12.2L12.2503 7.00003C12.4788 7.00025 12.6757 7.00044 12.8502 6.95856C13.3986 6.82688 13.8269 6.39864 13.9586 5.85017C14.0004 5.67572 14.0003 5.47878 14 5.25033L14 5.2V2.8L14 2.74967C14.0003 2.52122 14.0004 2.32429 13.9586 2.14983C13.8269 1.60136 13.3986 1.17312 12.8502 1.04145C12.6757 0.999564 12.4788 0.999752 12.2503 0.99997L12.2 1H9.8ZM9.38328 2.01382C9.42632 2.00348 9.49222 2 9.8 2H12.2C12.5078 2 12.5737 2.00348 12.6167 2.01382C12.7995 2.05771 12.9423 2.20045 12.9862 2.38328C12.9965 2.42632 13 2.49222 13 2.8V5.2C13 5.50779 12.9965 5.57369 12.9862 5.61672C12.9423 5.79955 12.7995 5.94229 12.6167 5.98619C12.5737 5.99652 12.5078 6 12.2 6H9.8C9.49222 6 9.42632 5.99652 9.38328 5.98619C9.20045 5.94229 9.05771 5.79955 9.01382 5.61672C9.00348 5.57369 9 5.50779 9 5.2V2.8C9 2.49222 9.00348 2.42632 9.01382 2.38328C9.05771 2.20045 9.20045 2.05771 9.38328 2.01382ZM2.74967 7.99997L2.8 8H5.2L5.25033 7.99997C5.47878 7.99975 5.67572 7.99956 5.85017 8.04145C6.39864 8.17312 6.82688 8.60136 6.95856 9.14983C7.00044 9.32429 7.00025 9.52122 7.00003 9.74967L7 9.8V12.2L7.00003 12.2503C7.00025 12.4788 7.00044 12.6757 6.95856 12.8502C6.82688 13.3986 6.39864 13.8269 5.85017 13.9586C5.67572 14.0004 5.47878 14.0003 5.25033 14L5.2 14H2.8L2.74967 14C2.52122 14.0003 2.32429 14.0004 2.14983 13.9586C1.60136 13.8269 1.17312 13.3986 1.04145 12.8502C0.999564 12.6757 0.999752 12.4788 0.99997 12.2503L1 12.2V9.8L0.99997 9.74967C0.999752 9.52122 0.999564 9.32429 1.04145 9.14983C1.17312 8.60136 1.60136 8.17312 2.14983 8.04145C2.32429 7.99956 2.52122 7.99975 2.74967 7.99997ZM2.8 9C2.49222 9 2.42632 9.00348 2.38328 9.01382C2.20045 9.05771 2.05771 9.20045 2.01382 9.38328C2.00348 9.42632 2 9.49222 2 9.8V12.2C2 12.5078 2.00348 12.5737 2.01382 12.6167C2.05771 12.7995 2.20045 12.9423 2.38328 12.9862C2.42632 12.9965 2.49222 13 2.8 13H5.2C5.50779 13 5.57369 12.9965 5.61672 12.9862C5.79955 12.9423 5.94229 12.7995 5.98619 12.6167C5.99652 12.5737 6 12.5078 6 12.2V9.8C6 9.49222 5.99652 9.42632 5.98619 9.38328C5.94229 9.20045 5.79955 9.05771 5.61672 9.01382C5.57369 9.00348 5.50779 9 5.2 9H2.8ZM9.8 8L9.74967 7.99997C9.52122 7.99975 9.32429 7.99956 9.14983 8.04145C8.60136 8.17312 8.17312 8.60136 8.04145 9.14983C7.99956 9.32429 7.99975 9.52122 7.99997 9.74967L8 9.8V12.2L7.99997 12.2503C7.99975 12.4788 7.99956 12.6757 8.04145 12.8502C8.17312 13.3986 8.60136 13.8269 9.14983 13.9586C9.32429 14.0004 9.52122 14.0003 9.74967 14L9.8 14H12.2L12.2503 14C12.4788 14.0003 12.6757 14.0004 12.8502 13.9586C13.3986 13.8269 13.8269 13.3986 13.9586 12.8502C14.0004 12.6757 14.0003 12.4788 14 12.2503L14 12.2V9.8L14 9.74967C14.0003 9.52122 14.0004 9.32429 13.9586 9.14983C13.8269 8.60136 13.3986 8.17312 12.8502 8.04145C12.6757 7.99956 12.4788 7.99975 12.2503 7.99997L12.2 8H9.8ZM9.38328 9.01382C9.42632 9.00348 9.49222 9 9.8 9H12.2C12.5078 9 12.5737 9.00348 12.6167 9.01382C12.7995 9.05771 12.9423 9.20045 12.9862 9.38328C12.9965 9.42632 13 9.49222 13 9.8V12.2C13 12.5078 12.9965 12.5737 12.9862 12.6167C12.9423 12.7995 12.7995 12.9423 12.6167 12.9862C12.5737 12.9965 12.5078 13 12.2 13H9.8C9.49222 13 9.42632 12.9965 9.38328 12.9862C9.20045 12.9423 9.05771 12.7995 9.01382 12.6167C9.00348 12.5737 9 12.5078 9 12.2V9.8C9 9.49222 9.00348 9.42632 9.01382 9.38328C9.05771 9.20045 9.20045 9.05771 9.38328 9.01382Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","FileTextIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M3 2.5C3 2.22386 3.22386 2 3.5 2H9.08579C9.21839 2 9.34557 2.05268 9.43934 2.14645L11.8536 4.56066C11.9473 4.65443 12 4.78161 12 4.91421V12.5C12 12.7761 11.7761 13 11.5 13H3.5C3.22386 13 3 12.7761 3 12.5V2.5ZM3.5 1C2.67157 1 2 1.67157 2 2.5V12.5C2 13.3284 2.67157 14 3.5 14H11.5C12.3284 14 13 13.3284 13 12.5V4.91421C13 4.51639 12.842 4.13486 12.5607 3.85355L10.1464 1.43934C9.86514 1.15804 9.48361 1 9.08579 1H3.5ZM4.5 4C4.22386 4 4 4.22386 4 4.5C4 4.77614 4.22386 5 4.5 5H7.5C7.77614 5 8 4.77614 8 4.5C8 4.22386 7.77614 4 7.5 4H4.5ZM4.5 7C4.22386 7 4 7.22386 4 7.5C4 7.77614 4.22386 8 4.5 8H10.5C10.7761 8 11 7.77614 11 7.5C11 7.22386 10.7761 7 10.5 7H4.5ZM4.5 10C4.22386 10 4 10.2239 4 10.5C4 10.7761 4.22386 11 4.5 11H10.5C10.7761 11 11 10.7761 11 10.5C11 10.2239 10.7761 10 10.5 10H4.5Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","PersonIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M7.5 0.875C5.49797 0.875 3.875 2.49797 3.875 4.5C3.875 6.15288 4.98124 7.54738 6.49373 7.98351C5.2997 8.12901 4.27557 8.55134 3.50407 9.31167C2.52216 10.2794 2.02502 11.72 2.02502 13.5999C2.02502 13.8623 2.23769 14.0749 2.50002 14.0749C2.76236 14.0749 2.97502 13.8623 2.97502 13.5999C2.97502 11.8799 3.42786 10.7206 4.17091 9.9883C4.91536 9.25463 6.02674 8.87499 7.49995 8.87499C8.97317 8.87499 10.0846 9.25463 10.8291 9.98831C11.5721 10.7206 12.025 11.8799 12.025 13.5999C12.025 13.8623 12.2376 14.0749 12.5 14.0749C12.7623 14.075 12.975 13.8623 12.975 13.6C12.975 11.72 12.4778 10.2794 11.4959 9.31166C10.7244 8.55135 9.70025 8.12903 8.50625 7.98352C10.0187 7.5474 11.125 6.15289 11.125 4.5C11.125 2.49797 9.50203 0.875 7.5 0.875ZM4.825 4.5C4.825 3.02264 6.02264 1.825 7.5 1.825C8.97736 1.825 10.175 3.02264 10.175 4.5C10.175 5.97736 8.97736 7.175 7.5 7.175C6.02264 7.175 4.825 5.97736 4.825 4.5Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","IdCardIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M14 11.0001V4.00006L1 4.00006L1 11.0001H14ZM15 4.00006V11.0001C15 11.5523 14.5523 12.0001 14 12.0001H1C0.447715 12.0001 0 11.5523 0 11.0001V4.00006C0 3.44778 0.447715 3.00006 1 3.00006H14C14.5523 3.00006 15 3.44778 15 4.00006ZM2 5.25C2 5.11193 2.11193 5 2.25 5H5.75C5.88807 5 6 5.11193 6 5.25V9.75C6 9.88807 5.88807 10 5.75 10H2.25C2.11193 10 2 9.88807 2 9.75V5.25ZM7.5 7C7.22386 7 7 7.22386 7 7.5C7 7.77614 7.22386 8 7.5 8H10.5C10.7761 8 11 7.77614 11 7.5C11 7.22386 10.7761 7 10.5 7H7.5ZM7 9.5C7 9.22386 7.22386 9 7.5 9H12.5C12.7761 9 13 9.22386 13 9.5C13 9.77614 12.7761 10 12.5 10H7.5C7.22386 10 7 9.77614 7 9.5ZM7.5 5C7.22386 5 7 5.22386 7 5.5C7 5.77614 7.22386 6 7.5 6H11.5C11.7761 6 12 5.77614 12 5.5C12 5.22386 11.7761 5 11.5 5H7.5Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","CardStackIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M2 3.5C2 3.22386 2.22386 3 2.5 3H12.5C12.7761 3 13 3.22386 13 3.5V9.5C13 9.77614 12.7761 10 12.5 10H2.5C2.22386 10 2 9.77614 2 9.5V3.5ZM2 10.9146C1.4174 10.7087 1 10.1531 1 9.5V3.5C1 2.67157 1.67157 2 2.5 2H12.5C13.3284 2 14 2.67157 14 3.5V9.5C14 10.1531 13.5826 10.7087 13 10.9146V11.5C13 12.3284 12.3284 13 11.5 13H3.5C2.67157 13 2 12.3284 2 11.5V10.9146ZM12 11V11.5C12 11.7761 11.7761 12 11.5 12H3.5C3.22386 12 3 11.7761 3 11.5V11H12Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","ChatBubbleIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M12.5 3L2.5 3.00002C1.67157 3.00002 1 3.6716 1 4.50002V9.50003C1 10.3285 1.67157 11 2.5 11H7.50003C7.63264 11 7.75982 11.0527 7.85358 11.1465L10 13.2929V11.5C10 11.2239 10.2239 11 10.5 11H12.5C13.3284 11 14 10.3285 14 9.50003V4.5C14 3.67157 13.3284 3 12.5 3ZM2.49999 2.00002L12.5 2C13.8807 2 15 3.11929 15 4.5V9.50003C15 10.8807 13.8807 12 12.5 12H11V14.5C11 14.7022 10.8782 14.8845 10.6913 14.9619C10.5045 15.0393 10.2894 14.9965 10.1464 14.8536L7.29292 12H2.5C1.11929 12 0 10.8807 0 9.50003V4.50002C0 3.11931 1.11928 2.00003 2.49999 2.00002Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","BackpackIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M5 1C5 0.447715 5.44772 0 6 0H9C9.55228 0 10 0.447715 10 1V2H14C14.5523 2 15 2.44772 15 3V6C15 6.8888 14.6131 7.68734 14 8.23608V11.5C14 12.3284 13.3284 13 12.5 13H2.5C1.67157 13 1 12.3284 1 11.5V8.2359C0.38697 7.68721 0 6.88883 0 6V3C0 2.44772 0.447716 2 1 2H5V1ZM9 1V2H6V1H9ZM1 3H5H5.5H9.5H10H14V6C14 6.654 13.6866 7.23467 13.1997 7.6004C12.8655 7.85144 12.4508 8 12 8H8V7.5C8 7.22386 7.77614 7 7.5 7C7.22386 7 7 7.22386 7 7.5V8H3C2.5493 8 2.1346 7.85133 1.80029 7.60022C1.31335 7.23446 1 6.65396 1 6V3ZM7 9H3C2.64961 9 2.31292 8.93972 2 8.82905V11.5C2 11.7761 2.22386 12 2.5 12H12.5C12.7761 12 13 11.7761 13 11.5V8.82915C12.6871 8.93978 12.3504 9 12 9H8V9.5C8 9.77614 7.77614 10 7.5 10C7.22386 10 7 9.77614 7 9.5V9Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","GearIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M7.07095 0.650238C6.67391 0.650238 6.32977 0.925096 6.24198 1.31231L6.0039 2.36247C5.6249 2.47269 5.26335 2.62363 4.92436 2.81013L4.01335 2.23585C3.67748 2.02413 3.23978 2.07312 2.95903 2.35386L2.35294 2.95996C2.0722 3.2407 2.0232 3.6784 2.23493 4.01427L2.80942 4.92561C2.62307 5.2645 2.47227 5.62594 2.36216 6.00481L1.31209 6.24287C0.924883 6.33065 0.650024 6.6748 0.650024 7.07183V7.92897C0.650024 8.32601 0.924883 8.67015 1.31209 8.75794L2.36228 8.99603C2.47246 9.375 2.62335 9.73652 2.80979 10.0755L2.2354 10.9867C2.02367 11.3225 2.07267 11.7602 2.35341 12.041L2.95951 12.6471C3.24025 12.9278 3.67795 12.9768 4.01382 12.7651L4.92506 12.1907C5.26384 12.377 5.62516 12.5278 6.0039 12.6379L6.24198 13.6881C6.32977 14.0753 6.67391 14.3502 7.07095 14.3502H7.92809C8.32512 14.3502 8.66927 14.0753 8.75705 13.6881L8.99505 12.6383C9.37411 12.5282 9.73573 12.3773 10.0748 12.1909L10.986 12.7653C11.3218 12.977 11.7595 12.928 12.0403 12.6473L12.6464 12.0412C12.9271 11.7604 12.9761 11.3227 12.7644 10.9869L12.1902 10.076C12.3768 9.73688 12.5278 9.37515 12.638 8.99596L13.6879 8.75794C14.0751 8.67015 14.35 8.32601 14.35 7.92897V7.07183C14.35 6.6748 14.0751 6.33065 13.6879 6.24287L12.6381 6.00488C12.528 5.62578 12.3771 5.26414 12.1906 4.92507L12.7648 4.01407C12.9766 3.6782 12.9276 3.2405 12.6468 2.95975L12.0407 2.35366C11.76 2.07292 11.3223 2.02392 10.9864 2.23565L10.0755 2.80989C9.73622 2.62328 9.37437 2.47229 8.99505 2.36209L8.75705 1.31231C8.66927 0.925096 8.32512 0.650238 7.92809 0.650238H7.07095ZM4.92053 3.81251C5.44724 3.44339 6.05665 3.18424 6.71543 3.06839L7.07095 1.50024H7.92809L8.28355 3.06816C8.94267 3.18387 9.5524 3.44302 10.0794 3.81224L11.4397 2.9547L12.0458 3.56079L11.1882 4.92117C11.5573 5.44798 11.8164 6.0575 11.9321 6.71638L13.5 7.07183V7.92897L11.932 8.28444C11.8162 8.94342 11.557 9.55301 11.1878 10.0798L12.0453 11.4402L11.4392 12.0462L10.0787 11.1886C9.55192 11.5576 8.94241 11.8166 8.28355 11.9323L7.92809 13.5002H7.07095L6.71543 11.932C6.0569 11.8162 5.44772 11.5572 4.92116 11.1883L3.56055 12.046L2.95445 11.4399L3.81213 10.0794C3.4431 9.55266 3.18403 8.94326 3.06825 8.2845L1.50002 7.92897V7.07183L3.06818 6.71632C3.18388 6.05765 3.44283 5.44833 3.81171 4.92165L2.95398 3.561L3.56008 2.95491L4.92053 3.81251ZM9.02496 7.50008C9.02496 8.34226 8.34223 9.02499 7.50005 9.02499C6.65786 9.02499 5.97513 8.34226 5.97513 7.50008C5.97513 6.65789 6.65786 5.97516 7.50005 5.97516C8.34223 5.97516 9.02496 6.65789 9.02496 7.50008ZM9.92496 7.50008C9.92496 8.83932 8.83929 9.92499 7.50005 9.92499C6.1608 9.92499 5.07513 8.83932 5.07513 7.50008C5.07513 6.16084 6.1608 5.07516 7.50005 5.07516C8.83929 5.07516 9.92496 6.16084 9.92496 7.50008Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","HomeIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M7.07926 0.222253C7.31275 -0.007434 7.6873 -0.007434 7.92079 0.222253L14.6708 6.86227C14.907 7.09465 14.9101 7.47453 14.6778 7.71076C14.4454 7.947 14.0655 7.95012 13.8293 7.71773L13 6.90201V12.5C13 12.7761 12.7762 13 12.5 13H2.50002C2.22388 13 2.00002 12.7761 2.00002 12.5V6.90201L1.17079 7.71773C0.934558 7.95012 0.554672 7.947 0.32229 7.71076C0.0899079 7.47453 0.0930283 7.09465 0.32926 6.86227L7.07926 0.222253ZM7.50002 1.49163L12 5.91831V12H10V8.49999C10 8.22385 9.77617 7.99999 9.50002 7.99999H6.50002C6.22388 7.99999 6.00002 8.22385 6.00002 8.49999V12H3.00002V5.91831L7.50002 1.49163ZM7.00002 12H9.00002V8.99999H7.00002V12Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","ChevronDownIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","ChevronRightIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","PinLeftIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M2.05005 13.5C2.05005 13.7485 2.25152 13.95 2.50005 13.95C2.74858 13.95 2.95005 13.7485 2.95005 13.5L2.95005 1.49995C2.95005 1.25142 2.74858 1.04995 2.50005 1.04995C2.25152 1.04995 2.05005 1.25142 2.05005 1.49995L2.05005 13.5ZM8.4317 11.0681C8.60743 11.2439 8.89236 11.2439 9.06809 11.0681C9.24383 10.8924 9.24383 10.6075 9.06809 10.4317L6.58629 7.94993L14.5 7.94993C14.7485 7.94993 14.95 7.74846 14.95 7.49993C14.95 7.2514 14.7485 7.04993 14.5 7.04993L6.58629 7.04993L9.06809 4.56813C9.24383 4.39239 9.24383 4.10746 9.06809 3.93173C8.89236 3.75599 8.60743 3.75599 8.4317 3.93173L5.1817 7.18173C5.00596 7.35746 5.00596 7.64239 5.1817 7.81812L8.4317 11.0681Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","PinRightIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M12.95 1.50005C12.95 1.25152 12.7485 1.05005 12.5 1.05005C12.2514 1.05005 12.05 1.25152 12.05 1.50005L12.05 13.5C12.05 13.7486 12.2514 13.95 12.5 13.95C12.7485 13.95 12.95 13.7486 12.95 13.5L12.95 1.50005ZM6.5683 3.93188C6.39257 3.75614 6.10764 3.75614 5.93191 3.93188C5.75617 4.10761 5.75617 4.39254 5.93191 4.56827L8.41371 7.05007L0.499984 7.05007C0.251456 7.05007 0.0499847 7.25155 0.0499847 7.50007C0.0499846 7.7486 0.251457 7.95007 0.499984 7.95007L8.41371 7.95007L5.93191 10.4319C5.75617 10.6076 5.75617 10.8925 5.93191 11.0683C6.10764 11.244 6.39257 11.244 6.56831 11.0683L9.8183 7.81827C9.99404 7.64254 9.99404 7.35761 9.8183 7.18188L6.5683 3.93188Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","DrawingPinIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M10.3285 1.13607C10.1332 0.940809 9.81662 0.940808 9.62136 1.13607C9.42609 1.33133 9.42609 1.64792 9.62136 1.84318L10.2744 2.49619L5.42563 6.13274L4.31805 5.02516C4.12279 4.8299 3.80621 4.8299 3.61095 5.02516C3.41569 5.22042 3.41569 5.537 3.61095 5.73226L5.02516 7.14648L6.08582 8.20714L2.81545 11.4775C2.62019 11.6728 2.62019 11.9894 2.81545 12.1846C3.01072 12.3799 3.3273 12.3799 3.52256 12.1846L6.79293 8.91425L7.85359 9.97491L9.2678 11.3891C9.46306 11.5844 9.77965 11.5844 9.97491 11.3891C10.1702 11.1939 10.1702 10.8773 9.97491 10.682L8.86733 9.57443L12.5039 4.7257L13.1569 5.37871C13.3522 5.57397 13.6687 5.57397 13.864 5.37871C14.0593 5.18345 14.0593 4.86687 13.864 4.6716L12.8033 3.61094L11.3891 2.19673L10.3285 1.13607ZM6.13992 6.84702L10.9887 3.21047L11.7896 4.01142L8.15305 8.86015L6.13992 6.84702Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","DrawingPinFilledIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M9.62129 1.13607C9.81656 0.940808 10.1331 0.940809 10.3284 1.13607L11.3891 2.19673L12.8033 3.61094L13.8639 4.6716C14.0592 4.86687 14.0592 5.18345 13.8639 5.37871C13.6687 5.57397 13.3521 5.57397 13.1568 5.37871L12.5038 4.7257L8.86727 9.57443L9.97485 10.682C10.1701 10.8773 10.1701 11.1939 9.97485 11.3891C9.77959 11.5844 9.463 11.5844 9.26774 11.3891L7.85353 9.97491L6.79287 8.91425L3.5225 12.1846C3.32724 12.3799 3.01065 12.3799 2.81539 12.1846C2.62013 11.9894 2.62013 11.6728 2.81539 11.4775L6.08576 8.20714L5.0251 7.14648L3.61089 5.73226C3.41563 5.537 3.41562 5.22042 3.61089 5.02516C3.80615 4.8299 4.12273 4.8299 4.31799 5.02516L5.42557 6.13274L10.2743 2.49619L9.62129 1.84318C9.42603 1.64792 9.42603 1.33133 9.62129 1.13607Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path><path d=\"M9.62129 1.13607C9.81656 0.940808 10.1331 0.940809 10.3284 1.13607L11.3891 2.19673L12.8033 3.61094L13.8639 4.6716C14.0592 4.86687 14.0592 5.18345 13.8639 5.37871C13.6687 5.57397 13.3521 5.57397 13.1568 5.37871L12.5038 4.7257L8.86727 9.57443L9.97485 10.682C10.1701 10.8773 10.1701 11.1939 9.97485 11.3891C9.77959 11.5844 9.463 11.5844 9.26774 11.3891L7.85353 9.97491L6.79287 8.91425L3.5225 12.1846C3.32724 12.3799 3.01065 12.3799 2.81539 12.1846C2.62013 11.9894 2.62013 11.6728 2.81539 11.4775L6.08576 8.20714L5.0251 7.14648L3.61089 5.73226C3.41563 5.537 3.41562 5.22042 3.61089 5.02516C3.80615 4.8299 4.12273 4.8299 4.31799 5.02516L5.42557 6.13274L10.2743 2.49619L9.62129 1.84318C9.42603 1.64792 9.42603 1.33133 9.62129 1.13607Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","MagnifyingGlassIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M10 6.5C10 8.433 8.433 10 6.5 10C4.567 10 3 8.433 3 6.5C3 4.567 4.567 3 6.5 3C8.433 3 10 4.567 10 6.5ZM9.30884 10.0159C8.53901 10.6318 7.56251 11 6.5 11C4.01472 11 2 8.98528 2 6.5C2 4.01472 4.01472 2 6.5 2C8.98528 2 11 4.01472 11 6.5C11 7.56251 10.6318 8.53901 10.0159 9.30884L12.8536 12.1464C13.0488 12.3417 13.0488 12.6583 12.8536 12.8536C12.6583 13.0488 12.3417 13.0488 12.1464 12.8536L9.30884 10.0159Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>","CheckIcon":"<svg width=\"16\" height=\"16\" viewBox=\"0 0 15 15\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\" aria-hidden=\"true\"><path d=\"M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z\" fill=\"currentColor\" fill-rule=\"evenodd\" clip-rule=\"evenodd\"></path></svg>"};</script><script>(() => {
+  const brands = window.XA_BRANDS
+  const navigation = window.XA_NAVIGATION
+  const icons = window.XA_ICONS
+  const labels = {
+    A: '清晰的任务层级', B: '留白的门店工作簿', C: '悬浮的门店导航台',
+    D: '专注的深色业务树', E: '强网格的业务索引', F: '双栏界栏导航',
+  }
+  const domainIcons = {
+    'platform-stores': 'HomeIcon', overview: 'DashboardIcon', orders: 'FileTextIcon',
+    providers: 'PersonIcon', bosses: 'IdCardIcon', finance: 'CardStackIcon',
+    support: 'ChatBubbleIcon', operations: 'BackpackIcon', system: 'GearIcon',
+  }
+  const esc = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character])
+  const icon = name => icons[name] || icons.DashboardIcon
+  const workspaceIds = ['platform-stores', 'overview']
+  const featureIcon = path => ({ stores: 'HomeIcon', dashboard: 'DashboardIcon', orders: 'FileTextIcon', reports: 'CheckIcon', chat: 'ChatBubbleIcon' })[path] || 'FileTextIcon'
+  const storeLogo = (slug, className = '') => `<img class="${className}" src="${brands[slug].logo}" alt="${esc(brands[slug].name)} Logo">`
+  const currentFeature = state => navigation.flatMap(domain => domain.centers.map(center => ({ domain, center, features: center.features }))).flatMap(group => group.features.map(feature => ({ ...feature, domain: group.domain, center: group.center }))).find(feature => feature.path === state.feature) || { title: '订单与派单', domain: navigation.find(domain => domain.id === 'orders') }
+
+  function storeSwitcher(state) {
+    return `<div class="store-switcher">
+      <span class="store-label">当前管理门店</span>
+      <button class="store-current" data-store-menu aria-expanded="false" aria-label="切换当前管理门店，仅原型预览">
+        ${storeLogo(state.store, 'store-logo')}
+        <span class="store-copy"><strong>${esc(brands[state.store].name)}</strong><small>门店数据独立管理</small></span>
+        ${icon('ChevronDownIcon')}
+      </button>
+      <div class="store-menu" hidden>
+        ${Object.values(brands).filter(brand => brand.slug !== 'platform').map(brand => `<button class="store-option" data-store="${brand.slug}">${storeLogo(brand.slug)}<span>${esc(brand.name)}</span><small>${brand.currency}</small></button>`).join('')}
+      </div>
+    </div>`
+  }
+
+  function centerMarkup(center, state) {
+    return `<section class="domain-center">
+      ${center.features.length > 1 || state.variant === 'F' ? `<h3>${esc(center.title)}</h3>` : ''}
+      ${center.features.map(feature => `<button class="child-link ${state.feature === feature.path ? 'is-active' : ''}" data-feature="${feature.path}" data-domain="${state.domain}" aria-current="${state.feature === feature.path ? 'page' : 'false'}"><span>${esc(feature.title)}</span>${state.feature === feature.path ? icon('ChevronRightIcon') : ''}</button>`).join('')}
+    </section>`
+  }
+
+  function domainMarkup(domain, state) {
+    const open = state.open.includes(domain.id)
+    return `<section class="domain-group">
+      <button class="domain-trigger ${state.domain === domain.id ? 'is-current' : ''}" data-domain="${domain.id}" aria-expanded="${open}" title="${esc(domain.title)}">${icon(domainIcons[domain.id])}<span class="domain-label">${esc(domain.title)}</span>${icon('ChevronDownIcon')}</button>
+      <div class="domain-children" ${open ? '' : 'hidden'}>${domain.centers.map(center => centerMarkup(center, { ...state, domain: domain.id })).join('')}</div>
+    </section>`
+  }
+
+  function workspaceMarkup(state) {
+    return navigation.filter(domain => workspaceIds.includes(domain.id)).flatMap(domain => domain.centers.flatMap(center => center.features.map(feature => ({ ...feature, domain: domain.id })))).map(feature => `<button class="workspace-link ${state.feature === feature.path ? 'is-active' : ''}" data-feature="${feature.path}" data-domain="${feature.domain}" title="${esc(feature.title)}">${icon(featureIcon(feature.path))}<span>${esc(feature.title)}</span></button>`).join('')
+  }
+
+  function primaryNavigation(state) {
+    const groups = [
+      { title: '平台与工作区', content: workspaceMarkup(state) },
+      { title: '门店经营', content: navigation.filter(domain => !workspaceIds.includes(domain.id) && !['operations', 'system'].includes(domain.id)).map(domain => domainMarkup(domain, state)).join('') },
+      { title: '门店配置', content: navigation.filter(domain => ['operations', 'system'].includes(domain.id)).map(domain => domainMarkup(domain, state)).join('') },
+    ]
+    return groups.map(group => `<div class="nav-section-label">${group.title}</div>${group.content}`).join('')
+  }
+
+  function railNavigation(state) {
+    return navigation.map(domain => `<button class="rail-domain ${state.domain === domain.id ? 'is-current' : ''}" data-domain="${domain.id}" title="${esc(domain.title)}" aria-label="${esc(domain.title)}">${icon(domainIcons[domain.id])}<span class="domain-label">${esc(domain.title)}</span></button>`).join('')
+  }
+
+  function sidebar(state) {
+    const footer = `<div class="sidebar-footer"><button class="collapse-button" data-collapse title="${state.collapsed ? '展开侧栏' : '收起侧栏'}">${icon(state.collapsed ? 'PinRightIcon' : 'PinLeftIcon')}<span>${state.collapsed ? '展开侧栏' : '收起侧栏'}</span></button><button class="pin-button" data-pin aria-pressed="${state.locked}" title="${state.locked ? '取消锁定展开' : '锁定展开侧栏'}" aria-label="${state.locked ? '取消锁定展开' : '锁定展开侧栏'}">${icon(state.locked ? 'DrawingPinFilledIcon' : 'DrawingPinIcon')}</button></div>`
+    if (state.variant === 'F') {
+      const domain = navigation.find(item => item.id === state.domain) || navigation.find(item => item.id === 'orders')
+      return `<aside class="prototype-sidebar" aria-label="后台业务导航">
+        <div class="prototype-rail"><div class="prototype-brand"><img class="brand-logo" src="${brands.platform.logo}" alt="电竞运营管理平台 Logo"></div><nav class="prototype-navigation" aria-label="一级业务导航">${railNavigation(state)}</nav>${footer}</div>
+        <div class="prototype-subnav">
+          <div class="prototype-subnav-header"><strong>${esc(domain.title)}</strong><p>当前业务子菜单</p></div>
+          ${storeSwitcher(state)}
+          <div class="subnav-scroll">${domain.centers.map(center => centerMarkup(center, state)).join('')}</div>
+          <button class="subnav-collapse" data-collapse>${icon('PinLeftIcon')}<span>收起二级导航</span></button>
+        </div>
+      </aside>`
+    }
+    return `<aside class="prototype-sidebar" aria-label="后台业务导航">
+      <div class="prototype-brand"><img class="brand-logo" src="${brands.platform.logo}" alt="电竞运营管理平台 Logo"><div class="brand-copy"><strong>电竞管理系统</strong><small>多门店运营管理</small></div></div>
+      ${storeSwitcher(state)}
+      <nav class="prototype-navigation" aria-label="后台主导航">${primaryNavigation(state)}</nav>
+      ${footer}
+    </aside>`
+  }
+
+  function content(state) {
+    const feature = currentFeature(state)
+    return `<main class="prototype-main">
+      <header class="prototype-topbar"><div class="breadcrumbs">${esc(brands[state.store].name)}　/　${esc(feature.domain?.title || '订单中心')}　/　<strong>${esc(feature.title)}</strong></div><button class="prototype-search" data-search>${icon('MagnifyingGlassIcon')}<span>搜索功能</span><kbd>Ctrl K</kbd></button></header>
+      <div class="prototype-content"><div class="prototype-context"><span class="prototype-eyebrow">方案 ${state.variant} · ${labels[state.variant]}</span><a class="gallery-return" href="index.html">返回方案比较</a></div><h1>${esc(feature.title)}<span class="prototype-ribbon">交互设计原型 · 非真实业务数据</span></h1><p class="prototype-intro">只比较导航结构、门店上下文和内容区空间，不改变真实菜单权限。</p>
+        <div class="prototype-notes"><section class="prototype-note">${icon('HomeIcon')}<h2>当前门店清晰</h2><p>${esc(brands[state.store].name)}作为数据边界。切换仅用于演示，不请求真实门店接口。</p></section><section class="prototype-note">${icon('FileTextIcon')}<h2>业务路径清楚</h2><p>订单、陪玩与老板仍是核心入口；分类和页面归属保持与当前后台一致。</p></section><section class="prototype-note">${icon('CheckIcon')}<h2>当前位置明确</h2><p>${esc(feature.title)}通过位置、字重和品牌色共同反馈，不只依靠单一颜色。</p></section></div>
+        <section class="prototype-stage"><h2>内容区对照</h2><p>这里用于观察侧栏宽度、菜单密度与当前位置。页面中的结构和留白仅供设计评审，不作为业务功能或数据验收。</p><div class="prototype-skeleton"><span></span><span></span><span></span></div></section>
+      </div>
+    </main>`
+  }
+
+  function searchDialog(state) {
+    return `<dialog class="search-dialog" aria-label="搜索后台功能"><form><input type="search" aria-label="搜索菜单" placeholder="输入菜单名称，例如：订单、陪玩、财务" autocomplete="off"></form><div class="search-results">${navigation.flatMap(domain => domain.centers.flatMap(center => center.features.map(feature => `<button class="search-result" data-feature="${feature.path}" data-domain="${domain.id}" data-search-text="${esc(feature.title + domain.title + center.title)}">${icon(featureIcon(feature.path))}<span>${esc(feature.title)}</span><small>${esc(domain.title)}</small></button>`))).join('')}</div><form method="dialog"><button>关闭</button></form></dialog>`
+  }
+
+  function initialState(variant) {
+    return { variant, store: 'shenglang', feature: 'orders', domain: 'orders', open: ['orders'], collapsed: false, locked: true }
+  }
+
+  function mount(root, variant, options = {}, previous) {
+    const state = previous || initialState(variant)
+    root.__sidebarState = state
+    root.className = `prototype-app variant-${variant}${state.collapsed ? ' is-collapsed' : ''}`
+    root.dataset.variant = variant
+    root.innerHTML = sidebar(state) + content(state) + searchDialog(state)
+    if (options.mini) return
+    const dialog = root.querySelector('.search-dialog')
+    const notify = text => {
+      const toast = document.createElement('div')
+      toast.className = 'prototype-toast'
+      toast.setAttribute('role', 'status')
+      toast.textContent = text
+      root.appendChild(toast)
+      setTimeout(() => toast.remove(), 2600)
+    }
+    const update = () => mount(root, variant, options, state)
+    root.onclick = event => {
+      const target = event.target.closest('button')
+      if (!target) return
+      if (target.matches('[data-store-menu]')) {
+        const menu = target.parentElement.querySelector('.store-menu')
+        menu.hidden = !menu.hidden
+        target.setAttribute('aria-expanded', String(!menu.hidden))
+        return
+      }
+      if (target.dataset.store) {
+        state.store = target.dataset.store
+        update()
+        notify(`已切换到${brands[state.store].name} · 仅原型预览，未修改真实门店`)
+        return
+      }
+      if (target.hasAttribute('data-search')) {
+        dialog.showModal()
+        dialog.querySelector('input').focus()
+        return
+      }
+      if (target.dataset.feature) {
+        state.feature = target.dataset.feature
+        state.domain = target.dataset.domain
+        if (!state.open.includes(state.domain)) state.open.push(state.domain)
+        if (state.variant === 'F' && state.collapsed && !workspaceIds.includes(state.domain)) state.collapsed = false
+        update()
+        return
+      }
+      if (target.dataset.domain) {
+        const domain = navigation.find(item => item.id === target.dataset.domain)
+        state.domain = target.dataset.domain
+        if (state.variant === 'F') {
+          state.feature = domain.centers[0].features[0].path
+        } else if (state.collapsed) {
+          state.collapsed = false
+          state.open = [target.dataset.domain]
+        } else {
+          state.open = state.open.includes(target.dataset.domain) ? state.open.filter(id => id !== target.dataset.domain) : [target.dataset.domain]
+        }
+        update()
+        return
+      }
+      if (target.hasAttribute('data-collapse')) {
+        state.collapsed = !state.collapsed
+        state.locked = false
+        update()
+        return
+      }
+      if (target.hasAttribute('data-pin')) {
+        state.locked = !state.locked
+        if (state.locked) state.collapsed = false
+        update()
+      }
+    }
+    dialog.querySelector('input').oninput = event => {
+      const keyword = event.target.value.trim().toLocaleLowerCase()
+      dialog.querySelectorAll('[data-search-text]').forEach(button => { button.hidden = keyword && !button.dataset.searchText.toLocaleLowerCase().includes(keyword) })
+    }
+    root.onkeydown = event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
+        event.preventDefault()
+        dialog.showModal()
+        dialog.querySelector('input').focus()
+      }
+    }
+  }
+
+  window.SidebarPrototype = { mount, labels }
+})()
+</script><script>SidebarPrototype.mount(document.getElementById('thumb-A'),'A',{mini:true});SidebarPrototype.mount(document.getElementById('thumb-B'),'B',{mini:true});SidebarPrototype.mount(document.getElementById('thumb-C'),'C',{mini:true});SidebarPrototype.mount(document.getElementById('thumb-D'),'D',{mini:true});SidebarPrototype.mount(document.getElementById('thumb-E'),'E',{mini:true});SidebarPrototype.mount(document.getElementById('thumb-F'),'F',{mini:true});</script></body></html>

@@ -33,6 +33,8 @@ class AdminChatCursorTest(TestCase):
             ids.append(result['data']['id'])
         self.other_client.post('/api/chat/send/', {'content': '其他会话'}, format='json')
         session = self.boss_client.get('/api/chat/session/').data['data']['session']['id']
+        claim = self.staff_client.post(f'/api/admin/chat-sessions/{session}/claim/', {'expected_version': 0}, format='json')
+        self.assertEqual(claim.data['code'], 0, claim.data)
         other_session = self.other_client.get('/api/chat/session/').data['data']['session']['id']
         other_id = ChatMessage.objects.get(session_id=other_session).pk
         # Imported or corrected timestamps may not follow insertion IDs. Ties

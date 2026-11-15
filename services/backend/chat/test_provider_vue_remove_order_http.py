@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Removing an order from a real consultation survives reload and reselection."""
 import json
 import os
@@ -18,10 +19,10 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
                    CELERY_TASK_ALWAYS_EAGER=False)
 class ProviderVueRemoveOrderHTTPTest(LiveServerTestCase):
     def test_remove_reload_and_choose_another_order(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
-        boss, provider, staff = make_user(), make_provider(), make_console_user(['chat:view', 'chat:reply', 'order:view'])
+            self.skipTest('requires current React source')
+        boss, provider, staff = make_user(), make_provider(deposit_mode='EARNINGS'), make_console_user(['chat:view', 'chat:reply', 'order:view'])
         accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, provider, staff)]
         for user, account in zip((boss, provider, staff), accounts): link_legacy_relations(user, account)
         provider.escort_profile.account = accounts[1]; provider.escort_profile.save(update_fields=['account'])
@@ -42,7 +43,7 @@ class ProviderVueRemoveOrderHTTPTest(LiveServerTestCase):
             for order in (first['data'], second['data']):
                 prefix = '/api/admin/orders/' if client == clients[2] else '/api/orders/orders/'
                 self.assertEqual(client.get(f"{prefix}{order['id']}/").data['data']['status'], 'GRABBED')
-        fixed = os.environ.get('XA_CHAT_REMOVE_FIXED') == '1'
+        fixed = True
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run(['node', str(repo / 'scripts/provider-vue-chat-remove-order-375.cjs')],
             input=json.dumps({'root':root, 'base':self.live_server_url, 'token':tokens[1], 'id':accounts[1].pk,
@@ -52,6 +53,7 @@ class ProviderVueRemoveOrderHTTPTest(LiveServerTestCase):
         print(result.stdout.strip())
         if fixed:
             session = ChatSession.objects.get(account=accounts[1])
+            self.assertEqual(clients[2].post(f'/api/admin/chat-sessions/{session.pk}/claim/', {'expected_version': 0}, format='json').data['code'], 0)
             response = clients[2].get(f'/api/admin/chat-sessions/{session.pk}/messages/').data
             self.assertEqual(response['code'], 0, response)
             contents = [row['content'] for row in response['data']['list']]

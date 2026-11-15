@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest import skipUnless
 
 from django.conf import settings
+from django.db import connection
 from django.test import LiveServerTestCase, override_settings
 
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -20,13 +21,48 @@ from wallet.models import WithdrawRequest
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)
 class DashboardWithdrawalBrowserTest(LiveServerTestCase):
+    @classmethod
+    def setUpClass(cls):
+        if connection.vendor == 'sqlite' and connection.creation.is_in_memory_db(connection.settings_dict['NAME']):
+            raise RuntimeError('提现页面真实浏览器验收需要独立文件 SQLite 或 MySQL；内存 SQLite 跨线程共享连接会导致结果不可靠。')
+        super().setUpClass()
+
     setUp = fixtures.setUp
     client_for = staticmethod(fixtures.client_for)
     ok = fixtures.ok
     bind = fixtures.bind
     payload = fixtures.payload
 
-    def test_other_staff_claim_drilldown_on_mobile(self):
+    def test_pending_dashboard_opens_oldest_first(self):
+        role = self.admin.admin_membership.roles.first()
+        role.permissions = list(set(role.permissions) | {'dashboard:view', 'withdraw:view'})
+        role.save(update_fields=['permissions'])
+        payee = self.bind('oldest-browser-1234')
+        ids = [self.ok(self.provider_client.post('/api/wallet/withdraw/', self.payload(payee, f'oldest-browser-{n}'), format='json'))['data']['request']['id'] for n in range(3)]
+        repo = Path(settings.BASE_DIR).parent.parent
+        result = subprocess.run(['node', str(repo / 'scripts/admin-withdraw-oldest-live.cjs')], cwd=repo,
+            input=json.dumps({'root':os.environ['XA_ADMIN_VUE_ROOT'], 'base':self.live_server_url,
+                              'token':issue_account_tokens(self.admin.admin_membership.account)[0], 'ids':ids}),
+            text=True, encoding='utf-8', capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_claim_last_row_returns_to_existing_page(self):
+        from wallet.models import SystemConfig
+        SystemConfig.objects.update_or_create(key='min_withdraw_amount', defaults={'value':'1000'})
+        payee = self.bind('last-page-browser-1234')
+        ids = []
+        for n in range(11):
+            data = {**self.payload(payee, f'last-page-{n}'), 'amount':1000}
+            ids.append(self.ok(self.provider_client.post('/api/wallet/withdraw/', data, format='json'))['data']['request']['id'])
+        repo = Path(settings.BASE_DIR).parent.parent
+        result = subprocess.run(['node', str(repo / 'scripts/admin-withdraw-oldest-live.cjs')], cwd=repo,
+            input=json.dumps({'root':os.environ['XA_ADMIN_VUE_ROOT'], 'base':self.live_server_url,
+                'token':issue_account_tokens(self.admin.admin_membership.account)[0], 'ids':ids, 'emptyLastPage':True}),
+            text=True, encoding='utf-8', capture_output=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(WithdrawRequest.objects.get(pk=ids[-1]).claimed_by_account_id, self.admin.admin_membership.account_id)
+
+    def test_other_staff_claim_drilldown_on_ipad_landscape(self):
         node = shutil.which('node')
         if not node:
             self.skipTest('Node runtime required')
@@ -64,6 +100,7 @@ class DashboardWithdrawalBrowserTest(LiveServerTestCase):
         self.ok(self.provider_client.post('/api/wallet/withdraw/', self.payload(payee, 'mobile-withdraw-unclaimed'), format='json'))
         provider = subprocess.run([node, str(repo / 'scripts/provider-withdraw-mobile-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'token': issue_account_tokens(self.account)[0], 'id': self.account.pk,
+                              'vueRoot': os.environ.get('XA_PROVIDER_VUE_ROOT'),
                               'pendingProgress': True}),
             text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
         self.assertEqual(provider.returncode, 0, provider.stdout + provider.stderr)

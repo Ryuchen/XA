@@ -12,7 +12,7 @@
 3. **解封按 pre_ban_state 快照回滚**，不无脑置 True。否则「本来就被停用的
    账户」被封一次再解封，会被凭空恢复成正常账户——这是一条越权提权路径。
 """
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 
 from club_accounts.models import ClubAccount

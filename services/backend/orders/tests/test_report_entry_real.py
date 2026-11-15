@@ -131,7 +131,7 @@ class ReportEntryRealWorkflowTest(APITestCase):
                     self.assertEqual(opened.data['code'], 0, opened.data)
                     self.assertEqual(opened.data['data']['id'], report_id)
                 else:
-                    self.assertEqual(entry, {'available': False, 'reason': '转单后本人无结算份额，无需提交报单'})
+                    self.assertEqual(entry, {'available': False, 'reason': '本人已退出且无结算份额，无需提交报单'})
                     self.assertEqual(opened.data['msg'], entry['reason'])
                 history = self.client.get('/api/wallet/reports/').data['data']
                 old_report = next(item for item in history if item['id'] == report_id)

@@ -19,7 +19,10 @@ from orders.tests.test_release_flow import screenshot
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class GiftClaimMiniappJourneyTest(LiveServerTestCase):
-    host, port = '127.0.0.1', 19210
+    host = '127.0.0.1'
+    port = 19210 if any(os.environ.get(flag) == '1' for flag in (
+        'XA_NATIVE_GIFT_CLAIM', 'XA_ADMIN_CLAIM_BROWSER',
+    )) else 0
 
     def test_gift_entitlement_delivery_is_visible_to_boss(self):
         media = TemporaryDirectory(prefix='xa-gift-claim-')

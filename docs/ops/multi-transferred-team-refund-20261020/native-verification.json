@@ -1,0 +1,169 @@
+{
+  "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+  "stages": [
+    {
+      "stage": "original-session-backed-up",
+      "account_id": "1142"
+    },
+    {
+      "stage": "fixture-session-active",
+      "account_id": "1159"
+    },
+    {
+      "stage": "opened-frozen_recovery",
+      "id": 123,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 123,
+      "aftersale_id": 13,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 123,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d 冻结单首退250，五人按实际入账比例追回",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 123,
+      "aftersale_id": 13,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 123,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d 冻结单第二次退150，累计400",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 123,
+      "aftersale_id": 13,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 123,
+      "status": "CANCELLED",
+      "payment_status": "REFUNDED",
+      "aftersale_status": "REFUNDED",
+      "resolution": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d 冻结单退清余款600，五人本单冻结归零",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 124,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 124,
+      "aftersale_id": 14,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-available_recovery",
+      "id": 124,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d 可用单首退250，全部五人足额后重新试算",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 124,
+      "aftersale_id": 14,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "wallet-open",
+      "balance": "1250",
+      "frozen": "0"
+    },
+    {
+      "stage": "wallet-refund-realtime",
+      "balance": "1400",
+      "frozen": "0",
+      "refunds": [
+        {
+          "id": 1192,
+          "amount": 1500,
+          "displayAmount": "+150",
+          "after": "1400"
+        },
+        {
+          "id": 1185,
+          "amount": 2500,
+          "displayAmount": "+250",
+          "after": "1250"
+        },
+        {
+          "id": 1168,
+          "amount": 6000,
+          "displayAmount": "+600",
+          "after": "1000"
+        },
+        {
+          "id": 1156,
+          "amount": 1500,
+          "displayAmount": "+150",
+          "after": "400"
+        },
+        {
+          "id": 1144,
+          "amount": 2500,
+          "displayAmount": "+250",
+          "after": "250"
+        }
+      ],
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 124,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "canAfterSale": true,
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d 可用单第二次退150，累计400保留余款600"
+    },
+    {
+      "stage": "partial-refund-summary-captured",
+      "order_id": 124,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_coins": "400",
+      "remaining_coins": "600"
+    },
+    {
+      "stage": "original-session-restored",
+      "account_id": "1142",
+      "home_error": ""
+    }
+  ]
+}

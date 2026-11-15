@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "services": [
+    {
+      "id": 1202,
+      "is_active": false,
+      "commission_fixed": 1001
+    },
+    {
+      "id": 1203,
+      "is_active": false,
+      "commission_fixed": 1001
+    },
+    {
+      "id": 1204,
+      "is_active": false,
+      "commission_fixed": 1001
+    }
+  ]
+}

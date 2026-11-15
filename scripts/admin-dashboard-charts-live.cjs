@@ -86,7 +86,8 @@ async function main() {
     assert.equal(statusData.list[0].status, 'COMPLETED');
     await page.goto(`${base}/dashboard`, { waitUntil: 'domcontentloaded' });
     await bar.waitFor({ timeout: 30000 });
-    await page.getByRole('link', { name: '深色模式' }).click();
+    await page.getByRole('button', { name: '切换外观' }).click();
+    await page.getByRole('menuitemradio', { name: '深色', exact: true }).click();
     await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
     await page.waitForTimeout(400);
     const canvasDark = await page.locator('.db-charts canvas').first().evaluate(el => el.toDataURL());

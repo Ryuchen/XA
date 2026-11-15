@@ -1,0 +1,20 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "passed": true,
+  "real_http": true,
+  "order_id": 1,
+  "amount": 10002,
+  "participants": [
+    {
+      "id": 2,
+      "nickname": "隔离联调 p1"
+    },
+    {
+      "id": 3,
+      "nickname": "隔离联调 p2"
+    }
+  ],
+  "both_names_visible": true,
+  "synthetic_fixture_only": true,
+  "actual_service_fulfilled": false
+}

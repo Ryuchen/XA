@@ -37,12 +37,17 @@ class OrderAdmin(ModelAdmin):
     ]
     inlines = [OrderStatusLogInline]
 
-    def get_readonly_fields(self,request,obj=None):
-        if obj and obj.payment_status in ('PAID','PARTIALLY_REFUNDED','REFUNDED'):
-            # Paid orders change through audited order services, never a raw
-            # model-form edit that bypasses payment/recovery validation.
-            return [field.name for field in self.model._meta.concrete_fields]
-        return super().get_readonly_fields(request,obj)
+    def get_readonly_fields(self, request, obj=None):
+        return [field.name for field in self.model._meta.concrete_fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(OrderStatusLog)

@@ -1,4 +1,4 @@
-// Real production admin UI and isolated HTTP backend at 375px.
+// Real production admin UI and isolated HTTP backend at iPad landscape.
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http'), assert = require('node:assert/strict');
 const { chromium } = require('../.tools/club-source-20261003/node_modules/playwright');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));
@@ -10,7 +10,7 @@ async function main() {
       proxy.on('error', () => res.writeHead(502).end()); req.pipe(proxy); return;
     }
     const pathname = new URL(req.url, 'http://localhost').pathname;
-    const file = path.resolve(build, pathname.startsWith('/assets/') ? pathname.slice(1) : 'index.html');
+    const file = path.resolve(build, pathname.startsWith('/assets/') || pathname === '/appearance.js' ? pathname.slice(1) : 'index.html');
     if (!file.startsWith(build + path.sep)) { res.writeHead(404).end(); return; }
     fs.readFile(file, (error, data) => {
       if (error) { res.writeHead(404).end(); return; }
@@ -23,18 +23,18 @@ async function main() {
   try {
     const base = `http://127.0.0.1:${server.address().port}`;
     browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-    const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const context = await browser.newContext({ viewport: { width: 1366, height: 1024 }, hasTouch: true });
     await context.addInitScript(token => localStorage.setItem('xa_admin_token', token), input.token);
-    const page = await context.newPage(), errors = []; page.on('pageerror', error => errors.push(error.message));
+    const page = await context.newPage(), errors = []; page.on('pageerror', error => errors.push(error.stack || error.message));
     await page.route('**/*', route => [base, input.api].includes(new URL(route.request().url()).origin) ? route.continue() : route.abort());
     if (input.convert) {
       await page.goto(`${base}/reservations`, { waitUntil: 'domcontentloaded' });
       const entry = page.locator('.entry').filter({ hasText: input.reservationNo });
       await entry.waitFor({ timeout: 30000 });
       await entry.getByRole('button', { name: '查看详情' }).click();
-      const drawer = page.locator('.el-drawer');
+      const drawer = page.getByRole('dialog', { name: '预约详情' });
       await drawer.getByRole('button', { name: '报价并转单' }).click();
-      const prompt = page.locator('.el-message-box');
+      const prompt = page.getByRole('dialog', { name: '确认预约转单' });
       await prompt.getByText(/确认预约转单/).waitFor();
       const content = await prompt.innerText();
       for (const value of [input.serviceName, input.bossName, input.providerName, '1000 币', '北京时间']) assert.ok(content.includes(value), `missing ${value}: ${content}`);
@@ -54,42 +54,42 @@ async function main() {
       assert.match(await page.getByRole('button', { name: /已确认待转单/ }).innerText(), /1\s*条/);
       await pending.click();
       await page.getByText('按预约开始时间从近到远排列', { exact: true }).waitFor();
-      await page.locator('.entry').first().getByText(input.pendingNos[0], { exact: true }).waitFor();
+      await page.locator('.entry').first().filter({ hasText: input.pendingNos[0] }).waitFor();
       const entries = page.locator('.entry');
       assert.equal(await entries.count(), 3);
       for (let i = 0; i < input.pendingNos.length; i++) assert.ok((await entries.nth(i).innerText()).includes(input.pendingNos[i]));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
       await page.goto(`${base}/dashboard`, { waitUntil: 'domcontentloaded' });
       await page.getByRole('button', { name: /已确认待转单/ }).click();
-      await page.locator('.entry').getByText(input.confirmedNo, { exact: true }).waitFor();
+      await page.locator('.entry').filter({ hasText: input.confirmedNo }).waitFor();
       assert.equal(await page.locator('.entry').count(), 1);
       assert.deepEqual(errors, []);
-      console.log('Real workbench counts and nearest-first reservation drilldowns passed at 375px'); return;
+      console.log('Real workbench counts and nearest-first reservation drilldowns passed at iPad landscape'); return;
     }
     await page.goto(`${base}/reservations`, { waitUntil: 'domcontentloaded' });
-    await page.getByText(input.reservationNo, { exact: true }).waitFor({ timeout: 30000 });
+    await page.locator('.entry').filter({ hasText: input.reservationNo }).waitFor({ timeout: 30000 });
     // Seed the same persisted marker written after a real earlier uncertain submission.
     await page.evaluate(({ key, summary }) => localStorage.setItem(key, summary), { key: `xa:reservation-create-pending:${input.staffId}`, summary: input.summary });
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: '代老板预约' }).click();
-    const dialog = page.locator('.el-dialog.reservation-dialog');
+    const dialog = page.getByRole('dialog', { name: '代老板预约' });
     await dialog.getByText('预约结果未确认，请先在预约列表核对，避免重复预约。').waitFor();
     await dialog.getByText(input.summary, { exact: true }).waitFor();
     assert.equal(await dialog.getByRole('button', { name: '创建预约' }).count(), 0);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     assert.equal(await dialog.evaluate(el => el.getBoundingClientRect().width <= innerWidth), true);
-    for (const button of await dialog.locator('.el-dialog__footer button').all()) {
+    for (const button of await dialog.locator('[data-slot="dialog-footer"] button').all()) {
       const box = await button.boundingBox();
-      assert.ok(box && box.x >= 0 && box.x + box.width <= 376 && box.y >= 0 && box.y + box.height <= 813, 'each action remains inside the 375px viewport');
+      assert.ok(box && box.x >= 0 && box.x + box.width <= 1367 && box.y >= 0 && box.y + box.height <= 1025, 'each action remains inside the iPad landscape viewport');
     }
     await dialog.getByRole('button', { name: '查看预约' }).click();
-    await page.getByText(input.reservationNo, { exact: true }).waitFor();
+    await page.locator('.entry').filter({ hasText: input.reservationNo }).waitFor();
     await page.getByRole('button', { name: '代老板预约' }).click();
     await dialog.getByRole('button', { name: '已核对，继续' }).click();
     await dialog.getByRole('button', { name: '创建预约' }).waitFor();
     assert.equal(await page.evaluate(key => localStorage.getItem(key), `xa:reservation-create-pending:${input.staffId}`), null);
     assert.deepEqual(errors, []);
-    console.log('375px admin reload, reservation review and explicit acknowledgement passed');
+    console.log('iPad landscape admin reload, reservation review and explicit acknowledgement passed');
   } finally { if (browser) await browser.close(); server.closeAllConnections(); server.close(); }
 }
 main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });

@@ -11,10 +11,17 @@ from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.models import ClubAccount
 from club_accounts.tokens import issue_account_tokens
 from orders.models import AfterSale, Evaluation, GameCategory, KookDispatchRecord, Order, WecomDispatchRecord
-from orders.tests.factories import make_console_user, make_promotion, make_provider, make_service, make_user, make_wallet
+from orders.tests.factories import make_console_user, make_promotion, make_provider as provider_fixture, make_service, make_user, make_wallet
 from users.models import EscortProfile
 from wallet.models import DisposeRecord, ProviderReport, SystemConfig, Transaction, Wallet
 from support.models import SupportContactCard
+
+
+def make_provider(**kwargs):
+    # These journeys normally require a fully qualified provider; individual
+    # deposit tests override this explicitly.
+    kwargs.setdefault('deposit_paid', 40000)
+    return provider_fixture(**kwargs)
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
@@ -337,14 +344,14 @@ class DispatchRealWorkflowTest(APITestCase):
         self.assertEqual(zero.status_code, 400, zero.data)
         self.assertIn('商品价格必须大于 0', str(zero.data))
         created = self.client.post('/api/admin/service-items/', {
-            'name': '隔离商品筛选测试', 'price': 1, 'billing_provider_count': 2,
+            'name': '隔离商品筛选测试', 'price': 100, 'billing_provider_count': 2,
         }, format='json')
         self.assertEqual(created.data['code'], 0, created.data)
         item_id = created.data['data']['id']
         by_name = self.client.get('/api/admin/service-items/', {'keyword': '隔离商品筛选'})
         self.assertEqual([r['id'] for r in by_name.data['data']['list']], [item_id])
         by_id = self.client.get('/api/admin/service-items/', {'item_id': item_id})
-        self.assertEqual(by_id.data['data']['list'][0]['price'], 1)
+        self.assertEqual(by_id.data['data']['list'][0]['price'], 100)
         self.assertEqual(by_id.data['data']['list'][0]['billing_provider_count'], 2)
         rejected = self.client.get('/api/admin/service-items/', {'item_id': '1x'})
         self.assertEqual(rejected.status_code, 400)
@@ -385,18 +392,18 @@ class DispatchRealWorkflowTest(APITestCase):
         changed = self.client.patch(url, {'deposit_mode': 'EARNINGS'}, format='json')
         self.assertEqual(changed.data['code'], 0, changed.data)
         profile.refresh_from_db()
-        self.assertEqual((profile.deposit_mode, profile.deposit_required, profile.effective_deposit_required), ('EARNINGS', 7300, 7300))
+        self.assertEqual((profile.deposit_mode, profile.deposit_required, profile.effective_deposit_required), ('EARNINGS', 80000, 80000))
 
         config.value = '1'
         config.save(update_fields=['value'])
         changed = self.client.patch(url, {'deposit_mode': 'CASH'}, format='json')
         self.assertEqual(changed.data['code'], 0, changed.data)
         profile.refresh_from_db()
-        self.assertEqual((profile.deposit_mode, profile.deposit_required, profile.effective_deposit_required), ('CASH', 20000, 20000))
+        self.assertEqual((profile.deposit_mode, profile.deposit_required, profile.effective_deposit_required), ('CASH', 40000, 40000))
         changed = self.client.patch(url, {'deposit_mode': 'EARNINGS'}, format='json')
         self.assertEqual(changed.data['code'], 0, changed.data)
         profile.refresh_from_db()
-        self.assertEqual((profile.deposit_mode, profile.deposit_required, profile.effective_deposit_required), ('EARNINGS', 40000, 40000))
+        self.assertEqual((profile.deposit_mode, profile.deposit_required, profile.effective_deposit_required), ('EARNINGS', 80000, 80000))
 
         profile.deposit_paid = 1000
         profile.save(update_fields=['deposit_paid'])
@@ -411,7 +418,7 @@ class DispatchRealWorkflowTest(APITestCase):
         role.permissions = [*role.permissions, 'escort:view', 'escort:edit']
         role.save(update_fields=['permissions'])
         username = 'qa_create_' + uuid4().hex[:12]
-        payload = {'username': username, 'password': 'isolated-test-only', 'display_name': '隔离陪玩草稿'}
+        payload = {'username': username, 'password': 'isolated-test-only', 'display_name': '隔离陪玩草稿', 'phone': '13900002001'}
         created = self.client.post('/api/admin/escorts/', payload, format='multipart')
         self.assertEqual(created.data['code'], 0, created.data)
         self.assertEqual(ClubAccount.objects.filter(username=username).count(), 1)
@@ -580,7 +587,7 @@ class DispatchRealWorkflowTest(APITestCase):
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000 - double_quote['amount'])
         self.assertEqual(Transaction.objects.filter(order=order, tx_type='PAY').count(), 1)
 
-    def test_double_manual_percentage_uses_integer_cut_for_each_provider(self):
+    def test_double_manual_percentage_is_rejected_before_debit(self):
         self.service.billing_provider_count = 2
         self.service.price = 10003
         self.service.save(update_fields=['billing_provider_count', 'price'])
@@ -595,13 +602,11 @@ class DispatchRealWorkflowTest(APITestCase):
             {'provider_id': accounts[1].pk, 'commission_type': 'PERCENT', 'commission_rate': 47},
         ])
         response = self.client.post('/api/admin/orders/dispatch/', payload, format='json')
-        self.assertEqual(response.data['code'], 0, response.data)
-        order = Order.objects.get(pk=response.data['data']['id'])
-        self.assertEqual(order.amount, 20006)
-        self.assertEqual(list(order.providers.order_by('id').values_list('provider_account_id', 'settlement_base', 'commission_rate', 'provider_income')),
-                         [(accounts[0].pk, 10003, 33, 6703), (accounts[1].pk, 10003, 47, 5302)])
-        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000 - order.amount)
-        self.assertEqual(Transaction.objects.filter(order=order, tx_type='PAY').count(), 1)
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn('不允许修改单笔订单抽成', response.data['msg'])
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(Transaction.objects.filter(tx_type='PAY').exists())
 
     def test_dashboard_counts_real_dispatch_and_creation_dates(self):
         payload = self.payload(self.quote()['amount'])
@@ -1107,6 +1112,10 @@ class DispatchRealWorkflowTest(APITestCase):
         current_profile.save(update_fields=['account'])
         historical_profile = order.provider.escort_profile
         Order.objects.filter(pk=order.pk).update(customer_account=boss, provider_account=provider)
+        # The assignment is the source of truth for the actual participant,
+        # including single-provider orders. A migrated identity must be applied
+        # to both records, as the real account backfill does.
+        order.providers.filter(provider_id=order.provider_id).update(provider_account=provider)
         old_boss_token, _ = issue_account_tokens(self.boss_account)
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + old_boss_token)
         rejected = self.client.post('/api/orders/evaluate/', {'order_id': order.pk, 'score': 4}, format='json')
@@ -1123,7 +1132,8 @@ class DispatchRealWorkflowTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + provider_token)
         received = self.client.get('/api/orders/evaluations/mine/').data['data']
         self.assertEqual([row['id'] for row in received['list']], [evaluation.pk])
-        self.assertEqual((received['list'][0]['customer_name'], received['list'][0]['provider_name']), ('老板当前身份', '陪玩当前身份'))
+        self.assertEqual((received['list'][0]['customer_name'], received['list'][0]['provider_name']),
+                         ('老板当前身份', order.providers.get(provider_id=order.provider_id).provider_name_snapshot))
         replied = self.client.post(f'/api/orders/evaluations/{evaluation.pk}/reply/', {'reply_content': '感谢老板', 'reply_version': 0}, format='json')
         self.assertEqual(replied.data['code'], 0, replied.data)
         staff_token, _ = issue_account_tokens(self.staff_account)

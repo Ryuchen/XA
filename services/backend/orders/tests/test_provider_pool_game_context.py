@@ -32,6 +32,25 @@ class ProviderPoolGameContextTest(APITransactionTestCase):
         self.assertFalse(order['game_nickname'])
         self.assertFalse(order['game_uid'])
         self.assertFalse(order['customer']['phone'])
+        focused = self.client.get(f"/api/orders/orders/{order['id']}/")
+        self.assertEqual(focused.status_code, 200, focused.data)
+        self.assertEqual(focused.data['data']['game_region'], order['game_region'])
+        self.assertFalse(focused.data['data']['game_nickname'])
+        self.assertFalse(focused.data['data']['game_uid'])
+        self.assertFalse(focused.data['data']['customer']['phone'])
+        self.assertEqual(focused.data['data']['allowed_actions'], order['allowed_actions'])
+        provider.escort_profile.status = 'OFFLINE'
+        provider.escort_profile.save(update_fields=['status'])
+        self.assertEqual(self.client.get(f"/api/orders/orders/{order['id']}/").status_code, 404)
+        provider.escort_profile.status = 'AVAILABLE'
+        provider.escort_profile.save(update_fields=['status'])
+        provider.escort_profile.pass_tier = ''
+        provider.escort_profile.pass_expires_at = None
+        provider.escort_profile.save(update_fields=['pass_tier', 'pass_expires_at'])
+        self.assertEqual(self.client.get(f"/api/orders/orders/{order['id']}/").status_code, 404)
+        provider.escort_profile.pass_tier = 'BLACK'
+        provider.escort_profile.pass_expires_at = timezone.now() + timezone.timedelta(days=7)
+        provider.escort_profile.save(update_fields=['pass_tier', 'pass_expires_at'])
         result = self.client.post(f"/api/orders/orders/{order['id']}/grab/", {}, format='json').data
         self.assertEqual(result['code'], 0, result)
         detail = self.client.get(f"/api/orders/orders/{order['id']}/").data['data']
@@ -86,6 +105,7 @@ class ProviderPoolGameContextTest(APITransactionTestCase):
         response = self.client.post(f'/api/orders/orders/{order_id}/applications/{applications[0]}/select/', {}, format='json').data
         self.assertEqual(response['code'], 0, response)
         auth(accounts[2])
+        self.assertEqual(self.client.get(f'/api/orders/orders/{order_id}/').status_code, 404)
         closed = self.client.get(f'/api/orders/orders/{order_id}/applications/{applications[1]}/mine/').data
         self.assertEqual(closed['code'], 0, closed)
         self.assertFalse(closed['data']['order']['game_nickname'])

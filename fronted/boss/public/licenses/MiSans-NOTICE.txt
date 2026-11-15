@@ -1,0 +1,4 @@
+本软件使用 MiSans 字体。MiSans © Xiaomi Inc.
+字体来源：https://hyperos.mi.com/font/zh/
+本目录 MiSans-LICENSE.pdf 为小米官方许可协议。
+字体以官方 WOFF2 原文件及 Unicode 范围随应用提供，未修改字形。

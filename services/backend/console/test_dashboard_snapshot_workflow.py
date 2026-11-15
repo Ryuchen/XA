@@ -3,9 +3,9 @@ import io
 import json
 from django.utils import timezone
 
-from django.core.management import call_command
 from django.test import override_settings
 from rest_framework.test import APITestCase
+from common.mysql_test_support import call_test_catalog_import
 
 from orders.management.commands.seed_club_catalog import CATALOG
 from orders.models import Order
@@ -70,7 +70,7 @@ class DashboardOrderSnapshotWorkflowTest(APITestCase):
         stats, today = dashboard()
         self.assertEqual((stats['order_amount_total'], stats['paid_order_total'], today['count'], today['net_amount']),
                          (12100, 2, 2, 12100))
-        call_command('seed_club_catalog', apply=True, stdout=io.StringIO())
+        call_test_catalog_import(apply=True, stdout=io.StringIO())
         self.service.refresh_from_db()
         gift.refresh_from_db()
         self.assertTrue(self.service.service_category.is_gift)

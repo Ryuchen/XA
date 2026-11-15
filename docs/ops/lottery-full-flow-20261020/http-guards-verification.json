@@ -1,0 +1,51 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "api_base": "http://127.0.0.1:18190/api",
+  "passed": true,
+  "checked_at": "2026-10-20T15:19:11.246Z",
+  "cases": [
+    {
+      "case": "lowpoints",
+      "scenario": "upfront-999.99-cannot-borrow-prizes",
+      "status": 400,
+      "message": "积分不足，请先备足本次全部抽奖积分",
+      "http_financial_snapshot_unchanged": true,
+      "database_snapshot_checked": true
+    },
+    {
+      "case": "guard",
+      "scenario": "no-positive-non-points-candidate",
+      "status": 400,
+      "message": "奖池尚未配置正概率非积分奖，暂不支持十连抽",
+      "http_financial_snapshot_unchanged": true,
+      "database_snapshot_checked": true
+    },
+    {
+      "case": "guard",
+      "scenario": "same-no-candidate-pool-keeps-single",
+      "passed": true,
+      "batch_id": 246
+    },
+    {
+      "case": "early",
+      "scenario": "natural-ssr-before-240-resets",
+      "passed": true,
+      "batch_id": 247,
+      "before": 237,
+      "after": 0
+    },
+    {
+      "case": "guard",
+      "scenario": "tenth-sr-stock-exhaustion-rolls-back-first-nine",
+      "status": 400,
+      "message": "奖品已兑完，请稍后再试",
+      "http_financial_snapshot_unchanged": true,
+      "database_snapshot_checked": true
+    }
+  ],
+  "actual_successes_recorded_in": "http-action-results.json",
+  "isolated_weights_restored": true,
+  "isolated_campaign_closed": true,
+  "database_failure_snapshot_checked": true,
+  "scope": "Only the fresh isolated fixture pool was configured; no local live campaign was read or written."
+}

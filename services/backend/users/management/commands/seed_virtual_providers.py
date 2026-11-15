@@ -3,7 +3,7 @@ import secrets
 from datetime import timedelta
 from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from users.models import CustomUser, EscortLevel, EscortProfile
@@ -35,6 +35,8 @@ class Command(BaseCommand):
             raise CommandError('预生成测试清单不符合100个账号和口令要求')
         rows=[]
         with transaction.atomic():
+            from users.pass_rules import lock_pass_config
+            lock_pass_config()
             for index in range(100):
                 level=levels[(index//5)%5];tier=tiers[index%5]
                 username=f'xa_virtual_{index+1:03d}'

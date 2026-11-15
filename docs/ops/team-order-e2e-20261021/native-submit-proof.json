@@ -1,0 +1,15 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "order_id": 1,
+  "selected_provider_ids": [
+    3,
+    4
+  ],
+  "amount_raw": 10002,
+  "source": "native-weapp-real-ui",
+  "real_ui_submit": true,
+  "payment_confirmation": "user-clicked-real-native-modal",
+  "request_result_unmodified": true,
+  "submit_count": 1
+}

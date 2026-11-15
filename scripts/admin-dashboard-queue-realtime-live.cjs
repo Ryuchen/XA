@@ -8,7 +8,7 @@ async function main() {
   const port = probe.address().port; await new Promise(resolve => probe.close(resolve));
   const root = path.resolve('apps/admin-web'), base = `http://127.0.0.1:${port}`;
   const vite = spawn(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', String(port), '--strictPort'],
-    { cwd: root, env: { ...process.env, XA_ADMIN_DEV_API_TARGET: input.api }, stdio: 'ignore', windowsHide: true });
+    { cwd: root, env: { ...process.env, XA_ADMIN_DEV_API_TARGET: input.api, XA_ADMIN_DEV_WS_TARGET: input.ws || input.api }, stdio: 'ignore', windowsHide: true });
   let browser;
   try {
     for (let i = 0; i < 120; i++) {
@@ -18,7 +18,7 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-    const context = await browser.newContext({ viewport: { width: 375, height: 812 } });
+    const context = await browser.newContext({ viewport: { width: 1366, height: 1024 }, hasTouch: true });
     await context.addInitScript(token => localStorage.setItem('xa_admin_token', token), input.staffToken);
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -28,11 +28,13 @@ async function main() {
     const pending = page.getByRole('button').filter({ hasText: '已支付待接单' });
     const withdrawals = page.getByRole('button').filter({ hasText: '待审核提现' }).first();
     const reports = page.getByRole('button').filter({ hasText: '待审核报单' }).first();
-    await pending.waitFor({ timeout: 30000 });
-    await withdrawals.waitFor();
-    assert.match(await pending.locator('strong').innerText(), /^0\s*单$/);
-    assert.match(await withdrawals.locator('strong').innerText(), /^0\s*笔$/);
-    assert.match(await reports.locator('strong').innerText(), /^0\s*条$/);
+    const supportGroup = page.locator('.db-work-group').filter({ has: page.getByRole('heading', { name: '客服', exact: true }) });
+    const empty = supportGroup.getByText('暂无待处理事项', { exact: true });
+    try { await empty.waitFor({ timeout: 30000 }); }
+    catch (error) { throw new Error(`${error.message}\nURL: ${page.url()}\nPage: ${(await page.locator('body').innerText()).slice(0, 1800)}\nErrors: ${JSON.stringify(errors)}`); }
+    assert.equal(await pending.count(), 0);
+    assert.equal(await withdrawals.count(), 0);
+    assert.equal(await reports.count(), 0);
     let timer;
     try { await Promise.race([ready, new Promise((_, reject) => { timer = setTimeout(() => reject(Error('dashboard socket unavailable')), 15000); })]); }
     finally { clearTimeout(timer); }
@@ -42,6 +44,7 @@ async function main() {
     };
     await post('/orders/create/', input.bossToken, { service_id: input.serviceId, dispatch_route: 'STAFF', client_request_id: 'dashboard-live-order' });
     await page.waitForFunction(() => [...document.querySelectorAll('.db-work-item')].some(el => el.textContent.includes('已支付待接单') && /1\s*单/.test(el.querySelector('strong')?.textContent || '')), null, { timeout: 18000 });
+    await empty.waitFor({ state: 'hidden' });
     await post('/wallet/withdraw/', input.providerToken, input.withdrawPayload);
     await page.waitForFunction(() => [...document.querySelectorAll('.db-work-item')].some(el => el.textContent.includes('待审核提现') && /1\s*笔/.test(el.querySelector('strong')?.textContent || '')), null, { timeout: 18000 });
     const assigned = await post('/orders/create/', input.bossToken, { service_id: input.serviceId,
@@ -60,11 +63,11 @@ async function main() {
     await post(`/wallet/reports/${report.id}/submit/`, input.providerToken, {});
     await page.waitForFunction(() => [...document.querySelectorAll('.db-work-item')].some(el => el.textContent.includes('待审核报单') && /1\s*条/.test(el.querySelector('strong')?.textContent || '')), null, { timeout: 18000 });
     await post(`/admin/reports/${report.id}/approve/`, input.staffToken, {});
-    await page.waitForFunction(() => [...document.querySelectorAll('.db-work-item')].some(el => el.textContent.includes('待审核报单') && /0\s*条/.test(el.querySelector('strong')?.textContent || '')), null, { timeout: 18000 });
+    await reports.waitFor({ state: 'hidden', timeout: 18000 });
     const review = await post('/orders/evaluate/', input.bossToken, { order_id: assigned.id, score: 4, content: '实时评价' });
     await page.waitForFunction(() => [...document.querySelectorAll('.db-work-item')].some(el => el.textContent.includes('未回复评价') && /1\s*条/.test(el.querySelector('strong')?.textContent || '')), null, { timeout: 18000 });
     await page.getByRole('button').filter({ hasText: '未回复评价' }).click();
-    const reviewCard = page.locator('.ev-card').filter({ hasText: '实时评价' });
+    const reviewCard = page.locator('.ev-table tbody tr').filter({ hasText: '实时评价' });
     await reviewCard.waitFor({ timeout: 20000 });
     await reviewCard.getByRole('button', { name: '回复', exact: true }).click();
     const draft = page.locator('#evaluation-reply-text');
@@ -76,7 +79,7 @@ async function main() {
     await page.getByText('回复已变化，草稿已保留', { exact: true }).waitFor({ timeout: 10000 });
     assert.equal(await draft.inputValue(), '客服正在编辑的草稿');
     await page.getByRole('button', { name: '读取最新回复' }).click();
-    await page.getByText('当前回复：陪玩已回复', { exact: true }).waitFor();
+    await page.getByText('当前陪玩回复：陪玩已回复', { exact: true }).waitFor();
     assert.equal(await draft.inputValue(), '客服正在编辑的草稿');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     assert.deepEqual(errors, []);

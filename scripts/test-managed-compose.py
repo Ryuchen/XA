@@ -65,7 +65,8 @@ class ManagedComposeTests(unittest.TestCase):
                     self.assertEqual(managed[name]['environment'][key], value, key)
         for name in ['web', 'celery-worker', 'celery-beat', 'admin-web', 'provider-h5', 'gateway']:
             self.assertEqual(managed[name]['image'], embedded[name]['image'])
-        self.assertIn('check_mysql_readiness', managed['migrate']['command'][-1].split('migrate --noinput')[0])
+        self.assertIn('check_mysql_readiness', managed['migrate']['command'][-1].split('migrate_stores')[0])
+        self.assertIn('migrate_stores', managed['migrate']['command'][-1])
 
     def test_missing_required_managed_settings_fail_during_configuration(self):
         for key in ['MYSQL_HOST', 'MYSQL_USER', 'MYSQL_PASSWORD', 'MYSQL_DATABASE', 'MYSQL_SSL_CA_FILE']:

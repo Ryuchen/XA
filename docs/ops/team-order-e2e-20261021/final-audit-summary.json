@@ -1,0 +1,103 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "read_only_transaction": true,
+  "database": "xa_test_team_order_e2e_20261021",
+  "counts": {
+    "orders": 1,
+    "shares": 2,
+    "status_logs": 4,
+    "applications": 0,
+    "reports": 2,
+    "report_images": 0,
+    "wallets": 6,
+    "transactions": 2,
+    "income_holds": 0,
+    "messages": 2,
+    "services": 2,
+    "profiles": 3,
+    "qualifications": 3,
+    "schedules": 84,
+    "game_categories": 1,
+    "service_categories": 1,
+    "gameplays": 1
+  },
+  "states": [
+    {
+      "order_id": 1,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "amount_raw": 10002,
+      "selected_provider_account_ids": [
+        3,
+        4
+      ],
+      "entry_evidence_count": 2,
+      "completion_evidence_count": 2,
+      "report_statuses": {
+        "3": "DRAFT",
+        "4": "DRAFT"
+      },
+      "pending_reports": 0,
+      "draft_reports": 2,
+      "result_images": 0,
+      "settled": false,
+      "income_or_freeze_transactions": 0,
+      "order_message_recipient_account_ids": [
+        3,
+        4
+      ],
+      "status_edges": [
+        [
+          "PENDING",
+          "PENDING"
+        ],
+        [
+          "PENDING",
+          "GRABBED"
+        ],
+        [
+          "GRABBED",
+          "IN_SERVICE"
+        ],
+        [
+          "IN_SERVICE",
+          "COMPLETED"
+        ]
+      ]
+    }
+  ],
+  "synthetic_initial_funds_raw": 500000,
+  "boss_balance_raw": 489998,
+  "unsettled_order_amount_raw": 10002,
+  "cash_conserved": true,
+  "no_income_or_freeze_posted": true,
+  "snapshot_sha256": "c91d30c917f5f86f29ee29618a0e562150235d6ba1eb13aa3badbefe62491f4a",
+  "checked_at": "2026-10-20T17:28:53.014989+00:00",
+  "exact_selected_p2_p3": true,
+  "evidence_distinct_files": 4,
+  "evidence_by_actor": {
+    "p2": {
+      "account_id": 3,
+      "entry_present": true,
+      "completion_present": true,
+      "status": "DRAFT",
+      "submitted": false,
+      "audited": false,
+      "settled": false
+    },
+    "p3": {
+      "account_id": 4,
+      "entry_present": true,
+      "completion_present": true,
+      "status": "DRAFT",
+      "submitted": false,
+      "audited": false,
+      "settled": false
+    }
+  },
+  "payment_count": 1,
+  "payment_amount_raw": -10002,
+  "payment_balance_before_raw": 500000,
+  "payment_balance_after_raw": 489998
+}

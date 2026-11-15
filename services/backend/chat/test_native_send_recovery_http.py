@@ -35,6 +35,7 @@ class NativeChatSendRecoveryHTTPTest(LiveServerTestCase):
                 input=json.dumps({'base': self.live_server_url, 'sessions': sessions}),
                 text=True, encoding='utf-8', capture_output=True, timeout=45, cwd=repo)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('PASS scoped React chat persistence', result.stdout)
             session = ChatSession.objects.get(account=accounts[0])
             self.assertEqual(session.messages.count(), 6)
             self.assertEqual(session.unread_support, 6)

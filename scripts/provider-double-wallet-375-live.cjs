@@ -27,12 +27,12 @@ async function main() {
       const page = await context.newPage(), errors = [];
       page.on('pageerror', error => errors.push(error.message));
       await page.route('**/*', route => ['127.0.0.1', 'localhost'].includes(new URL(route.request().url()).hostname) ? route.continue() : route.abort());
-      await page.goto(`http://127.0.0.1:${server.address().port}/#/pages/wallet/index`);
+      await page.goto(`http://127.0.0.1:${server.address().port}/#/wallet`);
       await page.getByText('可提现兴安币', { exact: true }).waitFor({ timeout: 20000 });
-      const card = page.getByText('可提现兴安币', { exact: true }).locator('..').locator('..');
-      await card.getByText(`${person.balance}币`, { exact: true }).first().waitFor({ timeout: 15000 });
-      const frozen = card.getByText('冻结金额', { exact: true }).locator('..');
-      await frozen.getByText(`${person.frozen}币`, { exact: true }).waitFor();
+      await page.waitForFunction(({ balance, frozen }) => {
+        const read = selector => document.querySelector(selector)?.textContent.replace(/\s/g, '');
+        return read('.wallet .balance') === `${balance}币` && read('.wallet-facts > div:first-child strong') === `${frozen}币`;
+      }, person, { timeout: 15000 });
       await page.getByText(input.released ? '收益解冻' : '收益冻结', { exact: true }).first().waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
       assert.deepEqual(errors, []);

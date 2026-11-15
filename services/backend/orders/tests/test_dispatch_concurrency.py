@@ -12,7 +12,7 @@ from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from orders.models import Order
-from orders.services import count_active_orders
+from orders.services import count_active_orders, count_capacity_orders
 from orders.tests.factories import make_console_user, make_order, make_provider, make_service, make_user, make_wallet
 
 
@@ -20,7 +20,7 @@ from orders.tests.factories import make_console_user, make_order, make_provider,
 @skipUnlessDBFeature('has_select_for_update')
 class DispatchConcurrencyTest(TransactionTestCase):
     def setUp(self):
-        self.provider = make_provider()
+        self.provider = make_provider(deposit_mode='EARNINGS')
         self.provider_account = get_or_create_account_for_legacy_user(self.provider)
         profile = self.provider.escort_profile
         profile.account = self.provider_account
@@ -51,7 +51,7 @@ class DispatchConcurrencyTest(TransactionTestCase):
         calls = threading.local()
 
         def observe_count(*args, **kwargs):
-            result = count_active_orders(*args, **kwargs)
+            result = count_capacity_orders(*args, **kwargs)
             calls.number = getattr(calls, 'number', 0) + 1
             # 第一请求已读出剩余名额，暂停到第二请求尝试进入同一资源。
             if threading.current_thread().name.endswith('_0') and calls.number == 2:
@@ -72,7 +72,7 @@ class DispatchConcurrencyTest(TransactionTestCase):
                     done.set()
 
         with patch.object(Order, 'MAX_CONCURRENT_ORDERS', 1), patch(
-            'orders.views.count_active_orders', side_effect=observe_count,
+            'orders.views.count_capacity_orders', side_effect=observe_count,
         ), ThreadPoolExecutor(max_workers=2, thread_name_prefix='capacity') as workers:
             first = workers.submit(request, f'/api/orders/orders/{self.first_order.pk}/grab/', {}, self.provider_token)
             try:
@@ -122,7 +122,7 @@ class DispatchConcurrencyTest(TransactionTestCase):
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
 
     def test_transfer_and_grab_share_the_same_capacity_gate(self):
-        old_provider = make_provider()
+        old_provider = make_provider(deposit_mode='EARNINGS')
         old_account = get_or_create_account_for_legacy_user(old_provider)
         order = make_order(
             self.boss, service=self.service, provider=old_provider,

@@ -1,0 +1,28 @@
+.account-login-brand {
+  position: relative;
+}
+.account-login-logo-frame,
+.boss-header-brand > .account-login-logo-frame {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%), 0 1px 2px -1px rgb(0 0 0 / 10%);
+}
+.account-login-brand-mark {
+  position: relative;
+  display: block;
+}
+button.account-login-theme-toggle {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+button.account-login-theme-toggle > svg {
+  width: 18px;
+  height: 18px;
+}

@@ -1,0 +1,165 @@
+{
+  "status": "PASS",
+  "tested_at": "2026-10-20T07:36:59.638233+00:00",
+  "production_code_changed": false,
+  "database_schema_changed": false,
+  "test_file": "orders/tests/test_fixed_multi_transferred_refunds.py",
+  "test_names": [
+    "test_official_four_transfers_wait_for_all_five_reports_and_keep_private_own_amounts",
+    "test_mixed_available_and_frozen_sources_refund_many_rounds_and_only_exact_remainder",
+    "test_each_of_five_available_recipients_short_by_100_blocks_every_business_funds_row"
+  ],
+  "results": {
+    "sqlite": {
+      "executed": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "complete_migrations": false,
+      "log": "backend-sqlite.log"
+    },
+    "mysql": {
+      "executed": 3,
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "complete_migrations": true,
+      "log": "backend-mysql.log"
+    }
+  },
+  "hard_assertions": {
+    "main_paid_amount": 10000,
+    "whole_order_fixed_commission": 1001,
+    "official_transfer_chain": [
+      "A->C keep40%",
+      "C->A keep50%",
+      "A->D keep25%",
+      "B->E keep60%"
+    ],
+    "main_actual_success_credits": [
+      787,
+      2700,
+      1350,
+      2362,
+      1800,
+      1001
+    ],
+    "main_final_settlement_bases": [
+      787,
+      2700,
+      1350,
+      2863,
+      2300
+    ],
+    "main_final_allocated_fixed": [
+      0,
+      0,
+      0,
+      501,
+      500
+    ],
+    "protected_order_paid_amount": 5000,
+    "protected_order_success_credits": [
+      349,
+      1200,
+      600,
+      1050,
+      800,
+      1001
+    ],
+    "refund_2500_recovery": [
+      197,
+      675,
+      338,
+      590,
+      450,
+      250
+    ],
+    "refund_4000_recovery": [
+      315,
+      1080,
+      540,
+      945,
+      720,
+      400
+    ],
+    "rounding_oracle": "Independent Fraction midpoint atom ordering with original transaction id ties; production allocator not called for expected amounts",
+    "refund_scenarios": [
+      "all five recipient holds",
+      "two released balances and three current-order holds",
+      "multiple partial refunds 2500+1500+1+5999 remainder",
+      "idempotent final replay and conflicting intent",
+      "each of five available recipient wallets alone short100 blocks full refund, restore makes old quote stale, fresh quote succeeds"
+    ],
+    "report_gate": "Five reports include released historical recipients; last old-A approval triggers the only settlement",
+    "private_events": "HTTP rendered JSON equals each recipient full order event; own recovery/net/hold fields, no recovery_lines, one event per account; boss hides recipient recovery",
+    "failed_refund_snapshot_models": [
+      "wallet.Wallet",
+      "wallet.Transaction",
+      "wallet.IncomeHold",
+      "orders.OrderRefund",
+      "orders.RefundRecoveryLine",
+      "orders.Order",
+      "orders.OrderProvider",
+      "wallet.ProviderReport",
+      "orders.AfterSale",
+      "orders.OrderStatusLog",
+      "wallet.WithdrawRequest",
+      "engagement.MemberProfile",
+      "engagement.PointLedger",
+      "engagement.OrderPointAllocation",
+      "engagement.ConsumptionConfirmation",
+      "engagement.RewardClaim",
+      "users.EscortProfile"
+    ]
+  },
+  "isolation": {
+    "mysql_container": "xa-fixed-multi-commission-mysql-20261020",
+    "network_mode": "none",
+    "application_network": "container:xa-fixed-multi-commission-mysql-20261020",
+    "published_ports": [],
+    "mysql_database": "test_xa_test_fixed_multi_commission",
+    "sqlite_database": ":memory:",
+    "source_mount": "read-only",
+    "media": "temporary directories",
+    "queue_and_channel_layer": "memory",
+    "live_database_accessed": false,
+    "external_notifications": false,
+    "ordinary_services_restarted": false
+  },
+  "limits": [
+    "No new concurrent race suite: production financial lock paths were unchanged; prior concurrency evidence is separate.",
+    "Private events are tested at emitter serialization with a recording channel layer, not a real websocket transport.",
+    "Rollback equality covers the listed 17 business/funds models; HTTP/AdminAuditLog records are not asserted unchanged."
+  ],
+  "prior_commission_production_hash_match": {
+    "orders/commission.py": true,
+    "orders/models.py": true,
+    "orders/pricing.py": true,
+    "orders/services.py": true,
+    "orders/serializers.py": true,
+    "console/views.py": true
+  },
+  "source_sha256": {
+    "orders/commission.py": "b50d4ec6dc6365c546881066db5e9dde3b1973892e301a834ffca2a9bb35bfa9",
+    "orders/models.py": "dcb7080d19fece5892d6aae072ef71d9e14a059e4075db6d8dbfb5c68ed1640e",
+    "orders/pricing.py": "4f0984fd0417467e7715e92fa2b2a525852ed594e7ee29639cebedc1d86f60db",
+    "orders/services.py": "6d5607b54f89a6f239699041ada970350a5064ca6789dfd2d6488ee7eed136b5",
+    "orders/notifier.py": "50336e096c8cb88ed86a5d3c7fc810c28fd95561a45102e6b69d81198db24080",
+    "orders/serializers.py": "0d022d8dcc3720c5ce2529ad36fde0add185fa25da060ba3f962f3aef614df42",
+    "orders/refunds.py": "b230402146632540c45b13081f54a9237a345e47f4b69f354f7b352ae524524a",
+    "orders/state_machine.py": "1b01648dbd183968be2110496d9fc2cf80130437dad74fcf56f9d781c63f9343",
+    "console/views.py": "6470dd856b9ec98a4aa7c222fa72b7e907bfa01257a4b80a614298bc536a41a8",
+    "wallet/income.py": "6e8e880758768220a24cb13813bb0b3c62217c4e51588943c1ba302362e72945",
+    "engagement/confirmation.py": "5f4da10ec4120c42a240a74b7cc51e933831cf9fc25d1d017c3c69eba924bddd",
+    "orders/tests/test_fixed_multi_transferred_refunds.py": "488dd636fce7b0d2ed22d6caeebb550fb8d189fc0ec94ffdeaf9f5fa0a142025"
+  },
+  "cleanup": {
+    "removed": true,
+    "anonymous_volume_removed": true,
+    "no_host_bind_mounts": true,
+    "tested_at": "2026-10-20T07:36:59.5719859+00:00",
+    "no_published_ports": true,
+    "network_mode": "none"
+  }
+}

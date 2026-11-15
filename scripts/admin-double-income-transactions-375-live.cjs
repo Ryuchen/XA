@@ -30,7 +30,13 @@ async function main() {
       await card.waitFor({ timeout: 15000 });
       const text = await card.innerText();
       assert.ok(text.includes(input.orderNo) && text.includes(item.username) && text.includes(item.label) && text.includes(item.amount), text);
-      await card.getByText('冻结将余额转入冻结资金，解冻则转回；冲正请结合关联流水核对。', { exact: true }).waitFor();
+      const note = card.getByText('冻结将余额转入冻结资金，解冻则转回；冲正请结合关联流水核对。', { exact: true });
+      if (await note.isVisible()) await note.waitFor();
+      else {
+        await card.getByRole('button', { name: '冻结流水说明' }).click();
+        await page.locator('[data-slot=popover-content]').getByText('冻结将余额转入冻结资金，解冻则转回；冲正请结合关联流水核对。', { exact: true }).waitFor();
+        await page.keyboard.press('Escape');
+      }
     }
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     assert.deepEqual(errors, []);

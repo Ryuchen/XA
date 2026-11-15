@@ -1,0 +1,79 @@
+{
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "stages": [
+    {
+      "role": "p1",
+      "stage": "first-frozen-refund",
+      "balance_raw": 787,
+      "frozen_raw": 939,
+      "net_income_raw": 1726,
+      "no_manual_reload": true,
+      "origin": "http://127.0.0.1:18082"
+    },
+    {
+      "stage": "insufficient-p2",
+      "account_id": 1170,
+      "required_coins": 67.5,
+      "available_coins": 57.5,
+      "shortfall_coins": 10,
+      "refund_confirmation_enabled": false
+    },
+    {
+      "stage": "insufficient-p3",
+      "account_id": 1171,
+      "required_coins": 33.8,
+      "available_coins": 23.8,
+      "shortfall_coins": 10,
+      "refund_confirmation_enabled": false
+    },
+    {
+      "stage": "insufficient-p4",
+      "account_id": 1172,
+      "required_coins": 59,
+      "available_coins": 49,
+      "shortfall_coins": 10,
+      "refund_confirmation_enabled": false
+    },
+    {
+      "stage": "insufficient-p5",
+      "account_id": 1173,
+      "required_coins": 45,
+      "available_coins": 35,
+      "shortfall_coins": 10,
+      "refund_confirmation_enabled": false
+    },
+    {
+      "role": "p5",
+      "stage": "first-available-refund",
+      "balance_raw": 1350,
+      "frozen_raw": 800,
+      "net_income_raw": 2150,
+      "no_manual_reload": true,
+      "origin": "http://127.0.0.1:18082"
+    },
+    {
+      "role": "p5",
+      "stage": "final-available-refund",
+      "balance_raw": 1080,
+      "frozen_raw": 800,
+      "net_income_raw": 1880,
+      "no_manual_reload": true,
+      "origin": "http://127.0.0.1:18082"
+    },
+    {
+      "stage": "insufficient-p1",
+      "account_id": 1169,
+      "required_coins": 19.7,
+      "available_coins": 9.7,
+      "shortfall_coins": 10,
+      "refund_confirmation_enabled": false,
+      "evidence": "admin-p1-insufficient.png"
+    },
+    {
+      "stage": "temporary-provider-session-logged-out",
+      "origin": "http://127.0.0.1:18082",
+      "observed_page": "陪玩登录",
+      "original_provider_origin_untouched": "http://127.0.0.1:3001"
+    }
+  ]
+}

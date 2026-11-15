@@ -1,8 +1,7 @@
-"""KOOK card adapter: the payout text is shared with clipboard and WeCom."""
+"""KOOK card adapter for the same public order facts as WeCom."""
 import json
 import logging
 import re
-from urllib.parse import quote
 from .models import KookDispatchRecord
 from integrations.kook_config import get_kook_config, route_for_order
 
@@ -61,6 +60,9 @@ def summarize_card(card_content):
 
 def build_card(text, *, role_ids=(), provider_order_url='', admin_order_url='', order_no=''):
     """纯展示链接；抢单仍由陪玩端权限和并发控制处理。"""
+    from stores.links import route_query_url, store_url
+    provider_order_url = store_url(provider_order_url)
+    admin_order_url = store_url(admin_order_url)
     modules = []
     role_ids = [value for value in role_ids if value.isascii() and value.isdigit()]
     if role_ids:
@@ -74,9 +76,8 @@ def build_card(text, *, role_ids=(), provider_order_url='', admin_order_url='', 
         buttons.append({'type': 'button', 'theme': 'primary', 'value': provider_order_url,
             'click': 'link', 'text': {'type': 'plain-text', 'content': '打开陪玩端接单'}})
     if admin_order_url and order_no:
-        separator = '&' if '?' in admin_order_url else '?'
         buttons.append({'type': 'button', 'theme': 'secondary',
-            'value': f'{admin_order_url}{separator}order_no={quote(order_no)}',
+            'value': route_query_url(admin_order_url, order_no=order_no),
             'click': 'link', 'text': {'type': 'plain-text', 'content': '客服查看订单'}})
     if buttons:
         modules.append({'type': 'action-group', 'elements': buttons})
@@ -95,13 +96,17 @@ def build_order_card(order, trigger, *, config=None, route=None):
 
 def enqueue_kook_dispatch(order, trigger):
     from .dispatching import queue_dispatch
-    config = get_kook_config()
-    if trigger == KookDispatchRecord.Trigger.NEW_ORDER and not config.auto_new_orders:
-        return None
-    if trigger == KookDispatchRecord.Trigger.PROVIDER_REJECTED and not config.auto_rejected_orders:
-        return None
+    from stores.db import transaction
     try:
-        return queue_dispatch(order, 'KOOK')
+        # A channel/configuration failure is ancillary to a committed or
+        # enclosing order payment. Roll it back to a savepoint before handling.
+        with transaction.atomic():
+            config = get_kook_config()
+            if trigger == KookDispatchRecord.Trigger.NEW_ORDER and not config.auto_new_orders:
+                return None
+            if trigger == KookDispatchRecord.Trigger.PROVIDER_REJECTED and not config.auto_rejected_orders:
+                return None
+            return queue_dispatch(order, 'KOOK')
     except Exception:
         logger.warning('KOOK dispatch enqueue failed: order_id=%s', order.pk)
         return None

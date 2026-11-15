@@ -1,8 +1,39 @@
-# 兴安电竞（XA）接口文档
+# XA 接口文档
+
+> **2026-11-13 门店创建接口更新**：统一后台平台超级管理员调用 `POST /api/admin/platform/store-management` 创建新店时，必须明确提交 `entity_prefix`（2–4 位英文字母或数字，不区分输入大小写，服务端转为大写且全平台唯一）。它是业务编号前缀，与 `provider_name_prefix` 陪玩展示简称分别填写；服务端不再从 slug 推导。字段校验发生在建库之前，已存在的门店及编号不修改。其他门店创建、独立数据库与首次营业流程以当前接口为准。
+
+> **首版门店与认证口径**：老板端和陪玩端分别使用 `sl.esports.club`、`xa.esports.club` 所属门店域名，后台使用 `admin.esports.club`。门店身份以域名或统一后台已验证的登录身份为准，查询参数和请求头不能切换已绑定门店；JWT 和刷新令牌绑定门店。产品要求三端支持账号密码加 OTP 或短信验证，绑定微信后可使用微信快捷登录；各入口的实现状态以开发记录为准，微信和短信真实通道尚待申请及联调。钱包和订单使用整数内部账务单位：`10` 内部单位为 `1` 店币，`100` 内部单位为人民币 `1` 元；薪资、投流和经营成本的 `*_fen` 字段为人民币分。以下较早记录中与本条冲突的入口、认证和品牌口径仅供追溯。
+
+> **试音新录音提交**：`POST /api/orders/orders/<order_id>/applications/recording/` 可直接上传录音并报名；队友确认或补录使用 `POST /api/orders/orders/<order_id>/applications/<application_id>/recording/`。两者使用 multipart，字段、失败恢复与旧录音选择见[试音报名接口说明](development/试音报名直接提交录音.md)。代码尚未最终联调。
+
+> **本店企微群派单配置**：`GET /api/admin/config/wecom-dispatch/` 读取配置状态；`PUT` 提交 `revision`、`enabled`、`auto_new_orders`、`auto_rejected_orders`，可选填写 `webhook` 或 `clear_webhook: true`。读取须有 `dispatch_config:view` 或 `dispatch_config:edit`，修改须有 `dispatch_config:edit`；启用须有相应 License。响应只包含地址是否已保存及配置状态，不返回 Webhook。版本冲突需重新读取后提交，开业前可保存禁用草稿。当前每店支持一个企微群机器人，详见[配置记录](development/门店企微群派单配置.md)；接口及真实渠道尚待最终联调。
+
+> **退押金申请**：陪玩通过 `GET/POST /api/wallet/deposit-applications/` 查询或提交，未处理申请可调用 `POST /api/wallet/deposit-applications/<id>/cancel/` 取消。客服通过 `GET /api/admin/deposit-applications/` 筛选待办，并调用 `POST /api/admin/deposit-applications/<id>/process/` 办理或 `POST /api/admin/deposit-applications/<id>/reject/` 拒绝。申请仅登记意向，办理时再次核对业务结清及七天等待期；字段与分页见[退押金申请说明](development/陪玩退押金申请.md)。代码及迁移尚待最终联调。
+
+> **KOOK 积分配置**：`GET/PUT /api/admin/config/kook-points/` 读取或设置本店服务器、签到频道、每日签到积分和启停状态；读取需 `engagement:view`，修改需 `engagement:edit`，启用还需本店 CHECKIN License。在线积分规则先随 PUT 提交 `online_draft_window_ms`（累计毫秒数）和 `online_draft_points`（积分数）保存草稿；另一次 PUT 提交 `publish_online_draft_revision` 发布。每次 PUT 均应带当前配置的 `revision`、`enabled`、`guild_id` 和 `checkin_channel_id`；版本冲突返回 409，需刷新后操作。读取返回 `online_rule_draft` 和 `online_rule_active`；草稿保存不等于生效，发布结果包含实际 `effective_at`。同一草稿重复发布返回原版本。`GET /api/admin/kook-points-status/` 返回监听状态；规则发布不代表已连接。接口和计分代码尚未最终联调，也未执行其所需结构迁移。
+
+> **预约业务周期**：预约列表和详情新增 `viewer_business_cycle_status`（`CURRENT`、`PREVIOUS`、`UNKNOWN` 或后台 `NOT_APPLICABLE`）以及 `viewer_participation_status`；旧周期、无法核实周期或已被替换的本人历史席位只读，不返回可操作项。双陪邀请被拒绝或超时后，本人仍可查看受限历史摘要。实际写入时后端仍重新核验，字段与适用范围见[预约历史与本人操作周期](development/预约历史与本人操作周期.md)；尚待最终联调。
+
+> **双陪预约重试**：`POST /api/orders/reservations/<reservation_id>/replace-provider/` 支持可选的 `client_request_id`；客户端应在同一操作重试时复用该编号。相同请求仅恢复仍有效的原邀请或原确认，失效的邀请不会被编号重试恢复；不传编号时，已失效后可重新邀请同一陪玩。陪玩重复提交本人有效确认时返回既有结果，不延长确认或付款截止。详情见[替换邀请重试](development/双陪预约替换邀请重试.md)和[本人确认重试](development/双陪预约确认重试.md)；尚待最终联调。
+
+> **客服登记续单**：具有订单查看及客服编辑权限的人员可调用 `POST /api/admin/orders/<续单ID>/continuation/`，提交 `original_order_id` 和 `client_request_id`。同一关联已有申请时返回原申请；登记不等于核实，仍须通过后台续单核实接口处理。订单和参与人按所属门店及业务周期校验，重试须复用请求编号。接口及奖励结算尚待最终联调。
+
+> **离职结清与重入查询**：有 `salary:view` 权限的后台人员可调用 `GET /api/admin/payroll/separation-settlements/?kind=settlements` 查询结清记录，默认返回待重入项；支持按员工、状态和游标筛选。重新入职仍使用既有授权操作。具体字段见[结清与重入查询说明](development/离职结清与重新入职查询.md)，尚待最终联调。
+
+门店接口使用既有 `{code, data, msg}` 信封：
+
+| 方法与路径 | 权限与行为 |
+| --- | --- |
+| `GET /api/stores/current/` | 当前营业门店的信息、三端入口和当前账户的平台门店管理权限；不公开全店目录或连接凭据 |
+| `GET /api/stores/manage/` | 默认门店内已显式获得平台授权的后台账户；返回 `results` 和 `available_database_aliases` |
+| `POST /api/stores/manage/` | 同上；登记 `slug/name/database_alias/boss_url/provider_url/admin_url`，返回201及 `PROVISIONING`；不会假装已建库营业 |
+| `PATCH /api/stores/manage/<id>/` | 修改名称、入口及启停状态；不能修改标识或数据库；未初始化不可营业，平台所属默认门店不可从网页停用 |
+
+WebSocket 使用所属门店域名及 `/api/ws/orders/?token=<JWT>`，服务端校验令牌所属门店并隔离频道；查询参数不能覆盖已绑定的门店身份。微信桥接票据及手机号授权以实际接入能力和当前认证规则为准。
 
 > 本文档基于后端真实代码反向归纳，逐接口列出「方法 / 路径 / 请求参数 / 响应字段 / 权限要求」。
 >
-> **金额单位：所有金额字段一律为「内部账务单位」整数，`10` 内部单位 = `1 兴安币`，
+> **金额单位：订单、钱包等店币金额字段为「内部账务单位」整数，`10` 内部单位 = `1 店币`，
 > 前端展示时除以 10。** 后端全链路（钱包余额、订单金额、分账、提现、打赏、签到奖励）
 > 都以该整数记账，**永不**在服务端做 ÷10 换算 —— 换算只在展示层做一次。
 >
@@ -208,7 +239,7 @@
 ### 2.1 服务列表
 `GET /api/orders/services/` · 权限：登录 — 查询参数 `category`（可选）。
 响应 `data[]`：`id, name, description, price, category, cover_url`。
-服务价格还返回 `unit_price`（每人报价）与 `billing_provider_count`（计价人数），公开 `price` 是两者相乘的套餐价。用户已确认双陪套餐统一每人价 × 2，后续新成交快照保存计价人数；既有已成交订单的总金额和分账不追溯重算。
+服务价格返回 `unit_price`（配置的单位价格）与 `billing_provider_count`（计价倍率），公开 `price` 为两者相乘后的套餐价。`fulfillment_provider_count` 表示实际需要的陪玩人数：双陪可以配置按人计价（倍率 2），也可以配置包含两人的整单价（倍率 1），不能根据计价倍率推断单陪或双陪。本字段和对应下单链路已开始接入，须完成门店结构初始化和最终联调后使用。
 
 ### 2.2 服务详情
 `GET /api/orders/services/<service_id>/` · 权限：登录
@@ -232,7 +263,15 @@
 
 ### 2.6 风云榜
 `GET /api/orders/rankings/` · 权限：登录 — 查询参数 `period`：`day`/`week`/`month`（默认 month）。
+
+排行榜需本店 `ACHIEVEMENTS_RANKINGS` 授权。授权不支持时返回 HTTP 403；控制库不可用且没有可验证授权缓存时返回 HTTP 503。个人接单统计和订单履约不受此项限制。
 响应 `data`：`period`、`consume_rank[]`（老板消费榜）、`order_rank[]`（陪玩接单榜）；榜项含 `rank, user_id, nickname, avatar, total_amount, order_count, title(爵位)`。
+陪玩接单榜项另含 `display_name`，使用本店陪玩简称前缀；`nickname` 保留原昵称。代码尚待最终联调。
+`order_rank_complete` 为布尔值：`false` 表示所选周期内有已结束履约的陪玩缺少可核对的本人结束或转出事实，返回的接单榜仅包含已核实部分，不能视为完整排名。双陪按本人首次提交结单截图的时间归属，同人同单按最后一次本人结束或转出计一次；退款不抹除已履约事实。
+
+服务中转入的陪玩在订单详情读取本人 `my_pending_work_stint.id`，通过 `POST /api/orders/orders/{order_id}/participation-start/` 以 multipart 提交 `work_stint_id`、本人 `entry_image` 和可选 `client_request_id` 确认本次入队。系统核对当前席位、本人身份和订单状态；未入队不得完成，重试同一请求返回原结果。原价逐段功能启用时仍使用原有 `segment_id` 入口契约。
+
+客服对已纳入独立原价记录的老板指定单陪执行 `POST /api/admin/orders/{order_id}/transfer/` 时，`transfers[]` 的每一项须包含 `original_share: {"retained": 4000, "transferred": 6000, "agreement": "客服确认原价份额"}`：前两项为内部账务单位的非负整数，10 内部单位为 1 店币，必须是 10 的整数倍且合计等于该席位转出前的原价份额；依据须为 3–500 字。未实际开始的原陪玩保留份额必须为零。缺少、超出或不守恒时整笔转单回滚。该独立统计当前仅覆盖无开始前转单的老板指定单陪普通店币单；双陪、加购、部分退款及其他支付来源的排序原价仍需各自可核对凭据，不能视为已完整接入。
 
 ### 2.7 下单
 `POST /api/orders/create/` · 权限：CUSTOMER 或 OPERATOR
@@ -242,7 +281,7 @@
 | service_id / product_id | int | 是 | 服务 ID（二者其一） |
 | provider_ids | int[] | 否 | 指定陪玩的业务账号 ID；单陪恰好 1 位、双陪恰好 2 位，不可重复；空数组表示平台安排 |
 | provider_id | int | 否 | 兼容旧版的单陪指定字段；新客户端使用 `provider_ids`，混传时必须为同一位单陪 |
-| dispatch_mode | string | 否 | `BOSS_SELECT`（默认）为平台报名后老板选择；`AUTO_GRAB` 仅限单陪 |
+| dispatch_mode | string | 否 | 未指定陪玩时默认 `AUTO_GRAB`，单陪或双陪按门店抢单规则分配；主动招募试音使用 `BOSS_SELECT`。指定陪玩未传模式时使用指定流程；可用性受对应功能门禁控制。 |
 | user_coupon_id | int | 否 | 使用的优惠券 |
 | game_rounds | int | 否 | 局数，默认 1 |
 | game_region | string | 否 | 大区 |
@@ -250,13 +289,13 @@
 | game_uid | string | 否 | 游戏 UID |
 | remark | string | 否 | 备注（≤255） |
 
-下单即扣款，计价：`amount = 原价×局数 − 老板折扣 − 活动折扣 − 券抵扣`，并按订单的百分比或整单固定抽成快照拆账（见 10.2）。响应 `data` 为订单对象（见 2.9）。余额不足返回 `code=400`。
+下单即扣款。会员折扣、门店活动折扣和折扣券属于比例优惠，每单最多选一种；每单最多使用一张券，金额券可与会员或门店活动折扣叠加，符合条件的订单还可按规则使用积分。响应 `data` 为订单对象（见 2.9）；余额不足返回 `code=400`。实际支付来源及复杂退款组合仍受相应功能门禁控制。
 
 `POST /api/orders/quote/` 复用相同的选人、资格与计价校验，返回报价及余额是否足够，不扣款。公开商品 `price` 已是整套价格；选中两位陪玩不会再次乘人数，也不会增加套餐价格。
 
 指定双陪时，服务端在同一扣款事务中锁住两位陪玩的派单名额，逐人复核可接状态、性别、游戏/平台/难度/档位资格与容量，写入 `escort_mode=DOUBLE`、两份 `OrderProvider` 分账快照并进入 `GRABBED`，两位均能读取本单。各人等级抽成沿用既有规则；固定金额抽成整单只扣一次再分摊。任一人不满足要求会拦截整单，不能提交一位陪玩的双陪订单。
 
-不指定时，双陪以 `BOSS_SELECT` 进入 `PENDING`，冻结 `required_provider_count=2` 并等待两人组队报名、队友确认和老板选择，不允许单人直接抢单。仅真正配置 `billing_provider_count=2` 的双陪套餐可自助进入该流程；其他咨询服务、附加费用和双陪小时套餐数量限制仍生效。人数和报价在扣款前复核，目录变更后须重新确认。
+双陪人数根据服务配置的 `fulfillment_provider_count=2` 确定，计费倍率可以是 1 或 2；订单保存 `required_provider_count=2` 快照，不允许单人抢得双陪订单。人数和报价在扣款前复核，目录变更后须重新确认。普通未指定订单应进入抢单池、双陪需完整组队；招募试音使用单独选人流程。相关路由及功能开关仍需最终联调，不能将此说明视为全路径已开放。
 
 ### 2.8 订单列表
 `GET /api/orders/orders/` · 权限：登录
@@ -271,23 +310,26 @@
 
 `id, order_no, status, payment_status, amount, game_rounds, game_region, game_nickname, game_uid, remark, service{…}, customer{id,nickname,phone}, provider{id,nickname}|null, is_evaluated, grabbed_at, in_service_at, completed_at, cancelled_at, refunded_at, cancel_reason, auto_cancel_at, reject_count, created_at, updated_at`。
 
+正式抢单订单还返回 `pending_deadline_expired`：`false` 表示当前可信时钟确定未截止，`true` 表示确定已截止，`null` 表示时钟证据或截止边界尚不确定。客户端不能把 `null` 当作未截止；操作以 `allowed_actions` 和服务端实际收件、仲裁结果为准。暂定 `auto_cancel_at` 不能替代已激活轮次的真实截止时间。
+
 ### 2.10 订单状态流转接口
 
 | 接口 | 方法/路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| 抢单/报名 | `POST /api/orders/orders/<id>/grab/` | PROVIDER | `requires_boss_selection=true` 时提交报名，body `team_size`、双人时的 `partner_id`；其它可直抢单通过后接单。状态/资格/名额由服务端复核 |
+| 单陪抢单／试音报名 | `POST /api/orders/orders/<id>/grab/` | PROVIDER | 抢单池单陪提交候选后等待本轮排序，不能把提交成功当作已接单；试音单使用相应报名流程。状态、资格和名额由服务端复核 |
+| 双陪抢单组队 | `POST /api/orders/orders/<id>/grab-team/`、`POST /api/orders/grab-team/invitations/<team_id>/<action>/` | PROVIDER | 发起邀请及确认／退出；首轮须双方完成组队后进入排序，实际操作名称及结果以接口返回为准 |
 | 可组队陪玩 | `GET /api/orders/orders/<id>/teammates/` | PROVIDER | 仅双陪待选单返回符合本单资格、通行证与名额条件的队友；单陪不能查询/借此发起组队 |
 | 队友确认/撤回 | `POST /api/orders/orders/<id>/applications/<application_id>/action/` | 报名本人/队友 | body `action=CONFIRM_TEAM/WITHDRAW`；确认组队时再次校验人数和资格 |
 | 老板选择报名 | `POST /api/orders/orders/<id>/applications/<application_id>/select/` | 订单所属老板 | 报名 ID 在路径中；双人须队友已确认，服务端复核资格并固化各成员分账 |
 | 开始服务 | `POST /api/orders/orders/<id>/start/`（别名 `/start-service/`） | 订单关联陪玩 | multipart `entry_image`；GRABBED→IN_SERVICE，双陪需相关成员入队凭证齐全 |
 | 完成 | `POST /api/orders/orders/<id>/complete/` | 订单关联陪玩 | multipart `completion_image`；完成履约并释放名额；新订单还须报单审核/售后条件满足后结算，见 3.2 |
 | 取消 | `POST /api/orders/orders/<id>/cancel/` | 订单所属老板 | 仅 PENDING 可取消，全额退款；body 可带 `reason` |
-| 拒单 | `POST /api/orders/orders/<id>/reject/` | 订单关联陪玩 | 回 PENDING，`reject_count+1`；body 可带 `reason` |
+| 自行拒单 | `POST /api/orders/orders/<id>/reject/` | 已登录账号 | 不改变订单；返回 `ORDER_SELF_REJECTION_DISABLED`，由客服协调改派或取消退款 |
 | 强制退款 | `POST /api/orders/orders/<id>/refund/` | OPERATOR | GRABBED/IN_SERVICE，`reason` 必填 |
-| 客服派单 | `POST /api/orders/orders/<id>/assign/` | OPERATOR | body 必填 `provider_id` |
+| 旧直接指派入口 | `POST /api/orders/orders/<id>/assign/` | 后台 `order:dispatch` | 返回 HTTP 409，不指定陪玩；客服安排的新单按抢单池分发 |
 
-以上成功均返回 `data` 为最新订单对象；状态非法返回 `code=400`。
-订单列表与详情返回权威 `required_team_size=1/2` 与 `can_team_apply`，取已成交 `required_provider_count` 等人数快照，不能根据当前参与人数、后续修改的商品目录或价格自行猜测。单陪仅 `team_size=1` 且不能携带 `partner_id`；明确双陪仅 `team_size=2` 且须另一名队友，队友确认后等待老板选择。陪玩端仅在 `required_team_size=2 && can_team_apply=true` 时开放队友选择，字段缺失按单人展示并由服务端最终校验。双陪仍由当前客服确认/后台派单流程成交，未新增客户端自助双陪付款入口。
+除旧直接指派入口外，以上成功均返回 `data` 为最新订单对象；状态非法返回 `code=400`。
+订单列表与详情的 `required_team_size=1/2` 取已成交人数快照，不能根据当前参与人数、后续修改的商品目录或价格自行猜测。普通双陪抢单须由两位合资格陪玩组成完整队伍，首轮结束后由系统排序分配；招募试音的选人流程与抢单池分开。抢单窗口、组队和退款仍依赖正式时钟与对应功能配置，完整链路待最终联调。
 
 ### 2.11 评价
 
@@ -327,6 +369,7 @@
 | 报单列表/草稿 | `GET/POST /api/wallet/reports/` | GET 登录 / POST PROVIDER | 查询本人记录；POST 仅以 `order_id` 创建/恢复服务报单草稿，见 3.2 |
 | 报单凭证 | `POST /api/wallet/reports/<id>/images/`；`DELETE /api/wallet/reports/<id>/images/<image_id>/` | 本人可编辑报单 | 上传三类截图、移除战绩图片，见 3.2 |
 | 报单提交 | `POST /api/wallet/reports/<id>/submit/` | 本人可提交报单 | 完成服务、仍已支付且三类截图齐全后提交审核 |
+| 报单撤回 | `POST /api/wallet/reports/<id>/withdraw/` | 本人待审核报单 | 撤回为待提交草稿，保留全部凭证，可修改后重新提交 |
 | 押金 | `GET/POST /api/wallet/deposit/` | PROVIDER | 见下 |
 
 ### 3.1 提现配置 / 试算（GET）
@@ -410,9 +453,17 @@
 
 驳回后可补图并重提；取消、退款、回待接单池以及本人已退出且无结算份额时停止编辑与提交。后台列表排除 `DRAFT`；审核权限为 `report:audit`，只允许待审核报单通过/驳回，驳回必须有 `audit_remark`。后台对象另返回 `suggested_commission_rate, commission_source_label, commission_type, commission_fixed, expected_income, settlement_mode, settled_at`；关联订单采用本人已经保存的分账快照，不能在审核时将固定抽成重新套成百分比。
 
-当前结算条件与实销确认使用两个时点：新 `REPORT_APPROVAL` 服务订单在必要成员全部报单通过、订单仍已付且已完成、完成时间起 72 小时售后窗口结束、无 `OPEN` 客诉时一次性结算；必要成员包含仍参与的成员和已退出但保留正数份额的成员。实销/会员确认另从最后一份有效报单提交起等待 72 小时；驳回会清除有效报单时点，重提重新计算。结算后的收益还可能依现有俱乐部规则抵扣押金/冻结，在钱包流水和可用/冻结余额中核对。历史 `COMPLETION` 订单保留原结算模式，报单审核不能重复入账。
+**首版目标规则**：售后等待和收益冻结按门店配置分别计算，默认均为 72 小时；普通服务的售后等待从整单完成开始，本人收益冻结从本人最后一次有效报单提交开始。两段时间重叠，须满足适用的本人审核、等待及售后条件；驳回后重提按最后一次有效提交重算。同一订单不同陪玩可以在整单补资足额且各自条件满足后分别释放，收益可能先用于补足押金。需要门店补资时，整单补资足额后才可结算；老板消费积分和 VIP 成长按各自规则及实销确认状态处理。审核通过不代表收益已到账，应以本人实际结算和钱包流水为准。
+
+当前退款、转单、加购等资金组合仍有未接通或默认关闭的门禁，上述为已确认的目标口径，不能当作所有情形均已开放或通过验收；具体可用范围以接口响应和最新开发记录为准。历史订单接管不属于当前首版范围。
 
 历史无关联订单的手工报单只保留查询与兼容审核：后台按历史报单/有效等级/全局规则解析百分比抽成，审核后保存收益快照及流水。该兼容路径不是当前客户端的新建报单入口。
+
+报单审核通过或驳回的通知恢复入口：
+
+- `GET /api/admin/notice-reviews/?kind=report-approval&page=1&page_size=20` 查询本店待核对通知，需同时具有 `message:view` 和 `order:view` 权限。返回原收件账号及业务周期、报单和订单标识、审核类型与时间、当前报单状态和审核时间；身份或周期缺失时可能为 `null`。
+- `POST /api/admin/notice-reviews/report-approval/<id>/` 提交 `action`（`recheck` 或 `dismiss`）、`reason`（2～255 字）及列表返回的 `expected_note`；需同时具有 `message:push` 和 `order:view` 权限。`recheck` 仅对已保存原账号和周期的通知按实际审核事实重新投递，成功提交不等于已送达；`dismiss` 留审计并结束待办。状态或原因变化时返回冲突，客户端应刷新。接口不允许修改原收件人、周期或来源。
+- 通知恢复依赖 `REPORT_APPROVAL_NOTICE_RECOVERY_ENABLED`、陪玩生命周期集成、门店数据库结构初始化以及逐店后台任务，当前开关默认关闭；该流程尚未最终联调。
 
 ### 3.3 押金（GET/POST）
 
@@ -431,9 +482,11 @@
 
 | 接口 | 方法/路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
-| 可领券列表 | `GET /api/coupons/` | 登录 | 带「当前用户是否已领」标记 |
+| 可领券列表 | `GET /api/coupons/` | 登录 | 返回本周期领取状态及当前是否可以领取 |
 | 我的券 | `GET /api/coupons/mine/` | 登录 | `?usable=1&amount=<分>` 仅返回满足金额门槛的可用券 |
-| 领取 | `POST /api/coupons/<coupon_id>/claim/` | 登录 | 抢光/过期→400，重复领取→400 |
+| 领取 | `POST /api/coupons/<coupon_id>/claim/` | 登录 | 本周期同一券已领取时返回原结果，`replayed=true`；其他不符合领取条件的请求按实际原因拒绝 |
+
+列表的 `claimable` 与 `claim_status` 保持一致：仅状态为 `AVAILABLE` 时为 `true`；已领取、资格已使用、库存不足及授权不允许或暂不可核验时为 `false`。领取接口仍在事务中重新核验规则和库存，列表状态不保证后续领取一定成功。本次变更尚待最终联调。
 
 ---
 
@@ -470,7 +523,7 @@
 | --- | --- | --- | --- |
 | 会话+历史 | `GET /api/chat/session/` | 登录（OPERATOR 拒绝，走后台工作台） | 自动创建会话并返回最近 50 条消息；响应含 `session`、按时间正序排列的 `messages[]`、`has_more`、`next_before_id`。加载更早记录传 `before_id=next_before_id`；游标只属于当前账号的会话。 |
 | 客服回复未读数 | `GET /api/chat/unread/` | 登录（客服账号除外） | 返回 `unread`；仅读取现有会话，不创建空会话。 |
-| 发送 | `POST /api/chat/send/` | 登录（OPERATOR 拒绝） | body `content`（最多 1000 字）或 `image`（multipart），至少其一；`unread_support+1` 并 WS 推送。无旧用户映射的业务账号也可创建会话；未绑定的历史会话会按已认证旧身份关联。 |
+| 发送 | `POST /api/chat/send/` | 老板或陪玩登录 | body `content`（最多 1000 字）、`image`（multipart）或 `order_ref` 至少提供一项；`order_ref` 关联本人有权查看的本店订单，可单独发送订单卡片，返回 `order_card`。参数或图片无效返回 HTTP 400，后台员工调用返回 HTTP 403。`unread_support+1` 并 WS 推送。无旧用户映射的业务账号也可创建会话；未绑定的历史会话会按已认证旧身份关联。 |
 | 标记已读 | `POST /api/chat/read/` | 登录 | `through_id` 为已展示的最后消息 ID；仅标记该 ID 及之前的客服消息，返回剩余 `unread_user`。旧客户端省略时沿用全部标记已读。 |
 
 消息对象字段：`id, is_from_support, content_type, content_type_display, content, image_url, is_read, created_at`。
@@ -532,7 +585,9 @@
 | 优惠券 | `coupons` | 读写 | `coupon:view` / `coupon:edit`、`coupon:delete` | `is_active` |
 | 用户券 | `user-coupons` | 只读 | `coupon:view` | `status, coupon` |
 | 公告 | `announcements` | 读写 | `announcement:view` / `announcement:edit`、`announcement:delete` | — |
-| Banner | `banners` | 读写 | `banner:view` / `banner:edit`、`banner:delete` | — |
+| Banner | `banners` | 读写 | `banner:view` / `banner:edit`、`banner:delete` | 创建和修改需本店 `CONTENT_OPERATIONS` 授权；授权不足返回 403，无法核验授权返回 503。读取和删除仍按角色权限执行。 |
+| 俱乐部内容 | `club-content` | 读写 | `engagement:view` / `engagement:edit` | 创建或修改老板权益 `RIGHTS`、俱乐部活动 `HOT` 需本店 `CONTENT_OPERATIONS` 授权；下单须知、陪玩保障、售后及积分规则仍按角色权限维护。读取和删除按角色权限执行。 |
+| 播报规则 | `broadcast-rules` | 读取、创建、修改 | `engagement:view` / `engagement:edit` | 创建和修改需本店 `CONTENT_OPERATIONS` 授权；授权不足返回 403，无法核验返回 503。无授权期间不生成新播报，已有播报可继续查看和管理。 |
 | 成就 | `achievements` | 读写 | `achievement:view` / `achievement:edit`、`achievement:delete` | — |
 | 服务项 | `service-items` | 读写 | `service:view` / `service:edit`、`service:delete` | `category` |
 | 老板分级 | `boss-types` | 读写 | `boss_type:view` / `boss_type:edit` | — |
@@ -593,21 +648,26 @@
 
 ### 10.2 订单百分比与整单固定抽成
 
-金额接口使用内部账务整数，`10` 内部单位 = `1` 兴安币。后台填写固定金额时显示兴安币，支持 1 位小数；例如填 `20` 币，接口提交 `commission_fixed: 200`。百分比为 `0–100` 整数；固定金额 `0` 明确表示不抽成。
+金额接口使用内部账务整数，`10` 内部单位等于 `1` 店币，`1` 元人民币等于 `10` 店币。兴安店币称星辉，声浪店币称浪花。抽成规则由各店配置，客服代单或派单不能为单笔订单临时改比例或固定金额。
 
-服务项新增 `commission_override` 开关及 `commission_type=PERCENT/FIXED`、`commission_fixed`。开关关闭时沿用原档位、体验及等级规则；开启后用该商品的比例或固定金额覆盖抽成，不改变服务价格或接单资格。活动同样支持两种模式，仍须满足原活动适用范围。全局切换固定金额保留旧 `rate`，历史无订单手工报单继续使用该比例；礼物沿用独立规则。
+普通服务按会员、门店活动或折扣券中选定的一项比例优惠及适用金额券计算成交额，再按规则使用积分抵扣。陪玩收益以积分抵扣**前**的成交额和本人适用抽成快照计算；员工工资和岗位提成按实际支付店币计算。服务主单推荐佣金按主单实际支付店币乘适用比例计算，加购和礼物不计推荐佣金。积分、赠送及赔付可能产生的门店补资缺口按实际资金规则处理，不应从实付金额直接倒推陪玩收益。
 
-`GET /api/admin/orders/dispatch-quote/` 与 `POST /api/admin/orders/dispatch/` 支持顶层 `commission_type=AUTO/PERCENT/FIXED`。`AUTO` 沿用配置；`FIXED` 仅提交一次顶层 `commission_fixed`（也支持同值别名 `commission_fixed_total`），不要在两位陪玩中重复填写。指定陪玩采用百分比时保留各 `providers[].commission_rate`，单陪未指定人时可用顶层 `commission_rate`。资格、人数、余额及预期成交金额仍由服务端校验。
+三角洲按每名陪玩本人在对应服务范围的资格档位取本店抽成；瓦罗兰特和英雄联盟按陪玩或代肝类别配置，上分按代肝类别。转入人员使用接入时的门店规则快照；转单涉及成交额和固定抽成分配时，按已确认的个人原价份额及对应取整规则执行。
 
-试算返回 `commission_type, commission_rate, commission_fixed_total, commission_source_label, commission_locked`；固定模式另返回 `commission_fixed_shares` 和 `provider_shares`（每人结算基数、抽成、预计收益）。实际固定抽成以折后实付封顶，双陪按结算份额分摊并处理整数尾差，局数增加不重复收费。例如双陪两局实付 `200` 币、整单固定 `20` 币，两人各分摊 `10` 币、各得 `90` 币。
+涉及积分、加购、转单和售后的资金组合仍有受控或未完成路径。客户端应以服务端当前报价和可执行结果为准，不能依本文假定所有组合已开放；最终须在隔离环境联调实际流水和结算。
 
-显式派单覆盖优先；适用的固定抽成活动可覆盖商品配置。其余按商品自定义及原自动规则解析，最终以服务端试算为准。创建订单时保存抽成模式、固定总额、来源及各人分账快照，后续配置修改不追溯旧单。转单只拆分已有收益；退款按实际入账比例冲正，任一方可追回资金不足时整笔拦截。旧版 LEGACY/AUTO 的逐人固定抽成请求保留原合同，与新整单固定模式分开处理。
+安全箱补贴启用后，`GET /api/admin/wallets/platform-funds/` 返回本店补贴资金状态和待结算汇总。找到资金钱包时 `funds_status` 为 `AVAILABLE`，金额取真实钱包和押金流水；钱包尚未初始化时为 `NOT_INITIALIZED`，`wallet_id`、`balance`、`deposits`、`available` 为 `null`，不代表余额为零。待结算汇总仍按实际订单独立返回。相关报单的 `platform_funding_insufficient` 在钱包尚未初始化时同样返回 `null`，表示不能判断，而非认定资金不足。这些状态尚待最终联调。
+
+### 10.3 服务加购报价与申请
+
+老板通过 `GET /api/orders/orders/{order_id}/addons/` 查看本单可发现的加购项目，再向 `POST /api/orders/orders/{order_id}/addons/quote/` 提交 `addon_id`、`unit`、正整数 `quantity`、`configuration_version` 和 `provider_account_id`。报价返回内部单位金额，以及 `intent_available` 和 `intent_reason`：仅在所选项目、陪玩与抽成快照可核对且不需客服核实时允许继续发起申请。需要客服核实的项目通过客服代办；报价不是付款保证。
+
+`POST /api/orders/orders/{order_id}/addons/intents/` 接收相同选择、`request_id`、`expected_amount`、`gift_balance_amount` 和 `compensation_balance_amount`。申请详情中的 `payment_available` 表示当前付款入口能否处理；`purchase_available` 不能作为已付款依据。付款使用 `POST /api/orders/orders/{order_id}/addons/intents/{intent_id}/pay/`，并在事务中重新校验价格、付款来源和资金条件。上述新增报价字段尚待最终联调。
 
 ## 11. 关键业务规则速记
 
-- **计价拆账**：`amount = original_amount − boss_discount − promo_discount − coupon_discount`；`provider_income + inviter_commission + shop_income = amount`。
-- **抽成方式**：百分比或整单固定金额，配置作用范围、试算和快照见 10.2；未开启新覆盖时保留原规则。
-- **订单状态机**：`PENDING→GRABBED→IN_SERVICE→COMPLETED`；`PENDING/GRABBED/IN_SERVICE→CANCELLED`；`COMPLETED/CANCELLED` 为终态。PENDING 超时 30 分钟自动取消。
-- **资金安全**：所有资金动作均在 `transaction.atomic()` + `select_for_update()` 内执行。
-- **平台收入**：`shop_income` 归集到平台系统账户 `__platform__`（禁登录）。
-- **提现门槛**：默认最低 10000 分（100 元）。
+- **计价与分账**：原价、优惠后成交额、积分抵扣及实付店币分别记录；陪玩收益、推荐佣金和岗位业绩按各自口径计算，补资与退款单独留账。
+- **抽成方式**：本店配置百分比或整单固定金额，订单和转入人员保存各自适用快照，客服不得单笔覆盖。
+- **订单状态**：常规流程为 `PENDING→GRABBED→IN_SERVICE→COMPLETED`；取消和售后依具体状态及权限处理。抢单等待期限由门店配置，实际截止以正式轮次和持久化收件结果为准。
+- **资金处理**：支付、冻结、退款、押金及结算须以本店实际流水和事务结果为准，跨库补资另按平台到账记录核对。
+- **提现门槛**：门店分别配置单笔最低额及可用余额门槛；可用余额必须严格大于后者，且扣除手续费后实际打款须大于零。

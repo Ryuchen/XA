@@ -1,6 +1,6 @@
 from django.core.cache import cache
 from django.conf import settings
-from django.db import transaction
+from stores.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response

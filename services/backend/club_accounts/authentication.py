@@ -42,9 +42,7 @@ class ClubAccountAuthentication(BaseAuthentication):
         mapping = getattr(account, 'legacy_mapping', None)
         legacy_user = None
         if mapping is not None:
-            legacy_user = get_user_model().objects.filter(
-                pk=mapping.legacy_user_id,
-            ).first()
+            legacy_user = get_user_model().objects.filter(pk=mapping.legacy_user_id).first()
         request.legacy_user = legacy_user
         if hasattr(request, '_request'):
             request._request.legacy_user = legacy_user

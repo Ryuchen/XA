@@ -1,0 +1,267 @@
+{
+  "result": "PASS",
+  "tested_at": "2026-10-19T19:09:28.577497+00:00",
+  "scope": "Official admin A-to-C transfer of a REPORT_APPROVAL dual-provider order, followed by three actual recipient credits and cumulative partial/full refunds",
+  "production_files_changed": [
+    "services/backend/console/views.py: only the transfer action"
+  ],
+  "schema_changes": false,
+  "refund_algorithm_changes": false,
+  "live_database_accessed": false,
+  "findings_and_fixes": [
+    {
+      "issue": "Transfer locked the outgoing wallet before updating/locking outgoing provider profile, reversing the profile-to-wallet order of another order refund or a cash-deposit refund",
+      "fix": "After locking Order, join existing OrderFinancialLock before any funds/profile lock; lock the full old/new provider profile set by user_id before any wallet; retain dispatch-capacity locks and existing rules",
+      "evidence": "Actual MySQL event-gated refund and official cash-deposit-refund tests establish that transfer does not enter its old-wallet lock while the other transaction owns its profile; all six new races pass"
+    },
+    {
+      "issue": "A DOUBLE batch could transfer both outgoing providers to the same new account, leaving one active seat and blocking the two-participant fulfillment flow",
+      "fix": "Validate the resulting active distinct-account set against purchased two-person team size before financial effects; reject atomically; preserve historical SINGLE merge behavior",
+      "evidence": "Original endpoint returned code 0 for the invalid merge before the fix; the final isolated regression requires code 400 and unchanged database snapshots"
+    },
+    {
+      "issue": "Transfer order update was emitted before a possible enclosing transaction committed",
+      "fix": "Register notify_order_update with transaction.on_commit; rollback discards it",
+      "evidence": "Successful outer commit publishes once; outer rollback produces no order event and preserves original assignment"
+    }
+  ],
+  "released_participant_audit": {
+    "required_report_providers": "Positive retained settlement_base keeps released A required; zero retained A is not required or paid",
+    "settlement": "No income is posted at REPORT_APPROVAL transfer time; all required three reports must pass before settlement",
+    "refund_plan": "All successful original credits are included regardless of released_at; recovery follows cumulative original credit weights",
+    "ordinary_orders": "Released A remains visible through full OrderProvider association in list and detail",
+    "notifier": "Released A, retained B and incoming C receive separately scoped full payloads with their own expected_income and refund_summary"
+  },
+  "isolation": {
+    "mysql_container": "xa-transferred-team-refund-mysql-20261020",
+    "mysql_image": "mysql:8.0",
+    "mysql_network": "none",
+    "published_ports": 0,
+    "app_network": "container:xa-transferred-team-refund-mysql-20261020",
+    "database_host": "127.0.0.1",
+    "configured_database": "xa_test_transferred_team_refund",
+    "actual_test_database": "test_xa_test_transferred_team_refund",
+    "settings": "config.mysql_test_settings",
+    "full_migrations_applied": 195,
+    "source_mount": "read-only",
+    "temporary_media": true,
+    "celery_broker": "memory://",
+    "cache": "LocMemCache",
+    "channels": "InMemoryChannelLayer",
+    "kook_enabled": false,
+    "wecom_enabled": false,
+    "external_network_access": false,
+    "real_payment_or_external_message": false,
+    "guarded_against_live_database": true
+  },
+  "mysql": {
+    "labels": [
+      "orders.tests.test_transferred_team_refunds",
+      "orders.tests.test_dispatch_concurrency"
+    ],
+    "tests_run": 21,
+    "passed": 21,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "wall_seconds": 52.781,
+    "test_seconds": 49.797,
+    "new_transferred_tests": 15,
+    "new_real_row_lock_races": 6,
+    "existing_capacity_races": 6,
+    "new_test_cases": {
+      "TransferredTeamRefundTest": [
+        "test_released_old_provider_is_required_and_credited_only_after_all_three_approvals",
+        "test_partial_refund_recovers_three_actual_sources_and_preserves_foreign_holds",
+        "test_old_and_new_provider_shortfalls_each_leave_every_row_unchanged",
+        "test_one_raw_prefix_and_remainder_are_not_split_between_only_current_two",
+        "test_released_old_and_current_two_have_own_http_list_detail_and_ws_summary",
+        "test_zero_retained_old_share_is_not_required_or_paid",
+        "test_double_transfer_cannot_merge_two_active_seats_into_one",
+        "test_transfer_order_notification_follows_outer_commit_or_rollback"
+      ],
+      "TransferredTeamConcurrencyTest": [
+        "test_same_key_refund_replays_once_for_all_three_original_credits",
+        "test_old_provider_release_racing_partial_refund_preserves_other_holds",
+        "test_in_service_transfer_racing_full_refund_cannot_leave_orphan_income",
+        "test_transfer_waits_before_wallet_while_cross_order_refund_owns_profile",
+        "test_cross_order_transfer_racing_old_income_release_does_not_touch_other_two_holds",
+        "test_transfer_locks_old_profile_before_wallet_against_official_cash_deposit_refund"
+      ],
+      "TransferredTeamSocketTest": [
+        "test_released_old_and_current_two_sockets_receive_only_own_income"
+      ]
+    }
+  },
+  "sqlite": {
+    "labels": [
+      "orders.tests.test_transferred_team_refunds.TransferredTeamRefundTest",
+      "orders.tests.test_transferred_team_refunds.TransferredTeamSocketTest",
+      "orders.tests.test_release_flow",
+      "orders.tests.test_team_partial_refunds.TeamPartialRefundTest"
+    ],
+    "tests_run": 32,
+    "passed": 32,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "wall_seconds": 27.805,
+    "test_seconds": 26.2,
+    "new_functional_and_socket_tests": 9,
+    "original_release_flow_tests": 15,
+    "original_team_partial_tests": 8
+  },
+  "official_fixture_path": [
+    "Independent paid IN_SERVICE DOUBLE fixture built with build_provider_shares and aggregate_order_split",
+    "POST /api/admin/orders/{id}/transfer/ with A-to-C 40 percent retained",
+    "POST /api/admin/orders/{id}/complete/",
+    "Only fixture completed_at changed to mature the completion-based 72-hour settlement window",
+    "All required A/B/C owners upload ENTRY, COMPLETION and RESULT through report image API and submit officially",
+    "POST /api/admin/reports/{id}/approve/ for all three; final approval settles once",
+    "GET refund-preview then POST refund with amount, plan_token and client_request_id",
+    "Official withdrawal creation/rejection and release_due_income are used only inside isolated test DB"
+  ],
+  "financial_assertions": [
+    {
+      "original_raw": 10000,
+      "initial_income_raw": {
+        "A": 4000,
+        "B": 3500
+      },
+      "transferred_income_raw": {
+        "A": 1600,
+        "B": 3500,
+        "C": 2400,
+        "platform": 2500
+      },
+      "transferred_bases_raw": {
+        "A": 1600,
+        "B": 5000,
+        "C": 3400
+      },
+      "refund_parts_raw": [
+        2500,
+        1500,
+        6000
+      ],
+      "cumulative_credit_recovery_raw": [
+        [
+          400,
+          875,
+          600,
+          625
+        ],
+        [
+          640,
+          1400,
+          960,
+          1000
+        ],
+        [
+          1600,
+          3500,
+          2400,
+          2500
+        ]
+      ],
+      "same_order_holds_or_available_only": true,
+      "foreign_holds_unchanged": true,
+      "completion_settlement_clocks_preserved": true
+    },
+    {
+      "case": "Outgoing A and incoming C each independently lack sufficient available funds after a pending withdrawal",
+      "original_raw": 100000,
+      "partial_raw": 50000,
+      "all_other_recipient_funds_sufficient": true,
+      "no_other_hold_or_pending_withdraw_funds_consumed": true,
+      "all_snapshotted_rows_unchanged_on_failure": true,
+      "stale_quote_rejected_after_withdrawal_rejection": true,
+      "fresh_quote_same_unsuccessful_request_succeeds": true
+    },
+    {
+      "case": "Integer boundary",
+      "original_raw": 43,
+      "credits_raw": [
+        7,
+        15,
+        11,
+        10
+      ],
+      "one_raw_refunds": 11,
+      "oracle": "Independent exact Fraction midpoint sorting",
+      "above_remaining_refund_rejected_without_mutation": true,
+      "final_remainder_exactly_reverses_every_original_credit": true
+    },
+    {
+      "case": "Final successful replay and conflicting intent",
+      "same_request_replay": "success with no row changes",
+      "changed_amount_same_request": "409 with no row changes"
+    }
+  ],
+  "websocket_checks": {
+    "real_connected_sockets": 5,
+    "roles": [
+      "released A",
+      "retained B",
+      "incoming C",
+      "boss",
+      "unrelated provider"
+    ],
+    "all_three_provider_http_list_detail_and_ws_match": true,
+    "each_provider_sees_only_own_expected_income_and_recovery_net_hold": true,
+    "boss_has_no_internal_recovery_fields": true,
+    "unrelated_provider_gets_no_event_and_HTTP_404": true,
+    "full_personal_event_provider_field_preserved": true,
+    "settled_at_is_json_string": true
+  },
+  "concurrency_cases": [
+    "same-key partial refund replay over three original provider credits",
+    "outgoing A hold release versus partial refund",
+    "same-order IN_SERVICE transfer versus full refund",
+    "cross-order transfer versus refund owning outgoing profile",
+    "cross-order transfer versus outgoing income release",
+    "transfer versus official cash-deposit refund owning outgoing profile"
+  ],
+  "initial_runs": {
+    "mysql_11_case_migration_run": {
+      "passed": 11,
+      "tests_run": 11,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "wall_seconds_including_migrations": 211.437
+    },
+    "sqlite_first_post_fix_run": {
+      "passed": 31,
+      "tests_run": 31,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "wall_seconds": 25.757
+    },
+    "fixture_correction": "New Order.save snapshots the current global hold rule; the independent fixture now explicitly restores its intended per-order 72-hour snapshot after creation. This was a test-fixture correction, not a production hold defect."
+  },
+  "review": {
+    "final_independent_read_only_review": "PASS; no required issues. Confirmed Order -> funds mutex -> sorted profiles -> wallets order, immutable two-person team guard, historical SINGLE compatibility and on-commit notification.",
+    "python_ast": "PASS",
+    "git_diff_check": "PASS",
+    "reviewed_at": "2026-10-19T19:09:40.434283+00:00"
+  },
+  "cleanup": {
+    "identity_verified": "/xa-transferred-team-refund-mysql-20261020 mysql:8.0 none 0",
+    "exact_container_and_volume_removed": true,
+    "absence_verified": true
+  },
+  "limitations": [
+    "Only REPORT_APPROVAL transferred settled partial refunds are covered by the new financial scenarios. Historical COMPLETION transfer timing remains unchanged and its existing ReleaseFlow regression passes.",
+    "These are isolated backend tests; the parent agent runs the separately tagged local multi-client integration.",
+    "Specified real MySQL interleavings passed; tests do not prove every possible schedule."
+  ],
+  "source_sha256": {
+    "services/backend/console/views.py": "25da2a30f4ea3b7722eb7c4579ca85a87262ee0e8150a92095ca3eaf7724af9f",
+    "services/backend/orders/notifier.py": "50336e096c8cb88ed86a5d3c7fc810c28fd95561a45102e6b69d81198db24080",
+    "services/backend/orders/serializers.py": "0952da8b818d41b3d2747a239e107d1d9190f8c9d30ccf0071555518ed3e4a73",
+    "services/backend/orders/tests/test_transferred_team_refunds.py": "386f24aec93dc1da721bb9ba121cf85797198541ee10d7c32ffc4dfbad5696c0"
+  },
+  "secrets_in_report": false
+}

@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.test import override_settings
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from rest_framework.test import APITestCase
 
@@ -117,13 +119,24 @@ class ConsoleClubAccountAuthenticationTest(APITestCase):
         )
         membership.roles.add(role)
 
+    @override_settings(LOGIN_OTP_REQUIRED=True)
     def test_staff_login_returns_club_account_tokens(self):
-        response = self.client.post(
+        from .models import OtpCredential
+        from .otp import encrypt_secret, hotp
+        secret = 'JBSWY3DPEHPK3PXP'
+        OtpCredential.objects.create(account=self.staff, secret_ciphertext=encrypt_secret(secret))
+        first = self.client.post(
             '/api/admin/auth/login',
             {'username': self.staff.username, 'password': self.password},
             format='json',
         )
-
+        self.assertEqual(first.status_code, 200)
+        self.assertTrue(first.data['data']['requiresOTP'])
+        response = self.client.post('/api/admin/auth/login', {
+            'username': self.staff.username, 'password': self.password,
+            'otpChallenge': first.data['data']['otpChallenge'],
+            'otpCode': hotp(secret, int(timezone.now().timestamp()) // 30),
+        }, format='json')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['code'], 0)
         access = AccessToken(response.data['data']['token'])

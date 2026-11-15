@@ -1,56 +1,26 @@
 # 贡献指南
 
-本仓库为单仓多端（monorepo）项目，包含四个可部署单元与文档。提交代码前请阅读本指南。
+开始前阅读 [AGENTS.md](AGENTS.md)，核对 `git status` 并保留他人尚未提交的修改。当前只负责三端后端和接口，现有前端由其他开发维护；不开展视觉重设计。
 
-## 仓库结构
+## 源码与工具
 
-```
-XA/
-├── apps/                     前端可部署单元（纳入 pnpm workspace）
-│   ├── boss-miniapp/         老板下单端（Taro + React，小程序 / H5）
-│   ├── provider-miniapp/     陪玩接单端（Taro + React，小程序 / H5）
-│   └── admin-web/            运营后台（Vue 3 + Vite + Element Plus）
-├── services/
-│   └── backend/              Django REST / WebSocket / Celery 服务
-├── docs/                     产品、接口、数据模型与架构文档
-└── archive/                  历史实现，仅供对照，不参与构建
-```
+- `fronted/boss`、`fronted/provider`、`fronted/admin`：三端 React 网页；`fronted/shared` 为共享模块，`fronted/wechat-bridge` 为最小微信授权桥接包。
+- `services/backend`：Django REST、WebSocket、异步任务、业务测试和数据库结构迁移。
+- `packages/money`：共享金额工具。旧 Vue/Sass 包保留供追溯，不纳入当前根 workspace。
+- `deploy/dev.ps1`：日常本机开发环境的统一入口。
 
-## 环境要求
+Node.js 使用 22.12+。根工具使用 `package.json` 指定的 pnpm；三端使用独立 npm workspaces，安装依赖执行 `npm --prefix fronted ci`。不要混用锁文件或为整理目录覆盖前端源码。
 
-- Node.js `>= 22`（见根 `.nvmrc`），包管理器统一使用 **pnpm 9+**。
-- Python 3.13+（后端），MySQL 8、Redis（见根 `docker-compose.yml`）。
+## 开发与验证
 
-## 本地开发
+仓库根目录执行 `./deploy/dev.ps1 Up|Status|Verify`。后端修改后使用 `RestartBackend`，代理修改后使用 `Reload`；不要自行启动临时后端或三套 Windows Vite。资源准备与环境边界见 [deploy/README.md](deploy/README.md)。
 
-前端（在仓库根执行，pnpm workspace 统一安装依赖）：
+前端常规检查入口为 `pnpm run verify:frontend`，包括类型检查、共享模块测试、最小微信桥接检查和三端构建。旧 `build:mini`、`style:check`、`release:check`、`build:release` 不再作为当前检查入口。
 
-```bash
-pnpm install
-pnpm run admin:dev        # 运营后台开发服务
-pnpm run boss:build       # 老板端构建微信小程序
-pnpm run provider:build   # 陪玩端构建微信小程序
-pnpm run build:all        # 三端全部构建
-```
+后端使用隔离测试配置与独立数据库，按受影响业务选择真实接口、资金、权限、重试和并发测试。数据库迁移须保留；首次部署仍执行结构迁移和平台、门店配置初始化。本机开发库不清空或重建，不接触生产资金、真实客户和真实消息接收人。
 
-后端：
+## 提交
 
-```bash
-cd services/backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env       # 按需修改
-python manage.py migrate
-python manage.py runserver
-```
+新建分支默认使用 `codex/` 前缀，提交遵循 Conventional Commits。每个 PR 说明行为变化、验证结果和未覆盖边界，不把构建成功写成业务验收通过。不要提交密钥、`.env`、数据库、上传文件、日志、虚拟环境或构建产物。
 
-## 提交规范
-
-- 遵循 Conventional Commits：`feat:`、`fix:`、`refactor:`、`docs:`、`chore:` 等。
-- 每个 PR 聚焦单一目的，附带清晰描述与影响范围。
-- 不要提交构建产物、虚拟环境、密钥（`.env`）等文件（见根 `.gitignore`）。
-
-## 分支策略
-
-- `main`：稳定分支，受保护。
-- 功能开发从 `main` 切出 `feature/*`，修复用 `fix/*`，通过 PR 合并。
+清理旧代码时先核对实际调用和现有修改；与已删除端相关的脚本可能已改成 React 契约测试，不能仅凭文件名批量删除。历史部署与旧产品资料不能用来覆盖最新产品约定。

@@ -1,0 +1,83 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "read_only_transaction": true,
+  "database": "xa_test_team_order_e2e_20261021",
+  "counts": {
+    "orders": 0,
+    "shares": 0,
+    "status_logs": 0,
+    "applications": 0,
+    "reports": 0,
+    "report_images": 0,
+    "wallets": 6,
+    "transactions": 1,
+    "income_holds": 0,
+    "messages": 0,
+    "services": 2,
+    "profiles": 3,
+    "qualifications": 3,
+    "schedules": 84,
+    "game_categories": 1,
+    "service_categories": 1,
+    "gameplays": 1
+  },
+  "states": [],
+  "synthetic_initial_funds_raw": 500000,
+  "boss_balance_raw": 500000,
+  "unsettled_order_amount_raw": 0,
+  "cash_conserved": true,
+  "no_income_or_freeze_posted": true,
+  "snapshot_sha256": "408d66c2ed26a79291eeb568ff5f0351724de5fadc158d41f3f0f23423a40a76",
+  "checked_at": "2026-10-20T17:02:00.589783+00:00",
+  "wallets": [
+    {
+      "id": 1,
+      "account_id": null,
+      "balance": 0,
+      "frozen_amount": 0,
+      "total_recharge": 0,
+      "total_gift": 0
+    },
+    {
+      "id": 2,
+      "account_id": 1,
+      "balance": 500000,
+      "frozen_amount": 0,
+      "total_recharge": 0,
+      "total_gift": 0
+    },
+    {
+      "id": 3,
+      "account_id": 2,
+      "balance": 0,
+      "frozen_amount": 0,
+      "total_recharge": 0,
+      "total_gift": 0
+    },
+    {
+      "id": 4,
+      "account_id": 3,
+      "balance": 0,
+      "frozen_amount": 0,
+      "total_recharge": 0,
+      "total_gift": 0
+    },
+    {
+      "id": 5,
+      "account_id": 4,
+      "balance": 0,
+      "frozen_amount": 0,
+      "total_recharge": 0,
+      "total_gift": 0
+    },
+    {
+      "id": 6,
+      "account_id": 5,
+      "balance": 0,
+      "frozen_amount": 0,
+      "total_recharge": 0,
+      "total_gift": 0
+    }
+  ]
+}

@@ -1,0 +1,7109 @@
+{
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "unit": "10 raw = 1 XA coin",
+  "stages": [
+    {
+      "stage": "before-settlement",
+      "checked_at": "2026-10-20T07:48:57.328Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 0,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 0,
+          "frozen": 0,
+          "net_income": 0
+        },
+        "p2": {
+          "balance": 0,
+          "frozen": 0,
+          "net_income": 0
+        },
+        "p3": {
+          "balance": 0,
+          "frozen": 0,
+          "net_income": 0
+        },
+        "p4": {
+          "balance": 0,
+          "frozen": 0,
+          "net_income": 0
+        },
+        "p5": {
+          "balance": 0,
+          "frozen": 0,
+          "net_income": 0
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [],
+        "p2": [],
+        "p3": [],
+        "p4": [],
+        "p5": []
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "PENDING",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "PENDING",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "PENDING",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "PENDING",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "PENDING",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "PENDING",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "PENDING",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "PENDING",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "PENDING",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "PENDING",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "PENDING",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "PENDING",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "PENDING",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "PENDING",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "PENDING",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 0,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": null,
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": null,
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": null,
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 0,
+        "pending": 25000
+      },
+      "platform": {
+        "balance_from_latest_ledger": 77100,
+        "baseline": 77100,
+        "fixture_net": 0,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 25000,
+        "equal": true
+      }
+    },
+    {
+      "stage": "after-settlement",
+      "checked_at": "2026-10-20T07:49:25.447Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 0,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 787,
+          "frozen": 1136,
+          "net_income": 1923
+        },
+        "p2": {
+          "balance": 2700,
+          "frozen": 3900,
+          "net_income": 6600
+        },
+        "p3": {
+          "balance": 1350,
+          "frozen": 1950,
+          "net_income": 3300
+        },
+        "p4": {
+          "balance": 2362,
+          "frozen": 3412,
+          "net_income": 5774
+        },
+        "p5": {
+          "balance": 1800,
+          "frozen": 2600,
+          "net_income": 4400
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [
+          {
+            "id": 1200,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1201,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -787,
+            "before": 787,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1211,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1217,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 349,
+            "before": 787,
+            "after": 1136,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1218,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -349,
+            "before": 1136,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p2": [
+          {
+            "id": 1202,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1203,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2700,
+            "before": 2700,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1212,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1219,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 2700,
+            "after": 3900,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1220,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 3900,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p3": [
+          {
+            "id": 1204,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1205,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1350,
+            "before": 1350,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1213,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1221,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 600,
+            "before": 1350,
+            "after": 1950,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1222,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -600,
+            "before": 1950,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p4": [
+          {
+            "id": 1206,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1207,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2362,
+            "before": 2362,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1214,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1223,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1050,
+            "before": 2362,
+            "after": 3412,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1224,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1050,
+            "before": 3412,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p5": [
+          {
+            "id": 1208,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1209,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1800,
+            "before": 1800,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1215,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1225,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 800,
+            "before": 1800,
+            "after": 2600,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1226,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 2600,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ]
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 349,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 1200,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 600,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 1050,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:07.745853+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:10.827996+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:14.002641+08:00",
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 10000,
+        "pending": 15000
+      },
+      "platform": {
+        "balance_from_latest_ledger": 80103,
+        "baseline": 77100,
+        "fixture_net": 3003,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 0,
+        "equal": true
+      }
+    },
+    {
+      "stage": "frozen-refund-250",
+      "checked_at": "2026-10-20T07:55:32.776Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 2500,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 787,
+          "frozen": 939,
+          "net_income": 1726
+        },
+        "p2": {
+          "balance": 2700,
+          "frozen": 3225,
+          "net_income": 5925
+        },
+        "p3": {
+          "balance": 1350,
+          "frozen": 1612,
+          "net_income": 2962
+        },
+        "p4": {
+          "balance": 2362,
+          "frozen": 2822,
+          "net_income": 5184
+        },
+        "p5": {
+          "balance": 1800,
+          "frozen": 2150,
+          "net_income": 3950
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1239,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [
+          {
+            "id": 1200,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1201,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -787,
+            "before": 787,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1211,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1217,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 349,
+            "before": 787,
+            "after": 1136,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1218,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -349,
+            "before": 1136,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1228,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 197,
+            "before": 787,
+            "after": 984,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1233,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 984,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          }
+        ],
+        "p2": [
+          {
+            "id": 1202,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1203,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2700,
+            "before": 2700,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1212,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1219,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 2700,
+            "after": 3900,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1220,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 3900,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1229,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 675,
+            "before": 2700,
+            "after": 3375,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1234,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 3375,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          }
+        ],
+        "p3": [
+          {
+            "id": 1204,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1205,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1350,
+            "before": 1350,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1213,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1221,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 600,
+            "before": 1350,
+            "after": 1950,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1222,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -600,
+            "before": 1950,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1230,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 338,
+            "before": 1350,
+            "after": 1688,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1235,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1688,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          }
+        ],
+        "p4": [
+          {
+            "id": 1206,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1207,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2362,
+            "before": 2362,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1214,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1223,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1050,
+            "before": 2362,
+            "after": 3412,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1224,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1050,
+            "before": 3412,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1231,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 590,
+            "before": 2362,
+            "after": 2952,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1236,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2952,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          }
+        ],
+        "p5": [
+          {
+            "id": 1208,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1209,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1800,
+            "before": 1800,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1215,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1225,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 800,
+            "before": 1800,
+            "after": 2600,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1226,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 2600,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1232,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 450,
+            "before": 1800,
+            "after": 2250,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1237,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 2250,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          }
+        ]
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 349,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 1200,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 600,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 1050,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T15:49:07.745853+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 2500,
+          "remaining": 7500,
+          "refund_count": 1,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 197,
+              "net_income": 590,
+              "remaining_frozen": 590
+            },
+            "p2": {
+              "recovered": 675,
+              "net_income": 2025,
+              "remaining_frozen": 2025
+            },
+            "p3": {
+              "recovered": 338,
+              "net_income": 1012,
+              "remaining_frozen": 1012
+            },
+            "p4": {
+              "recovered": 590,
+              "net_income": 1772,
+              "remaining_frozen": 1772
+            },
+            "p5": {
+              "recovered": 450,
+              "net_income": 1350,
+              "remaining_frozen": 1350
+            }
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:10.827996+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:14.002641+08:00",
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 10000,
+        "pending": 12500
+      },
+      "platform": {
+        "balance_from_latest_ledger": 79853,
+        "baseline": 77100,
+        "fixture_net": 2753,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 0,
+        "equal": true
+      }
+    },
+    {
+      "stage": "frozen-refund-400",
+      "checked_at": "2026-10-20T07:57:17.470Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 4000,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 787,
+          "frozen": 821,
+          "net_income": 1608
+        },
+        "p2": {
+          "balance": 2700,
+          "frozen": 2820,
+          "net_income": 5520
+        },
+        "p3": {
+          "balance": 1350,
+          "frozen": 1410,
+          "net_income": 2760
+        },
+        "p4": {
+          "balance": 2362,
+          "frozen": 2467,
+          "net_income": 4829
+        },
+        "p5": {
+          "balance": 1800,
+          "frozen": 1880,
+          "net_income": 3680
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1239,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1251,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 2500,
+            "after": 4000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [
+          {
+            "id": 1200,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1201,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -787,
+            "before": 787,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1211,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1217,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 349,
+            "before": 787,
+            "after": 1136,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1218,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -349,
+            "before": 1136,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1228,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 197,
+            "before": 787,
+            "after": 984,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1233,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 984,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1240,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 118,
+            "before": 787,
+            "after": 905,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1245,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -118,
+            "before": 905,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          }
+        ],
+        "p2": [
+          {
+            "id": 1202,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1203,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2700,
+            "before": 2700,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1212,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1219,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 2700,
+            "after": 3900,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1220,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 3900,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1229,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 675,
+            "before": 2700,
+            "after": 3375,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1234,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 3375,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1241,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 405,
+            "before": 2700,
+            "after": 3105,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1246,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -405,
+            "before": 3105,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          }
+        ],
+        "p3": [
+          {
+            "id": 1204,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1205,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1350,
+            "before": 1350,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1213,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1221,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 600,
+            "before": 1350,
+            "after": 1950,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1222,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -600,
+            "before": 1950,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1230,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 338,
+            "before": 1350,
+            "after": 1688,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1235,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1688,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1242,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 202,
+            "before": 1350,
+            "after": 1552,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1247,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -202,
+            "before": 1552,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          }
+        ],
+        "p4": [
+          {
+            "id": 1206,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1207,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2362,
+            "before": 2362,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1214,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1223,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1050,
+            "before": 2362,
+            "after": 3412,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1224,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1050,
+            "before": 3412,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1231,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 590,
+            "before": 2362,
+            "after": 2952,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1236,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2952,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1243,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 355,
+            "before": 2362,
+            "after": 2717,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1248,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -355,
+            "before": 2717,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          }
+        ],
+        "p5": [
+          {
+            "id": 1208,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1209,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1800,
+            "before": 1800,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1215,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1225,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 800,
+            "before": 1800,
+            "after": 2600,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1226,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 2600,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1232,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 450,
+            "before": 1800,
+            "after": 2250,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1237,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 2250,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1244,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 270,
+            "before": 1800,
+            "after": 2070,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1249,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -270,
+            "before": 2070,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          }
+        ]
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 349,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 1200,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 600,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 1050,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T15:49:07.745853+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 4000,
+          "remaining": 6000,
+          "refund_count": 2,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 315,
+              "net_income": 472,
+              "remaining_frozen": 472
+            },
+            "p2": {
+              "recovered": 1080,
+              "net_income": 1620,
+              "remaining_frozen": 1620
+            },
+            "p3": {
+              "recovered": 540,
+              "net_income": 810,
+              "remaining_frozen": 810
+            },
+            "p4": {
+              "recovered": 945,
+              "net_income": 1417,
+              "remaining_frozen": 1417
+            },
+            "p5": {
+              "recovered": 720,
+              "net_income": 1080,
+              "remaining_frozen": 1080
+            }
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:10.827996+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:14.002641+08:00",
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 10000,
+        "pending": 11000
+      },
+      "platform": {
+        "balance_from_latest_ledger": 79703,
+        "baseline": 77100,
+        "fixture_net": 2603,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 0,
+        "equal": true
+      }
+    },
+    {
+      "stage": "frozen-fully-refunded",
+      "checked_at": "2026-10-20T07:58:00.230Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 10000,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 787,
+          "frozen": 349,
+          "net_income": 1136
+        },
+        "p2": {
+          "balance": 2700,
+          "frozen": 1200,
+          "net_income": 3900
+        },
+        "p3": {
+          "balance": 1350,
+          "frozen": 600,
+          "net_income": 1950
+        },
+        "p4": {
+          "balance": 2362,
+          "frozen": 1050,
+          "net_income": 3412
+        },
+        "p5": {
+          "balance": 1800,
+          "frozen": 800,
+          "net_income": 2600
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1239,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1251,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 2500,
+            "after": 4000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1263,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 6000,
+            "before": 4000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [
+          {
+            "id": 1200,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1201,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -787,
+            "before": 787,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1211,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1217,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 349,
+            "before": 787,
+            "after": 1136,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1218,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -349,
+            "before": 1136,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1228,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 197,
+            "before": 787,
+            "after": 984,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1233,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 984,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1240,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 118,
+            "before": 787,
+            "after": 905,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1245,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -118,
+            "before": 905,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1252,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 472,
+            "before": 787,
+            "after": 1259,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1257,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -472,
+            "before": 1259,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          }
+        ],
+        "p2": [
+          {
+            "id": 1202,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1203,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2700,
+            "before": 2700,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1212,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1219,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 2700,
+            "after": 3900,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1220,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 3900,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1229,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 675,
+            "before": 2700,
+            "after": 3375,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1234,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 3375,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1241,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 405,
+            "before": 2700,
+            "after": 3105,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1246,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -405,
+            "before": 3105,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1253,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1620,
+            "before": 2700,
+            "after": 4320,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1258,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1620,
+            "before": 4320,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          }
+        ],
+        "p3": [
+          {
+            "id": 1204,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1205,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1350,
+            "before": 1350,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1213,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1221,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 600,
+            "before": 1350,
+            "after": 1950,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1222,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -600,
+            "before": 1950,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1230,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 338,
+            "before": 1350,
+            "after": 1688,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1235,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1688,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1242,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 202,
+            "before": 1350,
+            "after": 1552,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1247,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -202,
+            "before": 1552,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1254,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 810,
+            "before": 1350,
+            "after": 2160,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1259,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -810,
+            "before": 2160,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          }
+        ],
+        "p4": [
+          {
+            "id": 1206,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1207,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2362,
+            "before": 2362,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1214,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1223,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1050,
+            "before": 2362,
+            "after": 3412,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1224,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1050,
+            "before": 3412,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1231,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 590,
+            "before": 2362,
+            "after": 2952,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1236,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2952,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1243,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 355,
+            "before": 2362,
+            "after": 2717,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1248,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -355,
+            "before": 2717,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1255,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1417,
+            "before": 2362,
+            "after": 3779,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1260,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1417,
+            "before": 3779,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          }
+        ],
+        "p5": [
+          {
+            "id": 1208,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1209,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1800,
+            "before": 1800,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1215,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1225,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 800,
+            "before": 1800,
+            "after": 2600,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1226,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 2600,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1232,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 450,
+            "before": 1800,
+            "after": 2250,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1237,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 2250,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1244,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 270,
+            "before": 1800,
+            "after": 2070,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1249,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -270,
+            "before": 2070,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1256,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1080,
+            "before": 1800,
+            "after": 2880,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1261,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1080,
+            "before": 2880,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          }
+        ]
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 349,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 1200,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 600,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 1050,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T15:49:07.745853+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 10000,
+          "remaining": 0,
+          "refund_count": 3,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 787,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p2": {
+              "recovered": 2700,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p3": {
+              "recovered": 1350,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p4": {
+              "recovered": 2362,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p5": {
+              "recovered": 1800,
+              "net_income": 0,
+              "remaining_frozen": 0
+            }
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:10.827996+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:14.002641+08:00",
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 10000,
+        "pending": 5000
+      },
+      "platform": {
+        "balance_from_latest_ledger": 79102,
+        "baseline": 77100,
+        "fixture_net": 2002,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 0,
+        "equal": true
+      }
+    },
+    {
+      "stage": "five-shortages-restored",
+      "checked_at": "2026-10-20T08:04:22.722Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 10000,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 787,
+          "frozen": 349,
+          "net_income": 1136
+        },
+        "p2": {
+          "balance": 2700,
+          "frozen": 1200,
+          "net_income": 3900
+        },
+        "p3": {
+          "balance": 1350,
+          "frozen": 600,
+          "net_income": 1950
+        },
+        "p4": {
+          "balance": 2362,
+          "frozen": 1050,
+          "net_income": 3412
+        },
+        "p5": {
+          "balance": 1800,
+          "frozen": 800,
+          "net_income": 2600
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1239,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1251,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 2500,
+            "after": 4000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1263,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 6000,
+            "before": 4000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [
+          {
+            "id": 1200,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1201,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -787,
+            "before": 787,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1211,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1217,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 349,
+            "before": 787,
+            "after": 1136,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1218,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -349,
+            "before": 1136,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1228,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 197,
+            "before": 787,
+            "after": 984,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1233,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 984,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1240,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 118,
+            "before": 787,
+            "after": 905,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1245,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -118,
+            "before": 905,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1252,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 472,
+            "before": 787,
+            "after": 1259,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1257,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -472,
+            "before": 1259,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1264,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -690,
+            "before": 787,
+            "after": 97,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1265,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 690,
+            "before": 97,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p2": [
+          {
+            "id": 1202,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1203,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2700,
+            "before": 2700,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1212,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1219,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 2700,
+            "after": 3900,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1220,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 3900,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1229,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 675,
+            "before": 2700,
+            "after": 3375,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1234,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 3375,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1241,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 405,
+            "before": 2700,
+            "after": 3105,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1246,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -405,
+            "before": 3105,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1253,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1620,
+            "before": 2700,
+            "after": 4320,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1258,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1620,
+            "before": 4320,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1266,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -2125,
+            "before": 2700,
+            "after": 575,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1267,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 2125,
+            "before": 575,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p3": [
+          {
+            "id": 1204,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1205,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1350,
+            "before": 1350,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1213,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1221,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 600,
+            "before": 1350,
+            "after": 1950,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1222,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -600,
+            "before": 1950,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1230,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 338,
+            "before": 1350,
+            "after": 1688,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1235,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1688,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1242,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 202,
+            "before": 1350,
+            "after": 1552,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1247,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -202,
+            "before": 1552,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1254,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 810,
+            "before": 1350,
+            "after": 2160,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1259,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -810,
+            "before": 2160,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1268,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1112,
+            "before": 1350,
+            "after": 238,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1269,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1112,
+            "before": 238,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p4": [
+          {
+            "id": 1206,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1207,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2362,
+            "before": 2362,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1214,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1223,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1050,
+            "before": 2362,
+            "after": 3412,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1224,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1050,
+            "before": 3412,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1231,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 590,
+            "before": 2362,
+            "after": 2952,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1236,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2952,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1243,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 355,
+            "before": 2362,
+            "after": 2717,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1248,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -355,
+            "before": 2717,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1255,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1417,
+            "before": 2362,
+            "after": 3779,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1260,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1417,
+            "before": 3779,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1270,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1872,
+            "before": 2362,
+            "after": 490,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1271,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1872,
+            "before": 490,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p5": [
+          {
+            "id": 1208,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1209,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1800,
+            "before": 1800,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1215,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1225,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 800,
+            "before": 1800,
+            "after": 2600,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1226,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 2600,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1232,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 450,
+            "before": 1800,
+            "after": 2250,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1237,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 2250,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1244,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 270,
+            "before": 1800,
+            "after": 2070,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1249,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -270,
+            "before": 2070,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1256,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1080,
+            "before": 1800,
+            "after": 2880,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1261,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1080,
+            "before": 2880,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1272,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1450,
+            "before": 1800,
+            "after": 350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1273,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1450,
+            "before": 350,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ]
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 349,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 1200,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 600,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 1050,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T15:49:07.745853+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 10000,
+          "remaining": 0,
+          "refund_count": 3,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 787,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p2": {
+              "recovered": 2700,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p3": {
+              "recovered": 1350,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p4": {
+              "recovered": 2362,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p5": {
+              "recovered": 1800,
+              "net_income": 0,
+              "remaining_frozen": 0
+            }
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "OPEN",
+          "settled_at": "2026-10-20T15:49:10.827996+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 10000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:14.002641+08:00",
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 10000,
+        "pending": 5000
+      },
+      "platform": {
+        "balance_from_latest_ledger": 79102,
+        "baseline": 77100,
+        "fixture_net": 2002,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 0,
+        "equal": true
+      }
+    },
+    {
+      "stage": "available-refund-250",
+      "checked_at": "2026-10-20T08:07:27.467Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 12500,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 590,
+          "frozen": 349,
+          "net_income": 939
+        },
+        "p2": {
+          "balance": 2025,
+          "frozen": 1200,
+          "net_income": 3225
+        },
+        "p3": {
+          "balance": 1012,
+          "frozen": 600,
+          "net_income": 1612
+        },
+        "p4": {
+          "balance": 1772,
+          "frozen": 1050,
+          "net_income": 2822
+        },
+        "p5": {
+          "balance": 1350,
+          "frozen": 800,
+          "net_income": 2150
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1239,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1251,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 2500,
+            "after": 4000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1263,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 6000,
+            "before": 4000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1280,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 10000,
+            "after": 12500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [
+          {
+            "id": 1200,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1201,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -787,
+            "before": 787,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1211,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1217,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 349,
+            "before": 787,
+            "after": 1136,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1218,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -349,
+            "before": 1136,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1228,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 197,
+            "before": 787,
+            "after": 984,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1233,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 984,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1240,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 118,
+            "before": 787,
+            "after": 905,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1245,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -118,
+            "before": 905,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1252,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 472,
+            "before": 787,
+            "after": 1259,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1257,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -472,
+            "before": 1259,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1264,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -690,
+            "before": 787,
+            "after": 97,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1265,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 690,
+            "before": 97,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1274,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 787,
+            "after": 590,
+            "order": null,
+            "reversal_of": 1211,
+            "is_reversal": true
+          }
+        ],
+        "p2": [
+          {
+            "id": 1202,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1203,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2700,
+            "before": 2700,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1212,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1219,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 2700,
+            "after": 3900,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1220,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 3900,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1229,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 675,
+            "before": 2700,
+            "after": 3375,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1234,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 3375,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1241,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 405,
+            "before": 2700,
+            "after": 3105,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1246,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -405,
+            "before": 3105,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1253,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1620,
+            "before": 2700,
+            "after": 4320,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1258,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1620,
+            "before": 4320,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1266,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -2125,
+            "before": 2700,
+            "after": 575,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1267,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 2125,
+            "before": 575,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1275,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 2700,
+            "after": 2025,
+            "order": null,
+            "reversal_of": 1212,
+            "is_reversal": true
+          }
+        ],
+        "p3": [
+          {
+            "id": 1204,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1205,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1350,
+            "before": 1350,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1213,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1221,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 600,
+            "before": 1350,
+            "after": 1950,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1222,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -600,
+            "before": 1950,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1230,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 338,
+            "before": 1350,
+            "after": 1688,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1235,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1688,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1242,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 202,
+            "before": 1350,
+            "after": 1552,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1247,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -202,
+            "before": 1552,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1254,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 810,
+            "before": 1350,
+            "after": 2160,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1259,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -810,
+            "before": 2160,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1268,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1112,
+            "before": 1350,
+            "after": 238,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1269,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1112,
+            "before": 238,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1276,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1350,
+            "after": 1012,
+            "order": null,
+            "reversal_of": 1213,
+            "is_reversal": true
+          }
+        ],
+        "p4": [
+          {
+            "id": 1206,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1207,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2362,
+            "before": 2362,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1214,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1223,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1050,
+            "before": 2362,
+            "after": 3412,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1224,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1050,
+            "before": 3412,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1231,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 590,
+            "before": 2362,
+            "after": 2952,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1236,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2952,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1243,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 355,
+            "before": 2362,
+            "after": 2717,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1248,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -355,
+            "before": 2717,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1255,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1417,
+            "before": 2362,
+            "after": 3779,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1260,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1417,
+            "before": 3779,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1270,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1872,
+            "before": 2362,
+            "after": 490,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1271,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1872,
+            "before": 490,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1277,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2362,
+            "after": 1772,
+            "order": null,
+            "reversal_of": 1214,
+            "is_reversal": true
+          }
+        ],
+        "p5": [
+          {
+            "id": 1208,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1209,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1800,
+            "before": 1800,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1215,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1225,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 800,
+            "before": 1800,
+            "after": 2600,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1226,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 2600,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1232,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 450,
+            "before": 1800,
+            "after": 2250,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1237,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 2250,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1244,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 270,
+            "before": 1800,
+            "after": 2070,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1249,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -270,
+            "before": 2070,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1256,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1080,
+            "before": 1800,
+            "after": 2880,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1261,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1080,
+            "before": 2880,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1272,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1450,
+            "before": 1800,
+            "after": 350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1273,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1450,
+            "before": 350,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1278,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 1800,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1215,
+            "is_reversal": true
+          }
+        ]
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 349,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 1200,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 600,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 1050,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T15:49:07.745853+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 10000,
+          "remaining": 0,
+          "refund_count": 3,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 787,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p2": {
+              "recovered": 2700,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p3": {
+              "recovered": 1350,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p4": {
+              "recovered": 2362,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p5": {
+              "recovered": 1800,
+              "net_income": 0,
+              "remaining_frozen": 0
+            }
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T15:49:10.827996+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 2500,
+          "remaining": 7500,
+          "refund_count": 1,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 197,
+              "net_income": 590,
+              "remaining_frozen": 0
+            },
+            "p2": {
+              "recovered": 675,
+              "net_income": 2025,
+              "remaining_frozen": 0
+            },
+            "p3": {
+              "recovered": 338,
+              "net_income": 1012,
+              "remaining_frozen": 0
+            },
+            "p4": {
+              "recovered": 590,
+              "net_income": 1772,
+              "remaining_frozen": 0
+            },
+            "p5": {
+              "recovered": 450,
+              "net_income": 1350,
+              "remaining_frozen": 0
+            }
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:14.002641+08:00",
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 7500,
+        "pending": 5000
+      },
+      "platform": {
+        "balance_from_latest_ledger": 78852,
+        "baseline": 77100,
+        "fixture_net": 1752,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 0,
+        "equal": true
+      }
+    },
+    {
+      "stage": "final",
+      "checked_at": "2026-10-20T08:11:41.278Z",
+      "result": "PASS",
+      "wallets": {
+        "boss": {
+          "balance": 14000,
+          "frozen": 0
+        },
+        "p1": {
+          "balance": 472,
+          "frozen": 349,
+          "net_income": 821
+        },
+        "p2": {
+          "balance": 1620,
+          "frozen": 1200,
+          "net_income": 2820
+        },
+        "p3": {
+          "balance": 810,
+          "frozen": 600,
+          "net_income": 1410
+        },
+        "p4": {
+          "balance": 1417,
+          "frozen": 1050,
+          "net_income": 2467
+        },
+        "p5": {
+          "balance": 1080,
+          "frozen": 800,
+          "net_income": 1880
+        }
+      },
+      "transactions": {
+        "boss": [
+          {
+            "id": 1196,
+            "type": "ADJUST",
+            "status": "SUCCESS",
+            "amount": 25000,
+            "before": 0,
+            "after": 25000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1197,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 25000,
+            "after": 15000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1198,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -10000,
+            "before": 15000,
+            "after": 5000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1199,
+            "type": "PAY",
+            "status": "SUCCESS",
+            "amount": -5000,
+            "before": 5000,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1239,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 0,
+            "after": 2500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1251,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 2500,
+            "after": 4000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1263,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 6000,
+            "before": 4000,
+            "after": 10000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1280,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 2500,
+            "before": 10000,
+            "after": 12500,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1287,
+            "type": "REFUND",
+            "status": "SUCCESS",
+            "amount": 1500,
+            "before": 12500,
+            "after": 14000,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          }
+        ],
+        "p1": [
+          {
+            "id": 1200,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1201,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -787,
+            "before": 787,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1211,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 787,
+            "before": 0,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1217,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 349,
+            "before": 787,
+            "after": 1136,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1218,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -349,
+            "before": 1136,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1228,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 197,
+            "before": 787,
+            "after": 984,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1233,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 984,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1240,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 118,
+            "before": 787,
+            "after": 905,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1245,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -118,
+            "before": 905,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1252,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 472,
+            "before": 787,
+            "after": 1259,
+            "order": null,
+            "reversal_of": 1201,
+            "is_reversal": true
+          },
+          {
+            "id": 1257,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -472,
+            "before": 1259,
+            "after": 787,
+            "order": null,
+            "reversal_of": 1200,
+            "is_reversal": true
+          },
+          {
+            "id": 1264,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -690,
+            "before": 787,
+            "after": 97,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1265,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 690,
+            "before": 97,
+            "after": 787,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1274,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -197,
+            "before": 787,
+            "after": 590,
+            "order": null,
+            "reversal_of": 1211,
+            "is_reversal": true
+          },
+          {
+            "id": 1281,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -118,
+            "before": 590,
+            "after": 472,
+            "order": null,
+            "reversal_of": 1211,
+            "is_reversal": true
+          }
+        ],
+        "p2": [
+          {
+            "id": 1202,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1203,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2700,
+            "before": 2700,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1212,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2700,
+            "before": 0,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1219,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1200,
+            "before": 2700,
+            "after": 3900,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1220,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1200,
+            "before": 3900,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1229,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 675,
+            "before": 2700,
+            "after": 3375,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1234,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 3375,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1241,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 405,
+            "before": 2700,
+            "after": 3105,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1246,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -405,
+            "before": 3105,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1253,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1620,
+            "before": 2700,
+            "after": 4320,
+            "order": null,
+            "reversal_of": 1203,
+            "is_reversal": true
+          },
+          {
+            "id": 1258,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1620,
+            "before": 4320,
+            "after": 2700,
+            "order": null,
+            "reversal_of": 1202,
+            "is_reversal": true
+          },
+          {
+            "id": 1266,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -2125,
+            "before": 2700,
+            "after": 575,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1267,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 2125,
+            "before": 575,
+            "after": 2700,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1275,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -675,
+            "before": 2700,
+            "after": 2025,
+            "order": null,
+            "reversal_of": 1212,
+            "is_reversal": true
+          },
+          {
+            "id": 1282,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -405,
+            "before": 2025,
+            "after": 1620,
+            "order": null,
+            "reversal_of": 1212,
+            "is_reversal": true
+          }
+        ],
+        "p3": [
+          {
+            "id": 1204,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1205,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1350,
+            "before": 1350,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1213,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1350,
+            "before": 0,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1221,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 600,
+            "before": 1350,
+            "after": 1950,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1222,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -600,
+            "before": 1950,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1230,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 338,
+            "before": 1350,
+            "after": 1688,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1235,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1688,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1242,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 202,
+            "before": 1350,
+            "after": 1552,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1247,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -202,
+            "before": 1552,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1254,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 810,
+            "before": 1350,
+            "after": 2160,
+            "order": null,
+            "reversal_of": 1205,
+            "is_reversal": true
+          },
+          {
+            "id": 1259,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -810,
+            "before": 2160,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1204,
+            "is_reversal": true
+          },
+          {
+            "id": 1268,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1112,
+            "before": 1350,
+            "after": 238,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1269,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1112,
+            "before": 238,
+            "after": 1350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1276,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -338,
+            "before": 1350,
+            "after": 1012,
+            "order": null,
+            "reversal_of": 1213,
+            "is_reversal": true
+          },
+          {
+            "id": 1283,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -202,
+            "before": 1012,
+            "after": 810,
+            "order": null,
+            "reversal_of": 1213,
+            "is_reversal": true
+          }
+        ],
+        "p4": [
+          {
+            "id": 1206,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1207,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -2362,
+            "before": 2362,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1214,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 2362,
+            "before": 0,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1223,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1050,
+            "before": 2362,
+            "after": 3412,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1224,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1050,
+            "before": 3412,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1231,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 590,
+            "before": 2362,
+            "after": 2952,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1236,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2952,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1243,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 355,
+            "before": 2362,
+            "after": 2717,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1248,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -355,
+            "before": 2717,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1255,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1417,
+            "before": 2362,
+            "after": 3779,
+            "order": null,
+            "reversal_of": 1207,
+            "is_reversal": true
+          },
+          {
+            "id": 1260,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1417,
+            "before": 3779,
+            "after": 2362,
+            "order": null,
+            "reversal_of": 1206,
+            "is_reversal": true
+          },
+          {
+            "id": 1270,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1872,
+            "before": 2362,
+            "after": 490,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1271,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1872,
+            "before": 490,
+            "after": 2362,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1277,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -590,
+            "before": 2362,
+            "after": 1772,
+            "order": null,
+            "reversal_of": 1214,
+            "is_reversal": true
+          },
+          {
+            "id": 1284,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -355,
+            "before": 1772,
+            "after": 1417,
+            "order": null,
+            "reversal_of": 1214,
+            "is_reversal": true
+          }
+        ],
+        "p5": [
+          {
+            "id": 1208,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1209,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -1800,
+            "before": 1800,
+            "after": 0,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1215,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 1800,
+            "before": 0,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1225,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": 800,
+            "before": 1800,
+            "after": 2600,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1226,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": -800,
+            "before": 2600,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1232,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 450,
+            "before": 1800,
+            "after": 2250,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1237,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 2250,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1244,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 270,
+            "before": 1800,
+            "after": 2070,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1249,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -270,
+            "before": 2070,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1256,
+            "type": "EARNINGS_FREEZE",
+            "status": "SUCCESS",
+            "amount": 1080,
+            "before": 1800,
+            "after": 2880,
+            "order": null,
+            "reversal_of": 1209,
+            "is_reversal": true
+          },
+          {
+            "id": 1261,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -1080,
+            "before": 2880,
+            "after": 1800,
+            "order": null,
+            "reversal_of": 1208,
+            "is_reversal": true
+          },
+          {
+            "id": 1272,
+            "type": "PENALTY",
+            "status": "SUCCESS",
+            "amount": -1450,
+            "before": 1800,
+            "after": 350,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1273,
+            "type": "REWARD",
+            "status": "SUCCESS",
+            "amount": 1450,
+            "before": 350,
+            "after": 1800,
+            "order": null,
+            "reversal_of": null,
+            "is_reversal": false
+          },
+          {
+            "id": 1278,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -450,
+            "before": 1800,
+            "after": 1350,
+            "order": null,
+            "reversal_of": 1215,
+            "is_reversal": true
+          },
+          {
+            "id": 1285,
+            "type": "INCOME",
+            "status": "SUCCESS",
+            "amount": -270,
+            "before": 1350,
+            "after": 1080,
+            "order": null,
+            "reversal_of": 1215,
+            "is_reversal": true
+          }
+        ]
+      },
+      "reports": {
+        "p1": [
+          {
+            "id": 66,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 349,
+            "expected_income": 349,
+            "payout_amount": 349,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 61,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 56,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 787,
+            "expected_income": 787,
+            "payout_amount": 787,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p2": [
+          {
+            "id": 67,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1200,
+            "expected_income": 1200,
+            "payout_amount": 1200,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 62,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 57,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2700,
+            "expected_income": 2700,
+            "payout_amount": 2700,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p3": [
+          {
+            "id": 68,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 600,
+            "expected_income": 600,
+            "payout_amount": 600,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 63,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          },
+          {
+            "id": 58,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 1350,
+            "expected_income": 1350,
+            "payout_amount": 1350,
+            "commission_type": "FIXED",
+            "commission_fixed": 0
+          }
+        ],
+        "p4": [
+          {
+            "id": 69,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1551,
+            "expected_income": 1050,
+            "payout_amount": 1050,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 64,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          },
+          {
+            "id": 59,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2863,
+            "expected_income": 2362,
+            "payout_amount": 2362,
+            "commission_type": "FIXED",
+            "commission_fixed": 501
+          }
+        ],
+        "p5": [
+          {
+            "id": 70,
+            "order_id": 129,
+            "status": "APPROVED",
+            "amount": 1300,
+            "expected_income": 800,
+            "payout_amount": 800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 65,
+            "order_id": 128,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          },
+          {
+            "id": 60,
+            "order_id": 127,
+            "status": "APPROVED",
+            "amount": 2300,
+            "expected_income": 1800,
+            "payout_amount": 1800,
+            "commission_type": "FIXED",
+            "commission_fixed": 500
+          }
+        ]
+      },
+      "orders": [
+        {
+          "key": "frozen_recovery",
+          "id": 127,
+          "status": "CANCELLED",
+          "payment_status": "REFUNDED",
+          "aftersale_status": "REFUNDED",
+          "settled_at": "2026-10-20T15:49:07.745853+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 10000,
+          "remaining": 0,
+          "refund_count": 3,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 787,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p2": {
+              "recovered": 2700,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p3": {
+              "recovered": 1350,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p4": {
+              "recovered": 2362,
+              "net_income": 0,
+              "remaining_frozen": 0
+            },
+            "p5": {
+              "recovered": 1800,
+              "net_income": 0,
+              "remaining_frozen": 0
+            }
+          }
+        },
+        {
+          "key": "available_recovery",
+          "id": 128,
+          "status": "COMPLETED",
+          "payment_status": "PARTIALLY_REFUNDED",
+          "aftersale_status": "PARTIALLY_REFUNDED",
+          "settled_at": "2026-10-20T15:49:10.827996+08:00",
+          "amount": 10000,
+          "fixed_total": 1001,
+          "refunded": 4000,
+          "remaining": 6000,
+          "refund_count": 2,
+          "provider_summaries": {
+            "p1": {
+              "recovered": 315,
+              "net_income": 472,
+              "remaining_frozen": 0
+            },
+            "p2": {
+              "recovered": 1080,
+              "net_income": 1620,
+              "remaining_frozen": 0
+            },
+            "p3": {
+              "recovered": 540,
+              "net_income": 810,
+              "remaining_frozen": 0
+            },
+            "p4": {
+              "recovered": 945,
+              "net_income": 1417,
+              "remaining_frozen": 0
+            },
+            "p5": {
+              "recovered": 720,
+              "net_income": 1080,
+              "remaining_frozen": 0
+            }
+          }
+        },
+        {
+          "key": "protected_foreign_hold",
+          "id": 129,
+          "status": "COMPLETED",
+          "payment_status": "PAID",
+          "aftersale_status": "",
+          "settled_at": "2026-10-20T15:49:14.002641+08:00",
+          "amount": 5000,
+          "fixed_total": 1001,
+          "refunded": 0,
+          "remaining": 5000,
+          "refund_count": 0,
+          "provider_summaries": {
+            "p1": null,
+            "p2": null,
+            "p3": null,
+            "p4": null,
+            "p5": null
+          }
+        }
+      ],
+      "consumption": {
+        "confirmed": 6000,
+        "pending": 5000
+      },
+      "platform": {
+        "balance_from_latest_ledger": 78702,
+        "baseline": 77100,
+        "fixture_net": 1602,
+        "source": "complete admin ledger; actual wallet checked by final DB audit"
+      },
+      "conservation": {
+        "initial_raw": 25000,
+        "observed_raw": 25000,
+        "temporary_debit_raw": 0,
+        "unsettled_reserve_raw": 0,
+        "equal": true
+      }
+    }
+  ]
+}

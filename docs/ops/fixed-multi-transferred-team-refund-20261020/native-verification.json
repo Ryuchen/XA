@@ -1,0 +1,169 @@
+{
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "stages": [
+    {
+      "stage": "original-session-backed-up",
+      "account_id": "1142"
+    },
+    {
+      "stage": "fixture-session-active",
+      "account_id": "1168"
+    },
+    {
+      "stage": "opened-frozen_recovery",
+      "id": 127,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 127,
+      "aftersale_id": 15,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 127,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176 冻结收益首笔部分退款250币，本地合成联调",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 127,
+      "aftersale_id": 15,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 127,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176 冻结收益第二笔部分退款150币",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 127,
+      "aftersale_id": 15,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 127,
+      "status": "CANCELLED",
+      "payment_status": "REFUNDED",
+      "aftersale_status": "REFUNDED",
+      "resolution": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176 冻结收益余款600币退清，原始收益及固定抽成精确冲回",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 128,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 128,
+      "aftersale_id": 16,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-available_recovery",
+      "id": 128,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176 可用收益首笔部分退款250币，五人实际分账追回",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 128,
+      "aftersale_id": 16,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "wallet-open",
+      "balance": "1250",
+      "frozen": "0"
+    },
+    {
+      "stage": "wallet-refund-realtime",
+      "balance": "1400",
+      "frozen": "0",
+      "refunds": [
+        {
+          "id": 1287,
+          "amount": 1500,
+          "displayAmount": "+150",
+          "after": "1400"
+        },
+        {
+          "id": 1280,
+          "amount": 2500,
+          "displayAmount": "+250",
+          "after": "1250"
+        },
+        {
+          "id": 1263,
+          "amount": 6000,
+          "displayAmount": "+600",
+          "after": "1000"
+        },
+        {
+          "id": 1251,
+          "amount": 1500,
+          "displayAmount": "+150",
+          "after": "400"
+        },
+        {
+          "id": 1239,
+          "amount": 2500,
+          "displayAmount": "+250",
+          "after": "250"
+        }
+      ],
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 128,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "canAfterSale": true,
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176 可用收益第二笔部分退款150币"
+    },
+    {
+      "stage": "partial-refund-summary-captured",
+      "order_id": 128,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_coins": "400",
+      "remaining_coins": "600"
+    },
+    {
+      "stage": "original-session-restored",
+      "account_id": "1142",
+      "home_error": ""
+    }
+  ]
+}

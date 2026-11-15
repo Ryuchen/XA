@@ -159,7 +159,7 @@ class SettledRefundConcurrencyTest(APITransactionTestCase):
         order = self.settled(confirmed=True)
         reward = RewardItem.objects.create(code='mysql-vip-refund-tag',name='隔离VIP标签',kind='TAG',in_shop=False)
         claim = grant_entitlement(self.boss_account,reward,
-            f'vip-quota:{self.boss_account.pk}:1:TAG:1','VIP',{'tag':'并发交付标签'})
+            f'vip-quota:{self.boss_account.pk}:{self.boss_account.business_cycle}:TAG:1','VIP',{'tag':'并发交付标签'})
         claim.details = {'tag':'并发交付标签'}
         claim.save(update_fields=['details'])
         token = self.preview(order)['plan_token']
@@ -170,7 +170,7 @@ class SettledRefundConcurrencyTest(APITransactionTestCase):
                 held.set()
                 if not attempt.wait(timeout=8):
                     raise AssertionError('refund did not reach claim lock')
-                return process_claim(claim.pk,'COMPLETED','MySQL隔离交付',self.admin_account).status
+                return process_claim(claim.pk,'COMPLETED','MySQL隔离交付',self.admin_account,tag_reviewed=True).status
         def observe(order,**kwargs):
             attempt.set()
             return _locked_refund_claims(order,**kwargs)

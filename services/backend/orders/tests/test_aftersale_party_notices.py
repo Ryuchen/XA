@@ -58,7 +58,7 @@ class AfterSalePartyNoticeTest(APITransactionTestCase):
             self.fail('Node runtime required to verify provider presentation')
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run([node, '--test', '--test-name-pattern=real resolved aftersale response',
-                                 str(repo / 'apps/provider-miniapp/tests/order-report-actions.cjs')],
+                                 str(repo / 'scripts/fronted-order-contracts.test.mjs')],
             env={**os.environ, 'XA_REAL_RESOLVED_AFTERSALE': json.dumps(provider_order, cls=DjangoJSONEncoder)},
             text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -66,7 +66,7 @@ class AfterSalePartyNoticeTest(APITransactionTestCase):
         report = next(item for item in reports if item['id'] == report_id)
         self.assertEqual((report['aftersale_status'], report['settlement_status']), ('RESOLVED', 'WAITING'))
         result = subprocess.run([node, '--test', '--test-name-pattern=real resolved aftersale report',
-                                 str(repo / 'apps/provider-miniapp/tests/report-flow.cjs')],
+                                 str(repo / 'scripts/fronted-report-contracts.test.mjs')],
             env={**os.environ, 'XA_REAL_RESOLVED_REPORT': json.dumps(report, cls=DjangoJSONEncoder)},
             text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -82,7 +82,7 @@ class AfterSalePartyNoticeTest(APITransactionTestCase):
         self.assertEqual(len(self.messages(self.boss, order_id, '售后已处理')), 2)
 
     def test_both_team_members_receive_the_case_notice(self):
-        teammate = make_provider()
+        teammate = make_provider(deposit_paid=40000)
         teammate_account = get_or_create_account_for_legacy_user(teammate)
         teammate.escort_profile.account = teammate_account
         teammate.escort_profile.save(update_fields=['account'])

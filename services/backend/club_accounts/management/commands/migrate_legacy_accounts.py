@@ -2,7 +2,7 @@ from collections import Counter
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from stores.db import transaction
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from console.models import AdminMembership

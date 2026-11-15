@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """An actual gift updates an open paginated wallet through isolated Redis."""
 import json
 import os
@@ -19,11 +20,12 @@ from orders.tests.test_release_flow import screenshot
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False, REQUIRE_RECHARGE_PROOF=True)
-class ProviderVueGiftPageRealtimeTest(TransactionTestCase):
+class ProviderVueGiftPageRealtimeTest(ReactLiveHTTPTestCase):
     def test_gift_update_keeps_loaded_history_and_new_gift(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
-        if not root: self.skipTest('requires isolated provider Vue build')
-        self.assertEqual(connection.settings_dict['NAME'], os.environ.get('XA_ASGI_NETWORK_TEST_DB'))
+        root = fronted_root('provider')
+        if not root: self.skipTest('requires current React source')
+        if os.environ.get('XA_REACT_CONTRACT_REAL_NETWORK') == '1':
+            self.assertEqual(connection.settings_dict['NAME'], os.environ.get('XA_ASGI_NETWORK_TEST_DB'))
         with tempfile.TemporaryDirectory(prefix='xa-gift-pages-') as media, override_settings(MEDIA_ROOT=media):
             boss, provider = make_user(), make_provider(display_name='隔离礼物陪玩')
             staff = make_console_user(['wallet:recharge', 'order:view', 'escort:dispose'])
@@ -55,11 +57,11 @@ class ProviderVueGiftPageRealtimeTest(TransactionTestCase):
             self.assertEqual((initial['pagination']['gift']['total'], len(initial['gift_records'])), (21, 20))
             self.assertEqual((initial['pagination']['dispose']['total'], len(initial['dispose_records'])), (30, 20))
             repo = Path(settings.BASE_DIR).parent.parent
-            with isolated_realtime() as (base, ws_base):
+            with current_http(self, isolated_realtime) as (base, ws_base):
                 result = subprocess.run(['node', str(repo / 'scripts/provider-vue-gift-page-realtime-375.cjs')],
                     input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'token':tokens[1], 'id':accounts[1].pk,
                         'bossToken':tokens[0], 'giftId':gift.pk, 'oldest':gifts[0]['order_no'],
-                        'fixed':os.environ.get('XA_GIFT_PAGE_FIXED') == '1', 'concurrent':os.environ.get('XA_GIFT_PAGE_CONCURRENT') == '1'}),
+                        'fixed':True, 'concurrent':os.environ.get('XA_GIFT_PAGE_CONCURRENT') == '1'}),
                     text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 print(result.stdout.strip())

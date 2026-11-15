@@ -67,6 +67,18 @@ class DashboardClaimWorkflowTest(LiveServerTestCase):
         check('PENDING', 1, 0)
         unauthorized = ok(clients[3].get('/api/admin/dashboard/stats'))
         self.assertIsNone(unauthorized['pending_claim_total'])
+        if os.environ.get('XA_DASHBOARD_PERMISSION_BROWSER') == '1':
+            manager = make_console_user(['role:view', 'role:edit'])
+            manager_account = get_or_create_account_for_legacy_user(manager)
+            manager.admin_membership.account = manager_account
+            manager.admin_membership.save(update_fields=['account'])
+            role = viewer.admin_membership.roles.get()
+            repo = Path(settings.BASE_DIR).parent.parent
+            browser = subprocess.run(['node', str(repo / 'scripts/dashboard-claim-permission-live.cjs')], cwd=repo,
+                input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
+                    'token': issue_account_tokens(accounts[3])[0], 'managerToken': issue_account_tokens(manager_account)[0],
+                    'roleId': role.pk}), text=True, encoding='utf-8', capture_output=True, timeout=45)
+            self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
         ok(clients[2].post(f'/api/admin/club-claims/{claim.pk}/process/', {'status': 'FULFILLING', 'note': '正在安排'}, format='json'))
         check('FULFILLING', 0, 1)
         ok(clients[2].post(f'/api/admin/club-claims/{claim.pk}/process/', {'status': 'COMPLETED', 'note': '已交付'}, format='json'))

@@ -280,6 +280,15 @@ class BenefitAutomationTest(APITestCase):
         AfterSale.objects.create(order=order,account=self.account,reason='未结客诉')
         with self.assertRaises(ValidationError): retire(self.account,self.staff,'退店清空')
 
+    def test_retirement_clears_initialized_mixed_lot_without_breaking_constraint(self):
+        from .models import PointFundingLot
+        mixed = PointFundingLot.objects.create(account=self.account, source_key='retire-mixed-lot',
+                                                kind='RECHARGE', remaining=300, gift_remaining=100)
+        self.wallet.balance = 0; self.wallet.save(update_fields=['balance'])
+        retire(self.account, self.staff, '退店资金来源核对')
+        mixed.refresh_from_db()
+        self.assertEqual((mixed.remaining, mixed.gift_remaining), (0, 0))
+
     def test_retirement_new_cycle_no_old_task_or_grant_dedupe(self):
         self.tiers(); old=self.completed(); process_order(old.pk)
         self.wallet.balance=0; self.wallet.save(); retire(self.account,self.staff,'退店清空')

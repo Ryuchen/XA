@@ -50,8 +50,7 @@ class NativeReservationFieldsHTTPTest(LiveServerTestCase):
             input=json.dumps({'base':self.live_server_url, 'reservationId':reservation_id, 'fields':fields,
                 'bossToken':issue_account_tokens(accounts[0])[0], 'bossId':accounts[0].pk,
                 'providerToken':issue_account_tokens(accounts[1])[0], 'providerId':accounts[1].pk,
-                'root':os.environ.get('XA_PROVIDER_VUE_ROOT'),
-                'fixed':os.environ.get('XA_NATIVE_FIELDS_FIXED') == '1'}),
+                'root':os.environ.get('XA_PROVIDER_VUE_ROOT')}),
             text=True, encoding='utf-8', capture_output=True, timeout=40, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout.strip())

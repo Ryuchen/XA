@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
-from django.db import transaction
+from stores.db import transaction
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 

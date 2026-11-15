@@ -27,7 +27,9 @@ async function main() {
   page.onLoad({id: String(input.message)}); await page.load();
   assert.equal(page.data.item.title, input.expectedTitle || '预约已确认');
   if (input.expectedPreview) assert.ok(page.data.item.preview.includes(input.expectedPreview));
-  assert.equal(page.data.target, input.expectedTarget || `/pages/reservation-detail/index?id=${input.reservation}`);
+  const expectedTarget = Object.prototype.hasOwnProperty.call(input, 'expectedTarget') ? input.expectedTarget : `/pages/reservation-detail/index?id=${input.reservation}`;
+  assert.equal(page.data.target, expectedTarget);
+  if (input.expectedActionText) assert.equal(page.data.actionText, input.expectedActionText);
   page.action(); assert.equal(navigated, page.data.target);
   page.onUnload();
   if (input.expectedStatus) {

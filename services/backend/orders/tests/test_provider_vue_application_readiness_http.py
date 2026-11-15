@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A confirmed team sees the real selection eligibility of the same order."""
 import json
 import os
@@ -30,9 +31,9 @@ class ProviderVueApplicationReadinessHTTPTest(LiveServerTestCase):
     invite = invitation_flow.TeamInvitationDetailTest.invite
 
     def exercise_offline_member(self, offline_index):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         self.invite()
         self.login(self.partner)
         self.ok(self.client.post(self.action, {'action': 'CONFIRM_TEAM'}, format='json'))
@@ -59,7 +60,7 @@ class ProviderVueApplicationReadinessHTTPTest(LiveServerTestCase):
                 'offlineIndex': offline_index,
                 'providers': [{'id': self.accounts[user.pk].pk, 'token': issue_account_tokens(self.accounts[user.pk])[0]}
                               for user in (self.provider, self.partner)],
-                'expectFixed': os.environ.get('XA_READINESS_FIXED') == '1',
+                'expectFixed': True,
                 'poolOnly': os.environ.get('XA_READINESS_POOL_ONLY') == '1'}),
             text=True, encoding='utf-8', capture_output=True, timeout=50, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -86,9 +87,9 @@ class ProviderVueApplicationReadinessHTTPTest(LiveServerTestCase):
         self.assertNotIn('离线', rejected.data['msg'])
 
     def test_pool_entries_follow_actual_application_status_and_size(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         self.invite()
         repo = Path(settings.BASE_DIR).parent.parent
         def check(user, order, application, state, partner=False):

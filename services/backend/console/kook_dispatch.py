@@ -2,14 +2,14 @@
 from urllib.parse import urlsplit
 from uuid import uuid4
 
-from django.db import transaction
+from stores.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from integrations.kook import KookClient, KookError, KookDeliveryUnknown
-from integrations.kook_config import DEFAULT_TEMPLATE, TEMPLATE_FIELDS, decrypt_token, encrypt_token, get_kook_config
+from integrations.kook_config import TEMPLATE_FIELDS, default_template, decrypt_token, encrypt_token, get_kook_config
 from orders.dispatch_templates import sample_values, template_error
 from orders.kook_dispatch import build_card
 from orders.models import GameCategory, Gameplay
@@ -31,7 +31,7 @@ class RouteInput(serializers.Serializer):
     game_category_id = serializers.IntegerField(min_value=1, allow_null=True, default=None)
     gameplay_id = serializers.IntegerField(min_value=1, allow_null=True, default=None)
     platform = serializers.ChoiceField(choices=['', 'PC', 'MOBILE'], default='')
-    template = serializers.CharField(max_length=1200, default=DEFAULT_TEMPLATE)
+    template = serializers.CharField(max_length=1200, default=default_template)
     mention_role_ids = serializers.ListField(child=serializers.RegexField(r'^[0-9]{1,64}$'), max_length=10, default=list)
 
     def validate_template(self, value):
@@ -89,7 +89,7 @@ def config_data():
         'provider_order_url': config.provider_order_url, 'token_saved': bool(config.token),
         'token_error': bool(row and row.bot_token_ciphertext and not config.token),
         'ready': config.ready, 'source': config.source, 'revision': row.revision if row else 0,
-        'updated_at': row.updated_at if row else None, 'default_template': DEFAULT_TEMPLATE,
+        'updated_at': row.updated_at if row else None, 'default_template': default_template(),
         'template_fields': TEMPLATE_FIELDS,
         'games': list(GameCategory.objects.order_by('sort_order', 'id').values('id', 'name')),
         'gameplays': list(Gameplay.objects.order_by('sort_order', 'id').values('id', 'name')),
@@ -136,6 +136,9 @@ class KookConfigView(APIView):
         require_edit(request)
         serializer = ConfigInput(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if serializer.validated_data['enabled']:
+            from stores.license_benefits import require_content_operations
+            require_content_operations()
         save_config(serializer.validated_data)
         return Response({'code': 0, 'data': config_data(), 'msg': 'KOOK 配置已保存，后续派单立即使用新规则'})
 
@@ -195,7 +198,10 @@ class KookProbeView(APIView):
         request_id = serializers.UUIDField().run_validation(request.data.get('request_id'))
         if request.data.get('confirm') is not True:
             raise serializers.ValidationError('请确认向指定频道发送标明测试的卡片')
-        text = '【联调测试，不是真实订单】\n' + (route.get('template') or DEFAULT_TEMPLATE).format(**sample_values())
+        text = '【联调测试，不是真实订单】\n' + (route.get('template') or default_template()).format(**sample_values())
+        if not KookDispatchProbe.objects.filter(pk=request_id).exists():
+            from stores.license_benefits import require_content_operations
+            require_content_operations()
         probe, created = KookDispatchProbe.objects.get_or_create(pk=request_id, defaults={
             'route_key': route['id'], 'channel_id': route['channel_id'], 'content': text})
         if probe.route_key != route['id']:

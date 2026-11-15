@@ -10,7 +10,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
+from stores.db import transaction
 from django.utils import timezone
 
 from .direct_payment import _require_test_domain

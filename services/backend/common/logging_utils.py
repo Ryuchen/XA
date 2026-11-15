@@ -25,6 +25,7 @@ MONEY_LOGGER_NAME = 'xa.money'
 # 业务字段白名单：只有这些键会被 Formatter 从 record 上提取到 JSON 顶层，
 # 避免 LogRecord 的内部属性（args/exc_info/...）被误当成业务字段输出。
 BUSINESS_FIELDS = (
+    'store_slug',
     'event',
     'account_id',
     'user_id',
@@ -45,7 +46,7 @@ BUSINESS_FIELDS = (
 def redact_sensitive_urls(value):
     """Keep route/status diagnostics without bearer capabilities or WS JWTs."""
     value = re.sub(r'(/api/media/private/)[^/\s?"\']+', r'\1[redacted]', str(value))
-    return re.sub(r'([?&]token=)[^&\s"\']+', r'\1[redacted]', value)
+    return re.sub(r'([?&](?:token|access_token|refresh_token|poll_token|bridge_token)=)[^&\s"\']+', r'\1[redacted]', value, flags=re.IGNORECASE)
 
 
 class PlainLogFormatter(logging.Formatter):
@@ -110,7 +111,7 @@ def log_money_event(
 ) -> None:
     """记录一条结构化资金事件。
 
-    所有金额参数一律为**内部账务单位整数**（10 = 1 兴安币），与后端全链路口径一致；
+    所有金额参数一律为**内部账务单位整数**（10 = 1 浪花），与后端全链路口径一致；
     这里绝不做 ÷10 换算，避免日志与流水对不上账。
 
     Args:
@@ -130,7 +131,9 @@ def log_money_event(
         reason: 备注 / 原因。
         level: 日志级别，默认 ``logging.INFO``。
     """
-    extra: Dict[str, Any] = {'event': event}
+    from stores.context import current_store
+    store = current_store()
+    extra: Dict[str, Any] = {'event': event, 'store_slug': store.slug if store else None}
     optional = {
         'account_id': account_id,
         'user_id': user_id,

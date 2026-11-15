@@ -1,0 +1,98 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-20T03:19:11.385Z",
+  "order_id": 124,
+  "purpose": "Manually emit one local invalidation for the existing committed partial refund; this is not another refund.",
+  "transport": "Node WebSocket -> localhost:18080/api/ws/orders/ -> gateway/backend -> Redis channel layer",
+  "browser_or_cdp_used": false,
+  "business_mutation_requested": false,
+  "timeout_ms_per_step": 15000,
+  "secrets_in_report": false,
+  "run": "XA-MULTI-TRANSFERRED-TEAM-REFUND-20261020-f99a6d",
+  "before_snapshot_sha256": "e7fd35c3037aac0652a176a7f78a0d11bec6bc32d70ac3802d773bf573bfb290",
+  "channel_test": {
+    "result": "PASS",
+    "order_id": 124,
+    "notification_calls": 1,
+    "database_writes": 0,
+    "read_only_transaction": true,
+    "select_queries": 148,
+    "channel_backend": "Redis"
+  },
+  "after_snapshot_sha256": "e7fd35c3037aac0652a176a7f78a0d11bec6bc32d70ac3802d773bf573bfb290",
+  "business_snapshots_unchanged": true,
+  "unchanged_scope": [
+    "six actor wallets and complete ledger pages",
+    "admin order",
+    "aftersale",
+    "complete 21-row order ledger including 3 platform entries"
+  ],
+  "actors": {
+    "boss": {
+      "full_event_count": 1,
+      "refunded_raw": 4000,
+      "remaining_raw": 6000,
+      "internal_recovery_hidden": true
+    },
+    "p1": {
+      "full_event_count": 1,
+      "assignment": "historical_released",
+      "original_income": 700,
+      "recovered": 280,
+      "net_income": 420,
+      "remaining_frozen_raw": 0,
+      "refunded_raw": 4000,
+      "remaining_raw": 6000,
+      "other_provider_recovery_hidden": true
+    },
+    "p2": {
+      "full_event_count": 1,
+      "assignment": "historical_released",
+      "original_income": 2100,
+      "recovered": 840,
+      "net_income": 1260,
+      "remaining_frozen_raw": 0,
+      "refunded_raw": 4000,
+      "remaining_raw": 6000,
+      "other_provider_recovery_hidden": true
+    },
+    "p3": {
+      "full_event_count": 1,
+      "assignment": "historical_released",
+      "original_income": 1200,
+      "recovered": 480,
+      "net_income": 720,
+      "remaining_frozen_raw": 0,
+      "refunded_raw": 4000,
+      "remaining_raw": 6000,
+      "other_provider_recovery_hidden": true
+    },
+    "p4": {
+      "full_event_count": 1,
+      "assignment": "current_active",
+      "original_income": 2100,
+      "recovered": 840,
+      "net_income": 1260,
+      "remaining_frozen_raw": 0,
+      "refunded_raw": 4000,
+      "remaining_raw": 6000,
+      "other_provider_recovery_hidden": true
+    },
+    "p5": {
+      "full_event_count": 1,
+      "assignment": "current_active",
+      "original_income": 1400,
+      "recovered": 560,
+      "net_income": 840,
+      "remaining_frozen_raw": 0,
+      "refunded_raw": 4000,
+      "remaining_raw": 6000,
+      "other_provider_recovery_hidden": true
+    }
+  },
+  "no_additional_refund": true,
+  "no_money_order_time_or_external_notification_write": true,
+  "notification_attempted": true,
+  "all_sockets_closed": true,
+  "completed_at": "2026-10-20T03:19:14.360Z"
+}

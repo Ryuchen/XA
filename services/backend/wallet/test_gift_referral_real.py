@@ -52,6 +52,27 @@ class GiftReferralRealTest(APITestCase):
         self.assertEqual(response.data['code'], 0, response.data)
         return response.data['data']
 
+    def test_provider_who_is_also_inviter_gets_one_clear_refund_notice(self):
+        boss, provider, staff = (self.client_for(user) for user in (self.boss, self.provider, self.staff))
+        created = self.ok(boss.post('/api/orders/gifts/send/', {
+            'gift_service_id': self.gift.pk, 'quantity': 1, 'provider_id': self.accounts[self.provider.pk].pk,
+            'expected_amount': 10000, 'client_request_id': 'same-provider-inviter-notice',
+        }, format='json'))
+        order_id = created['id']
+        preview = self.ok(staff.get(f'/api/admin/orders/{order_id}/refund-preview/', {'refund_amount': 2500}))
+        with self.captureOnCommitCallbacks(execute=True):
+            self.ok(staff.post(f'/api/admin/orders/{order_id}/refund/', {
+                'refund_amount': 2500, 'reason': '隔离退款', 'client_request_id': 'same-provider-inviter-refund',
+                'plan_token': preview['plan_token'],
+            }, format='json'))
+        messages = self.ok(provider.get('/api/messages/'))['messages']
+        notices = [row for row in messages if row['title'] == '订单部分退款']
+        self.assertEqual(len(notices), 1, notices)
+        self.assertIn('收益（含推荐收益）变化', notices[0]['preview'])
+        rows = self.ok(provider.get('/api/wallet/transactions/'))['transactions']
+        self.assertTrue(any(row['is_referral_income'] and row['amount'] < 0 for row in rows), rows)
+        self.assertTrue(any(row['tx_type'] == 'GIFT' and row['amount'] < 0 for row in rows), rows)
+
     def test_provider_gift_history_uses_current_boss_identity(self):
         boss, provider = (self.client_for(user) for user in (self.boss, self.provider))
         created = self.ok(boss.post('/api/orders/gifts/send/', {
@@ -138,7 +159,7 @@ class GiftReferralRealTest(APITestCase):
             self.skipTest('Node runtime required for provider wallet rendering')
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run([node, '--test', '--test-name-pattern=real gift benefit data',
-                                 str(repo / 'apps/provider-miniapp/tests/wallet-realtime.cjs')],
+                                 str(repo / 'scripts/fronted-wallet-contracts.test.mjs')],
                                 env={**os.environ, 'XA_REAL_GIFT_BENEFITS': json.dumps(snapshots)},
                                 text=True, encoding='utf-8', capture_output=True, timeout=20, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)

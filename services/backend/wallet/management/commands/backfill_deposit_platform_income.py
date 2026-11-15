@@ -7,7 +7,7 @@
 但历史数据还欠着平台侧那一半。
 
 本命令**当前只做只读盘点**，``--commit`` 分支硬拒。为什么不直接把回补写进来：
-补数的基准取决于「陪玩侧 DEPOSIT 流水合计」与「``deposit_paid`` 合计」对不对
+补数的基准取决于「陪玩侧 DEPOSIT 流水与线下现金补差合计」与「``deposit_paid`` 合计」对不对
 得上。
 
 * 对得上：说明历史押金全部走 ``DepositView``，按流水合计补平台侧即可；
@@ -35,11 +35,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count, Sum
 
 from users.models import EscortProfile
-from wallet.models import Transaction, Wallet
+from wallet.models import CashDepositTopup, Transaction, Wallet
 
 
 def _yuan(amount):
-    """内部账务单位 -> 兴安币展示值（1 兴安币 = 10 单位）。"""
+    """内部账务单位 -> 浪花展示值（1 浪花 = 10 单位）。"""
     return f'{amount / 10:g}'
 
 
@@ -76,7 +76,7 @@ def _clip(text, width):
 
 
 class Command(BaseCommand):
-    help = '押金账务盘点：核对陪玩侧 DEPOSIT 流水与 deposit_paid 是否对得上'
+    help = '押金账务盘点：核对陪玩侧 DEPOSIT 流水、线下补差与 deposit_paid 是否对得上'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -138,6 +138,10 @@ class Command(BaseCommand):
         """打印盘点报告，返回汇总 dict（供测试断言）。"""
         by_account, by_user = self._wallet_index()
         deposit_by_wallet = self._deposit_by_wallet()
+        cash_by_profile = {row['profile_id']: (row['n'], row['total'] or 0) for row in
+            CashDepositTopup.objects.values('profile_id').annotate(n=Count('id'), total=Sum('amount'))}
+        cash_count = sum(n for n, _ in cash_by_profile.values())
+        cash_total = sum(total for _, total in cash_by_profile.values())
 
         tx_count = sum(n for n, _ in deposit_by_wallet.values())
         # DEPOSIT 流水全是负数（陪玩侧出账），取绝对值才是"缴了多少"。
@@ -160,7 +164,9 @@ class Command(BaseCommand):
             n, total = deposit_by_wallet.get(wallet_id, (0, 0))
             if wallet_id is not None and wallet_id in deposit_by_wallet:
                 matched_wallets.add(wallet_id)
-            flow = -total  # 该陪玩通过流水缴出去的总额
+            cash_n, cash_amount = cash_by_profile.get(pid, (0, 0))
+            flow = -total + cash_amount
+            n += cash_n
 
             diff = flow - deposit_paid
             if diff or deposit_paid or n:
@@ -193,10 +199,12 @@ class Command(BaseCommand):
             'tx_outflow': tx_outflow,
             'paid_total': paid_total,
             'paid_nonzero': paid_nonzero,
-            'diff': tx_outflow - paid_total,
+            'cash_count': cash_count,
+            'cash_total': cash_total,
+            'diff': tx_outflow + cash_total - paid_total,
             'platform_count': platform_count,
             'platform_total': platform_total,
-            'pending_backfill': tx_outflow - platform_total,
+            'pending_backfill': tx_outflow + cash_total - platform_total,
             'orphan_wallet_count': len(orphan_wallets),
             'orphan_flow': orphan_flow,
             'mismatched_count': sum(1 for r in rows if r['diff']),
@@ -206,15 +214,16 @@ class Command(BaseCommand):
         w('=== 押金账务盘点（只读，未写入任何数据）===')
         w('')
         w(f'[1] 陪玩侧 DEPOSIT 流水：{tx_count} 笔，'
-          f'出账合计 {tx_outflow}（{_yuan(tx_outflow)} 兴安币）')
+          f'出账合计 {tx_outflow}（{_yuan(tx_outflow)} 浪花）')
+        w(f'[1a] 线下现金押金登记：{cash_count} 笔，合计 {cash_total}（{_yuan(cash_total)} 浪花）')
         w(f'[2] EscortProfile.deposit_paid 合计：{paid_total}'
-          f'（{_yuan(paid_total)} 兴安币），其中非零 {paid_nonzero} 名陪玩')
-        w(f'[3] 差额 [1]-[2]：{summary["diff"]}'
-          f'（{_yuan(summary["diff"])} 兴安币）')
+          f'（{_yuan(paid_total)} 浪花），其中非零 {paid_nonzero} 名陪玩')
+        w(f'[3] 差额 [1]+[1a]-[2]：{summary["diff"]}'
+          f'（{_yuan(summary["diff"])} 浪花）')
         if summary['diff'] == 0:
             w(self.style.SUCCESS(
-                '    -> 对得上：历史押金均由 DepositView 写入，'
-                '可按 [1] 作为平台侧回补基准。'
+                '    -> 对得上：陪玩侧押金流水与线下补差合计匹配已缴押金，'
+                '可按 [1]+[1a] 核对平台侧。'
             ))
         else:
             w(self.style.WARNING(
@@ -226,17 +235,17 @@ class Command(BaseCommand):
             ))
         w('')
         w(f'[4] 平台侧 DEPOSIT_INCOME 流水：{platform_count} 笔，'
-          f'入账合计 {platform_total}（{_yuan(platform_total)} 兴安币）')
-        w(f'[5] 待回补金额 [1]-[4]：{summary["pending_backfill"]}'
-          f'（{_yuan(summary["pending_backfill"])} 兴安币）')
-        w('    说明：[4] 含修复上线后新产生的正常入账，回补只需补 [5] 这部分；'
+          f'入账合计 {platform_total}（{_yuan(platform_total)} 浪花）')
+        w(f'[5] 待回补金额 [1]+[1a]-[4]：{summary["pending_backfill"]}'
+          f'（{_yuan(summary["pending_backfill"])} 浪花）')
+        w('    说明：[4] 含修复上线后新产生的正常入账与线下补差，回补只需补 [5] 这部分；'
           '重复执行时 [5] 会收敛到 0，这就是幂等的判据。')
 
         if orphan_wallets:
             w('')
             w(self.style.WARNING(
                 f'[!] {len(orphan_wallets)} 个钱包有 DEPOSIT 流水但挂不到陪玩档案，'
-                f'涉及 {orphan_flow}（{_yuan(orphan_flow)} 兴安币）。'
+                f'涉及 {orphan_flow}（{_yuan(orphan_flow)} 浪花）。'
             ))
             w(self.style.WARNING(
                 f'    wallet_id: {sorted(orphan_wallets)[:20]}'
@@ -286,5 +295,5 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'盘点完成（只读）：{summary["mismatched_count"]} 名陪玩账实不符，'
             f'待回补 {summary["pending_backfill"]}'
-            f'（{_yuan(summary["pending_backfill"])} 兴安币）。'
+            f'（{_yuan(summary["pending_backfill"])} 浪花）。'
         ))

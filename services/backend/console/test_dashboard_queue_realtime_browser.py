@@ -3,10 +3,7 @@ import json
 import base64
 import os
 import shutil
-import socket
 import subprocess
-import sys
-import time
 import tempfile
 from pathlib import Path
 
@@ -49,47 +46,20 @@ class DashboardQueueRealtimeBrowserTest(APITransactionTestCase):
             'expected_id': 0, 'expected_version': 0,
         }, format='json').data
         self.assertEqual(payee['code'], 0, payee)
-        with socket.socket() as probe:
-            probe.bind(('127.0.0.1', 0))
-            port = probe.getsockname()[1]
+        from orders.tests.test_provider_vue_team_progress_http import isolated_realtime
         temp = tempfile.TemporaryDirectory(prefix='xa-dashboard-realtime-')
         self.addCleanup(temp.cleanup)
-        Path(temp.name, 'dashboard_asgi_settings.py').write_text(
-            'from config.asgi_network_test_settings import *\n'
-            'import os\nORDER_SETTLEMENT_MODE = "REPORT_APPROVAL"\n'
-            'REQUIRE_ORDER_EVIDENCE_IMAGES = True\nMEDIA_ROOT = os.environ["XA_DASHBOARD_TEST_MEDIA"]\n', encoding='utf-8')
-        env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'dashboard_asgi_settings', 'PYTHONPATH': temp.name,
-               'XA_DASHBOARD_TEST_MEDIA': temp.name, 'KOOK_ENABLED': 'false', 'WECOM_DISPATCH_ENABLED': 'false'}
-        server = subprocess.Popen([sys.executable, '-m', 'daphne', '-b', '127.0.0.1', '-p', str(port), 'config.asgi:application'],
-            cwd=settings.BASE_DIR, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        try:
-            for _ in range(150):
-                if server.poll() is not None:
-                    self.fail('isolated ASGI exited')
-                try:
-                    with socket.create_connection(('127.0.0.1', port), timeout=.2):
-                        break
-                except OSError:
-                    time.sleep(.1)
-            else:
-                self.fail('isolated ASGI did not start')
+        with override_settings(MEDIA_ROOT=temp.name), isolated_realtime(report_approval=True) as (api_base, ws_base):
             repo = Path(settings.BASE_DIR).parent.parent
             result = subprocess.run([node, str(repo / 'scripts/admin-dashboard-queue-realtime-live.cjs')],
-                input=json.dumps({'api': f'http://127.0.0.1:{port}', 'staffToken': issue_account_tokens(staff_account)[0],
+                input=json.dumps({'api': api_base, 'ws': ws_base, 'staffToken': issue_account_tokens(staff_account)[0],
                     'bossToken': issue_account_tokens(boss_account)[0], 'providerToken': issue_account_tokens(provider_account)[0],
                     'providerId': provider_account.pk, 'evidence': base64.b64encode(screenshot().read()).decode('ascii'),
                     'serviceId': service.pk, 'withdrawPayload': {'amount': 20000,
                         'withdrawal_account_id': payee['data']['id'], 'expected_payee_version': payee['data']['version'],
-                        'client_request_id': 'dashboard-live-withdraw'}}), cwd=repo, env=env,
+                        'client_request_id': 'dashboard-live-withdraw'}}), cwd=repo,
                 text=True, encoding='utf-8', capture_output=True, timeout=80)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(Order.objects.filter(customer_account=boss_account, status='PENDING').count(), 1)
             self.assertEqual(WithdrawRequest.objects.filter(account=provider_account, status='PENDING').count(), 1)
             self.assertEqual(ProviderReport.objects.filter(provider_account=provider_account, status='APPROVED').count(), 1)
-        finally:
-            server.terminate()
-            try:
-                server.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                server.kill(); server.wait(timeout=10)

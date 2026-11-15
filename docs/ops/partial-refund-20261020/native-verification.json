@@ -1,0 +1,250 @@
+{
+  "run": "XA-PARTIAL-REFUND-20261020-68af85",
+  "stages": [
+    {
+      "stage": "original-session-backed-up",
+      "account_id": "1142"
+    },
+    {
+      "stage": "fixture-session-active",
+      "account_id": "1150"
+    },
+    {
+      "stage": "opened-frozen_recovery",
+      "id": 113,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 113,
+      "aftersale_id": 6,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 113,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益首次部分退款250币",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 114,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 114,
+      "aftersale_id": 7,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-available_recovery",
+      "id": 114,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费首次部分退款200币，按净额调整实销",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-frozen_recovery",
+      "id": 113,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "canAfterSale": true,
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益首次部分退款250币"
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 113,
+      "aftersale_id": 6,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-frozen_recovery",
+      "id": 113,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-available_recovery",
+      "id": 114,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "canAfterSale": true,
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费首次部分退款200币，按净额调整实销"
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 114,
+      "aftersale_id": 7,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-available_recovery",
+      "id": 114,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费第二次部分退款100币",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "submitted-available_recovery",
+      "id": 114,
+      "aftersale_id": 7,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-available_recovery",
+      "id": 114,
+      "status": "CANCELLED",
+      "payment_status": "REFUNDED",
+      "aftersale_status": "REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 已确认消费订单退清300币余款，累计退款600币",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-insufficient_recovery",
+      "id": 115,
+      "status": "COMPLETED",
+      "payment_status": "PAID",
+      "canAfterSale": true,
+      "aftersale_status": ""
+    },
+    {
+      "stage": "submitted-insufficient_recovery",
+      "id": 115,
+      "aftersale_id": 8,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "realtime-insufficient_recovery",
+      "id": 115,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 模拟提现驳回后部分退款1000币，保留1000币余款u",
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-frozen_recovery",
+      "id": 113,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "canAfterSale": true,
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 冻结收益第二次部分退款150币"
+    },
+    {
+      "stage": "submitted-frozen_recovery",
+      "id": 113,
+      "aftersale_id": 6,
+      "status": "OPEN",
+      "real_http": true,
+      "only_confirmation_modal_automated": true
+    },
+    {
+      "stage": "wallet-open",
+      "balance": "2000",
+      "frozen": "0"
+    },
+    {
+      "stage": "wallet-refund-realtime",
+      "balance": "2600",
+      "frozen": "0",
+      "refunds": [
+        {
+          "id": 995,
+          "amount": 6000,
+          "displayAmount": "+600",
+          "after": "2600"
+        },
+        {
+          "id": 991,
+          "amount": 10000,
+          "displayAmount": "+1000",
+          "after": "2000"
+        },
+        {
+          "id": 987,
+          "amount": 3000,
+          "displayAmount": "+300",
+          "after": "1000"
+        },
+        {
+          "id": 984,
+          "amount": 1000,
+          "displayAmount": "+100",
+          "after": "700"
+        },
+        {
+          "id": 981,
+          "amount": 1500,
+          "displayAmount": "+150",
+          "after": "600"
+        },
+        {
+          "id": 977,
+          "amount": 2000,
+          "displayAmount": "+200",
+          "after": "450"
+        },
+        {
+          "id": 974,
+          "amount": 2500,
+          "displayAmount": "+250",
+          "after": "250"
+        }
+      ],
+      "no_manual_reload": true
+    },
+    {
+      "stage": "opened-insufficient_recovery",
+      "id": 115,
+      "status": "COMPLETED",
+      "payment_status": "PARTIALLY_REFUNDED",
+      "canAfterSale": true,
+      "aftersale_status": "PARTIALLY_REFUNDED",
+      "resolution": "XA-PARTIAL-REFUND-20261020-68af85 模拟提现驳回后部分退款1000币，保留1000币余款u"
+    },
+    {
+      "stage": "partial-refund-summary-captured",
+      "order_id": 115,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "refunded_coins": "1000",
+      "remaining_coins": "1000"
+    },
+    {
+      "stage": "original-session-restored",
+      "account_id": "1142",
+      "home_error": ""
+    }
+  ]
+}

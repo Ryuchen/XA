@@ -1,7 +1,7 @@
 import hashlib
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from stores.db import transaction
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from users.models import CustomUser
 

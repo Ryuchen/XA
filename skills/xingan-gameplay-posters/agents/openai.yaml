@@ -1,0 +1,4 @@
+interface:
+  display_name: "兴安电竞玩法海报制作"
+  short_description: "复用二次元手绘素材，分阶段制作玩法海报、价目、封面与矢量宣发图"
+  default_prompt: "使用 $xingan-gameplay-posters，按兴安电竞已确认的二次元手绘风格制作或修改这套玩法海报，复用已有资产并遵循 r/w 对齐规则。"

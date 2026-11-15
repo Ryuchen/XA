@@ -1,0 +1,11 @@
+{
+  "name": "xa-admin-sidebar-directions",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "copyright": "Copyright (c) 2026 青岛声浪传媒有限公司. All rights reserved.",
+  "author": "青岛声浪传媒有限公司",
+  "scripts": {
+    "dev": "node server.cjs"
+  }
+}

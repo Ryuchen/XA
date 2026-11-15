@@ -1,0 +1,173 @@
+{
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "archived_at": "2026-10-20T08:18:07.145Z",
+  "files": [
+    {
+      "name": "verification.json",
+      "bytes": 3661,
+      "sha256": "4ab0390229db662cfc656ebde3d92cb3b0c5dc117902b32a68773e153137a0b1"
+    },
+    {
+      "name": "final-database.json",
+      "bytes": 12602,
+      "sha256": "db14f16c462fe38cbb8ddf29fc43e04bfc1986dd3f98cd1436e07f5073cf4744"
+    },
+    {
+      "name": "audit-fixture-correction.json",
+      "bytes": 943,
+      "sha256": "b487faa3c545a55743bb032cc53f088c9a4aba0ebc942d4fd16f8753d95f0e28"
+    },
+    {
+      "name": "final-database-attempt1-failed.json",
+      "bytes": 186,
+      "sha256": "9594a84500996e3c5440dc4ed9178ce4a9fdac2c7cbf39b77359244da53551f5"
+    },
+    {
+      "name": "backend-isolated-tests.json",
+      "bytes": 5953,
+      "sha256": "99a6009d8e72145f55e6c101c2f3f42ecb70e0cc768fe204c5cab2b5deb2baf6"
+    },
+    {
+      "name": "runtime-verification.json",
+      "bytes": 1981,
+      "sha256": "59f8904e5e8dbf606c14a11917e4e863bd9a4c2f790eb668e56d9e29795ba70f"
+    },
+    {
+      "name": "backup-verification.json",
+      "bytes": 6025,
+      "sha256": "b6efdb462507be823db86572dcc33b7419717e7b5ed4efcf416bb7215773dedc"
+    },
+    {
+      "name": "lifecycle-verification.json",
+      "bytes": 21227,
+      "sha256": "2306680532d0c413fb14a8fabe1c78591d79b7fc3e94c2c7144bd161ec6fc5bc"
+    },
+    {
+      "name": "mature-verification.json",
+      "bytes": 1784,
+      "sha256": "90c96a7b3da39f71c25bc3c6d85b62928537fb12e39af136d78ecd4a8af1705f"
+    },
+    {
+      "name": "action-verification.json",
+      "bytes": 31667,
+      "sha256": "536ebe9ef9040ad18f15a5f88ae5e0345418ac12f320ce65e33f97f78ab2d75d"
+    },
+    {
+      "name": "verification-stages.json",
+      "bytes": 186412,
+      "sha256": "89220df34ca037edb1b50eced3ddc897dc7fd4101d2ce377028ea219914afce4"
+    },
+    {
+      "name": "native-verification.json",
+      "bytes": 4559,
+      "sha256": "8e4c653af239b078eed4d598fc9d159aa9fc13e31ba677a62762361cf8568621"
+    },
+    {
+      "name": "ui-verification.json",
+      "bytes": 2049,
+      "sha256": "6cdd4b7e06e1eac7dbe47cb20049ccaa75cd25a6c97b091a2caf9ea7f7350557"
+    },
+    {
+      "name": "hide-fixture-verification.json",
+      "bytes": 367,
+      "sha256": "95f10234a2f52807f40eb49cf74253739cad4fd2f87986e8323a79af6b283501"
+    },
+    {
+      "name": "consumption-confirmation.json",
+      "bytes": 210,
+      "sha256": "2c551d51ae9195ab9daa97ca9d46aae1da75bcfc1d76a87dda1d2ee4d2841f83"
+    },
+    {
+      "name": "seed-recovery-verification.json",
+      "bytes": 1428,
+      "sha256": "147f65918e38afaff8fea7867b3315395647d6833e945b430723ba523940b032"
+    },
+    {
+      "name": "real-refund-ws-frozen_recovery-2500.json",
+      "bytes": 3313,
+      "sha256": "934c61f39fffc3c47e00ac78b2552ad9da7d81ea2449fc8ccb596bd881a17710"
+    },
+    {
+      "name": "real-refund-ws-available_recovery-2500.json",
+      "bytes": 3298,
+      "sha256": "df0d1d45d35df37ea175fdcc65d8b156c74aaf70c81aba7f81831ea3a458029e"
+    },
+    {
+      "name": "real-refund-ws-available_recovery-4000.json",
+      "bytes": 3297,
+      "sha256": "c854ae2b61fec33fc458e8c75227c027819fb80e8c9b1a65cd8a137cef73dbc8"
+    },
+    {
+      "name": "admin-five-fixed-shares.png",
+      "bytes": 89376,
+      "sha256": "815365a76cd8f00faed22dcfdf6dbfe98ec4d7c6e884b288d7b42f8701c8247f"
+    },
+    {
+      "name": "admin-frozen-250-preview.png",
+      "bytes": 81895,
+      "sha256": "130cad1dcef2065626d32386df755e6b1efe988f66896cba7d65a1206d3a78c7"
+    },
+    {
+      "name": "admin-p1-insufficient.png",
+      "bytes": 77695,
+      "sha256": "fba055c33599ccbb26ddab84f5df154f1d1d0d475d4373f4d2b90423aa4c8058"
+    },
+    {
+      "name": "admin-p2-insufficient.png",
+      "bytes": 77726,
+      "sha256": "fc5c9d6333ea1bc621e15a22c1e8c8e30d1bacb9b4e0906e36693fdcdbdc8231"
+    },
+    {
+      "name": "admin-p3-insufficient.png",
+      "bytes": 77735,
+      "sha256": "5442c2b792217bc59aa4f0934f6aa2224cdb39bf9364f553a36195985ccd4fca"
+    },
+    {
+      "name": "admin-p4-insufficient.png",
+      "bytes": 77640,
+      "sha256": "fa7cfbc382835b46848d2c608352daad56ffc56b60efb72189f0d3133a5d1bfe"
+    },
+    {
+      "name": "admin-p5-insufficient.png",
+      "bytes": 77555,
+      "sha256": "70fd7e5875fb7f47f2b0cfcc898cb965e15351fcac8da1bad5ec9ae455861081"
+    },
+    {
+      "name": "admin-final-partial-refund.png",
+      "bytes": 79453,
+      "sha256": "e985cfce8be93e8f66792779a2eca758f6447366532ecbb582c6068ef67d61ea"
+    },
+    {
+      "name": "p1-first-refund-realtime.png",
+      "bytes": 50364,
+      "sha256": "6c0d0a36b2f3f6c897726887330d58c0a3bfe20bf47e30443fe473857dcec290"
+    },
+    {
+      "name": "p5-first-available-refund-realtime.png",
+      "bytes": 49653,
+      "sha256": "28233e8d2fe4eb388343c553725cd568560ba32cbfcf09f97548aaf0b1223ff7"
+    },
+    {
+      "name": "p5-final-wallet.png",
+      "bytes": 49587,
+      "sha256": "aa191e62a2b74aa560c5f6ab4a4e49c1b1963553341ff8e7b2a99b41616a88f6"
+    },
+    {
+      "name": "native-wallet-final-proof.png",
+      "bytes": 182579,
+      "sha256": "614eeb1ed46c39a78493aed7794a1cca22dd9de833d2fbe1a082ba2fbe9532d6"
+    },
+    {
+      "name": "native-partial-refund-summary.png",
+      "bytes": 181815,
+      "sha256": "9dad92beab3f3c5d318d8fe1a0c4c0df04aed0288b49d48d1f6c6bbc7ada14f1"
+    },
+    {
+      "name": "expected.json",
+      "bytes": 8059,
+      "sha256": "553a14edf92441105e6de572d029bf9337519dcc1fd623a915ece5aec136f40e"
+    }
+  ],
+  "all_images_below_200000_bytes": true,
+  "credentials_sql_and_private_files_excluded": true
+}

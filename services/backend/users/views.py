@@ -7,10 +7,12 @@ import uuid
 from datetime import datetime, time, timedelta
 
 from PIL import Image, UnidentifiedImageError
-from django.conf import settings
+from stores.conf import settings
+from stores.context import current_currency_name
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
+from stores.db import transaction
 from django.db.models import Case, Count, ExpressionWrapper, F, FloatField, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
@@ -22,7 +24,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
-from club_accounts.permissions import IsClubAccountAuthenticated
+from club_accounts.permissions import IsClubAccountAuthenticated, resolve_club_account
 from club_accounts.services import (
     authenticate_account,
     get_or_create_account_for_legacy_user,
@@ -93,10 +95,11 @@ def _wechat_error_response(exc):
 
 
 def _wechat_binding_info(account):
-    wechat_bound = bool(account.openid and account.is_openid_bound)
+    wechat_bound = bool(account.is_openid_bound and (account.openid or account.wechat_identities.exists()))
     phone_verified = bool(account.phone and account.is_phone_verified)
     return {
         'isWechatBound': wechat_bound,
+        'isH5WechatBound': account.wechat_identities.filter(channel='OFFICIAL_H5', appid=settings.WECHAT_H5_APPID).exists(),
         'isPhoneVerified': phone_verified,
         'bindingState': 'PHONE_BOUND' if wechat_bound and phone_verified else (
             'WECHAT_BOUND' if wechat_bound else 'UNBOUND'
@@ -142,8 +145,8 @@ def _wechat_http_get(url):
         return json.loads(resp.read().decode('utf-8'))
 
 
-def _wechat_code2session(code):
-    """用登录 code 换取 openid。失败抛出 ValueError。"""
+def _wechat_code2session_proof(code):
+    """Exchange the miniapp code for server-supplied identity facts."""
     params = urllib.parse.urlencode({
         'appid': settings.WECHAT_MINIAPP_APPID,
         'secret': settings.WECHAT_MINIAPP_SECRET,
@@ -151,14 +154,26 @@ def _wechat_code2session(code):
         'grant_type': 'authorization_code',
     })
     data = _wechat_http_get(f'https://api.weixin.qq.com/sns/jscode2session?{params}')
+    if not isinstance(data, dict):
+        raise WechatLoginError('微信登录服务暂不可用，请稍后重试')
     if data.get('errcode'):
         if str(data['errcode']) in ('40029', '40163'):
             raise WechatLoginError('微信登录凭证已失效，请重新登录', 'WECHAT_CODE_INVALID')
         raise WechatLoginError('微信登录服务暂不可用，请稍后重试')
     openid = data.get('openid')
-    if not openid:
+    if not isinstance(openid, str) or not openid or len(openid) > 100:
         raise WechatLoginError('微信未返回有效身份，请重新登录')
-    return openid
+    from .wechat_identity import clean_unionid
+    try:
+        unionid = clean_unionid(data.get('unionid'))
+    except ValueError as exc:
+        raise WechatLoginError(str(exc), 'WECHAT_IDENTITY_INVALID') from exc
+    return {'openid': openid, 'unionid': unionid}
+
+
+def _wechat_code2session(code):
+    """用登录 code 换取 openid。失败抛出 ValueError。"""
+    return _wechat_code2session_proof(code)['openid']
 
 
 def _wechat_get_access_token():
@@ -436,7 +451,7 @@ class WechatLoginView(APIView):
 
         if created:
             updated_fields.extend([
-                'account_type', 'phone', 'nickname',
+                'phone', 'nickname',
                 'is_phone_verified', 'is_openid_bound',
             ])
 
@@ -460,7 +475,10 @@ class WechatLoginView(APIView):
             if legacy_fields:
                 legacy_user.save(update_fields=legacy_fields)
 
-        access_token, refresh_token = issue_account_tokens(account)
+        # Successful WeChat authorization is a complete login method.  Mark
+        # it accordingly so a bound authenticator does not incorrectly force
+        # another OTP, and so unbinding WeChat invalidates this token.
+        access_token, refresh_token = issue_account_tokens(account, auth_method='wechat')
         response_id = (
             legacy_user.id
             if getattr(settings, 'LEGACY_FORCE_AUTH_COMPAT', False) and legacy_user
@@ -575,6 +593,11 @@ class AccountLoginView(APIView):
     throttle_scope = 'login'
 
     def post(self, request):
+        # Keep the old URL, but require the same password+SMS proof as the new flow.
+        from .password_login import PasswordLoginView
+        return PasswordLoginView().post(request)
+
+    def _legacy_post(self, request):
         username = (request.data.get('username') or '').strip()
         password = request.data.get('password') or ''
 
@@ -730,7 +753,7 @@ class MeView(APIView):
 
     def patch(self, request):
         account = request.account
-        legacy_user = request.legacy_user
+        legacy_user = getattr(request, 'legacy_user', None)
         if 'phone' in request.data:
             phone = request.data.get('phone') or ''
             if not isinstance(phone, str):
@@ -784,6 +807,12 @@ class MeView(APIView):
                 normalized.append(values)
 
             with transaction.atomic():
+                locked_account = ClubAccount.objects.select_for_update().get(pk=account.pk)
+                if (locked_account.account_type != ClubAccount.AccountType.BOSS or not locked_account.is_active
+                        or not locked_account.can_login or not locked_account.license_membership_active
+                        or locked_account.business_cycle != account.business_cycle):
+                    return Response({'code': 409, 'msg': '老板账号状态已变化，请重新登录'}, status=409)
+                account = locked_account
                 default_assigned = False
                 saved_profiles = []
                 for values in normalized:
@@ -887,9 +916,10 @@ class MeAvatarView(APIView):
 
 
 class EscortProfileListView(APIView):
-    permission_classes = [IsClubAccountAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, provider_id=None):
+        account = resolve_club_account(request)
         game = request.query_params.get('game', '').strip()
         game_category_id = request.query_params.get('game_category', '').strip()
         service_item_id = request.query_params.get('service_item', '').strip()
@@ -917,7 +947,7 @@ class EscortProfileListView(APIView):
         ).select_related('account', 'user', 'level').prefetch_related(
             'game_categories',
             'service_items__game_category',
-            'user__schedules', 'qualifications__game_category',
+            'user__schedules', 'qualifications__game_category', 'account__wechat_identities',
         )
         from .qualifications import filtered_qualifications,serialize_qualification,qualification_rows,service_requirement,scope_matches,service_skill
         if detail:
@@ -926,16 +956,25 @@ class EscortProfileListView(APIView):
         if qualification_filter is not None:profiles=profiles.filter(qualification_filter).distinct()
         recent_ids = []
         if shortcuts:
+            if account is None:
+                return Response({'code': 401, 'msg': '登录后可查看最近选择的陪玩'}, status=401)
             from .companion_shortcuts import recent_provider_ids
-            recent_ids = recent_provider_ids(request.account)
+            recent_ids = recent_provider_ids(account)
             profiles = profiles.filter(Q(account_id__in=recent_ids) | Q(recommendation_slot__isnull=False))
         if gender != 'ANY' and not detail:
             profiles = profiles.filter(gender=gender)
         from wallet.club_rules import club_income_rules_enabled
         club_rules_enabled = club_income_rules_enabled()
+        from wallet.refund_recovery_order import enabled as recovery_order_enabled
+        allow_refund_recovery = recovery_order_enabled()
         if not directory:
-            deposit_rule = Q(deposit_mode='EARNINGS') | (Q(deposit_paid__gte=20000) if club_rules_enabled else Q(deposit_paid__gte=F('deposit_required')))
-            profiles = profiles.filter(deposit_rule, status=EscortProfile.Status.AVAILABLE)
+            from wallet.club_rules import deposit_target
+            deposit_rule = Q(deposit_mode='EARNINGS') | Q(deposit_paid__gte=deposit_target('CASH'))
+            if allow_refund_recovery:
+                from wallet.models import RefundDepositDeficit
+                deposit_rule |= Q(pk__in=RefundDepositDeficit.objects.filter(
+                    remaining__gt=0).values('profile_id'))
+            profiles = profiles.filter(deposit_rule).exclude(status=EscortProfile.Status.OFFLINE)
         if detail:
             # A visible profile remains browsable when its current availability or
             # service qualification changes; only the selection action is blocked.
@@ -959,10 +998,12 @@ class EscortProfileListView(APIView):
                 | Q(user__received_orders__service__game_category__name__iexact=game)
             ).distinct()
 
-        from orders.services import active_orders_for
+        from orders.services import capacity_orders_for
+        from orders.capacity import current_capacity_limit
+        capacity_limit = current_capacity_limit()
         # Reuse the dispatch capacity predicate, including legacy IDs, double
         # providers and released shares, in one database round trip for the list.
-        active_count = active_orders_for(
+        active_count = capacity_orders_for(
             account_id=OuterRef('account_id'), provider_id=OuterRef('user_id'),
         ).order_by().values(group=Value(1)).annotate(total=Count('pk', distinct=True)).values('total')
         profiles = profiles.annotate(
@@ -975,10 +1016,11 @@ class EscortProfileListView(APIView):
                 default=Value(0),
                 output_field=IntegerField(),
             ),
-            review_count=Count('user__received_evaluations', distinct=True),
+            review_count=Count('user__received_evaluations',
+                               filter=Q(user__received_evaluations__voided_at__isnull=True), distinct=True),
             positive_review_count=Count(
                 'user__received_evaluations',
-                filter=Q(user__received_evaluations__score__gte=4),
+                filter=Q(user__received_evaluations__score__gte=4, user__received_evaluations__voided_at__isnull=True),
                 distinct=True,
             ),
         ).annotate(
@@ -995,6 +1037,7 @@ class EscortProfileListView(APIView):
         from engagement.models import ProviderNaming, MemberTag
         naming_map = {}
         for naming in ProviderNaming.objects.filter(provider_id__in=profiles.values('account_id'),
+                provider_business_cycle=F('provider__business_cycle'),
                 is_visible=True, expires_at__gt=timezone.now()).order_by('-expires_at'):
             naming_map.setdefault(naming.provider_id, []).append({'id': naming.pk, 'title': naming.title, 'expires_at': naming.expires_at})
         tag_map = {}
@@ -1002,39 +1045,45 @@ class EscortProfileListView(APIView):
                 Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).order_by('-id'):
             bucket = tag_map.setdefault(tag.account_id, [])
             if len(bucket) < 3:
-                bucket.append({'id': tag.pk, 'title': tag.title, 'highlighted': tag.highlighted})
+                bucket.append({'id': tag.pk, 'title': tag.title, 'highlighted': tag.highlighted, 'expires_at': tag.expires_at})
         eligible_variants = []
         eligible_catalog = detail and not service and request.query_params.get('eligible_catalog') == '1'
         if eligible_catalog:
             from orders.purchase_benefits import account_service_q
             eligible_variants = list(ServiceItem.objects.filter(
-                visible_service_q(), account_service_q(request.account),
+                visible_service_q(), account_service_q(account),
             ).exclude(service_category__is_gift=True).select_related(
                 'gameplay', 'game_category', 'service_category', 'required_level'))
         elif detail and service:
             if service.catalog_family and not (service.service_category and service.service_category.is_gift):
                 from orders.purchase_benefits import account_service_q
                 eligible_variants = list(ServiceItem.objects.filter(
-                    visible_service_q(), account_service_q(request.account), catalog_family=service.catalog_family,
+                    visible_service_q(), account_service_q(account), catalog_family=service.catalog_family,
                     gameplay_id=service.gameplay_id, game_category_id=service.game_category_id,
                 ).exclude(service_category__is_gift=True).select_related(
                     'gameplay', 'game_category', 'service_category', 'required_level'))
             else:
                 eligible_variants = [service]
+        from stores.context import current_store
+        from stores.display import provider_display_name
+        store = current_store()
+        store_prefix = getattr(store, 'provider_name_prefix', '') if store else ''
         data = []
         listed_profiles = []
         for p in profiles:
             # Historical shortcuts may show availability, but never grant a new service qualification.
             if shortcuts and service and (not p.can_take_service(service) or not service_skill(p,service)):
                 continue
-            acceptance_error = p.order_acceptance_error(service, club_rules_enabled=club_rules_enabled, provider_gender=gender)
-            if not acceptance_error and p.active_order_count >= Order.MAX_CONCURRENT_ORDERS:
+            acceptance_error = p.order_acceptance_error(service, club_rules_enabled=club_rules_enabled,
+                                                       provider_gender=gender,
+                                                       allow_refund_recovery=allow_refund_recovery)
+            if not acceptance_error and p.active_order_count >= capacity_limit:
                 acceptance_error = '该陪玩当前接单已满，请稍后再约'
-            if detail and not acceptance_error and p.status != EscortProfile.Status.AVAILABLE:
+            if detail and not acceptance_error and p.status == EscortProfile.Status.OFFLINE:
                 acceptance_error = '该陪玩暂不可接单，请稍后再约'
             can_order = not acceptance_error
             if shortcuts:
-                can_order = can_order and p.status == EscortProfile.Status.AVAILABLE
+                can_order = can_order and p.status != EscortProfile.Status.OFFLINE
             if not directory and not can_order:
                 continue
             identity = p.account or p.user
@@ -1046,9 +1095,12 @@ class EscortProfileListView(APIView):
                 if request.query_params.get(key):qualified=[q for q in qualified if getattr(q,key)==request.query_params[key]]
             if game_category_id:qualified=[q for q in qualified if q.game_category_id==int(game_category_id)]
             reference=qualified[0].price_per_hour if len(qualified)==1 and qualified[0].price_per_hour is not None else p.price_per_hour
+            nickname = p.display_name or identity.nickname or identity.username
             item = {
                 'id': p.account_id or p.user_id,
-                'nickname': p.display_name or identity.nickname or identity.username,
+                'nickname': nickname,
+                'display_name': provider_display_name(nickname),
+                'store_prefix': store_prefix,
                 'gender': p.gender,
                 'recommendation_slot': p.recommendation_slot,
                 'avatar': identity.avatar_url or '',
@@ -1078,9 +1130,11 @@ class EscortProfileListView(APIView):
                 item['order_unavailable_reason'] = acceptance_error
                 if service or eligible_catalog:
                     item['eligible_service_item_ids'] = [variant.pk for variant in eligible_variants
-                        if p.status == EscortProfile.Status.AVAILABLE
-                        and p.active_order_count < Order.MAX_CONCURRENT_ORDERS
-                        and not p.order_acceptance_error(variant, club_rules_enabled=club_rules_enabled, provider_gender=gender)]
+                        if p.status != EscortProfile.Status.OFFLINE
+                        and p.active_order_count < capacity_limit
+                        and not p.order_acceptance_error(variant, club_rules_enabled=club_rules_enabled,
+                                                         provider_gender=gender,
+                                                         allow_refund_recovery=allow_refund_recovery)]
             data.append(item)
             listed_profiles.append(p)
 
@@ -1161,13 +1215,35 @@ class ProviderStatsView(APIView):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可查看'})
 
-        orders = Order.objects.filter(provider_account=request.account)
-        today = Order.objects.filter(
-            provider_account=request.account,
-            created_at__date=timezone.localdate(),
-        )
+        from orders.models import OrderParticipationSegment, OrderProvider
+        from orders.services import active_orders_for
+        account = request.account
+        # A service can have two players or several successive participants.
+        # A released pre-start assignment with no share is not a completed job.
+        meaningful = Q(providers__released_at__isnull=True) | Q(providers__settlement_base__gt=0) | Q(providers__provider_income__gt=0)
+        identity = (Q(provider_account=account)
+                    | (Q(providers__provider_account=account) & meaningful)
+                    | Q(original_attribution__segments__provider_account=account,
+                        original_attribution__segments__started_at__isnull=False))
+        if request.legacy_user:
+            identity |= Q(provider_account__isnull=True, provider=request.legacy_user)
+            identity |= Q(providers__provider_account__isnull=True, providers__provider=request.legacy_user) & meaningful
+        orders = Order.objects.filter(identity, is_gift_snapshot=False).distinct()
+        today_date = timezone.localdate()
+        today_segments = OrderParticipationSegment.objects.filter(
+            provider_account=account, accepted_at__date=today_date).values('attribution__order_id')
+        today_legacy_shares = OrderProvider.objects.filter(provider_account=account,
+            order__original_attribution__isnull=True, created_at__date=today_date).values('order_id')
+        today = orders.filter(Q(pk__in=today_segments) | Q(pk__in=today_legacy_shares)
+                              | Q(original_attribution__isnull=True, provider_account=account,
+                                  created_at__date=today_date))
+        if request.legacy_user:
+            today = orders.filter(Q(pk__in=today_segments) | Q(pk__in=today_legacy_shares)
+                | Q(original_attribution__isnull=True, provider_account=account, created_at__date=today_date)
+                | Q(original_attribution__isnull=True, provider_account__isnull=True,
+                    provider=request.legacy_user, created_at__date=today_date))
 
-        profile = EscortProfile.objects.filter(account=request.account).first()
+        profile = EscortProfile.objects.filter(account=account).first()
 
         # 走统一寻址：account 维度查不到时回落 user 维度，
         # 避免历史上 account 未回填的钱包被当成「没有收入」。
@@ -1186,16 +1262,18 @@ class ProviderStatsView(APIView):
         finished = total_completed + total_cancelled
         completion_rate = round(total_completed / finished * 100) if finished else 0
 
-        from orders.services import count_active_orders
-        active_orders = count_active_orders(request.account)
+        from orders.services import count_capacity_orders
+        from orders.capacity import current_capacity_limit
+        active_orders = count_capacity_orders(request.account)
 
         return Response({
             'code': 0,
             'data': {
                 'today_orders': today.count(),
-                'serving': orders.filter(status=Order.Status.IN_SERVICE).count(),
+                'serving': active_orders_for(account, provider_id=getattr(request.legacy_user, 'pk', None))
+                    .filter(status=Order.Status.IN_SERVICE, is_gift_snapshot=False).count(),
                 'active_orders': active_orders,
-                'max_concurrent_orders': Order.MAX_CONCURRENT_ORDERS,
+                'max_concurrent_orders': current_capacity_limit(),
                 'total_completed': total_completed,
                 'pending': orders.filter(status=Order.Status.PENDING).count(),
                 'rating_avg': float(profile.rating_avg) if profile else 0,
@@ -1225,6 +1303,8 @@ class ProviderPassView(APIView):
         return EscortProfile.objects.filter(account=request.account).prefetch_related('qualifications__game_category').first()
 
     def _data(self, request, profile):
+        from .pass_rules import pass_purchase_block_reason
+        from .pass_points import available as points_payment_available
         wallet = get_wallet(account=request.account, user=request.legacy_user)
         products = []
         for tier, label in EscortProfile.PassTier.choices:
@@ -1233,9 +1313,22 @@ class ProviderPassView(APIView):
                 'daily_price': get_pass_daily_price(tier),
                 'delay_seconds': get_pass_delay_seconds(tier),
             })
-        history = ProviderPassPurchase.objects.filter(account=request.account)[:20]
+        owner = Q(account=request.account) | Q(account__isnull=True, provider_id=profile.user_id)
+        history_qs = ProviderPassPurchase.objects.filter(owner).select_related('refund', 'point_redemption')
+        # Keep every historical queued purchase reachable even when more than
+        # twenty later purchases are present in the normal history page.
+        recent = list(history_qs[:20])
+        known = {item.pk for item in recent}
+        pending = list(history_qs.filter(starts_at__gt=timezone.now(), refund__isnull=True))
+        history = recent + [item for item in pending if item.pk not in known]
+        now = timezone.now()
+        from .pass_license import status as pass_license_status
+        license_status = pass_license_status()
         return {
             'balance': wallet.balance,
+            'license_status': license_status,
+            'license_purchase_allowed': license_status == 'ALLOW',
+            'points_payment_available': points_payment_available(),
             'active_tier': profile.active_pass_tier,
             'active_tier_display': dict(EscortProfile.PassTier.choices).get(
                 profile.active_pass_tier, '无通行证',
@@ -1243,12 +1336,21 @@ class ProviderPassView(APIView):
             'expires_at': profile.pass_expires_at,
             'current_delay_seconds': profile.order_visibility_delay_seconds,
             'no_pass_delay_seconds': get_pass_delay_seconds(''),
+            'purchase_block_reason': ('本店已暂停销售通行证' if license_status == 'DISABLED'
+                else '门店授权状态暂时无法核验，请稍后重试' if license_status == 'UNKNOWN'
+                else '门店授权暂不允许购买通行证，请联系平台' if license_status != 'ALLOW'
+                else pass_purchase_block_reason(profile)),
             'products': products,
             'history': [{
                 'id': item.id, 'tier': item.tier,
                 'tier_display': item.get_tier_display(), 'days': item.days,
                 'paid_amount': item.paid_amount, 'starts_at': item.starts_at,
+                'point_discount_amount': item.point_discount_amount,
+                'points_hundredths': item.point_redemption.points_hundredths if hasattr(item, 'point_redemption') else 0,
+                'points_returned': item.refund.points_returned if hasattr(item, 'refund') else 0,
                 'expires_at': item.expires_at, 'created_at': item.created_at,
+                'refunded': hasattr(item, 'refund'),
+                'refundable': not hasattr(item, 'refund') and item.starts_at > now,
             } for item in history],
         }
 
@@ -1263,8 +1365,16 @@ class ProviderPassView(APIView):
         profile = self._profile(request)
         if profile is None:
             return Response({'code': 403, 'msg': '仅陪玩可购买通行证'})
+        points_requested = 'points_quote_token' in request.data
+        points_token = request.data.get('points_quote_token')
+        if points_requested:
+            from .pass_points import available
+            if not available():
+                return Response({'code': 400, 'msg': '通行证积分抵扣暂未开放'}, status=400)
+            if not isinstance(points_token, str) or not points_token:
+                return Response({'code': 400, 'msg': '积分报价无效，请重新核对'}, status=400)
         tier = str(request.data.get('tier') or '').upper()
-        if tier not in get_pass_daily_prices():
+        if tier not in dict(EscortProfile.PassTier.choices):
             return Response({'code': 400, 'msg': '请选择有效通行证'})
         try:
             from rest_framework import serializers
@@ -1274,42 +1384,75 @@ class ProviderPassView(APIView):
         if days != 1:
             return Response({'code': 400, 'msg': '通行证按日采购，每次有效期 1 天'})
 
-        daily_price = get_pass_daily_price(tier)
-        if daily_price < 1 or daily_price > 2147483647:
-            return Response({'code': 400, 'msg': '通行证价格配置异常，请联系客服'})
-        if 'expected_daily_price' in request.data and request.data['expected_daily_price'] != daily_price:
-            return Response({'code': 400, 'msg': '通行证价格已更新，请刷新后确认购买'})
-        original_amount = daily_price * days
-        paid_amount = original_amount
-        now = timezone.now()
-
         with transaction.atomic():
+            from .pass_license import status as pass_license_status, refusal
+            denied = refusal(pass_license_status())
+            if denied is not None:
+                return denied
+            if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
+                from club_accounts.provider_lifecycle import ProviderLifecycleError, lock_active_provider_operation
+                try:
+                    active = lock_active_provider_operation(request.account)
+                except ProviderLifecycleError:
+                    return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验，请联系客服'}, status=503)
+                if not active:
+                    return Response({'code': 409, 'msg': '陪玩账号状态已变化，请重新登录'}, status=409)
+            from .pass_rules import lock_pass_config, pass_purchase_block_reason
+            lock_pass_config()
+            # Serialize the final sale decision with the store's switch.
+            denied = refusal(pass_license_status(lock=True))
+            if denied is not None:
+                return denied
+            daily_price = get_pass_daily_price(tier, lock=True)
+            if daily_price < 1 or daily_price > 2147483647:
+                return Response({'code': 400, 'msg': '通行证价格配置异常，请联系客服'})
+            if 'expected_daily_price' in request.data and request.data['expected_daily_price'] != daily_price:
+                return Response({'code': 400, 'msg': '通行证价格已更新，请刷新后确认购买'})
+            original_amount = daily_price * days
+            paid_amount = original_amount
             locked_profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
             replayed, reason = peek_fund_write(account=request.account, request_id=request.data.get('client_request_id'))
             if replayed:
                 return Response({'code': 409, 'msg': reason})
-            if locked_profile.active_pass_tier and locked_profile.active_pass_tier != tier:
-                return Response({
-                    'code': 400,
-                    'msg': '当前通行证尚未到期，仅支持续费同等级通行证',
-                })
+            reason = pass_purchase_block_reason(locked_profile)
+            if reason:
+                return Response({'code': 400, 'msg': reason})
             wallet = get_wallet(
                 account=request.account, user=request.legacy_user, for_update=True,
             )
             if not wallet.is_active:
                 return Response({'code': 403, 'msg': '钱包不可用'})
+            point_terms = None
+            point_profile = None
+            if points_token is not None:
+                from engagement.services import locked_profile as locked_points_profile
+                from .pass_points import lock_and_verify
+                locked_account = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
+                if (locked_account.account_type != ClubAccount.AccountType.PROVIDER
+                        or not locked_account.is_active or not locked_account.can_login):
+                    from rest_framework.exceptions import ValidationError
+                    raise ValidationError('陪玩账号状态已变化，请重新登录')
+                point_profile = locked_points_profile(locked_account)
+                point_terms = lock_and_verify(locked_account, tier, daily_price, points_token, point_profile)
+                paid_amount = point_terms['calculation']['payable_units']
             if wallet.balance < paid_amount:
-                return Response({'code': 400, 'msg': '兴安币不足，请联系企业微信客服充值'})
+                if points_token is not None:
+                    transaction.set_rollback(True)
+                return Response({'code': 400, 'msg': f'{current_currency_name()}余额不足，请联系客服核对'})
             platform_wallet = get_platform_wallet(for_update=True)
             if platform_wallet.balance + paid_amount > 2147483647:
+                if points_token is not None:
+                    transaction.set_rollback(True)
                 return Response({'code': 400, 'msg': '平台入账金额超过系统范围，请联系客服'})
             allowed, reason = claim_fund_write(
                 account=request.account, request_id=request.data.get('client_request_id'),
                 scope='provider.pass', fingerprint=f'{tier}:{days}:{paid_amount}',
             )
             if not allowed:
+                if points_token is not None:
+                    transaction.set_rollback(True)
                 return Response({'code': 409, 'msg': reason})
-            starts_at = max(now, locked_profile.pass_expires_at or now)
+            starts_at = timezone.now()
             expires_at = starts_at + timedelta(days=days)
             before = wallet.balance
             wallet.balance -= paid_amount
@@ -1323,13 +1466,25 @@ class ProviderPassView(APIView):
             purchase = ProviderPassPurchase.objects.create(
                 provider=request.legacy_user,
                 account=request.account,
+                business_cycle=request.account.business_cycle,
                 tier=tier,
                 days=days,
                 daily_price=daily_price, original_amount=original_amount,
-                discount_amount=original_amount - paid_amount,
+                discount_amount=0, point_discount_amount=original_amount - paid_amount,
                 paid_amount=paid_amount, starts_at=starts_at,
                 expires_at=expires_at, transaction=tx,
             )
+            if point_terms and point_terms['calculation']['points_hundredths']:
+                from engagement.services import change_points
+                from .models import ProviderPassPointRedemption
+                calculation, rules = point_terms['calculation'], point_terms['rules']
+                ledger = change_points(point_profile, -calculation['points_hundredths'],
+                    f'pass:{purchase.pk}:points', 'PASS_POINTS', f'通行证购买 #{purchase.pk} 积分抵扣')
+                ProviderPassPointRedemption.objects.create(purchase=purchase, ledger=ledger,
+                    points_hundredths=calculation['points_hundredths'], discount_units=calculation['discount_units'],
+                    group_points_hundredths=rules['group_point_hundredths'], group_coin_units=rules['group_coin_units'],
+                    max_ratio_basis_points=rules['max_ratio_basis_points'], config_version=rules['version'],
+                    groups=calculation['selected_groups'])
             platform_before = platform_wallet.balance
             platform_wallet.balance += paid_amount
             platform_wallet.save(update_fields=['balance'])
@@ -1344,6 +1499,8 @@ class ProviderPassView(APIView):
             locked_profile.save(update_fields=['pass_tier', 'pass_expires_at'])
             result = fund_success(request, 'provider.pass', msg='通行证购买成功',
                                   data=self._data(request, locked_profile))
+            from wallet.notifier import notify_wallet_update
+            transaction.on_commit(lambda: notify_wallet_update(wallet))
 
         return result
 
@@ -1351,23 +1508,24 @@ class ProviderPassView(APIView):
 class EscortScheduleView(APIView):
     """陪玩每周循环档期：GET 读取已设时段，PUT 整表覆盖。
 
-    采用四段制：00-06 / 06-12 / 12-18 / 18-24（分钟边界见 VALID_SEGMENTS）。
     PUT 接收 slots 列表，每项 {weekday, start_minute, end_minute}，
-    在 atomic 内先清空本人全部时段再批量写入。
+    结束分钟小于开始分钟表示次日；在事务内锁定本人档案并整表替换。
     """
 
     permission_classes = [IsClubAccountAuthenticated]
 
-    VALID_SEGMENTS = {(0, 360), (360, 720), (720, 1080), (1080, 1440)}
-
     def _serialize(self, account):
+        user_id = EscortProfile.objects.filter(account=account).values_list('user_id', flat=True).first()
+        owned = Q(account=account)
+        if user_id:
+            owned |= Q(account__isnull=True, provider_id=user_id)
         return [
             {
                 'weekday': s.weekday,
                 'start_minute': s.start_minute,
                 'end_minute': s.end_minute,
             }
-            for s in EscortSchedule.objects.filter(account=account)
+            for s in EscortSchedule.objects.filter(owned).order_by('weekday', 'start_minute', 'end_minute', 'pk')
         ]
 
     def get(self, request):
@@ -1383,25 +1541,36 @@ class EscortScheduleView(APIView):
         if not isinstance(slots, list):
             return Response({'code': 400, 'msg': '档期数据格式非法'})
 
+        def integer(value):
+            if type(value) is int:
+                return value
+            if isinstance(value, str) and value.strip().isascii() and value.strip().isdigit() and len(value.strip()) <= 4:
+                return int(value.strip())
+            raise ValueError('invalid integer')
+
         cleaned = set()
         for slot in slots:
             try:
-                weekday = int(slot['weekday'])
-                start_minute = int(slot['start_minute'])
-                end_minute = int(slot['end_minute'])
+                weekday = integer(slot['weekday'])
+                start_minute = integer(slot['start_minute'])
+                end_minute = integer(slot['end_minute'])
             except (KeyError, TypeError, ValueError):
                 return Response({'code': 400, 'msg': '档期数据格式非法'})
             if weekday < 0 or weekday > 6:
                 return Response({'code': 400, 'msg': '星期取值非法'})
-            if (start_minute, end_minute) not in self.VALID_SEGMENTS:
-                return Response({'code': 400, 'msg': '时段必须为四段制之一'})
+            if not 0 <= start_minute < 1440 or not 0 <= end_minute <= 1440 or start_minute == end_minute:
+                return Response({'code': 400, 'msg': '开始或结束时间无效，请选择不同的起止时间'})
             cleaned.add((weekday, start_minute, end_minute))
 
         with transaction.atomic():
-            EscortSchedule.objects.filter(account=request.account).delete()
+            profile = EscortProfile.objects.select_for_update().filter(account=request.account).first()
+            if not profile:
+                return Response({'code': 403, 'msg': '未创建陪玩资料'})
+            owned = Q(account=request.account) | Q(account__isnull=True, provider_id=profile.user_id)
+            EscortSchedule.objects.filter(owned).delete()
             EscortSchedule.objects.bulk_create([
                 EscortSchedule(
-                    provider=request.legacy_user,
+                    provider_id=profile.user_id,
                     account=request.account,
                     weekday=weekday,
                     start_minute=start_minute,
@@ -1409,11 +1578,12 @@ class EscortScheduleView(APIView):
                 )
                 for weekday, start_minute, end_minute in sorted(cleaned)
             ])
+            saved = self._serialize(request.account)
 
         return Response({
             'code': 0,
             'msg': '档期已保存',
-            'data': self._serialize(request.account),
+            'data': saved,
         })
 
 
@@ -1441,13 +1611,22 @@ class EscortMeView(APIView):
         from engagement.models import MemberTag
         tags = MemberTag.objects.filter(account=profile.account, is_active=True, reviewed_at__isnull=False, suspended_at__isnull=True).filter(
             Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).order_by('-id')[:3]
+        from identifiers.services import get_entity_number
         return {
-            'display_tags': [{'id': tag.pk, 'title': tag.title, 'highlighted': tag.highlighted} for tag in tags],
+            'entity_no': get_entity_number(profile.account),
+            'display_tags': [{'id': tag.pk, 'title': tag.title, 'highlighted': tag.highlighted, 'expires_at': tag.expires_at} for tag in tags],
             'dispatch_notification_options':notification_options(profile),
             'dispatch_notification_preferences':profile.dispatch_notification_preferences,
             'qualifications':[serialize_qualification(q) for q in qualification_rows(profile)],
             'active_pass_tier':profile.active_pass_tier,
             'display_name': profile.display_name,
+            'isWechatBound': bool(profile.account.is_openid_bound and (profile.account.openid or profile.account.wechat_identities.exists())),
+            'isWechatH5Bound': bool(profile.account.is_openid_bound and profile.account.wechat_identities.filter(
+                channel='OFFICIAL_H5', appid=settings.WECHAT_H5_APPID).exists()),
+            'wechatAvatarReady': bool(profile.wechat_avatar_legacy_exempt or profile.wechat_avatar_verified_at),
+            'wechatAvatarLegacyExempt': profile.wechat_avatar_legacy_exempt,
+            'avatarSource': profile.avatar_source,
+            'isPhoneVerified': profile.account.is_phone_verified,
             'gender': profile.gender,
             'bio': profile.bio,
             'city': profile.city,
@@ -1459,7 +1638,7 @@ class EscortMeView(APIView):
             'rating_avg': float(profile.rating_avg),
             'rating_count': profile.rating_count,
             'completed_order_count': profile.completed_order_count,
-            'avatar_url': self._file_url(profile.avatar, request),
+            'avatar_url': self._file_url(profile.avatar, request) or bounded_public_image_url(profile.account.avatar_url or ''),
             'intro_video_url': self._file_url(profile.intro_video, request),
             'voice_card_url': self._file_url(profile.voice_card, request),
             'cheat_proof_url': self._file_url(profile.cheat_proof, request),
@@ -1570,14 +1749,27 @@ class EscortMeView(APIView):
 
         # 全部校验通过后一次写入；头像同步账号，保证老板端立即显示最新头像。
         with transaction.atomic():
+            # Checkout and transfer lock service before provider; keep skill
+            # changes in that order so personal commission snapshots can
+            # safely hold the provider lock while checking authorization.
+            items = (list(ServiceItem.objects.select_for_update().filter(
+                skill_service_q(), id__in=item_ids).order_by('id')) if item_ids is not None else None)
+            if 'avatar' in changes:
+                account = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
+                if (account.account_type != ClubAccount.AccountType.PROVIDER or not account.is_active
+                        or not account.can_login or account.business_cycle != request.account.business_cycle):
+                    return Response({'code': 409, 'msg': '账号状态已变化，请重新登录后修改头像'}, status=409)
             profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
+            if 'avatar' in changes and profile.account_id != request.account.pk:
+                return Response({'code': 409, 'msg': '陪玩资料已变化，请刷新后重试'}, status=409)
             if item_ids is not None:
-                items = list(ServiceItem.objects.select_for_update().filter(skill_service_q(), id__in=item_ids).order_by('id'))
                 previous=set(profile.service_items.values_list('pk',flat=True))
                 if any(item.pk not in previous and not profile.can_take_service(item) for item in items):
                     return Response({'code':400,'msg':'所选服务超出当前接单资格，请联系运营认证'})
                 if len(items) != len(item_ids):
                     return Response({'code': 400, 'msg': '部分服务已下架或不存在，请刷新后重选'})
+            if 'avatar' in changes:
+                changes['avatar_source'] = 'UPLOAD'
             for field, value in changes.items():
                 if field=='dispatch_notification_preferences':value=dict(profile.dispatch_notification_preferences,**value)
                 setattr(profile, field, value)
@@ -1638,23 +1830,22 @@ class EscortSkillOptionsView(APIView):
 
 
 class CustomerAchievementView(APIView):
-    """老板成就馆：成就清单由后台配置，根据已完成订单实时计算解锁状态。"""
+    """老板成就馆与会员标签共享本店已确认服务实销口径。"""
     permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        completed = Order.objects.filter(
-            customer_account=request.account,
-            status=Order.Status.COMPLETED,
-        )
-        from orders.refunds import with_net_amount
-        agg = with_net_amount(completed.filter(payment_status__in=['PAID','PARTIALLY_REFUNDED'])).aggregate(order_count=Count('id'),total=Sum('_net_paid_amount'))
+        from engagement.achievement_metrics import confirmed_service_metrics
+        from engagement.models import EarnedAchievement
+        agg = confirmed_service_metrics(request.account)
+        earned = set(EarnedAchievement.objects.filter(account=request.account,
+            business_cycle=request.account.business_cycle).values_list('achievement_id', flat=True))
         metrics = {
-            Achievement.Metric.ORDERS: agg['order_count'] or 0,
-            Achievement.Metric.AMOUNT: agg['total'] or 0,
+            Achievement.Metric.ORDERS: agg['count'],
+            Achievement.Metric.AMOUNT: agg['amount'],
         }
 
         data = []
-        for item in Achievement.objects.filter(is_active=True):
+        for item in Achievement.objects.filter(Q(is_active=True) | Q(pk__in=earned)):
             current = metrics.get(item.metric, 0)
             data.append({
                 'code': item.code,
@@ -1662,7 +1853,7 @@ class CustomerAchievementView(APIView):
                 'desc': item.desc,
                 'icon': item.icon,
                 'metric': item.metric,
-                'unlocked': current >= item.target,
+                'unlocked': item.pk in earned,
                 'current': current,
                 'target': item.target,
             })
@@ -1670,7 +1861,7 @@ class CustomerAchievementView(APIView):
         return Response({'code': 0, 'data': data})
 
 
-# 每月签到奖励档位（兴安币内部账务单位）：按本月累计签到次数取档，超出则循环
+# 每月签到奖励档位（浪花内部账务单位）：按本月累计签到次数取档，超出则循环
 MONTHLY_CHECKIN_REWARDS = [10, 20, 30, 40, 50, 60, 200]
 
 
@@ -1760,8 +1951,9 @@ def _award_checkin(*, account, legacy_user, target_date, seq_in_month, is_makeup
     if reward_amount > 0:
         balance_before = wallet.balance
         wallet.balance += reward_amount
-        wallet.save(update_fields=['balance'])
-        Transaction.objects.create(
+        wallet.total_gift += reward_amount
+        wallet.save(update_fields=['balance', 'total_gift'])
+        reward_tx = Transaction.objects.create(
             wallet=wallet,
             amount=reward_amount,
             tx_type=Transaction.TxType.REWARD,
@@ -1769,10 +1961,15 @@ def _award_checkin(*, account, legacy_user, target_date, seq_in_month, is_makeup
             balance_after=wallet.balance,
             remark=f'月度签到礼物：{payload["name"]}',
         )
+        from engagement.models import PointFundingLot
+        from engagement.services import record_wallet_adjustment
+        record_wallet_adjustment(wallet=wallet, tx=reward_tx, kind=PointFundingLot.Kind.GIFT)
+        from wallet.notifier import notify_wallet_update
+        transaction.on_commit(lambda: notify_wallet_update(wallet))
         log_money_event(
             'checkin.reward',
             account_id=account.pk,
-            user_id=legacy_user.pk,
+            user_id=getattr(legacy_user, 'pk', None),
             tx_type=Transaction.TxType.REWARD,
             amount=reward_amount,
             balance_before=balance_before,
@@ -1783,25 +1980,59 @@ def _award_checkin(*, account, legacy_user, target_date, seq_in_month, is_makeup
 
 
 def _daily_paid_amount(account, target_date):
-    """按订单创建日统计当日已支付且未退款的兴安币消费。"""
+    """按实际付款日统计服务、礼物和加购的店币实付净额。"""
     tz = timezone.get_current_timezone()
     start = timezone.make_aware(datetime.combine(target_date, time.min), tz)
     end = start + timedelta(days=1)
-    from orders.refunds import with_net_amount
-    return with_net_amount(Order.objects.filter(
-        customer_account=account,
-        payment_status__in=[Order.PaymentStatus.PAID,Order.PaymentStatus.PARTIALLY_REFUNDED],
+    from orders.models import OrderAddonPayment, OrderAddonRefund, OrderRefund
+
+    payments = Transaction.objects.filter(
+        wallet__account=account,
+        order__customer_account=account,
+        order__business_cycle=account.business_cycle,
+        status=Transaction.Status.SUCCESS,
+        amount__lt=0,
+        reversal_of__isnull=True,
+        reversals__isnull=True,
         created_at__gte=start,
         created_at__lt=end,
-    )).aggregate(total=Sum('_net_paid_amount'))['total'] or 0
+    ).exclude(
+        pk__in=Subquery(OrderAddonPayment.objects.values('buyer_transaction_id')),
+    ).filter(
+        Q(tx_type=Transaction.TxType.PAY, order__is_gift_snapshot=False)
+        | Q(tx_type=Transaction.TxType.GIFT, order__is_gift_snapshot=True)
+    )
+    order_paid = -(payments.aggregate(total=Sum('amount'))['total'] or 0)
+    order_refunded = OrderRefund.objects.filter(
+        order_id__in=Subquery(payments.values('order_id')),
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    addons = OrderAddonPayment.objects.filter(
+        intent__buyer=account,
+        intent__order__business_cycle=account.business_cycle,
+        buyer_transaction__wallet__account=account,
+        buyer_transaction__status=Transaction.Status.SUCCESS,
+        buyer_transaction__tx_type=Transaction.TxType.PAY,
+        buyer_transaction__amount__lt=0,
+        buyer_transaction__reversal_of__isnull=True,
+        buyer_transaction__reversals__isnull=True,
+        paid_at__gte=start,
+        paid_at__lt=end,
+    )
+    addon_paid = -(addons.aggregate(total=Sum('buyer_transaction__amount'))['total'] or 0)
+    addon_refunded = OrderAddonRefund.objects.filter(
+        payment_id__in=Subquery(addons.values('pk')),
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    return order_paid - order_refunded + addon_paid - addon_refunded
 
 
-def _sync_makeup_card(progress, rule, today_spend, today):
+def _sync_makeup_card(progress, rule, today_spend, today, *, license_allows_grant):
     """消费满档后按天发一张补签卡，月库存最多保留配置上限。"""
     grant_key = today.isoformat()
     grant_days = list(progress.card_grant_days or [])
     if (
-        today_spend >= rule.makeup_card_spend_required
+        license_allows_grant
+        and today_spend >= rule.makeup_card_spend_required
         and grant_key not in grant_days
         and progress.makeup_cards < rule.max_makeup_cards
     ):
@@ -1809,6 +2040,8 @@ def _sync_makeup_card(progress, rule, today_spend, today):
         grant_days.append(grant_key)
         progress.card_grant_days = grant_days
         progress.save(update_fields=['makeup_cards', 'card_grant_days', 'updated_at'])
+        from users.notifier import notify_checkin_progress_after_commit
+        notify_checkin_progress_after_commit(progress.year, progress.month)
         return True
     return False
 
@@ -1838,27 +2071,36 @@ class CheckinView(APIView):
             checkin_date__month=today.month,
         )
 
+    @transaction.atomic
     def get(self, request):
         if request.account.account_type != ClubAccount.AccountType.BOSS:
             return Response({'code': 403, 'msg': '仅老板可签到'})
 
-        today = timezone.localdate()
         rule = _checkin_rule()
-        records = self._month_records(request.account, today)
-        checked_days = sorted(r.checkin_date.day for r in records)
-        checked_set = set(checked_days)
-        checked_count = len(checked_days)
-        today_checked = today.day in checked_set
-
-        wallet = get_wallet(account=request.account, user=request.legacy_user)
-        progress, _ = CheckinMonthProgress.objects.get_or_create(
+        wallet = get_wallet(account=request.account, user=request.legacy_user, for_update=True)
+        current = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
+        if (current.business_cycle != request.account.business_cycle or not current.license_membership_active):
+            return Response({'code': 409, 'msg': '账号状态已变化，请重新登录后查看签到'}, status=409)
+        today = timezone.localdate()
+        progress, created = CheckinMonthProgress.objects.select_for_update().get_or_create(
             account=request.account,
             year=today.year,
             month=today.month,
             defaults={'user': request.legacy_user},
         )
+        records = self._month_records(request.account, today)
+        checked_days = sorted(r.checkin_date.day for r in records)
+        checked_set = set(checked_days)
+        checked_count = len(checked_days)
+        today_checked = today.day in checked_set
         today_spend = _daily_paid_amount(request.account, today)
-        card_earned_today = _sync_makeup_card(progress, rule, today_spend, today)
+        from stores.license_benefits import check_new_benefits
+        checkin_license, _ = check_new_benefits('CHECKIN')
+        checkin_allowed = checkin_license == 'ALLOW'
+        card_earned_today = _sync_makeup_card(progress, rule, today_spend, today, license_allows_grant=checkin_allowed)
+        if created and not card_earned_today:
+            from users.notifier import notify_checkin_progress_after_commit
+            notify_checkin_progress_after_commit(progress.year, progress.month)
 
         gifts = {gift.checkin_day: gift for gift in CheckinGift.objects.filter(is_active=True)}
         days_in_month = calendar.monthrange(today.year, today.month)[1]
@@ -1893,7 +2135,8 @@ class CheckinView(APIView):
                 'today_spend': today_spend,
                 'daily_spend_required': rule.daily_spend_required,
                 'makeup_card_spend_required': rule.makeup_card_spend_required,
-                'today_eligible': today_spend >= rule.daily_spend_required,
+                'today_eligible': checkin_allowed and today_spend >= rule.daily_spend_required,
+                'license_status': checkin_license,
                 'makeup_cards': progress.makeup_cards,
                 'max_makeup_cards': rule.max_makeup_cards,
                 'card_earned_today': card_earned_today or today.isoformat() in (progress.card_grant_days or []),
@@ -1915,22 +2158,49 @@ class CheckinView(APIView):
         if request.account.account_type != ClubAccount.AccountType.BOSS:
             return Response({'code': 403, 'msg': '仅老板可签到'})
 
-        today = timezone.localdate()
         requested_day = request.data.get('day')
         is_makeup = requested_day not in (None, '')
+        from stores.license_benefits import check_new_benefits
+        checkin_license, _ = check_new_benefits('CHECKIN')
+        checkin_allowed = checkin_license == 'ALLOW'
+        if not is_makeup and checkin_license == 'UNKNOWN':
+            return Response({'code': 503, 'errorCode': 'LICENSE_UNAVAILABLE',
+                             'msg': '门店授权状态暂时无法核验，请稍后重试'}, status=503)
+        if not is_makeup and not checkin_allowed:
+            return Response({'code': 403, 'msg': '门店授权暂不允许发放新的签到权益，请联系平台'}, status=403)
         rule = _checkin_rule()
         full_attendance_just_awarded = False
+        notice_cycle = request.account.business_cycle
+        recover_notice = (getattr(settings, 'CHECKIN_NOTICE_RECOVERY_ENABLED', False)
+            and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False))
 
         try:
             with transaction.atomic():
+                get_wallet(account=request.account, user=request.legacy_user, for_update=True)
+                current = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
+                if (current.business_cycle != request.account.business_cycle or not current.license_membership_active):
+                    return Response({'code': 409, 'msg': '账号状态已变化，请重新登录后签到'}, status=409)
+                today = timezone.localdate()
                 progress, _ = CheckinMonthProgress.objects.select_for_update().get_or_create(
                     account=request.account,
                     year=today.year,
                     month=today.month,
                     defaults={'user': request.legacy_user},
                 )
+                # A concurrent check-in can make this request wait past the
+                # license deadline. Decide again after that wait, before any
+                # new card or reward is granted. Existing makeup cards remain
+                # usable even when new issuance is unavailable.
+                checkin_license, _ = check_new_benefits('CHECKIN')
+                checkin_allowed = checkin_license == 'ALLOW'
+                if not is_makeup and not checkin_allowed:
+                    transaction.set_rollback(True)
+                    if checkin_license == 'UNKNOWN':
+                        return Response({'code': 503, 'errorCode': 'LICENSE_UNAVAILABLE',
+                                         'msg': '门店授权状态暂时无法核验，请稍后重试'}, status=503)
+                    return Response({'code': 403, 'msg': '门店授权暂不允许发放新的签到权益，请联系平台'}, status=403)
                 today_spend = _daily_paid_amount(request.account, today)
-                _sync_makeup_card(progress, rule, today_spend, today)
+                _sync_makeup_card(progress, rule, today_spend, today, license_allows_grant=checkin_allowed)
 
                 if is_makeup:
                     try:
@@ -1954,7 +2224,7 @@ class CheckinView(APIView):
                         needed = max(rule.daily_spend_required - today_spend, 0)
                         return Response({
                             'code': 400,
-                            'msg': f'今日还需消费 {needed / 10:g} 兴安币才可签到',
+                            'msg': f'今日还需消费 {needed / 10:g} {current_currency_name()}才可签到',
                         })
                     if self._month_records(request.account, today).filter(
                         checkin_date=today,
@@ -1972,27 +2242,44 @@ class CheckinView(APIView):
 
                 checked_count = self._month_records(request.account, today).count()
                 days_in_month = calendar.monthrange(today.year, today.month)[1]
-                if checked_count == days_in_month and not progress.full_attendance_awarded:
+                if checkin_allowed and checked_count == days_in_month and not progress.full_attendance_awarded:
                     progress.full_attendance_awarded = True
                     progress.full_attendance_reward_name = rule.full_attendance_reward_name
                     progress.full_attendance_tag_code = rule.full_attendance_tag_code
                     progress.full_attendance_awarded_at = timezone.now()
+                    if recover_notice:
+                        progress.full_attendance_notice_intent = True
+                        progress.full_attendance_notice_cycle = notice_cycle
+                        progress.full_attendance_notice_detail = rule.full_attendance_reward_desc
                     progress.save(update_fields=[
                         'full_attendance_awarded', 'full_attendance_reward_name',
-                        'full_attendance_tag_code', 'full_attendance_awarded_at', 'updated_at',
+                        'full_attendance_tag_code', 'full_attendance_awarded_at',
+                        'full_attendance_notice_intent', 'full_attendance_notice_cycle',
+                        'full_attendance_notice_detail', 'updated_at',
                     ])
                     full_attendance_just_awarded = True
+                from users.notifier import notify_checkin_progress_after_commit
+                notify_checkin_progress_after_commit(progress.year, progress.month)
         except IntegrityError:
             return Response({'code': 400, 'msg': '该日期已签到'})
 
         if full_attendance_just_awarded:
-            create_message(
-                recipient_id=request.legacy_user.id,
-                title='月度全勤奖励已获得',
-                preview=f'恭喜获得 {rule.full_attendance_reward_name}',
-                detail=rule.full_attendance_reward_desc,
-                action_url='/pages/customer/checkin/index',
-            )
+            if recover_notice:
+                from site_messages.checkin_notice import deliver
+                transaction.on_commit(lambda: deliver(progress.pk), robust=True)
+            else:
+                from site_messages.utils import create_cycle_message
+                guarded = getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)
+                writer = create_cycle_message if guarded else create_message
+                transaction.on_commit(lambda: writer(
+                    recipient_id=getattr(request.legacy_user, 'id', None),
+                    recipient_account_id=request.account.id,
+                    recipient_business_cycle=notice_cycle if guarded else None,
+                    title='月度全勤奖励已获得',
+                    preview=f'恭喜获得 {rule.full_attendance_reward_name}',
+                    detail=rule.full_attendance_reward_desc,
+                    action_url='/pages/checkin/index',
+                ), robust=True)
 
         return Response({
             'code': 0,
@@ -2010,11 +2297,12 @@ class CheckinView(APIView):
 
 
 class QualificationOptionsView(APIView):
-    permission_classes=[IsClubAccountAuthenticated]
+    permission_classes=[AllowAny]
     def get(self,request):
         from .qualifications import options_payload
         data=options_payload()
-        if request.account.account_type!='STAFF':
+        account=resolve_club_account(request)
+        if account is None or account.account_type!='STAFF':
             for scope in data['scopes']:
                 for grade in scope['grades']:grade.pop('commission_rate',None)
         return Response({'code':0,'data':data})

@@ -1,0 +1,240 @@
+{
+  "result": "PASS",
+  "run": "XA-PARTIAL-REFUND-20261020-68af85",
+  "checked_at": "2026-10-19T17:57:41.964912+00:00",
+  "database_writes": 0,
+  "read_only_transaction": true,
+  "snapshot_isolation": "REPEATABLE READ",
+  "secrets_in_report": false,
+  "money_unit": "raw ledger integer: 10 = 1 XA coin; 100 = 1 RMB",
+  "boss": {
+    "account_id": 1150,
+    "balance_raw": 26000,
+    "frozen_raw": 0,
+    "refund_raw": 26000
+  },
+  "provider": {
+    "account_id": 1151,
+    "balance_raw": 8000,
+    "frozen_raw": 4000,
+    "net_income_raw": 12000,
+    "effective_withdrawal_spending_raw": 0
+  },
+  "platform": {
+    "baseline_raw": 65850,
+    "balance_raw": 68850,
+    "fixture_net_raw": 3000
+  },
+  "conservation": {
+    "initial_raw": 41000,
+    "boss_raw": 26000,
+    "provider_available_raw": 8000,
+    "provider_frozen_raw": 4000,
+    "platform_raw": 3000,
+    "equal": true
+  },
+  "orders": [
+    {
+      "key": "frozen_recovery",
+      "order_id": 113,
+      "report_id": 22,
+      "amount_raw": 10000,
+      "payment_status": "REFUNDED",
+      "status": "CANCELLED",
+      "refund_parts_raw": [
+        2500,
+        1500,
+        6000
+      ],
+      "cumulative_refund_raw": 10000,
+      "remaining_raw": 0,
+      "net_provider_income_raw": 0,
+      "reversal_lines": 9,
+      "original_approval_snapshot_retained": true,
+      "history_rounds": 3
+    },
+    {
+      "key": "available_recovery",
+      "order_id": 114,
+      "report_id": 23,
+      "amount_raw": 6000,
+      "payment_status": "REFUNDED",
+      "status": "CANCELLED",
+      "refund_parts_raw": [
+        2000,
+        1000,
+        3000
+      ],
+      "cumulative_refund_raw": 6000,
+      "remaining_raw": 0,
+      "net_provider_income_raw": 0,
+      "reversal_lines": 6,
+      "original_approval_snapshot_retained": true,
+      "history_rounds": 3
+    },
+    {
+      "key": "insufficient_recovery",
+      "order_id": 115,
+      "report_id": 24,
+      "amount_raw": 20000,
+      "payment_status": "PARTIALLY_REFUNDED",
+      "status": "COMPLETED",
+      "refund_parts_raw": [
+        10000
+      ],
+      "cumulative_refund_raw": 10000,
+      "remaining_raw": 10000,
+      "net_provider_income_raw": 8000,
+      "reversal_lines": 2,
+      "original_approval_snapshot_retained": true,
+      "history_rounds": 1
+    },
+    {
+      "key": "protected_foreign_hold",
+      "order_id": 116,
+      "report_id": 25,
+      "amount_raw": 5000,
+      "payment_status": "PAID",
+      "status": "COMPLETED",
+      "refund_parts_raw": [],
+      "cumulative_refund_raw": 0,
+      "remaining_raw": 5000,
+      "net_provider_income_raw": 4000,
+      "reversal_lines": 0,
+      "original_approval_snapshot_retained": true,
+      "history_rounds": 0
+    }
+  ],
+  "refunds": {
+    "records": 7,
+    "amount_raw": 26000,
+    "recovered_raw": 26000,
+    "source_reversal_lines": 17,
+    "originals_preserved": true,
+    "one_line_per_refund_original": true,
+    "cumulative_source_limit_respected": true
+  },
+  "consumption": {
+    "confirmed_order_id": 114,
+    "original_confirmed_raw": 6000,
+    "cumulative_refunded_raw": 6000,
+    "per_tranche_net_raw": [
+      4000,
+      3000,
+      0
+    ],
+    "pending_remaining_raw": 15000
+  },
+  "holds": {
+    "a_id": 5,
+    "a_original_raw": 8000,
+    "a_recovered_raw": 8000,
+    "a_cancelled_by_final_refund": true,
+    "a_excluded_after_due": true,
+    "d_id": 6,
+    "d_unchanged_raw": 4000
+  },
+  "withdrawal": {
+    "id": 10,
+    "amount_raw": 10000,
+    "status": "REJECTED",
+    "transaction_status": "FAILED",
+    "effective_spending_raw": 0,
+    "tax_posted": false
+  },
+  "protected_old_rows": [
+    {
+      "table": "orders_order",
+      "old_rows": 92,
+      "original_columns": 61,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "wallet_wallet",
+      "old_rows": 1149,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 3000
+    },
+    {
+      "table": "wallet_transaction",
+      "old_rows": 935,
+      "original_columns": 16,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "wallet_incomehold",
+      "old_rows": 4,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "wallet_providerreport",
+      "old_rows": 21,
+      "original_columns": 22,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_aftersale",
+      "old_rows": 5,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "engagement_consumptionconfirmation",
+      "old_rows": 11,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_orderrefund",
+      "old_rows": 3,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_refundrecoveryline",
+      "old_rows": 7,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "orders_orderstatuslog",
+      "old_rows": 197,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    },
+    {
+      "table": "engagement_orderpointallocation",
+      "old_rows": 5,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "migration_columns_verified": [],
+      "expected_platform_net_raw": 0
+    }
+  ],
+  "old_order_hash_equal": true,
+  "all_old_wallets_unchanged_except_exact_platform_net": true,
+  "official_operation_audit_paths_checked": 8,
+  "no_business_services_invoked": true,
+  "container_temporary_backup_removed": true
+}

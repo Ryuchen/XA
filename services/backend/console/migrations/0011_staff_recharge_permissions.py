@@ -1,6 +1,6 @@
 from django.db import migrations
 
-SUPPORT = {'wallet:view','wallet:recharge','recharge:view','transaction:view',
+SUPPORT = {'wallet:view','wallet:recharge','recharge:view','transaction:view','withdraw:view','withdraw:audit',
     'order:dispatch','escort:view','service:view','chat:view','chat:reply',
     'registration:view','registration:audit'}
 FINANCE = {'wallet:recharge','recharge:view','withdraw:view','withdraw:audit',

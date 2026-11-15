@@ -4,9 +4,47 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
+class AchievementLicenseEvent(models.Model):
+    """Original authorization and real-sales snapshot for a single source."""
+    event_key = models.CharField(max_length=100, unique=True)
+    order = models.ForeignKey('orders.Order', on_delete=models.PROTECT)
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField()
+    outcome = models.CharField(max_length=8)
+    license_evidence = models.JSONField(default=dict)
+    metrics = models.JSONField(default=dict)
+    eligible = models.JSONField(default=list)
+    sales_snapshot = models.JSONField(null=True, blank=True)
+    sales_snapshot_hash = models.CharField(max_length=64, blank=True)
+    decided_at = models.DateTimeField(default=timezone.now)
+
+
+class EarnedAchievement(models.Model):
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField()
+    achievement = models.ForeignKey('users.Achievement', on_delete=models.PROTECT)
+    source_event = models.ForeignKey(AchievementLicenseEvent, on_delete=models.PROTECT)
+    earned_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['account', 'business_cycle', 'achievement'],
+                                               name='unique_earned_achievement_cycle')]
+
+
+class AchievementLicenseReview(models.Model):
+    event = models.OneToOneField(AchievementLicenseEvent, on_delete=models.PROTECT, related_name='review')
+    request_id = models.UUIDField(unique=True)
+    platform_actor_id = models.UUIDField()
+    outcome = models.CharField(max_length=8)
+    reason = models.CharField(max_length=500)
+    granted_ids = models.JSONField(default=list)
+    reviewed_at = models.DateTimeField(default=timezone.now)
+
+
 class ClubOperationConfig(models.Model):
     # 固定主键 1；运营配置与账本分离，修改配置不重算历史记录。
     points_enabled = models.BooleanField(default=True)
+    base_points_rate = models.PositiveSmallIntegerField(default=100, validators=[MaxValueValidator(1000)])
     birthday_multiplier = models.PositiveSmallIntegerField(default=2, validators=[MinValueValidator(1), MaxValueValidator(10)])
     vip_enabled = models.BooleanField(default=True)
     vip_min_single_recharge = models.PositiveIntegerField(default=0)
@@ -14,6 +52,44 @@ class ClubOperationConfig(models.Model):
     season_code = models.CharField(max_length=40, blank=True, default='')
     season_ends_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class VipDeferredRecalculation(models.Model):
+    """Store-local snapshot from the beginning of one disabled VIP period."""
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    epoch = models.PositiveIntegerField(default=0)
+    is_open = models.BooleanField(default=False)
+    # Null means the store was already disabled before this feature: never
+    # pretend that today's tiers were the tiers at the historical disable time.
+    baseline_rules = models.JSONField(null=True, blank=True)
+    pending = models.BooleanField(default=False)
+    opened_at = models.DateTimeField(null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name='vip_deferred_singleton')]
+
+
+class VipUpgradeReview(models.Model):
+    """An upgrade entitlement whose historical issuance needs human review."""
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    tier = models.ForeignKey('engagement.VipTier', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField()
+    epoch = models.PositiveIntegerField()
+    status = models.CharField(max_length=16, default='PENDING', choices=[('PENDING', '待核对'), ('RESOLVED', '已核对')])
+    evidence = models.JSONField(default=dict)
+    resolution = models.CharField(max_length=24, blank=True, default='', choices=[
+        ('', '未处理'), ('ALREADY_ISSUED', '确认已发'), ('ISSUED', '人工确认补发')])
+    resolution_note = models.CharField(max_length=500, blank=True, default='')
+    resolved_by = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True,
+                                    related_name='+')
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['account', 'tier', 'business_cycle', 'epoch'],
+                                               name='uniq_vip_upgrade_review_epoch')]
 
 
 class MemberProfile(models.Model):
@@ -27,6 +103,76 @@ class MemberProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
+class LicenseConsumptionPointsDecision(models.Model):
+    """License decision at actual consumption confirmation, per order."""
+    order = models.OneToOneField('orders.Order', on_delete=models.PROTECT, related_name='license_points_decision')
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    event_key = models.CharField(max_length=160, unique=True)
+    points_amount = models.BigIntegerField()
+    outcome = models.CharField(max_length=16, choices=[('ALLOW', '允许发放'), ('DENY', '不发放'),
+                                                        ('UNKNOWN', '授权待核对')])
+    license_evidence = models.JSONField(default=dict)
+    decided_at = models.DateTimeField(default=timezone.now)
+
+
+class LicenseConsumptionPointsReview(models.Model):
+    """A later human review; the original UNKNOWN decision stays immutable."""
+    decision = models.OneToOneField(LicenseConsumptionPointsDecision, on_delete=models.PROTECT, related_name='review')
+    request_id = models.UUIDField(unique=True)
+    platform_actor_id = models.UUIDField()
+    outcome = models.CharField(max_length=8, choices=[('ALLOW', '允许补发'), ('DENY', '不予发放')])
+    reason = models.CharField(max_length=500)
+    awarded_points = models.PositiveBigIntegerField(default=0)
+    refunded_principal_at_award = models.PositiveBigIntegerField(default=0)
+    points_ledger = models.OneToOneField('engagement.PointLedger', on_delete=models.PROTECT,
+                                         null=True, blank=True, related_name='+')
+    skip_reason = models.CharField(max_length=24, blank=True, default='')
+    reviewed_at = models.DateTimeField(default=timezone.now)
+
+
+class LicenseRefundVipDecision(models.Model):
+    """Immutable growth authorization at refunded service confirmation."""
+    order = models.OneToOneField('orders.Order', on_delete=models.PROTECT, related_name='license_refund_vip_decision')
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField()
+    paid_units = models.PositiveBigIntegerField()
+    refunded_units = models.PositiveBigIntegerField()
+    payment_vip_enabled = models.BooleanField()
+    confirmation_vip_enabled = models.BooleanField()
+    outcome = models.CharField(max_length=16, choices=[('ALLOW', '允许'), ('DENY', '不允许'), ('UNKNOWN', '待核对')])
+    license_evidence = models.JSONField(default=dict)
+    decided_at = models.DateTimeField()
+
+
+class LicenseRefundVipReview(models.Model):
+    decision = models.OneToOneField(LicenseRefundVipDecision, on_delete=models.PROTECT, related_name='review')
+    request_id = models.UUIDField(unique=True)
+    platform_actor_id = models.UUIDField()
+    outcome = models.CharField(max_length=8, choices=[('ALLOW', '允许'), ('DENY', '不允许')])
+    reason = models.CharField(max_length=500)
+    vip_applied = models.BooleanField(default=False)
+    vip_recalculation_pending = models.BooleanField(default=False)
+    reviewed_at = models.DateTimeField(default=timezone.now)
+
+
+class LicenseAddonBenefitsReview(models.Model):
+    """Audited resolution of one add-on's unknown License decisions."""
+    consumption = models.OneToOneField('orders.OrderAddonConsumption', on_delete=models.PROTECT, related_name='license_review')
+    request_id = models.UUIDField(unique=True)
+    platform_actor_id = models.UUIDField()
+    vip_outcome = models.CharField(max_length=8, blank=True, default='')
+    points_outcome = models.CharField(max_length=8, blank=True, default='')
+    reason = models.CharField(max_length=500)
+    vip_applied = models.BooleanField(default=False)
+    vip_recalculation_pending = models.BooleanField(default=False)
+    awarded_points = models.PositiveBigIntegerField(default=0)
+    refunded_principal_at_award = models.PositiveBigIntegerField(default=0)
+    points_ledger = models.OneToOneField('engagement.PointLedger', on_delete=models.PROTECT,
+                                         null=True, blank=True, related_name='+')
+    skip_reason = models.CharField(max_length=24, blank=True, default='')
+    reviewed_at = models.DateTimeField(default=timezone.now)
+
+
 class RechargePackage(models.Model):
     amount = models.PositiveIntegerField(unique=True)
     gift_amount = models.PositiveIntegerField(default=0)
@@ -38,11 +184,30 @@ class RechargePackage(models.Model):
 
 
 class PointFundingLot(models.Model):
+    class Kind(models.TextChoices):
+        PREPAID = 'PREPAID', '预存'
+        GIFT = 'GIFT', '赠送'
+        COMPENSATION = 'COMPENSATION', '赔款'
+        # 一笔充值的实充与赠送共用既有 FIFO 批次；读取余额时再按该批次的
+        # 原始赠送金额拆分，避免迁移历史订单与退款分配关系。
+        RECHARGE = 'RECHARGE', '充值混合批次'
+
     account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
     source_key = models.CharField(max_length=160, unique=True)
     remaining = models.PositiveIntegerField()
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.PREPAID, db_index=True)
     points_rate = models.PositiveSmallIntegerField(default=100)
+    # NULL preserves the historical inferred split until the new funding flow
+    # explicitly locks and snapshots this mixed recharge's remaining gift.
+    gift_remaining = models.PositiveIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(
+            condition=models.Q(gift_remaining__isnull=True) | (
+                models.Q(kind='RECHARGE') & models.Q(gift_remaining__lte=models.F('remaining'))),
+            name='funding_lot_gift_within_remaining',
+        )]
 
 
 class OrderPointAllocation(models.Model):
@@ -52,9 +217,74 @@ class OrderPointAllocation(models.Model):
     points_amount = models.PositiveBigIntegerField()
     released = models.BooleanField(default=False)
     refunded_amount = models.PositiveIntegerField(default=0)
+    # Populated only when a mixed lot already had a reliable explicit split.
+    # NULL means older records whose original source cannot be reconstructed.
+    source_gift_amount = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['order', 'lot'], name='unique_order_point_lot')]
+        constraints = [
+            models.UniqueConstraint(fields=['order', 'lot'], name='unique_order_point_lot'),
+            models.CheckConstraint(condition=models.Q(source_gift_amount__isnull=True)
+                                   | models.Q(source_gift_amount__lte=models.F('amount')),
+                                   name='order_point_gift_within_amount'),
+        ]
+
+
+class DefaultPaymentPointsSnapshot(models.Model):
+    """First-release source and points terms for the default wallet checkout."""
+    order = models.OneToOneField('orders.Order', on_delete=models.PROTECT, related_name='default_points_snapshot')
+    points_rate = models.PositiveSmallIntegerField()
+    birthday_multiplier = models.PositiveSmallIntegerField()
+    points_enabled = models.BooleanField()
+    vip_enabled = models.BooleanField(default=False)
+    vip_tier_id_snapshot = models.PositiveBigIntegerField(null=True, blank=True)
+    vip_level_snapshot = models.PositiveIntegerField(null=True, blank=True)
+    awarded_refunded_principal = models.PositiveIntegerField(null=True, blank=True)
+
+
+class DefaultPaymentSource(models.Model):
+    snapshot = models.ForeignKey(DefaultPaymentPointsSnapshot, on_delete=models.PROTECT, related_name='sources')
+    allocation = models.ForeignKey(OrderPointAllocation, on_delete=models.PROTECT, related_name='default_sources')
+    kind = models.CharField(max_length=16, choices=[('PREPAID', '本金'), ('GIFT', '赠送'), ('COMPENSATION', '赔付')])
+    amount = models.PositiveIntegerField()
+    refunded_amount = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['allocation', 'kind'], name='default_payment_source_once'),
+            models.CheckConstraint(condition=models.Q(kind__in=['PREPAID', 'GIFT', 'COMPENSATION']), name='default_payment_source_kind'),
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name='default_payment_source_positive'),
+            models.CheckConstraint(condition=models.Q(refunded_amount__lte=models.F('amount')), name='default_payment_source_refund_limit'),
+        ]
+
+
+class OrderFundingAllocation(models.Model):
+    """Source-specific payment fact for the new wallet flow.
+
+    A historic mixed recharge can contribute both principal and gift from the
+    same lot, so the kind is part of the unique identity. Legacy allocations
+    are retained separately and must not be retroactively guessed.
+    """
+    class Kind(models.TextChoices):
+        PREPAID = 'PREPAID', '本金'
+        GIFT = 'GIFT', '赠送'
+        COMPENSATION = 'COMPENSATION', '赔付'
+
+    order = models.ForeignKey('orders.Order', on_delete=models.PROTECT, related_name='funding_allocations')
+    lot = models.ForeignKey(PointFundingLot, on_delete=models.PROTECT)
+    kind = models.CharField(max_length=16, choices=Kind.choices)
+    amount = models.PositiveIntegerField()
+    refunded_amount = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['order', 'lot', 'kind'], name='unique_order_funding_source'),
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name='order_funding_amount_positive'),
+            models.CheckConstraint(condition=models.Q(kind__in=['PREPAID', 'GIFT', 'COMPENSATION']),
+                                   name='order_funding_kind_valid'),
+            models.CheckConstraint(condition=models.Q(refunded_amount__lte=models.F('amount')),
+                                   name='order_funding_refund_within_amount'),
+        ]
 
 
 class PointLedger(models.Model):
@@ -199,13 +429,15 @@ class GiftBenefitRule(models.Model):
 class ProviderNaming(models.Model):
     provider = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='received_namings')
     sponsor = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='sponsored_namings')
+    provider_business_cycle = models.PositiveIntegerField(editable=False)
     title = models.CharField(max_length=30)
     expires_at = models.DateTimeField()
     is_visible = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['provider', 'sponsor'], name='unique_provider_sponsor_naming')]
+        constraints = [models.UniqueConstraint(fields=['provider', 'sponsor', 'provider_business_cycle'],
+                                               name='unique_provider_sponsor_cycle_naming')]
 
 
 class GiftNamingGrant(models.Model):
@@ -224,9 +456,18 @@ class LotteryCampaign(models.Model):
     starts_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
     daily_limit = models.PositiveIntegerField(default=0)
+    pity_enabled = models.BooleanField(default=True)
+    pity_limit = models.PositiveIntegerField(default=240)
+    pity_target_reward = models.ForeignKey('RewardItem', null=True, blank=True, on_delete=models.PROTECT,
+                                         related_name='pity_campaigns')
+    pity_generation = models.PositiveIntegerField(default=0, editable=False)
     version = models.PositiveIntegerField(default=1)
     rules = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(pity_limit__gte=1),
+                                              name='lottery_pity_limit_positive')]
 
 
 class LotteryPrize(models.Model):
@@ -247,13 +488,12 @@ class LotteryPityState(models.Model):
     account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
     campaign = models.ForeignKey(LotteryCampaign, on_delete=models.PROTECT)
     business_cycle = models.PositiveIntegerField(default=1, editable=False)
-    count = models.PositiveSmallIntegerField(default=0)
+    count = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['account', 'campaign', 'business_cycle'], name='unique_lottery_personal_pity'),
-            models.CheckConstraint(condition=models.Q(count__lt=240), name='lottery_pity_below_guarantee'),
         ]
 
 
@@ -291,8 +531,8 @@ class LotteryDraw(models.Model):
     is_pity = models.BooleanField(default=False)
     is_ten_guarantee = models.BooleanField(default=False)
     selection_pool = models.JSONField(default=list)
-    pity_before = models.PositiveSmallIntegerField(default=0)
-    pity_after = models.PositiveSmallIntegerField(default=0)
+    pity_before = models.PositiveIntegerField(default=0)
+    pity_after = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -318,6 +558,7 @@ class MemberTag(models.Model):
 class VipTier(models.Model):
     boss_type = models.OneToOneField('users.BossType', on_delete=models.PROTECT, related_name='vip_config')
     level = models.PositiveSmallIntegerField(unique=True)
+    points_rate = models.PositiveSmallIntegerField(default=100, validators=[MaxValueValidator(1000)])
     recharge_threshold = models.PositiveIntegerField()  # 历史存储字段名；现为累计已完成订单实付门槛，人民币分
     benefits = models.JSONField(default=dict)
     upgrade_rewards = models.JSONField(default=list, blank=True)
@@ -372,6 +613,9 @@ class ClubContent(models.Model):
 class KookPointsConfig(models.Model):
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     enabled = models.BooleanField(default=False)
+    revision = models.PositiveIntegerField(default=0)
+    listener_revision = models.PositiveIntegerField(default=0)
+    daily_checkin_points = models.PositiveIntegerField(default=5)
     guild_id = models.CharField(max_length=64)
     checkin_channel_id = models.CharField(max_length=64)
     voice_channel_ids = models.JSONField(default=list, blank=True)
@@ -380,8 +624,25 @@ class KookPointsConfig(models.Model):
     status = models.CharField(max_length=80, default='等待连接')
 
 
+class KookCheckinRuleVersion(models.Model):
+    revision = models.PositiveIntegerField(unique=True)
+    points = models.PositiveIntegerField()
+    effective_at = models.DateTimeField()
+    operator = models.ForeignKey('club_accounts.ClubAccount', null=True, on_delete=models.PROTECT)
+
+
+class KookOnlineRuleDraft(models.Model):
+    """Administrator-submitted terms; never used for accrual until published."""
+    config_revision = models.PositiveIntegerField(unique=True)
+    window_ms = models.PositiveIntegerField()
+    points = models.PositiveIntegerField()
+    operator = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class KookBinding(models.Model):
     account = models.OneToOneField('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     user_id = models.CharField(max_length=64, unique=True)
     nickname = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -390,10 +651,164 @@ class KookBinding(models.Model):
     event_at = models.DateTimeField(null=True, blank=True)
     online_milliseconds = models.PositiveBigIntegerField(default=0)
     awarded_points = models.PositiveBigIntegerField(default=0)
+    cycle_online_base = models.PositiveBigIntegerField(default=0)
+    cycle_awarded_base = models.PositiveBigIntegerField(default=0)
+
+
+class KookOnlineRuleVersion(models.Model):
+    """Immutable terms used by online interval evidence."""
+    revision = models.PositiveIntegerField(primary_key=True)
+    window_ms = models.PositiveIntegerField()
+    points = models.PositiveIntegerField()
+    effective_at = models.DateTimeField(null=True, blank=True)
+    operator = models.ForeignKey('club_accounts.ClubAccount', null=True, blank=True, on_delete=models.PROTECT)
+    source_draft = models.OneToOneField('KookOnlineRuleDraft', null=True, blank=True, on_delete=models.PROTECT)
+
+
+class KookOnlineInterval(models.Model):
+    """Observed online interval and original entitlement decision."""
+    binding = models.ForeignKey('KookBinding', on_delete=models.PROTECT, related_name='online_intervals')
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    account_cycle = models.PositiveIntegerField()
+    binding_cycle = models.PositiveIntegerField(null=True, blank=True)
+    channel_id = models.CharField(max_length=64)
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField()
+    elapsed_ms = models.PositiveIntegerField()
+    rule_revision = models.PositiveIntegerField(default=0)
+    rule_version = models.ForeignKey('KookOnlineRuleVersion', null=True, on_delete=models.PROTECT)
+    rule_window_ms = models.PositiveIntegerField(default=7200000)
+    rule_points = models.PositiveIntegerField(default=1)
+    online_before = models.PositiveBigIntegerField()
+    online_after = models.PositiveBigIntegerField()
+    awarded_before = models.PositiveBigIntegerField()
+    awarded_after = models.PositiveBigIntegerField()
+    online_base_before = models.PositiveBigIntegerField()
+    online_base_after = models.PositiveBigIntegerField()
+    award_base_before = models.PositiveBigIntegerField()
+    award_base_after = models.PositiveBigIntegerField()
+    points_enabled_used = models.BooleanField(null=True)
+    processing_status = models.CharField(max_length=12, default='DONE')
+    processed_at = models.DateTimeField(null=True, blank=True)
+    interval_outcome = models.CharField(max_length=8)
+    award_outcome = models.CharField(max_length=8)
+    points_ledger = models.ForeignKey('PointLedger', null=True, blank=True, on_delete=models.PROTECT)
+    decision_source = models.ForeignKey('console.AdminAuditLog', null=True, blank=True, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['binding', 'started_at', 'ended_at'],
+                                               name='kook_online_interval_unique')]
+
+
+class KookOnlineCursor(models.Model):
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='kook_online_cursors')
+    binding = models.ForeignKey('KookBinding', null=True, blank=True, on_delete=models.PROTECT, related_name='online_cursors')
+    business_cycle = models.PositiveIntegerField()
+    blocked = models.BooleanField(default=False)
+    rule_version = models.ForeignKey('KookOnlineRuleVersion', default=0, on_delete=models.PROTECT)
+    remainder_ms = models.PositiveBigIntegerField(default=0)
+    pending_points = models.PositiveBigIntegerField(default=0)
+    unbound_online_ms = models.PositiveBigIntegerField(default=0)
+    unbound_awarded_points = models.PositiveBigIntegerField(default=0)
+    last_ended_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['account', 'business_cycle'], name='kook_online_cursor_cycle_unique')]
+
+
+class KookOnlineRuleBalance(models.Model):
+    """Transactional accrued remainder and unpaid groups for a cycle and rule."""
+    cursor = models.ForeignKey('KookOnlineCursor', on_delete=models.PROTECT, related_name='rule_balances')
+    rule_version = models.ForeignKey('KookOnlineRuleVersion', on_delete=models.PROTECT)
+    remainder_ms = models.PositiveBigIntegerField(default=0)
+    pending_points = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['cursor', 'rule_version'], name='kook_online_rule_balance_unique')]
+
+
+class KookOnlineRuleTransition(models.Model):
+    """Actual per-cycle carry from one immutable rule into its successor."""
+    cursor = models.ForeignKey('KookOnlineCursor', on_delete=models.PROTECT, related_name='rule_transitions')
+    from_rule = models.ForeignKey('KookOnlineRuleVersion', on_delete=models.PROTECT, related_name='+')
+    to_rule = models.ForeignKey('KookOnlineRuleVersion', on_delete=models.PROTECT, related_name='+')
+    effective_at = models.DateTimeField()
+    carried_ms = models.PositiveBigIntegerField()
+    old_pending_points = models.PositiveBigIntegerField()
+    new_remainder_ms = models.PositiveBigIntegerField()
+    new_pending_points = models.PositiveBigIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['cursor', 'to_rule'], name='kook_online_transition_unique')]
+
+
+class KookOnlinePointAllocation(models.Model):
+    """Share of an issued points ledger attributed to one original rule."""
+    cursor = models.ForeignKey('KookOnlineCursor', on_delete=models.PROTECT)
+    ledger = models.ForeignKey('PointLedger', on_delete=models.PROTECT, related_name='kook_rule_allocations')
+    rule_version = models.ForeignKey('KookOnlineRuleVersion', on_delete=models.PROTECT)
+    points = models.PositiveBigIntegerField()
+    review_reason = models.CharField(max_length=500, blank=True, default='')
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['ledger', 'rule_version'], name='kook_online_allocation_unique')]
+
+
+class KookOnlineProcessing(models.Model):
+    interval = models.OneToOneField('KookOnlineInterval', on_delete=models.PROTECT, related_name='processing')
+    online_before = models.PositiveBigIntegerField()
+    online_after = models.PositiveBigIntegerField()
+    awarded_before = models.PositiveBigIntegerField()
+    awarded_after = models.PositiveBigIntegerField()
+    points_ledger = models.ForeignKey('PointLedger', null=True, blank=True, on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class KookManualOnlineReview(models.Model):
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField()
+    cursor = models.ForeignKey('KookOnlineCursor', on_delete=models.PROTECT)
+    source_id = models.CharField(max_length=100)
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField()
+    online_seconds = models.PositiveIntegerField()
+    operator = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    status = models.CharField(max_length=20, default='PENDING_REVIEW')
+    reason = models.CharField(max_length=100, blank=True, default='')
+    points_ledger = models.ForeignKey('PointLedger', null=True, blank=True, on_delete=models.PROTECT)
+    resolution_request_id = models.UUIDField(null=True, blank=True, unique=True)
+    resolution_outcome = models.CharField(max_length=8, blank=True, default='')
+    resolution_points = models.PositiveIntegerField(null=True, blank=True)
+    resolution_reason = models.CharField(max_length=500, blank=True, default='')
+    platform_actor_id = models.UUIDField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['account', 'business_cycle', 'source_id'],
+                                               name='kook_manual_online_source_unique')]
+
+
+class KookManualOnlineSegment(models.Model):
+    """Immutable rule-at-event facts for an actual manual source interval."""
+    review = models.ForeignKey('KookManualOnlineReview', on_delete=models.PROTECT, related_name='rule_segments')
+    rule_version = models.ForeignKey('KookOnlineRuleVersion', on_delete=models.PROTECT)
+    started_at = models.DateTimeField()
+    ended_at = models.DateTimeField()
+    elapsed_ms = models.PositiveBigIntegerField()
+    rule_window_ms = models.PositiveIntegerField()
+    rule_points = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['review', 'started_at'], name='kook_manual_segment_start_unique')]
 
 
 class KookBindingChallenge(models.Model):
     account = models.OneToOneField('club_accounts.ClubAccount', on_delete=models.CASCADE)
+    business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     code_hash = models.CharField(max_length=64, unique=True)
     expires_at = models.DateTimeField()
 
@@ -401,6 +816,44 @@ class KookBindingChallenge(models.Model):
 class KookPointEvent(models.Model):
     event_id = models.CharField(max_length=100, unique=True)
     received_at = models.DateTimeField(auto_now_add=True)
+
+
+class KookLicensePointsReview(models.Model):
+    """Platform decision against one immutable UNKNOWN source event."""
+    source = models.OneToOneField('console.AdminAuditLog', on_delete=models.PROTECT, related_name='kook_license_review')
+    request_id = models.UUIDField(unique=True)
+    platform_actor_id = models.UUIDField()
+    outcome = models.CharField(max_length=8, choices=[('ALLOW', '允许'), ('DENY', '不允许')])
+    evidence_digest = models.CharField(max_length=64)
+    reason = models.CharField(max_length=500)
+    awarded_points = models.PositiveBigIntegerField(default=0)
+    credited_milliseconds = models.PositiveBigIntegerField(default=0)
+    points_ledger = models.OneToOneField('engagement.PointLedger', on_delete=models.PROTECT,
+                                         null=True, blank=True, related_name='+')
+    skip_reason = models.CharField(max_length=24, blank=True, default='')
+    reviewed_at = models.DateTimeField(default=timezone.now)
+
+
+class LicenseGiftVipDecision(models.Model):
+    order = models.OneToOneField('orders.Order', on_delete=models.PROTECT, related_name='license_gift_vip_decision')
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    business_cycle = models.PositiveIntegerField()
+    paid_units = models.PositiveBigIntegerField()
+    license_evidence = models.JSONField(default=dict)
+    decided_at = models.DateTimeField(default=timezone.now)
+
+
+class LicenseGiftVipReview(models.Model):
+    decision = models.OneToOneField(LicenseGiftVipDecision, on_delete=models.PROTECT, related_name='review')
+    request_id = models.UUIDField(unique=True)
+    platform_actor_id = models.UUIDField()
+    outcome = models.CharField(max_length=8, choices=[('ALLOW', '允许'), ('DENY', '不允许')])
+    reason = models.CharField(max_length=500)
+    vip_applied = models.BooleanField(default=False)
+    vip_recalculation_pending = models.BooleanField(default=False)
+    refunded_units = models.PositiveBigIntegerField(default=0)
+    skip_reason = models.CharField(max_length=24, blank=True, default='')
+    reviewed_at = models.DateTimeField(default=timezone.now)
 
 
 class ConsumptionConfirmation(models.Model):
@@ -427,3 +880,6 @@ class RetirementAudit(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['account', 'business_cycle'], name='unique_retirement_cycle')]
+
+
+from .refunded_points_models import RefundedPointsConsumptionEvidence, TransferRefundPointsConsumptionEvidence  # noqa: E402,F401

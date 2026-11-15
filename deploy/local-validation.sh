@@ -21,13 +21,17 @@ assert services["web"]["environment"]["XA_LOCAL_VALIDATION"] == "true"
 assert services["web"]["deploy"]["replicas"] == 2
 assert services["celery-beat"].get("deploy", {}).get("replicas", 1) == 1
 for name, service in services.items():
-    if name != "gateway":
+    if name not in ("gateway", "db", "redis"):
         assert not service.get("ports"), "Unexpected port binding: " + name
+for name, port in (("db", "13306"), ("redis", "16380")):
+    bindings = services[name]["ports"]
+    assert len(bindings) == 1 and bindings[0]["host_ip"] == "127.0.0.1"
+    assert str(bindings[0]["published"]) == port
 bindings = services["gateway"]["ports"]
 assert len(bindings) == 3
 assert all(item["host_ip"] == "127.0.0.1" for item in bindings)
 assert {str(item["published"]) for item in bindings} == {"18080", "18081", "18082"}
-print("PASS isolated Compose database and loopback-only gateway ports")
+print("PASS isolated Compose database and loopback-only fixed ports")
 '
     ;;
   build)

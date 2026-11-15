@@ -61,14 +61,14 @@ class DepositRatioTests(APITestCase):
         self.assertEqual((self.wallet.balance,self.wallet.frozen_amount),(11500,0))
 
     def test_remaining_deposit_cap_and_completed_target_route_all_income_to_settlement(self):
-        self.profile.deposit_paid = 39950
+        self.profile.deposit_paid = 79950
         self.profile.save(update_fields=['deposit_paid'])
         first = self.hold(1000)
         self.assertEqual((first.deposit_amount,first.amount),(50,950))
         second = self.hold(1000)
         self.assertEqual((second.deposit_amount,second.amount),(0,1000))
         self.profile.refresh_from_db()
-        self.assertEqual(self.profile.deposit_paid,40000)
+        self.assertEqual(self.profile.deposit_paid,80000)
 
     def test_zero_and_full_percent_edges_and_cash_mode_do_not_lose_money(self):
         SystemConfig.objects.create(key=DEPOSIT_PERCENT_KEY,value='0')

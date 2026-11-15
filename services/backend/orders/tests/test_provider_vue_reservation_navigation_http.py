@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Navigation between real reservations preserves the selected route."""
 import json
 import os
@@ -18,9 +19,9 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
 class ProviderVueReservationNavigationHTTPTest(LiveServerTestCase):
     def test_order_to_reservation_list_and_another_reservation(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         boss, provider, outsider = make_user(), make_provider(), make_provider()
         staff = make_console_user(['order:view'])
         accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, provider, staff, outsider)]
@@ -63,10 +64,10 @@ class ProviderVueReservationNavigationHTTPTest(LiveServerTestCase):
             input=json.dumps({'root':root, 'base':self.live_server_url, 'orderId':converted['order']['id'],
                 'orderNo':converted['order']['order_no'], 'first':first, 'second':second, 'expired':expired, 'hidden':hidden,
                 'id':accounts[1].pk, 'token':issue_account_tokens(accounts[1])[0],
-                'fixed':os.environ.get('XA_RESERVATION_ROUTE_FIXED') == '1'}),
+                'fixed':True}),
             text=True, encoding='utf-8', capture_output=True, timeout=40, cwd=repo)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         print(result.stdout.strip())
-        if os.environ.get('XA_RESERVATION_ROUTE_FIXED') == '1':
+        if True:
             for client in clients[:3]:
                 self.assertEqual(ok(client.get(f"/api/orders/reservations/{second['id']}/"))['status'], 'CONFIRMED')

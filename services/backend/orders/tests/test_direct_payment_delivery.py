@@ -34,7 +34,8 @@ class DirectPaymentDeliveryTest(TestCase):
         make_wallet(self.user, balance=50000)
         service = make_service(price=10000)
         request = SimpleNamespace(account=self.account, legacy_user=self.user,
-            data={'service_id': service.pk, 'expected_amount': 10000, 'client_request_id': 'delivery-1'})
+            data={'service_id': service.pk, 'expected_amount': 10000, 'client_request_id': 'delivery-1',
+                  'dispatch_mode': 'AUTO_GRAB'})
         self.intent = prepare_direct_order(request, appid='wx-test', mchid='mch-test')
         self.payload = {'appid': 'wx-test', 'mchid': 'mch-test', 'out_trade_no': self.intent.merchant_order_no,
             'transaction_id': 'tx-delivery-1', 'trade_type': 'JSAPI', 'trade_state': 'SUCCESS',
@@ -197,8 +198,10 @@ class DirectPaymentDeliveryTest(TestCase):
         self.assertEqual(order.status, 'IN_SERVICE')
 
     def test_conflict_removes_order_from_provider_pool(self):
-        provider = make_provider()
+        provider = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         account = get_or_create_account_for_legacy_user(provider)
+        account.openid, account.is_openid_bound = 'direct-pool-provider', True
+        account.save(update_fields=['openid', 'is_openid_bound'])
         EscortProfile.objects.filter(user=provider).update(account=account)
         row = self.ingested()
         self.process(row)
@@ -312,7 +315,7 @@ class DirectPaymentDeliveryTest(TestCase):
         event.lease_until = None
         event.save(update_fields=['lease_until'])
         with patch('orders.notifier.notify_order_update'), patch('orders.services.schedule_auto_cancel'), \
-             patch('integrations.kook_config.get_kook_config', return_value=SimpleNamespace(auto_new_orders=False)):
+             patch('integrations.kook_config.get_kook_config', return_value=SimpleNamespace(enabled=False, auto_new_orders=False)):
             self.assertEqual(scan_payment_outbox(), [(event.pk, 'done')])
             self.assertEqual(process_payment_outbox(event.pk), 'done')
         order.refresh_from_db()
@@ -320,11 +323,33 @@ class DirectPaymentDeliveryTest(TestCase):
 
     @override_settings(WECOM_DISPATCH_ENABLED=True, WECOM_DISPATCH_NEW_ORDERS=True,
                        WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=mock-test')
+    def test_boss_selection_outbox_completes_without_group_grab_message(self):
+        request = SimpleNamespace(account=self.account, legacy_user=self.user, data={
+            'service_id': self.intent.order.service_id, 'expected_amount': 10000,
+            'client_request_id': 'delivery-selection', 'dispatch_mode': 'BOSS_SELECT',
+        })
+        self.intent = prepare_direct_order(request, appid='wx-test', mchid='mch-test')
+        self.payload['out_trade_no'] = self.intent.merchant_order_no
+        self.payload['success_time'] = self.intent.created_at.isoformat()
+        self.process(self.ingested())
+        event = DirectPaymentOutbox.objects.get(intent=self.intent)
+        with patch('orders.dispatching.send_task_safely') as send, \
+             patch('orders.services.schedule_auto_cancel') as schedule, \
+             patch('orders.notifier.notify_order_update') as notify:
+            self.assertEqual(process_payment_outbox(event.pk), 'done')
+        self.assertTrue(Order.objects.get(pk=self.intent.order_id).requires_boss_selection)
+        self.assertFalse(WecomDispatchRecord.objects.filter(order_id=self.intent.order_id).exists())
+        send.assert_not_called()
+        schedule.assert_called_once()
+        notify.assert_called_once()
+
+    @override_settings(WECOM_DISPATCH_ENABLED=True, WECOM_DISPATCH_NEW_ORDERS=True,
+                       WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=mock-test')
     def test_retry_keeps_one_group_record_and_delivery_cas(self):
         row = self.ingested()
         self.process(row)
         event = DirectPaymentOutbox.objects.get()
-        with patch('integrations.kook_config.get_kook_config', return_value=SimpleNamespace(auto_new_orders=False)), \
+        with patch('integrations.kook_config.get_kook_config', return_value=SimpleNamespace(enabled=False, auto_new_orders=False)), \
              patch('orders.dispatching.send_task_safely'), \
              patch('orders.services.schedule_auto_cancel'), \
              patch('orders.notifier.notify_order_update', side_effect=[RuntimeError('test'), None]):

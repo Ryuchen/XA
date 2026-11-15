@@ -64,6 +64,10 @@ class NativeAfterSaleConcurrentHTTPTest(LiveServerTestCase):
         self.assertEqual(self.ok(self.client.post(url, first, format='json'))['status'], 'RESOLVED')
         again = self.ok(self.client.post(url, {'reason': '另一设备的新说明', 'client_request_id': 'other-case-intent'}, format='json'))
         self.assertEqual((again['status'], again['reason']), ('OPEN', '另一设备的新说明'))
+        historical = self.client.post(url, first, format='json')
+        self.assertEqual((historical.status_code, historical.data['errorCode']), (409, 'AFTERSALE_REQUEST_PREVIOUS'))
+        sale.refresh_from_db()
+        self.assertEqual((sale.status, sale.reason), ('OPEN', '另一设备的新说明'))
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',

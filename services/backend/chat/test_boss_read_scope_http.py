@@ -41,6 +41,7 @@ class BossChatReadScopeHTTPTest(LiveServerTestCase):
         session = customer.get('/api/chat/session/').data['data']['session']
         admin = APIClient()
         admin.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+        self.assertEqual(admin.post(f"/api/admin/chat-sessions/{session['id']}/claim/", {'expected_version': 0}, format='json').data['code'], 0)
         ids = []
         for number in range(count):
             result = admin.post(f"/api/admin/chat-sessions/{session['id']}/reply/", {'content': f'隔离客服回复 {number}'}, format='json').data

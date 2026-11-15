@@ -11,3 +11,6 @@ if os.environ.get('XA_ASGI_TEST_MEDIA_ROOT'):
     MEDIA_ROOT = os.environ['XA_ASGI_TEST_MEDIA_ROOT']
 CHANNEL_LAYERS = {'default': {'BACKEND': 'channels_redis.core.RedisChannelLayer',
                               'CONFIG': {'hosts': [_redis_url], 'prefix': _prefix}}}
+if os.environ.get('XA_TEAM_REPORT_APPROVAL') == '1':
+    ORDER_SETTLEMENT_MODE = 'REPORT_APPROVAL'
+    REQUIRE_ORDER_EVIDENCE_IMAGES = True

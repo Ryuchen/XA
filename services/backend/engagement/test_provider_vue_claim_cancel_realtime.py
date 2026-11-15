@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Real provider redemption and staff cancellation while its Vue page stays open."""
 import json
 import os
@@ -15,16 +16,16 @@ from club_accounts.tokens import issue_account_tokens
 from engagement.kook_points import process_event
 from engagement.models import KookPointsConfig, RewardItem
 from orders.tests.factories import make_console_user, make_provider, make_user
-from orders.tests.test_provider_vue_team_progress_http import isolated_realtime
+from users.test_native_checkin_order_realtime import isolated_redis_asgi
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)
-class ProviderVueClaimCancelRealtimeTest(APITransactionTestCase):
+class ProviderVueClaimCancelRealtimeTest(ReactLiveHTTPTestCase):
     def test_staff_cancellation_refreshes_points_stock_and_loaded_claims_without_losing_draft(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root:
-            self.skipTest('requires isolated provider Vue build')
+            self.skipTest('requires current React source')
         boss, provider = make_user(), make_provider()
         staff = make_console_user(['engagement:fulfill'])
         users = (boss, provider, staff)
@@ -66,12 +67,12 @@ class ProviderVueClaimCancelRealtimeTest(APITransactionTestCase):
             'client_request_id':'claim-cancel-target'}, format='json'))
         self.assertEqual(ok(clients[1].get('/api/club/points/'))['points'], 3)
         repo = Path(settings.BASE_DIR).parent.parent
-        with isolated_realtime() as (base, ws_base):
+        with current_http(self, isolated_redis_asgi) as (base, ws_base):
             result = subprocess.run(['node', str(repo / 'scripts/provider-vue-claim-cancel-375.cjs')],
                 input=json.dumps({'root':root, 'base':base, 'wsBase':ws_base, 'claimId':claim['id'],
                     'oldId':old[0]['id'], 'targetId':target.pk, 'id':accounts[1].pk, 'token':tokens[1],
                     'bossToken':tokens[0], 'staffToken':tokens[2],
-                    'fixed':os.environ.get('XA_CLAIM_CANCEL_FIXED') == '1'}),
+                    'fixed':True}),
                 text=True, encoding='utf-8', capture_output=True, cwd=repo, timeout=70)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             print(result.stdout.strip())

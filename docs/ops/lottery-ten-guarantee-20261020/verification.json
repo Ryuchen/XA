@@ -1,0 +1,49 @@
+{
+  "result": "PASS",
+  "checked_at": "2026-10-20T12:57:53.121Z",
+  "rules": {
+    "ten_min_non_points": 1,
+    "fallback_only_tenth_if_first_nine_points": true,
+    "fallback_positive_base_weights_only": true,
+    "hard_pity_240_priority": true,
+    "zero_base_target_excluded_from_ten_candidates": true,
+    "single_draws_do_not_use_batch_guarantee": true,
+    "base_probabilities_unchanged": true
+  },
+  "tests": {
+    "sqlite": 48,
+    "mysql": 56,
+    "native": 109,
+    "mysql_concurrency_cases": 5,
+    "official_wxml": 49,
+    "official_wxss": 52,
+    "admin_typecheck": "PASS",
+    "admin_build": "PASS"
+  },
+  "local": {
+    "migration": "engagement.0017",
+    "backend_processes_restarted": 4,
+    "ordinary_containers_running": 9,
+    "protected_tables": 25,
+    "old_data_unchanged": true,
+    "campaign_id": 1,
+    "enabled": false,
+    "base_probability_sum": 0,
+    "real_draws_or_point_deductions": false
+  },
+  "ui": {
+    "cases": 3,
+    "posts_intercepted": 2,
+    "all_http_mocked": true,
+    "original_page_restored": true
+  },
+  "assets": {
+    "new_images": 0,
+    "packaged_images_audio_bytes": 30641
+  },
+  "limits": [
+    "Current activity remains disabled with zero base probabilities, per user request.",
+    "Draw screenshots use intercepted demonstration responses, not real prizes or configured probabilities.",
+    "Database behavior was verified in isolated databases; no long-duration load test or empirical probability estimation was performed."
+  ]
+}

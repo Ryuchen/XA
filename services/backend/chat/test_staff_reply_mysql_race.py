@@ -18,6 +18,38 @@ from orders.tests.factories import make_console_user
 @skipUnless(connection.vendor == 'mysql', 'requires MySQL row locks')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class StaffReplyMySQLRaceTest(TransactionTestCase):
+    def test_simultaneous_claim_has_one_winner(self):
+        boss = ClubAccount.objects.create_account(username='claim-race-boss', account_type='BOSS')
+        session = ChatSession.objects.create(account=boss)
+        tokens = []
+        accounts = []
+        for _ in range(2):
+            user = make_console_user(['chat:view', 'chat:reply'])
+            staff = get_or_create_account_for_legacy_user(user)
+            AdminMembership.objects.filter(user=user).update(account=staff)
+            accounts.append(staff.pk)
+            tokens.append(issue_account_tokens(staff)[0])
+        gate = Barrier(2)
+
+        def claim(token):
+            close_old_connections()
+            try:
+                client = APIClient()
+                client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+                gate.wait(timeout=10)
+                response = client.post(f'/api/admin/chat-sessions/{session.pk}/claim/',
+                                       {'expected_version': 0}, format='json')
+                return response.status_code
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            self.assertEqual(sorted(pool.map(claim, tokens)), [200, 409])
+        session.refresh_from_db()
+        self.assertIn(session.claimed_by_id, accounts)
+        self.assertEqual(session.claim_version, 1)
+        self.assertEqual(session.assignment_events.count(), 1)
+
     def test_two_identical_replies_commit_once(self):
         boss = ClubAccount.objects.create_account(username='staff-reply-race-boss', account_type='BOSS')
         user = make_console_user(['chat:view', 'chat:reply'])
@@ -26,6 +58,9 @@ class StaffReplyMySQLRaceTest(TransactionTestCase):
         client = APIClient(); client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss)[0])
         session_id = client.get('/api/chat/session/').data['data']['session']['id']
         token = issue_account_tokens(staff)[0]
+        staff_client = APIClient(); staff_client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+        claim = staff_client.post(f'/api/admin/chat-sessions/{session_id}/claim/', {'expected_version': 0}, format='json')
+        self.assertEqual(claim.data['code'], 0, claim.data)
         gate = Barrier(2)
 
         def send():

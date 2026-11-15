@@ -7,9 +7,10 @@ from datetime import date
 from uuid import uuid4
 
 from cryptography.fernet import Fernet, InvalidToken
-from django.conf import settings
+from stores.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
+from stores.db import transaction
 from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers

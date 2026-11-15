@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>声浪电竞 · 最新原型预览</title>
+  <script>
+    const destinations = {
+      admin: '/#/admin-dashboard',
+      boss: '/#/home',
+      provider: '/provider/all-pages.html'
+    };
+    location.replace(destinations[location.hash.slice(1)] || '/#/admin-dashboard');
+  </script>
+</head>
+<body>
+  <p>最新设计原型 · 示例数据</p>
+  <a href="/#/admin-dashboard">管理后台</a>
+  <a href="/#/home">老板端</a>
+  <a href="/provider/all-pages.html">陪玩端</a>
+</body>
+</html>

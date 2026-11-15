@@ -1,0 +1,66 @@
+.boss-content[data-page="companions"] .boss-directory-header { margin: -16px -24px 0; padding: 24px; background: radial-gradient(circle at 12% 0%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 42%), radial-gradient(circle at 92% 24%, hsl(var(--ocean-400) / .09), transparent 36%); }
+.boss-directory-header > div:first-child { align-items: flex-start; }
+.boss-directory-header > div:first-child > div > p { color: var(--boss-link); font-size: 12px; font-weight: 500; line-height: 16px; }
+.boss-content[data-page="companions"] .boss-directory-header h1 { margin-top: 8px; font-size: 26px; font-weight: 600; line-height: 1.25; letter-spacing: -.04em; }
+.boss-directory-header-icon { display: grid; width: 44px; height: 44px; flex-shrink: 0; place-items: center; border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent); border-radius: 8px; color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-directory-header .search-shell { margin-top: 20px; }
+.boss-directory-service-context { margin-bottom: 20px; border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent); border-radius: 8px; padding: 16px; background: color-mix(in oklab, var(--primary) 5%, transparent); }
+.boss-directory-service-context > p { color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+.boss-directory-service-context > h2 { margin-top: 4px; font-size: 16px; font-weight: 600; }
+.boss-directory-service-context > h2 + p { margin-top: 4px; }
+.boss-content[data-page="companions"] .boss-companion-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 20px; }
+.boss-directory-filter[data-slot="select-trigger"] { width: 100%; height: 48px; min-height: 44px; min-width: 0; border-radius: 8px; padding: 0 12px; background: color-mix(in oklab, var(--muted) 45%, transparent); text-align: left; font-size: 14px; box-shadow: none; }
+.boss-directory-filter > span { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+.boss-directory-filter-label { color: var(--muted-foreground); font-size: 12px; font-weight: 400; }
+.boss-directory-filter [data-slot="select-value"] { max-width: 100%; }
+.boss-content[data-page="companions"] .boss-companion-switches { margin-bottom: 20px; }
+.boss-content[data-page="companions"] .boss-companion-results { margin: 0 0 20px; padding-top: 16px; }
+.boss-content[data-page="companions"] .boss-companion-results h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.boss-content[data-page="companions"] .boss-companion-results p { margin-top: 4px; font-size: 12px; line-height: 16px; }
+.boss-content[data-page="companions"] .boss-companion-results > [data-slot="badge"] { flex-shrink: 0; font-size: 12px; }
+.boss-content[data-page="companions"] .boss-companion-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.boss-directory-card { display: flex; flex-direction: column; padding: 16px; border-radius: 8px; font-size: 14px; line-height: calc(20 / 14); box-shadow: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a; }
+.boss-directory-portrait { display: grid; width: 56px; height: 56px; flex-shrink: 0; place-items: center; overflow: hidden; border-radius: 50%; background: linear-gradient(145deg, color-mix(in oklab, var(--primary) 20%, var(--card)), color-mix(in oklab, var(--primary) 8%, var(--card))); color: var(--boss-link); font-size: 20px; font-weight: 600; }
+.boss-directory-card .boss-companion-name > span { flex-wrap: nowrap; }
+.boss-directory-card .boss-companion-name strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boss-directory-card .boss-companion-name strong { line-height: 24px; }
+.boss-directory-card .boss-companion-name small { line-height: 16px; }
+.boss-directory-card .boss-companion-name [data-slot="badge"] { flex-shrink: 0; height: auto; border-radius: 4px; padding: 2px 6px; font-size: 12px; font-weight: 400; line-height: calc(20 / 14); }
+.boss-directory-unavailable { color: var(--muted-foreground); background: var(--muted); }
+.boss-directory-voice, .boss-directory-no-voice { display: grid; width: 44px; height: 44px; flex-shrink: 0; place-items: center; border-radius: 8px; }
+.boss-directory-no-voice { color: var(--muted-foreground); }
+.boss-directory-voice-status { display: flex; align-items: center; gap: 8px; margin-top: 12px; border-radius: 8px; padding: 8px 12px; color: var(--boss-link); background: color-mix(in oklab, var(--primary) 5%, transparent); font-size: 12px; }
+.boss-directory-voice-status > svg { flex-shrink: 0; }
+.boss-directory-voice-status > span { flex: 1; min-width: 0; }
+.boss-directory-voice-status.has-error { color: var(--destructive); background: color-mix(in oklab, var(--destructive) 5%, transparent); }
+.boss-directory-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.boss-directory-tags [data-slot="badge"] { border-radius: 4px; padding-inline: 8px; font-size: 12px; font-weight: 400; line-height: calc(20 / 14); }
+.boss-directory-tags .is-primary { color: var(--boss-link); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-directory-card .boss-companion-facts { flex-wrap: nowrap; gap: 12px; margin-top: 12px; font-size: 12px; }
+.boss-directory-card .boss-companion-facts > span:not(.boss-directory-games) { min-width: 0; max-width: 45%; flex-shrink: 0; white-space: nowrap; }
+.boss-directory-fact-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boss-directory-card .boss-companion-facts svg { flex-shrink: 0; }
+.boss-directory-games { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boss-directory-card .boss-companion-prices { margin-top: 12px; padding-top: 12px; }
+.boss-directory-card .boss-companion-prices small { font-size: 12px; line-height: calc(20 / 14); }
+.boss-directory-card .boss-companion-prices strong { margin-top: 2px; font-size: 14px; line-height: calc(20 / 14); }
+.boss-directory-card .boss-companion-prices strong small { font-weight: 400; line-height: calc(20 / 14); }
+.boss-directory-skeleton > section { padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
+.boss-directory-skeleton > section > div:first-child { display: flex; gap: 12px; }
+.boss-directory-skeleton > section > div:first-child > div:last-child { display: grid; flex: 1; min-width: 0; gap: 8px; }
+.boss-directory-state { padding: 24px; border: 1px dashed var(--border); border-radius: 8px; text-align: center; }
+.boss-directory-state > svg { margin-inline: auto; color: var(--muted-foreground); }
+.boss-directory-state h3 { margin-top: 12px; font-size: 16px; font-weight: 600; }
+.boss-directory-state p { margin-top: 8px; color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+.boss-directory-state.has-error, .boss-directory-read-notice { border: 1px solid color-mix(in oklab, var(--destructive) 25%, transparent); background: color-mix(in oklab, var(--destructive) 5%, transparent); }
+.boss-directory-state.has-error > svg { color: var(--destructive); }
+.boss-directory-read-notice { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; border-radius: 8px; padding: 12px; font-size: 14px; }
+.boss-directory-loading { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--muted-foreground); font-size: 12px; }
+.boss-directory-service-context > h2, .boss-content[data-page="companions"] .boss-companion-results h2, .boss-directory-state h3 { line-height: 24px; }
+@media (min-width: 1280px) { .boss-content[data-page="companions"] .boss-companion-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 768px) { .boss-content[data-page="companions"] .boss-directory-header { background: none; } }
+@media (max-width: 767px) {
+  .boss-content[data-page="companions"] .boss-directory-header { margin: -8px -16px 0; padding: 16px 16px 20px; }
+  .boss-content[data-page="companions"] .boss-companion-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .boss-content[data-page="companions"] .boss-companion-list { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}

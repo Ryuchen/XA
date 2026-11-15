@@ -31,13 +31,20 @@ def notify_report_update(report, *, notify_owner=True):
             'order_id': report.order_id,
             'status': report.status,
         }}
-        groups = ['report_reviewers']
+        groups = [('report_reviewers', event)]
         account_id = report_provider_account_id(report) if notify_owner else None
         if account_id and notify_owner:
-            groups.insert(0, f'account_{account_id}')
-        for group in groups:
+            owner_event = event
+            if report.order_id:
+                from site_messages.order_cycle import recipient_cycle
+                cycle = recipient_cycle(report.order, account_id)
+                owner_event = ({'type': event['type'], 'data': {**event['data'],
+                                'recipient_business_cycle': cycle}} if cycle else None)
+            if owner_event is not None:
+                groups.insert(0, (f'account_{account_id}', owner_event))
+        for group, outgoing in groups:
             try:
-                async_to_sync(channel_layer.group_send)(group, event)
+                async_to_sync(channel_layer.group_send)(group, outgoing)
             except Exception:
                 logging.getLogger(__name__).warning(
                     '报单实时通知失败: report_id=%s group=%s', report.pk, group, exc_info=True,
@@ -52,6 +59,11 @@ def notify_order_update(order):
         _notify_order_update(order)
     except Exception:
         logging.getLogger(__name__).warning('订单实时通知失败: order_id=%s', order.pk, exc_info=True)
+    try:
+        from chat.order_card_notices import schedule as schedule_chat_card_refresh
+        schedule_chat_card_refresh(order.pk)
+    except Exception:
+        logging.getLogger(__name__).warning('咨询订单卡片刷新调度失败: order_id=%s', order.pk, exc_info=True)
 
 
 def notify_evaluation_update():
@@ -85,10 +97,14 @@ def _notify_order_update(order):
             instance, context={'request': request},
         ).data))
 
-    def send(group, data):
+    def send(group, data, *, recipient_id=None, recipient_cycle=None):
         try:
+            event = {'type': 'order_status_update', 'data': data}
+            if recipient_id is not None:
+                event['recipient_account_id'] = recipient_id
+                event['recipient_business_cycle'] = recipient_cycle
             async_to_sync(channel_layer.group_send)(
-                group, {'type': 'order_status_update', 'data': data},
+                group, event,
             )
         except Exception:
             logging.getLogger(__name__).warning(
@@ -112,23 +128,38 @@ def _notify_order_update(order):
         account_id__in=personal_ids,
     ).values_list('account_id', 'legacy_user_id'))
     users = get_user_model().objects.in_bulk(legacy_ids.values())
+    from site_messages.order_cycle import recipient_cycle
     for account in accounts:
+        cycle = recipient_cycle(order, account.pk)
+        if (type(cycle) is not int or cycle != account.business_cycle
+                or not account.license_membership_active):
+            continue
         request = SimpleNamespace(
             account=account, legacy_user=users.get(legacy_ids.get(account.pk)),
             # There is no HTTP Host in a queued notification. Preserve the
             # existing relative URL contract (MEDIA_BASE_URL still takes priority).
             build_absolute_uri=lambda url: url,
         )
-        send(f'account_{account.pk}', rendered(request))
+        send(f'account_{account.pk}', rendered(request), recipient_id=account.pk, recipient_cycle=cycle)
 
-    for provider_id in set(order.applications.values_list('applicant_id', flat=True)) | set(order.applications.exclude(partner_id=None).values_list('partner_id', flat=True)):
-        if provider_id not in personal_ids:
-            send(f'account_{provider_id}', {'id': order.pk, 'status': order.status})
+    application_cycles = {}
+    for applicant_id, applicant_cycle, partner_id, partner_cycle in order.applications.values_list(
+            'applicant_id', 'applicant_business_cycle', 'partner_id', 'partner_business_cycle'):
+        for account_id, cycle in ((applicant_id, applicant_cycle), (partner_id, partner_cycle)):
+            if account_id and account_id not in personal_ids:
+                application_cycles.setdefault(account_id, set()).add(cycle)
+    for account in ClubAccount.objects.filter(pk__in=application_cycles, is_active=True, can_login=True,
+                                               license_membership_active=True):
+        cycles = application_cycles[account.pk]
+        if len(cycles) == 1 and account.business_cycle in cycles:
+            send(f'account_{account.pk}', {'id': order.pk, 'status': order.status},
+                 recipient_id=account.pk, recipient_cycle=account.business_cycle)
 
     # Operators are independently gated by current order:view in the consumer.
     send('operators', rendered())
 
     # 抢单池相关状态广播给全部陪玩：PENDING 加入/退回，GRABBED/CANCELLED 移除。
     if order.dispatch_route == order.DispatchRoute.PUBLIC and order.payment_status != order.PaymentStatus.UNPAID and order.status in (order.Status.PENDING, order.Status.GRABBED, order.Status.CANCELLED):
-        # 公共分组只通知刷新，详细订单必须经带通行证/档位过滤的 HTTP 接口读取。
-        send('providers', {'id': order.pk, 'status': order.status})
+        # 公共组只提供无订单编号的刷新信号；通行证尚未到可见时间的陪玩
+        # 不能通过 WebSocket 提前获知具体订单。列表接口仍按本人资格过滤。
+        send('providers', {})

@@ -1,5 +1,7 @@
 # 与 docker-compose.remote.yml 合并使用，域名和凭证见 deploy/release.env.example。
 x-release-env: &release-env
+  XA_STORE_DATABASES: ${XA_STORE_DATABASES:-}
+  XA_STORE_INTEGRATIONS: ${XA_STORE_INTEGRATIONS:-}
   DJANGO_DEBUG: "false"
   DJANGO_TRUST_PROXY: "true"
   DJANGO_ALLOWED_HOSTS: ${XA_API_DOMAIN:?API domain required},${XA_ADMIN_DOMAIN:?admin domain required},${XA_PROVIDER_DOMAIN:?provider domain required}
@@ -23,7 +25,7 @@ services:
   migrate:
     environment: *release-env
     command: >-
-      sh -c "python manage.py migrate --noinput &&
+      sh -c "python manage.py migrate_stores &&
       python manage.py check_mysql_readiness &&
       python manage.py collectstatic --noinput"
   web:

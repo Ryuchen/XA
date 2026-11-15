@@ -222,8 +222,18 @@ class ReportClockBossRealtimeTest(APITransactionTestCase):
             self.assertTrue((await socket.connect())[0])
             try:
                 await database_sync_to_async(self.approve_after_window)(report_id)
-                event = await socket.receive_json_from(timeout=2)
-                self.assertEqual(event['type'], 'order_status_update')
+                events = [await socket.receive_json_from(timeout=2)]
+                while not await socket.receive_nothing(timeout=0.1):
+                    events.append(await socket.receive_json_from(timeout=2))
+                    self.assertLessEqual(len(events), 8, events)
+                # Settlement also commits the owner's member-point change.
+                # Independent invalidations need no arbitrary first-frame order.
+                self.assertEqual({event['type'] for event in events},
+                                 {'member_points_update', 'order_status_update'})
+                order_events = [event for event in events if event['type'] == 'order_status_update']
+                self.assertEqual(len(order_events), 1, events)
+                self.assertEqual(sum(event['type'] == 'member_points_update' for event in events), 1)
+                event = order_events[0]
                 self.assertEqual(event['data']['id'], order_id)
                 self.assertIsNotNone(event['data']['settled_at'])
                 detail = await database_sync_to_async(self.detail)(order_id)

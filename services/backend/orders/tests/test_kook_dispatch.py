@@ -60,7 +60,7 @@ class KookOrderDispatchTest(TestCase):
         serialized = json.dumps(cards, ensure_ascii=False)
         self.assertIn(self.order.order_no, serialized)
         self.assertIn('王者陪玩', serialized)
-        self.assertIn('160 兴安币', serialized)
+        self.assertIn('160 浪花', serialized)
         self.assertNotIn('订单金额', serialized)
         self.assertIn('(rol)12345(rol)', serialized)
         self.assertIn('order_no=', serialized)

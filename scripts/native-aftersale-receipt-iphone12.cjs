@@ -30,7 +30,7 @@ const automator=require('../.tools/wechat-automation/node_modules/miniprogram-au
     assert.ok((await panel.text()).includes(`已退回钱包：${input.refundText} 兴安币`));
     if(input.negotiated){const order=(await page.data()).order;assert.equal(order.status,'CANCELLED');
       assert.equal(order.payment_status,'PARTIALLY_REFUNDED');
-      assert.ok((await panel.text()).includes(`订单剩余金额：${input.remainingText} 兴安币`));}
+      assert.ok((await panel.text()).includes(`订单已终止，退款后保留金额：${input.remainingText} 兴安币`));}
     console.log(`Native ${device.model}: actual refund receipt rendered.`);
   } finally {await mini.disconnect();}
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});

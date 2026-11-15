@@ -1,0 +1,59 @@
+{
+  "result": "PASS",
+  "run": "XA-FIXED-MULTI-TRANSFERRED-TEAM-20261020-48c176",
+  "scope": "three new fixed multi-transfer time fixtures only; not real fulfillment",
+  "funds_changed": false,
+  "unrelated_order_hash_equal": true,
+  "real_api_status_logs_unchanged": true,
+  "clocks": [
+    {
+      "key": "frozen_recovery",
+      "order_id": 127,
+      "completed_at": "2026-10-17T06:48:56.632391+00:00",
+      "report_ready_at": "2026-10-20T07:48:13.172347+00:00",
+      "consumption_ready_at": "2026-10-23T07:48:13.172347+00:00",
+      "changed_fields": [
+        "created_at",
+        "grabbed_at",
+        "in_service_at",
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at"
+      ],
+      "real_api_status_logs_unchanged": true
+    },
+    {
+      "key": "available_recovery",
+      "order_id": 128,
+      "completed_at": "2026-10-17T04:48:56.632391+00:00",
+      "report_ready_at": "2026-10-17T05:48:56.632391+00:00",
+      "consumption_ready_at": "2026-10-20T05:48:56.632391+00:00",
+      "changed_fields": [
+        "created_at",
+        "grabbed_at",
+        "in_service_at",
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at",
+        "five submitted_at"
+      ],
+      "real_api_status_logs_unchanged": true
+    },
+    {
+      "key": "protected_foreign_hold",
+      "order_id": 129,
+      "completed_at": "2026-10-17T06:48:56.632391+00:00",
+      "report_ready_at": "2026-10-20T07:48:25.142078+00:00",
+      "consumption_ready_at": "2026-10-23T07:48:25.142078+00:00",
+      "changed_fields": [
+        "created_at",
+        "grabbed_at",
+        "in_service_at",
+        "completed_at",
+        "report_ready_at",
+        "consumption_ready_at"
+      ],
+      "real_api_status_logs_unchanged": true
+    }
+  ]
+}

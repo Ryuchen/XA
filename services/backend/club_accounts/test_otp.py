@@ -17,20 +17,37 @@ class LoginOtpTest(APITestCase):
         self.account=get_or_create_account_for_legacy_user(self.user)
         admin_user=make_console_user()
         self.admin=get_or_create_account_for_legacy_user(admin_user)
+        for account in (self.account, self.admin):
+            account.phone='13800001111';account.is_phone_verified=True;account.save(update_fields=['phone','is_phone_verified'])
         from console.models import AdminMembership
         AdminMembership.objects.filter(user=admin_user).update(account=self.admin)
         self.now=timezone.now()
+        self.sms_codes=[]
+        sender=patch('users.password_login.send_verification_code',side_effect=lambda phone,code:self.sms_codes.append(code))
+        sender.start();self.addCleanup(sender.stop)
     def post(self,data=None,admin=False):
         a=self.admin if admin else self.account
         with patch('club_accounts.otp.timezone.now',return_value=self.now):
             return self.client.post('/api/admin/auth/login' if admin else '/api/users/account-login/',{'username':a.username,'password':'pass1234',**(data or {})},format='json')
     def enroll(self,admin=False):
-        first=self.post(admin=admin).data['data']
+        first=self.setup_post(admin=admin).data['data']
         self.assertTrue(first['requiresOTPSetup']);self.assertNotIn('token',first)
         secret=first['otpSecret']
-        second=self.post({'otpChallenge':first['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)},admin=admin).data
+        second=self.setup_post({'otpChallenge':first['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)},admin=admin).data
         self.assertEqual(second['code'],0,second)
-        return secret,second['data'],first
+        self.now+=timedelta(seconds=30)
+        challenge=self.post(admin=admin).data['data']
+        completed=self.post({'otpChallenge':challenge['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)},admin=admin).data
+        self.assertEqual(completed['code'],0,completed)
+        return secret,{**completed['data'],'recoveryCodes':second['data']['recoveryCodes']},first
+    def setup_post(self,data=None,admin=False):
+        account=self.admin if admin else self.account
+        token,_=issue_account_tokens(account,auth_method='password_sms')
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer '+token)
+        with patch('club_accounts.otp.timezone.now',return_value=self.now):
+            response=self.client.post('/api/admin/auth/otp-setup' if admin else '/api/users/otp-setup/',data or {},format='json')
+        self.client.credentials()
+        return response
     def test_rfc_hotp_totp_vectors(self):
         secret=base64.b32encode(b'12345678901234567890').decode()
         self.assertEqual(hotp(secret,0),'755224')
@@ -65,7 +82,7 @@ class LoginOtpTest(APITestCase):
         self.assertEqual(self.client.post('/api/users/refresh/',{'refresh':refresh}).status_code,401)
     def test_code_and_challenge_replay_are_rejected_but_next_period_succeeds(self):
         secret,_,first=self.enroll()
-        self.assertEqual(self.post({'otpChallenge':first['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)}).data['code'],400)
+        self.assertEqual(self.setup_post({'otpChallenge':first['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)}).data['code'],400)
         challenge=self.post().data['data']
         self.assertFalse(challenge['requiresOTPSetup']);self.assertNotIn('otpSecret',challenge)
         self.assertEqual(self.post({'otpChallenge':challenge['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)}).data['code'],400)
@@ -79,24 +96,26 @@ class LoginOtpTest(APITestCase):
             self.assertEqual(response.data['code'],0 if index==0 else 400)
         self.assertEqual(len(OtpCredential.objects.get(account=self.account).recovery_hashes),7)
     def test_attempt_limit_expiration_and_scope(self):
+        secret='JBSWY3DPEHPK3PXP'
+        OtpCredential.objects.create(account=self.account,secret_ciphertext=encrypt_secret(secret))
         first=self.post().data['data']
         for _ in range(5):self.assertEqual(self.post({'otpChallenge':first['otpChallenge'],'otpCode':'abcdef'}).data['code'],400)
         self.assertEqual(OtpLoginChallenge.objects.get(pk=first['otpChallenge']).attempts,5)
-        self.assertEqual(self.post({'otpChallenge':first['otpChallenge'],'otpCode':hotp(first['otpSecret'],int(self.now.timestamp())//30)}).data['code'],400)
+        self.assertEqual(self.post({'otpChallenge':first['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)}).data['code'],400)
         other=self.post().data['data'];self.now+=timedelta(minutes=11)
-        self.assertEqual(self.post({'otpChallenge':other['otpChallenge'],'otpCode':hotp(other['otpSecret'],int(self.now.timestamp())//30)}).data['code'],400)
+        self.assertEqual(self.post({'otpChallenge':other['otpChallenge'],'otpCode':hotp(secret,int(self.now.timestamp())//30)}).data['code'],400)
         self.assertEqual(self.post({'otpChallenge':other['otpChallenge'],'otpCode':'123456'},admin=True).data['code'],400)
     def test_parallel_setup_challenge_cannot_replace_enrolled_secret(self):
-        old=self.post().data['data']
+        old=self.setup_post().data['data']
         secret,_,_=self.enroll()
-        res=self.post({'otpChallenge':old['otpChallenge'],'otpCode':hotp(old['otpSecret'],int(self.now.timestamp())//30)})
+        res=self.setup_post({'otpChallenge':old['otpChallenge'],'otpCode':hotp(old['otpSecret'],int(self.now.timestamp())//30)})
         self.assertEqual(res.data['code'],400)
         from club_accounts.otp import decrypt_secret
         self.assertEqual(decrypt_secret(OtpCredential.objects.get(account=self.account).secret_ciphertext),secret)
     def test_changed_password_invalidates_pending_setup(self):
-        first=self.post().data['data']
+        first=self.setup_post().data['data']
         self.account.set_password('changed-password');self.account.save(update_fields=['password'])
-        response=self.post({'password':'changed-password','otpChallenge':first['otpChallenge'],'otpCode':hotp(first['otpSecret'],int(self.now.timestamp())//30)})
+        response=self.setup_post({'otpChallenge':first['otpChallenge'],'otpCode':hotp(first['otpSecret'],int(self.now.timestamp())//30)})
         self.assertEqual(response.data['code'],400)
 
 

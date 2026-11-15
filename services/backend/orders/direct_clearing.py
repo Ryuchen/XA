@@ -15,7 +15,7 @@ import hashlib
 import json
 from datetime import timedelta
 
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
@@ -170,7 +170,7 @@ def _read_source(order, intent, quote, session, *, now):
     elif not order.inviter_id and order.inviter_account_id:
         raise DirectClearingError('推荐人快照不完整')
     platform_cut = order.amount - order.provider_income
-    if order.inviter_commission != (platform_cut * order.inviter_commission_rate_snapshot // 100 if order.inviter_id else 0):
+    if order.inviter_commission != (order.amount * order.inviter_commission_rate_snapshot // 100 if order.inviter_id else 0):
         raise DirectClearingError('推荐人分成与冻结比例不一致')
     reports = {report.provider_id: report for report in ProviderReport.objects.select_for_update()
                .filter(order=order).order_by('pk')}

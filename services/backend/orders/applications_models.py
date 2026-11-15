@@ -9,6 +9,8 @@ class OrderApplication(models.Model):
     order = models.ForeignKey('orders.Order', on_delete=models.CASCADE, related_name='applications')
     applicant = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='order_applications')
     partner = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='team_applications', null=True, blank=True)
+    applicant_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    partner_business_cycle = models.PositiveIntegerField(null=True, blank=True, editable=False)
     partner_confirmed = models.BooleanField(default=False)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -20,3 +22,14 @@ class OrderApplication(models.Model):
         ]
         indexes = [models.Index(fields=['order', 'applicant'], name='application_order_actor_idx')]
         ordering = ['created_at','id']
+
+
+class OrderApplicationVoice(models.Model):
+    """Each member chooses an immutable recording for this application."""
+    application = models.ForeignKey(OrderApplication, on_delete=models.PROTECT, related_name='voices')
+    owner = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT)
+    recording = models.ForeignKey('users.VoiceRecording', on_delete=models.PROTECT, related_name='submissions')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['application', 'owner'], name='application_voice_owner_unique')]

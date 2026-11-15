@@ -1,4 +1,5 @@
-"""The outgoing and incoming providers see their real handoff in Vue."""
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
+"""The outgoing and incoming providers read their handoff in current React controls."""
 import json
 import os
 import shutil
@@ -27,9 +28,9 @@ class ProviderVueTransferHTTPTest(LiveServerTestCase):
     recharge = flow.ReleaseFlowTest.recharge
 
     def exercise_transfer(self, settled, realtime=False):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         teammate, incoming = make_provider(display_name='留队陪玩'), make_provider(display_name='转入陪玩')
         for user in (teammate, incoming):
             self.accounts[user.pk] = get_or_create_account_for_legacy_user(user)
@@ -53,14 +54,18 @@ class ProviderVueTransferHTTPTest(LiveServerTestCase):
         repo = Path(settings.BASE_DIR).parent.parent
         providers = [{'token': issue_account_tokens(self.accounts[user.pk])[0], 'id': self.accounts[user.pk].pk} for user in (self.provider, incoming, teammate)]
         def exercise(base, ws_base=None):
+            if realtime:
+                self.assertTrue(ws_base, 'Realtime contracts require XA_REACT_CONTRACT_REAL_NETWORK=1')
+                self.assertNotEqual(base, ws_base, 'Use distinct real HTTP and WebSocket Daphne workers')
             result = subprocess.run(['node', str(repo / 'scripts/provider-vue-transfer-375.cjs')],
                 input=json.dumps({'root': root, 'base': base, 'wsBase': ws_base, 'realtime': realtime,
                     'staffToken': issue_account_tokens(self.accounts[self.admin.pk])[0], 'orderId': order['id'],
                     'orderNo': order['order_no'], 'providers': providers, 'settled': settled}),
                 text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            print(result.stdout.strip())
         if realtime:
-            with isolated_realtime() as (base, ws_base): exercise(base, ws_base)
+            with current_http(self, isolated_realtime, report_approval=not settled) as (base, ws_base): exercise(base, ws_base)
         else: exercise(self.live_server_url)
         for user in (self.boss, self.provider, teammate, incoming, self.admin):
             self.login(user)

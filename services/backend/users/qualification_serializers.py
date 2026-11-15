@@ -1,11 +1,12 @@
 import json
-from django.db import transaction
+from stores.db import transaction
 from rest_framework import serializers
+from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
 from orders.models import GameCategory
 from .models import ProviderQualification
 from .qualifications import grade_options, serialize_qualification
 
-class QualificationSerializer(serializers.ModelSerializer):
+class QualificationSerializer(EntityNumberModelSerializer):
     game_category=serializers.PrimaryKeyRelatedField(queryset=GameCategory.objects.all())
     class Meta:
         model=ProviderQualification
@@ -32,6 +33,10 @@ class QualificationsField(serializers.Field):
 
 @transaction.atomic
 def save_qualifications(profile,rows):
+    # Serialize qualification replacement, including inserts and removals,
+    # with order paths which snapshot this provider's qualification.
+    from .models import EscortProfile
+    profile = EscortProfile.objects.select_for_update().get(pk=profile.pk)
     ids=[]
     for row in rows:
         scope={k:row[k] for k in ['game_category','provider_kind','platform','security_level']}

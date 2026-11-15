@@ -1,352 +1,198 @@
-# 兴安电竞（XA）游戏陪玩平台
+# XA 电竞陪玩管理系统
 
-XA 是一套单仓多端的游戏陪玩业务系统，覆盖老板下单、陪玩抢单与履约、运营派单与审核、钱包结算、消息通知、签到和礼物打赏等完整流程。
+面向电竞陪玩门店的业务管理平台，连接老板下单、陪玩履约与门店运营，覆盖订单、资金、售后、会员活动、客服和经营核算。
 
-项目包含四个运行单元：
+**首版开发与验收中 · 三端 Web · 多门店独立数据库 · 闭源专有软件**
 
-- **老板端**：微信小程序，老板快捷登录后选择游戏、服务项目、陪玩和客服并下单。
-- **陪玩端**：H5 / Web，陪玩抢单、开始服务、完成服务、报单、回复评价、管理资料和申请提现。
-- **管理端**：Web 运营后台，管理老板、陪玩、订单、派单、审核、充值、钱包、通行证、签到奖励、消息和基础配置。
-- **服务端**：Django REST Framework + Channels + Celery，统一承载业务接口、WebSocket、异步任务、MySQL 和 Redis。
+三端界面共用 [项目设计原则](DESIGN.md) 与 [系统设计标准](docs/DESIGN_SYSTEM.md)；外部设计参考及适用边界见 [参考库](docs/design/REFERENCE-LIBRARY.md)。
 
-> 当前发布范围与验收结果见 [发布与联调说明](docs/RELEASE_READINESS.md)。老板端发布微信小程序，打手端发布 H5，运营使用 Web 后台。采用“联系客服付款 → 后台凭证充值 → 余额下单 → 履约报单 → 审核结算”流程，微信客服由企业微信原生工作台接待。
->
-> **1 元人民币 = 10 兴安币 = 100 内部账务单位**。界面展示兴安币，后端存储整数账务单位。例如实收 100 元对应 1,000 币，API 金额为 10,000。
+[开发环境](#开发环境) · [安装与验证](#安装与验证) · [项目结构](#项目结构) · [文档导航](#文档导航) · [许可与使用限制](#许可与使用限制)
 
-2026-10-06 已完成腾讯云全量重新部署及应用数据清空，微信体验版为 `2026.10.6`。旧业务账号和运营数据已移除，新超级管理员与陪玩账号的交付及验收见 [重新部署与清空记录](docs/REDEPLOY_RESET_20261006.md)。
+## 项目概览
 
-同日后续更新已将陪玩 H5 部署为 `2026.10.6.1`，管理后台修复 API 前缀导致的 404 后更新为 `2026.10.6.2`。小程序 `2026.10.6.1` 已完成官方开发包上传，待在公众平台设为体验版。更新范围、备份与验收见 [最新版更新部署记录](docs/UPDATE_DEPLOYMENT_20261006.md)。
+项目采用单仓库组织三端网页与后端服务。老板端、陪玩端面向手机触屏与桌面浏览器；管理后台面向桌面及最小 1366 × 1024 CSS 视口的横屏平板。
 
-派单管理支持复制发单文案和推送到 KOOK / 企业微信群，只展示打手实得；活动订单按折后成交价重新抽成。使用与配置见 [一键发单说明](docs/GROUP_DISPATCH.md)。
+| 使用端 | 面向角色 | 业务范围 |
+| --- | --- | --- |
+| 老板端 | 门店客户 | 服务与陪玩浏览、下单与预约、订单进度、评价、钱包及会员权益 |
+| 陪玩端 | 陪玩人员 | 抢单与派单、履约与报单、资料与排班、收益、押金及提现 |
+| 管理后台 | 门店运营、客服、售后、财务及授权平台人员 | 订单调度、审核与售后、资金与权限管理、运营配置、薪资及经营报表 |
+| 后端服务 | 三端与系统任务 | 身份认证、门店隔离、交易记账、业务状态流转、实时通信与异步处理 |
 
-本机 WSL 的完整容器运行、真实微信登录绑定及复验命令见 [本地部署验收记录](docs/LOCAL_DEPLOYMENT_VALIDATION.md)。管理端入口为 `http://127.0.0.1:18081`，陪玩端为 `http://127.0.0.1:18082`；这些地址仅供本机验证。
+以上为业务覆盖范围；具体实现、待办与验收证据见[开发进度](docs/development/16-开发进度.md)和[需求追踪](docs/development/11-需求与验收追踪.md)。项目当前按首版设计和验收，构建通过不代表所有业务及外部渠道已经完成联调。
 
-## 目录结构
+## 业务与架构
+
+- **订单与履约**：服务定价、预约、派单与抢单、单陪与双陪、履约凭证、报单及订单房间。
+- **资金与售后**：钱包记账、充值、退款、分账结算、押金、提现及对账；资金写入核对权限、幂等、并发和失败回滚。
+- **门店与权限**：每店独立业务数据库；域名、身份令牌、接口、文件、缓存、WebSocket 和任务保持门店上下文。平台权限独立于店内角色。
+- **运营与经营**：会员、优惠券、活动、礼物、通行证、岗位薪资、每日投流与经营核算。人民币金额与门店虚拟币分别处理。
+- **沟通与通知**：咨询、站内消息、订单进度与审核反馈，通过接口和实时通道关联业务状态。
+
+老板端、陪玩端按门店域名进入，不提供跨店切换。管理后台使用统一入口，通过验证后的登录身份确定访问范围；未知域名和未授权身份不能回落到默认门店。
+
+## 技术栈
+
+| 层级 | 技术与职责 |
+| --- | --- |
+| 三端网页 | React、TypeScript、Tailwind CSS 4、shadcn、Vite |
+| 微信授权桥接 | 最小原生小程序包，仅承担微信身份、手机号授权与短信确认 |
+| 业务接口 | Python、Django、Django REST Framework |
+| 实时与任务 | Channels、Daphne、Celery |
+| 数据与缓存 | MySQL 8、Redis |
+| 本机开发 | PowerShell 7、WSL2、Docker Compose、Nginx、源码挂载与 HMR |
+| 验证工具 | TypeScript、Node.js Test Runner、Django Test Runner、Playwright |
+
+具体依赖版本以各工作区的清单和锁文件为准。三端使用独立 npm workspaces；根目录 pnpm workspace 管理共享金额包与 Playwright 工具。
+
+## 开发环境
+
+### 环境要求
+
+| 组件 | 要求 |
+| --- | --- |
+| 系统工具 | Windows、PowerShell 7、已准备好的 WSL2 mirrored 网络与 Docker Engine |
+| Node.js | 22.12 或更高版本 |
+| 包管理器 | 根目录 pnpm 9.0.0；`fronted/` 使用 npm |
+| Python | 3.13 或更高版本，仓库 `.venv` 虚拟环境 |
+| 数据资源 | 已登记的两店独立测试库、Redis 和私有开发配置 |
+| 微信开发者工具 | 需要官方编译验证或授权桥接联调时使用 |
+
+全新开发设备应先按[部署说明](deploy/README.md)准备隔离资源和本机私有配置。标准开发脚本复用已登记的数据库，不自动创建、清空或重建业务库。配置示例见[根环境模板](.env.example)与[本机部署模板](deploy/esports-local/.env.example)；真实密钥和账号由授权维护者单独提供。
+
+### 启动与日常操作
+
+在仓库根目录使用 PowerShell 7：
+
+```powershell
+./deploy/dev.ps1 Up
+./deploy/dev.ps1 Status
+./deploy/dev.ps1 Verify
+```
+
+| 操作 | 命令 |
+| --- | --- |
+| 启动并打开本机入口 | `./deploy/dev.ps1 Up -Open` |
+| 后端代码修改后重启 | `./deploy/dev.ps1 RestartBackend` |
+| 代理配置修改后检查并重载 | `./deploy/dev.ps1 Reload` |
+| 查看日志 | `./deploy/dev.ps1 Logs` |
+| 停止本套开发服务 | `./deploy/dev.ps1 Down` |
+
+前端修改通过容器内 Vite HMR 更新。`Down` 保留数据库、Redis、依赖卷和其他项目；完整行为及资源绑定见 [deploy/README.md](deploy/README.md)。
+
+### 本机入口
+
+以下为本机 hosts 与容器代理提供的开发地址，不代表公网服务已发布。
+
+| 角色 | 声浪电竞 | 兴安电竞 |
+| --- | --- | --- |
+| 老板端 | [sl.esports.club/boss/](http://sl.esports.club/boss/) | [xa.esports.club/boss/](http://xa.esports.club/boss/) |
+| 陪玩端 | [sl.esports.club/player/](http://sl.esports.club/player/) | [xa.esports.club/player/](http://xa.esports.club/player/) |
+| 管理后台 | [admin.esports.club](http://admin.esports.club/) | 同一入口，由登录身份确定访问范围 |
+
+## 安装与验证
+
+### JavaScript 依赖
+
+首次安装或锁文件变更后，在根目录执行：
+
+```powershell
+pnpm install --frozen-lockfile
+npm --prefix fronted ci
+```
+
+`pnpm-lock.yaml` 与 `fronted/package-lock.json` 分别维护，保留各自的包管理器。
+
+### 前端检查
+
+```powershell
+pnpm run typecheck
+pnpm run test:frontend
+pnpm run bridge:check
+pnpm run build:all
+```
+
+汇总检查命令为 `pnpm run verify:frontend`，任一步失败即停止。单端构建使用 `pnpm run boss:build`、`pnpm run provider:build` 或 `pnpm run admin:build`。
+
+需要强制使用微信官方编译器验证桥接包时执行：
+
+```powershell
+node scripts/check-wechat-bridge.mjs --require-compiler
+```
+
+### 后端检查
+
+使用仓库虚拟环境和专用测试配置：
+
+```powershell
+./.venv/Scripts/python.exe services/backend/manage.py check --settings=config.test_settings
+./.venv/Scripts/python.exe services/backend/manage.py test orders.tests.test_settlement --settings=config.test_settings --noinput
+./.venv/Scripts/python.exe services/backend/manage.py makemigrations --check --dry-run --settings=config.migration_test_settings
+```
+
+双门店隔离测试示例：
+
+```powershell
+./.venv/Scripts/python.exe services/backend/manage.py test stores.tests_admin_entry --settings=config.multitenant_test_settings --noinput
+```
+
+以上示例使用一次性 SQLite 测试库。资金与并发改动还需执行相应的隔离 MySQL 测试，微信、短信和支付需分别记录真实渠道与测试替身的覆盖范围。完整规则见[测试、发布与回滚](docs/development/10-测试发布与回滚.md)。
+
+已知失败、跳过项和未覆盖范围保留在对应验证记录中，不能将局部检查通过标记为整体交付完成。最近一次目录与后端整理的结果见[目录清理记录](docs/ops/repository-cleanup-20261111.md)与[后端清理记录](docs/ops/backend-unused-cleanup-20261111.md)。
+
+## 项目结构
 
 ```text
 XA/
-├── apps/
-│   ├── boss-miniapp/         # 老板原生微信小程序（native/）；src/ 为历史 Taro 实现
-│   ├── provider-miniapp/     # 陪玩 H5 / Web（Taro + React，目录名为历史命名）
-│   └── admin-web/            # 运营管理后台（Vue 3 + Vite + Element Plus）
-├── services/
-│   └── backend/              # Django REST / Channels / Celery 服务
-├── docs/                     # 产品、接口、架构、数据模型和设计规范
-├── archive/                  # 历史代码，仅供对照，不参与构建
-├── docker-compose.yml        # 后端、MySQL、Redis、Celery 编排
-├── docker-compose.web.yml    # 后端与三端 Web 镜像的整合编排（见部署说明）
-└── pnpm-workspace.yaml       # 前端 workspace 定义
+├── fronted/
+│   ├── boss/                老板端网页
+│   ├── provider/            陪玩工作台
+│   ├── admin/               管理后台
+│   ├── shared/              会话、接口、实时连接与共享业务模块
+│   └── wechat-bridge/       最小微信授权桥接包
+├── services/backend/        业务接口、权限、资金、任务、迁移与测试
+├── packages/money/          共享金额换算与格式化工具
+├── deploy/                  标准开发入口、代理与部署配置
+├── scripts/                 验证、隔离联调与运维工具
+├── docs/
+│   ├── prd/                 产品需求与业务规则
+│   ├── development/         研发设计、接口约定、进度与验收追踪
+│   ├── ops/                 运维说明与验证记录
+│   └── history/             历史文档快照
+├── AGENTS.md                项目协作与最新约定
+├── CONTRIBUTING.md          开发与提交指南
+└── LICENSE                  闭源专有软件声明
 ```
 
-## 核心业务
+旧 Vue/Sass 组件包、历史脚本和原型资料保留用于追溯，不参与当前根 workspace 构建。部分历史发布编排仍引用已移除的 `apps/`，生产发布前须单独核对适配情况。
 
-### 老板端
+## 文档导航
 
-- 微信快捷登录并匹配原有账号。
-- 按“游戏类目 → 游玩项目 → 指定/不指定陪玩 → 负责客服”完成自助下单。
-- 查看订单状态、评价已完成订单并快捷选择礼物打赏。
-- 浏览陪玩列表、陪玩排行榜和礼物专区；陪玩支持按游戏筛选。
-- 通过企业微信客服联系充值或客服下单，充值金额按 1:10 转为兴安币。
-- 消息中心、优惠券、余额及充值记录、常用游戏资料管理。
-- 月度签到：当日消费满 1,880 兴安币完成签到，满 3,880 兴安币额外获得补签卡；补签卡最多 3 张，每月重置，满签奖励可由后台配置。
+| 文档 | 用途 |
+| --- | --- |
+| [项目协作约定](AGENTS.md) | 最新产品形态、门店边界、开发与数据保护约定 |
+| [产品需求](docs/prd/README.md) | 业务规则和产品决策 |
+| [研发文档](docs/development/README.md) | 架构、事务、接口、工作包和验收追踪 |
+| [开发进度](docs/development/16-开发进度.md) | 已实现内容、验证证据与待办 |
+| [接口参考](docs/API.md) | 接口说明；字段与权限须结合当前服务端实现核对 |
+| [开发环境部署](deploy/README.md) | 环境准备、资源绑定、启动与故障检查 |
+| [多门店说明](docs/ops/multitenancy-20261104.md) | 门店初始化、独立数据库和平台授权 |
+| [贡献指南](CONTRIBUTING.md) | 协作、检查与提交规范 |
 
-### 陪玩端
+## 协作与发布
 
-- 抢单池展示订单金额、预计到手金额和老板备注要求。
-- 订单状态按“待抢单 → 已接单 → 服务中 → 服务完成”流转；新订单在全体打手报单审核通过后结算。
-- 通行证分级抢单：黑卡立即可见，金卡延迟 30 秒，银卡延迟 60 秒，铜卡延迟 120 秒，无卡最后可见。
-- 通行证每次购买 1 天，同档续费顺延；默认黑卡 500、金卡 300、银卡 100、铜卡 20 兴安币/天，后台“通行证管理”可调整价格和可见延迟。
-- 完成服务后从订单生成报单，上传入队截图、结单截图及多张战绩截图。
-- 查看老板评价并回复；管理个人信息、语音卡和服务资料。
-- 钱包统一展示余额、收入、礼物、奖惩、通行证消费和提现记录，并支持申请提现。
-- 接收运营后台发送的系统消息和订单消息。
+开发前核对工作树并保留他人未提交改动，遵循 [AGENTS.md](AGENTS.md) 与[贡献指南](CONTRIBUTING.md)。提交采用 Conventional Commits，说明行为变化、验证结果及未覆盖范围。
 
-### 管理端
+首版上线按全新部署准备，仍需完整执行结构迁移、平台与门店初始化及配置验证。线上数据清理和正式发布须由明确授权的独立操作执行；本机日常开发保持已有隔离数据库原状。
 
-- 老板、陪玩、员工及权限管理。
-- 游戏类目、服务项目、陪玩资料、陪玩等级和陪玩排行榜管理。
-- 订单、派单、状态流转、报单审核、评价和礼物打赏管理。
-- 钱包流水、兴安币充值、提现审核、奖惩和通行证管理。
-- 签到规则、补签卡、满签奖励、优惠券、公告和系统消息配置。
-- 客服名片、企业微信入口及试听链接等运营配置。
+真实密钥、验证码、数据库、上传文件、私有 runtime 和客户资料不得提交到仓库或附在公开问题中。缺陷与安全问题通过项目既有的私有协作渠道提交。
 
-## 技术栈与环境要求
+## 许可与使用限制
 
-| 组件 | 技术 | 本地端口 |
-| --- | --- | --- |
-| 老板端 | 微信原生 JavaScript、WXML、WXSS | 微信开发者工具；历史 H5 调试 `3000` |
-| 陪玩端 | Taro 4、React 18、TypeScript、Sass | H5 调试建议 `3001` |
-| 管理端 | Vue 3、Vite 5、Element Plus、Pinia | `5180` |
-| 服务端 | Django、DRF、Channels、Daphne、Celery | `8000` |
-| 基础设施 | MySQL 8、Redis | `3306`、`6379` |
+本项目为**闭源专有软件，保留所有权利**。除适用法律或另行书面授权允许的范围外，不授予复制、修改、部署、分发、再许可、公开发布或商业使用本项目原创内容的权利。持有源码、获得仓库访问权限或参与协作不自动构成额外许可，完整条款见 [LICENSE](LICENSE)。
 
-本地开发建议安装：
+根 JavaScript 包保留 `private: true` 与 `license: "UNLICENSED"` 标记，采用 [npm 对私有包的说明](https://docs.npmjs.com/cli/configuring-npm/package-json/#license)中的配置方式。软件授权范围以本仓库声明及双方另行书面约定为准。
 
-- Node.js `>= 22`（见 `.nvmrc`）
-- pnpm `9.0.0`（见根 `package.json#packageManager`）
-- Docker Desktop 与 Docker Compose v2
-- 微信开发者工具（仅老板微信小程序构建需要）
+第三方依赖、字体、图标及其他素材仍适用各自许可证，本项目的闭源声明不改变其权利或义务。仓库内已保留 [shadcn-vue 上游许可](packages/shadcn-vue/UPSTREAM-LICENSE)、[Tabler 图标许可](scripts/icon-sources/tabler/LICENSE.txt)及 [MiSans 字体许可](fronted/shared/assets/fonts/misans/MiSans-LICENSE.pdf)；完整位置索引与适配包的许可范围见 [第三方许可说明](THIRD_PARTY_NOTICES.md)。该索引不构成全部第三方组件的许可清单。
 
-```bash
-corepack enable
-corepack prepare pnpm@9.0.0 --activate
-pnpm install
-```
-
-## 快速启动
-
-### 1. 准备环境变量
-
-```bash
-cp .env.example .env
-```
-
-`.env` 只用于本机或部署环境，不要提交真实密码和微信 `AppSecret`。
-
-如需把待派订单推送到 KOOK 频道，在 `.env` 中配置机器人 Token 和文字频道 ID：
-
-```dotenv
-KOOK_ENABLED=true
-KOOK_BOT_TOKEN=机器人Token
-KOOK_DISPATCH_CHANNEL_ID=目标文字频道ID
-KOOK_DISPATCH_NEW_ORDERS=true
-KOOK_DISPATCH_REJECTED_ORDERS=true
-# 可选：通知指定角色、增加运营后台跳转按钮
-KOOK_DISPATCH_MENTION_ROLE_IDS=角色ID1,角色ID2
-KOOK_ADMIN_ORDER_URL=https://admin.example.com/orders
-```
-
-机器人需要先加入目标 KOOK 服务器并拥有频道发消息权限。新建后未指定陪玩的订单，以及陪玩拒单后重新回到待接单池的订单，会通过 Celery 异步发送卡片；发送结果可在 Django Admin 的 `Kook dispatch records` 中查询。
-
-### 2. 启动后端服务
-
-```bash
-docker compose up -d --build
-docker compose ps
-```
-
-该命令会启动 MySQL、Redis、数据库迁移、Django/Daphne、Celery Worker 和 Celery Beat。接口默认位于 `http://127.0.0.1:8000/api`。
-
-常用命令：
-
-```bash
-docker compose logs -f web
-docker compose exec web python manage.py migrate
-docker compose exec web python manage.py test --noinput
-docker compose down
-```
-
-除非确认可以丢弃本地业务数据，否则不要执行 `docker compose down -v`。
-
-### 3. 启动三个前端
-
-老板端直接在微信开发者工具中导入 `apps/boss-miniapp`，读取 `native/`。在 `native/config.js` 配置开发服务地址；原生代码修改后由开发者工具重新编译。
-
-陪玩端和管理端分别在终端运行：
-
-```bash
-# 陪玩 H5 / Web
-pnpm --filter xa-provider-miniapp exec taro build --type h5 --watch --port 3001
-
-# 运营管理后台
-pnpm run admin:dev
-```
-
-对应访问地址：
-
-- 陪玩端：`http://127.0.0.1:3001`
-- 管理端：`http://127.0.0.1:5180`
-- 后端接口：`http://127.0.0.1:8000/api`
-
-历史老板 H5 可用 `pnpm --filter xa-boss-miniapp exec taro build --type h5 --watch --port 3000` 启动，仅供旧版对照，不代表 `native/` 的界面和功能验收。
-
-## 微信小程序构建与登录
-
-### 构建
-
-```bash
-pnpm run boss:build
-```
-
-在微信开发者工具中导入 `apps/boss-miniapp`，项目配置的 `miniprogramRoot` 为 `native/`，直接读取 `native/app.json`。`boss:build` 执行原生结构、语法和本机可用的官方编译器检查，不生成 Taro `dist/`。
-
-发布前配置 `native/config.js` 的 `trial` / `release` 地址，开启开发者工具域名校验（注意 `project.private.config.json` 的覆盖设置），并执行 `node scripts/check-native.mjs --require-compiler`。正式三端构建用 `pnpm build:release`，会在配置缺失或官方编译器不可用时停止；完整步骤见 [发布与联调说明](docs/RELEASE_READINESS.md)。
-
-### 登录配置
-
-真实微信快捷登录需要在 `.env` 中配置与 `apps/boss-miniapp/project.config.json` 一致的 AppID：
-
-```dotenv
-WECHAT_APPID=微信小程序AppID
-WECHAT_SECRET=微信小程序AppSecret
-WECHAT_MOCK_LOGIN=false
-```
-
-修改后重建或重启后端：
-
-```bash
-docker compose up -d --build web celery-worker celery-beat
-```
-
-后端登录匹配顺序为：
-
-1. 优先按微信 `openid` 匹配已绑定老板账号；
-2. 未绑定时，在已验证且手机号唯一的情况下绑定原账号；
-3. 无匹配账号时才创建新老板账号；
-4. 手机号冲突时拒绝自动绑定，交由运营人员处理。
-
-`WECHAT_MOCK_LOGIN=true` 只适合本地 H5 联调，生产或微信开发者工具真机联调必须关闭，否则无法验证真实微信身份，也可能产生非预期测试账号。
-
-陪玩开始服务、完成服务时默认必须上传入队和结单截图。旧版客户端灰度升级期间可临时设置
-`REQUIRE_ORDER_EVIDENCE_IMAGES=false`，生产稳定后应恢复为 `true`；即使关闭该开关，报单正式提交仍会校验完整凭证。
-
-## 测试账号与阶段数据
-
-后端提供可重复执行的联调数据命令。重跑只清理 `demo_*` 测试账号及其关联数据，不会清理手工创建的正常账号。
-
-```bash
-docker compose exec web python manage.py seed_stage_test_data
-docker compose exec web python manage.py seed_gift_test_data
-```
-
-默认生成：
-
-| 用途 | 账号 | 密码 | 说明 |
-| --- | --- | --- | --- |
-| 管理端客服 | `demo_stage_operator` | `test1234` | 全阶段运营账号 |
-| 陪玩端 | `demo_provider_01` ～ `demo_provider_20` | `test1234` | 前 5 个为可抢单状态，覆盖各类通行证 |
-| 老板数据 | `demo_boss_01` ～ `demo_boss_20` | `test1234` | 用于后台和订单数据验证；老板端仍以微信登录为准 |
-
-全阶段数据包含老板、陪玩、商品、订单状态、抢单、服务、报单、评价、消息、钱包、充值、提现、奖惩、优惠券及通行证记录。可自定义数量和密码：
-
-```bash
-docker compose exec web python manage.py seed_stage_test_data \
-  --customers 20 --providers 20 --password test1234
-```
-
-## 常用构建与检查
-
-```bash
-# 正式老板微信小程序
-pnpm run boss:build
-
-# 历史老板 H5 对照构建
-pnpm run boss:build:h5
-# 陪玩与管理端正式交付构建
-pnpm run provider:build:h5
-pnpm run admin:build
-
-# 后端测试
-docker compose exec web python manage.py test --noinput
-
-# 检查编排文件语法
-docker compose config --quiet
-docker compose -f docker-compose.web.yml config --quiet
-```
-
-`build:all` 检查老板原生代码并构建打手 H5 和管理后台。`build:release` 先检查正式原生地址、有效域名校验开关及 AppID，再强制通过官方原生编译器；需要先配置 `native/config.js` 并把公开构建变量导入终端。`provider:build` 和 `build:mini` 保留陪玩小程序兼容构建。
-
-## Docker 部署说明
-
-### 已验证范围
-
-根 `docker-compose.yml` 可用于一键启动开发后端栈：MySQL、Redis、迁移任务、Web、Celery Worker 和 Celery Beat。
-
-### 整合 Web 编排
-
-`docker-compose.web.yml` 计划提供以下地址：
-
-- 管理端：`http://127.0.0.1:8080`
-- 老板 H5：`http://127.0.0.1:8083`
-- 陪玩 H5：`http://127.0.0.1:8081`
-- 后端：`http://127.0.0.1:8000`
-
-启动命令为：
-
-```bash
-docker compose -f docker-compose.web.yml up -d --build
-```
-
-### 自动构建镜像
-
-`.github/workflows/docker-publish.yml` 在 Pull Request 中执行多架构构建校验，在合并到
-`main`、推送 `v*` 标签或手动触发时，将以下 AMD64/ARM64 镜像发布到 Docker Hub：
-
-- `ryuchen/xa-backend`：Django / Daphne / Celery 共用后端镜像。
-- `ryuchen/xa-dispatch`：运营派单后台。
-- `ryuchen/xa-provider`：陪玩端 H5。命名空间可由工作流配置覆盖。
-
-分支、版本、Git SHA 和 `latest` 标签由工作流自动生成；发布镜像同时附带 SBOM、OCI
-元数据和构建来源证明。推送镜像需要 `DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN`；自动 SSH 部署的额外凭证见 [对接凭证清单](docs/INTEGRATION_CREDENTIALS.md)。
-
-基础整合编排属于**开发/验收配置**；正式部署采用 [发布说明](docs/RELEASE_READINESS.md) 中的 release 叠加编排。生产上线前至少还应使用非
-root 数据库账号、关闭 Django Debug、限制 Allowed Hosts/CORS、配置 HTTPS 与微信合法域名、
-托管静态与媒体文件、备份数据库并接入日志和监控。
-
-## 接口与实时通信
-
-- 普通业务接口前缀：`/api`
-- 管理端接口前缀：`/api/admin`
-- 媒体文件：`/media`
-- 订单与消息实时更新：Django Channels WebSocket
-
-具体字段、权限和流程请以 [接口文档](docs/API.md) 与服务端路由为准。
-
-## 常见问题
-
-### 前端页面没有数据
-
-先确认后端及依赖服务状态：
-
-```bash
-docker compose ps
-curl -i http://127.0.0.1:8000/api/users/me/
-docker compose logs --tail=200 web
-```
-
-`401 Unauthorized` 通常表示后端已响应但当前未登录；连接拒绝或 `5xx` 才需要继续检查容器、数据库迁移和服务日志。
-
-### 微信快捷登录每次都创建新账号
-
-检查 `WECHAT_APPID`、`WECHAT_SECRET` 是否与小程序一致，并确认 `WECHAT_MOCK_LOGIN=false`。真实环境还需确认原老板账号已保存正确 `openid`，或具备唯一且已验证的手机号供首次绑定。
-
-### 微信开发者工具提示找不到 `dist/app.json`
-
-当前老板端应读取 `native/app.json`。核对 `apps/boss-miniapp/project.config.json` 的 `miniprogramRoot` 为 `native/`，在仓库根执行 `pnpm run boss:build` 后重新导入 `apps/boss-miniapp`，不要继续导入旧 `dist/` 项目。
-
-### MySQL 报 `Access denied` / `1045`
-
-MySQL 密码只在数据卷首次初始化时生效。已有 `mysql_data` 数据卷时，单纯修改 `.env` 不会修改数据库中的密码。优先恢复原密码或在数据库内安全修改用户密码；不要为了修复登录问题直接删除数据卷。
-
-### 端口被占用
-
-```bash
-lsof -nP -iTCP:8000 -sTCP:LISTEN
-lsof -nP -iTCP:3000 -sTCP:LISTEN
-lsof -nP -iTCP:3001 -sTCP:LISTEN
-lsof -nP -iTCP:5180 -sTCP:LISTEN
-```
-
-结束旧进程或为当前开发服务指定其他端口。
-
-## 项目文档
-
-- [业务闭环与本轮验收](docs/BUSINESS_CLOSURE.md)
-- [上线对接密钥、Token 与配置清单](docs/INTEGRATION_CREDENTIALS.md)
-- [当前产品需求与验收基线](docs/PRD_CURRENT.md)
-- [历史产品需求文档](docs/PRD.md)
-- [代码现状版产品文档](docs/PRODUCT_DOCUMENTATION.md)
-- [系统架构与业务边界](docs/ARCHITECTURE.md)
-- [接口文档](docs/API.md)
-- [数据模型 ER 图](docs/ER.md)
-- [核心流程时序图](docs/Sequence.md)
-- [三端视觉规范](docs/DESIGN_SYSTEM.md)
-- [贡献指南](CONTRIBUTING.md)
-
-## 提交规范
-
-- 使用 Conventional Commits，例如 `feat:`、`fix:`、`refactor:`、`docs:`、`chore:`。
-- 不提交 `.env`、AppSecret、数据库密码、构建产物、虚拟环境或本地日志。
-- 每个 PR 聚焦一个清晰目标，并在提交前完成对应端构建和受影响的后端测试。
-
-本项目为私有业务项目，未经授权不得分发或用于其他用途。
+Copyright © 2026 青岛声浪传媒有限公司。All rights reserved.

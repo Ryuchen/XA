@@ -13,7 +13,7 @@ exclude = {'node_modules', '.git', '__pycache__', 'media', 'staticfiles', 'venv'
            'dist', 'dist-h5', '.swc', '.vite'}
 files = {}
 for directory in ('services/backend', 'deploy', 'scripts', 'packages',
-                  'apps/admin-web', 'apps/provider-miniapp', 'apps/boss-miniapp'):
+                  'apps/admin-web', 'apps/provider-vue', 'apps/boss-miniapp'):
     for path in (root/directory).rglob('*'):
         relative = path.relative_to(root)
         if (not path.is_file() or any(part in exclude for part in relative.parts)
@@ -26,7 +26,7 @@ for name in ('docker-compose.tencent.yml', 'docker-compose.remote.yml',
              'docs/TENCENT_DEPLOYMENT_20260928.md', 'docs/TENCENT_DEPLOYMENT_PLAN.md',
              'docs/RELEASE_READINESS.md', 'docs/MINIAPP_MEDIA_BUDGET_20260928.md', 'docs/KOOK_ADMIN_SETUP.md', 'docs/WECOM_CUSTOMER_SERVICE_SETUP.md'):
     files[name] = root/name
-for app, artifact in (('admin-web/dist','admin'), ('provider-miniapp/dist-h5','provider')):
+for app, artifact in (('admin-web/dist','admin'), ('provider-vue/dist','provider')):
     assert (root/'apps'/app/'index.html').is_file(), f'Missing build: {app}'
     for path in (root/'apps'/app).rglob('*'):
         if path.is_file():

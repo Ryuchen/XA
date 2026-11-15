@@ -44,6 +44,7 @@ class AccountSupportChatTest(APITestCase):
         self.assertEqual(item['user_role_display'], '老板')
         self.assertEqual(item['unread_support'], 1)
         self.assertEqual(self.ok(admin.get('/api/admin/chat-sessions/', {'keyword': 'new-chat-boss'}))['total'], 1)
+        self.ok(admin.post(f"/api/admin/chat-sessions/{session['id']}/claim/", {'expected_version': 0}, format='json'))
         self.ok(admin.post(f"/api/admin/chat-sessions/{session['id']}/reply/", {'content':'可以为您安排'}, format='json'))
         refreshed = self.ok(client.get('/api/chat/session/'))
         self.assertEqual([row['content'] for row in refreshed['messages']], ['咨询套餐', '可以为您安排'])
@@ -74,6 +75,24 @@ class AccountSupportChatTest(APITestCase):
         self.assertEqual(result.data['code'], 400)
         self.assertEqual(len(self.ok(client.get('/api/chat/session/'))['messages']), 1)
 
+    def test_staff_cannot_create_customer_conversation_from_read_endpoint(self):
+        boss = ClubAccount.objects.create_account(username='chat-read-owner', account_type='BOSS')
+        staff_user = make_console_user(['chat:view', 'chat:reply'])
+        staff = get_or_create_account_for_legacy_user(staff_user)
+        staff_user.admin_membership.account = staff
+        staff_user.admin_membership.save(update_fields=['account'])
+        client, admin = self.client_for(boss), self.client_for(staff)
+        session_id = self.ok(client.get('/api/chat/session/'))['session']['id']
+        url = f'/api/admin/chat-sessions/{session_id}/'
+        self.ok(admin.post(url + 'claim/', {'expected_version': 0}, format='json'))
+        self.ok(admin.post(url + 'reply/', {'content': '客服回复'}, format='json'))
+
+        denied = admin.post('/api/chat/read/', {}, format='json')
+        self.assertEqual(denied.status_code, 403, denied.data)
+        self.assertFalse(ChatSession.objects.filter(account=staff).exists())
+        self.assertEqual(ChatSession.objects.get(pk=session_id).unread_user, 1)
+        self.assertEqual(self.ok(client.post('/api/chat/read/', {}, format='json'))['unread_user'], 0)
+
     def test_boss_read_does_not_clear_reply_arriving_after_history_load(self):
         boss = ClubAccount.objects.create_account(username='chat-boss-read-race', account_type='BOSS')
         staff_user = make_console_user(['chat:view', 'chat:reply'])
@@ -83,6 +102,7 @@ class AccountSupportChatTest(APITestCase):
         client, admin = self.client_for(boss), self.client_for(staff)
         session_id = self.ok(client.get('/api/chat/session/'))['session']['id']
         url = f'/api/admin/chat-sessions/{session_id}/'
+        self.ok(admin.post(url + 'claim/', {'expected_version': 0}, format='json'))
         first = self.ok(admin.post(url + 'reply/', {'content': '已展示'}, format='json'))
         loaded = self.ok(client.get('/api/chat/session/'))
         self.assertEqual(loaded['messages'][-1]['id'], first['id'])
@@ -103,6 +123,7 @@ class AccountSupportChatTest(APITestCase):
         first = self.ok(client.post('/api/chat/send/', {'content': '已展示'}, format='json'))
         session_id = self.ok(client.get('/api/chat/session/'))['session']['id']
         url = f'/api/admin/chat-sessions/{session_id}/'
+        self.ok(admin.post(url + 'claim/', {'expected_version': 0}, format='json'))
         loaded = self.ok(admin.get(url + 'messages/'))
         self.assertEqual(loaded['list'][-1]['id'], first['id'])
         second = self.ok(client.post('/api/chat/send/', {'content': '随后到达'}, format='json'))
@@ -124,6 +145,7 @@ class AccountSupportChatTest(APITestCase):
         first = self.ok(client.post('/api/chat/send/', {'content': '已展示'}, format='json'))
         session_id = self.ok(client.get('/api/chat/session/'))['session']['id']
         url = f'/api/admin/chat-sessions/{session_id}/'
+        self.ok(admin.post(url + 'claim/', {'expected_version': 0}, format='json'))
         second = self.ok(client.post('/api/chat/send/', {'content': '尚未看到'}, format='json'))
         self.ok(admin.post(url + 'reply/', {'content': '回复已展示的内容', 'read_through_id': first['id']}, format='json'))
         data = self.ok(admin.get('/api/admin/chat-sessions/', {'only_unread': 1}))
@@ -135,6 +157,12 @@ class AccountSupportChatTest(APITestCase):
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class AccountSupportChatRealtimeTest(APITransactionTestCase):
+    @override_settings(CHAT_NOTIFICATION_OUTBOX_ENABLED=True)
+    def test_outbox_delivers_real_chat_events_to_authorized_sockets(self):
+        from chat.models import ChatNotificationOutbox
+        self.test_new_account_and_staff_receive_real_chat_events()
+        self.assertEqual(ChatNotificationOutbox.objects.filter(completed_at__isnull=False).count(), 2)
+
     def test_new_account_and_staff_receive_real_chat_events(self):
         boss = ClubAccount.objects.create_account(username='chat-realtime-new',
             account_type=ClubAccount.AccountType.BOSS)
@@ -158,8 +186,13 @@ class AccountSupportChatRealtimeTest(APITransactionTestCase):
                     '/api/chat/send/', {'content': '咨询实际服务'}, format='json')
                 self.assertEqual(response.data['code'], 0, response.data)
                 events = [await socket.receive_json_from(timeout=3) for socket in sockets]
-                self.assertTrue(all(event['type'] == 'chat_message' for event in events), events)
+                self.assertEqual([event['type'] for event in events], ['chat_message', 'chat_session_update'])
+                self.assertEqual(events[1]['data']['session']['last_message'], '')
                 session_id = events[0]['data']['session_id']
+                claimed = await database_sync_to_async(clients[1].post)(
+                    f'/api/admin/chat-sessions/{session_id}/claim/', {'expected_version': 0}, format='json')
+                self.assertEqual(claimed.data['code'], 0, claimed.data)
+                self.assertEqual((await sockets[1].receive_json_from(timeout=3))['type'], 'chat_session_update')
                 response = await database_sync_to_async(clients[1].post)(
                     f'/api/admin/chat-sessions/{session_id}/reply/', {'content': '已收到'}, format='json')
                 self.assertEqual(response.data['code'], 0, response.data)

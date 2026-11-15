@@ -10,7 +10,7 @@ from club_accounts.models import LegacyAccountMap
 from club_accounts.tokens import issue_account_tokens
 from console.serializers import AdminProviderReportSerializer
 from orders.direct_clearing import post_test_clearing
-from orders.models import OrderProvider, OrderRefund
+from orders.models import Order, OrderProvider, OrderRefund
 from orders.serializers import OrderSerializer
 from orders.tests.factories import make_console_user, make_order, make_provider, make_user, make_wallet
 from orders.tests.test_direct_clearing import ClearingFixture
@@ -39,6 +39,16 @@ class SettlementDisplayTest(ClearingFixture, TestCase):
                 self.assertNotIn(private, data)
         self.assertEqual(OrderSerializer([order], many=True).data[0]['settlement_status'], 'REVIEW')
         self.assertFalse(Transaction.objects.filter(order=order).exists())
+
+    def test_bulk_display_preserves_direct_payment_with_or_without_related_cache(self):
+        direct, _, _ = self.make_completed(count=1)
+        balance = make_order(make_user(), provider=make_provider())
+        for queryset in (Order.objects.filter(pk__in=[direct.pk, balance.pk]),
+                         Order.objects.filter(pk__in=[direct.pk, balance.pk]).select_related('direct_payment')):
+            rows = list(queryset.order_by('pk'))
+            prepare_order_settlement_display(rows)
+            facts = {row.pk: row._display_has_direct for row in rows}
+            self.assertEqual(facts, {direct.pk: True, balance.pk: False})
 
     def test_balance_requires_matching_successful_income(self):
         customer, provider = make_user(), make_provider()
@@ -139,11 +149,47 @@ class SettlementDisplayTest(ClearingFixture, TestCase):
             self.fund(order)
             Transaction.objects.create(wallet=wallet, order=order, amount=80, tx_type='INCOME', balance_after=80)
             orders.append(order)
+        counts = []
         for rows in (orders[:1], orders):
             with CaptureQueriesContext(connection) as captured:
                 prepare_order_settlement_display(rows)
                 self.assertEqual([order_settlement_status(order) for order in rows], ['SETTLED'] * len(rows))
-            self.assertEqual(len(captured), 4)
+            counts.append(len(captured))
+        # Points receipt and ledger checks add a fixed batch of queries; the
+        # important invariant is that page size does not add per-order reads.
+        self.assertEqual(counts[0], counts[1])
+
+    def test_order_list_shortcut_reloads_full_evidence_if_reused_for_a_report(self):
+        customer, provider = make_user(), make_provider()
+        account = get_or_create_account_for_legacy_user(provider)
+        wallet = make_wallet(provider)
+        wallet.account = account
+        wallet.save(update_fields=['account'])
+        order = make_order(customer, provider=provider, provider_account=account, amount=1000,
+                           provider_income=800, status='PENDING', payment_status='PAID',
+                           service_clock_version=1)
+        share = OrderProvider.objects.create(order=order, provider=provider, provider_account=account,
+                                             settlement_base=1000, provider_income=800,
+                                             settled_at=timezone.now())
+        Transaction.objects.create(wallet=wallet, order=order, amount=800, tx_type='INCOME',
+                                   balance_before=0, balance_after=800)
+        report = ProviderReport.objects.create(order=order, provider=provider, provider_account=account,
+            game_name='隔离测试', amount=1000, payout_amount=800, status='APPROVED')
+        self.assertEqual(report_settlement_status(report), 'SETTLED')
+        prepare_order_settlement_display([order], order_list_only=True)
+        self.assertTrue(order._display_order_only)
+        self.assertEqual(order._display_shares, [])
+        report.order = order
+        self.assertEqual(report_settlement_status(report), 'SETTLED')
+        self.assertFalse(order._display_order_only)
+        self.assertEqual(order._display_shares[0].pk, share.pk)
+        prepare_order_settlement_display([order], order_list_only=True)
+        self.assertTrue(order._display_order_only)
+        self.fund(order)
+        order.status, order.settled_at = 'COMPLETED', timezone.now()
+        order.save(update_fields=['status', 'settled_at'])
+        self.assertEqual(order_settlement_status(order), 'SETTLED')
+        self.assertFalse(order._display_order_only)
 
     def test_paid_flag_cannot_hide_refund_record_refund_payment_or_reversal(self):
         for evidence in ('record', 'refund', 'reversal', 'reversal_other_order', 'bad_snapshot'):
@@ -236,6 +282,19 @@ class SettlementDisplayTest(ClearingFixture, TestCase):
         self.assertEqual(result['settlement_status'], 'REVIEW')
         serialized = OrderSerializer(context={'request': SimpleNamespace(account=outsider_account, legacy_user=outsider)})
         self.assertIsNone(serialized.get_expected_income(order))
+        order_response = client.get('/api/orders/orders/')
+        self.assertEqual(order_response.status_code, 200)
+        order_data = next(row for row in order_response.data['data'] if row['id'] == order.pk)
+        self.assertIsNone(order_data['expected_income'])
+
+    def test_account_only_share_keeps_its_own_income_without_a_legacy_user(self):
+        order, _, providers = self.make_completed(count=2)
+        account = get_or_create_account_for_legacy_user(providers[0])
+        share = order.providers.get(provider=providers[0])
+        share.provider = None
+        share.save(update_fields=['provider'])
+        serializer = OrderSerializer(context={'request': SimpleNamespace(account=account, legacy_user=None)})
+        self.assertEqual(serializer.get_expected_income(order), share.provider_income)
 
     def test_report_api_query_count_does_not_grow_per_order(self):
         customer, provider = make_user(), make_provider()

@@ -8,7 +8,7 @@ import json
 from functools import wraps
 
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import transaction
+from stores.db import transaction
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 

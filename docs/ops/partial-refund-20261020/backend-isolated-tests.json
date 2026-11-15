@@ -1,0 +1,133 @@
+{
+  "status": "PASS",
+  "tested_at": "2026-10-19T18:00:47.442603+00:00",
+  "scope": "Cumulative settled partial refunds, exact recovery, protected holds, net benefits, statistics and periodic confirmation compatibility",
+  "isolation": {
+    "live_database_accessed": false,
+    "sqlite": "in-memory; Docker network none",
+    "mysql": "dedicated MySQL 8 container with network none, no published ports; app shares only this isolated network namespace",
+    "mysql_database": "test_xa_test_partial_refund",
+    "source_mount": "read-only",
+    "media": "temporary auto-removed directory",
+    "queues": "memory://",
+    "channels": "in-memory",
+    "kook_enabled": false,
+    "wecom_dispatch_enabled": false
+  },
+  "migrations": {
+    "orders": "0054_orderrefund_client_request_id_and_more",
+    "wallet": "0031_incomehold_recovered_amount_and_more",
+    "engagement": "0015_consumptionconfirmation_refunded_amount_and_more",
+    "complete_isolated_sqlite_chain": "PASS",
+    "complete_isolated_mysql_chain": "PASS",
+    "makemigrations_check": "PASS: No changes detected",
+    "backfill": "New recovered/refunded columns equal original amount only for previously cancelled holds, reversed confirmations, or released funding allocations; all existing fields/rows retained.",
+    "payment_check_constraint": "PARTIALLY_REFUNDED included"
+  },
+  "broad_sqlite_before_final_release_lock_fix": {
+    "tests_run": 234,
+    "passed": 230,
+    "skipped": 4,
+    "failures": 0,
+    "errors": 0,
+    "elapsed_seconds": 99.689,
+    "skip_reason": "SQLite lacks select_for_update; all four original cases passed in final real MySQL run."
+  },
+  "final_release_and_money_sqlite": {
+    "tests_run": 50,
+    "passed": 50,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0,
+    "test_seconds": 28.308,
+    "labels": [
+      "orders.tests.test_partial_refunds",
+      "orders.tests.test_settled_refunds",
+      "wallet.test_realtime"
+    ]
+  },
+  "final_real_mysql": {
+    "tests_run": 30,
+    "passed": 30,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0,
+    "elapsed_seconds": 44.152,
+    "test_seconds": 41.22,
+    "labels": [
+      "orders.tests.test_partial_refunds",
+      "orders.tests.test_partial_refund_concurrency",
+      "orders.tests.test_settled_refund_concurrency",
+      "orders.tests.test_report_settlement_concurrency.ReportSettlementConcurrencyTest",
+      "wallet.test_fund_receipts.FundReceiptConcurrencyTest"
+    ],
+    "composition": {
+      "partial_financial_cases": 14,
+      "partial_concurrency_cases": 4,
+      "existing_refund_concurrency_cases": 8,
+      "existing_report_and_receipt_row_lock_cases": 4
+    }
+  },
+  "final_read_statistics_and_worker": {
+    "tests_run": 57,
+    "passed": 57,
+    "skipped": 0,
+    "failures": 0,
+    "errors": 0,
+    "elapsed_seconds": 28.186,
+    "test_seconds": 26.662,
+    "labels": [
+      "console.test_partial_statistics",
+      "console.tests.PlayerDashboardTest",
+      "console.test_menu_contracts",
+      "engagement.test_benefit_automation"
+    ],
+    "checks": [
+      "Partial paid order stays in completed/paid counts and net paid turnover.",
+      "Non-divisible team turnover totals exactly 7001 after refund from 8001; actual provider net income is 2100 and 3501 from original credits minus real reversals.",
+      "Provider/inviter using one wallet does not add inviter commission to the provider earnings ranking.",
+      "Original PAID snapshots, transfer attribution, date/permission/menu behavior and secondary wallet/deposit statistics remain compatible.",
+      "Partial service turnover, recent selections, achievements and home rankings read net paid amounts.",
+      "Periodic confirmation scanner includes partially refunded completed orders and confirms only the remaining net consumption."
+    ]
+  },
+  "financial_invariants": [
+    "Cumulative refunds never exceed actual original payment. Each credit uses deterministic monotone cumulative integer apportionment; each operation recovers only the new delta and the final refund exactly clears every original credit.",
+    "Seventeen one-unit refunds, multiple providers and inviter credits reconcile exactly without negative recovery deltas.",
+    "Each refund has an order-scoped idempotency key and intent fingerprint; successful replay does not alter money or emit new invalidations; conflicting intent returns 409.",
+    "Preview binds requested amount, previous refunds, original credits and reversals, wallet/profile/hold facts; stale or amount-substituted plans roll back.",
+    "Only the same order remaining income hold can fund recovery. Pending withdrawal freezes, unrelated order holds, protected deposits and platform deposit pools remain intact.",
+    "Partially recovered holds retain their original amount and maturity; release transfers only amount minus recovered_amount; a fully recovered hold is cancelled once.",
+    "Original ledger, report approvals, completion and settlement timestamps remain; a completed order count decreases only on final full refund.",
+    "Consumption confirmations and point funding allocations retain originals plus cumulative refunded amounts; points and unused VIP/gift rights follow net eligibility. Consumed benefits retain auditable history.",
+    "Partial aftersale tickets can reopen in a new request round; full refunds close the order, while partial refunds keep COMPLETED/PARTIALLY_REFUNDED.",
+    "Owner summaries expose only the owner net income, recovered amount and remaining order hold; full recovery lines remain restricted to authorized refund staff.",
+    "Commit-only wallet/order invalidations do not fire on failed, rolled-back or replayed operations."
+  ],
+  "real_mysql_bug_found_and_fixed": {
+    "initial_run": {
+      "tests_run": 28,
+      "passed": 27,
+      "errors": 1,
+      "skipped": 0
+    },
+    "cause": "Release held wallet/hold and waited for order shared FK lock when inserting EARNINGS_RELEASE, while refund held order and waited for wallet.",
+    "fix": "Release locks the source order before wallet and hold, with one transaction per hold and no global financial mutex.",
+    "retested": "Final real MySQL 30/30 PASS, including partial release/refund and existing full-refund release concurrency."
+  },
+  "cleanup": {
+    "container": "xa-partial-refund-mysql-20261020",
+    "guard": "Exact name/image mysql:8.0/network none/zero published ports inspected before deletion",
+    "removed_with_anonymous_volumes": true
+  },
+  "static_checks": {
+    "backend_diff_check": "PASS",
+    "python_ast": "PASS"
+  },
+  "limits": [
+    "Suite executions overlap and must not be summed as unique tests.",
+    "Broad SQLite preceded the final release-order-lock fix; the final targeted suites above ran after that fix. The last statistics/selector changes were read-only and did not change the tested money paths.",
+    "Dashboard history without an unambiguous original provider credit keeps a net snapshot estimate; official labelled provider credits use exact successful ledger and reversal amounts.",
+    "This report is isolated backend evidence. Live three-role UI and final read-only database audit are recorded separately by the coordinating agent."
+  ]
+}

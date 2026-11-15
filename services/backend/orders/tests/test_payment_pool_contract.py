@@ -33,7 +33,7 @@ class PaymentPoolContractTests(TestCase):
         with patch('orders.direct_payment._notify_paid'):
             confirm_verified_payment(self.intent.order_id, evidence)
         self.legacy = make_order(self.boss, service, customer_account=self.account, payment_status='PAID')
-        provider = make_provider()
+        provider = make_provider(deposit_mode='EARNINGS')
         provider_account = get_or_create_account_for_legacy_user(provider)
         EscortProfile.objects.filter(user=provider).update(account=provider_account)
         self.client = APIClient()

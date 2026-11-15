@@ -26,9 +26,13 @@ class GrabReceiptTest(APITransactionTestCase):
     recharge = flow.ReleaseFlowTest.recharge
 
     def prepare(self, team=False):
-        other = make_provider(display_name='另一位陪玩')
+        other = make_provider(display_name='另一位陪玩', deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         for user in (self.provider, other):
             self.accounts[user.pk] = get_or_create_account_for_legacy_user(user)
+            account = self.accounts[user.pk]
+            account.openid = f'grab-receipt-{account.pk}'
+            account.is_openid_bound = True
+            account.save(update_fields=['openid', 'is_openid_bound'])
             profile = user.escort_profile
             profile.account = self.accounts[user.pk]
             profile.pass_tier = 'BLACK'
@@ -45,6 +49,9 @@ class GrabReceiptTest(APITransactionTestCase):
         return Order.objects.get(pk=data['id']), other
 
     def test_grab_replay_competitor_and_later_order_state(self):
+        from stores.models import Store
+        self.assertEqual(Store.objects.filter(slug='shenglang').update(provider_name_prefix='SL'), 1)
+        original_name = self.provider.escort_profile.display_name
         order, other = self.prepare()
         url = f'/api/orders/orders/{order.pk}/grab/'
         self.login(self.provider)
@@ -53,7 +60,11 @@ class GrabReceiptTest(APITransactionTestCase):
         replay = self.ok(self.client.post(url, payload, format='json'))
         self.assertTrue(replay['request_replayed'])
         self.assertEqual(order.status_logs.filter(action='GRAB').count(), 1)
-        self.assertEqual(Message.objects.filter(recipient_account=self.accounts[self.boss.pk], related_order_id=order.pk, title='大神已接单').count(), 1)
+        notices = Message.objects.filter(recipient_account=self.accounts[self.boss.pk], related_order_id=order.pk, title='大神已接单')
+        self.assertEqual(notices.count(), 1)
+        self.assertTrue(notices.get().preview.startswith('SL-' + original_name))
+        self.provider.escort_profile.refresh_from_db()
+        self.assertEqual(self.provider.escort_profile.display_name, original_name)
         changed = self.client.post(url, {'team_size': 2, 'partner_id': self.accounts[other.pk].pk,
                                         'client_request_id': 'grab-original'}, format='json')
         self.assertEqual(changed.status_code, 409)
@@ -63,16 +74,16 @@ class GrabReceiptTest(APITransactionTestCase):
         self.assertNotEqual(self.client.post(url, {'team_size': 1, 'client_request_id': 'grab-other'}, format='json').data['code'], 0)
         self.assertFalse(IdempotencyKey.objects.filter(account=self.accounts[other.pk], request_id='grab-other').exists())
         self.login(self.provider)
-        self.ok(self.client.post(f'/api/orders/orders/{order.pk}/reject/', {'reason': '隔离测试时间冲突'}, format='json'))
+        rejected = self.client.post(f'/api/orders/orders/{order.pk}/reject/', {'reason': '隔离测试时间冲突'}, format='json')
+        self.assertEqual(rejected.data['errorCode'], 'ORDER_SELF_REJECTION_DISABLED')
         replay = self.ok(self.client.post(url, payload, format='json'))
-        self.assertEqual((replay['status'], replay['request_replayed']), ('PENDING', True))
+        self.assertEqual((replay['status'], replay['request_replayed']), ('GRABBED', True))
         self.login(other)
-        self.ok(self.client.post(url, {'team_size': 1, 'client_request_id': 'grab-other'}, format='json'))
+        self.assertNotEqual(self.client.post(url, {'team_size': 1, 'client_request_id': 'grab-other'}, format='json').data['code'], 0)
         self.login(self.provider)
         replay = self.ok(self.client.post(url, payload, format='json'))
         self.assertEqual(replay['status'], 'GRABBED')
-        self.assertFalse(replay['can_operate'])
-        self.assertNotIn('START', replay['allowed_actions'])
+        self.assertTrue(replay['can_operate'])
 
     def test_team_application_retry_does_not_duplicate_invitation(self):
         order, partner = self.prepare(team=True)

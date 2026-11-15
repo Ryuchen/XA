@@ -6,7 +6,7 @@ must be a test transport: a test database must never call the merchant API.
 import hashlib
 import logging
 
-from django.db import transaction
+from stores.db import transaction
 
 from integrations.wechatpay_gateway import OfficialHTTPTransport, WeChatPayGateway, WeChatPayOutcomeUnknown, WeChatPayResponseError
 from integrations.wechatpay_refund_evidence import parse_refund_notification, query_refund_evidence

@@ -1,9 +1,10 @@
 from rest_framework import serializers
+from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
 
 from .models import Coupon, UserCoupon
 
 
-class CouponSerializer(serializers.ModelSerializer):
+class CouponSerializer(EntityNumberModelSerializer):
     is_claimed = serializers.SerializerMethodField()
     claimable = serializers.SerializerMethodField()
     claim_status = serializers.SerializerMethodField()
@@ -28,13 +29,19 @@ class CouponSerializer(serializers.ModelSerializer):
         return obj.id in claimed_ids
 
     def get_claimable(self, obj):
-        return obj.is_claimable
+        # Use the account's current claim and qualification state as well as
+        # the template and License, just like the displayed claim status.
+        return self.get_claim_status(obj) == 'AVAILABLE'
 
     def get_claim_status(self, obj):
         if obj.id in self.context.get('used_qualification_ids', set()):
             return 'USED'
         if self.get_is_claimed(obj):
             return 'CLAIMED'
+        if self.context.get('license_admission') == 'UNKNOWN':
+            return 'LICENSE_UNKNOWN'
+        if self.context.get('license_admission') == 'DENY':
+            return 'UNAVAILABLE'
         if obj.discount_type == Coupon.DiscountType.QUALIFICATION and not obj.service_ids:
             return 'UNAVAILABLE'
         if obj.total_qty and obj.claimed_qty >= obj.total_qty:
@@ -42,7 +49,7 @@ class CouponSerializer(serializers.ModelSerializer):
         return 'AVAILABLE' if obj.is_claimable else 'UNAVAILABLE'
 
 
-class UserCouponSerializer(serializers.ModelSerializer):
+class UserCouponSerializer(EntityNumberModelSerializer):
     name = serializers.CharField(source='coupon.name', read_only=True)
     discount_type = serializers.CharField(source='coupon.discount_type', read_only=True)
     discount_rate = serializers.IntegerField(source='coupon.discount_rate', read_only=True)

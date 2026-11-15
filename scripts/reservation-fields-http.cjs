@@ -12,8 +12,8 @@ global.Page=value=>{definition=value};
   for(const [key,value] of Object.entries(input.fields))assert.equal(page.data.reservation[key],value);
   const wxml=fs.readFileSync(path.join(native,'pages/reservation-detail/index.wxml'),'utf8');
   for(const key of Object.keys(input.fields)){
-    assert.equal(wxml.includes(`reservation.${key}`),input.fixed,`${key} owner template binding`);
-    if(input.fixed)assert.ok(wxml.includes(`wx:if="{{reservation.${key}}}"`),`${key} hides an empty value`);
+    assert.ok(wxml.includes(`reservation.${key}`),`${key} owner template binding`);
+    assert.ok(wxml.includes(`wx:if="{{reservation.${key}}}"`),`${key} hides an empty value`);
   }
   page.onUnload();
   if(input.root){
@@ -22,5 +22,5 @@ global.Page=value=>{definition=value};
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const {chromium}=require('../.tools/club-source-20261003/node_modules/playwright');const browser=await chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
     try{const context=await browser.newContext({viewport:{width:375,height:812},isMobile:true,hasTouch:true});await context.addInitScript(({providerToken,providerId})=>{localStorage.setItem('token',JSON.stringify({data:providerToken}));localStorage.setItem('xa_provider_user',JSON.stringify({data:{id:providerId,role:'provider',nickname:'隔离陪玩'}}))},input);const view=await context.newPage();await view.goto(`http://127.0.0.1:${server.address().port}/#/reservations?id=${input.reservationId}`);for(const value of Object.values(input.fields))await view.getByText(value,{exact:true}).waitFor({timeout:15000});await context.close()}finally{await browser.close();server.closeAllConnections();server.close()}
   }
-  console.log(input.fixed?'Native controller carries fields; owner template binds them; current provider Vue shows them':'REPRODUCED: native controller receives all fields but owner template binds none; current provider Vue shows them');
+  console.log('Native controller carries fields and owner template binds them' + (input.root ? '; provider Vue shows them' : ''));
 })().catch(error=>{console.error(error.stack||error);process.exitCode=1});

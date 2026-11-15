@@ -21,7 +21,8 @@ function setup() {
     watch: () => {}, onMounted: () => {}, onBeforeUnmount: () => {} }
   const mocks = {
     vue, 'vue-router': { useRoute: () => route, useRouter: () => router },
-    'element-plus': { ElMessageBox: {} }, '@element-plus/icons-vue': { Search: {} },
+    '@xa/shadcn-vue/icons': {}, '@/composables/useConfirmDialog': { useConfirmDialog: () => ({}) },
+    '@/utils/staffNoticeSound': {chatNoticeSound: {}, staffNoticeSound: {}},
     '@/stores/auth': { useAuthStore: () => auth }, '@/stores/staffDispatchQueue': { useStaffDispatchQueue: () => queue },
     '@/router/navigation': { buildNavigation: () => [], flattenNavigation: () => [], searchNavigation: () => [] },
   }

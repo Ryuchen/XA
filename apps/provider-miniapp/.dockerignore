@@ -1,6 +1,0 @@
-node_modules/
-dist/
-dist-h5/
-.swc/
-*.tsbuildinfo
-.DS_Store

@@ -1,0 +1,120 @@
+.boss-lottery-stage {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin: 16px 0 24px;
+  text-align: center;
+}
+.boss-lottery-wheel {
+  position: relative;
+  width: min(100%, 232px);
+}
+.boss-lottery-wheel svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: visible;
+}
+.boss-lottery-rotor {
+  transform-origin: 120px 120px;
+}
+.boss-lottery-stage.is-spinning .boss-lottery-rotor {
+  transition: transform 2100ms cubic-bezier(0.12, 0.74, 0.18, 1);
+}
+.boss-lottery-sector {
+  fill: var(--muted);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.boss-lottery-sector.alternate {
+  fill: var(--accent);
+}
+.boss-lottery-sector.rare {
+  fill: color-mix(in oklch, var(--primary) 24%, var(--background));
+}
+.boss-lottery-wheel text {
+  fill: var(--foreground);
+  font-size: 9px;
+  font-weight: 500;
+}
+.boss-lottery-center {
+  fill: var(--primary);
+  stroke: var(--background);
+  stroke-width: 4;
+}
+.boss-lottery-wheel .boss-lottery-mark {
+  fill: var(--primary-foreground);
+  font-size: 14px;
+  font-weight: 600;
+}
+.boss-lottery-pointer {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-top: 16px solid var(--primary);
+  transform: translateX(-50%);
+}
+.boss-lottery-results {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+.boss-lottery-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 144px), 1fr));
+  gap: 12px;
+}
+.boss-lottery-result-card {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 184px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  overflow-wrap: anywhere;
+}
+.boss-lottery-result-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.boss-lottery-result-card.is-concealed {
+  background: var(--muted);
+  justify-content: center;
+  align-items: center;
+}
+.boss-lottery-result-card.is-revealed {
+  animation: boss-lottery-reveal 220ms ease-out both;
+}
+.boss-lottery-result-card > :last-child {
+  margin-top: auto;
+}
+@keyframes boss-lottery-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.boss-lottery-stage.is-reduced .boss-lottery-rotor,
+.boss-lottery-results.is-reduced .boss-lottery-result-card {
+  transition: none;
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-lottery-rotor,
+  .boss-lottery-result-card {
+    transition: none !important;
+    animation: none !important;
+  }
+}

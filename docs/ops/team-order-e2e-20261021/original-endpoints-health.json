@@ -1,0 +1,21 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "original_services": [
+    {
+      "port": 18080,
+      "http_status": 401,
+      "expected_http_status": 401
+    },
+    {
+      "port": 5180,
+      "http_status": 200,
+      "expected_http_status": 200
+    },
+    {
+      "port": 3001,
+      "http_status": 200,
+      "expected_http_status": 200
+    }
+  ]
+}

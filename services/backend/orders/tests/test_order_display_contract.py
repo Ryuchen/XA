@@ -61,3 +61,23 @@ class OrderDisplayContractTest(SimpleTestCase):
                 row = ReportTimeSerializer(report).data
                 self.assertIsNone(row['submitted_at'])
                 self.assertTrue(row['created_at'])
+
+    def test_report_exposes_order_public_number_and_preserves_legacy_lookup(self):
+        from unittest.mock import patch
+        from orders.models import Order
+        from wallet.serializers import ReportSerializer
+
+        class OrderNumberSerializer(AdminProviderReportSerializer):
+            class Meta(AdminProviderReportSerializer.Meta):
+                fields = ['order_no', 'order_entity_no']
+
+        class ProviderOrderNumberSerializer(ReportSerializer):
+            class Meta(ReportSerializer.Meta):
+                fields = ['order_no', 'order_entity_no']
+
+        report = ProviderReport(order=Order(id=42, order_no='ORD-LEGACY-42'))
+        with patch('identifiers.services.get_entity_number', return_value='SLABCDEFG123'):
+            self.assertEqual(OrderNumberSerializer(report).data, {
+                'order_no': 'ORD-LEGACY-42', 'order_entity_no': 'SLABCDEFG123',
+            })
+            self.assertEqual(ProviderOrderNumberSerializer(report).data['order_entity_no'], 'SLABCDEFG123')

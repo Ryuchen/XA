@@ -1,7 +1,7 @@
 """Pending-order deadlines: new-order snapshot, legacy fallback and config access."""
 import logging
 
-from django.db import transaction
+from stores.db import transaction
 from django.utils import timezone
 
 from .models import OrderTimeoutConfig
@@ -10,27 +10,35 @@ DEFAULT_TIMEOUT_MINUTES = 30
 logger = logging.getLogger(__name__)
 
 
-def record_timeout_notice(order, *, refunded_to_wallet):
-    """Keep the result available to the customer after they return online.
-
-    Called inside the successful cancellation transaction, after the wallet
-    refund. Direct-payment refund reservations have a separate state and do
-    not use this notice.
-    """
-    from site_messages.utils import create_message
-    # The existing message helper treats delivery failures as non-fatal.
-    # A savepoint keeps a database error there from aborting the refund.
-    with transaction.atomic():
-        create_message(
-            recipient_id=order.customer_id,
-            recipient_account_id=order.customer_account_id,
-            title='订单超时已取消',
-            preview=('订单超时未接单，已自动取消，款项已退回兴安币余额。'
-                     if refunded_to_wallet else '订单超时未接单，已自动取消。'),
-            msg_type='ORDER',
-            action_url=f'/pages/orderList/index?orderId={order.pk}',
-            related_order_id=order.pk,
-        )
+def record_timeout_notice(order, *, refund=None, refunded_to_wallet=None, refunded_points=None):
+    """Capture a timeout notice from the cancellation and actual refund facts."""
+    from site_messages.utils import create_cycle_message
+    from stores.context import current_currency_name
+    if refund is None:
+        refund = order.refund_records.order_by('-pk').first()
+    if refunded_to_wallet is None:
+        refunded_to_wallet = bool(refund and refund.amount)
+    from .points_payment_models import OrderPointsRefund
+    points = OrderPointsRefund.objects.filter(refund_id=refund.pk).first() if refund else None
+    if points is not None:
+        refunded_to_wallet = bool(points.coin_units)
+        refunded_points = bool(points.points_hundredths)
+    elif refunded_points is None:
+        refunded_points = False
+    preview = (f'订单超时未接单，已自动取消，款项已退回{current_currency_name()}余额。'
+               + ('抵扣积分已退回。' if refunded_points else '') if refunded_to_wallet
+               else ('订单超时未接单，已自动取消，抵扣积分已退回。' if refunded_points
+                     else '订单超时未接单，已自动取消。'))
+    from site_messages.order_timeout_notice import enabled, record
+    if enabled():
+        record(order, refund=refund, refunded_to_wallet=refunded_to_wallet,
+               refunded_points=refunded_points, preview=preview)
+    else:
+        # Preserve the existing independent savepoint around immediate delivery.
+        with transaction.atomic():
+            create_cycle_message(recipient_id=order.customer_id, recipient_account_id=order.customer_account_id,
+                recipient_business_cycle=order.business_cycle, title='订单超时已取消', preview=preview,
+                msg_type='ORDER', action_url=f'/pages/orderList/index?orderId={order.pk}', related_order_id=order.pk)
 
 
 def expired_order_candidates(now=None):

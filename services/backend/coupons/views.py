@@ -1,4 +1,5 @@
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
+from stores.db import transaction
 from django.db.models import F
 from django.utils import timezone
 from rest_framework.response import Response
@@ -16,10 +17,12 @@ class CouponListView(APIView):
     def get(self, request):
         from django.db.models import Q
         from .claims import claimed_coupon_ids, used_qualification_ids
+        from stores.license_benefits import check_new_benefits
+        admission, _ = check_new_benefits('PROMOTIONS')
         coupons = list(Coupon.objects.filter(is_active=True, is_public=True).filter(
             Q(valid_to__isnull=True) | Q(valid_to__gt=timezone.now())))
         claimed_ids = claimed_coupon_ids(request.account, coupons)
-        serializer = CouponSerializer(coupons, many=True, context={'claimed_ids': claimed_ids,
+        serializer = CouponSerializer(coupons, many=True, context={'claimed_ids': claimed_ids, 'license_admission': admission,
             'used_qualification_ids': used_qualification_ids(request.account, coupons)})
         return Response({'code': 0, 'data': serializer.data})
 
@@ -30,13 +33,16 @@ class CouponClaimView(APIView):
     def post(self, request, coupon_id):
         from .claims import claim
         try:
-            claim(request.account, request.legacy_user, coupon_id)
+            claimed = claim(request.account, request.legacy_user, coupon_id)
         except Coupon.DoesNotExist:
             return Response({'code': 404, 'msg': '优惠券不存在'})
         except IntegrityError:
             return Response({'code': 400, 'msg': '本周期或今日已领取该项资格券'})
 
-        return Response({'code': 0, 'msg': '领取成功'})
+        replayed = bool(getattr(claimed, '_claim_replayed', False))
+        return Response({'code': 0, 'msg': '该券已领取' if replayed else '领取成功',
+                         'data': {'id': claimed.pk, 'status': claimed.availability_status,
+                                  'replayed': replayed}})
 
 
 class MyCouponListView(APIView):
@@ -44,8 +50,8 @@ class MyCouponListView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def get(self, request):
-        from .benefits import grant_periodic, applies_to
-        grant_periodic(request.account)
+        from .benefits import try_grant_periodic, applies_to
+        try_grant_periodic(request.account)
         qs = UserCoupon.objects.filter(account=request.account, business_cycle=request.account.business_cycle).select_related('coupon', 'account')
 
         usable = request.query_params.get('usable')

@@ -5,6 +5,7 @@ from common.health import readiness
 
 urlpatterns = [
     path('api/health/', readiness),
+    path('api/stores/', include('stores.urls')),
     path('api/media/renew/', RenewPrivateMediaView.as_view()),
     path('api/media/private/<str:ticket>/', private_media, name='private-media'),
     path('media/<path:path>', public_media, name='public-media'),

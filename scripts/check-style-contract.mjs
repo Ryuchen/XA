@@ -7,7 +7,6 @@ execFileSync(process.execPath, [resolve(root, 'scripts/sync-native-theme.mjs'), 
 
 // ---------- 颜色 / Token 检查（保持原行为，覆盖全部三端） ----------
 const styleSourceRoots = [
-  resolve(root, 'apps/boss-miniapp/src'),
   resolve(root, 'apps/provider-miniapp/src'),
   resolve(root, 'apps/admin-web/src'),
   resolve(root, 'apps/boss-miniapp/native'),
@@ -175,7 +174,7 @@ await checkMoneyPackageResolvable()
 // design-system 转发检查（保持原行为）
 // Sass `hide` permits H5-specific font sizing while forwarding shared tokens.
 const expectedEntrypoint = /@forward\s+['"]\.\.\/\.\.\/\.\.\/\.\.\/packages\/design-system\/src\/miniapp['"](?:\s+hide\s+\$[\w-]+(?:\s*,\s*\$[\w-]+)*)?\s*;/
-for (const app of ['boss-miniapp', 'provider-miniapp']) {
+for (const app of ['provider-miniapp']) {
   const entry = resolve(root, `apps/${app}/src/styles/variables.scss`)
   const content = await readFile(entry, 'utf8')
   if (!expectedEntrypoint.test(content)) {

@@ -1,4 +1,10 @@
-"""Real staff claim notices and redemption keep their selected record in Vue."""
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
+"""Real staff claim notices and redemption keep their selected record in Vue.
+
+Run browser acceptance with an isolated file-backed SQLite or MySQL database:
+the live server and browser make concurrent requests, and Django's shared
+in-memory SQLite test connection can be closed while requests are still active.
+"""
 import json
 import os
 import subprocess
@@ -21,8 +27,8 @@ from orders.tests.factories import make_console_user, make_provider, make_user
                    CELERY_TASK_ALWAYS_EAGER=False)
 class ProviderVueClaimNavigationHTTPTest(LiveServerTestCase):
     def exercise(self, lost=False):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
-        if not root: self.skipTest('requires isolated provider Vue build')
+        root = fronted_root('provider')
+        if not root: self.skipTest('requires current React source')
         boss, provider, staff = make_user(), make_provider(), make_console_user(['engagement:points', 'engagement:fulfill'])
         accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, provider, staff)]
         for user, account in zip((boss, provider, staff), accounts): link_legacy_relations(user, account)
@@ -55,7 +61,7 @@ class ProviderVueClaimNavigationHTTPTest(LiveServerTestCase):
         notices = ok(clients[1].get('/api/messages/'))['messages']
         notice = next(row for row in notices if row['title']=='权益交付进度更新')
         self.assertEqual(notice['action_url'], f"/pages/reward-claim/index?id={old['id']}")
-        fixed = os.environ.get('XA_CLAIM_ROUTE_FIXED') == '1'
+        fixed = True
         repo = Path(settings.BASE_DIR).parent.parent
         try:
             result = subprocess.run(['node', str(repo / 'scripts/provider-vue-claim-navigation-375.cjs')],
@@ -77,6 +83,4 @@ class ProviderVueClaimNavigationHTTPTest(LiveServerTestCase):
         self.exercise()
 
     def test_lost_redemption_response_replays_same_record(self):
-        if os.environ.get('XA_CLAIM_ROUTE_FIXED') != '1':
-            self.skipTest('requires updated route')
         self.exercise(lost=True)

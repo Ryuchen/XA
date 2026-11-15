@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A converted appointment remains identifiable on the provider order."""
 import json
 import os
@@ -21,9 +22,9 @@ from orders.tests.factories import make_console_user, make_provider, make_servic
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
 class ProviderVueReservationOriginHTTPTest(LiveServerTestCase):
     def test_boss_reservation_conversion_and_provider_handoff(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         boss, provider, incoming = make_user(), make_provider(), make_provider()
         staff = make_console_user(['order:view', 'order:dispatch'])
         accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, provider, incoming, staff)]

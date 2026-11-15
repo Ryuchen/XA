@@ -32,6 +32,10 @@ class StaffChatVisibilityHTTPTest(LiveServerTestCase):
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
         session = client.get('/api/chat/session/').data['data']['session']
+        first = APIClient(); first.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[1])
+        second = APIClient(); second.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[2])
+        self.assertEqual(first.post(f"/api/admin/chat-sessions/{session['id']}/claim/", {'expected_version': 0}, format='json').data['code'], 0)
+        self.assertEqual(second.get(f"/api/admin/chat-sessions/{session['id']}/messages/").status_code, 403)
         repo = Path(settings.BASE_DIR).parent.parent
         result = subprocess.run([node, str(repo / 'scripts/admin-chat-visibility-live.cjs')],
             input=json.dumps({'base': self.live_server_url, 'sessionId': session['id'],

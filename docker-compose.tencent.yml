@@ -13,6 +13,8 @@ x-backend: &backend
   logging: *logging
   mem_limit: 256m
   environment: &environment
+    XA_STORE_DATABASES: ${XA_STORE_DATABASES:-}
+    XA_STORE_INTEGRATIONS: ${XA_STORE_INTEGRATIONS:-}
     DJANGO_DEBUG: "false"
     DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?secret required}
     DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?hosts required}
@@ -30,6 +32,13 @@ x-backend: &backend
     DJANGO_CACHE_URL: ${DJANGO_CACHE_URL:-redis://redis:6379/3}
     WECHAT_APPID: ${WECHAT_APPID:?AppID required}
     WECHAT_SECRET: ${WECHAT_SECRET:?AppSecret required}
+    WECHAT_WEB_LOGIN_ENV: ${WECHAT_WEB_LOGIN_ENV:-release}
+    SMS_SECRET_ID: ${SMS_SECRET_ID:-}
+    SMS_SECRET_KEY: ${SMS_SECRET_KEY:-}
+    SMS_APP_ID: ${SMS_APP_ID:-}
+    SMS_TEMPLATE_ID: ${SMS_TEMPLATE_ID:-}
+    SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
+    SMS_REGION: ${SMS_REGION:-ap-guangzhou}
     WECHAT_MOCK_LOGIN: "false"
     REQUIRE_CLIENT_REQUEST_ID: "true"
     REQUIRE_ORDER_EVIDENCE_IMAGES: "true"
@@ -81,7 +90,7 @@ services:
     <<: *backend
     restart: "no"
     mem_limit: 384m
-    command: sh -c "python manage.py migrate --noinput && python manage.py check_mysql_readiness && python manage.py collectstatic --noinput"
+    command: sh -c "python manage.py migrate_stores && python manage.py check_mysql_readiness && python manage.py collectstatic --noinput"
     depends_on:
       db:
         condition: service_healthy

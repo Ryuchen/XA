@@ -1,9 +1,10 @@
 from rest_framework import serializers
+from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
 
 from .models import SupportContactCard
 
 
-class SupportContactCardSerializer(serializers.ModelSerializer):
+class SupportContactCardSerializer(EntityNumberModelSerializer):
     def to_representation(self, instance):
         from common.catalog_images import bounded_public_image_url
         data = super().to_representation(instance)

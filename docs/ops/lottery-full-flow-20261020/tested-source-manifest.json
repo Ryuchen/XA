@@ -1,0 +1,151 @@
+{
+  "run": "lottery-full-flow-20261020",
+  "created_at": "2026-10-20T15:25:07.447Z",
+  "sources": [
+    "services/backend/engagement/models.py",
+    "services/backend/engagement/services.py",
+    "services/backend/engagement/views.py",
+    "services/backend/engagement/serializers.py",
+    "services/backend/engagement/migrations/0016_lottery_batches_and_pity.py",
+    "services/backend/engagement/migrations/0017_lottery_ten_guarantee.py",
+    "apps/boss-miniapp/native/pages/lottery/index.js",
+    "apps/boss-miniapp/native/pages/lottery/presentation.js",
+    "apps/boss-miniapp/native/pages/lottery/index.wxml",
+    "apps/boss-miniapp/native/pages/lottery/index.wxss",
+    "apps/boss-miniapp/native/core/api.js",
+    "apps/boss-miniapp/native/config.js",
+    "apps/admin-web/src/views/engagement/index.vue"
+  ],
+  "sha256": [
+    {
+      "path": "services/backend/engagement/models.py",
+      "sha256": "f35a6b9d2be22a117fabb3e378891edc9f6dd72f1e36e14afd33552783afa3c5"
+    },
+    {
+      "path": "services/backend/engagement/services.py",
+      "sha256": "5c8342e59c1cf677d9f94565f429ba0bd8db30268ebf344c23c1e6628387d96c"
+    },
+    {
+      "path": "services/backend/engagement/views.py",
+      "sha256": "d18acfe45ff663eb46b7839a031ba7ea0848cfd92de49fc432d624456845222a"
+    },
+    {
+      "path": "services/backend/engagement/serializers.py",
+      "sha256": "a4960b6eeb3a29fa7c2579f4aca17391213ec4a6563fef448dd0699f1218edef"
+    },
+    {
+      "path": "services/backend/engagement/migrations/0016_lottery_batches_and_pity.py",
+      "sha256": "15eb27ee7a71b1b671f743b0999582bd01e311b1fbae5343096dcb2750495ad7"
+    },
+    {
+      "path": "services/backend/engagement/migrations/0017_lottery_ten_guarantee.py",
+      "sha256": "c7dc7b9d53605f25154925a84a010897ce7e8f26d8424f8454c9a9ab1555bbf6"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/lottery/index.js",
+      "sha256": "ad7c5e8d6f27ed7f38655b4ecd1074f4e9940b1aaf6b9f11a37ab9518ae6ca34"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/lottery/presentation.js",
+      "sha256": "3b11d3ae18a67963055dc93876468424876bd6fd8abbdec3e45894823195999a"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/lottery/index.wxml",
+      "sha256": "c92873f2e00ec3785a491f21e149624bf0d77dd175a95bc15f4b1de29abc46e5"
+    },
+    {
+      "path": "apps/boss-miniapp/native/pages/lottery/index.wxss",
+      "sha256": "7723fef4eb22ad8d4f9a5f448e8e0f33b042c40089bf116ef6dab8b44fcc0d4e"
+    },
+    {
+      "path": "apps/boss-miniapp/native/core/api.js",
+      "sha256": "f28126a9914fc4c0f8ecd056e3decb32058653249bc0c37000fa8c3beb70cac4"
+    },
+    {
+      "path": "apps/boss-miniapp/native/config.js",
+      "sha256": "98f2069ab5dc047b2b56bd507c1aaff9b03f59d47bdd1e3e29e07cd0f733099c"
+    },
+    {
+      "path": "apps/admin-web/src/views/engagement/index.vue",
+      "sha256": "5c374eb9900d9c96897c3d575316edeb489e47e292ff0dcfcb44573dcd6145a8"
+    }
+  ],
+  "local_helper_sha256": [
+    {
+      "path": ".tools/lottery-full-flow-20261020/admin-vite.cjs",
+      "sha256": "67a0a9770b965a494f7456c190413d3abf49c577a33071b7a6e2b7575ef4a774"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/archive-public.cjs",
+      "sha256": "49bfa2a93d53f9a41beb41710aef1c1f060623d56280375417e20bd679ae8917"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/audit_isolated.py",
+      "sha256": "811d1b72b2b200a1e232ff2b3ac061edc71f98485c02d50c47f68d583be04f18"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/infra.py",
+      "sha256": "73c0fbc9d511f3e0a5a1f67072c2054fe6dad5eeda52dd57e7975f82b470a1d2"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/isolated_settings.py",
+      "sha256": "28198cc22d98c67e13c6d40f3d3373827454d5d22a9dfbbe147072c1f907efce"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/native-claim-proof.cjs",
+      "sha256": "c0d45e24fd3e2ce60c23648da75afa4759d3befd4c34566be2f293130991c28c"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/native-real.cjs",
+      "sha256": "2e9b67a798bfac09bb8a98028af76253554aedffb47de5ebbb658f7be826ef9b"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/otp_isolated.py",
+      "sha256": "3247325231e329ed8adf84ca385b8565414571b5743840aad447bb917439d269"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/readonly-live-audit.cjs",
+      "sha256": "581e6ad75a01f1903df72e7221776fd7a09ee893fbba1791765483481123f8ce"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/readonly-live-audit.py",
+      "sha256": "1a96255c186580b7c147f47b8fe259c5151466abe9ad8c50f0896bf9b712edae"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/resume_initialization.py",
+      "sha256": "5cd53e0258e7cbbfa77fb00daee563423aa8ed1b7fa4adf5fe223521361f359d"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/root-ops.cjs",
+      "sha256": "e20d538efdabc84b7377b4f9aea0f0896a59f068eb0b81436ed611b5a89cee88"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/seed_isolated.py",
+      "sha256": "48490a1de95dfb11daeebf5ab6ccd541c7578f6a150fdca46cf8b4382fad9fa5"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/server_isolated.py",
+      "sha256": "532a868030cdad176642036b491b91e9b974a09df2321eedd3ad5b0a5e4e348b"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/start_relay.py",
+      "sha256": "9c3d9d25a20bd7909c490d945af5f4023dd95e567d369a2713c79a6c0db3a91e"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/stop_relay.py",
+      "sha256": "31a6f648749eb47f6344f4d3140d38f480eb99622e90254e29445480e7bcb7c9"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/tcp_relay.py",
+      "sha256": "b7aa44450ed2c4ff68fefc0023bfc0f596c93ef5446ac6c63d9e6c05c3905803"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/verify-http.cjs",
+      "sha256": "0a742dfba5f09205773011627a8dd5708b1302c1de1c2afb431c05f6d8c63f3b"
+    },
+    {
+      "path": ".tools/lottery-full-flow-20261020/verify-native-restoration.cjs",
+      "sha256": "a29e05dae4bbc2aca1ca971211111b834bb15ac64ffcad6a0343f265edc7eca4"
+    }
+  ]
+}

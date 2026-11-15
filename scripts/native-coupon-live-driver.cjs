@@ -38,12 +38,12 @@ async function main() {
   assert.equal(page.data.items.length, 0, '停用券不能留在待使用');
   page.filter({ currentTarget: { dataset: { status: 'DISABLED' } } });
   assert.equal(page.data.items[0].status, 'DISABLED');
-  page.use({ currentTarget: { dataset: { id: input.voucherId } } });
+  await page.use({ currentTarget: { dataset: { id: input.voucherId } } });
   assert.equal(navigation, '', '停用券不能跳转选择服务');
   await adminPatch(true); await page.load();
   page.filter({ currentTarget: { dataset: { status: 'UNUSED' } } });
   assert.equal(page.data.items[0].status, 'UNUSED');
-  page.use({ currentTarget: { dataset: { id: input.voucherId } } });
+  await page.use({ currentTarget: { dataset: { id: input.voucherId } } });
   assert.match(navigation, /catalog/);
   page.onUnload();
   console.log('Native coupon page -> real Django HTTP: disabled and reenabled availability passed');

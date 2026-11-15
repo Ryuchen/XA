@@ -1,6 +1,6 @@
 """Compare stored escort rating summaries with their actual evaluation rows."""
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from stores.db import transaction
 
 from orders.ratings import escort_rating_summary
 from users.models import EscortProfile

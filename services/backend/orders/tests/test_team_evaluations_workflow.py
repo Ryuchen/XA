@@ -86,6 +86,10 @@ class TeamEvaluationsWorkflowTest(LiveServerTestCase):
             own = ok(clients[index + 1].get('/api/orders/evaluations/mine/'))['list']
             self.assertEqual(len(own), 1)
             self.assertEqual(own[0]['score'], 5 - index)
+            paged = ok(clients[index + 1].get('/api/orders/evaluations/mine/',
+                                               {'order_id': order_id, 'page': 1, 'page_size': 20}))
+            self.assertEqual((paged['total'], paged['pending_total'], paged['filtered_total']), (1, 1, 1))
+            self.assertEqual([item['id'] for item in paged['list']], [own[0]['id']])
             visible = ok(clients[index + 1].get(f'/api/orders/orders/{order_id}/'))['evaluations']
             self.assertEqual([item['id'] for item in visible], [own[0]['id']])
             ok(clients[index + 1].post(f"/api/orders/evaluations/{own[0]['id']}/reply/",

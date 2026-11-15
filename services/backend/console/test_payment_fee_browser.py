@@ -1,4 +1,4 @@
-"""Exercise fee configuration through the real mobile admin and isolated backend."""
+"""Exercise fee configuration through the iPad landscape admin and isolated backend."""
 import json
 import os
 import shutil
@@ -17,7 +17,7 @@ from orders.tests.factories import make_console_user
 @skipUnless(os.environ.get('XA_PAYMENT_FEE_BROWSER') == '1', 'Requires isolated browser and database')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
 class PaymentFeeBrowserTest(LiveServerTestCase):
-    def test_mobile_configuration_preview_and_history(self):
+    def test_landscape_configuration_preview_and_history(self):
         node = shutil.which('node')
         if not node:
             self.skipTest('Node runtime required')

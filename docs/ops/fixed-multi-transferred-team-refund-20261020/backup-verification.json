@@ -1,0 +1,172 @@
+{
+  "result": "PASS",
+  "phase": "capture",
+  "checked_at": "2026-10-20T07:35:05.429420+00:00",
+  "database_writes": 0,
+  "read_only_transaction": true,
+  "snapshot_isolation": "REPEATABLE READ",
+  "secrets_in_report": false,
+  "backup_sha256": "c1ad306a79c0e7db900a57ba7b167e032cb49310384eff3ea166d92e36e2fd02",
+  "backup_bytes": 6497671,
+  "protected_tables": [
+    {
+      "table": "orders_order",
+      "old_rows": 106,
+      "original_columns": 65,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "3b1c9e0c3cf21d2b40a1399f98a08c161dbffb027d6ba702070062c333279f0a",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_wallet",
+      "old_rows": 1167,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "ba2a135f76218824e5015ad058a2b9e61346a62d5c650aeffa02717c752ba935",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_transaction",
+      "old_rows": 1175,
+      "original_columns": 16,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "560198f6d47650fbdb29e3a233ba64df772de509bd17f9ae4caf6b7954f0eb83",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_incomehold",
+      "old_rows": 26,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "cb5870e54356a7f89a05d1a2c63ded4f09f69f04934130980ebc0ad7236b2f16",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_providerreport",
+      "old_rows": 55,
+      "original_columns": 22,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "df5fbdc24fe4762f0069c982c25726f7212e0ad704ad3051b8addbe46f2eb44c",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_aftersale",
+      "old_rows": 14,
+      "original_columns": 11,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "ddb138ce42de1a80b6a26b8fd762b713057fc1ed09bedaeb539040512164abde",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "engagement_consumptionconfirmation",
+      "old_rows": 15,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "093fa81da4a670ee1f5ff7b9b5ed7348eb9a4d5ba74c9a2e53889f5412f6cc15",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_orderrefund",
+      "old_rows": 26,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "929d545e8e7d06e0cd69472703b125985dccf4642e6c8cbd47ac339d12c66964",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_refundrecoveryline",
+      "old_rows": 119,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "8f4147a6088bdb8b4a6b24dbd48e11ec09675b7bfa2b5749fc3367d185ea8458",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_orderstatuslog",
+      "old_rows": 243,
+      "original_columns": 9,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "efc72d2b08f87c55ad70313790e326310b334bd7989f9b61b7e1184fb6006114",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "engagement_orderpointallocation",
+      "old_rows": 6,
+      "original_columns": 7,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "b7210fc13989cbb832deab98d8d37c31237881ec42c4a4b5afe7a68ce834d1aa",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "orders_orderprovider",
+      "old_rows": 47,
+      "original_columns": 13,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "e960513cc562fb733eb0a9b878ddbedbfa1e77a227d5e5c814bae972fa02121d",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_disposerecord",
+      "old_rows": 16,
+      "original_columns": 10,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "0b6d136981ae8b50664751fe38680d8706de0b510f29fcc1f74201849eae728b",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "console_adminauditlog",
+      "old_rows": 213,
+      "original_columns": 12,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "864bd2d2ea2958a04a6e44f8f425d4f5336ea22a957f5a2f95298b057c92ea91",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    },
+    {
+      "table": "wallet_systemconfig",
+      "old_rows": 9,
+      "original_columns": 5,
+      "original_columns_preserved": true,
+      "new_columns_verified": [],
+      "original_rows_sha256": "95c8d534d0afa1e90136e8f781f1433650275755402bbb7ac0caa395bfe9ceb2",
+      "old_rows_preserved": true,
+      "expected_platform_delta_raw": 0
+    }
+  ],
+  "platform_wallet_id": 1,
+  "platform_balance": 77100,
+  "old_order_max_id": 126,
+  "old_orders_hash": "75a948a8f279cb710cf65e4ac931c8720a9a2c18b149b7a57f4f5a776d329ec7",
+  "old_transaction_max_id": 1195,
+  "old_transactions_hash": "8465c0ba048e525fb6a25501ba6fa2be8cf3a02395b7f857a29d9bcab65d87bd",
+  "select_queries": 24,
+  "old_wallet_count": 1167,
+  "old_settings_key_count": 9
+}

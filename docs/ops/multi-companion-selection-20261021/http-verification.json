@@ -1,0 +1,118 @@
+{
+  "run": "multi-provider-flow-20261021",
+  "passed": true,
+  "api_origin": "http://127.0.0.1:18191",
+  "real_http": true,
+  "mocked_order_results": false,
+  "synthetic_fixture_only": true,
+  "actual_service_fulfilled": false,
+  "completed_at": "2026-10-20T16:44:39.403Z",
+  "quotes": {
+    "double_raw": 10002,
+    "platform_double_raw": 10002,
+    "legacy_single_raw": 5001,
+    "package_price_unchanged": true
+  },
+  "guards": [
+    {
+      "name": "incomplete-team",
+      "rejected": true,
+      "financial_state_unchanged": true,
+      "responses": [
+        {
+          "route": "/orders/quote/",
+          "http_status": 200,
+          "business_code": 400
+        },
+        {
+          "route": "/orders/create/",
+          "http_status": 200,
+          "business_code": 400
+        }
+      ]
+    },
+    {
+      "name": "duplicate-member",
+      "rejected": true,
+      "financial_state_unchanged": true,
+      "responses": [
+        {
+          "route": "/orders/quote/",
+          "http_status": 200,
+          "business_code": 400
+        },
+        {
+          "route": "/orders/create/",
+          "http_status": 200,
+          "business_code": 400
+        }
+      ]
+    },
+    {
+      "name": "over-capacity-selection",
+      "rejected": true,
+      "financial_state_unchanged": true,
+      "responses": [
+        {
+          "route": "/orders/quote/",
+          "http_status": 200,
+          "business_code": 400
+        },
+        {
+          "route": "/orders/create/",
+          "http_status": 200,
+          "business_code": 400
+        }
+      ]
+    },
+    {
+      "name": "wrong-selected-gender",
+      "rejected": true,
+      "financial_state_unchanged": true,
+      "responses": [
+        {
+          "route": "/orders/quote/",
+          "http_status": 200,
+          "business_code": 400
+        },
+        {
+          "route": "/orders/create/",
+          "http_status": 200,
+          "business_code": 400
+        }
+      ]
+    }
+  ],
+  "order": {
+    "id": 1,
+    "order_no": "ORD4D4978C4C89249D584FB",
+    "amount_raw": 10002,
+    "required_provider_count": 2,
+    "escort_mode": "DOUBLE",
+    "status": "GRABBED",
+    "payment_status": "PAID",
+    "requires_boss_selection": true,
+    "participant_account_ids": [
+      2,
+      3
+    ],
+    "all_three_views_consistent": true,
+    "provider_expected_income_raw": {
+      "p1": 4501,
+      "p2": 4001
+    },
+    "provider_earnings_credited": false
+  },
+  "payment": {
+    "transaction_id": 2,
+    "amount_raw": -10002,
+    "balance_before_raw": 500000,
+    "balance_after_raw": 489998,
+    "exact_one_new_transaction": true,
+    "replay_business_code": 409,
+    "replay_http_status": 200,
+    "replay_recovered_same_order": true,
+    "all_four_wallets_unchanged_after_replay": true
+  },
+  "note": "真实隔离 HTTP 与合成初始余额；未履约服务、未结算收益；HTTP 状态与业务错误码按原接口约定分别记录。"
+}

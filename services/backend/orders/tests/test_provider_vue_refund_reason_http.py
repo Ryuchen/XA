@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """A provider can see the reason of a refunded assigned order."""
 import json
 import os
@@ -28,9 +29,9 @@ class ProviderVueRefundReasonHTTPTest(LiveServerTestCase):
     ok = flow.ProviderCancelledOrderFlowTest.ok
 
     def test_staff_refund_reason_reaches_each_party(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         self.login(self.boss)
         order = self.ok(self.client.post('/api/orders/create/', {'service_id':self.service.pk,
             'dispatch_route':'STAFF', 'client_request_id':'vue-refund-reason'}, format='json'))

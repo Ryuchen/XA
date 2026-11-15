@@ -37,7 +37,7 @@ from orders.direct_payment_inbox import scan_payment_inbox
 from orders.direct_payment_outbox import scan_payment_outbox
 from orders.direct_payment_quote import quote_direct_payment
 from orders.models import Order
-from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
+from orders.tests.factories import make_console_user, make_order, make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile
 from wallet.models import IncomeHold, ProviderReport, SystemConfig, Transaction, Wallet
 
@@ -105,18 +105,23 @@ class DirectPaymentIsolatedAcceptance(TransactionTestCase):
                   'client_request_id': 'acceptance-' + route, 'expected_payment_total': quote.total_fen,
                   'expected_fee_quote_hash': quote.quote_hash}), appid='wx-acceptance', mchid='mch-acceptance')
 
-    def test_unpaid_dashboard_count_matches_order_filter(self):
+    def test_unpaid_dashboard_excludes_simulation_but_keeps_real_unpaid_orders(self):
         role = self.staff.admin_membership.roles.get()
         role.permissions = [*role.permissions, 'dashboard:view']
         role.save(update_fields=['permissions'])
         intent = self.prepare('STAFF')
+        normal = make_order(self.boss, service=self.service, customer_account=self.boss_account,
+                            status='PENDING', payment_status='UNPAID')
+        balances = list(Wallet.objects.order_by('pk').values_list('pk', 'balance', 'frozen_amount'))
         self.auth(self.staff_account)
         stats = self.client.get('/api/admin/dashboard/stats').data['data']
         result = self.client.get('/api/admin/orders/', {'status': 'PENDING', 'payment_status': 'UNPAID'}).data['data']
         self.assertEqual(stats['pending_unpaid_total'], 1)
-        self.assertEqual(result['total'], 1)
-        self.assertEqual([row['id'] for row in result['list']], [intent.order_id])
+        self.assertEqual(stats['order_total'], 1)
+        self.assertEqual(result['total'], 2)
+        self.assertEqual({row['id'] for row in result['list']}, {intent.order_id, normal.pk})
         self.assertEqual(self.client.get('/api/admin/orders/', {'status': 'PENDING', 'payment_status': 'PAID'}).data['data']['total'], 0)
+        self.assertEqual(list(Wallet.objects.order_by('pk').values_list('pk', 'balance', 'frozen_amount')), balances)
 
     def callback(self, intent, *, amount=None, event_id='evt-acceptance'):
         total = intent.amount_fen if amount is None else amount
@@ -147,7 +152,7 @@ class DirectPaymentIsolatedAcceptance(TransactionTestCase):
         # Notifications and task scheduling are not delivered externally.
         with patch('orders.direct_payment._notify_paid'), patch('orders.notifier.notify_order_update'), \
              patch('orders.services.schedule_auto_cancel'), \
-             patch('integrations.kook_config.get_kook_config', return_value=SimpleNamespace(auto_new_orders=False)):
+             patch('integrations.kook_config.get_kook_config', return_value=SimpleNamespace(enabled=False, auto_new_orders=False)):
             scan_payment_inbox()
             scan_payment_outbox()
 

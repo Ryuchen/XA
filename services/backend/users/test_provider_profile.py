@@ -23,8 +23,12 @@ class ProviderProfileTest(APITestCase):
         config = override_settings(MEDIA_ROOT=folder.name)
         config.enable()
         self.addCleanup(config.disable)
-        self.user = make_provider(display_name='原昵称', price_per_hour=205)
+        self.user = make_provider(display_name='原昵称', price_per_hour=205,
+                                  deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         self.account = get_or_create_account_for_legacy_user(self.user)
+        self.account.openid = f'profile-test-{self.account.pk}'
+        self.account.is_openid_bound = True
+        self.account.save(update_fields=['openid', 'is_openid_bound'])
         self.profile = self.user.escort_profile
         self.profile.account = self.account
         self.profile.save(update_fields=['account'])

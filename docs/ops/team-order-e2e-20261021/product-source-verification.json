@@ -1,0 +1,12 @@
+{
+  "run": "team-order-e2e-20261021",
+  "passed": true,
+  "files": 804,
+  "source_unchanged": true,
+  "changed_files": [],
+  "scope": [
+    "native-miniapp",
+    "backend"
+  ],
+  "checked_at": "2026-10-20T17:31:58.687Z"
+}

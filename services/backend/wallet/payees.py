@@ -1,5 +1,6 @@
 """Saved withdrawal destinations: one per provider and payment method."""
-from django.db import transaction
+from stores.db import transaction
+from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -11,7 +12,8 @@ from .services import get_wallet
 
 def serialize_account(row):
     return {'id': row.pk, 'payee_method': row.payee_method, 'payee_account': row.payee_account,
-            'payee_name': row.payee_name, 'version': row.version, 'updated_at': row.updated_at}
+            'payee_name': row.payee_name, 'version': row.version, 'business_cycle': row.business_cycle,
+            'updated_at': row.updated_at}
 
 
 def validate_payee(data):
@@ -33,7 +35,7 @@ class WithdrawalAccountListView(APIView):
     def get(self, request):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可管理提现账户'})
-        rows = WithdrawalAccount.objects.filter(account=request.account)
+        rows = WithdrawalAccount.objects.filter(account=request.account, business_cycle=request.account.business_cycle)
         return Response({'code': 0, 'data': [serialize_account(row) for row in rows]})
 
 
@@ -54,13 +56,30 @@ class WithdrawalAccountDetailView(APIView):
                 _, number, name = validate_payee({**request.data, 'payee_method': payee_method})
             except ValueError as error:
                 return Response({'code': 400, 'msg': str(error)})
+        lifecycle = getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False)
+        if lifecycle:
+            from club_accounts.provider_lifecycle import ProviderLifecycleError, ensure_provider_lifecycle
+            try:
+                ensure_provider_lifecycle(request.account)
+            except ProviderLifecycleError:
+                return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验，请稍后重试'}, status=503)
         with transaction.atomic():
+            if lifecycle:
+                from club_accounts.provider_lifecycle import lock_provider_operation
+                try:
+                    lock_provider_operation(request.account)
+                except ProviderLifecycleError:
+                    return Response({'code': 503, 'msg': '陪玩账号状态暂不可核验，请稍后重试'}, status=503)
+                if not ClubAccount.objects.filter(pk=request.account.pk,
+                        account_type=ClubAccount.AccountType.PROVIDER, license_membership_active=True,
+                        business_cycle=request.account.business_cycle).exists():
+                    return Response({'code': 409, 'msg': '陪玩账号周期已变化，请重新登录核对'}, status=409)
             # Match withdrawal's wallet -> destination lock order, including the
             # first binding (which has no destination row to lock yet). Locking
             # ClubAccount here would deadlock with the withdrawal receipt's FK.
             get_wallet(account=request.account, user=request.legacy_user, for_update=True)
             row = WithdrawalAccount.objects.select_for_update().filter(
-                account=request.account, payee_method=payee_method,
+                account=request.account, business_cycle=request.account.business_cycle, payee_method=payee_method,
             ).first()
             if (row.version if row else 0) != expected or (row.pk if row else 0) != expected_id:
                 return Response({'code': 409, 'errorCode': 'PAYEE_CHANGED',
@@ -68,6 +87,8 @@ class WithdrawalAccountDetailView(APIView):
             if delete:
                 if row:
                     row.delete()
+                    from .notifier import notify_withdraw_account_update
+                    transaction.on_commit(lambda: notify_withdraw_account_update(request.account.pk))
                 return Response({'code': 0, 'msg': '已解绑，已提交的提现申请不受影响'})
             if row:
                 row.payee_account, row.payee_name = number, name
@@ -75,7 +96,10 @@ class WithdrawalAccountDetailView(APIView):
                 row.save(update_fields=['payee_account', 'payee_name', 'version', 'updated_at'])
             else:
                 row = WithdrawalAccount.objects.create(account=request.account, payee_method=payee_method,
+                                                       business_cycle=request.account.business_cycle,
                                                        payee_account=number, payee_name=name)
+            from .notifier import notify_withdraw_account_update
+            transaction.on_commit(lambda: notify_withdraw_account_update(request.account.pk))
             return Response({'code': 0, 'msg': '收款账户已保存', 'data': serialize_account(row)})
 
     def put(self, request, payee_method):

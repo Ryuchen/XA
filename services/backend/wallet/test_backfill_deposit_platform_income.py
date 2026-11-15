@@ -96,14 +96,14 @@ class BackfillDepositPlatformIncomeTest(TestCase):
         out = self._run()
 
         self.assertIn('=== 押金账务盘点（只读，未写入任何数据）===', out)
-        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：1 笔，出账合计 30000（3000 兴安币）', out)
-        self.assertIn('[2] EscortProfile.deposit_paid 合计：30000（3000 兴安币），其中非零 1 名陪玩', out)
-        self.assertIn('[3] 差额 [1]-[2]：0（0 兴安币）', out)
+        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：1 笔，出账合计 30000（3000 浪花）', out)
+        self.assertIn('[2] EscortProfile.deposit_paid 合计：30000（3000 浪花），其中非零 1 名陪玩', out)
+        self.assertIn('[3] 差额 [1]+[1a]-[2]：0（0 浪花）', out)
         self.assertIn('对得上', out)
         self.assertNotIn('对不上', out)
         # 平台侧一分没记，整笔 30000 都待回补
-        self.assertIn('[4] 平台侧 DEPOSIT_INCOME 流水：0 笔，入账合计 0（0 兴安币）', out)
-        self.assertIn('[5] 待回补金额 [1]-[4]：30000（3000 兴安币）', out)
+        self.assertIn('[4] 平台侧 DEPOSIT_INCOME 流水：0 笔，入账合计 0（0 浪花）', out)
+        self.assertIn('[5] 待回补金额 [1]+[1a]-[4]：30000（3000 浪花）', out)
         self.assertIn('明细：逐个陪玩核对全部一致，无差额条目。', out)
         self.assertIn('0 名陪玩账实不符', out)
 
@@ -122,9 +122,9 @@ class BackfillDepositPlatformIncomeTest(TestCase):
 
         out = self._run()
 
-        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：1 笔，出账合计 30000（3000 兴安币）', out)
-        self.assertIn('[2] EscortProfile.deposit_paid 合计：80000（8000 兴安币），其中非零 2 名陪玩', out)
-        self.assertIn('[3] 差额 [1]-[2]：-50000（-5000 兴安币）', out)
+        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：1 笔，出账合计 30000（3000 浪花）', out)
+        self.assertIn('[2] EscortProfile.deposit_paid 合计：80000（8000 浪花），其中非零 2 名陪玩', out)
+        self.assertIn('[3] 差额 [1]+[1a]-[2]：-50000（-5000 浪花）', out)
         self.assertIn('对不上', out)
         self.assertIn('回补基准需人工判定', out)
         self.assertNotIn('对得上', out)
@@ -147,11 +147,11 @@ class BackfillDepositPlatformIncomeTest(TestCase):
         out = self._run()
 
         # [1] 仍然只有陪玩那 1 笔；若把 DEPOSIT_INCOME 混进来会变成 2 笔 / 合计 0
-        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：1 笔，出账合计 30000（3000 兴安币）', out)
-        self.assertIn('[3] 差额 [1]-[2]：0（0 兴安币）', out)
-        self.assertIn('[4] 平台侧 DEPOSIT_INCOME 流水：1 笔，入账合计 30000（3000 兴安币）', out)
+        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：1 笔，出账合计 30000（3000 浪花）', out)
+        self.assertIn('[3] 差额 [1]+[1a]-[2]：0（0 浪花）', out)
+        self.assertIn('[4] 平台侧 DEPOSIT_INCOME 流水：1 笔，入账合计 30000（3000 浪花）', out)
         # 平台侧补齐后待回补收敛到 0，这就是命令自称的幂等判据
-        self.assertIn('[5] 待回补金额 [1]-[4]：0（0 兴安币）', out)
+        self.assertIn('[5] 待回补金额 [1]+[1a]-[4]：0（0 浪花）', out)
 
     def test_partially_backfilled_reports_remaining_gap(self):
         """平台侧补了一半：[5] 只报剩下的缺口，不重复计已补部分。"""
@@ -163,9 +163,9 @@ class BackfillDepositPlatformIncomeTest(TestCase):
 
         out = self._run()
 
-        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：2 笔，出账合计 50000（5000 兴安币）', out)
-        self.assertIn('[4] 平台侧 DEPOSIT_INCOME 流水：1 笔，入账合计 30000（3000 兴安币）', out)
-        self.assertIn('[5] 待回补金额 [1]-[4]：20000（2000 兴安币）', out)
+        self.assertIn('[1] 陪玩侧 DEPOSIT 流水：2 笔，出账合计 50000（5000 浪花）', out)
+        self.assertIn('[4] 平台侧 DEPOSIT_INCOME 流水：1 笔，入账合计 30000（3000 浪花）', out)
+        self.assertIn('[5] 待回补金额 [1]+[1a]-[4]：20000（2000 浪花）', out)
 
     def test_orphan_wallet_is_called_out(self):
         """有 DEPOSIT 流水却挂不到陪玩档案的钱包必须单独点名，别被静默漏掉。"""
@@ -185,7 +185,7 @@ class BackfillDepositPlatformIncomeTest(TestCase):
         out = self._run()
 
         self.assertIn('1 个钱包有 DEPOSIT 流水但挂不到陪玩档案', out)
-        self.assertIn('涉及 12000（1200 兴安币）', out)
+        self.assertIn('涉及 12000（1200 浪花）', out)
         self.assertIn(f'wallet_id: [{wallet.pk}]', out)
 
     # -- 明细开关 -------------------------------------------------------
@@ -200,7 +200,7 @@ class BackfillDepositPlatformIncomeTest(TestCase):
 
         out = self._run('--top', '0')
 
-        self.assertIn('[3] 差额 [1]-[2]：-50000（-5000 兴安币）', out)
+        self.assertIn('[3] 差额 [1]+[1a]-[2]：-50000（-5000 浪花）', out)
         self.assertNotIn('差额明细', out)
         self.assertNotIn('被直改的老王', out)
 
@@ -294,8 +294,8 @@ class BackfillDepositPlatformIncomeTest(TestCase):
             call_command(COMMAND, '--commit', stdout=out, no_color=True)
 
         printed = out.getvalue()
-        self.assertIn('[3] 差额 [1]-[2]：0（0 兴安币）', printed)
-        self.assertIn('[5] 待回补金额 [1]-[4]：30000（3000 兴安币）', printed)
+        self.assertIn('[3] 差额 [1]+[1a]-[2]：0（0 浪花）', printed)
+        self.assertIn('[5] 待回补金额 [1]+[1a]-[4]：30000（3000 浪花）', printed)
         # 报告打完就退出，不该出现只读盘点的收尾行（那是没有 --commit 才走的）
         self.assertNotIn('盘点完成（只读）', printed)
 

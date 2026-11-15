@@ -49,7 +49,7 @@ class ReportNoticeNavigationTest(APITransactionTestCase):
         if node:
             repo = Path(settings.BASE_DIR).parent.parent
             env = {**os.environ, 'XA_REPORT_NOTICE': json.dumps(detail, ensure_ascii=False)}
-            result = subprocess.run([node, '--test', str(repo / 'apps/provider-miniapp/tests/message-order-navigation.cjs')],
+            result = subprocess.run([node, '--test', str(repo / 'scripts/fronted-message-contracts.test.mjs')],
                                     env=env, capture_output=True, text=True, encoding='utf-8', timeout=30, cwd=repo)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

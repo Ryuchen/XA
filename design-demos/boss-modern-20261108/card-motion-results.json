@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "host": "sl.esports.club",
+      "light": {
+        "x": "25%",
+        "y": "75%",
+        "opacity": "0.55"
+      },
+      "layoutUnchanged": true,
+      "errors": []
+    },
+    {
+      "host": "xa.esports.club",
+      "light": {
+        "x": "25%",
+        "y": "75%",
+        "opacity": "0.55"
+      },
+      "layoutUnchanged": true,
+      "errors": []
+    },
+    {
+      "selection": "boss-card-confirm"
+    },
+    {
+      "reducedMotion": {
+        "animation": "none",
+        "pointerLight": "none"
+      }
+    },
+    {
+      "mobile": {
+        "pointerLight": "disabled",
+        "navigation": "passed"
+      }
+    }
+  ]
+}

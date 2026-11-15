@@ -3,9 +3,9 @@ import io
 import json
 from datetime import timedelta
 from unittest.mock import patch
-from django.core.management import call_command
 from django.test import override_settings
 from django.utils import timezone
+from common.mysql_test_support import call_test_catalog_import
 from rest_framework.test import APITestCase
 
 from orders.management.commands.seed_club_catalog import CATALOG
@@ -36,7 +36,7 @@ class OrderCatalogSnapshotFlowTest(APITestCase):
             'client_request_id': 'snapshot-pool-order'}, format='json'))
         order = Order.objects.get(pk=data['id'])
         self.assertFalse(order.is_gift_snapshot)
-        call_command('seed_club_catalog', apply=True, stdout=io.StringIO())
+        call_test_catalog_import(apply=True, stdout=io.StringIO())
         self.service.refresh_from_db()
         self.assertTrue(self.service.service_category.is_gift)
         self.login(self.provider)

@@ -1,0 +1,191 @@
+.boss-content[data-page="catalog"] .boss-catalog-fidelity-header { margin: -16px -24px 0; padding: 16px 24px 20px; background: radial-gradient(circle at 12% 0%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 42%), radial-gradient(circle at 92% 24%, hsl(var(--ocean-400) / .09), transparent 36%); }
+.boss-catalog-fidelity-header > .boss-catalog-eyebrow { margin: 0; color: var(--boss-link); font-size: 12px; font-weight: 500; }
+.boss-content .boss-catalog-fidelity-header > h1 { margin-top: 8px; font-size: 26px; line-height: 1.25; }
+.boss-catalog-fidelity-header .search-shell { margin-top: 20px; }
+.boss-catalog-fidelity-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+.boss-catalog-fidelity-body > * { min-width: 0; }
+.boss-catalog-fidelity-body > .boss-game-filter, .boss-catalog-fidelity-body > .boss-catalog-filters, .boss-catalog-fidelity-body > .boss-catalog-results { margin: 0; }
+.boss-catalog-context { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid color-mix(in oklab, var(--primary) 20%, transparent); border-radius: 12px; background: color-mix(in oklab, var(--primary) 5%, transparent); }
+.boss-catalog-context > svg, .boss-catalog-context-icon { flex-shrink: 0; color: var(--boss-link); }
+.boss-catalog-context-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-catalog-context > div { flex: 1; min-width: 0; }
+.boss-catalog-context h2 { font-size: 14px; font-weight: 600; line-height: 20px; }
+.boss-catalog-context p { margin-top: 2px; font-size: 12px; color: var(--muted-foreground); line-height: 18px; }
+.boss-catalog-context > [data-slot="button"] { flex-shrink: 0; font-size: 12px; padding-inline: 8px; }
+.boss-catalog-filter-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.boss-catalog-filter-heading > p { font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+.boss-catalog-filter-heading > [data-slot="button"] { font-size: 12px; padding-inline: 8px; }
+.boss-catalog-expanded { margin-top: 8px; padding: 12px 4px 0; border-top: 1px solid var(--border); display: grid; gap: 12px; }
+.boss-catalog-expanded p { font-size: 12px; color: var(--muted-foreground); }
+.boss-catalog-expanded > div > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.boss-catalog-expanded button { min-height: 44px; padding-inline: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; }
+.boss-catalog-expanded button[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--boss-link); }
+.boss-catalog-active-filters > p { font-size: 12px; color: var(--muted-foreground); }
+.boss-catalog-active-filters > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.boss-catalog-active-filters button { display: flex; align-items: center; gap: 6px; min-height: 44px; max-width: 100%; padding: 8px 12px; border: 1px solid color-mix(in oklab, var(--primary) 25%, transparent); border-radius: 8px; background: color-mix(in oklab, var(--primary) 5%, transparent); color: var(--boss-link); font-size: 12px; overflow-wrap: anywhere; }
+.boss-catalog-active-filters button > svg { flex-shrink: 0; }
+.boss-catalog-sort { display: flex; flex-shrink: 0; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 4px; }
+.boss-catalog-sort button { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; min-width: 44px; padding-inline: 8px; border-radius: 6px; font-size: 12px; }
+.boss-catalog-sort button[aria-pressed="true"] { background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--boss-link); }
+.boss-catalog-fidelity-body .boss-catalog-results h2 { font-size: 16px; font-weight: 600; }
+.boss-catalog-fidelity-body .boss-catalog-results h2 > small { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.boss-catalog-fidelity-body .boss-catalog-results p { margin-top: 4px; font-size: 12px; }
+.boss-catalog-fidelity-body .boss-service-card-title > div { min-width: 0; flex: 1; }
+.boss-catalog-fidelity-body .boss-service-card-title h3 { line-height: 20px; }
+.boss-catalog-fidelity-body .boss-price { font-size: 20px; line-height: 28px; }
+.boss-catalog-fidelity-body .boss-price > small { font-size: 12px; line-height: 1.4; }
+.boss-catalog-fidelity-body .boss-service-card-content [data-slot="badge"] { height: 20px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.65; }
+.boss-catalog-fidelity-body .boss-service-card-title h3, .boss-catalog-fidelity-body .boss-service-card-title p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boss-catalog-fidelity-body .boss-service-card-title p { margin-top: 4px; font-size: 12px; color: var(--muted-foreground); }
+.boss-catalog-service-art { position: relative; display: grid; place-items: center; overflow: hidden; width: 96px; height: 112px; flex-shrink: 0; border-radius: 12px; background: linear-gradient(to bottom right, #38bdf859, #2563eb40, #4338ca4d), #0f172a; color: #ffffffd9; }
+.boss-catalog-service-art > span { position: absolute; border: 1px solid #ffffff1a; border-radius: 50%; }
+.boss-catalog-service-art > span:first-child { right: -20px; top: -20px; width: 64px; height: 64px; }
+.boss-catalog-service-art > span:nth-child(2) { left: -16px; bottom: -28px; width: 80px; height: 80px; }
+.boss-catalog-service-art > svg { position: relative; }
+.boss-catalog-service-art > small { position: absolute; bottom: 8px; color: #ffffff99; font-size: 12px; font-weight: 500; letter-spacing: .1em; }
+.boss-catalog-fidelity-body .boss-catalog-consult-badge { color: var(--warning-foreground); border-color: color-mix(in oklab, var(--warning) 30%, transparent); }
+.dark .boss-catalog-fidelity-body .boss-catalog-consult-badge { color: var(--warning); }
+.boss-catalog-fidelity-body :is(.boss-service-card-main, button):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.boss-catalog-fidelity-body :is(.boss-catalog-sort, .boss-catalog-expanded, .boss-catalog-active-filters) button:hover { background: var(--accent); color: var(--accent-foreground); }
+.boss-catalog-fidelity-body :is(.boss-catalog-sort, .boss-catalog-expanded, .boss-catalog-active-filters) button:active { filter: brightness(.96); }
+.boss-service-fidelity-page { min-width: 0; padding-bottom: 104px; }
+.boss-service-detail-back { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 8px 12px; }
+.boss-service-detail-back .boss-back-link { min-height: 44px; margin: 0; padding-inline: 8px; border-radius: 8px; font-size: 14px; }
+.boss-service-detail-back > [data-slot="badge"] { font-size: 12px; }
+.boss-service-coupon-context { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; color: var(--boss-link); }
+.boss-service-coupon-context > p { flex: 1; font-size: 12px; }
+.boss-service-coupon-context > [data-slot="button"] { flex-shrink: 0; font-size: 12px; }
+.boss-service-provider-context { margin-bottom: 16px; }
+.boss-service-hero-grid { display: grid; gap: 16px; min-width: 0; }
+.boss-service-fidelity-hero { position: relative; overflow: hidden; padding: 20px; border: 1px solid color-mix(in oklab, var(--primary) 15%, transparent); border-radius: 12px; background: linear-gradient(to bottom right, #1e3a8a66, #020617cc), #0f172a; box-shadow: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a; }
+.boss-service-hero-orbit { position: absolute; pointer-events: none; border: 1px solid #ffffff1a; border-radius: 50%; }
+.boss-service-hero-orbit.first { right: -40px; top: -48px; width: 192px; height: 192px; }
+.boss-service-hero-orbit.second { right: -8px; top: -16px; width: 128px; height: 128px; }
+.boss-service-hero-content { position: relative; display: flex; flex-direction: column; height: 100%; }
+.boss-service-hero-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.boss-service-hero-heading p { font-size: 14px; font-weight: 500; color: #ffffffbf; }
+.boss-service-hero-heading > div > span { display: block; margin-top: 4px; font-size: 12px; color: #ffffff8c; }
+.boss-service-hero-icon { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border: 1px solid #ffffff26; border-radius: 8px; background: #ffffff1a; color: white; }
+.boss-service-hero-content > h1 { margin-top: 32px; max-width: 520px; color: white; font-size: 26px; font-weight: 600; line-height: 1.3; letter-spacing: -.03em; overflow-wrap: anywhere; }
+.boss-service-hero-description { margin-top: 12px; max-width: 560px; font-size: 14px; line-height: 24px; color: #ffffffb3; }
+.boss-service-hero-price { display: flex; flex-direction: column; gap: 16px; margin-top: auto; padding-top: 24px; }
+.boss-service-hero-price > p { color: white; font-size: 32px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
+.boss-service-hero-price > p > span { margin-left: 8px; font-size: 12px; font-weight: 400; color: #ffffffa6; }
+.boss-service-hero-price > [data-slot="badge"] { width: fit-content; color: white; border-color: #ffffff26; background: #ffffff1a; }
+.boss-service-fidelity-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.boss-service-fidelity-facts > div { display: flex; flex-direction: column; justify-content: space-between; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.boss-service-fact-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 8px; background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--boss-link); }
+.boss-service-fidelity-facts > div > div { margin-top: 20px; }
+.boss-service-fidelity-facts p { font-size: 12px; color: var(--muted-foreground); }
+.boss-service-fidelity-facts strong { display: block; margin-top: 4px; font-size: 14px; font-weight: 600; line-height: 20px; }
+.boss-service-fidelity-facts strong > span { font-variant-numeric: tabular-nums; }
+.boss-service-information-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.boss-service-info-card { min-width: 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.boss-service-info-card h2 { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; line-height: 24px; }
+.boss-service-info-card h2 > svg { color: var(--boss-link); flex-shrink: 0; }
+.boss-service-card-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.boss-service-card-heading > div:first-child { min-width: 0; }
+.boss-service-card-heading h2 > span { margin-left: -4px; color: var(--muted-foreground); font-size: 14px; font-weight: 400; }
+.boss-service-card-heading p { margin-top: 4px; color: var(--muted-foreground); font-size: 12px; }
+.boss-service-fidelity-variants { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.boss-service-fidelity-variants > button { min-width: 0; min-height: 84px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: left; background: color-mix(in oklab, var(--muted) 35%, transparent); transition: border-color .15s; }
+.boss-service-fidelity-variants > button > span { display: block; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.boss-service-fidelity-variants > button > strong { display: block; margin-top: 8px; color: var(--boss-link); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.boss-service-fidelity-variants small { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+.boss-service-fidelity-variants > button[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in oklab, var(--primary) 10%, transparent); }
+.boss-service-fidelity-variants > button:hover { border-color: color-mix(in oklab, var(--primary) 50%, transparent); }
+.boss-service-fidelity-page :is(button, a):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.boss-service-highlights { display: grid; gap: 12px; margin-top: 16px; }
+.boss-service-highlights > p { display: flex; align-items: start; gap: 8px; font-size: 14px; line-height: 24px; color: var(--muted-foreground); }
+.boss-service-highlights svg { flex-shrink: 0; margin-top: 4px; color: var(--success); }
+.boss-service-card-copy { margin-top: 12px; color: var(--muted-foreground); font-size: 14px; line-height: 28px; white-space: pre-line; }
+.boss-service-card-note { margin-top: 8px; color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+.boss-service-consult-card { border-color: color-mix(in oklab, var(--warning) 25%, transparent); background: color-mix(in oklab, var(--warning) 5%, transparent); }
+.boss-service-consult-card h2 > svg { color: var(--warning); }
+.boss-service-addons { display: grid; gap: 8px; margin-top: 16px; }
+.boss-service-addons > a { display: flex; min-height: 48px; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.boss-service-addons > a:hover { background: var(--accent); }
+.boss-service-addons > a > span { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; }
+.boss-service-addons > a > strong { color: var(--boss-link); font-size: 14px; font-weight: 400; }
+.boss-service-addons > a > svg { flex-shrink: 0; color: var(--muted-foreground); }
+.boss-service-addons-empty { display: flex; min-height: 48px; align-items: center; gap: 8px; margin-top: 16px; padding: 12px; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted-foreground); font-size: 12px; }
+.boss-service-roulette-pool { margin-top: 16px; border-top: 1px solid var(--border); }
+.boss-service-roulette-pool > div { display: flex; gap: 12px; padding-block: 12px; border-bottom: 1px solid var(--border); }
+.boss-service-roulette-pool > div:last-child { padding-bottom: 0; border: 0; }
+.boss-service-roulette-pool > div > div { flex: 1; }
+.boss-service-roulette-pool strong { font-size: 14px; font-weight: 500; }
+.boss-service-roulette-pool p, .boss-service-roulette-pool > div > span { color: var(--muted-foreground); font-size: 12px; }
+.boss-service-start-steps { display: grid; gap: 20px; margin-top: 20px; }
+.boss-service-start-steps > div { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 35%, transparent); }
+.boss-service-start-steps > div > span { position: relative; display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; background: color-mix(in oklab, var(--primary) 10%, transparent); color: var(--boss-link); }
+.boss-service-start-steps small { position: absolute; right: -4px; top: -4px; border-radius: 4px; padding-inline: 4px; background: var(--card); color: var(--boss-link); font-size: 12px; font-weight: 600; }
+.boss-service-start-steps h3 { font-size: 14px; font-weight: 500; }
+.boss-service-start-steps p { margin-top: 4px; color: var(--muted-foreground); font-size: 12px; line-height: 20px; }
+.boss-service-rich-content, .boss-service-media { margin-top: 16px; }
+.boss-service-media { display: grid; gap: 12px; }
+.boss-service-media .boss-banner { width: 100%; height: auto; max-height: none; object-fit: contain; }
+.boss-service-review-average { display: flex; align-items: center; gap: 4px; flex-shrink: 0; color: var(--boss-link); }
+.boss-service-review-average strong { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.boss-service-review-average > span { font-size: 12px; color: var(--muted-foreground); }
+.boss-service-review-grid { display: grid; gap: 20px; margin-top: 20px; }
+.boss-service-review-grid > article + article { padding-top: 20px; border-top: 1px solid var(--border); }
+.boss-service-review-author { display: flex; align-items: center; gap: 8px; }
+.boss-service-review-author .boss-avatar { width: 36px; height: 36px; }
+.boss-service-review-avatar { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: var(--muted); color: var(--muted-foreground); }
+.boss-service-review-author > strong { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; }
+.boss-service-review-author > [data-slot="badge"] { color: var(--boss-link); }
+.boss-service-review-provider, .boss-service-review-time { margin-top: 12px; font-size: 12px; color: var(--muted-foreground); }
+.boss-service-review-provider { margin-top: 8px; }
+.boss-service-review-copy { margin-top: 12px; font-size: 14px; line-height: 24px; overflow-wrap: anywhere; }
+#service-reviews-title { scroll-margin-block-start: 88px; }
+#service-reviews-title:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+.boss-service-review-reply { margin-top: 12px; padding: 12px; border-radius: 8px; background: color-mix(in oklab, var(--muted) 60%, transparent); color: var(--muted-foreground); font-size: 12px; line-height: 20px; overflow-wrap: anywhere; }
+.boss-service-review-reply > strong { color: var(--foreground); font-weight: 500; }
+.boss-service-review-error { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; min-height: 48px; margin-top: 16px; padding: 8px 12px; border: 1px solid color-mix(in oklab, var(--destructive) 20%, transparent); border-radius: 8px; background: color-mix(in oklab, var(--destructive) 5%, transparent); color: var(--destructive); font-size: 14px; }
+.boss-service-no-reviews { padding: 24px 12px 12px; text-align: center; color: var(--muted-foreground); }
+.boss-service-no-reviews > svg { margin-inline: auto; }
+.boss-service-no-reviews > p { margin-top: 8px; font-size: 14px; font-weight: 500; color: var(--foreground); }
+.boss-service-no-reviews > span { display: block; margin-top: 4px; font-size: 12px; }
+.boss-service-fidelity-actionbar { position: fixed; z-index: 30; inset-inline: 0; bottom: 0; padding: 12px 24px; border-top: 1px solid var(--border); background: color-mix(in oklab, var(--background) 95%, transparent); backdrop-filter: blur(24px); }
+.boss-service-fidelity-actionbar > div { display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: 1072px; margin-inline: auto; }
+.boss-service-action-summary { min-width: 0; }
+.boss-service-action-summary > p { font-size: 12px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boss-service-action-summary > strong { display: block; margin-top: 4px; color: var(--boss-link); font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.boss-service-action-summary > strong > span { margin-left: 4px; color: var(--muted-foreground); font-size: 12px; font-weight: 400; }
+.boss-service-action-buttons { display: grid; grid-template-columns: 80px 112px minmax(144px, 1fr); gap: 8px; flex-shrink: 0; }
+.boss-service-action-buttons.is-consult { grid-template-columns: 80px minmax(144px, 1fr); }
+.boss-service-action-buttons > [data-slot="button"] { border-radius: 8px; font-size: 14px; }
+.boss-service-action-buttons > .boss-service-favorite { display: flex; flex-direction: column; gap: 0; padding-inline: 4px; font-size: 12px; }
+.boss-service-favorite[aria-pressed="true"] { color: var(--boss-link); }
+.boss-catalog-fidelity-header > h1 + p { line-height: 16px; color: var(--foreground); }
+.boss-catalog-context p { line-height: 1.65; }
+.boss-catalog-sort button { line-height: 1.65; }
+.boss-catalog-fidelity-body .boss-catalog-results h2 { line-height: 24px; }
+.boss-service-hero-heading p, .boss-service-fidelity-variants > button > span, .boss-service-addons > a > span, .boss-service-addons > a > strong, .boss-service-start-steps h3, .boss-service-review-author > strong, .boss-service-review-error, .boss-service-no-reviews > p { line-height: 20px; }
+.boss-service-hero-heading > div > span, .boss-service-hero-price > p > span, .boss-service-fidelity-facts p, .boss-service-card-heading p, .boss-service-fidelity-variants small, .boss-service-start-steps small, .boss-service-review-average > span, .boss-service-review-provider, .boss-service-review-time, .boss-service-no-reviews > span, .boss-service-action-summary > p, .boss-service-action-summary > strong > span { line-height: 16px; }
+.boss-service-fidelity-variants > button > strong, .boss-service-review-average strong, .boss-service-action-summary > strong { line-height: 28px; }
+@media (min-width: 640px) { .boss-service-hero-price { flex-direction: row; align-items: end; justify-content: space-between; } }
+@media (min-width: 768px) {
+  .boss-content[data-page="catalog"] .boss-catalog-fidelity-header { background: none; }
+  .boss-service-hero-grid { grid-template-columns: minmax(0, 1.5fr) minmax(260px, .7fr); }
+  .boss-service-fidelity-hero { padding: 24px; }
+  .boss-service-fidelity-facts { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .boss-service-fidelity-facts > div, .boss-service-info-card { padding: 20px; }
+  .boss-service-information-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .boss-service-info-card.is-wide { grid-column: 1 / -1; }
+  .boss-service-fidelity-variants { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .boss-service-start-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .boss-service-review-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .boss-service-review-grid > article + article { padding-top: 0; border-top: 0; }
+}
+@media (max-width: 767px) {
+  .boss-content[data-page="catalog"] .boss-catalog-fidelity-header { margin: -8px -16px 0; padding: 16px 16px 20px; }
+  .boss-service-fidelity-page { padding-bottom: 0; }
+  .boss-service-fidelity-actionbar { bottom: calc(84px + env(safe-area-inset-bottom)); padding-inline: 16px; }
+  .boss-service-fidelity-actionbar > div { display: block; }
+  .boss-service-action-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .boss-service-action-summary > p { flex: 1; }
+  .boss-service-action-summary > strong { flex-shrink: 0; margin-top: 0; }
+  .boss-service-action-buttons { grid-template-columns: 76px 104px minmax(0, 1fr); }
+  .boss-service-action-buttons.is-consult { grid-template-columns: 88px minmax(0, 1fr); }
+}

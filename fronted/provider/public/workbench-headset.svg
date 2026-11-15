@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" fill="none">
+  <defs>
+    <linearGradient id="band" x1="52" y1="18" x2="217" y2="124" gradientUnits="userSpaceOnUse"><stop stop-color="#a2b3e8"/><stop offset=".28" stop-color="#5469ae"/><stop offset=".6" stop-color="#526199"/><stop offset="1" stop-color="#232e53"/></linearGradient>
+    <linearGradient id="shell" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#849ccf"/><stop offset=".38" stop-color="#516796"/><stop offset="1" stop-color="#293459"/></linearGradient>
+    <pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><path d="M0 0V4" stroke="#bacbf3" stroke-opacity=".42" stroke-width=".8"/></pattern>
+    <pattern id="mesh" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".7" fill="#14213b"/><circle cx="3" cy="3" r=".65" fill="#182542"/></pattern>
+  </defs>
+  <g transform="translate(19 1) rotate(10 154 111)" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Rear cushion, suspension and return side of the band. -->
+    <path d="M62 124C53 81 69 42 104 24s72-9 92 21l-8 7c-18-21-47-27-71-13C89 54 77 80 80 113l-2 17Z" fill="#2c395c" stroke="#8499bc" stroke-width="1.3"/>
+    <g transform="rotate(-14 78 140)"><rect x="54" y="107" width="38" height="70" rx="17" fill="#334260" stroke="#8497bd"/><rect x="62" y="107" width="35" height="69" rx="17" fill="#617499" stroke="#9eaccc"/><rect x="68" y="111" width="28" height="62" rx="14" fill="#25314d" stroke="#8c9cc2"/><rect x="73" y="118" width="17" height="48" rx="8.5" fill="#172239" stroke="#506182"/><path d="M59 120v34m4-39v44m3-47v44" stroke="#8d9cbb" opacity=".55"/></g>
+    <!-- Bent, upholstered headband: multiple seam lines follow the same arc. -->
+    <path d="M61 112C51 82 56 50 81 30c29-24 69-31 100-13 32 18 48 53 50 92l-18 9-10-6c0-35-12-63-37-78-21-12-48-9-68 7-18 15-24 40-19 66l-9 8Z" fill="url(#band)" stroke="#a0b3da" stroke-width="1.6"/>
+    <path d="M61 109C50 72 68 37 103 21c44-21 88-6 109 34 9 18 13 37 15 53M69 110C60 73 76 44 105 30c38-19 75-7 97 28 9 15 15 34 16 53" stroke="#d0ddf2" stroke-opacity=".69" stroke-width="1.2"/>
+    <path d="M71 109C65 79 74 55 92 40c19-15 46-22 67-15 24 7 38 23 47 43l5 14c-8-23-22-40-44-49-23-10-47-6-67 9-19 15-26 40-21 65Z" fill="#253450" stroke="#7788af"/>
+    <path d="m64 104 7 3m-8-10 7 3m-8-11 7 3m-7-11 7 3m-6-11 7 3m-5-11 7 3m-4-10 6 3m-1-11 5 4m1-11 5 5m3-11 4 5m5-10 3 5m7-9 2 5m7-8 2 5m8-7 1 5m8-6 1 5m8-5v5m8-4-1 5m9-3-2 5m9-1-2 4m10 1-3 4m10 2-4 4m10 3-4 4m9 5-4 3m9 6-5 3m8 6-5 3m7 7-5 2m7 8-5 1m6 8-5 1" stroke="#ccdcf6" opacity=".45"/>
+    <path d="m202 87 19-10 2 8-19 11Z" fill="#7888a9" stroke="#a3b4d0"/><path d="m204 94 17-9 4 33-17 9Z" fill="#374967" stroke="#8da2c7"/><path d="m208 98 12-6m-11 13 12-6m-11 13 12-6" stroke="#778aab"/>
+    <!-- The near ear cup sits over the headband pivot. -->
+    <g transform="rotate(18 208 143)">
+      <rect x="174" y="103" width="49" height="83" rx="23" fill="#1a253e" stroke="#a5b7d8" stroke-width="1.5"/>
+      <rect x="178" y="103" width="46" height="83" rx="22" fill="url(#hatch)" stroke="#627697"/>
+      <rect x="187" y="99" width="52" height="85" rx="24" fill="#425475" stroke="#b2c5e6" stroke-width="1.6"/>
+      <rect x="193" y="99" width="51" height="82" rx="24" fill="url(#shell)" stroke="#a9c0e0" stroke-width="1.6"/>
+      <rect x="198" y="105" width="41" height="69" rx="19" fill="url(#mesh)" stroke="#9baccd"/>
+      <path d="M194 106v33a18 18 0 0 0 18 18h4a17 17 0 0 0 17-17v-11" stroke="#202d49" stroke-width="6"/>
+      <path d="M194 104v33a18 18 0 0 0 18 18h4a17 17 0 0 0 17-17v-11" stroke="#b7cae3" stroke-width="2.4"/>
+      <circle cx="233" cy="126" r="5" fill="#273953" stroke="#acbdd9"/><circle cx="233" cy="126" r="1.5" fill="#b9cbe7"/>
+    </g>
+    <path d="M189 164c-7 24-25 31-51 31l-28-1" stroke="#1f2e4c" stroke-width="6"/><path d="M189 163c-7 24-25 30-51 30l-28-1" stroke="#b0bfdd" stroke-width="2"/>
+    <path d="m109 188 19 1c6 0 6 7 0 7l-19-1c-5 0-5-7 0-7Z" fill="#667b9e" stroke="#bdcbe3"/>
+  </g>
+</svg>

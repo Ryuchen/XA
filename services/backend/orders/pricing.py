@@ -2,7 +2,7 @@
 
 集中下单（C 端）与客服代派单（console）共用的两段逻辑，避免口径分叉：
 
-1. 折扣链（决定老板实付 amount，单位均为内部账务单位整数，10 = 1 兴安币，向下取整）：
+1. 折扣链（决定老板实付 amount，单位均为内部账务单位整数，10 = 1 浪花，向下取整）：
        original_amount    = service.price × game_rounds
        amount_after_boss  = original_amount × 老板VIP折扣率 // 100      ① BossType.discount_rate
        ┌─ 命中带折扣率的活动 → amount = amount_after_boss × 活动折扣率 // 100  ② Promotion（此时禁用券）
@@ -41,6 +41,12 @@ def _clamp_rate(rate) -> int:
     return min(max(rate, 0), 100)
 
 
+def promotion_available_for_new_order():
+    """License controls new activity offers, not already issued benefits."""
+    from stores.license_benefits import check_new_benefits
+    return check_new_benefits('PROMOTIONS')[0] == 'ALLOW'
+
+
 def resolve_active_promotion(service, now=None):
     """取当前对该商品生效的促销活动；并发多活动时取优先级最高的一条。"""
     from promotions.models import Promotion
@@ -55,13 +61,13 @@ def resolve_active_promotion(service, now=None):
     return None
 
 
-def resolve_commission_rate(service, escort_profile, promotion) -> int:
+def resolve_commission_rate(service, escort_profile, promotion, *, global_rate=None) -> int:
     """解析平台抽成率(%)：活动 > 陪玩等级 > 店铺(商品级→全局)。"""
-    rate, _ = resolve_commission_rate_with_source(service, escort_profile, promotion)
+    rate, _ = resolve_commission_rate_with_source(service, escort_profile, promotion, global_rate=global_rate)
     return rate
 
 
-def resolve_commission_rate_with_source(service, escort_profile, promotion):
+def resolve_commission_rate_with_source(service, escort_profile, promotion, *, global_rate=None):
     """同 resolve_commission_rate，但额外返回来源标识。
 
     Returns:
@@ -81,7 +87,7 @@ def resolve_commission_rate_with_source(service, escort_profile, promotion):
         return 20, 'club_companion'
     if policy in ('REGULAR', 'FUN'):
         level = getattr(escort_profile, 'level', None)
-        return (_clamp_rate(level.commission_rate), 'level') if level and level.is_active else (_clamp_rate(get_commission_rate()), 'global')
+        return (_clamp_rate(level.commission_rate), 'level') if level and level.is_active else (_clamp_rate(global_rate if global_rate is not None else get_commission_rate()), 'global')
     if promotion is not None and promotion.commission_rate is not None:
         return _clamp_rate(promotion.commission_rate), 'promotion'
     level = getattr(escort_profile, 'level', None)
@@ -89,14 +95,14 @@ def resolve_commission_rate_with_source(service, escort_profile, promotion):
         return _clamp_rate(level.commission_rate), 'level'
     rate = service.commission_rate
     if rate is None:
-        return _clamp_rate(get_commission_rate()), 'global'
+        return _clamp_rate(global_rate if global_rate is not None else get_commission_rate()), 'global'
     return _clamp_rate(rate), 'service'
 
 
-def club_provider_specs(service_or_order, profiles, amount):
+def club_provider_specs(service_or_order, profiles, amount, *, global_rate=None):
     """固定3元为整单抽成，多陪份额只分配一次，不重复收取。"""
     from .commission import provider_specs
-    custom = provider_specs(service_or_order,profiles,amount)
+    custom = provider_specs(service_or_order,profiles,amount, global_rate=global_rate)
     if custom is not None:
         return custom
     policy = getattr(service_or_order, 'commission_policy', 'LEGACY')
@@ -111,7 +117,7 @@ def club_provider_specs(service_or_order, profiles, amount):
         from .settlement import split_settlement_bases
         fixed = split_settlement_bases(min(300, amount), len(profiles))
         return [{'commission_type': 'FIXED', 'commission_fixed': cut, 'commission_rate': 0} for cut in fixed]
-    return [{'commission_type': 'PERCENT', 'commission_rate': resolve_commission_rate(service_or_order, profile, None)} for profile in profiles]
+    return [{'commission_type': 'PERCENT', 'commission_rate': resolve_commission_rate(service_or_order, profile, None, global_rate=global_rate)} for profile in profiles]
 
 
 def compute_order_amount(

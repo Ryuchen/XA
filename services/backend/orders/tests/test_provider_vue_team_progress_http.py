@@ -1,3 +1,4 @@
+from common.fronted_test_support import ReactLiveHTTPTestCase, current_http, fronted_root
 """Actual two-provider handoff reaches both Vue pages and all order parties."""
 import json
 import os
@@ -20,7 +21,7 @@ from orders.tests.factories import make_provider
 
 
 @contextmanager
-def isolated_realtime():
+def isolated_realtime(*, report_approval=False):
     """Two Daphne workers communicate only through a disposable Redis instance."""
     def port():
         with socket.socket() as sock:
@@ -31,18 +32,21 @@ def isolated_realtime():
         ports.add(port())
     redis_port, api_port, ws_port = ports
     password, prefix = secrets.token_hex(16), 'xa_asgi_test_' + secrets.token_hex(8)
+    redis_container = 'xa-test-redis-' + secrets.token_hex(8)
     env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.asgi_redis_network_test_settings',
            'XA_ASGI_TEST_REDIS_URL': f'redis://:{password}@127.0.0.1:{redis_port}/0',
            'XA_ASGI_TEST_REDIS_PREFIX': prefix, 'XA_ASGI_TEST_MEDIA_ROOT': str(settings.MEDIA_ROOT),
            'KOOK_ENABLED': 'false', 'WECOM_DISPATCH_ENABLED': 'false'}
+    if report_approval:
+        env['XA_TEAM_REPORT_APPROVAL'] = '1'
     processes = []
     client = None
     flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
     try:
-        processes.append(subprocess.Popen(['wsl.exe', '-d', 'XA-Ubuntu-24.04', '--', 'env',
-            'LD_LIBRARY_PATH=/tmp/xa-report-redis-qa/root/usr/lib/x86_64-linux-gnu',
-            '/tmp/xa-report-redis-qa/root/usr/bin/redis-server', '--bind', '127.0.0.1', '--port', str(redis_port),
-            '--save', '', '--appendonly', 'no', '--requirepass', password], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags))
+        processes.append(subprocess.Popen(['wsl.exe', '-d', 'XA-Ubuntu-24.04', '-u', 'root', '--', 'docker', 'run',
+            '--rm', '--name', redis_container, '-p', f'127.0.0.1:{redis_port}:6379', 'redis:alpine',
+            'redis-server', '--save', '', '--appendonly', 'no', '--requirepass', password],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags))
         client = redis.Redis(host='127.0.0.1', port=redis_port, password=password, socket_timeout=.2)
         for _ in range(150):
             if processes[0].poll() is not None:
@@ -67,6 +71,8 @@ def isolated_realtime():
         if client is not None:
             try: client.shutdown(nosave=True)
             except redis.RedisError: pass
+        subprocess.run(['wsl.exe', '-d', 'XA-Ubuntu-24.04', '-u', 'root', '--', 'docker', 'rm', '-f', redis_container],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags, timeout=15)
         for process in reversed(processes):
             if process.poll() is None:
                 process.terminate()
@@ -87,9 +93,9 @@ class ProviderVueTeamProgressHTTPTest(LiveServerTestCase):
     recharge = flow.ReleaseFlowTest.recharge
 
     def test_actual_handoff(self):
-        root = os.environ.get('XA_PROVIDER_VUE_ROOT')
+        root = fronted_root('provider')
         if not root or not shutil.which('node'):
-            self.skipTest('Requires current Vue build and Node')
+            self.skipTest('Requires the current React source and Node')
         second = make_provider(display_name='第二陪玩')
         self.accounts[second.pk] = get_or_create_account_for_legacy_user(second)
         second.escort_profile.account = self.accounts[second.pk]
@@ -108,13 +114,13 @@ class ProviderVueTeamProgressHTTPTest(LiveServerTestCase):
         repo = Path(settings.BASE_DIR).parent.parent
         def exercise(base, ws_base=None):
             result = subprocess.run(['node', str(repo / 'scripts/provider-vue-team-progress-375.cjs')],
-                input=json.dumps({'root': root, 'base': base, 'wsBase': ws_base, 'realtime': bool(ws_base), 'orderId': order['id'], 'tokens': tokens,
+                input=json.dumps({'root': root, 'base': base, 'wsBase': ws_base, 'realtime': bool(ws_base), 'orderId': order['id'], 'tokens': tokens, 'bossId': self.accounts[self.boss.pk].pk,
                     'providers': [{'token': tokens['first'], 'id': self.accounts[self.provider.pk].pk},
                                   {'token': tokens['second'], 'id': self.accounts[second.pk].pk}],
                     'image': str(repo / 'apps/boss-miniapp/native/assets/icons/chat.png')}),
                 text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         if os.environ.get('XA_TEAM_PROGRESS_REALTIME') == '1':
-            with isolated_realtime() as (base, ws_base): exercise(base, ws_base)
+            with current_http(self, isolated_realtime) as (base, ws_base): exercise(base, ws_base)
         else:
             exercise(self.live_server_url)

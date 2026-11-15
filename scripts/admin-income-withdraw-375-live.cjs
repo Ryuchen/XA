@@ -47,11 +47,12 @@ async function main() {
     await card.getByRole('button', { name: '领取', exact: true }).click();
     await card.getByText('我已领取', { exact: true }).waitFor({ timeout: 15000 });
     await card.getByRole('button', { name: '详情', exact: true }).click();
-    const drawer = page.locator('.el-drawer');
+    const drawer = page.getByRole('dialog', { name: '提现详情' });
     await drawer.getByText('isolated-account-20261102', { exact: true }).waitFor({ timeout: 15000 });
     await drawer.getByText('隔离测试', { exact: true }).waitFor();
-    assert.equal(await drawer.locator('.el-drawer__body').evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
-    await drawer.locator('.el-drawer__close-btn').click();
+    assert.equal(await drawer.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+    await page.keyboard.press('Escape');
+    await drawer.waitFor({ state: 'hidden' });
     await card.getByRole('button', { name: '通过', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: '提现审核' });
     await dialog.waitFor({ timeout: 15000 });
@@ -64,6 +65,9 @@ async function main() {
     await dialog.waitFor({ state: 'hidden' });
     await card.waitFor({ state: 'hidden', timeout: 15000 });
     await page.goto(`${base}/dashboard`, { waitUntil: 'domcontentloaded' });
+    const filter = page.getByRole('button', { name: '仅看有待办' });
+    await filter.waitFor({ timeout: 30000 });
+    if (await filter.getAttribute('aria-pressed') === 'true') await filter.click();
     const after = page.getByRole('button', { name: /待审核提现/ }).first();
     await after.waitFor({ timeout: 30000 });
     assert.match(await after.innerText(), /0\s*笔/);
