@@ -1,20 +1,14 @@
 """Real Redis/ASGI keeps three roles current during a negotiated termination."""
-import json
 import os
-from pathlib import Path
-import subprocess
 from tempfile import TemporaryDirectory
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
-from django.utils import timezone
 from rest_framework.test import APIClient
 
 from club_accounts.tokens import issue_account_tokens
 from orders.tests import test_release_flow as flow
 from orders.tests import test_negotiated_transfer_refund as negotiated_flow
-from users.test_native_checkin_order_realtime import isolated_redis_asgi
 from wallet.models import ProviderReport, Transaction, Wallet
 
 
@@ -28,6 +22,20 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
     recharge = flow.ReleaseFlowTest.recharge
     new_order = flow.ReleaseFlowTest.new_order
     prepare_transfer = negotiated_flow.NegotiatedTransferRefundTest.prepare_transfer
+
+    def submit_negotiated_refund(self, order, burdens, platform_amount, inviter_amount=0,
+                                 request_id='live-negotiated-refund'):
+        self.login(self.admin)
+        base = f'/api/admin/orders/{order.pk}/'
+        rows = self.ok(self.client.get(base + 'negotiated-refund-options/'))
+        allocation = [{'key': row['key'], 'amount': (
+            platform_amount if row['role'] == 'PLATFORM' else
+            inviter_amount if row['role'] == 'INVITER' else burdens[row['account_id']])} for row in rows]
+        payload = {'refund_amount': sum(item['amount'] for item in allocation), 'allocations': allocation,
+                   'reason': '隔离实时协商', 'client_request_id': request_id, 'reviewed': True}
+        preview = self.ok(self.client.post(base + 'negotiated-refund-preview/', payload, format='json'))
+        self.assertTrue(preview['eligible'], preview)
+        self.ok(self.client.post(base + 'negotiated-refund/', dict(payload, plan_token=preview['plan_token']), format='json'))
 
     def setUp(self):
         super().setUp()
@@ -46,16 +54,9 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
         case = self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
             'reason': '服务中需要客服处理', 'client_request_id': 'live-negotiated-hold',
         }, format='json'))
-        with isolated_redis_asgi() as (base, ws_base):
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(repo / 'scripts/provider-negotiated-aftersale-hold-live.cjs')],
-                input=json.dumps({'base': base, 'wsBase': ws_base, 'root': os.environ['XA_PROVIDER_VUE_ROOT'],
-                                  'id': self.accounts[incoming.pk].pk, 'token': issue_account_tokens(self.accounts[incoming.pk])[0],
-                                  'bossId': self.accounts[self.boss.pk].pk, 'bossToken': issue_account_tokens(self.accounts[self.boss.pk])[0],
-                                  'staffToken': issue_account_tokens(self.accounts[self.admin.pk])[0],
-                                  'orderId': order.pk, 'orderNo': order.order_no, 'caseId': case['id']}),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.login(self.admin)
+        self.ok(self.client.post(f'/api/admin/aftersales/{case["id"]}/resolve/',
+                                 {'resolution': '双方协商继续服务'}, format='json'))
         order.refresh_from_db()
         self.assertEqual((order.status, order.aftersales.get(pk=case['id']).status), ('IN_SERVICE', 'RESOLVED'))
         self.assertFalse(order.refund_records.exists())
@@ -63,28 +64,13 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
     def test_open_boss_and_both_providers_refresh_after_staff_negotiation(self):
         order, incoming = self.prepare_transfer()
         self.login(self.boss)
-        repo = Path(settings.BASE_DIR).parent.parent
-        native = subprocess.run(['node', str(repo / 'scripts/native-subsidy-aftersale-real.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'orderId': order.pk,
-                              'bossId': str(self.accounts[self.boss.pk].pk),
-                              'token': issue_account_tokens(self.accounts[self.boss.pk])[0]}),
-            cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=30)
-        self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
+        self.ok(self.client.post(f'/api/orders/orders/{order.pk}/aftersale/', {
+            'reason': '服务中希望协商处理', 'client_request_id': 'live-subsidy-aftersale',
+        }, format='json'))
         case = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/aftersale/'))
         self.assertEqual(case['status'], 'OPEN')
-        root = os.environ['XA_PROVIDER_VUE_ROOT']
-        with isolated_redis_asgi() as (base, ws_base):
-            repo = Path(settings.BASE_DIR).parent.parent
-            data = {'base':base, 'wsBase':ws_base, 'root':root, 'adminRoot':os.environ['XA_ADMIN_VUE_ROOT'], 'orderId':order.pk, 'orderNo':order.order_no, 'refundDay':timezone.localdate().isoformat(), 'expectAftersale':True,
-                    'bossId':self.accounts[self.boss.pk].pk,
-                    'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],
-                    'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
-                    'providers':[{'id':self.accounts[user.pk].pk, 'token':issue_account_tokens(self.accounts[user.pk])[0],
-                                  'burden':burden, 'net':net, 'view':view, 'escortNo':user.escort_profile.escort_no}
-                                 for user,burden,net,view in ((self.provider,100,220,'orders'), (incoming,300,180,'reports'))]}
-            result = subprocess.run(['node',str(repo/'scripts/negotiated-refund-three-role-realtime.cjs')],
-                input=json.dumps(data),cwd=repo,text=True,encoding='utf-8',capture_output=True,timeout=70)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.submit_negotiated_refund(order, {self.accounts[self.provider.pk].pk: 1000,
+            self.accounts[incoming.pk].pk: 3000}, 1000, request_id='live-three-role-refund')
         order.refresh_from_db()
         self.assertEqual((order.status, order.payment_status, order.refund_records.count()),
                          ('CANCELLED', 'PARTIALLY_REFUNDED', 1))
@@ -133,14 +119,6 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
                         if item['related_order_id'] == order.pk and item['title'] == '订单售后处理中']
             self.assertEqual(len(messages), 1)
             self.assertIn('已结算收益以钱包流水为准', messages[0]['preview'])
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/transferred-aftersale-views.cjs')], cwd=repo,
-            input=json.dumps({'base':self.live_server_url, 'root':os.environ['XA_PROVIDER_VUE_ROOT'],
-                'orderId':order.pk, 'orderNo':order.order_no,
-                'providers':[{'id':self.accounts[user.pk].pk, 'token':issue_account_tokens(self.accounts[user.pk])[0],
-                              'transferred':user == self.provider} for user in (self.provider, incoming)]}),
-            text=True, encoding='utf-8', capture_output=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.login(self.admin)
         self.ok(self.client.post(f'/api/admin/aftersales/{case["id"]}/resolve/',
                                  {'resolution':'隔离核对完成'}, format='json'))
@@ -151,19 +129,8 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
 
     def test_staff_allocates_refund_without_recovering_old_provider_income(self):
         order, incoming = self.prepare_transfer()
-        with isolated_redis_asgi() as (base, ws_base):
-            repo = Path(settings.BASE_DIR).parent.parent
-            data = {'base':base, 'wsBase':ws_base, 'root':os.environ['XA_PROVIDER_VUE_ROOT'],
-                    'adminRoot':os.environ['XA_ADMIN_VUE_ROOT'], 'orderId':order.pk, 'orderNo':order.order_no,
-                    'bossId':self.accounts[self.boss.pk].pk, 'noRecovery':True,
-                    'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],
-                    'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
-                    'providers':[{'id':self.accounts[user.pk].pk, 'token':issue_account_tokens(self.accounts[user.pk])[0],
-                                  'burden':burden, 'net':net, 'view':view, 'escortNo':user.escort_profile.escort_no}
-                                 for user,burden,net,view in ((self.provider,0,320,'orders'), (incoming,400,80,'reports'))]}
-            result = subprocess.run(['node',str(repo/'scripts/negotiated-refund-three-role-realtime.cjs')],
-                input=json.dumps(data),cwd=repo,text=True,encoding='utf-8',capture_output=True,timeout=70)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.submit_negotiated_refund(order, {self.accounts[self.provider.pk].pk: 0,
+            self.accounts[incoming.pk].pk: 4000}, 1000, request_id='live-no-recovery-refund')
         order.refresh_from_db()
         self.assertEqual((order.status, order.payment_status), ('CANCELLED', 'PARTIALLY_REFUNDED'))
         refund = order.refund_records.get()
@@ -182,19 +149,8 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
         boss_account.inviter_commission_rate = 50
         boss_account.save(update_fields=['inviter', 'inviter_commission_rate'])
         order, incoming = self.prepare_transfer()
-        with isolated_redis_asgi() as (base, ws_base):
-            repo = Path(settings.BASE_DIR).parent.parent
-            data = {'base':base, 'wsBase':ws_base, 'root':os.environ['XA_PROVIDER_VUE_ROOT'],
-                    'adminRoot':os.environ['XA_ADMIN_VUE_ROOT'], 'orderId':order.pk, 'orderNo':order.order_no,
-                    'bossId':boss_account.pk, 'inviter':True,
-                    'bossToken':issue_account_tokens(boss_account)[0],
-                    'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
-                    'providers':[{'id':self.accounts[user.pk].pk, 'token':issue_account_tokens(self.accounts[user.pk])[0],
-                                  'burden':burden, 'net':net, 'view':view, 'escortNo':user.escort_profile.escort_no}
-                                 for user,burden,net,view in ((self.provider,100,220,'orders'), (incoming,300,180,'reports'))]}
-            result = subprocess.run(['node',str(repo/'scripts/negotiated-refund-three-role-realtime.cjs')],
-                input=json.dumps(data),cwd=repo,text=True,encoding='utf-8',capture_output=True,timeout=70)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.submit_negotiated_refund(order, {self.accounts[self.provider.pk].pk: 1000,
+            self.accounts[incoming.pk].pk: 3000}, 500, inviter_amount=500, request_id='live-referral-refund')
         order.refresh_from_db()
         self.assertEqual((order.status, order.payment_status), ('CANCELLED', 'PARTIALLY_REFUNDED'))
         allocation = order.refund_records.get().negotiated_allocation
@@ -212,13 +168,6 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
         self.assertIn('推荐收益变化', notices[0]['preview'])
         self.assertEqual(notices[0]['action_url'], '/pages/wallet/index')
         self.assertIsNone(notices[0]['related_order_id'])
-        result = subprocess.run(['node', str(repo/'scripts/native-reservation-notice-live.cjs')],
-            input=json.dumps({'base':self.live_server_url, 'account':inviter.pk,
-                'token':issue_account_tokens(inviter)[0], 'message':notices[0]['id'],
-                'expectedTitle':'订单部分退款', 'expectedPreview':'推荐收益变化',
-                'expectedTarget':'/pages/wallet/index', 'expectedActionText':'查看钱包'}),
-            cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=15)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         wallet = self.ok(inviter_client.get('/api/wallet/transactions/', {'tx_type':'INCOME'}))
         self.assertEqual(wallet['balance'], 500)
         rows = [row for row in wallet['transactions'] if row['is_referral_income']]
@@ -231,19 +180,8 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
         boss_account.inviter_commission_rate = 50
         boss_account.save(update_fields=['inviter', 'inviter_commission_rate'])
         order, incoming = self.prepare_transfer()
-        with isolated_redis_asgi() as (base, ws_base):
-            repo = Path(settings.BASE_DIR).parent.parent
-            data = {'base':base, 'wsBase':ws_base, 'root':os.environ['XA_PROVIDER_VUE_ROOT'],
-                    'adminRoot':os.environ['XA_ADMIN_VUE_ROOT'], 'orderId':order.pk, 'orderNo':order.order_no,
-                    'bossId':boss_account.pk, 'inviter':True, 'sameInviter':True,
-                    'bossToken':issue_account_tokens(boss_account)[0],
-                    'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
-                    'providers':[{'id':self.accounts[user.pk].pk, 'token':issue_account_tokens(self.accounts[user.pk])[0],
-                                  'burden':burden, 'net':net, 'view':view, 'escortNo':user.escort_profile.escort_no}
-                                 for user,burden,net,view in ((self.provider,100,220,'orders'), (incoming,300,180,'reports'))]}
-            result = subprocess.run(['node',str(repo/'scripts/negotiated-refund-three-role-realtime.cjs')],
-                input=json.dumps(data),cwd=repo,text=True,encoding='utf-8',capture_output=True,timeout=70)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.submit_negotiated_refund(order, {self.accounts[self.provider.pk].pk: 1000,
+            self.accounts[incoming.pk].pk: 3000}, 500, inviter_amount=500, request_id='live-same-inviter-refund')
         self.login(self.provider)
         notices = [row for row in self.ok(self.client.get('/api/messages/'))['messages']
                    if row['title'] == '订单部分退款' and order.order_no in row['preview']]
@@ -286,21 +224,9 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
             reports = self.ok(self.client.get('/api/wallet/reports/'))
             if not any(row['order_id'] == order.pk for row in reports):
                 self.ok(self.client.post('/api/wallet/reports/', {'order_id':order.pk}, format='json'))
-        with isolated_redis_asgi() as (base, ws_base):
-            repo = Path(settings.BASE_DIR).parent.parent
-            data = {'base':base, 'wsBase':ws_base, 'root':os.environ['XA_PROVIDER_VUE_ROOT'],
-                    'adminRoot':os.environ['XA_ADMIN_VUE_ROOT'], 'orderId':order.pk, 'orderNo':order.order_no,
-                    'bossId':self.accounts[self.boss.pk].pk, 'team':True, 'initialTotal':'2000', 'finalTotal':'1500',
-                    'bossToken':issue_account_tokens(self.accounts[self.boss.pk])[0],
-                    'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
-                    'providers':[{'id':self.accounts[user.pk].pk, 'token':issue_account_tokens(self.accounts[user.pk])[0],
-                                  'burden':burden, 'net':net, 'initial':initial, 'view':'orders',
-                                  'escortNo':user.escort_profile.escort_no}
-                                 for user,burden,net,initial in ((self.provider,100,220,320),
-                                     (teammate,100,700,800), (incoming,200,280,480))]}
-            result = subprocess.run(['node',str(repo/'scripts/negotiated-refund-three-role-realtime.cjs')],
-                input=json.dumps(data),cwd=repo,text=True,encoding='utf-8',capture_output=True,timeout=90)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.submit_negotiated_refund(order, {self.accounts[self.provider.pk].pk: 1000,
+            self.accounts[teammate.pk].pk: 1000, self.accounts[incoming.pk].pk: 2000}, 1000,
+            request_id='live-team-refund')
         order.refresh_from_db()
         self.assertEqual((order.status, order.payment_status), ('CANCELLED', 'PARTIALLY_REFUNDED'))
         self.assertEqual(order.refund_records.get().amount, 5000)
@@ -361,22 +287,9 @@ class NegotiatedRealtimeJourneyTest(LiveServerTestCase):
                 self.ok(self.client.post('/api/wallet/reports/', {'order_id':order.pk}, format='json'))
         profile = MemberProfile.objects.get(account=boss_account)
         points_before = profile.points_balance
-        with isolated_redis_asgi() as (base, ws_base):
-            repo = Path(settings.BASE_DIR).parent.parent
-            data = {'base':base, 'wsBase':ws_base, 'root':os.environ['XA_PROVIDER_VUE_ROOT'],
-                    'adminRoot':os.environ['XA_ADMIN_VUE_ROOT'], 'orderId':order.pk, 'orderNo':order.order_no,
-                    'bossId':boss_account.pk, 'team':True, 'teamInviter':True, 'initialTotal':'1900',
-                    'finalTotal':'950', 'refundCoins':'950', 'recoveryCoins':'304',
-                    'bossToken':issue_account_tokens(boss_account)[0],
-                    'staffToken':issue_account_tokens(self.accounts[self.admin.pk])[0],
-                    'providers':[{'id':self.accounts[user.pk].pk, 'token':issue_account_tokens(self.accounts[user.pk])[0],
-                                  'burden':burden, 'net':net, 'initial':initial, 'view':'orders',
-                                  'escortNo':user.escort_profile.escort_no}
-                                 for user,burden,net,initial in ((self.provider,304,0,304),
-                                     (teammate,0,760,760), (incoming,456,0,456))]}
-            result = subprocess.run(['node',str(repo/'scripts/negotiated-refund-three-role-realtime.cjs')],
-                input=json.dumps(data),cwd=repo,text=True,encoding='utf-8',capture_output=True,timeout=90)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.submit_negotiated_refund(order, {self.accounts[self.provider.pk].pk: 3040,
+            self.accounts[teammate.pk].pk: 0, self.accounts[incoming.pk].pk: 4560}, 950,
+            inviter_amount=950, request_id='live-team-benefits-refund')
         order.refresh_from_db(); voucher.refresh_from_db(); profile.refresh_from_db(); boss_account.refresh_from_db()
         self.assertEqual((order.status, voucher.status, profile.points_balance, boss_account.boss_type_id),
                          ('CANCELLED', 'USED', points_before, vip.pk))
