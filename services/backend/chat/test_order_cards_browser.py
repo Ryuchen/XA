@@ -1,25 +1,22 @@
-import json
-import os
-from pathlib import Path
-import subprocess
 from datetime import timedelta
-from unittest import skipUnless
 
 from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
+from rest_framework.test import APIClient
+
 from chat.models import ChatMessage, ChatSession
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_console_user, make_order, make_provider, make_user
 from orders.models import Order
-from wallet.test_deposit_realtime_workflow import single_asgi
+from stores.context import resolve_store, store_context
 
 
-@skipUnless(os.environ.get('XA_CHAT_ORDER_CARD_BROWSER') == '1', 'Requires isolated ASGI and three Vite clients')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
 class ChatOrderCardsBrowserTest(LiveServerTestCase):
     def test_boss_and_provider_send_authorized_cards_to_staff(self):
+        self.enterContext(store_context(resolve_store()))
         boss, provider = make_user(), make_provider(deposit_mode='EARNINGS')
         staff = make_console_user(['chat:view', 'chat:reply', 'order:view'])
         accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, provider, staff)]
@@ -37,16 +34,21 @@ class ChatOrderCardsBrowserTest(LiveServerTestCase):
         pool = make_order(boss, customer_account=accounts[0])
         Order.objects.filter(pk=pool.pk).update(created_at=timezone.now() - timedelta(hours=2))
         sessions = [ChatSession.objects.create(account=account, user=user) for user, account in zip((boss, provider), accounts[:2])]
-        identities = [{'id': account.pk, 'token': issue_account_tokens(account)[0], 'permissions': permissions}
-                      for account, permissions in zip(accounts, [[], [], ['chat:view', 'chat:reply', 'order:view']])]
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/chat-order-card-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'boss':identities[0], 'provider':identities[1], 'staff':identities[2],
-                                  'order':order.pk, 'orderNo':order.order_no, 'poolOrder':pool.pk, 'poolOrderNo':pool.order_no,
-                                  'bossSession':sessions[0].pk, 'providerSession':sessions[1].pk}),
-                text=True, encoding='utf-8', capture_output=True, timeout=70)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        boss_client = APIClient(HTTP_HOST='sl.esports.club')
+        boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[0])[0])
+        provider_client = APIClient(HTTP_HOST='sl.esports.club')
+        provider_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[1])[0])
+        admin = APIClient(HTTP_HOST='admin.esports.club')
+        admin.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[2])[0])
+        self.assertEqual(boss_client.post('/api/chat/send/', {'content': '老板订单咨询', 'order_ref': str(order.pk)}, format='json').data['code'], 0)
+        self.assertEqual(provider_client.post('/api/chat/send/', {'content': '陪玩订单咨询', 'order_ref': str(order.pk)}, format='json').data['code'], 0)
+        for session in sessions:
+            self.assertEqual(admin.post(f'/api/admin/chat-sessions/{session.pk}/claim/', {'expected_version': 0}, format='json').data['code'], 0)
+            listed = admin.get(f'/api/admin/chat-sessions/{session.pk}/messages/').data
+            self.assertEqual(listed['code'], 0, listed)
+            card = listed['data']['list'][0]['order_card']
+            self.assertEqual((card['id'], card['order_no']), (order.pk, order.order_no))
+        self.assertEqual(provider_client.post('/api/chat/send/', {'content': '待抢订单咨询', 'order_ref': str(pool.pk)}, format='json').data['code'], 0)
         self.assertEqual(ChatMessage.objects.filter(related_order=order).count(), 2)
         self.assertEqual(ChatMessage.objects.filter(related_order=pool).count(), 1)
         if getattr(settings, 'CHAT_NOTIFICATION_OUTBOX_ENABLED', False):
