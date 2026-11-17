@@ -1,6 +1,6 @@
 # 遗留旧端脚本外科式清除审计（2026-11-17）
 
-日期：2026-11-17；状态：**执行记录（C 波与最终验证待补记）**。
+日期：2026-11-17／18；状态：**执行记录（已完成；pass2 隔离区处置待用户决定）**。
 
 ## 1. 背景与用户决定
 
@@ -37,10 +37,18 @@
 | team_gift | 漏网模块接管＋最后脚本 | 223b959e | harness 1/1 |
 | gift_referral | B6 漏网门控块补清 | fb60010c | 官方 1 既有错误不变 |
 | design 剔除 | design-demos＋docs/design＋prototype-preview 栈 | b12f7b9e | 链接同步、归档保留事实 |
+| C3 | coupons 双模块悬空 native 调用 | d74fa398 | 28 tests 失败集合逐名一致 |
+| C1 | orders 八模块（6 清理＋2 模块删除） | 5b748d52 | 14 tests 12 既有错误 2 skip |
+| C2 | engagement/chat/users 六模块 | 4f560445 | 7 测试转绿、零新增失败 |
+| C5→主会话接管 | checkout 双模块（env 门控＋ORM/HTTP 等价；C4/C5 代理空转被停后主会话执行） | 5fa94e94 | 官方 16 skip 不变；harness 13/16，余 3 为 grab 段待联调 |
+
+## 3.1 全套件最终对照（2026-11-18 凌晨）
+
+`manage.py test --settings=config.test_settings`（工作目录 services/backend）：**5333 tests，256 failures／4000 errors／509 skipped**；11-17 基线为 5341／253／4001／533。差异归因：测试数 −8＝删除的模块/方法（game_context、refund_reason、withdraw_config_permission、reservation_transfer_visibility、native_empty_tier、real_assignment_and_mute 等）；skips −24＝解除门控后转绿或转既有 WIP 红；errors −1 同源。**failures +3 全部落在本会话未触碰模块**（stores.tests_business/tests_hosts/tests_runtime、ranking/grab multistore、wallet.test_refund_income_priority 等）——程序化交集核验：本会话编辑的 109 个测试模块与 80 个失败模块交集为空，清理零断言回归成立；+3 为基线后未触碰模块的 WIP 漂移（含并行会话改动）。
 
 ## 4. 上一轮遗漏的发现与补清
 
-兜底扫描（services 全量 node/basename 引用 vs scripts 现存文件）发现 11-17 小程序切除后仍残留 **27 处悬空 native-* 调用、分布 17 个测试模块**（orders 10、engagement 3、chat 1、users 2、coupons 2）——11-17 审计"删除名称全库 grep 零残留引用"的声称不成立，本记录予以更正。已派 C1/C2/C3 三代理按同口径清理（结果待补记）。另发现并补清 B6 漏网的 gift_referral 门控 node 块、B4 未落盘的 23 脚本删除、提现 3 脚本仅暂存未落盘。
+兜底扫描（services 全量 node/basename 引用 vs scripts 现存文件）发现 11-17 小程序切除后仍残留 **27 处悬空 native-* 调用、分布 17 个测试模块**（orders 10、engagement 3、chat 1、users 2、coupons 2）——11-17 审计"删除名称全库 grep 零残留引用"的声称不成立，本记录予以更正。C1/C2/C3 代理＋主会话接管（checkout 双模块）已全部清理；**终态全库悬空脚本引用扫描＝0**（含 basename 与动态拼接排查）。另发现并补清 B6 漏网的 gift_referral 门控 node 块、B4 未落盘的 23 脚本删除、提现 3 脚本仅暂存未落盘。
 
 ## 5. .tools 两轮清理
 
@@ -52,7 +60,9 @@
 
 - 历史 UI 覆盖损失：旧 Vue/小程序页面布局、截图、DOM/触控、声音计数、滚动宽度、对话框草稿保留、WS 驱动 DOM 刷新、离线重连不重复响铃、传输丢包模拟等，逐模块见各批次提交说明与代理报告；React 等价覆盖留待后续界面阶段（A3 口径变更已登记 26 规划）。
 - 待 MySQL 层联调：grab/reject 行锁路径（sound、cursor、预约折扣转换等改写模块）在 SQLite harness 不可完成，登记待隔离 MySQL 矩阵复跑；B5b 三模块 harness 因既有 WIP（COMPLETION 结算门禁 funding_allocations 夹具缺口）BLOCKED。
-- 既有 WIP 红态（identifiers 门店上下文、grab 旗标、结算夹具等）与本次清理无关，维持 11-17 审计归因；全套件最终对照待补记。
+- 既有 WIP 红态（identifiers 门店上下文、grab 旗标、结算夹具等）与本次清理无关，维持 11-17 审计归因；全套件最终对照见 §3.1。
+- 清理中发现的既有 committed 后端 bug（非本次引入、禁改业务代码故登记待修）：①chat `ChatSessionView` `before_id` 锚点 `sender_account` deferred＋select_related 致 FieldError（B1/C2 同源 BLOCKED）；②users `/api/users/escorts/` OuterRef ValueError（C1/C2 同源）；③admin service-items PATCH 503（C1/C5 绕以 ORM）。
+- 隔离 MySQL grab 竞争脚本（test_grab_receipt_mysql_isolated.py）两次复跑均内层 240s 超时；git 日志证实 grab 代码与脚本自清理开始零改动→既有环境/WIP 阻断，登记待环境修复后复跑，非清理回归。
 
 ## 7. 环境注记
 
