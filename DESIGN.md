@@ -6,7 +6,7 @@
 
 1. [系统设计标准](docs/DESIGN_SYSTEM.md)：全项目原则、模块边界、状态表达和验收标准。第 8 节列出三端采用的十二项 SaaS 页面交互原则与逐项验收口径。
 2. [前端实现基线](fronted/DESIGN.md)：已确认的原型、尺寸及当前组件约定。
-3. [设计参考库与选用记录](docs/design/REFERENCE-LIBRARY.md)：用户指定的 VoltAgent awesome-design-md、可采用部分和排除项。
+3. [设计参考库与选用记录](docs/history/design-20261117/REFERENCE-LIBRARY.md)：用户指定的 VoltAgent awesome-design-md、可采用部分和排除项。
 4. 对应业务 PRD、页面源码及已有验收记录；业务事实和用户最新明确决定优先。
 
 所有设计改动必须说明服务的角色任务、使用的共享组件、完整交互状态和验证范围。先复用已有规范；采用外部参考时记录来源及取舍，并映射到项目 token 和组件，不逐页引入另一套品牌。

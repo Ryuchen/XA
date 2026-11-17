@@ -42,7 +42,7 @@ docs/
 
 ## 4. 固定锚点（未移动）
 
-- AGENTS.md 引用：`docs/DESIGN_SYSTEM.md`、`docs/design/REFERENCE-LIBRARY.md`、`docs/prd/02-老板端.md`、`03-陪玩端.md`、`04-后台职能与操作.md`、`33-SaaS门店授权与License.md` —— AGENTS.md 本身零改动。
+- AGENTS.md 引用：`docs/DESIGN_SYSTEM.md`、`docs/history/design-20261117/REFERENCE-LIBRARY.md`、`docs/prd/02-老板端.md`、`03-陪玩端.md`、`04-后台职能与操作.md`、`33-SaaS门店授权与License.md` —— AGENTS.md 本身零改动。
 - 生成脚本依赖：`generate_trace.py`（prd/07、prd/20、dev 编号主文档）、`generate_decision_status.py`（dev/19）、`generate_page_trace.py`（dev/15、prd/08）—— 脚本零改动，依赖路径全部保留。
 - 各目录 README 位置不变（内容更新）。
 

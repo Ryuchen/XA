@@ -12,8 +12,7 @@
 | [development/](development/README.md) | 研发方案与进度 | 01–27 编号主文档＋[topics/](development/topics/README.md) 领域专题＋追踪生成脚本 | 进度单一口径：16/18/19；专题按领域归档 |
 | [architecture/](architecture/README.md) | 架构设计 | 当前设计基线（SaaS 目标架构、重构计划）＋历史参考（早期架构/ER/时序） | 历史资料不代表已实现；新设计入当前基线区 |
 | [ops/](ops/README.md) | 运维与执行记录 | deployment/ 部署方案、integrations/ 外部接入、records/  dated 执行记录、场景夹具目录 | 记录命名带日期；可执行配置在仓库 `deploy/`，本目录只放文档 |
-| [design/](design/README.md) | 设计资料 | 设计参考库、风格系统、各轮原型与视觉资料 | 外部参考须登记来源与采用点（REFERENCE-LIBRARY） |
-| [history/](history/README.md) | 历史归档 | 被取代的旧 PRD、旧审计、旧 UI 评审；只读追溯 | 只归档不删除；不得作为当前实现或验收依据 |
+| [history/](history/README.md) | 历史归档 | 被取代的旧 PRD、旧审计、旧 UI 评审；设计资料与视觉方向记录归档（design-20261117、design-directions-20261117）；只读追溯 | 只归档不删除；不得作为当前实现或验收依据 |
 | [licenses/](licenses/) | 第三方许可 | 组件许可证文本 | 随依赖变更同步 THIRD_PARTY_NOTICES |
 | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | 设计系统标准 | 十二项 SaaS 交互原则与共享 token（AGENTS.md 引用，路径固定） | 修订须同步 AGENTS.md 约定 |
 
@@ -22,7 +21,7 @@
 | Wiki 章节 | 对应文档 |
 | --- | --- |
 | 项目概述 / 快速开始 | 根 README、[deploy/README](../deploy/README.md)、本文件 |
-| 前端架构 | [design/](design/README.md)、`fronted/` 各 README 与设计文档 |
+| 前端架构 | [设计资料（归档）](history/design-20261117/README.md)、`fronted/` 各 README 与设计文档 |
 | 后端架构 / 数据库设计 | [architecture/](architecture/README.md)、[development/01](development/01-架构权限与多租户.md)、[02](development/02-数据模型与迁移.md)、[14](development/14-关键数据与事务方案.md) |
 | 业务模块 | [prd/](prd/README.md) 01–32、[development/topics/](development/topics/README.md) |
 | API 接口文档 | [development/09](development/09-接口契约与工作包.md)、[prd/08](prd/08-页面接口追踪.md)、[prd/09](prd/09-后端接口清单.md) |

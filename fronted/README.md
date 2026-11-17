@@ -1,6 +1,6 @@
 # 声浪电竞三端 React 前端
 
-设计与界面评审统一从 [项目设计原则](../DESIGN.md) 开始，执行 [系统设计标准](../docs/DESIGN_SYSTEM.md) 和 [前端基线](DESIGN.md)。用户指定的 [awesome-design-md 参考库与选用边界](../docs/design/REFERENCE-LIBRARY.md) 已纳入三端开发流程。
+设计与界面评审统一从 [项目设计原则](../DESIGN.md) 开始，执行 [系统设计标准](../docs/DESIGN_SYSTEM.md) 和 [前端基线](DESIGN.md)。用户指定的 [awesome-design-md 参考库与选用边界](../docs/history/design-20261117/REFERENCE-LIBRARY.md) 已纳入三端开发流程。
 
 2026-11-11 前端产品化交付见 [SAAS-DELIVERY.md](SAAS-DELIVERY.md)；模块、角色、状态和后端待对接契约见 [PRD 34](../docs/prd/34-SaaS产品模块与三端前端闭环.md)。日常开发统一使用 `../deploy/dev.ps1` 和登记的 WSL + Docker 环境，下表旧端口仅作历史脚手架记录。
 

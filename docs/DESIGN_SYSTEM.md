@@ -2,7 +2,7 @@
 
 更新：2026-11-11。适用于管理后台、陪玩端、老板端 Web/H5，以及新增页面、组件和设计评审。根入口为 [DESIGN.md](../DESIGN.md)，具体实现尺寸见 [前端基线](../fronted/DESIGN.md)。
 
-本标准整合用户已确认的设计与业务约定，并接入 [VoltAgent awesome-design-md 设计参考库](design/REFERENCE-LIBRARY.md)。文档描述规范要求；实施和验证状态以对应交付记录为准。
+本标准整合用户已确认的设计与业务约定，并接入 [VoltAgent awesome-design-md 设计参考库](history/design-20261117/REFERENCE-LIBRARY.md)。文档描述规范要求；实施和验证状态以对应交付记录为准。
 
 ## 1. 决策顺序与适用边界
 
@@ -100,7 +100,7 @@
 
 ## 8. SaaS 页面交互的十二项原则
 
-采用用户根据《设计师从顶级SaaS产品中借鉴的12种 UI 模式》提供的十二项要点。下表是本项目的实施口径，适用于三端设计和评审；具体页面按角色任务选用。[参考来源与取舍](design/REFERENCE-LIBRARY.md)
+采用用户根据《设计师从顶级SaaS产品中借鉴的12种 UI 模式》提供的十二项要点。下表是本项目的实施口径，适用于三端设计和评审；具体页面按角色任务选用。[参考来源与取舍](history/design-20261117/REFERENCE-LIBRARY.md)
 
 | 原则 | 页面验收时检查什么 |
 | --- | --- |

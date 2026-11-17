@@ -27,7 +27,7 @@
 ## 全项目设计标准（2026-11-11 用户指定）
 
 - 三端页面评审逐项对照[十二项 SaaS 交互原则](../../docs/DESIGN_SYSTEM.md#8-saas-页面交互的十二项原则)，按对应角色的实际任务检查页面落点、证据来源及反馈。
-- 三端界面设计、实现与评审先读根目录 [DESIGN.md](../../DESIGN.md)、[系统设计标准](../../docs/DESIGN_SYSTEM.md) 和 [前端实现基线](../../fronted/DESIGN.md)。用户指定的 [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) 纳入正式设计参考库，选用方式及已核对版本见 [参考记录](../../docs/design/REFERENCE-LIBRARY.md)。
+- 三端界面设计、实现与评审先读根目录 [DESIGN.md](../../DESIGN.md)、[系统设计标准](../../docs/DESIGN_SYSTEM.md) 和 [前端实现基线](../../fronted/DESIGN.md)。用户指定的 [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) 纳入正式设计参考库，选用方式及已核对版本见 [参考记录](../../docs/history/design-20261117/REFERENCE-LIBRARY.md)。
 - 外部参考须记录具体来源、采用点、排除项与页面验收，统一映射现有共享 token/组件；不能逐页覆盖品牌或据参考推造业务规则。后台与陪玩为固定 B 端，老板端私人定制严格限定可购模块。加载、无数据、异常与有数据共用真实页面结构，未知金额与统计不能显示成 0。
 - 本节约束后续设计工作；用户最新明确决定与业务 PRD 优先。标准入库不等于页面实施、接口联调或业务验收已完成。
 

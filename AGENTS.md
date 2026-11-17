@@ -129,8 +129,8 @@ pnpm run verify:frontend              # 前端检查：类型＋共享测试＋�
 ## 9. 设计与体验基线
 
 - **当前阶段功能优先**：沿用现有界面，只打通真实接口与业务闭环，仅修必要交互；老板/陪玩双风格 H5 App 形态为后续界面目标。
-- 设计/评审先读 [DESIGN.md](DESIGN.md)、[DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)（十二项 SaaS 交互原则逐项对照）、[fronted/DESIGN.md](fronted/DESIGN.md)；外部参考按 [REFERENCE-LIBRARY](docs/design/REFERENCE-LIBRARY.md) 登记来源/采用点/排除项/页面验收，映射共享 token/组件，不逐页覆盖品牌、不据参考推造业务规则。
-- 品牌与规格：Blue Planet 六色＋奶白背景（色值见 DESIGN_SYSTEM），状态色仅传达业务含义；蓝色渐变仅用于特殊信息与重点操作；视觉方向"澄海：任务优先"（[现行记录](design-demos/shenglang-web-prototype/app/direction-approved.md)；原 huashu-20261101 目录已不在工作区，见 prd/17 说明）；Web 主导航左侧；间距 4pt 整数倍；组件紧凑但触控范围足够、信息卡片按内容自适应不裁切。
+- 设计/评审先读 [DESIGN.md](DESIGN.md)、[DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)（十二项 SaaS 交互原则逐项对照）、[fronted/DESIGN.md](fronted/DESIGN.md)；`design-demos/` 与 `docs/design/` 已按用户 2026-11-17 决定剔除，外部参考登记归档于 [REFERENCE-LIBRARY](docs/history/design-20261117/REFERENCE-LIBRARY.md)（历史事实，不再新增登记）；沿用共享 token/组件，不逐页覆盖品牌、不据参考推造业务规则。
+- 品牌与规格：Blue Planet 六色＋奶白背景（色值见 DESIGN_SYSTEM），状态色仅传达业务含义；蓝色渐变仅用于特殊信息与重点操作；历史视觉方向"澄海：任务优先"（[归档记录](docs/history/design-directions-20261117/shenglang-web-prototype-direction-approved.md)，当前阶段功能优先不开展视觉重设计）；Web 主导航左侧；间距 4pt 整数倍；组件紧凑但触控范围足够、信息卡片按内容自适应不裁切。
 - 后台与陪玩为固定 B 端模块；老板端私人定制严格限定可购模块（[prd/34](docs/prd/34-SaaS产品模块与三端前端闭环.md)）。
 - 加载/无数据/异常/有数据共用真实页面结构；按场景选 tooltip/toast/alert/modal/popconfirm/抽屉：说明靠近字段、错误给可执行下一步、确认框展示待确认内容；关键提醒声音清晰可控不重复打扰。
 - 文案参考 Apple HIG：保留必要业务结果/金额/错误，压缩重复；次要规则放可点击可聚焦提示；移动端不依赖悬停；不可逆后果与失败处理步骤不藏进提示。

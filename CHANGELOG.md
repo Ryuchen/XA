@@ -13,6 +13,7 @@
 - **新增**：[企业级总体规划](docs/development/26-企业级总体规划.md)（M0–M9 路线图与门禁）；[SaaS 平台产品设计](docs/prd/35-企业级SaaS平台产品设计.md)（租户模型/能力打包/生命周期/商业化）；[目标架构与重构设计](docs/architecture/SAAS_TARGET_ARCHITECTURE.md)＋[重构实施计划](docs/architecture/REFACTORING_PLAN.md)（R1–R6 波次）；[AI 驱动 SDLC 开发流程](docs/development/27-AI驱动SDLC开发流程.md)（S1–S7 阶段、G1–G7 人类门禁）；AGENTS.md 第一性原理（事实唯一，账实相符）；[门店预存尊享卡 PRD 增补](docs/prd/37-门店预存尊享卡.md)（卡式预存产品线，参考 Obsidian 东东平台尊享卡规范与声浪卡档，含 PC01–PC08 待确认决策）；[入驻培训功能对照与 SaaS 化增补](docs/prd/38-入驻培训功能对照与SaaS化增补.md)（东东平台培训 PDF 44 页示意图与规则核对，44 项功能覆盖判定、SA01–SA14 增补提案；尊享卡补卡面版权审核/逐卡转回开关/购买台账）；[SaaS 缺口整改审批单](docs/prd/39-SaaS缺口整改审批单.md) 24 项逐批审批完成（SA01 订阅＋每单 0.1% 平台服务费、SA12 增长功能全入首版等 20 项批准，SA03 不采纳、SA04/09 暂缓、SA10 维持现状），37/38 状态转已批复基线；[门店管理与派单系统产品设计](docs/prd/40-门店管理与派单系统产品设计.md)（两域专业 SaaS 整合设计，落入批复决策）＋[产品开发流程安排](docs/development/28-产品开发流程安排.md)（Claude 官方 SDLC 原理映射：spec 驱动/检查阶梯/确定性强制/独立评审/worktree 并行/无人值守五问，E1–E13 Epic 与 W0–W6 波次对齐 M/R）。
 - **变更**：AGENTS.md 按 [AGENTS.md 开放标准](https://agents.md/) 重构为 11 章智能体指导文件（渐进披露、命令/测试/安全/PR 规范、AI 工作流）；docs 目录企业级整理（479 文件分类迁移、18 领域专题索引、[文档中心与格式标准](docs/README.md)）；门店模型更正为**第三方入驻**——声浪/兴安为开发验证实例，与 SaaS 平台解绑，平台逻辑不得硬编码特定门店。
 - **删除**：全部微信小程序内容（原生桥接包、native 脚本、MINIAPP 身份渠道、小程序直付方案草案、开发者工具验收记录、相关设计/部署/工具资料）；微信登录统一走公众号网页授权（H5 OAuth）。详见[删除审计](docs/ops/records/docs-consolidation-miniprogram-removal-20261117.md)。
+- **删除**：`design-demos/` 与 `docs/design/` 全目录按用户 2026-11-17 决定剔除（674＋12 个跟踪文件）；4 份视觉方向决定记录归档至 `docs/history/design-directions-20261117/`、docs/design 归档至 `docs/history/design-20261117/`；仅服务于原型预览的 `deploy/prototype-preview/` 与 `compose.prototype-preview.yml` 随之删除；AGENTS/文档索引链接同步改指归档、已删原型链接降级为行内代码；不涉及代码修改（frontend dockerignore 的无害忽略模式保留）。
 - **修复**：test_settings 环境隔离（重置 STORE_DATABASE_ALIASES 并补齐门店 SQLite 别名，宿主机环境不再干扰单测）；G07/G54 追踪编号恢复；文档失效链接修复（138→17，剩余为既有 apps/ 遗留）。
 - **文档**：[docs 整理审计](docs/ops/records/docs-restructure-20261117.md)、[整合与删除审计](docs/ops/records/docs-consolidation-miniprogram-removal-20261117.md)；历史归档（重构前 AGENTS 原文等）。
 - **验证**：前端 verify:frontend 全绿（三端类型检查＋共享测试 103/103＋构建）；后端 check 0 issues、迁移无变更；后端全套件红态经对照实验归因为既有 WIP（与本次变更无关，登记待清偿）。
@@ -72,7 +73,7 @@
 
 ### 2026-11-01
 
-- **新增**：三端视觉方向"澄海：任务优先"确认（[选择记录](design-demos/shenglang-web-prototype/app/direction-approved.md)）；Blue Planet 六色＋奶白主色；4pt 间距节奏；Web 主导航左侧。
+- **新增**：三端视觉方向"澄海：任务优先"确认（[选择记录](docs/history/design-directions-20261117/shenglang-web-prototype-direction-approved.md)）；Blue Planet 六色＋奶白主色；4pt 间距节奏；Web 主导航左侧。
 - **变更**：设计参考技能切换为 huashu-design；业务开发方法约定（先理解现有规则与真实字段、检索相近开源实现、最小改动扩展）。
 
 ### 2026-10-29
