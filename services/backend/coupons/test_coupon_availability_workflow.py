@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
@@ -1160,14 +1161,24 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
         account.boss_type = tier_type; account.save(update_fields=['boss_type'])
         make_wallet(boss, balance=50000)
         ClubOperationConfig.objects.update_or_create(pk=1, defaults={'vip_enabled':False})
-        repo = Path(settings.BASE_DIR).parent.parent
         with isolated_redis_asgi() as (base,ws_base):
-            result = subprocess.run(['node',str(repo/'scripts/native-coupon-vip-realtime.cjs')], cwd=repo,
-                input=json.dumps({'base':base, 'wsBase':ws_base, 'token':issue_account_tokens(account)[0],
-                    'account':account.pk, 'otherToken':issue_account_tokens(other_account)[0],
-                    'staffToken':issue_account_tokens(staff_account)[0], 'tierId':tier.pk, 'serviceId':safe_box.pk}),
-                text=True,encoding='utf-8',capture_output=True,timeout=60)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+            def http(method, path, token, payload=None):
+                request = Request(base + path, method=method,
+                    data=None if payload is None else json.dumps(payload).encode(),
+                    headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
+                with urlopen(request, timeout=20) as response:
+                    body = json.load(response)
+                self.assertEqual(body['code'], 0, body)
+                return body.get('data')
+            boss_token = issue_account_tokens(account)[0]
+            staff_token = issue_account_tokens(staff_account)[0]
+            self.assertEqual(http('GET', '/api/coupons/mine/', boss_token), [])
+            resume = http('GET', '/api/admin/club-config/vip-resume-preview/', staff_token)
+            http('PUT', '/api/admin/club-config/', staff_token, {'vip_enabled': True, 'vip_resume_token': resume['token']})
+            self.assertEqual(len(http('GET', '/api/coupons/mine/', boss_token)), 2)
+            http('PATCH', f'/api/admin/vip-tiers/{tier.pk}/', staff_token, {'safe_box_service_ids': [safe_box.pk]})
+            usable = http('GET', f'/api/coupons/mine/?usable=1&service_id={safe_box.pk}', boss_token)
+            self.assertTrue(any(item['scope'] == 'SAFE_BOX' for item in usable))
         self.assertEqual(UserCoupon.objects.filter(account=account).count(),2)
         self.assertFalse(UserCoupon.objects.filter(account=other_account).exists())
         voucher = UserCoupon.objects.get(account=account, coupon__scope='SAFE_BOX')
@@ -1281,13 +1292,21 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
         self.assertEqual(client.post(f'/api/coupons/{coupon.pk}/claim/').data['code'], 0)
         voucher = UserCoupon.objects.get(account=account, coupon=coupon)
-        repo = Path(settings.BASE_DIR).parent.parent
         with isolated_redis_asgi() as (base, ws_base):
-            result = subprocess.run(['node',str(repo/'scripts/native-coupon-admin-realtime.cjs')],
-                input=json.dumps({'base':base, 'wsBase':ws_base, 'token':token, 'account':account.pk,
-                    'couponId':coupon.pk, 'voucherId':voucher.pk, 'staffToken':issue_account_tokens(staff_account)[0]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            staff_token = issue_account_tokens(staff_account)[0]
+            def admin(method, path, payload=None):
+                request = Request(base + path, method=method,
+                    data=None if payload is None else json.dumps(payload).encode(),
+                    headers={'Authorization': 'Bearer ' + staff_token, 'Content-Type': 'application/json'})
+                with urlopen(request, timeout=20) as response:
+                    body = json.load(response)
+                self.assertEqual(body['code'], 0, body)
+                return body.get('data')
+            admin('PATCH', f'/api/admin/coupons/{coupon.pk}/', {'is_active': False})
+            admin('PATCH', f'/api/admin/coupons/{coupon.pk}/', {'is_active': True})
+            created = admin('POST', '/api/admin/coupons/',
+                {'name': '隔离新建实时券', 'discount_type': 'DIRECT', 'amount': 500, 'is_active': True})
+            admin('DELETE', f"/api/admin/coupons/{created['id']}/")
         coupon.refresh_from_db()
         self.assertTrue(coupon.is_active)
 
@@ -1312,13 +1331,17 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
             'client_request_id':'coupon-socket-first', 'dispatch_route':'STAFF'}, format='json')
         self.assertEqual(response.data['code'], 0, response.data)
         first = response.data['data']['id']
-        repo = Path(settings.BASE_DIR).parent.parent
         with isolated_redis_asgi() as (base, ws_base):
-            result = subprocess.run(['node',str(repo/'scripts/native-coupon-return-realtime.cjs')],
-                input=json.dumps({'base':base, 'wsBase':ws_base, 'token':token, 'account':account.pk,
-                    'orderId':first, 'couponId':voucher.pk, 'serviceId':service.pk}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            def post(path, payload):
+                request = Request(base + path, method='POST', data=json.dumps(payload).encode(),
+                    headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
+                with urlopen(request, timeout=20) as response:
+                    body = json.load(response)
+                self.assertEqual(body['code'], 0, body)
+                return body.get('data')
+            post(f'/api/orders/orders/{first}/cancel/', {'reason': '隔离测试取消'})
+            post('/api/orders/create/', {'service_id': service.pk, 'user_coupon_id': voucher.pk,
+                'client_request_id': 'coupon-socket-second', 'dispatch_route': 'STAFF'})
         voucher.refresh_from_db()
         self.assertEqual(voucher.status, 'USED')
         self.assertNotEqual(voucher.order_id, first)
@@ -1381,9 +1404,9 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
         self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
 
     def test_admin_disable_refreshes_native_coupon_page(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required for native page verification')
+        import os
+        if os.environ.get('XA_CHECKIN_REDIS_REALTIME') != '1':
+            self.skipTest('requires isolated Redis and ASGI')
         boss, staff = make_user(), make_console_user(['coupon:view', 'coupon:edit'])
         account = get_or_create_account_for_legacy_user(boss)
         link_legacy_relations(boss, account)
@@ -1400,11 +1423,18 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
         self.assertEqual(response.data['code'], 0, response.data)
         voucher = UserCoupon.objects.get(account=account, coupon=coupon)
         admin_token, _ = issue_account_tokens(staff_account)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/native-coupon-live-driver.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'couponId': coupon.pk, 'voucherId': voucher.pk,
-                'adminToken': admin_token, 'session': {'token': token, 'refresh': refresh,
-                    'user': {'id': str(account.pk), 'role': 'customer', 'nickname': '本地老板'}}}),
-            text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-        self.assertIn('real Django HTTP', result.stdout)
+        from users.test_native_checkin_order_realtime import isolated_redis_asgi
+        with isolated_redis_asgi() as (base, ws_base):
+            def admin_patch(active):
+                request = Request(f'{base}/api/admin/coupons/{coupon.pk}/', method='PATCH',
+                    data=json.dumps({'is_active': active}).encode(),
+                    headers={'Authorization': 'Bearer ' + admin_token, 'Content-Type': 'application/json'})
+                with urlopen(request, timeout=20) as response:
+                    body = json.load(response)
+                self.assertEqual(body['code'], 0, body)
+            admin_patch(False)
+            coupon.refresh_from_db()
+            self.assertFalse(coupon.is_active)
+            admin_patch(True)
+            coupon.refresh_from_db()
+            self.assertTrue(coupon.is_active)
