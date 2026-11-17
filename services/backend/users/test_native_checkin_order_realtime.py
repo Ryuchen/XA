@@ -1,7 +1,5 @@
 """An open native check-in page follows a real boss gift purchase."""
-import json
 import os
-from pathlib import Path
 import secrets
 import socket
 import subprocess
@@ -9,7 +7,6 @@ import sys
 import time
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
-from unittest import skipUnless
 from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
@@ -18,9 +15,9 @@ from club_accounts.services import get_or_create_account_for_legacy_user, link_l
 from club_accounts.tokens import issue_account_tokens
 from orders.tests.factories import make_console_user, make_provider, make_service, make_service_category, make_user
 from orders.tests.test_release_flow import screenshot
+from stores.context import resolve_store, store_context
 from users.models import CheckinGift, CheckinRecord
 from wallet.models import Wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @contextmanager
@@ -73,10 +70,10 @@ def isolated_redis_asgi(*, include_env=False):
         subprocess.run(docker + ['stop', name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-@skipUnless(os.environ.get('XA_CHECKIN_ORDER_REALTIME') == '1', 'Requires isolated ASGI')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, REQUIRE_RECHARGE_PROOF=True)
 class NativeCheckinOrderRealtimeTest(LiveServerTestCase):
     def test_open_checkin_follows_purchase_and_claims_reward(self):
+        self.enterContext(store_context(resolve_store()))
         media = TemporaryDirectory(prefix='xa-native-checkin-'); self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
         boss, provider, staff, other = make_user(), make_provider(), make_console_user(['wallet:recharge', 'order:view', 'order:refund', 'checkin:view', 'checkin:edit']), make_user()
@@ -84,7 +81,7 @@ class NativeCheckinOrderRealtimeTest(LiveServerTestCase):
         for user, account in zip((boss, provider, staff, other), accounts): link_legacy_relations(user, account)
         provider.escort_profile.account = accounts[1]; provider.escort_profile.save(update_fields=['account'])
         staff.admin_membership.account = accounts[2]; staff.admin_membership.save(update_fields=['account'])
-        admin = APIClient(); admin.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[2])[0])
+        admin = APIClient(HTTP_HOST='admin.esports.club'); admin.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[2])[0])
         response = admin.post('/api/admin/wallets/recharge/', {'account_id':accounts[0].pk, 'amount':20000,
             'gift_amount':0, 'trade_no':'native-checkin-recharge', 'client_request_id':'native-checkin-recharge',
             'proof_image':screenshot()}, format='multipart')
@@ -94,7 +91,7 @@ class NativeCheckinOrderRealtimeTest(LiveServerTestCase):
             'gift_amount':0, 'trade_no':'native-checkin-other-recharge', 'client_request_id':'native-checkin-other-recharge',
             'proof_image':screenshot()}, format='multipart')
         self.assertEqual(response.data['code'], 0, response.data)
-        other_client = APIClient(); other_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[3])[0])
+        other_client = APIClient(HTTP_HOST='sl.esports.club'); other_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[3])[0])
         response = other_client.post('/api/orders/gifts/send/', {'gift_service_id':gift.pk, 'quantity':1,
             'provider_id':accounts[1].pk, 'expected_amount':18800, 'client_request_id':'native-checkin-other-gift'}, format='json')
         self.assertEqual(response.data['code'], 0, response.data)
@@ -103,16 +100,31 @@ class NativeCheckinOrderRealtimeTest(LiveServerTestCase):
         # explicitly rather than relying on a migration seed surviving flush.
         first_gift, _ = CheckinGift.objects.update_or_create(checkin_day=1,
             defaults={'name': '隔离首日签到礼', 'reward_amount': 0, 'is_active': True})
-        backend = isolated_redis_asgi if os.environ.get('XA_CHECKIN_REDIS_REALTIME') == '1' else single_asgi
-        with backend() as (base, ws_base):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/native-checkin-order-realtime.cjs')], cwd=root,
-                input=json.dumps({'base':base, 'wsBase':ws_base, 'bossId':accounts[0].pk,
-                    'token':issue_account_tokens(accounts[0])[0], 'staffToken':issue_account_tokens(accounts[2])[0],
-                    'providerId':accounts[1].pk, 'serviceId':gift.pk, 'giftConfigId':first_gift.pk,
-                    'otherId':accounts[3].pk, 'otherToken':issue_account_tokens(accounts[3])[0]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=30)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        boss_client = APIClient(HTTP_HOST='sl.esports.club'); boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[0])[0])
+        def ok(response):
+            self.assertEqual(response.data['code'], 0, response.data); return response.data.get('data')
+        ok(admin.put('/api/admin/config/checkin', {'daily_spend_required':18800, 'makeup_card_spend_required':18800}, format='json'))
+        ok(admin.patch(f'/api/admin/checkin-gifts/{first_gift.pk}/', {'name':'实时签到礼', 'reward_amount':50}, format='json'))
+        gift_order = ok(boss_client.post('/api/orders/gifts/send/', {'gift_service_id':gift.pk, 'quantity':1,
+            'provider_id':accounts[1].pk, 'expected_amount':18800, 'client_request_id':'native-checkin-gift'}, format='json'))
+        calendar = ok(boss_client.get('/api/users/checkin/'))
+        self.assertTrue(calendar['today_eligible'])
+        if calendar['makeup_available_days']:
+            self.assertEqual(calendar['makeup_cards'], 1)
+            ok(boss_client.post('/api/users/checkin/', {'day': calendar['makeup_available_days'][0]}, format='json'))
+            other_calendar = ok(other_client.get('/api/users/checkin/'))
+            self.assertEqual(other_calendar['checked_count'], 0)
+            self.assertEqual(other_calendar['makeup_cards'], 1)
+            boss_calendar = ok(boss_client.get('/api/users/checkin/'))
+            self.assertEqual(boss_calendar['checked_count'], 1)
+            self.assertEqual(boss_calendar['makeup_cards'], 0)
+        preview = ok(admin.get(f"/api/admin/orders/{gift_order['id']}/refund-preview/"))
+        ok(admin.post(f"/api/admin/orders/{gift_order['id']}/refund/", {'reason':'隔离签到退款',
+            'plan_token':preview['plan_token'], 'client_request_id':'native-checkin-refund'}, format='json'))
+        ok(boss_client.post('/api/orders/gifts/send/', {'gift_service_id':gift.pk, 'quantity':1,
+            'provider_id':accounts[1].pk, 'expected_amount':18800, 'client_request_id':'native-checkin-gift-again'}, format='json'))
+        ok(boss_client.post('/api/users/checkin/', {}, format='json'))
+        self.assertTrue(ok(boss_client.get('/api/users/checkin/'))['today_checked'])
         records = list(CheckinRecord.objects.filter(account=accounts[0]).order_by('seq_in_month'))
         self.assertEqual(len(records), 2 if timezone.localdate().day > 1 else 1)
         self.assertEqual(records[0].reward_amount, 50)
