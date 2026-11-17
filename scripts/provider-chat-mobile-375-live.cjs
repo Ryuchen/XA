@@ -60,7 +60,7 @@ async function main() {
     await page.getByText('发送图片', { exact: true }).click();
     const chooser = await chooserPromise;
     const uploaded = page.waitForResponse(response => response.url().includes('/api/chat/send/') && response.request().method() === 'POST' && response.status() === 200, { timeout: 15000 });
-    await chooser.setFiles(path.resolve('apps/boss-miniapp/native/assets/icons/chat.png'));
+    await chooser.setFiles(path.resolve('scripts/fixtures/chat.png'));
     const uploadResponse = await uploaded;
     assert.equal((await uploadResponse.json()).code, 0, 'image upload accepted');
     await page.waitForFunction(() => [...document.querySelectorAll('img[src*="/api/media/private/"]')].some(img => img.complete && img.naturalWidth > 0), null, { timeout: 8000 }).catch(async () => {
@@ -79,7 +79,7 @@ async function main() {
     await page.getByText('发送图片', { exact: true }).click();
     const lostChooser = await lostChooserPromise;
     dropNextSendResponse = true;
-    await lostChooser.setFiles(path.resolve('apps/boss-miniapp/native/assets/icons/chat.png'));
+    await lostChooser.setFiles(path.resolve('scripts/fixtures/chat.png'));
     await Promise.race([responseDropped, new Promise((_, reject) => setTimeout(() => reject(new Error('upload response was not dropped')), 15000))]);
     await page.getByText('上条消息结果未确认，请先核对。', { exact: true }).waitFor({ timeout: 15000 });
     assert.equal(droppedResponse?.code, 0, 'the real server committed before the response was lost');

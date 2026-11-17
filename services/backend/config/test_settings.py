@@ -10,7 +10,10 @@ ALLOWED_HOSTS = ['*']
 
 # Unit tests and the default CI job run without a database or Redis service.
 # Migration/MySQL settings override DATABASES for their separate checks.
-DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}
+DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_a': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_b': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_new': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}
+# 宿主机可能导出 XA_STORE_DATABASES，使基础 settings 注入门店别名；
+# 单测无门店库服务，必须随 DATABASES 一并重置，否则系统检查找不到连接。
+STORE_DATABASE_ALIASES = ()
 CHANNEL_LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
 CELERY_BROKER_URL = 'memory://'
 CELERY_RESULT_BACKEND = 'cache+memory://'

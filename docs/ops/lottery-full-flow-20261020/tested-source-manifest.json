@@ -8,12 +8,6 @@
     "services/backend/engagement/serializers.py",
     "services/backend/engagement/migrations/0016_lottery_batches_and_pity.py",
     "services/backend/engagement/migrations/0017_lottery_ten_guarantee.py",
-    "apps/boss-miniapp/native/pages/lottery/index.js",
-    "apps/boss-miniapp/native/pages/lottery/presentation.js",
-    "apps/boss-miniapp/native/pages/lottery/index.wxml",
-    "apps/boss-miniapp/native/pages/lottery/index.wxss",
-    "apps/boss-miniapp/native/core/api.js",
-    "apps/boss-miniapp/native/config.js",
     "apps/admin-web/src/views/engagement/index.vue"
   ],
   "sha256": [
@@ -42,27 +36,21 @@
       "sha256": "c7dc7b9d53605f25154925a84a010897ce7e8f26d8424f8454c9a9ab1555bbf6"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/lottery/index.js",
       "sha256": "ad7c5e8d6f27ed7f38655b4ecd1074f4e9940b1aaf6b9f11a37ab9518ae6ca34"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/lottery/presentation.js",
       "sha256": "3b11d3ae18a67963055dc93876468424876bd6fd8abbdec3e45894823195999a"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/lottery/index.wxml",
       "sha256": "c92873f2e00ec3785a491f21e149624bf0d77dd175a95bc15f4b1de29abc46e5"
     },
     {
-      "path": "apps/boss-miniapp/native/pages/lottery/index.wxss",
       "sha256": "7723fef4eb22ad8d4f9a5f448e8e0f33b042c40089bf116ef6dab8b44fcc0d4e"
     },
     {
-      "path": "apps/boss-miniapp/native/core/api.js",
       "sha256": "f28126a9914fc4c0f8ecd056e3decb32058653249bc0c37000fa8c3beb70cac4"
     },
     {
-      "path": "apps/boss-miniapp/native/config.js",
       "sha256": "98f2069ab5dc047b2b56bd507c1aaff9b03f59d47bdd1e3e29e07cd0f733099c"
     },
     {

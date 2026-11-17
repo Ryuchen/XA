@@ -117,7 +117,7 @@ class ProviderVueTeamProgressHTTPTest(LiveServerTestCase):
                 input=json.dumps({'root': root, 'base': base, 'wsBase': ws_base, 'realtime': bool(ws_base), 'orderId': order['id'], 'tokens': tokens, 'bossId': self.accounts[self.boss.pk].pk,
                     'providers': [{'token': tokens['first'], 'id': self.accounts[self.provider.pk].pk},
                                   {'token': tokens['second'], 'id': self.accounts[second.pk].pk}],
-                    'image': str(repo / 'apps/boss-miniapp/native/assets/icons/chat.png')}),
+                    'image': str(repo / 'scripts/fixtures/chat.png')}),
                 text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         if os.environ.get('XA_TEAM_PROGRESS_REALTIME') == '1':

@@ -18,8 +18,7 @@
     "build:all": "npm --prefix fronted run build",
     "typecheck": "npm --prefix fronted run typecheck",
     "test:frontend": "npm --prefix fronted test",
-    "bridge:check": "node scripts/check-wechat-bridge.mjs",
-    "verify:frontend": "pnpm run typecheck && pnpm run test:frontend && pnpm run bridge:check && pnpm run build:all"
+    "verify:frontend": "pnpm run typecheck && pnpm run test:frontend && pnpm run build:all"
   },
   "devDependencies": {
     "playwright": "^1.64.1"

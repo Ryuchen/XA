@@ -26,17 +26,17 @@ class StoreConfigurationTest(SimpleTestCase):
             self.assertEqual(settings.WECOM_DISPATCH_WEBHOOK, '')
             self.assertEqual(store_name(), '南岸电竞')
 
-    @override_settings(WECHAT_MINIAPP_APPID='platform-wechat-app', WECHAT_MOCK_LOGIN=False,
+    @override_settings(WECHAT_H5_APPID='platform-wechat-app', WECHAT_MOCK_LOGIN=False,
         SMS_APP_ID='platform-sms-app', STORE_INTEGRATIONS={'xinan': {
         'KOOK_ENABLED': True, 'KOOK_BOT_TOKEN': 'xinan-recipient-token',
-        'WECHAT_MINIAPP_APPID': 'xinan-wechat-app', 'WECHAT_MOCK_LOGIN': True,
+        'WECHAT_H5_APPID': 'xinan-wechat-app', 'WECHAT_MOCK_LOGIN': True,
         'SMS_APP_ID': 'xinan-sms-app',
     }})
     def test_explicit_server_configuration_resolves_per_store(self):
         with store_context(self.store):
             self.assertTrue(settings.KOOK_ENABLED)
             self.assertEqual(settings.KOOK_BOT_TOKEN, 'xinan-recipient-token')
-            self.assertEqual(settings.WECHAT_MINIAPP_APPID, 'platform-wechat-app')
+            self.assertEqual(settings.WECHAT_H5_APPID, 'platform-wechat-app')
             self.assertFalse(settings.WECHAT_MOCK_LOGIN)
             self.assertEqual(settings.SMS_APP_ID, 'platform-sms-app')
 

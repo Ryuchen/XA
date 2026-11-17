@@ -5,7 +5,6 @@ from stores.db import transaction
 from .web_login_models import ProviderWechatUnionOwner
 
 
-MINI_CHANNEL = 'MINIAPP'
 H5_CHANNEL = 'OFFICIAL_H5'
 
 
@@ -40,29 +39,26 @@ def check_h5_provider_binding(account, unionid):
     """Caller holds the provider account lock."""
     if not account.openid:
         return
-    mini = WechatIdentity.objects.select_for_update().filter(account=account, channel=MINI_CHANNEL,
+    h5 = WechatIdentity.objects.select_for_update().filter(account=account, channel=H5_CHANNEL,
         appid=account.wechat_appid, openid=account.openid).first()
-    require_matching_unionids(mini.unionid if mini else '', unionid)
+    require_matching_unionids(h5.unionid if h5 else '', unionid)
 
 
-def bind_mini_provider(account, *, appid, openid, unionid):
-    """Persist miniapp proof after account lock and cross-channel validation."""
+def bind_provider(account, *, appid, openid, unionid):
+    """Persist official-account H5 proof after account lock and cross-channel validation."""
     unionid = clean_unionid(unionid)
-    own = WechatIdentity.objects.select_for_update().filter(account=account, channel=MINI_CHANNEL, appid=appid)
+    own = WechatIdentity.objects.select_for_update().filter(account=account, channel=H5_CHANNEL, appid=appid)
     if own.exclude(openid=openid).exists():
         raise ValueError('该账号已绑定其他微信，请联系客服')
-    identity = WechatIdentity.objects.select_for_update().filter(channel=MINI_CHANNEL, appid=appid, openid=openid).first()
+    identity = WechatIdentity.objects.select_for_update().filter(channel=H5_CHANNEL, appid=appid, openid=openid).first()
     if identity and identity.account_id != account.pk:
         raise ValueError('当前微信已绑定其他账号，请联系客服')
     if identity and identity.unionid and unionid and identity.unionid != unionid:
         raise ValueError('微信身份信息不一致，请联系客服')
     effective_unionid = unionid or (identity.unionid if identity else '')
-    h5_rows = list(WechatIdentity.objects.select_for_update().filter(account=account, channel=H5_CHANNEL))
-    for h5 in h5_rows:
-        require_matching_unionids(h5.unionid, effective_unionid)
     claim_provider_unionid(account, effective_unionid)
     if identity is None:
-        WechatIdentity.objects.create(account=account, channel=MINI_CHANNEL, appid=appid,
+        WechatIdentity.objects.create(account=account, channel=H5_CHANNEL, appid=appid,
                                       openid=openid, unionid=unionid)
     elif unionid and not identity.unionid:
         identity.unionid = unionid

@@ -1,6 +1,6 @@
 # 兴安电竞（XA）· 核心流程时序图
 
-> 配套文档：[PRD.md](../PRD.md) · [ER.md](./ER.md)　│　最后更新：2026-06-30
+> 配套文档：[PRD.md](../history/product/PRD.md) · [ER.md](./ER.md)　│　最后更新：2026-06-30
 >
 > 本文用 Mermaid `sequenceDiagram` 描述关键业务链路的端到端调用顺序，含资金动作与 WebSocket 推送。金额单位均为「分」。
 
@@ -315,27 +315,26 @@ sequenceDiagram
 
 ## 9. 微信 / 账号登录
 
-> `POST /api/users/wechat-login/`（小程序）｜`account-login/`（H5）
+> `GET/POST /api/users/h5-login/start|callback|status/`（公众号网页授权）｜`account-login/`（账号密码）
+> （微信小程序相关内容已按用户 2026-11-17 决定删除：小程序 code2session 登录渠道与桥接认证不再保留，老板端微信登录走公众号网页授权/扫码。）
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as 客户端
-    participant API as Wechat/AccountLoginView
-    participant WX as 微信(code2session)
+    participant C as 客户端(浏览器)
+    participant API as H5Login/AccountLoginView
+    participant WX as 微信(公众号网页授权 OAuth)
     participant DB as MySQL
 
     alt 微信登录
-        C->>API: POST /wechat-login/ {code, role, phoneCode?}
-        alt WECHAT_MOCK_LOGIN=True
-            API->>API: openid='wx_mock_<code>'
-        else 真实
-            API->>WX: code2session(code)
-            WX-->>API: openid
-            opt 带 phoneCode
-                API->>WX: 解析手机号 → 回填
-            end
-        end
+        C->>API: GET /h5-login/start/ {purpose, 门店域名}
+        API-->>C: 重定向到微信授权页(snsapi_base/snsapi_userinfo)
+        C->>WX: 用户在微信内确认授权
+        WX-->>API: GET /h5-login/callback/ {code, state}
+        API->>WX: sns/oauth2/access_token(code)
+        WX-->>API: openid/unionid(按渠道分存)
+        API->>DB: 校验 state 与门店上下文, 绑定/创建身份
+        C->>API: GET /h5-login/status/ 轮询登录结果
     else 账号登录
         C->>API: POST /account-login/ {username, password, role}
         API->>DB: 校验密码(真实 hash)

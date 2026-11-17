@@ -15,8 +15,6 @@
     "mysql": 56,
     "native": 109,
     "mysql_concurrency_cases": 5,
-    "official_wxml": 49,
-    "official_wxss": 52,
     "admin_typecheck": "PASS",
     "admin_build": "PASS"
   },

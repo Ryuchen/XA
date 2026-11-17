@@ -10,7 +10,7 @@
 2. 在上述约束内执行本标准、前端基线及已确认原型。规则冲突须记录具体来源与最终取舍。
 3. 外部设计参考用于解决已识别的界面问题，选取具体模式后转成项目规则；版本与取舍记录在参考库。外部品牌分析不替代本项目规范。
 
-当前正式前端为 `fronted/` 下的 React + TypeScript + Tailwind CSS 4 + shadcn 三端网页。旧原生小程序、Vue、Element Plus、旧色卡及尺寸说明归档至 [2026-10-13 历史规范](history/DESIGN_SYSTEM-20261013.md)，仅供追溯。
+当前正式前端为 `fronted/` 下的 React + TypeScript + Tailwind CSS 4 + shadcn 三端网页。旧 Vue、Element Plus、旧色卡及尺寸说明归档至 [2026-10-13 历史规范](history/DESIGN_SYSTEM-20261013.md)，仅供追溯。（微信小程序相关内容已按用户 2026-11-17 决定删除）
 
 ## 2. 任务、角色与模块
 

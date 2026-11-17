@@ -28,8 +28,8 @@ def admin_login_readiness():
 
     sms_configured = all(getattr(settings, name, '') for name in (
         'SMS_SECRET_ID', 'SMS_SECRET_KEY', 'SMS_APP_ID', 'SMS_TEMPLATE_ID', 'SMS_SIGN_NAME'))
-    mini_appid = getattr(settings, 'WECHAT_MINIAPP_APPID', '')
-    mini_configured = bool(mini_appid and getattr(settings, 'WECHAT_MINIAPP_SECRET', ''))
+    mini_appid = getattr(settings, 'WECHAT_H5_APPID', '')
+    mini_configured = bool(mini_appid and getattr(settings, 'WECHAT_H5_SECRET', ''))
     h5_appid = getattr(settings, 'WECHAT_H5_APPID', '')
     h5_configured = bool(h5_appid and getattr(settings, 'WECHAT_H5_SECRET', ''))
     memberships = AdminMembership.objects.filter(
@@ -53,7 +53,7 @@ def admin_login_readiness():
                 methods.add('SMS_CONFIGURED')
         if (mini_configured and account.is_openid_bound and account.openid
                 and account.wechat_appid == mini_appid):
-            methods.add('WECHAT_MINIAPP_CONFIGURED')
+            methods.add('WECHAT_H5_CONFIGURED')
         if h5_configured and account.is_openid_bound and account.wechat_identities.filter(
                 channel='OFFICIAL_H5', appid=h5_appid).exclude(openid='').exists():
             methods.add('WECHAT_H5_CONFIGURED')

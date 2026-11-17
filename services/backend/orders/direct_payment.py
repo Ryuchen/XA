@@ -141,7 +141,7 @@ def prepare_direct_order(request, *, appid, mchid):
                 raise DirectPaymentError('微信身份已变更，请先核对原支付订单')
             return existing
         if not account.is_openid_bound or not account.openid or account.wechat_appid != appid:
-            raise DirectPaymentError('当前账号未绑定对应小程序微信身份')
+            raise DirectPaymentError('当前账号未绑定对应微信身份')
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
         if not serializer.is_valid():
             raise DirectPaymentError(str(serializer.errors))

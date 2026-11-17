@@ -36,7 +36,7 @@ async function main() {
     await page.getByText('尚未配置', { exact: true }).waitFor({ timeout: 30000 });
     const form = page.locator('.fee-form');
     await form.getByLabel('微信支付商户号').fill('1234567890');
-    await form.getByLabel('小程序 AppID').fill('wx1234567890abcdef');
+    await form.getByLabel('微信 AppID').fill('wx1234567890abcdef');
     await form.getByLabel(/商户费率/).fill('0.6');
     await form.getByLabel('向老板报价的手续费计算基数').selectOption('PAYMENT_TOTAL');
     await form.getByLabel('手续费取整方式').selectOption('UP');

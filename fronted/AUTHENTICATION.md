@@ -18,7 +18,7 @@
 - 老板端和陪玩端使用 `/api/users/h5-login/start|callback|status/`。
 - 管理后台使用 `/api/admin/auth/h5-login/start|callback|status`。
 - 网页只获得短期登录票和微信官方授权地址。回调完成后，业务 JWT 只返回给持有私密 `poll_token` 的原页面。
-- H5、微信小程序和未来微信开放平台的 `openid` 分开保存为 `WechatIdentity`；同一账号可有多个渠道身份，微信返回 `unionid` 时一并保存。
+- H5 和未来微信开放平台的 `openid` 分开保存为 `WechatIdentity`；同一账号可有多个渠道身份，微信返回 `unionid` 时一并保存。
 - 陪玩和后台账号不会因扫码或 H5 授权自动创建。老板可以通过微信建立老板账号，手机号验证和密码设置仍按后续安全流程完成。
 
 ### 后台首次微信绑定初始化
@@ -31,7 +31,7 @@
 
 ## 配置
 
-公众号网页授权使用独立配置，不能与小程序或未来开放平台凭据混用：
+公众号网页授权使用独立配置，不能与未来开放平台凭据混用：
 
 - `WECHAT_H5_APPID`
 - `WECHAT_H5_SECRET`

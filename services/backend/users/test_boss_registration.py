@@ -102,39 +102,7 @@ class BossRegistrationTests(TestCase):
         self.assertFalse(BossRegistrationChallenge.objects.get(phone='13800001111').consumed)
         self.assertEqual(self.register(challenge, code).status_code, 201)
 
-    @override_settings(WECHAT_MINIAPP_APPID='wx-registration-test', WECHAT_MINIAPP_SECRET='test-only',
-                       WECHAT_MOCK_LOGIN=False)
-    def test_registered_boss_can_link_wechat_without_replacing_account_or_wallet(self):
-        registration = self.start()
-        result = self.register(registration.data['data']['smsChallenge'], self.codes[-1][1])
-        account = ClubAccount.objects.get(pk=result.data['data']['userInfo']['id'])
-        wallet_id = Wallet.objects.get(account=account).pk
-        with patch('users.web_login.create_bridge_code', return_value=('data:image/png;base64,test', '')), \
-             patch('users.web_login._wechat_code2session', return_value='registration-wechat-proof'), \
-             patch('users.web_login._wechat_get_phone', return_value=account.phone), \
-             patch('users.web_login.send_verification_code', side_effect=lambda phone, code: self.codes.append((phone, code))):
-            started = self.client.post('/api/users/web-login/start/', {'audience': 'boss'}, format='json').data['data']
-            authorized = self.client.post('/api/users/web-login/authorize/', {'ticket': started['ticket'],
-                'code': 'wechat-proof', 'phoneCode': 'phone-proof'}, format='json')
-            self.assertEqual(authorized.status_code, 200, authorized.data)
-            bridge = authorized.data['data']['bridge_token']
-            sent = self.client.post('/api/users/web-login/sms/', {'ticket': started['ticket'],
-                'bridge_token': bridge}, format='json')
-            self.assertEqual(sent.status_code, 200, sent.data)
-            confirmed = self.client.post('/api/users/web-login/confirm/', {'ticket': started['ticket'],
-                'bridge_token': bridge, 'smsCode': self.codes[-1][1]}, format='json')
-            self.assertEqual(confirmed.status_code, 200, confirmed.data)
-            status = self.client.get('/api/users/web-login/status/', {'ticket': started['ticket'],
-                'poll_token': started['poll_token']})
-        self.assertEqual(status.data['data']['userInfo']['id'], str(account.pk))
-        account.refresh_from_db()
-        self.assertEqual((account.openid, account.is_openid_bound), ('registration-wechat-proof', True))
-        self.assertEqual(Wallet.objects.get(account=account).pk, wallet_id)
 
-
-@skipUnless('store_b' in settings.DATABASES, 'requires two isolated stores')
-@override_settings(ALLOWED_HOSTS=['*'], LEGACY_FORCE_AUTH_COMPAT=False,
-                   LICENSE_ACCOUNT_ADMISSION_ENABLED=False)
 class BossRegistrationStoreTests(BossRegistrationTests):
     databases = {'default', 'store_b'}
 

@@ -754,7 +754,7 @@ class UserViewSet(EnvelopeViewSetMixin, ModelViewSet):
         return Response({'code': 0, 'data': preview_retirement(self.get_object(), request.account)})
 
     def create(self, request, *args, **kwargs):
-        """显式关闭建号入口：老板账户由小程序注册产生，后台不许凭空造。"""
+        """显式关闭建号入口：老板账户由老板端注册产生，后台不许凭空造。"""
         return Response({'code': 405, 'msg': '不支持在后台创建老板账户'}, status=405)
 
     def get_queryset(self):

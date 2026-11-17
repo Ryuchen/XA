@@ -61,7 +61,7 @@ async function main() {
     const chooser = page.waitForEvent('filechooser');
     await page.getByText('发送图片', { exact: true }).click();
     const uploaded = page.waitForResponse(response => response.url().includes('/api/chat/send/') && response.request().method() === 'POST' && response.status() === 200);
-    await (await chooser).setFiles(path.resolve('apps/boss-miniapp/native/assets/icons/chat.png'));
+    await (await chooser).setFiles(path.resolve('scripts/fixtures/chat.png'));
     assert.equal((await (await uploaded).json()).code, 0);
     const chat = await fetch(`${input.base}/api/chat/session/`, { headers: { Authorization: `Bearer ${input.providerToken}` } }).then(r => r.json());
     assert.equal(chat.code, 0);

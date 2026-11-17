@@ -30,7 +30,7 @@ async function main() {
       const chooser = page.waitForEvent('filechooser');
       await page.getByText('添加战绩截图', { exact: true }).click();
       const uploaded = page.waitForResponse(response => response.url().includes(`/api/wallet/reports/${input.reportId}/images/`) && response.request().method() === 'POST' && response.status() === 200);
-      await (await chooser).setFiles(path.resolve('apps/boss-miniapp/native/assets/icons/chat.png'));
+      await (await chooser).setFiles(path.resolve('scripts/fixtures/chat.png'));
       assert.equal((await (await uploaded).json()).code, 0);
       await page.getByText('2/9 张', { exact: true }).waitFor();
       const submitted = page.waitForResponse(response => response.url().includes(`/api/wallet/reports/${input.reportId}/submit/`) && response.request().method() === 'POST' && response.status() === 200);

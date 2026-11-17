@@ -33,7 +33,7 @@ def _parse(data):
     if not isinstance(merchant_id, str) or not re.fullmatch(r'[0-9]{8,32}', merchant_id):
         raise ValueError('商户号须为 8–32 位数字')
     if not isinstance(appid, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,32}', appid):
-        raise ValueError('小程序 AppID 格式无效')
+        raise ValueError('微信 AppID 格式无效')
     if not isinstance(rate, str) or not re.fullmatch(r'(?:0|[1-9][0-9]{0,2})(?:\.[0-9]{1,4})?', rate):
         raise ValueError('费率须为百分数，最多四位小数')
     try:

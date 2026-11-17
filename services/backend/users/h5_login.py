@@ -275,11 +275,11 @@ def identity_for(account, proof):
 
 def new_h5_boss(proof):
     from django.contrib.auth import get_user_model
-    from users.boss_types import default_miniapp_boss_type
+    from users.boss_types import default_boss_type
     from wallet.models import Wallet
 
     with transaction.atomic():
-        boss_type = default_miniapp_boss_type()
+        boss_type = default_boss_type()
         if not boss_type.is_active:
             raise ValueError('默认老板类型暂不可用，请联系门店客服')
         account = ClubAccount.objects.create_account(username='wx_' + uuid.uuid4().hex,

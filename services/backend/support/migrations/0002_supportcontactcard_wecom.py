@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 default='',
-                help_text='企业微信「我的企业」中的企业ID，用于小程序打开微信客服',
+                help_text='企业微信「我的企业」中的企业ID，用于打开微信客服',
                 max_length=64,
                 verbose_name='企业微信企业ID',
             ),

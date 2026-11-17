@@ -504,10 +504,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# 微信小程序登录配置
-WECHAT_MINIAPP_APPID = os.environ.get('WECHAT_APPID', '')
-WECHAT_MINIAPP_SECRET = os.environ.get('WECHAT_SECRET', '')
-# 微信公众号网页授权与小程序/未来开放平台身份分开保存。
+# 微信公众号网页授权与未来开放平台身份分开保存。
 WECHAT_H5_APPID = os.environ.get('WECHAT_H5_APPID', os.environ.get('WECHAT_OFFICIAL_APPID', ''))
 WECHAT_H5_SECRET = os.environ.get('WECHAT_H5_SECRET', os.environ.get('WECHAT_OFFICIAL_SECRET', ''))
 WECHAT_H5_ALLOWED_ORIGINS = [value.strip() for value in os.environ.get('WECHAT_H5_ALLOWED_ORIGINS', '').split(',') if value.strip()]

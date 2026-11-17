@@ -28,7 +28,7 @@ from stores.media import decode_login_scene, encode_login_scene, media_root
 from stores.models import Store
 from stores.tasks import StoreTask
 from users.models import WebLoginSession
-from users.web_login import session_for
+from users.login_sessions import session_for
 from users.views import WechatLoginError
 
 

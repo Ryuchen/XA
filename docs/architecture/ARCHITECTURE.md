@@ -1,8 +1,8 @@
 # XA 项目结构与业务边界
 
-本文件是代码目录的导航，不替代 [PRD](../PRD.md)、[接口文档](../API.md) 或 [ER 图](./ER.md)。
+本文件是代码目录的导航，不替代 [PRD](../history/product/PRD.md)、[接口文档](../history/product/API.md) 或 [ER 图](./ER.md)。
 
-2026-11-04 起系统按门店隔离运行：中央目录记录名称、入口、状态与数据库别名，店内所有业务模型使用各店独立数据库；默认库保留原业务及中央目录。HTTP、WebSocket、Celery、缓存、文件与事务共享并校验同一门店上下文。具体部署与验证见[门店与多租户](../ops/multitenancy-20261104.md)。
+2026-11-04 起系统按门店隔离运行：中央目录记录名称、入口、状态与数据库别名，店内所有业务模型使用各店独立数据库；默认库保留原业务及中央目录。HTTP、WebSocket、Celery、缓存、文件与事务共享并校验同一门店上下文。具体部署与验证见[门店与多租户](../ops/records/multitenancy-20261104.md)。
 
 ## 三端职责
 
@@ -12,7 +12,7 @@
 | 陪玩端 | `fronted/provider/` | 手机/桌面Web，抢单、服务流转、报单、提现、资料与每周档期 | `/api/users/escorts/*`、`/api/orders/`、`/api/wallet/` |
 | 运营后台 | `fronted/admin/` | 桌面/横屏平板，调度、审核、内容、核算、RBAC及获授权的平台门店管理 | `/api/admin/`、`/api/stores/` |
 
-三端由官方shadcn脚手架建立，采用React和Tailwind CSS 4；`fronted/shared` 提供门店、会话、请求和实时连接，`fronted/wechat-bridge` 只提供微信与手机号授权桥接。`apps/` 为历史实现与迁移依据。
+三端由官方shadcn脚手架建立，采用React和Tailwind CSS 4；`fronted/shared` 提供门店、会话、请求和实时连接。微信授权走公众号网页授权（H5 OAuth）与网页扫码，不再有小程序桥接（微信小程序相关内容已按用户 2026-11-17 决定删除）。`apps/` 为历史实现与迁移依据。
 
 ## 后端模块边界
 

@@ -14,7 +14,7 @@ class SupportContactCard(models.Model):
         blank=True,
         default='',
         verbose_name='企业微信企业ID',
-        help_text='企业微信「我的企业」中的企业ID，用于小程序打开微信客服',
+        help_text='企业微信「我的企业」中的企业ID，用于打开微信客服',
     )
     wecom_service_url = models.URLField(
         blank=True,

@@ -400,7 +400,7 @@ MiSans 自托管四字重为主字体，回退链含 `-apple-system` / `PingFang
 
 | 分组 | 路由 | 页面 | 核心信息与主操作 |
 |---|---|---|---|
-| 身份与帮助 | `/login` | 登录 | 门店名与品牌、隐私协议、微信快捷登录（H5 网页授权）、账号密码＋短信／动态验证码验证、客服入口；`?verify_phone=1` 进入手机号绑定的微信桥接核对页。项目强制约定要求老板端仅保留微信快捷登录，当前代码仍并存密码＋短信方式，本方案不擅自增删，见 4.9 偏差清单 |
+| 身份与帮助 | `/login` | 登录 | 门店名与品牌、隐私协议、微信快捷登录（公众号网页授权／网页扫码）、账号密码＋短信／动态验证码验证、客服入口；手机号绑定在网页内完成短信验证（微信小程序桥接核对页已按用户 2026-11-17 决定删除）。项目强制约定要求老板端仅保留微信快捷登录，当前代码仍并存密码＋短信方式，本方案不擅自增删，见 4.9 偏差清单 |
 | 身份与帮助 | `/support` | 客服与帮助 | 公开／已登录客服卡、充值与订单咨询上下文、复制编号、站内会话备用入口；外部链接不可用时明确提示 |
 | 身份与帮助 | `/audition` | 试音邀请 | token 有效性、招募状态、本人身份核对；无效／过期／角色不符明确原因 |
 | 发现与内容 | `/home` | 首页 | 门店标题、搜索、Hero、公告条、服务进度、76px 快捷入口、玩法封面、入场活动／下单须知弹窗 |
@@ -1208,7 +1208,7 @@ AdminShell（左栏业务域 / 二级导航 / 64px 顶栏 / 功能搜索 / 账�
 | `users.EscortProfile` | `AVAILABLE` / `BUSY` / `OFFLINE`、`PassTier` 四档、认证、押金、技能、档期 | 陪玩工作台接单开关、资料与档期、技能、通行证、个人中心；后台陪玩档案 |
 | `users.CustomUser` / `CustomerGameProfile` | 微信身份、手机号、常用游戏 | 老板资料、老板列表、登录与账号安全 |
 | `club_accounts.ClubAccount` | `BOSS` / `PROVIDER` / `STAFF`、门店、角色、权限 | 三端身份、后台成员与角色、审计日志 |
-| `club_accounts.WechatIdentity` | H5 / 小程序 / 开放平台 openid 分存、unionid | 微信登录、账号安全绑定状态 |
+| `club_accounts.WechatIdentity` | 公众号网页授权 / 开放平台 openid 分存、unionid | 微信登录、账号安全绑定状态 |
 | `engagement.RewardItem` / `RewardClaim` | 商品库存、积分价、4 交付状态、`kind_snapshot`、TAG | 积分商城、权益交付、后台好礼与交付队列 |
 | `engagement.VipTier` / `Checkin` / `LotteryCampaign` | 等级门槛、签到日历、奖池、概率、保底、十连 | 会员成长、每日签到、转盘、后台会员运营各 Tab |
 | `coupons.Coupon` / `CouponTemplate` | 资格券／折扣券、门槛、状态、返还 | 领券中心、我的券、结算优惠核验、订单取消返券 |
@@ -1273,7 +1273,7 @@ AdminShell（左栏业务域 / 二级导航 / 64px 顶栏 / 功能搜索 / 账�
 | 约束 | 界面必须遵守 |
 |---|---|
 | **域名即门店边界** | `sl.esports.club/boss` / `sl.esports.club/player` → 声浪电竞；`xa.esports.club/boss` / `xa.esports.club/player` → 兴安电竞；`admin.esports.club` 独立管理入口。界面不提供门店切换按钮改变业务身份；未知域名不回落默认门店；门店切换器只做公开目录选择并整页进入目标店登录页 |
-| **认证差异** | 老板端仅微信快捷登录（网页扫码 + 最小桥接页完成身份／手机号／短信确认）；陪玩端与后台为账号密码 + 动态验证码（TOTP）、首次绑定初始化与恢复码；三端会话按角色与门店隔离，不允许老板令牌进入陪玩端或后台 |
+| **认证差异** | 老板端仅微信快捷登录（公众号网页授权／网页扫码，手机号绑定在网页内完成短信确认）；陪玩端与后台为账号密码 + 动态验证码（TOTP）、首次绑定初始化与恢复码；三端会话按角色与门店隔离，不允许老板令牌进入陪玩端或后台 |
 | **统一响应信封** | 成功与失败按服务端 `code` / `errorCode` / `msg` / `data` 解析；HTTP 401 单次刷新、刷新失败退出、迟到响应不复活旧会话；业务错误显示服务端文案与可执行下一步 |
 | **权限点** | 后台菜单、按钮、详情字段、行操作、链接可见性由 `模块:动作` 权限点驱动（如 `order:dispatch`、`report:audit`、`withdraw:audit`、`salary:confirm`、`roi:view`、`engagement:fulfill`）；查看权与写权分离；独立删除权限单独判断 |
 | **幂等与版本** | 资金、兑换、抽奖、派单、审核、消息发送使用稳定 `client_request_id` / `client_message_id`；编辑提交携带 `revision` / `expected_version` / `expected_details` / `expected_status` / `terms_snapshot` / `expected_updated_at`；重复原请求不重复扣款、建单、发消息或结算 |
@@ -1369,7 +1369,7 @@ AdminShell（左栏业务域 / 二级导航 / 64px 顶栏 / 功能搜索 / 账�
 | 状态取值与迁移 | `orders/models.py`、`orders/state_machine.py`、`wallet/models.py`、`engagement/models.py`、`users/models.py`、`stores/models.py` | 1.2.4、3.7、4.2 |
 | 权限点与角色 | `console/permissions.py`、`club_accounts/permissions.py`、`stores/platform_permissions.py`、`console/management/commands/seed_admin_roles.py` | 2.0.2、4.4 |
 | 接口约束 | 各 app `urls.py` / `views.py`、`config/urls.py`、`config/settings.py`、`AUTHENTICATION.md`、`REALTIME.md` | 4.3 |
-| 金额与核算口径 | `orders/commission.py`、`wallet/models.py`、`console/payroll_calculation.py`、`docs/ops/payroll-roi-20261104.md` | 4.5 |
+| 金额与核算口径 | `orders/commission.py`、`wallet/models.py`、`console/payroll_calculation.py`、`docs/ops/records/payroll-roi-20261104.md` | 4.5 |
 | 待开放与未完成 | 三端 `PROTOTYPE-TODO.md`、`ACCEPTANCE.md`、`VISUAL-UPDATE.md` | 3.1、4.6、4.8 |
 | 错误码、限流与统一解包 | `orders/refunds.py`、`orders/aftersale.py`、`orders/pricing.py`、`console/exceptions.py`、`config/settings.py` 注册的全局异常处理器、`shared/src/api/client.ts` 与 `shared/src/api/response.ts` | 3.4.1、4.3 |
 | 状态机与日志枚举 | `orders/state_machine.py`（8 条 `TRANSITIONS`）、`orders/models.py`（12 项 `Action`，时间线由 `action_display \|\| action` 驱动） | 3.7、4.2 |

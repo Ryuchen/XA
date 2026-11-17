@@ -73,5 +73,5 @@ class SupportContactCardApiTest(APITestCase):
         self.assertTrue(unchanged.is_valid(), unchanged.errors)
         broken = AdminSupportCardSerializer(card, data={'wecom_corp_id': ''}, partial=True)
         self.assertFalse(broken.is_valid())
-        scene = AdminSupportCardSerializer(card, data={'wecom_service_url': 'https://work.weixin.qq.com/kfid/kfc_test?scene=miniapp'}, partial=True)
+        scene = AdminSupportCardSerializer(card, data={'wecom_service_url': 'https://work.weixin.qq.com/kfid/kfc_test?scene=h5'}, partial=True)
         self.assertTrue(scene.is_valid(), scene.errors)

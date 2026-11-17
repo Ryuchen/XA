@@ -2,7 +2,7 @@
 
 背景
 ----
-前端此前在 ``provider-miniapp/src/pages/wallet/index.tsx`` 里自己算了一遍税::
+前端此前在 ``旧陪玩端钱包页`` 里自己算了一遍税::
 
     const withdrawAmount = Math.round(parsedWithdraw * 10);
     const withdrawTax = Math.round(withdrawAmount * taxRate / 100);

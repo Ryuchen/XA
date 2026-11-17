@@ -19,8 +19,6 @@
     "sqlite": 39,
     "mysql": 47,
     "native": 105,
-    "official_wxml": 49,
-    "official_wxss": 52,
     "admin_typecheck": "PASS",
     "admin_production_build": "PASS"
   },
