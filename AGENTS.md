@@ -138,7 +138,7 @@ pnpm run verify:frontend              # 前端检查：类型＋共享测试＋�
 ## 10. Git 与协作
 
 - 分支 `codex/` 前缀；Conventional Commits；PR 说明行为变化、验证结果与未覆盖边界，不把构建成功写成业务验收（[CONTRIBUTING](CONTRIBUTING.md)）。
-- 清理旧代码先核对实际调用与现有修改；与已删除旧端相关的脚本可能已改为 React 契约测试，不能仅凭文件名批量删除；51 个混合调用遗留脚本不作当前三端验收依据（[复核记录](docs/ops/records/legacy-script-followup-52-20261115.md)）。
+- 清理旧代码先核对实际调用与现有修改；与已删除旧端相关的脚本可能已改为 React 契约测试，不能仅凭文件名批量删除；遗留旧端驱动脚本已按用户 2026-11-17 决定外科式清除（[审计记录](docs/ops/records/legacy-script-surgical-removal-20261117.md)，历史 UI 覆盖损失以该记录为准）。
 - 历史部署与旧产品资料不能覆盖最新产品约定；历史资料见 [docs/history/](docs/history/README.md)。
 
 ## 11. 文档地图与维护

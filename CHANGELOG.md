@@ -14,6 +14,7 @@
 - **变更**：AGENTS.md 按 [AGENTS.md 开放标准](https://agents.md/) 重构为 11 章智能体指导文件（渐进披露、命令/测试/安全/PR 规范、AI 工作流）；docs 目录企业级整理（479 文件分类迁移、18 领域专题索引、[文档中心与格式标准](docs/README.md)）；门店模型更正为**第三方入驻**——声浪/兴安为开发验证实例，与 SaaS 平台解绑，平台逻辑不得硬编码特定门店。
 - **删除**：全部微信小程序内容（原生桥接包、native 脚本、MINIAPP 身份渠道、小程序直付方案草案、开发者工具验收记录、相关设计/部署/工具资料）；微信登录统一走公众号网页授权（H5 OAuth）。详见[删除审计](docs/ops/records/docs-consolidation-miniprogram-removal-20261117.md)。
 - **删除**：`design-demos/` 与 `docs/design/` 全目录按用户 2026-11-17 决定剔除（674＋12 个跟踪文件）；4 份视觉方向决定记录归档至 `docs/history/design-directions-20261117/`、docs/design 归档至 `docs/history/design-20261117/`；仅服务于原型预览的 `deploy/prototype-preview/` 与 `compose.prototype-preview.yml` 随之删除；AGENTS/文档索引链接同步改指归档、已删原型链接降级为行内代码；不涉及代码修改（frontend dockerignore 的无害忽略模式保留）。
+- **变更**：遗留旧端脚本轨道按用户批准的外科式口径清偿——125 个顶层旧端驱动删除，93＋17 个调用方测试的旧端 UI/node 步骤移除或改纯 HTTP/进程内 WS 重实现，后端资金/状态/隔离断言逐字保留；被取代业务规则的旧断言（门店级打款审批、客服 assign 旧旅程、作废后重评）裁决删除并登记；`.tools` 死快照两轮清理（7.5G 永久删除＋200 项二次隔离）。详见[外科式清除审计](docs/ops/records/legacy-script-surgical-removal-20261117.md)。
 - **修复**：test_settings 环境隔离（重置 STORE_DATABASE_ALIASES 并补齐门店 SQLite 别名，宿主机环境不再干扰单测）；G07/G54 追踪编号恢复；文档失效链接修复（138→17，剩余为既有 apps/ 遗留）。
 - **文档**：[docs 整理审计](docs/ops/records/docs-restructure-20261117.md)、[整合与删除审计](docs/ops/records/docs-consolidation-miniprogram-removal-20261117.md)；历史归档（重构前 AGENTS 原文等）。
 - **验证**：前端 verify:frontend 全绿（三端类型检查＋共享测试 103/103＋构建）；后端 check 0 issues、迁移无变更；后端全套件红态经对照实验归因为既有 WIP（与本次变更无关，登记待清偿）。
