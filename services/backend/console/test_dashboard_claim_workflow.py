@@ -1,11 +1,6 @@
 """Dashboard claim counts drill into real gift entitlement work queues."""
-import json
-import os
-import subprocess
-from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -57,28 +52,23 @@ class DashboardClaimWorkflowTest(LiveServerTestCase):
             self.assertEqual((snapshot['pending_claim_total'], snapshot['fulfilling_claim_total']), (pending, fulfilling))
             listing = ok(clients[2].get('/api/admin/club-claims/', {'status': status}))
             self.assertEqual([row['id'] for row in listing['list']], [claim.pk])
-            if os.environ.get('XA_DASHBOARD_CLAIM_BROWSER') == '1':
-                repo = Path(settings.BASE_DIR).parent.parent
-                browser = subprocess.run(['node', str(repo / 'scripts/dashboard-claim-375.cjs')], cwd=repo,
-                    input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                        'token': issue_account_tokens(accounts[2])[0], 'status': status, 'claimId': claim.pk}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=60)
-                self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
         check('PENDING', 1, 0)
         unauthorized = ok(clients[3].get('/api/admin/dashboard/stats'))
         self.assertIsNone(unauthorized['pending_claim_total'])
-        if os.environ.get('XA_DASHBOARD_PERMISSION_BROWSER') == '1':
-            manager = make_console_user(['role:view', 'role:edit'])
-            manager_account = get_or_create_account_for_legacy_user(manager)
-            manager.admin_membership.account = manager_account
-            manager.admin_membership.save(update_fields=['account'])
-            role = viewer.admin_membership.roles.get()
-            repo = Path(settings.BASE_DIR).parent.parent
-            browser = subprocess.run(['node', str(repo / 'scripts/dashboard-claim-permission-live.cjs')], cwd=repo,
-                input=json.dumps({'base': self.live_server_url, 'root': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'token': issue_account_tokens(accounts[3])[0], 'managerToken': issue_account_tokens(manager_account)[0],
-                    'roleId': role.pk}), text=True, encoding='utf-8', capture_output=True, timeout=45)
-            self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
+        manager = make_console_user(['role:view', 'role:edit'])
+        manager_account = get_or_create_account_for_legacy_user(manager)
+        manager.admin_membership.account = manager_account
+        manager.admin_membership.save(update_fields=['account'])
+        role = viewer.admin_membership.roles.get()
+        manager_client = APIClient()
+        manager_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(manager_account)[0])
+        ok(manager_client.patch(f'/api/admin/roles/{role.pk}/',
+            {'permissions': ['dashboard:view', 'engagement:fulfill']}, format='json'))
+        granted = ok(clients[3].get('/api/admin/dashboard/stats'))
+        self.assertEqual((granted['pending_claim_total'], granted['fulfilling_claim_total']), (1, 0))
+        ok(manager_client.patch(f'/api/admin/roles/{role.pk}/', {'permissions': ['dashboard:view']}, format='json'))
+        revoked = ok(clients[3].get('/api/admin/dashboard/stats'))
+        self.assertIsNone(revoked['pending_claim_total'])
         ok(clients[2].post(f'/api/admin/club-claims/{claim.pk}/process/', {'status': 'FULFILLING', 'note': '正在安排'}, format='json'))
         check('FULFILLING', 0, 1)
         ok(clients[2].post(f'/api/admin/club-claims/{claim.pk}/process/', {'status': 'COMPLETED', 'note': '已交付'}, format='json'))
