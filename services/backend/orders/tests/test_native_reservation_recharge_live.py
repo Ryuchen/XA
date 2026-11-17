@@ -1,22 +1,19 @@
 """Native page controller and real backend: recharge while a quote is insufficient."""
 import json
-import base64
-import subprocess
 from datetime import timedelta
-from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.test import LiveServerTestCase, override_settings
-from django.conf import settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
+from engagement.services import config
 from orders.models import Order, Reservation
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
 from orders.tests.test_release_flow import screenshot
-from wallet.models import Wallet
+from wallet.models import SystemConfig, Wallet
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
@@ -35,7 +32,7 @@ class NativeReservationRechargeTest(LiveServerTestCase):
 
     def run_journey(self, scenario):
         with TemporaryDirectory(prefix='xa-reservation-recharge-') as media, override_settings(MEDIA_ROOT=media):
-            boss, provider = make_user(), make_provider()
+            boss, provider = make_user(), make_provider(deposit_mode='EARNINGS')
             staff = make_console_user(['wallet:recharge', 'service:edit', 'order:view', 'dashboard:view'])
             accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, provider, staff)]
             for user, account in zip((boss, provider, staff), accounts):
@@ -46,6 +43,10 @@ class NativeReservationRechargeTest(LiveServerTestCase):
             staff.admin_membership.save(update_fields=['account'])
             service = make_service(price=10000)
             tokens = [issue_account_tokens(account)[0] for account in accounts]
+            SystemConfig.objects.update_or_create(key='reservation_deadlines', defaults={'value': json.dumps(
+                {'confirmation_minutes': 120, 'payment_minutes': 120, 'version': 1,
+                 'slot_minutes': 15, 'min_duration_minutes': 15, 'max_duration_minutes': 720, 'max_advance_days': 30})})
+            config()
             client = APIClient()
             client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
             start = (timezone.now() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
@@ -57,14 +58,27 @@ class NativeReservationRechargeTest(LiveServerTestCase):
             client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[1])
             result = client.post(f'/api/orders/reservations/{booking_id}/confirm/', {}, format='json').data
             self.assertEqual(result['code'], 0, result)
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(repo / 'scripts/native-reservation-recharge-live.cjs')], cwd=repo,
-                input=json.dumps({'api': self.live_server_url, 'bookingId': booking_id, 'bossId': accounts[0].pk,
-                                  'bossToken': tokens[0], 'staffToken': tokens[2], 'scenario': scenario,
-                                  'serviceId': service.pk,
-                                  'proof': base64.b64encode(screenshot().read()).decode('ascii')}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            amount = 12000 if scenario == 'price_changed' else 10000
+            client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[2])
+            recharge = client.post('/api/admin/wallets/recharge/', {'account_id': accounts[0].pk,
+                'amount': amount, 'gift_amount': 0, 'trade_no': 'native-reservation-local-recharge',
+                'client_request_id': 'native-reservation-local-recharge', 'proof_image': screenshot()}, format='multipart')
+            self.assertEqual(recharge.data['code'], 0, recharge.data)
+            if scenario == 'price_changed':
+                service.price = 12000
+                service.save(update_fields=['price'])
+            client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
+            if scenario == 'cancelled':
+                cancelled = client.post(f'/api/orders/reservations/{booking_id}/cancel/', {'reason': '隔离预约取消'}, format='json')
+                self.assertEqual(cancelled.data['code'], 0, cancelled.data)
+            else:
+                quote = client.get(f'/api/orders/reservations/{booking_id}/quote/').data
+                self.assertEqual(quote['code'], 0, quote)
+                self.assertEqual(quote['data']['amount'], amount)
+                converted = client.post(f'/api/orders/reservations/{booking_id}/convert/',
+                    {'client_request_id': 'native-reservation-recharge-convert', 'expected_amount': quote['data']['amount'],
+                     'expected_service': quote['data']['service']}, format='json')
+                self.assertEqual(converted.data['code'], 0, converted.data)
             booking = Reservation.objects.get(pk=booking_id)
             if scenario == 'cancelled':
                 self.assertEqual(booking.status, 'CANCELLED')

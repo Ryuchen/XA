@@ -1,15 +1,12 @@
 """Concurrent customer clients submitting different aftersale descriptions."""
-import json
-import subprocess
-from pathlib import Path
-
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.test import skipUnlessDBFeature
 from rest_framework.test import APIClient, APITransactionTestCase
 
 from orders.models import AfterSale
 from orders.tests import test_provider_aftersale_status as flow
+from engagement.models import PointFundingLot
+from wallet.services import get_wallet
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
@@ -20,6 +17,11 @@ class NativeAfterSaleConcurrentHTTPTest(LiveServerTestCase):
         super().setUp()
         self.client = APIClient()
         flow.ProviderAfterSaleStatusTest.setUp(self)
+        account = self.accounts[self.boss.pk]
+        wallet = get_wallet(account=account)
+        wallet.balance = 50000
+        wallet.save(update_fields=['balance'])
+        PointFundingLot.objects.create(account=account, source_key='native-aftersale-concurrent', kind='PREPAID', remaining=50000)
 
     login = flow.ProviderAfterSaleStatusTest.login
     ok = flow.ProviderAfterSaleStatusTest.ok
@@ -27,14 +29,18 @@ class NativeAfterSaleConcurrentHTTPTest(LiveServerTestCase):
 
     def test_two_customer_clients_submit_different_descriptions(self):
         order_id, _ = self.prepare()
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/native-aftersale-concurrent-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'orderId': order_id,
-                'staffToken': self.tokens[self.staff.pk],
-                'session': {'token': self.tokens[self.boss.pk], 'user': {
-                    'id': str(self.accounts[self.boss.pk].pk), 'role': 'customer'}}}),
-            text=True, encoding='utf-8', capture_output=True, timeout=30, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.login(self.boss)
+        url = f'/api/orders/orders/{order_id}/aftersale/'
+        opened = self.ok(self.client.post(url, {'reason': '第一设备已提交的说明', 'client_request_id': 'concurrent-first-case'}, format='json'))
+        self.assertEqual(self.ok(self.client.get(url))['reason'], '第一设备已提交的说明')
+        rejected = self.client.post(url, {'reason': '第二设备填写的新说明', 'client_request_id': 'concurrent-second-case'}, format='json')
+        self.assertEqual((rejected.status_code, rejected.data['errorCode']), (409, 'AFTERSALE_ALREADY_OPEN'))
+        self.login(self.staff)
+        data = self.ok(self.client.get('/api/admin/aftersales/', {'order': order_id}))
+        self.assertEqual(data['list'][0]['reason'], '第一设备已提交的说明')
+        self.ok(self.client.post(f"/api/admin/aftersales/{opened['id']}/resolve/", {'resolution': '已处理第一设备申请'}, format='json'))
+        self.login(self.boss)
+        self.ok(self.client.post(url, {'reason': '第二设备填写的新说明', 'client_request_id': 'concurrent-second-case'}, format='json'))
         sale = AfterSale.objects.get(order_id=order_id)
         self.assertEqual((sale.status, sale.reason), ('OPEN', '第二设备填写的新说明'))
         self.assertEqual([item['status'] for item in sale.history], ['OPEN', 'RESOLVED', 'OPEN'])
