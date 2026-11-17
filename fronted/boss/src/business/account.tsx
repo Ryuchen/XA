@@ -1,6 +1,6 @@
 import { coinText, coinUnit } from "@xa/shared"
 import { useBossBrand } from "./h5-module"
-import { useCurrentStore, getStoreSlug } from "@xa/shared"
+import { useCurrentStore, getStoreSlug, useH5Auth } from "@xa/shared"
 import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { toast } from "sonner"
@@ -93,16 +93,34 @@ export function LoginPage() {
   const navigate = useNavigate(),
     query = useQuery(),
     session = useSession("boss"),
-    { busy, run } = useAction()
+    { busy } = useAction()
   const verifyPhone = query.get("verify_phone") === "1",
-    [flow, setFlow] = useState<Row | null>(null),
-    [flowError, setFlowError] = useState(""),
-    [status, setStatus] = useState(""),
-    [remaining, setRemaining] = useState(0),
     [agreed, setAgreed] = useState(false),
     [agreementError, setAgreementError] = useState(false),
-    [mobileAuthorization] = useState(() => window.matchMedia("(pointer: coarse)").matches || /MicroMessenger/i.test(navigator.userAgent)),
-    generation = useRef(0)
+    ownerRef = useRef<string | number | null>(null)
+  const wechat = useH5Auth("boss", (result) => {
+    if (verifyPhone && ownerRef.current && String(result.userInfo?.id) !== String(ownerRef.current)) {
+      wechat.setError("本次授权账号与当前账号不一致，请使用当前账号对应的微信重新验证")
+      return
+    }
+    if (!result.token || !result.userInfo) {
+      wechat.setError("登录结果尚未完整返回，请重新核对")
+      return
+    }
+    persistSession("boss", result)
+    if (verifyPhone) navigate("/security", { replace: true })
+    else {
+      const next = query.get("next") || "/home"
+      navigate(
+        next.startsWith("/") &&
+          !next.startsWith("//") &&
+          !next.startsWith("/login")
+          ? next
+          : "/home",
+        { replace: true }
+      )
+    }
+  })
   useEffect(() => {
     if (session?.token && !verifyPhone) {
       const next = query.get("next") || "/home"
@@ -116,146 +134,27 @@ export function LoginPage() {
       )
     }
   }, [session?.token, verifyPhone, navigate])
-  async function start() {
-    const revision = getSession("boss").revision,
-      owner = getSession("boss").user?.id,
-      currentGeneration = ++generation.current
-    setFlow(null)
-    setStatus("")
-    setFlowError("")
-    const value = await api.post<any>(
-      "/users/web-login/start/",
-      verifyPhone ? { purpose: "bind_phone" } : {},
-      { public: !verifyPhone }
-    )
-    if (!value.ticket || !value.poll_token || !value.qr_image)
-      throw new Error("微信登录入口暂不可用，请稍后重试或联系客服")
-    if (
-      getSession("boss").revision !== revision ||
-      generation.current !== currentGeneration
-    )
-      throw new Error("登录身份已变化，请重新获取微信登录码")
-    setFlow({
-      ...value,
-      startedAt: Date.now(),
-      revision,
-      owner,
-      generation: currentGeneration,
-    })
-    setStatus("PENDING")
-    setRemaining(value.expires_in)
-  }
-  useEffect(() => {
-    if (!flow || status !== "PENDING") return
-    let active = true,
-      polling = false
-    const poll = async () => {
-      if (polling || !active) return
-      if (
-        getSession("boss").revision !== flow.revision ||
-        generation.current !== flow.generation
-      ) {
-        setStatus("CHANGED")
-        setFlowError("当前登录状态已变化，请重新核对账号并获取微信登录码")
-        return
-      }
-      polling = true
-      try {
-        const result = await api.request<any>(
-          queryUrl("/users/web-login/status/", {
-            ticket: flow.ticket,
-            poll_token: flow.poll_token,
-          }),
-          { public: true }
-        )
-        if (!active || generation.current !== flow.generation) return
-        if (getSession("boss").revision !== flow.revision) {
-          setStatus("CHANGED")
-          setFlowError("当前登录状态已变化，请重新核对账号并获取微信登录码")
-          return
-        }
-        if (result.status === "CONFIRMED") {
-          if (
-            verifyPhone &&
-            flow.owner &&
-            String(result.userInfo?.id) !== String(flow.owner)
-          ) {
-            setStatus("MISMATCH")
-            setFlowError(
-              "本次扫码账号与当前账号不一致，请使用当前账号对应的微信重新验证"
-            )
-            return
-          }
-          if (!result.token || !result.userInfo)
-            throw new Error("登录结果尚未完整返回，请重新核对")
-          persistSession("boss", result)
-          setStatus("CONFIRMED")
-          if (verifyPhone) navigate("/security", { replace: true })
-          else {
-            const next = query.get("next") || "/home"
-            navigate(
-              next.startsWith("/") &&
-                !next.startsWith("//") &&
-                !next.startsWith("/login")
-                ? next
-                : "/home",
-              { replace: true }
-            )
-          }
-        } else if (result.status === "EXPIRED") {
-          setStatus("EXPIRED")
-          setFlowError("二维码已失效，请重新获取微信登录码")
-        } else setFlowError("")
-      } catch (error: any) {
-        if (active)
-          setFlowError(error.message || "登录状态暂未更新，请稍后重试")
-      } finally {
-        polling = false
-      }
-    }
-    void poll()
-    const timer = window.setInterval(() => void poll(), 2500),
-      countdown = window.setInterval(
-        () =>
-          setRemaining(
-            Math.max(
-              0,
-              Math.ceil(flow.expires_in - (Date.now() - flow.startedAt) / 1000)
-            )
-          ),
-        1000
-      )
-    return () => {
-      active = false
-      window.clearInterval(timer)
-      window.clearInterval(countdown)
-    }
-  }, [flow, status, verifyPhone])
-  const pending = flow && status === "PENDING",
-    mobileLaunchUrl = pending && mobileAuthorization && typeof flow.launch_url === "string" && /^https:\/\//.test(flow.launch_url) ? flow.launch_url : "",
-    mobileLaunchUnavailable = Boolean(pending && mobileAuthorization && !mobileLaunchUrl)
+  const pending = Boolean(wechat.flow)
   return (
     <div className="boss-login-layout">
       <section className="boss-login-welcome">
         <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">微信安全登录</Badge>
         <Title
-          title={verifyPhone ? "微信授权并验证手机号" : "每一次组队，都从安心登录开始。"}
-          description={verifyPhone ? "使用当前账号对应的微信完成验证" : `微信快捷登录${store.name}老板服务中心`}
+          title={verifyPhone ? "微信授权绑定当前账号" : "每一次组队，都从安心登录开始。"}
+          description={verifyPhone ? "使用当前账号对应的微信完成绑定验证" : `微信快捷登录${store.name}老板服务中心`}
         />
-        <p className="boss-muted">{coinText("使用微信快捷登录，验证手机号后即可管理订单、浪花与专属服务。")}</p>
+        <p className="boss-muted">{coinText("使用微信快捷登录，即可管理订单、浪花与专属服务。")}</p>
         <div className="boss-login-benefits"><span><CalendarDays size={16} />订单进度</span><span><Wallet size={16} />钱包资产</span><span><Headphones size={16} />专属服务</span></div>
       </section>
-      <Panel title={verifyPhone ? "微信授权验证" : mobileAuthorization ? "微信快捷登录" : "微信扫码登录"} className="boss-login-authorization">
+      <Panel title={verifyPhone ? "微信授权验证" : "微信快捷登录"} className="boss-login-authorization">
         <div className="boss-form">
-          {flowError && <div className="boss-feedback error" role="alert">{flowError}</div>}
+          {wechat.error && <div className="boss-feedback error" role="alert">{wechat.error}</div>}
           {!pending && <span className="boss-login-primary-icon"><MessageCircle size={24} /></span>}
-          {pending && !mobileAuthorization && <Image src={flow.qr_image} alt="请使用微信扫描，核对后确认登录" className="boss-login-code" />}
-          {pending && <p role="status" className="boss-login-status">{mobileAuthorization ? mobileLaunchUnavailable ? "微信授权入口尚未就绪" : "请在微信授权页确认登录" : "请使用微信扫码并确认"} · {remaining > 0 ? `约 ${remaining} 秒有效` : "正在核对有效状态"}</p>}
-          {mobileLaunchUnavailable && <div className="boss-feedback error" role="alert">当前环境暂时无法打开微信授权，请重新获取或联系客服。</div>}
-          {mobileLaunchUrl && <Button asChild><a href={mobileLaunchUrl} rel="noopener noreferrer"><MessageCircle size={18} />在微信中快捷打开授权页</a></Button>}
-          {(!pending || !mobileAuthorization || mobileLaunchUnavailable) && <Button
+          {pending && <p role="status" className="boss-login-status">请在微信授权页确认登录 · 授权链接约 5 分钟有效</p>}
+          {wechat.flow && <Button asChild variant="outline"><a href={wechat.flow.authorization_url} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} />继续微信授权</a></Button>}
+          <Button
             variant={pending ? "outline" : "default"}
-            disabled={busy}
+            disabled={wechat.busy}
             onClick={() => {
               if (!agreed) {
                 setAgreementError(true)
@@ -263,11 +162,12 @@ export function LoginPage() {
                 return
               }
               setAgreementError(false)
-              void run(start, "").catch((error) => setFlowError(error.message))
+              ownerRef.current = getSession("boss").user?.id ?? null
+              void wechat.start({ purpose: verifyPhone ? "bind_wechat" : "login" })
             }}
           >
-            {busy ? mobileAuthorization ? "正在获取微信授权…" : "正在获取微信登录码…" : pending ? mobileAuthorization ? "重新获取微信授权" : "刷新二维码" : <><MessageCircle size={18} />{mobileAuthorization ? "微信快捷登录" : "微信扫码登录"}</>}
-          </Button>}
+            {wechat.busy ? "正在获取微信授权…" : pending ? "重新获取微信授权" : <><MessageCircle size={18} />微信快捷登录</>}
+          </Button>
           <div className="boss-login-agreement">
             <div className="boss-login-agreement-row">
               <input id="boss-login-privacy" name="privacy_agreement" autoComplete="off" type="checkbox" checked={agreed} aria-invalid={agreementError} aria-describedby={agreementError ? "boss-login-privacy-error" : undefined} disabled={busy} onChange={event => { setAgreed(event.target.checked); if (event.target.checked) setAgreementError(false) }} />
@@ -788,7 +688,7 @@ export function SecurityPage() {
   const profile = load.data, protectedAccount = profile?.isWechatBound && profile?.isPhoneVerified
   return <><BackLink to="/mine">个人中心</BackLink><Title title="账号安全" description="核对登录身份与联系方式，敏感信息均已脱敏展示。" /><State {...load}>{profile && <div className="boss-security-layout">
     <section className={"boss-security-status" + (protectedAccount ? " protected" : "")}><ShieldCheck size={24} /><div><h2>{protectedAccount ? "账号资料已验证" : "继续完善账号保护"}</h2><p>{protectedAccount ? "微信身份与手机号已确认" : "请通过微信授权页核对身份并完成手机号验证"}</p></div></section>
-    <Panel className="boss-security-identity"><div className="boss-security-card-header"><MessageCircle size={20} /><div><p>登录身份</p><h2>微信绑定</h2></div><Badge variant="outline" className={profile.isWechatBound ? "boss-available" : "boss-verification-pending"}>{profile.isWechatBound ? "已绑定" : "待绑定"}</Badge></div><div className="boss-security-card-body"><Info entries={[["账号", profile.username]]} /><div className="boss-security-card-note"><strong>{profile.isWechatBound ? "当前微信已关联本账号" : "尚未关联微信身份"}</strong><p>通过微信快捷登录核对当前账号身份，账号资产与订单保持关联。</p></div>{profile.isH5WechatBound ? <p className="boss-muted">可使用微信快捷登录当前账号。</p> : <WechatBindingButton onBound={() => { updateProfile("boss", { isWechatBound: true, isH5WechatBound: true }); void load.reload() }} />}<Button asChild variant="outline"><Link to="/login?verify_phone=1">微信授权并验证手机号</Link></Button></div></Panel>
+    <Panel className="boss-security-identity"><div className="boss-security-card-header"><MessageCircle size={20} /><div><p>登录身份</p><h2>微信绑定</h2></div><Badge variant="outline" className={profile.isWechatBound ? "boss-available" : "boss-verification-pending"}>{profile.isWechatBound ? "已绑定" : "待绑定"}</Badge></div><div className="boss-security-card-body"><Info entries={[["账号", profile.username]]} /><div className="boss-security-card-note"><strong>{profile.isWechatBound ? "当前微信已关联本账号" : "尚未关联微信身份"}</strong><p>通过微信快捷登录核对当前账号身份，账号资产与订单保持关联。</p></div>{profile.isH5WechatBound ? <p className="boss-muted">可使用微信快捷登录当前账号。</p> : <WechatBindingButton onBound={() => { updateProfile("boss", { isWechatBound: true, isH5WechatBound: true }); void load.reload() }} />}<Button asChild variant="outline"><Link to="/login?verify_phone=1">微信授权绑定当前账号</Link></Button></div></Panel>
     <Panel className="boss-security-phone"><div className="boss-security-card-header"><Smartphone size={20} /><div><p>联系方式</p><h2>验证手机号</h2></div><Badge variant="outline" className={profile.isPhoneVerified ? "boss-available" : "boss-verification-pending"}>{profile.isPhoneVerified ? "已验证" : "待验证"}</Badge></div><div className="boss-security-card-body"><div className="boss-security-card-note"><strong className="boss-security-phone-number">{profile.phone ? String(profile.phone).replace(/^(\d{3}).*(\d{4})$/, "$1 **** $2") : "尚未绑定手机号"}</strong><p>在微信授权页读取微信手机号并完成短信验证，网页仅脱敏展示。</p></div><Button asChild variant={profile.isPhoneVerified ? "outline" : "default"}><Link to="/login?verify_phone=1">{profile.isPhoneVerified ? "核对手机号授权" : "微信授权并验证手机号"}</Link></Button></div></Panel>
     <Panel title="账号密码登录" icon={LockKeyhole}><p className="boss-muted">设置或更新登录账号和密码，后续使用验证器或短信完成身份验证。</p>{profile.isPhoneVerified ? <PasswordSecurityForm username={profile.username} onSaved={(username) => { updateProfile("boss", { username }); void load.reload() }} /> : <Button disabled>先完成手机号验证</Button>}</Panel>
     <OtpSetupPanel role="boss" />

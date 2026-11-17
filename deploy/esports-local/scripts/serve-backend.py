@@ -127,8 +127,9 @@ def check(settings, port):
 
 
 def install_external_substitutes():
-    from PIL import Image, ImageDraw, ImageFont
-    from users import h5_login, password_login, web_login
+    from PIL import Image
+    from users import h5_login, password_login
+    from users.views import WechatLoginError
     from stores import platform_auth
 
     def proof(code, kind):
@@ -139,26 +140,8 @@ def install_external_substitutes():
                 raise KeyError('expired')
             return row['value']
         except (OSError, ValueError, KeyError, TypeError):
-            raise web_login.WechatLoginError(
+            raise WechatLoginError(
                 '隔离验收外部测试凭证无效或过期', 'TEST_EXTERNAL_PROOF_INVALID', 400)
-
-    def bridge_code(session):
-        image = Image.new('RGB', (420, 420), '#f8f8f4')
-        draw = ImageDraw.Draw(image)
-        try:
-            font = ImageFont.truetype('C:/Windows/Fonts/msyh.ttc', 32)
-            small = ImageFont.truetype('C:/Windows/Fonts/msyh.ttc', 17)
-        except OSError:
-            font = small = ImageFont.load_default()
-        draw.rounded_rectangle((18, 18, 402, 402), radius=20, outline='#2563eb', width=4)
-        draw.text((210, 110), 'TEST SUBSTITUTE', anchor='mm', fill='#2563eb', font=small)
-        draw.text((210, 175), '测试替身', anchor='mm', fill='#0f172a', font=font)
-        draw.text((210, 225), '仅用于本地隔离验收', anchor='mm', fill='#0f172a', font=small)
-        draw.text((210, 268), '不调用真实微信或短信', anchor='mm', fill='#64748b', font=small)
-        draw.text((210, 323), f'SESSION {session.ticket.hex[:12]}', anchor='mm', fill='#64748b', font=small)
-        output = BytesIO()
-        image.save(output, format='PNG')
-        return 'data:image/png;base64,' + base64.b64encode(output.getvalue()).decode(), ''
 
     def sms_send(phone, code):
         path = PRIVATE / 'sms-delivery.private.json'
@@ -184,10 +167,6 @@ def install_external_substitutes():
                 'Isolated avatar representation exceeds the avatar field.')
         return url
 
-    web_login.create_bridge_code = bridge_code
-    web_login._wechat_code2session = lambda code: proof(code, 'wechat-openid')
-    web_login._wechat_get_phone = lambda code: proof(code, 'wechat-phone')
-    web_login.send_verification_code = sms_send
     password_login.send_verification_code = sms_send
     platform_auth.send_verification_code = sms_send
     h5_login.exchange_code = lambda code: proof(code, 'wechat-h5-profile')
