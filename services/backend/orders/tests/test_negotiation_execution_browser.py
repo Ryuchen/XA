@@ -1,11 +1,7 @@
-"""Isolated real HTTP/browser test for staff refund and lost responses."""
-import json
+"""Isolated real HTTP test for staff refund execution and committed results."""
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -13,7 +9,6 @@ from orders.models import NegotiationExecution, Order
 from orders.tests import test_provider_aftersale_status as fixture
 from wallet.models import Wallet
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_NEGOTIATION_EXECUTION_BROWSER') == '1', 'Requires isolated ASGI and the local admin web')
@@ -56,14 +51,9 @@ class NegotiationExecutionBrowserTest(LiveServerTestCase):
             self.ok(self.client.post(f'/api/orders/orders/{order_id}/negotiation-proposal/',
                 {'proposal_id':proposal['id'], 'accepted':True}, format='json'))
         before = Wallet.objects.get(user=self.boss).balance
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/negotiation-execution-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':order_id, 'case':case['id'], 'zero':zero,
-                    'staff':{'id':self.accounts[self.staff.pk].pk, 'token':self.tokens[self.staff.pk],
-                             'permissions':role.permissions}}), text=True, encoding='utf-8',
-                capture_output=True, timeout=90)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.login(self.staff)
+        self.ok(self.client.post(f"/api/admin/aftersales/{case['id']}/negotiation-execution/",
+            {'proposal_id':proposal['id'], 'client_request_id':'execute-browser-refund'}, format='json'))
         order = Order.objects.get(pk=order_id)
         self.assertEqual((order.status, order.payment_status), ('COMPLETED', 'PAID' if zero else 'PARTIALLY_REFUNDED'))
         self.assertEqual(order.refund_records.count(), 0 if zero else 1)

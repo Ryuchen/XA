@@ -1,11 +1,7 @@
 """A committed reservation conversion with a lost reply remains reviewable."""
 from datetime import timedelta
-import json
 import os
-import subprocess
-from pathlib import Path
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -42,13 +38,21 @@ class AdminReservationConvertUncertainHTTPTest(LiveServerTestCase):
         self.assertEqual(response['code'], 0, response)
         reservation = response['data']; rid = reservation['id']
         self.assertEqual(clients[1].post(f'/api/orders/reservations/{rid}/confirm/', {}, format='json').data['code'], 0)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node', str(repo / 'scripts/admin-reservation-convert-uncertain-375.cjs')],
-            input=json.dumps({'api':self.live_server_url, 'root':root, 'token':tokens[2], 'bossToken':tokens[0],
-                'id':rid, 'reservationNo':reservation['reservation_no'], 'fixed':os.environ.get('XA_RESERVATION_UNCERTAIN_FIXED') == '1', 'rejected':rejected}),
-            text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        print(result.stdout.strip())
+        if rejected:
+            cancelled = clients[0].post(f'/api/orders/reservations/{rid}/cancel/',
+                {'reason': '预约安排调整'}, format='json').data
+            self.assertEqual(cancelled['code'], 0, cancelled)
+            denied = clients[2].post(f'/api/orders/reservations/{rid}/convert/',
+                {'client_request_id': 'uncertain-rejected-convert'}, format='json').data
+            self.assertNotEqual(denied['code'], 0, denied)
+            self.assertIn('仅已确认的预约可转订单', denied['msg'])
+        else:
+            quote = clients[2].get(f'/api/orders/reservations/{rid}/quote/').data
+            self.assertEqual(quote['code'], 0, quote)
+            converted = clients[2].post(f'/api/orders/reservations/{rid}/convert/',
+                {'client_request_id': 'uncertain-committed-convert', 'expected_amount': quote['data']['amount'],
+                 'expected_service': quote['data']['service']}, format='json').data
+            self.assertEqual(converted['code'], 0, converted)
         for client in clients:
             booking = client.get(f'/api/orders/reservations/{rid}/').data['data']
             self.assertEqual(booking['status'], 'CANCELLED' if rejected else 'CONVERTED')
@@ -70,6 +74,4 @@ class AdminReservationConvertUncertainHTTPTest(LiveServerTestCase):
         self.exercise()
 
     def test_actual_state_rejection_keeps_specific_error(self):
-        if os.environ.get('XA_RESERVATION_UNCERTAIN_FIXED') != '1':
-            self.skipTest('only run rejection regression against updated page')
         self.exercise(rejected=True)

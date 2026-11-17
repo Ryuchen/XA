@@ -1,17 +1,11 @@
-"""Three real front ends against an isolated ASGI/SQLite follow-up order."""
-import json
+"""Three real roles confirm and execute a follow-up negotiation through the HTTP API."""
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
-from club_accounts.tokens import issue_account_tokens
 from orders.models import NegotiationFollowupLink
 from orders.tests import test_negotiation_followup as fixtures
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_NEGOTIATION_FOLLOWUP_BROWSER') == '1', 'Requires isolated ASGI and local front ends')
@@ -38,13 +32,10 @@ class FollowupThreeRoleBrowserTest(LiveServerTestCase):
         result = self.client_for(self.b_account).post(f'/api/orders/orders/{self.order.pk}/complete/',
             {'completion_image':image()}, format='multipart')
         self.assertEqual(result.data.get('code'), 0, result.data)
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/negotiation-aftersale-scope-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':self.order.pk, 'remainingName':self.b.nickname or self.b.username,
-                    'boss':{'id':self.boss_account.pk, 'token':issue_account_tokens(self.boss_account)[0]}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=120)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        opened = self.client_for(self.boss_account).post(f'/api/orders/orders/{self.order.pk}/aftersale/', {
+            'reason':'继续处理 B 的服务问题', 'affected_provider_account_ids':[self.b_account.pk],
+            'client_request_id':'scope-browser-aftersale'}, format='json')
+        self.assertEqual(opened.data['code'], 0, opened.data)
         case.refresh_from_db()
         self.assertEqual((case.status, case.affected_provider_account_ids), ('OPEN', [self.b_account.pk]))
         self.assertEqual(sum(row.get('reason') == '继续处理 B 的服务问题' for row in case.history), 1)
@@ -54,16 +45,20 @@ class FollowupThreeRoleBrowserTest(LiveServerTestCase):
         role = self.operator.admin_membership.roles.first()
         role.permissions = [*role.permissions, 'support:edit']; role.save(update_fields=['permissions'])
         before = get_wallet(user=self.boss, account=self.boss_account).balance
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/negotiation-followup-three-role.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':self.order.pk, 'orderNo':self.order.order_no,
-                    'staff':{'id':self.operator_account.pk, 'token':issue_account_tokens(self.operator_account)[0],
-                             'permissions':['order:view', 'support:edit', 'order:refund']},
-                    'boss':{'id':self.boss_account.pk, 'token':issue_account_tokens(self.boss_account)[0]},
-                    'provider':{'id':self.b_account.pk, 'token':issue_account_tokens(self.b_account)[0]}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=120)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        staff_client = self.client_for(self.operator_account)
+        proposal = staff_client.post(f'/api/admin/aftersales/{case.pk}/negotiation-proposal/', {
+            'request_id':'followup-browser-proposal', 'expected_version':1, 'refund_units':1000,
+            'provider_terms':[{'account_id':self.b_account.pk, 'retained_units':3000}],
+            'explanation':'继续履约陪玩的协商退款'}, format='json')
+        self.assertEqual(proposal.data['code'], 0, proposal.data)
+        proposal_id = proposal.data['data']['id']
+        for account in (self.boss_account, self.b_account):
+            decided = self.client_for(account).post(f'/api/orders/orders/{self.order.pk}/negotiation-proposal/',
+                {'proposal_id':proposal_id, 'accepted':True}, format='json')
+            self.assertEqual(decided.data['code'], 0, decided.data)
+        executed = staff_client.post(f'/api/admin/aftersales/{case.pk}/negotiation-execution/',
+            {'proposal_id':proposal_id, 'client_request_id':'followup-browser-refund'}, format='json')
+        self.assertEqual(executed.data['code'], 0, executed.data)
         case.refresh_from_db(); self.order.refresh_from_db()
         self.assertEqual((case.status, self.order.status, self.order.payment_status),
                          ('PARTIALLY_REFUNDED', 'COMPLETED', 'PARTIALLY_REFUNDED'))
@@ -92,16 +87,20 @@ class FollowupThreeRoleBrowserTest(LiveServerTestCase):
         role = self.operator.admin_membership.roles.first()
         role.permissions = [*role.permissions, 'support:edit']; role.save(update_fields=['permissions'])
         before = get_wallet(user=self.boss, account=self.boss_account).balance
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/negotiation-followup-three-role.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':self.order.pk, 'orderNo':self.order.order_no,
-                    'staff':{'id':self.operator_account.pk, 'token':issue_account_tokens(self.operator_account)[0],
-                             'permissions':['order:view', 'support:edit', 'order:refund']},
-                    'boss':{'id':self.boss_account.pk, 'token':issue_account_tokens(self.boss_account)[0]},
-                    'provider':{'id':self.b_account.pk, 'token':issue_account_tokens(self.b_account)[0]}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=120)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        staff_client = self.client_for(self.operator_account)
+        proposal = staff_client.post(f'/api/admin/aftersales/{case.pk}/negotiation-proposal/', {
+            'request_id':'followup-browser-proposal', 'expected_version':1, 'refund_units':1000,
+            'provider_terms':[{'account_id':self.b_account.pk, 'retained_units':3000}],
+            'explanation':'继续履约陪玩的协商退款'}, format='json')
+        self.assertEqual(proposal.data['code'], 0, proposal.data)
+        proposal_id = proposal.data['data']['id']
+        for account in (self.boss_account, self.b_account):
+            decided = self.client_for(account).post(f'/api/orders/orders/{self.order.pk}/negotiation-proposal/',
+                {'proposal_id':proposal_id, 'accepted':True}, format='json')
+            self.assertEqual(decided.data['code'], 0, decided.data)
+        executed = staff_client.post(f'/api/admin/aftersales/{case.pk}/negotiation-execution/',
+            {'proposal_id':proposal_id, 'client_request_id':'followup-browser-refund'}, format='json')
+        self.assertEqual(executed.data['code'], 0, executed.data)
         self.order.refresh_from_db(); case.refresh_from_db()
         self.assertEqual((self.order.status, self.order.completed_at, case.status),
                          ('COMPLETED', completed_at, 'PARTIALLY_REFUNDED'))

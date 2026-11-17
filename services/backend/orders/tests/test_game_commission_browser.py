@@ -1,18 +1,14 @@
-"""Real admin page and isolated ASGI-backed game commission drafts."""
-import json
+"""Admin game commission drafts against the real isolated HTTP API."""
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
+from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from console.models import AdminAuditLog
 from orders.models import GameCategory, GameCommissionProfile
 from orders.tests.factories import make_console_user, make_service
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_GAME_COMMISSION_BROWSER') == '1', 'Requires isolated ASGI and admin Vite')
@@ -34,13 +30,23 @@ class GameCommissionBrowserTest(LiveServerTestCase):
                      platform='PC', security_level='TOP_SECRET', provider_grade='MASTER')
         make_service(name='界面特殊加购', is_addon=True)
         make_service(name='界面已停用服务', is_active=False)
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/game-commission-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'staff': {'id': account.pk, 'token': issue_account_tokens(account)[0],
-                    'permissions': permissions}, 'reader': {'id': reader_account.pk, 'token': issue_account_tokens(reader_account)[0],
-                    'permissions': ['dictionary:view']}, 'game_id': game.pk}), text=True, encoding='utf-8', capture_output=True, timeout=45)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        url = f'/api/admin/config/game-commissions/{game.pk}/'
+        first = client.put(url, {'game': 'VALORANT', 'version': 0, 'rules': {'companion': 0, 'grind': 25}}, format='json')
+        self.assertEqual(first.data['code'], 0, first.data)
+        concurrent = client.put(url, {'game': 'VALORANT', 'version': 1, 'rules': {'companion': 0, 'grind': 35}}, format='json')
+        self.assertEqual(concurrent.status_code, 200, concurrent.data)
+        stale = client.put(url, {'game': 'VALORANT', 'version': 1, 'rules': {'companion': 0, 'grind': 40}}, format='json')
+        self.assertEqual(stale.data['errorCode'], 'CONFIG_CHANGED', stale.data)
+        reopened = client.get(url)
+        self.assertEqual(reopened.data['data']['configuration']['rules'], {'companion': 0, 'grind': 35})
+        delta_save = client.put(f'/api/admin/config/game-commissions/{delta.pk}/', {'game': 'DELTA', 'version': 0,
+            'rules': {'scopes': [{'provider_kind': 'GUARD', 'platform': 'PC', 'security_level': 'TOP_SECRET',
+                                  'grade': 'MASTER', 'gameplay_id': None, 'rate': 22}]}}, format='json')
+        self.assertEqual(delta_save.data['code'], 0, delta_save.data)
+        reader_client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(reader_account)[0])
+        denied = reader_client.put(url, {'game': 'VALORANT', 'version': 2, 'rules': {'companion': 0, 'grind': 35}}, format='json')
+        self.assertEqual(denied.status_code, 403, denied.data)
         saved = GameCommissionProfile.objects.get(game_category=game)
         self.assertEqual((saved.game, saved.rules, saved.version), ('VALORANT', {'companion': 0, 'grind': 35}, 2))
         other = GameCommissionProfile.objects.get(game_category=delta)

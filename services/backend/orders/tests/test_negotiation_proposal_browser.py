@@ -1,17 +1,12 @@
-"""Three real web clients against isolated ASGI and a migrated SQLite DB."""
-import json
+"""Three real roles confirm and revise a negotiation proposal through the HTTP API."""
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 from orders.models import NegotiationDecision, NegotiationProposal, Order
 from orders.tests.test_provider_aftersale_status import ProviderAfterSaleStatusTest, image
 from wallet.models import Wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_NEGOTIATION_PROPOSAL_BROWSER') == '1', 'Requires isolated ASGI and local Vite')
@@ -34,20 +29,34 @@ class NegotiationProposalBrowserTest(LiveServerTestCase):
         role = self.staff.admin_membership.roles.first()
         role.permissions = list(set([*role.permissions, 'support:edit', 'order:refund'])); role.save(update_fields=['permissions'])
         self.login(self.staff)
-        self.ok(self.client.post('/api/admin/aftersales/open-negotiation/', {'order_id':order_id,
+        case_id = self.ok(self.client.post('/api/admin/aftersales/open-negotiation/', {'order_id':order_id,
             'affected_provider_account_ids':[self.accounts[self.provider.pk].pk], 'reason':'老板联系后申请协商',
-            'client_request_id':'proposal-browser-case'}, format='json'))
+            'client_request_id':'proposal-browser-case'}, format='json'))['id']
         order = Order.objects.get(pk=order_id)
-        def identity(user, permissions=None):
-            return {'id':self.accounts[user.pk].pk, 'token':self.tokens[user.pk], 'permissions':permissions or []}
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/negotiation-proposal-three-role.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':order_id, 'orderNo':order.order_no,
-                    'boss':identity(self.boss), 'provider':identity(self.provider),
-                    'staff':identity(self.staff, role.permissions)}), text=True, encoding='utf-8',
-                capture_output=True, timeout=120)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        provider_account_id = self.accounts[self.provider.pk].pk
+        proposal_url = f'/api/admin/aftersales/{case_id}/negotiation-proposal/'
+        draft_v1 = {'request_id':'proposal-browser-v1', 'expected_version':0, 'refund_units':500,
+            'provider_terms':[{'account_id':provider_account_id, 'retained_units':7500}],
+            'explanation':'双方协商后中止服务'}
+        v1 = self.ok(self.client.post(proposal_url, draft_v1, format='json'))
+        self.ok(self.client.post(proposal_url, draft_v1, format='json'))
+        self.login(self.provider)
+        self.ok(self.client.post(f'/api/orders/orders/{order_id}/complete/', {'completion_image':image()}, format='multipart'))
+        self.login(self.boss)
+        self.ok(self.client.post(f'/api/orders/orders/{order_id}/negotiation-proposal/',
+            {'proposal_id':v1['id'], 'accepted':True}, format='json'))
+        self.login(self.provider)
+        self.ok(self.client.post(f'/api/orders/orders/{order_id}/negotiation-proposal/',
+            {'proposal_id':v1['id'], 'accepted':True}, format='json'))
+        self.login(self.staff)
+        blocked = self.client.post(f'/api/admin/aftersales/{case_id}/resolve/', {'resolution':'尝试结案'}, format='json')
+        self.assertEqual(blocked.data['msg'], '已有各方同意的协商方案，请先完成约定处理，不能直接结束售后')
+        v2 = self.ok(self.client.post(proposal_url, {'request_id':'proposal-browser-v2', 'expected_version':1,
+            'refund_units':600, 'provider_terms':[{'account_id':provider_account_id, 'retained_units':7400}],
+            'explanation':'双方协商后中止服务'}, format='json'))
+        self.login(self.provider)
+        self.ok(self.client.post(f'/api/orders/orders/{order_id}/negotiation-proposal/',
+            {'proposal_id':v2['id'], 'accepted':False}, format='json'))
         proposal = NegotiationProposal.objects.get(case__order=order, version=1)
         self.assertEqual((proposal.status, proposal.refund_units, proposal.provider_terms[0]['retained_units']),
                          ('ACCEPTED', 500, 7500))

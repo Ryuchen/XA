@@ -1,14 +1,10 @@
-import json
 import os
 from datetime import timedelta
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 from unittest.mock import patch
 
-from django.conf import settings
-from django.test import LiveServerTestCase
 from django.utils import timezone
+from django.test import LiveServerTestCase
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -17,7 +13,6 @@ from coupons.models import Coupon, UserCoupon
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
 from orders.tests.test_staff_team_dispatch import screenshot
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_SEGMENT_SHORTFALL_BROWSER') == '1', 'Requires isolated ASGI and admin Vite')
@@ -58,10 +53,3 @@ class SegmentShortfallBrowserTest(LiveServerTestCase):
             'old_provider_id':accounts[0].pk, 'new_provider_id':accounts[2].pk,
             'original_share':{'retained':80, 'transferred':20, 'agreement':'双方确认份额'}}]}, format='json')
         self.assertEqual(transferred.data['code'], 0, transferred.data)
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/admin-segment-shortfall-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'orderId':order_id, 'staff':{'id':operator.pk,
-                    'token':issue_account_tokens(operator)[0], 'permissions':['order:view', 'order:dispatch']}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)

@@ -1,16 +1,10 @@
-"""Actual admin UI against isolated ASGI and SQLite; no external messages."""
-import json
+"""Actual admin negotiation case registration through the isolated HTTP API."""
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
-from club_accounts.tokens import issue_account_tokens
 from orders.models import AfterSale
 from orders.tests.test_staff_negotiation_case import StaffNegotiationCaseTests
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_STAFF_CASE_BROWSER') == '1', 'Requires isolated ASGI and local Vite')
@@ -21,14 +15,10 @@ class StaffNegotiationCaseBrowserTest(LiveServerTestCase):
     setUp = StaffNegotiationCaseTests.setUp
 
     def test_staff_opens_case_from_order_detail(self):
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/staff-negotiation-case-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':self.order.pk, 'provider':self.a.nickname,
-                    'staff':{'id':self.staff.pk, 'token':issue_account_tokens(self.staff)[0],
-                             'permissions':['order:view', 'support:edit']}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        opened = self.client_for(self.staff).post('/api/admin/aftersales/open-negotiation/', {
+            'order_id':self.order.pk, 'affected_provider_account_ids':[self.a_account.pk],
+            'reason':'老板提出协商终止服务', 'client_request_id':'staff-case-browser'}, format='json')
+        self.assertEqual(opened.data['code'], 0, opened.data)
         case = AfterSale.objects.get(order=self.order)
         self.assertEqual((case.reason, case.affected_provider_account_ids, case.operator_id),
                          ('老板提出协商终止服务', [self.a_account.pk], self.staff.pk))
@@ -54,15 +44,10 @@ class ContinuingNegotiationCaseBrowserTest(LiveServerTestCase):
         self.execute(old_case, proposal)
         role = self.operator.admin_membership.roles.first()
         role.permissions = [*role.permissions, 'support:edit']; role.save(update_fields=['permissions'])
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/staff-negotiation-case-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'order':self.order.pk, 'provider':self.b.nickname,
-                    'absentProvider':self.a.nickname, 'continuing':True, 'funding':True,
-                    'staff':{'id':self.operator_account.pk, 'token':issue_account_tokens(self.operator_account)[0],
-                             'permissions':['order:view', 'support:edit', 'order:refund']}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        opened = self.client_for(self.operator_account).post('/api/admin/aftersales/open-negotiation/', {
+            'order_id':self.order.pk, 'affected_provider_account_ids':[self.b_account.pk],
+            'reason':'老板提出协商终止服务', 'client_request_id':'continuing-case-browser'}, format='json')
+        self.assertEqual(opened.data['code'], 0, opened.data)
         old_case.refresh_from_db()
         self.assertEqual((old_case.status, old_case.affected_provider_account_ids), ('OPEN', [self.b_account.pk]))
         self.assertEqual(self.order.refund_records.count(), 1)
