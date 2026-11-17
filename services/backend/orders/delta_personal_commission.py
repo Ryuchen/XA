@@ -260,16 +260,6 @@ def pending_payment_snapshot(service, profile):
             'personal_rules': frozen}
 
 
-def pending_order_terms(service, profile, amount, inviter_rate):
-    """Prepare unresolved checkout terms without estimating any person's pay."""
-    if type(amount) is not int or amount <= 0 or type(inviter_rate) is not int or not 0 <= inviter_rate <= 100:
-        raise ValueError('待分配订单金额或推荐比例无效')
-    return {'game_commission_snapshot': pending_payment_snapshot(service, profile),
-            'commission_allocation_pending': True, 'commission_rate': None,
-            'provider_income': None, 'shop_income': None,
-            'inviter_commission': amount * inviter_rate // 100}
-
-
 def lock_and_verify_pending_snapshot(service_id, expected):
     """Recheck frozen rules under the same service/category/config locks as payment."""
     from stores.db import transaction

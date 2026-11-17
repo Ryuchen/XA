@@ -26,13 +26,6 @@ def _addon_responsibility_at(addon, boundary):
     return (current[0]['segment_id'], current[0]['basis']) if current else (None, 0)
 
 
-def _verify_addon_segment_released(addon, segment_id, boundary):
-    """Keep transfers with an unconfirmed add-on responsibility closed."""
-    responsible, _ = _addon_responsibility_at(addon, boundary)
-    if responsible == segment_id:
-        raise ValidationError('转出陪玩仍负责加购，请先完成独立接替')
-
-
 def capture_locked(order, transfer, *, frozen_facts=None, before_revision_id=None, allow_pending=False):
     """Rebuild the actual retained segments and all already posted funding uses."""
     from .points_transfer_refund_access import permits

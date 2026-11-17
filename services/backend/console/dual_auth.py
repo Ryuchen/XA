@@ -1,14 +1,8 @@
 """Neutral console password+SMS and bound-WeChat authentication."""
-import hashlib
-import hmac
-import secrets
 from collections.abc import Mapping
-from datetime import timedelta
 
 from django.core import signing
-from django.conf import settings as global_settings
-from django.db import DatabaseError, IntegrityError, transaction as control_transaction
-from django.utils import timezone
+from django.db import DatabaseError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,11 +10,9 @@ from rest_framework.views import APIView
 from club_accounts.models import ClubAccount
 from club_accounts.tokens import issue_account_tokens
 from stores.admin_entry import AdminLoginError, _active_store, _account, _username, login_context
-from stores.context import current_store, store_context
+from stores.context import store_context
 from stores.db import transaction
-from stores.media import decode_login_scene, encode_login_scene
-from stores.models import (AdminLoginHandoff, Store, PlatformAccount, PlatformAuditEvent,
-                           PlatformWechatBindingIntent, PlatformWechatIdentity)
+from stores.models import Store
 from users.password_login import (PasswordSmsError, resend_password_sms, sms_payload,
     start_password_sms, verify_password_sms)
 from users.sms_transport import SmsUnavailable
@@ -165,28 +157,6 @@ class ConsolePasswordLoginView(APIView):
             return failure('门店登录服务暂不可用，请稍后重试', 503)
 
 
-def handoff_for(ticket, *, lock=False):
-    try:
-        store_id, ticket_id = decode_login_scene(ticket)
-        store = current_store()
-        if store_id is not None and (store is None or store.pk != store_id):
-            raise ValueError
-        query = AdminLoginHandoff.objects.select_for_update() if lock else AdminLoginHandoff.objects
-        handoff = query.get(ticket=ticket_id)
-        if store_id is None and handoff.purpose == 'bind_wechat':
-            raise ValueError
-        if handoff.store_slug != (store.slug if store else ''):
-            raise ValueError
-        return handoff
-    except (ValueError, TypeError, AttributeError, AdminLoginHandoff.DoesNotExist):
-        raise ValueError('登录请求无效，请在网页重新生成二维码') from None
-
-
-def ensure_handoff_active(session):
-    if session.expires_at <= timezone.now():
-        raise ValueError('登录二维码已过期，请刷新后重试')
-
-
 def console_account(store, account_id):
     with store_context(store):
         account = ClubAccount.objects.filter(pk=account_id, account_type=ClubAccount.AccountType.STAFF,
@@ -197,40 +167,3 @@ def console_account(store, account_id):
             from stores.setup_access import is_setup_admin
             return account if is_setup_admin(store, account) else None
         return account
-
-
-def resolve_openid_account(openid, *, identity_kind='auto'):
-    matches = []
-    if identity_kind != 'platform':
-        stores = Store.objects.filter(status__in=[Store.Status.ACTIVE, Store.Status.CONFIGURING], initialized_at__isnull=False,
-            database_alias__in=settings.DATABASES)
-        for store in stores:
-            with store_context(store):
-                account = ClubAccount.objects.filter(openid=openid, account_type=ClubAccount.AccountType.STAFF,
-                    is_openid_bound=True, is_active=True, can_login=True).first()
-                if account and console_account(store, account.pk):
-                    matches.append(('store', store, account))
-    if identity_kind != 'store' and global_settings.PLATFORM_IDENTITY_ENABLED:
-        from stores.platform_auth import _active_grant
-        identity = PlatformWechatIdentity.objects.select_related('account').filter(
-            appid=global_settings.WECHAT_H5_APPID, openid=openid, account__is_active=True).first()
-        if identity and _active_grant(identity.account):
-            matches.append(('platform', None, identity.account))
-    if not matches:
-        raise ValueError('当前微信尚未绑定后台账号，请使用账号密码登录并完成微信初始化')
-    if len(matches) != 1:
-        raise LookupError('当前微信关联多个后台身份，请选择平台或门店身份；多门店请使用账号登录')
-    return matches[0]
-
-
-def platform_binding_account(session):
-    from stores.platform_auth import _active_grant
-    if not global_settings.PLATFORM_IDENTITY_ENABLED or not session.platform_account_id:
-        return None
-    intent = PlatformWechatBindingIntent.objects.select_related('account').filter(handoff=session).first()
-    if (not intent or intent.account_id != session.platform_account_id or not intent.account.is_active
-            or intent.security_version != intent.account.security_version or not _active_grant(intent.account)):
-        return None
-    return intent.account
-
-

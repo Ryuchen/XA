@@ -9,7 +9,7 @@ from datetime import datetime, time, timedelta
 from PIL import Image, UnidentifiedImageError
 from stores.conf import settings
 from stores.context import current_currency_name
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError
 from stores.db import transaction
@@ -23,21 +23,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
-from club_accounts.models import ClubAccount, LegacyAccountMap
+from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated, resolve_club_account
-from club_accounts.services import (
-    authenticate_account,
-    get_or_create_account_for_legacy_user,
-)
-from club_accounts.tokens import issue_account_tokens, refresh_account_access_token
+from club_accounts.tokens import refresh_account_access_token
 from orders.models import GameCategory, Order, ServiceItem
 from orders.catalog import skill_service_q, visible_service_q
 from site_messages.utils import create_message
 from wallet.models import (
     Transaction,
-    Wallet,
     get_pass_daily_price,
-    get_pass_daily_prices,
     get_pass_delay_seconds,
     get_platform_wallet,
 )
@@ -86,14 +80,6 @@ class WechatLoginError(ValueError):
         self.code = code
 
 
-def _wechat_error_response(exc):
-    return Response({
-        'code': getattr(exc, 'code', 400),
-        'errorCode': getattr(exc, 'error_code', 'WECHAT_UNAVAILABLE'),
-        'msg': str(exc) if isinstance(exc, WechatLoginError) else '微信服务暂不可用，请稍后重试',
-    })
-
-
 def _wechat_binding_info(account):
     wechat_bound = bool(account.is_openid_bound and (account.openid or account.wechat_identities.exists()))
     phone_verified = bool(account.phone and account.is_phone_verified)
@@ -107,29 +93,9 @@ def _wechat_binding_info(account):
     }
 
 
-def _ensure_boss_login_allowed(account):
-    if account is None or account.account_type != ClubAccount.AccountType.BOSS:
-        raise WechatLoginError('该微信号非老板账号，请使用对应端登录', 'ACCOUNT_ROLE_MISMATCH', 403)
-    if not account.is_active or not account.can_login:
-        raise WechatLoginError('该老板账号已被禁用，请联系客服', 'ACCOUNT_DISABLED', 403)
-
-
 def _legacy_user_for_account(account):
     mapping = getattr(account, 'legacy_mapping', None)
     return User.objects.filter(pk=mapping.legacy_user_id).first() if mapping else None
-
-
-def _assert_phone_available(account, phone):
-    """A verified phone may not silently merge or replace another boss account."""
-    mapping = getattr(account, 'legacy_mapping', None)
-    accounts = ClubAccount.objects.filter(account_type=ClubAccount.AccountType.BOSS, phone=phone)
-    legacy_users = User.objects.filter(role=User.Role.CUSTOMER, phone=phone)
-    if account.pk:
-        accounts = accounts.exclude(pk=account.pk)
-    if mapping:
-        legacy_users = legacy_users.exclude(pk=mapping.legacy_user_id)
-    if accounts.exists() or legacy_users.exists():
-        raise WechatLoginError('该手机号已关联其他老板账号，请联系客服处理', 'ACCOUNT_CONFLICT', 409)
 
 
 def _lock_wechat_phone(phone):
@@ -162,106 +128,6 @@ class AccountLoginView(APIView):
         # Keep the old URL, but require the same password+SMS proof as the new flow.
         from .password_login import PasswordLoginView
         return PasswordLoginView().post(request)
-
-    def _legacy_post(self, request):
-        username = (request.data.get('username') or '').strip()
-        password = request.data.get('password') or ''
-
-        if not username:
-            return Response({'code': 400, 'msg': '请输入账号'})
-
-        from .models import ProviderRegistration
-        if ProviderRegistration.objects.filter(username__iexact=username).exclude(status='APPROVED').exists():
-            return Response({'code': 403, 'msg': '注册申请尚未通过，请查询审核结果'})
-
-        if settings.WECHAT_MOCK_LOGIN:
-            account = ClubAccount.objects.filter(username=username).first()
-            if account is None:
-                legacy_user = User.objects.filter(username=username).first()
-                if legacy_user is not None:
-                    account = get_or_create_account_for_legacy_user(legacy_user)
-            created = account is None
-            if created:
-                account = ClubAccount.objects.create_account(
-                    username=username,
-                    password=password or None,
-                    account_type=ClubAccount.AccountType.PROVIDER,
-                    openid=f"acct_{username}",
-                    is_openid_bound=True,
-                )
-                user = User.objects.create_user(
-                    username=username,
-                    password=None,
-                    openid=account.openid,
-                    role=User.Role.PROVIDER,
-                    is_openid_bound=True,
-                )
-                LegacyAccountMap.objects.create(
-                    legacy_user_id=user.id,
-                    account=account,
-                    legacy_role=User.Role.PROVIDER,
-                )
-                EscortProfile.objects.create(
-                    user=user,
-                    account=account,
-                    display_name=account.username,
-                    status=EscortProfile.Status.OFFLINE,
-                    is_verified=False,
-                )
-                Wallet.objects.filter(user=user).update(account=account)
-        else:
-            if not password:
-                return Response({'code': 400, 'msg': '请输入密码'})
-            account = authenticate_account(
-                username,
-                password,
-                account_type=ClubAccount.AccountType.PROVIDER,
-            )
-            if account is None:
-                # Allow a staged deployment to migrate a valid historical
-                # provider lazily when it first logs in.
-                legacy_user = authenticate(
-                    request=request,
-                    username=username,
-                    password=password,
-                )
-                if legacy_user is not None:
-                    account = get_or_create_account_for_legacy_user(legacy_user)
-            if account is None:
-                return Response({'code': 400, 'msg': '账号或密码错误'})
-
-        # 陪玩端仅允许陪玩登录：老板/客服/管理员账号一律拒绝，且不改写其角色。
-        if account.account_type != ClubAccount.AccountType.PROVIDER:
-            return Response({'code': 403, 'msg': '该账号非陪玩账号，请使用对应端登录'})
-
-        if not account.is_active or not account.can_login:
-            return Response({'code': 403, 'msg': '账号已被禁用'})
-
-        from club_accounts.otp import otp_login_gate
-        otp=otp_login_gate(account,request.data,'provider')
-        if isinstance(otp,Response):return otp
-        access_token, refresh_token = issue_account_tokens(account,otp_verified=bool(otp and otp['otp_verified']))
-
-        return Response({
-            'code': 0,
-            'msg': 'success',
-            'data': {
-                'recoveryCodes': otp.get('recoveryCodes',[]) if otp else [],
-                'token': access_token,
-                'refreshToken': refresh_token,
-                'userInfo': {
-                    'id': str(account.id),
-                    'username': account.username,
-                    'nickname': account.nickname or account.username,
-                    'role': 'provider',
-                    'backendRole': account.account_type,
-                    'openid': account.openid,
-                    'phone': account.phone,
-                    'bindCode': None,
-                    'bindStatus': 'direct',
-                }
-            }
-        })
 
 
 class AccountRefreshView(APIView):
