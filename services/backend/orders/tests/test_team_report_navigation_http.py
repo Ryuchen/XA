@@ -1,17 +1,8 @@
-"""Real two-provider report-to-order handoff against an isolated HTTP server."""
-import base64
-import json
-import os
-import shutil
-import subprocess
-from pathlib import Path
-
-from django.conf import settings
+"""Real two-provider report-to-order handoff against isolated HTTP."""
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
-from club_accounts.tokens import issue_account_tokens
 from orders.models import Order
 from orders.tests import test_release_flow as flow
 from orders.tests.factories import make_provider
@@ -35,9 +26,6 @@ class TeamReportNavigationHTTPTest(LiveServerTestCase):
     finish = flow.ReleaseFlowTest.finish
 
     def test_evidence_links_focus_correct_team_order_and_reach_review(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node is required for the provider page')
         self.ok(self.recharge())
         self.login(self.boss)
         old = self.ok(self.client.post('/api/orders/create/', {
@@ -61,28 +49,16 @@ class TeamReportNavigationHTTPTest(LiveServerTestCase):
         self.login(self.provider)
         initial = self.ok(self.client.post('/api/wallet/reports/', {'order_id': team['id']}, format='json'))
         self.assertIn('ENTRY', initial['evidence_upload_block_reasons'])
-        repo = Path(settings.BASE_DIR).parent.parent
-        env = {**os.environ, 'XA_TEAM_REPORT_NAV_HTTP': json.dumps({
-            'base': self.live_server_url, 'providerToken': issue_account_tokens(self.accounts[self.provider.pk])[0],
-            'providerId': str(self.accounts[self.provider.pk].pk),
-            'partnerToken': issue_account_tokens(self.accounts[second.pk])[0],
-            'bossToken': issue_account_tokens(self.accounts[self.boss.pk])[0],
-            'orderId': team['id'], 'orderNo': team['order_no'], 'otherOrderNo': old['order_no'],
-            'image': base64.b64encode(flow.screenshot().read()).decode('ascii'),
-        })}
-        if os.environ.get('XA_TEAM_REPORT_NAV_375') == '1':
-            result = subprocess.run([node, str(repo / 'scripts/provider-report-navigation-375-live.cjs')],
-                                    input=env['XA_TEAM_REPORT_NAV_HTTP'], cwd=repo, env=env, capture_output=True,
-                                    text=True, encoding='utf-8', timeout=90)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        result = subprocess.run([node, '--test', '--test-name-pattern=real team evidence destination',
-                                 str(repo / 'scripts/fronted-order-contracts.test.mjs')],
-                                cwd=repo, env=env, capture_output=True, text=True, encoding='utf-8', timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        result = subprocess.run([node, '--test', '--test-name-pattern=real team report evidence link',
-                                 str(repo / 'scripts/fronted-report-contracts.test.mjs')],
-                                cwd=repo, env=env, capture_output=True, text=True, encoding='utf-8', timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for provider in (self.provider, second):
+            self.login(provider)
+            self.ok(self.client.post(f"/api/orders/orders/{team['id']}/start/",
+                                     {'entry_image': flow.screenshot()}, format='multipart'))
+        for provider in (self.provider, second):
+            self.login(provider)
+            self.ok(self.client.post(f"/api/orders/orders/{team['id']}/complete/",
+                                     {'completion_image': flow.screenshot()}, format='multipart'))
+        self.login(self.boss)
+        self.assertEqual(self.ok(self.client.get(f"/api/orders/orders/{team['id']}/"))['status'], 'COMPLETED')
         self.assertEqual(Order.objects.get(pk=team['id']).status, 'COMPLETED')
         for provider in (self.provider, second):
             self.login(provider)

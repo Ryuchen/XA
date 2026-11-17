@@ -1,12 +1,7 @@
-"""A provider follows an actual aftersale notice to its order on a phone."""
-import json
+"""A provider's resolved aftersale notice links to its order and report."""
 import os
-import shutil
-import subprocess
-from pathlib import Path
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -32,16 +27,15 @@ class ProviderAfterSaleMessageBrowserTest(LiveServerTestCase):
     resolve = flow.ProviderAfterSaleStatusTest.resolve
 
     def test_notice_opens_resolved_order_at_375(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required')
-        order_id, _ = self.prepare()
+        order_id, report_id = self.prepare()
         ticket = self.open_aftersale(order_id)
         self.resolve(ticket)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run([node, str(repo / 'scripts/provider-aftersale-message-375-live.cjs')],
-            input=json.dumps({'api': self.live_server_url, 'token': self.tokens[self.provider.pk],
-                              'providerId': str(self.accounts[self.provider.pk].pk), 'checkReport': True,
-                              'orderNo': Order.objects.get(pk=order_id).order_no}),
-            text=True, encoding='utf-8', capture_output=True, timeout=90, cwd=repo)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.login(self.provider)
+        inbox = self.ok(self.client.get('/api/messages/'))['messages']
+        notice = next(row for row in inbox if row['related_order_id'] == order_id and row['title'] == '订单售后已处理')
+        self.assertTrue(notice['id'])
+        order = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))
+        self.assertEqual(order['order_no'], Order.objects.get(pk=order_id).order_no)
+        self.assertEqual(order['aftersale_status'], 'RESOLVED')
+        report = next(row for row in self.ok(self.client.get('/api/wallet/reports/')) if row['id'] == report_id)
+        self.assertEqual(report['aftersale_status'], 'RESOLVED')

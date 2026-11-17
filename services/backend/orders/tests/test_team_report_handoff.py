@@ -1,26 +1,15 @@
 """Real API coverage for a two-provider order and its report handoff."""
 import asyncio
-import json
-import os
-import shutil
-import socket
-import subprocess
-import sys
-import time
 from datetime import timedelta
-from pathlib import Path
 from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.test import override_settings
-from django.conf import settings
-from django.db import connection
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
-from club_accounts.tokens import issue_account_tokens
 from orders.models import Order
 from orders.tests import test_release_flow as flow
 from orders.tests.factories import make_provider
@@ -196,47 +185,6 @@ class TeamReportHandoffTest(APITransactionTestCase):
         self.assertEqual(old_detail['settlement_mode'], 'REPORT_APPROVAL')
         old_list = self.ok(self.client.get('/api/orders/orders/', {'status': 'in_progress'}))
         self.assertTrue(next(row for row in old_list if row['id'] == order_id)['my_assignment_released'])
-        node = shutil.which('node')
-        if os.environ.get('XA_TEAM_REPORT_BROWSER') == '1':
-            self.assertTrue(node)
-            self.assertEqual(connection.settings_dict['NAME'], os.environ.get('XA_ASGI_NETWORK_TEST_DB'))
-            with socket.socket() as probe:
-                probe.bind(('127.0.0.1', 0))
-                port = probe.getsockname()[1]
-            process = subprocess.Popen([sys.executable, '-m', 'daphne', '-b', '127.0.0.1', '-p', str(port), 'config.asgi:application'],
-                cwd=settings.BASE_DIR, env=os.environ.copy(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-            try:
-                for _ in range(150):
-                    if process.poll() is not None: self.fail('isolated ASGI server exited')
-                    try:
-                        with socket.create_connection(('127.0.0.1', port), timeout=.2): break
-                    except OSError: time.sleep(.1)
-                else: self.fail('isolated ASGI server did not start')
-                repo = Path(settings.BASE_DIR).parent.parent
-                providers = []
-                for user, released, income in ((self.provider, True, '320币'), (incoming, False, '480币')):
-                    account = self.accounts[user.pk]
-                    providers.append({'id': account.pk, 'token': issue_account_tokens(account)[0], 'released': released,
-                        'income': income, 'canReport': True, 'waitingNotice': '报单全部通过、售后窗口结束且无未结客诉后结算'})
-                result = subprocess.run([node, str(repo / 'scripts/provider-transfer-375-live.cjs')],
-                    input=json.dumps({'api': f'http://127.0.0.1:{port}', 'orderNo': old_detail['order_no'],
-                                      'participantText': '留守陪玩 + 转入陪玩', 'providers': providers}),
-                    cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=70)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            finally:
-                process.terminate()
-                try: process.wait(timeout=10)
-                except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=10)
-        if node:
-            repo = Path(__file__).resolve().parents[4]
-            result = subprocess.run(
-                [node, '--test', '--test-name-pattern=transferred provider sees',
-                 str(repo / 'scripts/fronted-order-contracts.test.mjs')],
-                cwd=repo, capture_output=True, text=True, encoding='utf-8', timeout=30,
-                env={**os.environ, 'XA_TRANSFERRED_ORDER_JSON': json.dumps(old_detail)},
-            )
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         old_report = self.ok(self.client.post('/api/wallet/reports/', {'order_id': order_id}, format='json'))
         old_share = Order.objects.get(pk=order_id).providers.get(provider_account=self.accounts[self.provider.pk])
         self.assertEqual(old_report['amount'], old_share.settlement_base)

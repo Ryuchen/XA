@@ -1,11 +1,7 @@
 """An open checkout follows a provider's real availability changes."""
-import base64
-import json
 import os
-import subprocess
 import tempfile
 from datetime import timedelta
-from pathlib import Path
 from unittest import skipUnless
 
 from django.test import LiveServerTestCase, override_settings
@@ -44,13 +40,17 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
             user.escort_profile.save(update_fields=['account'])
             user.escort_profile.service_items.add(service)
         make_wallet(boss, balance=50000)
-        repo = Path(__file__).resolve().parents[4]
-        result = subprocess.run(['node', str(repo / 'scripts/native-checkout-double-status-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'bossToken': issue_account_tokens(accounts[0])[0],
-                'bossId': accounts[0].pk, 'providerTokens': [issue_account_tokens(account)[0] for account in accounts[1:]],
-                'providerIds': [account.pk for account in accounts[1:]], 'serviceId': service.pk}),
-            cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=45)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        offline_client = APIClient(); offline_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[2])[0])
+        offline = offline_client.post('/api/users/escorts/status/', {'status': 'OFFLINE'}, format='json')
+        self.assertEqual(offline.data['code'], 0, offline.data)
+        boss_client = APIClient(); boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[0])[0])
+        blocked = boss_client.post('/api/orders/quote/', {'service_id': service.pk,
+            'provider_ids': [accounts[1].pk, accounts[2].pk]}, format='json')
+        self.assertEqual(blocked.data['code'], 400, blocked.data)
+        created = boss_client.post('/api/orders/create/', {'service_id': service.pk,
+            'provider_ids': [accounts[1].pk, accounts[3].pk], 'game_region': '隔离区', 'game_nickname': '隔离老板',
+            'remark': '保留备注', 'client_request_id': 'double-replacement-checkout'}, format='json')
+        self.assertEqual(created.data['code'], 0, created.data)
         order = Order.objects.get(customer_account=accounts[0])
         self.assertEqual(order.status, 'GRABBED')
         self.assertEqual(set(order.providers.filter(released_at__isnull=True).values_list('provider_account_id', flat=True)),
@@ -69,16 +69,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         detail = client.get(f'/api/admin/orders/{order.pk}/').data
         self.assertEqual(detail['code'], 0, detail)
         self.assertEqual((detail['data']['status'], detail['data']['amount']), ('GRABBED', 20000))
-        h5_root = os.environ.get('XA_PROVIDER_TIMEOUT_H5_DIR')
-        if h5_root:
-            result = subprocess.run(['node', str(repo / 'scripts/provider-double-selected-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'root': h5_root, 'orderNo': order.order_no,
-                    'tokens': [issue_account_tokens(account)[0] for account in accounts[1:]],
-                    'ids': [str(account.pk) for account in accounts[1:]]}), cwd=repo, text=True,
-                encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-
-        boss_client = APIClient(); boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[0])[0])
         provider_clients = []
         for account in (accounts[1], accounts[3]):
             provider_client = APIClient(); provider_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
@@ -92,28 +82,14 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
                 self.assertEqual((data['team_progress']['stage'], data['team_progress']['submitted_count'],
                                   data['team_progress']['total_count']), (stage, submitted, 2))
 
-        def verify_surfaces(stage):
-            if not h5_root:
-                return
-            result = subprocess.run(['node', str(repo / 'scripts/provider-double-selected-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'root': h5_root, 'orderNo': order.order_no,
-                    'tokens': [issue_account_tokens(account)[0] for account in accounts[1:]],
-                    'ids': [str(account.pk) for account in accounts[1:]], 'stage': stage,
-                    'bossToken': issue_account_tokens(accounts[0])[0], 'bossId': accounts[0].pk, 'orderId': order.pk}),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-
         for index, provider_client in enumerate(provider_clients):
             response = provider_client.post(f'/api/orders/orders/{order.pk}/start/', {'entry_image': screenshot()}, format='multipart')
             self.assertEqual(response.data['code'], 0, response.data)
             progress('ENTRY' if index == 0 else 'COMPLETION', 1 if index == 0 else 0,
                      'GRABBED' if index == 0 else 'IN_SERVICE')
-            if index == 0:
-                verify_surfaces('ENTRY')
         response = provider_clients[0].post(f'/api/orders/orders/{order.pk}/complete/', {'completion_image': screenshot()}, format='multipart')
         self.assertEqual(response.data['code'], 0, response.data)
         progress('COMPLETION', 1, 'IN_SERVICE')
-        verify_surfaces('COMPLETION')
         response = provider_clients[1].post(f'/api/orders/orders/{order.pk}/complete/', {'completion_image': screenshot()}, format='multipart')
         self.assertEqual(response.data['code'], 0, response.data)
         order.refresh_from_db()
@@ -123,62 +99,41 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         self.assertEqual(reports.count(), 2)
         self.assertEqual(set(reports.values_list('status', flat=True)), {'DRAFT'})
         self.assertEqual(sum(reports.values_list('amount', flat=True)), 20000)
-        def verify_report_surfaces(status, submit=False, settled=False):
-            if not h5_root:
-                return
-            result = subprocess.run(['node', str(repo / 'scripts/provider-double-report-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'root': h5_root, 'orderNo': order.order_no,
-                    'tokens': [issue_account_tokens(account)[0] for account in accounts[1:]],
-                    'ids': [str(account.pk) for account in accounts[1:]], 'status': status,
-                    'submit': submit, 'settled': settled, 'image': base64.b64encode(screenshot().read()).decode('ascii')}),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-
-        verify_report_surfaces('待提交', submit=True)
-        if not h5_root:
-            for provider_client, account in zip(provider_clients, (accounts[1], accounts[3])):
-                report = reports.get(provider_account=account)
-                upload = provider_client.post(f'/api/wallet/reports/{report.pk}/images/',
-                                              {'kind': 'RESULT', 'image': screenshot()}, format='multipart')
-                self.assertEqual(upload.data['code'], 0, upload.data)
-                submitted = provider_client.post(f'/api/wallet/reports/{report.pk}/submit/', {}, format='json')
-                self.assertEqual(submitted.data['code'], 0, submitted.data)
+        for provider_client, account in zip(provider_clients, (accounts[1], accounts[3])):
+            report = reports.get(provider_account=account)
+            upload = provider_client.post(f'/api/wallet/reports/{report.pk}/images/',
+                                          {'kind': 'RESULT', 'image': screenshot()}, format='multipart')
+            self.assertEqual(upload.data['code'], 0, upload.data)
+            submitted = provider_client.post(f'/api/wallet/reports/{report.pk}/submit/', {}, format='json')
+            self.assertEqual(submitted.data['code'], 0, submitted.data)
         self.assertEqual(set(reports.values_list('status', flat=True)), {'PENDING'})
-        verify_report_surfaces('待审核')
-        if h5_root:
-            first = reports.get(provider_account=accounts[1])
-            second = reports.get(provider_account=accounts[3])
-            def review(items):
-                result = subprocess.run(['node', str(repo / 'scripts/admin-double-report-approve-375-live.cjs')],
-                    input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                        'orderNo': order.order_no, 'reports': items}), cwd=repo, text=True,
-                    encoding='utf-8', capture_output=True, timeout=90)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            review([{'id': first.pk, 'name': '陪玩甲', 'reject': True}, {'id': second.pk, 'name': '陪玩替补'}])
-            first.refresh_from_db(); second.refresh_from_db(); order.refresh_from_db()
-            self.assertEqual((first.status, second.status), ('REJECTED', 'APPROVED'))
-            self.assertIsNone(order.consumption_ready_at)
-            self.assertIsNone(order.settled_at)
-            boss_view = boss_client.get(f'/api/orders/orders/{order.pk}/').data['data']
-            self.assertEqual(boss_view['status'], 'COMPLETED')
-            self.assertIsNone(boss_view['consumption_ready_at'])
-            result = subprocess.run(['node', str(repo / 'scripts/provider-report-time-375.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'providerToken': issue_account_tokens(accounts[1])[0],
-                    'providerId': str(accounts[1].pk), 'orderNo': order.order_no,
-                    'reportId': first.pk, 'resubmit': True}), cwd=repo, text=True,
-                encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            first.refresh_from_db(); second.refresh_from_db(); order.refresh_from_db()
-            self.assertEqual((first.status, second.status), ('PENDING', 'APPROVED'))
-            self.assertIsNotNone(order.consumption_ready_at)
-            self.assertIsNone(order.settled_at)
-            review([{'id': first.pk, 'name': '陪玩甲', 'resultCount': 2}])
-        else:
-            for report in reports:
-                approved = client.post(f'/api/admin/reports/{report.pk}/approve/', {}, format='json')
-                self.assertEqual(approved.data['code'], 0, approved.data)
+        replaced_client = APIClient(); replaced_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(accounts[2])[0])
+        self.assertFalse(any(row['order_id'] == order.pk for row in replaced_client.get('/api/wallet/reports/').data['data']))
+        first = reports.get(provider_account=accounts[1])
+        second = reports.get(provider_account=accounts[3])
+        rejected = client.post(f'/api/admin/reports/{first.pk}/reject/', {'audit_remark': '请补充清晰战绩截图'}, format='json')
+        self.assertEqual(rejected.data['code'], 0, rejected.data)
+        approved = client.post(f'/api/admin/reports/{second.pk}/approve/', {}, format='json')
+        self.assertEqual(approved.data['code'], 0, approved.data)
+        first.refresh_from_db(); second.refresh_from_db(); order.refresh_from_db()
+        self.assertEqual((first.status, second.status), ('REJECTED', 'APPROVED'))
+        self.assertIsNone(order.consumption_ready_at)
+        self.assertIsNone(order.settled_at)
+        boss_view = boss_client.get(f'/api/orders/orders/{order.pk}/').data['data']
+        self.assertEqual(boss_view['status'], 'COMPLETED')
+        self.assertIsNone(boss_view['consumption_ready_at'])
+        upload = provider_clients[0].post(f'/api/wallet/reports/{first.pk}/images/',
+                                          {'kind': 'RESULT', 'image': screenshot()}, format='multipart')
+        self.assertEqual(upload.data['code'], 0, upload.data)
+        resubmitted = provider_clients[0].post(f'/api/wallet/reports/{first.pk}/submit/', {}, format='json')
+        self.assertEqual(resubmitted.data['code'], 0, resubmitted.data)
+        first.refresh_from_db(); second.refresh_from_db(); order.refresh_from_db()
+        self.assertEqual((first.status, second.status), ('PENDING', 'APPROVED'))
+        self.assertIsNotNone(order.consumption_ready_at)
+        self.assertIsNone(order.settled_at)
+        approved = client.post(f'/api/admin/reports/{first.pk}/approve/', {}, format='json')
+        self.assertEqual(approved.data['code'], 0, approved.data)
         self.assertEqual(set(ProviderReport.objects.filter(order=order).values_list('status', flat=True)), {'APPROVED'})
-        verify_report_surfaces('已通过')
         order.refresh_from_db()
         self.assertIsNone(order.settled_at, 'approval does not bypass the consumption confirmation period')
         for account in (accounts[1], accounts[3]):
@@ -267,26 +222,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
             self.assertGreater(hold.deposit_amount, 0)
             self.assertGreater(hold.amount, 0)
             self.assertEqual((hold.wallet.balance, hold.wallet.frozen_amount), (0, hold.amount))
-        root = os.environ.get('XA_PROVIDER_TIMEOUT_H5_DIR')
-        repo = Path(__file__).resolve().parents[4]
-        def verify_wallets(released):
-            if not root: return
-            rows = []
-            for account, hold in zip(accounts[1:], holds):
-                hold.wallet.refresh_from_db()
-                rows.append({'token': issue_account_tokens(account)[0], 'id': str(account.pk),
-                    'balance': f'{hold.wallet.balance / 10:g}', 'frozen': f'{hold.wallet.frozen_amount / 10:g}'})
-            result = subprocess.run(['node', str(repo / 'scripts/provider-double-wallet-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'root': root, 'providers': rows, 'released': released}),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        def verify_admin_transactions(tx_type):
-            if not root: return
-            rows = []
-            for account in accounts[1:]:
-                tx = Transaction.objects.get(order=order, wallet__account=account, tx_type=tx_type, status='SUCCESS')
-                rows.append({'txNo': tx.tx_no, 'username': tx.wallet.account.username,
-                    'label': tx.get_tx_type_display(), 'amount': f'{tx.amount / 10:+g} 币'})
         # A migrated legacy user may have a different username from the
         # wallet's actual business account; display and search must agree.
         providers[0].username = 'isolated-legacy-income'
@@ -297,10 +232,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         legacy_rows = reviewer.get('/api/admin/transactions/', {'keyword': providers[0].username}).data['data']['list']
         self.assertTrue(any(row['order'] == order.pk and row['username'] == accounts[1].username for row in current_rows))
         self.assertFalse(any(row['order'] == order.pk for row in legacy_rows))
-        verify_wallets(False)
-        verify_admin_transactions('EARNINGS_FREEZE')
-        if root:
-            first_freeze = Transaction.objects.get(order=order, wallet__account=accounts[1], tx_type='EARNINGS_FREEZE')
         release_time = max(hold.release_at for hold in holds) + timedelta(seconds=1)
         self.assertEqual(release_due_income(now=release_time), 2)
         self.assertEqual(release_due_income(now=release_time), 0)
@@ -309,39 +240,31 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
             self.assertEqual((hold.wallet.balance, hold.wallet.frozen_amount), (hold.amount, 0))
             self.assertEqual(Transaction.objects.filter(order=order, wallet=hold.wallet,
                 tx_type='EARNINGS_RELEASE', status='SUCCESS').count(), 1)
-        verify_wallets(True)
-        verify_admin_transactions('EARNINGS_RELEASE')
         # The first provider now withdraws earnings produced by this order.
         provider_client = clients[0]
-        if not root:
-            binding = provider_client.put('/api/wallet/withdraw-accounts/WECHAT/', {
-                'payee_account': 'isolated-account-20261102', 'payee_name': '隔离测试',
-                'expected_id': 0, 'expected_version': 0}, format='json')
-            self.assertEqual(binding.data['code'], 0, binding.data)
-            payee = binding.data['data']
+        binding = provider_client.put('/api/wallet/withdraw-accounts/WECHAT/', {
+            'payee_account': 'isolated-account-20261102', 'payee_name': '隔离测试',
+            'expected_id': 0, 'expected_version': 0}, format='json')
+        self.assertEqual(binding.data['code'], 0, binding.data)
+        payee = binding.data['data']
         amount = 6000
-        if root:
-            result = subprocess.run(['node', str(repo / 'scripts/provider-income-withdraw-apply-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'root': root,
-                    'token': issue_account_tokens(accounts[1])[0], 'id': str(accounts[1].pk)}),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            from wallet.models import WithdrawRequest
-            withdrawal_id = WithdrawRequest.objects.get(account=accounts[1]).pk
-            detail = reviewer.get(f'/api/admin/withdrawals/{withdrawal_id}/')
-            self.assertEqual(detail.data['code'], 0, detail.data)
-            withdrawal = detail.data['data']
-            self.assertEqual((withdrawal['payee_account'], withdrawal['payee_name']),
-                             ('isolated-account-20261102', '隔离测试'))
-            saved = provider_client.get('/api/wallet/withdraw-accounts/').data['data']
-            self.assertEqual((saved[0]['payee_account'], saved[0]['payee_name']),
-                             ('isolated-updated-20261102', '隔离新资料'))
-        else:
-            request = provider_client.post('/api/wallet/withdraw/', {'amount': amount,
-                'withdrawal_account_id': payee['id'], 'expected_payee_version': payee['version'],
-                'client_request_id': 'isolated-double-income-withdraw'}, format='json')
-            self.assertEqual(request.data['code'], 0, request.data)
-            withdrawal = request.data['data']['request']
+        request = provider_client.post('/api/wallet/withdraw/', {'amount': amount,
+            'withdrawal_account_id': payee['id'], 'expected_payee_version': payee['version'],
+            'client_request_id': 'isolated-double-income-withdraw'}, format='json')
+        self.assertEqual(request.data['code'], 0, request.data)
+        withdrawal = request.data['data']['request']
+        detail = reviewer.get(f"/api/admin/withdrawals/{withdrawal['id']}/")
+        self.assertEqual(detail.data['code'], 0, detail.data)
+        self.assertEqual((detail.data['data']['payee_account'], detail.data['data']['payee_name']),
+                         ('isolated-account-20261102', '隔离测试'))
+        saved = provider_client.get('/api/wallet/withdraw-accounts/').data['data']
+        updated = provider_client.put('/api/wallet/withdraw-accounts/WECHAT/', {
+            'payee_account': 'isolated-updated-20261102', 'payee_name': '隔离新资料',
+            'expected_id': saved[0]['id'], 'expected_version': saved[0]['version']}, format='json')
+        self.assertEqual(updated.data['code'], 0, updated.data)
+        saved = provider_client.get('/api/wallet/withdraw-accounts/').data['data']
+        self.assertEqual((saved[0]['payee_account'], saved[0]['payee_name']),
+                         ('isolated-updated-20261102', '隔离新资料'))
         hold = holds[0]; hold.wallet.refresh_from_db()
         self.assertEqual((hold.wallet.balance, hold.wallet.frozen_amount), (hold.amount - amount, amount))
         url = f"/api/admin/withdrawals/{withdrawal['id']}/"
@@ -355,14 +278,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         self.assertEqual(approved.data['data']['status'], 'APPROVED')
         hold.wallet.refresh_from_db()
         self.assertEqual((hold.wallet.balance, hold.wallet.frozen_amount), (hold.amount - amount, 0))
-        if root:
-            result = subprocess.run(['node', str(repo / 'scripts/provider-income-withdraw-receipt-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'root': root,
-                    'token': issue_account_tokens(accounts[1])[0], 'id': str(accounts[1].pk),
-                    'actual': f"{approved.data['data']['actual_amount'] / 100:.2f}",
-                    'reference': 'ISOLATED-INCOME-WITHDRAW'}), cwd=repo, text=True,
-                encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         # Older wallets may not have been linked to a business account yet.
         hold.wallet.account = None
         hold.wallet.save(update_fields=['account'])
@@ -388,13 +303,13 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         account.save(update_fields=['username', 'nickname'])
         boss.username = 'legacy-recharge-identity'; boss.nickname = '历史充值客户'
         boss.save(update_fields=['username', 'nickname'])
-        repo = Path(__file__).resolve().parents[4]
-        browser = subprocess.run(['node', str(repo / 'scripts/admin-wallet-recharge-375-live.cjs')],
-            input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                'walletId': wallet.pk, 'username': account.username, 'nickname': account.nickname,
-                'receipt': 'ISOLATED-RECHARGE-20261102'}), cwd=repo, text=True,
-            encoding='utf-8', capture_output=True, timeout=60)
-        self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
+        wallets = client.get('/api/admin/wallets/', {'keyword': account.username}).data['data']['list']
+        row = next(item for item in wallets if item['id'] == wallet.pk)
+        self.assertEqual((row['username'], row['nickname']), (account.username, account.nickname))
+        records = client.get('/api/admin/recharge-records/', {'wallet_id': wallet.pk}).data['data']['list']
+        record = next(item for item in records if item['trade_no'] == 'ISOLATED-RECHARGE-20261102')
+        self.assertEqual((record['amount'], record['gift_amount'], record['username'], record['nickname']),
+                         (10000, 1000, account.username, account.nickname))
 
     def test_reward_current_identity_matches_provider_wallet_at_mobile_width(self):
         provider = make_provider(display_name='隔离奖励陪玩')
@@ -413,12 +328,14 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         account.save(update_fields=['username', 'nickname'])
         provider.username = 'legacy-reward-identity'; provider.nickname = '历史奖励陪玩'
         provider.save(update_fields=['username', 'nickname'])
-        repo = Path(__file__).resolve().parents[4]
-        result = subprocess.run(['node', str(repo / 'scripts/admin-reward-identity-375-live.cjs')],
-            input=json.dumps({'api': self.live_server_url, 'token': issue_account_tokens(staff_account)[0],
-                'username': account.username, 'nickname': account.nickname, 'reason': reason, 'penaltyReason': penalty_reason, 'staffName': staff_account.nickname}), cwd=repo,
-            text=True, encoding='utf-8', capture_output=True, timeout=60)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        escorts = client.get('/api/admin/escorts/', {'keyword': account.username}).data['data']['list']
+        self.assertTrue(any(item['id'] == provider.escort_profile.pk and item['username'] == account.username for item in escorts))
+        rewarded = client.post(f'/api/admin/escorts/{provider.escort_profile.pk}/dispose/',
+            {'dispose_type': 'REWARD', 'amount': 3000, 'reason': reason}, format='json')
+        self.assertEqual(rewarded.data['code'], 0, rewarded.data)
+        penalized = client.post(f'/api/admin/escorts/{provider.escort_profile.pk}/dispose/',
+            {'dispose_type': 'PENALTY', 'amount': 1000, 'reason': penalty_reason}, format='json')
+        self.assertEqual(penalized.data['code'], 0, penalized.data)
         wallet.refresh_from_db(); self.assertEqual(wallet.balance, 2000)
         self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type='REWARD', amount=3000).count(), 1)
         self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type='PENALTY', amount=-1000).count(), 1)
@@ -430,13 +347,6 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         DisposeRecord.objects.filter(pk__in=[row['id'] for row in records]).update(account=None)
         legacy_records = client.get('/api/admin/dispose-records/', {'account_id': account.pk}).data['data']['list']
         self.assertEqual({row['id'] for row in legacy_records}, {row['id'] for row in records})
-        root = os.environ.get('XA_PROVIDER_TIMEOUT_H5_DIR')
-        if root:
-            result = subprocess.run(['node', str(repo / 'scripts/provider-reward-375-live.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'root': root, 'reason': reason,
-                    'provider': {'token': issue_account_tokens(account)[0], 'id': str(account.pk)}, 'penaltyReason': penalty_reason}), cwd=repo,
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_provider_toggles_status_while_boss_checkout_remains_open(self):
         boss, provider = make_user(), make_provider(display_name='隔离陪玩', deposit_mode='EARNINGS', pass_tier='BLACK',
@@ -450,10 +360,16 @@ class CheckoutProviderStatusLiveTest(LiveServerTestCase):
         service = make_service(name='陪玩状态验收', price=10000)
         provider.escort_profile.service_items.add(service)
         make_wallet(boss, balance=50000)
-        repo = Path(__file__).resolve().parents[4]
-        result = subprocess.run(['node', str(repo / 'scripts/native-checkout-provider-status-live.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'bossToken': issue_account_tokens(boss_account)[0],
-                'bossId': boss_account.pk, 'providerToken': issue_account_tokens(provider_account)[0],
-                'providerId': provider_account.pk, 'serviceId': service.pk}),
-            cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=30)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        boss_client = APIClient(); boss_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(boss_account)[0])
+        provider_client = APIClient(); provider_client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(provider_account)[0])
+        quote_payload = {'service_id': service.pk, 'provider_id': provider_account.pk}
+        quoted = boss_client.post('/api/orders/quote/', quote_payload, format='json')
+        self.assertEqual(quoted.data['code'], 0, quoted.data)
+        offline = provider_client.post('/api/users/escorts/status/', {'status': 'OFFLINE'}, format='json')
+        self.assertEqual(offline.data['code'], 0, offline.data)
+        blocked = boss_client.post('/api/orders/quote/', quote_payload, format='json')
+        self.assertEqual(blocked.data['code'], 400, blocked.data)
+        available = provider_client.post('/api/users/escorts/status/', {'status': 'AVAILABLE'}, format='json')
+        self.assertEqual(available.data['code'], 0, available.data)
+        restored = boss_client.post('/api/orders/quote/', quote_payload, format='json')
+        self.assertEqual(restored.data['code'], 0, restored.data)

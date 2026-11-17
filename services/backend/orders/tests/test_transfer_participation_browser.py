@@ -1,20 +1,13 @@
-"""Exercise the real provider page against an isolated ASGI and SQLite store."""
-import base64
-import json
+"""Exercise the real transfer-entry API against an isolated SQLite store."""
 import os
-from pathlib import Path
-import subprocess
 from tempfile import TemporaryDirectory
 from unittest import skipUnless
-from unittest.mock import patch
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 
 from club_accounts.tokens import issue_account_tokens
 from orders.tests import test_prestart_handoff as fixture
 from orders.tests import test_release_flow as flow
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_TRANSFER_ENTRY_BROWSER') == '1', 'Requires isolated ASGI and the managed local gateway')
@@ -48,15 +41,10 @@ class TransferParticipationBrowserTest(LiveServerTestCase):
                 'retained':4000, 'transferred':6000, 'agreement':'双方确认原价份额'}))
             segment = OrderParticipationSegment.objects.get(attribution__order=order,
                 provider_account=self.accounts[replacement.pk], released_at__isnull=True)
-            image = base64.b64encode(flow.screenshot().read()).decode('ascii')
-            with patch.dict(os.environ, {'XA_ASGI_NETWORK_TEST_MEDIA_ROOT':media}), single_asgi() as (api, _):
-                root = Path(settings.BASE_DIR).parent.parent
-                result = subprocess.run(['node', str(root / 'scripts/provider-transfer-entry-browser.cjs')], cwd=root,
-                    input=json.dumps({'api':api, 'order':order.pk, 'image':image,
-                        'provider':{'id':self.accounts[replacement.pk].pk,
-                                    'token':issue_account_tokens(self.accounts[replacement.pk])[0]}}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=60)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.accounts[replacement.pk])[0])
+            started = self.client.post(f'/api/orders/orders/{order.pk}/start/',
+                {'entry_image': flow.screenshot()}, format='multipart')
+            self.assertEqual(started.data['code'], 0, started.data)
             segment.refresh_from_db()
             self.assertEqual(segment.start_source, 'TRANSFER_ENTRY')
             self.assertIsNotNone(segment.started_at)

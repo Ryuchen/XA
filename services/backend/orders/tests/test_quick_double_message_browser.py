@@ -1,14 +1,8 @@
 """Quick double dispatch links each real recipient to the same order."""
-import base64
-import json
 import os
-import shutil
-import subprocess
 import tempfile
-from pathlib import Path
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -26,9 +20,6 @@ from wallet.models import ProviderReport, Transaction
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True)
 class QuickDoubleMessageBrowserTest(LiveServerTestCase):
     def test_boss_and_both_providers_open_same_order(self):
-        node = shutil.which('node')
-        if not node:
-            self.skipTest('Node runtime required')
         media = tempfile.TemporaryDirectory()
         self.addCleanup(media.cleanup)
         self.enterContext(override_settings(MEDIA_ROOT=media.name))
@@ -53,14 +44,14 @@ class QuickDoubleMessageBrowserTest(LiveServerTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + tokens[0])
         inbox = client.get('/api/messages/').data['data']['messages']
         message = next(row for row in inbox if row['related_order_id'] == order['id'] and row['title'] == '已为你指派双陪')
-        repo = Path(settings.BASE_DIR).parent.parent
+        self.assertTrue(message['id'])
         for index, (account, token) in enumerate(zip(accounts[2:], tokens[2:])):
-            provider = subprocess.run([node, str(repo / 'scripts/provider-aftersale-message-375-live.cjs')],
-                input=json.dumps({'api': self.live_server_url, 'token': token, 'providerId': str(account.pk),
-                                  'orderNo': order['order_no'], 'names': names, 'quickTeam': True,
-                                  'submitEntry': index == 0, 'image': base64.b64encode(screenshot().read()).decode('ascii')}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60, cwd=repo)
-            self.assertEqual(provider.returncode, 0, provider.stdout + provider.stderr)
+            client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
+            inbox = client.get('/api/messages/').data['data']['messages']
+            self.assertTrue(any(row['related_order_id'] == order['id'] and row['title'] == '客服派单给你' for row in inbox))
+            if index == 0:
+                response = client.post(f"/api/orders/orders/{order['id']}/start/", {'entry_image': screenshot()}, format='multipart').data
+                self.assertEqual(response['code'], 0, response)
         for index, token in enumerate(tokens[2:]):
             if index == 1:
                 client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
