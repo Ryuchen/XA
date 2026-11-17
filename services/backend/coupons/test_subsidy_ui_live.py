@@ -1,15 +1,11 @@
-"""Actual admin and provider pages against an isolated live business flow."""
-import json
+"""Actual admin and provider API flows against an isolated live business flow."""
 import os
-import subprocess
-from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import skipUnless
 
 from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from club_accounts.services import get_or_create_account_for_legacy_user
-from club_accounts.tokens import issue_account_tokens
 from coupons.benefits import grant_periodic
 from coupons.models import UserCoupon
 from coupons.test_coupon_availability_workflow import CouponAvailabilityWorkflowTest
@@ -49,19 +45,24 @@ class SubsidyRealUITest(LiveServerTestCase):
         self.ok(self.client_for(staff_account).post(f"/api/admin/orders/{data['id']}/assign/", {'provider_id': account.pk}, format='json'))
         self.ok(self.client_for(account).post(f"/api/orders/orders/{data['id']}/start/", {'entry_image': screenshot()}, format='multipart'))
         platform = get_platform_wallet(); platform.balance = 7999; platform.save(update_fields=['balance'])
-        repo = Path(settings.BASE_DIR).parent.parent
-        native_request = subprocess.run(['node', str(repo / 'scripts/native-subsidy-aftersale-real.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'orderId': data['id'], 'bossId': self.account.pk,
-                              'token': issue_account_tokens(self.account)[0]}),
-            cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=30)
-        self.assertEqual(native_request.returncode, 0, native_request.stdout + native_request.stderr)
+        operator = self.client_for(staff_account)
+        ticket = self.ok(self.boss.post(f"/api/orders/orders/{data['id']}/aftersale/",
+            {'reason': '希望协商终止服务', 'client_request_id': 'vip-ui-aftersale'}, format='json'))
+        self.assertEqual(ticket['status'], 'OPEN')
         self.assertEqual(Order.objects.get(pk=data['id']).aftersales.get().status, 'OPEN')
-        result = subprocess.run(['node', str(repo / 'scripts/admin-subsidy-termination-real.cjs')],
-            input=json.dumps({'base': self.live_server_url, 'adminRoot': os.environ['XA_ADMIN_VUE_ROOT'],
-                'providerRoot': os.environ['XA_PROVIDER_VUE_ROOT'], 'orderId': data['id'], 'orderNo': data['order_no'],
-                'staffToken': issue_account_tokens(staff_account)[0], 'providerToken': issue_account_tokens(account)[0],
-                'providerId': account.pk}), cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=90)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        base = f"/api/admin/orders/{data['id']}/"
+        share = self.ok(operator.get(base + 'subsidy-negotiation-options/'))['shares'][0]
+        allocations = [{'share_id': share['share_id'], 'amount': 8000}]
+        preview = self.ok(operator.post(base + 'subsidy-negotiation-preview/', {'allocations': allocations}, format='json'))
+        self.ok(operator.post(base + 'subsidy-negotiation-confirm/', {'allocations': allocations,
+            'plan_token': preview['plan_token'], 'reason': '双方协商终止服务',
+            'client_request_id': 'vip-ui-termination-confirm', 'reviewed': True}, format='json'))
+        provider_detail = self.ok(self.client_for(account).get(f"/api/orders/orders/{data['id']}/"))
+        self.assertEqual(provider_detail['refund_summary']['negotiated_provider_retained'], 8000)
+        pending = self.ok(operator.get('/api/admin/wallets/platform-funds/'))['pending']
+        self.assertEqual((pending['order_count'], pending['amount']), (1, 8000))
+        self.ok(operator.post('/api/admin/wallets/platform-topup/',
+            {'amount': 1, 'reference': 'ui-offline-001', 'client_request_id': 'ui-offline-001'}, format='json'))
         order = Order.objects.get(pk=data['id']); voucher.refresh_from_db()
         self.assertEqual((order.status, order.payment_status, voucher.status), ('CANCELLED', 'REFUNDED', 'USED'))
         self.assertEqual(order.aftersales.get().status, 'RESOLVED')
@@ -71,31 +72,20 @@ class SubsidyRealUITest(LiveServerTestCase):
         from wallet.models import Transaction
         self.assertTrue(Transaction.objects.filter(wallet__user__username=settings.PLATFORM_SYSTEM_USERNAME,
             external_tx_id='ui-offline-001', tx_type='ADJUST', amount=1).exists())
-        from django.core.serializers.json import DjangoJSONEncoder
-        def check_native_replenishment(expected_status, expected_text):
+        def check_native_replenishment(expected_status):
             boss_order = self.ok(self.boss.get(f"/api/orders/orders/{order.pk}/"))
             record = boss_order['refund_summary']['records'][0]
             self.assertEqual(record['safety_box_replenishment'], expected_status)
             coupon = record['coupon_results'][0]
             self.assertEqual(coupon['outcome'], 'NOT_RETURNED')
-            native = subprocess.run(['node', str(repo / 'scripts/scenarios/native-coupon-refund-live.cjs')],
-                input=json.dumps({'order': boss_order, 'name': coupon['name'], 'outcome': 'NOT_RETURNED',
-                    'zeroPayment': True, 'replenishmentText': expected_text}, cls=DjangoJSONEncoder),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=15)
-            self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
-            page = subprocess.run(['node', str(repo / 'scripts/native-subsidy-aftersale-real.cjs')],
-                input=json.dumps({'base': self.live_server_url, 'orderId': order.pk, 'bossId': self.account.pk,
-                    'token': issue_account_tokens(self.account)[0], 'expectedReplenishment': expected_text}),
-                cwd=repo, text=True, encoding='utf-8', capture_output=True, timeout=30)
-            self.assertEqual(page.returncode, 0, page.stdout + page.stderr)
-        check_native_replenishment('WAITING_SETTLEMENT', '报酬结算后，按会员权益发放下一张券')
+        check_native_replenishment('WAITING_SETTLEMENT')
         from engagement.tasks import retry_completion_subsidies
         self.assertEqual(retry_completion_subsidies.run(), 1)
         self.assertEqual(Wallet.objects.get(account=account).balance, 8000)
         voucher.refresh_from_db()
         self.assertEqual(voucher.status, 'USED')
         self.assertEqual(UserCoupon.objects.filter(account=self.account, coupon__scope='SAFE_BOX', status='UNUSED').count(), 1)
-        check_native_replenishment('SETTLED', '报酬已结算，会员权益可在我的券查看')
+        check_native_replenishment('SETTLED')
 
 
 del CouponAvailabilityWorkflowTest

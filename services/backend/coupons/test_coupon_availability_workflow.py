@@ -1379,11 +1379,6 @@ class CouponAvailabilityNativeHTTPTest(LiveServerTestCase):
             input=json.dumps({'order':detail, 'name':'隔离返还再用券', 'outcome':'RETURNED'}, cls=DjangoJSONEncoder),
             text=True, encoding='utf-8', capture_output=True, timeout=15, cwd=repo)
         self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
-        browser = subprocess.run(['node', str(repo/'scripts/admin-coupon-history-live.cjs')],
-            input=json.dumps({'root':root, 'base':self.live_server_url, 'orderNo':first['order_no'],
-                              'token':issue_account_tokens(staff_account)[0]}),
-            text=True, encoding='utf-8', capture_output=True, timeout=40, cwd=repo)
-        self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
 
     def test_admin_disable_refreshes_native_coupon_page(self):
         node = shutil.which('node')

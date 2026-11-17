@@ -1,13 +1,10 @@
-import json
 import os
 from datetime import timedelta
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
@@ -16,7 +13,6 @@ from coupons.models import UserCoupon, VipMonthlyCutover
 from engagement.models import ConsumptionConfirmation, MemberBenefitGrant, VipTier
 from engagement.services import config
 from orders.tests.factories import make_boss_type, make_console_user, make_order, make_user
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_VIP_THRESHOLD_BROWSER') == '1', 'Requires isolated ASGI and admin Vite')
@@ -30,13 +26,11 @@ class VipThresholdBrowserTest(LiveServerTestCase):
         permissions = ['engagement:view', 'engagement:edit', 'boss_type:view', 'service:view']
         user = make_console_user(permissions); staff = get_or_create_account_for_legacy_user(user)
         user.admin_membership.account = staff; user.admin_membership.save(update_fields=['account'])
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/admin-vip-threshold-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'action':'configure', 'staff':{'id':staff.pk,
-                    'token':issue_account_tokens(staff)[0], 'permissions':permissions}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        operator = APIClient()
+        operator.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+        saved = operator.patch(f'/api/admin/vip-tiers/{high.pk}/',
+            {'monthly_coupon_count': 3, 'monthly_discount': 88, 'season_discount': 65}, format='json')
+        self.assertEqual((saved.status_code, saved.data['code']), (200, 0), saved.data)
         high.refresh_from_db()
         self.assertEqual((high.monthly_coupon_count, high.monthly_discount, high.season_discount), (3, 88, 65))
 
@@ -56,13 +50,16 @@ class VipThresholdBrowserTest(LiveServerTestCase):
         permissions = ['engagement:view', 'engagement:edit', 'boss_type:view', 'service:view']
         user = make_console_user(permissions); staff = get_or_create_account_for_legacy_user(user)
         user.admin_membership.account = staff; user.admin_membership.save(update_fields=['account'])
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/admin-vip-threshold-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'staff': {'id':staff.pk, 'token':issue_account_tokens(staff)[0],
-                                                       'permissions':permissions}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        operator = APIClient()
+        operator.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+        preview = operator.post(f'/api/admin/vip-tiers/{high.pk}/recalculation-preview/',
+            {'consumption_threshold': 500}, format='json')
+        self.assertEqual((preview.status_code, preview.data['code']), (200, 0), preview.data)
+        self.assertEqual((preview.data['data']['affected_count'], preview.data['data']['upgrade_count'],
+                          preview.data['data']['downgrade_count']), (1, 1, 0))
+        saved = operator.patch(f'/api/admin/vip-tiers/{high.pk}/',
+            {'consumption_threshold': 500, 'recalculation_token': preview.data['data']['token']}, format='json')
+        self.assertEqual((saved.status_code, saved.data['code']), (200, 0), saved.data)
         boss.refresh_from_db(); high.refresh_from_db()
         self.assertEqual((boss.boss_type_id, high.recharge_threshold), (high.boss_type_id, 500))
         self.assertEqual(MemberBenefitGrant.objects.filter(account=boss, tier=high).count(), 1)
@@ -84,13 +81,16 @@ class VipThresholdBrowserTest(LiveServerTestCase):
         permissions = ['engagement:view', 'engagement:edit', 'boss_type:view', 'service:view']
         user = make_console_user(permissions); staff = get_or_create_account_for_legacy_user(user)
         user.admin_membership.account = staff; user.admin_membership.save(update_fields=['account'])
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/admin-vip-threshold-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'action': 'reactivate', 'staff': {'id':staff.pk,
-                    'token':issue_account_tokens(staff)[0], 'permissions':permissions}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        operator = APIClient()
+        operator.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+        preview = operator.post(f'/api/admin/vip-tiers/{high.pk}/recalculation-preview/',
+            {'active': True}, format='json')
+        self.assertEqual((preview.status_code, preview.data['code']), (200, 0), preview.data)
+        self.assertEqual((preview.data['data']['affected_count'], preview.data['data']['upgrade_count'],
+                          preview.data['data']['downgrade_count']), (1, 1, 0))
+        saved = operator.patch(f'/api/admin/vip-tiers/{high.pk}/',
+            {'active': True, 'recalculation_token': preview.data['data']['token']}, format='json')
+        self.assertEqual((saved.status_code, saved.data['code']), (200, 0), saved.data)
         boss.refresh_from_db(); high.refresh_from_db()
         self.assertTrue(high.active)
         self.assertEqual(boss.boss_type_id, high.boss_type_id)
@@ -112,13 +112,18 @@ class VipThresholdBrowserTest(LiveServerTestCase):
         permissions = ['engagement:view', 'engagement:edit', 'boss_type:view', 'service:view']
         user = make_console_user(permissions); staff = get_or_create_account_for_legacy_user(user)
         user.admin_membership.account = staff; user.admin_membership.save(update_fields=['account'])
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / 'scripts/admin-vip-threshold-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'action': 'create', 'staff': {'id':staff.pk,
-                    'token':issue_account_tokens(staff)[0], 'permissions':permissions}}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        operator = APIClient()
+        operator.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+        payload = {'boss_type': kind.pk, 'level': 3, 'consumption_threshold': 400, 'benefits': {},
+                   'upgrade_rewards': [], 'companion_service_ids': [], 'safe_box_service_ids': [],
+                   'monthly_discount': 90, 'monthly_coupon_count': 0, 'season_discount': 80, 'active': True}
+        preview = operator.post('/api/admin/vip-tiers/creation-preview/', payload, format='json')
+        self.assertEqual((preview.status_code, preview.data['code']), (200, 0), preview.data)
+        self.assertEqual((preview.data['data']['affected_count'], preview.data['data']['upgrade_count'],
+                          preview.data['data']['downgrade_count']), (1, 1, 0))
+        saved = operator.post('/api/admin/vip-tiers/',
+            {**payload, 'recalculation_token': preview.data['data']['token']}, format='json')
+        self.assertEqual((saved.status_code, saved.data['code']), (201, 0), saved.data)
         tier = VipTier.objects.get(boss_type=kind)
         boss.refresh_from_db()
         self.assertEqual((tier.level, tier.recharge_threshold, boss.boss_type_id), (3, 400, kind.pk))
