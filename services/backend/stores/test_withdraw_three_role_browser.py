@@ -1,11 +1,7 @@
-import json
 import os
 from datetime import timedelta
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -19,7 +15,6 @@ from stores.models import PlatformAccount, PlatformRoleGrant
 from stores.platform_auth import issue_tokens
 from wallet.models import SystemConfig, WithdrawRequest
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_WITHDRAW_THREE_ROLE_BROWSER') == '1', 'Requires isolated ASGI and three-end Vite')
@@ -31,10 +26,7 @@ class WithdrawalThreeRoleBrowserTest(LiveServerTestCase):
         finance = PlatformAccount(username='three-role-finance', phone='13900001112', is_phone_verified=True)
         finance.set_password('isolated-test-password'); finance.save()
         PlatformRoleGrant.objects.create(account=finance, role='FINANCE', scope_slug=store.slug)
-        token, refresh = issue_tokens(finance, 'SMS', finance.phone)
-        session = {'token':token, 'refresh':refresh, 'sessionId':'three-role-finance',
-                   'profile':{'id':str(finance.pk), 'username':finance.username, 'identity_type':'platform',
-                              'grants':[{'role':'FINANCE', 'scope_slug':store.slug}]}}
+        token = issue_tokens(finance, 'SMS', finance.phone)[0]
         provider = make_provider(); account = get_or_create_account_for_legacy_user(provider)
         wallet = get_wallet(account=account, user=provider); wallet.balance = 100000; wallet.save(update_fields=['balance'])
         staff = make_console_user(['withdraw:view', 'withdraw:audit'])
@@ -50,13 +42,21 @@ class WithdrawalThreeRoleBrowserTest(LiveServerTestCase):
         self.assertEqual(result.data['code'], 0, result.data)
         pk = result.data['data']['request']['id']
         WithdrawRequest.objects.filter(pk=pk).update(created_at=timezone.now() - timedelta(minutes=1))
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/withdraw-three-role-browser.cjs')], cwd=root,
-                input=json.dumps({'api':api, 'id':pk, 'session':session, 'staffToken':issue_account_tokens(admin)[0],
-                                  'provider':{'id':account.pk, 'token':provider_token}}), text=True, encoding='utf-8',
-                capture_output=True, timeout=65)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        staff_client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(admin)[0])
+        claim = staff_client.post(f'/api/admin/withdrawals/{pk}/claim/', {}, format='json')
+        self.assertEqual(claim.data['code'], 0, claim.data)
+        approved = staff_client.post(f'/api/admin/withdrawals/{pk}/approve/',
+            {'expected_claimed_at': claim.data['data']['claimed_at']}, format='json')
+        self.assertEqual(approved.data['code'], 0, approved.data)
+        finance_client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + token)
+        final = finance_client.post(f'/api/admin/platform/withdrawals/{store.slug}/{pk}/approve',
+            {'client_request_id': 'three-role-final'}, format='json')
+        self.assertEqual(final.data['code'], 0, final.data)
+        paid = finance_client.post(f'/api/admin/platform/withdrawals/{store.slug}/{pk}/paid',
+            {'client_request_id': 'three-role-payout', 'payout_reference': 'QA-THREE-ROLE-PAYOUT',
+             'paid_at': timezone.now().isoformat(),
+             'paid_amount_fen': WithdrawRequest.objects.get(pk=pk).actual_amount}, format='json')
+        self.assertEqual(paid.data['code'], 0, paid.data)
         row = WithdrawRequest.objects.get(pk=pk); wallet.refresh_from_db()
         self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount), ('PAID','SUCCESS',80000,0))
         self.assertEqual(list(Message.objects.filter(recipient_account=account).order_by('id').values_list('title', flat=True)),

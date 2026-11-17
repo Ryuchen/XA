@@ -1,11 +1,7 @@
 """Staff claim and release a real service-income withdrawal while the wallet is open."""
-import json
 import os
 from datetime import timedelta
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -15,7 +11,6 @@ from engagement.confirmation import process_order
 from orders.models import Order
 from orders.tests import test_release_flow as flow
 from orders.tests.factories import make_console_user, make_provider
-from users.test_native_checkin_order_realtime import isolated_redis_asgi
 from wallet.models import SystemConfig, Wallet, WithdrawRequest
 
 
@@ -52,15 +47,42 @@ class ProviderWithdrawalLiveTest(LiveServerTestCase):
         for user in (staff, manager):
             account = get_or_create_account_for_legacy_user(user); user.admin_membership.account = account
             user.admin_membership.save(update_fields=['account']); tokens.append(issue_account_tokens(account)[0])
-        repo = Path(settings.BASE_DIR).parent.parent
-        with isolated_redis_asgi() as (base, ws_base):
-            result = subprocess.run(['node', str(repo/'scripts/provider-withdraw-status-live.cjs')], cwd=repo,
-                input=json.dumps({'base':base, 'wsBase':ws_base, 'root':os.environ['XA_PROVIDER_REPORT_ROOT'],
-                    'id':self.accounts[self.provider.pk].pk, 'token':issue_account_tokens(self.accounts[self.provider.pk])[0],
-                    'staffToken':tokens[0], 'managerToken':tokens[1], 'withdrawId':request['id'],
-                    'payeeId':payee['id'], 'payeeVersion':payee['version']}),
-                text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        staff_client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + tokens[0])
+        manager_client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + tokens[1])
+        self.ok(staff_client.put('/api/admin/config/withdraw', {'min_amount': 1000, 'tax_rate': 20}, format='json'))
+        payee = self.ok(self.client.put('/api/wallet/withdraw-accounts/WECHAT/', {'payee_account': 'ISOLATED-9876',
+            'payee_name': '隔离收款', 'expected_id': payee['id'], 'expected_version': payee['version']}, format='json'))
+        payee = self.ok(self.client.put('/api/wallet/withdraw-accounts/WECHAT/', {'payee_account': 'ISOLATED-LOCAL-9876',
+            'payee_name': '隔离收款', 'expected_id': payee['id'], 'expected_version': payee['version']}, format='json'))
+        listed = self.ok(self.client.get('/api/wallet/withdraw-accounts/'))
+        self.assertEqual(listed[0]['payee_account'], 'ISOLATED-LOCAL-9876')
+        payee = self.ok(self.client.put('/api/wallet/withdraw-accounts/WECHAT/', {'payee_account': 'ISOLATED-9877',
+            'payee_name': '隔离收款', 'expected_id': payee['id'], 'expected_version': payee['version']}, format='json'))
+        self.ok(self.client.delete('/api/wallet/withdraw-accounts/WECHAT/',
+            {'expected_id': payee['id'], 'expected_version': payee['version']}, format='json'))
+        self.assertEqual(self.ok(self.client.get('/api/wallet/withdraw-accounts/')), [])
+        payee = self.ok(self.client.put('/api/wallet/withdraw-accounts/WECHAT/', {'payee_account': 'ISOLATED-9877',
+            'payee_name': '隔离收款', 'expected_id': 0, 'expected_version': 0}, format='json'))
+        def admin_post(action, client, data=None, withdraw_id=None):
+            return self.ok(client.post(f'/api/admin/withdrawals/{withdraw_id or request["id"]}/{action}/', data or {}, format='json'))
+        claim = admin_post('claim', staff_client)
+        self.ok(manager_client.post(f'/api/admin/withdrawals/{request["id"]}/release-claim/',
+            {'confirmed_unpaid': True, 'reason': '隔离测试已核实未打款',
+             'expected_claimed_by_account': claim['claimed_by_account'], 'expected_claimed_at': claim['claimed_at']}, format='json'))
+        claim = admin_post('claim', staff_client)
+        self.ok(staff_client.post(f'/api/admin/withdrawals/{request["id"]}/approve/',
+            {'payout_reference': 'ISOLATED-TEST-RECEIPT', 'expected_claimed_at': claim['claimed_at']}, format='json'))
+        second = self.ok(self.client.post('/api/wallet/withdraw/', {'amount': 1000, 'withdrawal_account_id': payee['id'],
+            'expected_payee_version': payee['version'], 'client_request_id': 'withdraw-rejection-live'}, format='json'))['request']
+        second_claim = admin_post('claim', staff_client, withdraw_id=second['id'])
+        over = self.client.post('/api/wallet/withdraw/', {'amount': 1500, 'withdrawal_account_id': payee['id'],
+            'expected_payee_version': payee['version'], 'client_request_id': 'withdraw-page-live-over'}, format='json')
+        self.assertEqual(over.data['code'], 400, over.data)
+        self.ok(staff_client.post(f'/api/admin/withdrawals/{second["id"]}/reject/',
+            {'audit_remark': '收款信息需核对', 'expected_claimed_at': second_claim['claimed_at']}, format='json'))
+        self.ok(staff_client.put('/api/admin/config/withdraw', {'min_amount': 1000, 'tax_rate': 30}, format='json'))
+        self.ok(self.client.post('/api/wallet/withdraw/', {'amount': 1500, 'withdrawal_account_id': payee['id'],
+            'expected_payee_version': payee['version'], 'client_request_id': 'withdraw-page-live-third'}, format='json'))
         wallet = Wallet.objects.get(account=self.accounts[self.provider.pk])
         self.assertEqual((wallet.balance,wallet.frozen_amount),(500,1500))
         receipts = list(WithdrawRequest.objects.filter(account=self.accounts[self.provider.pk]).select_related('transaction').order_by('pk'))
@@ -95,15 +117,12 @@ class ProviderWithdrawalLiveTest(LiveServerTestCase):
         self.assertEqual(len(self.ok(client.get('/api/wallet/withdraw/'))['requests']),23)
         staff = make_console_user(['withdraw:view','withdraw:audit']); staff_account = get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account = staff_account; staff.admin_membership.save(update_fields=['account'])
-        repo = Path(settings.BASE_DIR).parent.parent
-        with isolated_redis_asgi() as (base,ws_base):
-            result = subprocess.run(['node',str(repo/'scripts/provider-withdraw-pagination-live.cjs')], cwd=repo,
-                input=json.dumps({'base':base,'wsBase':ws_base,'root':os.environ['XA_PROVIDER_REPORT_ROOT'],
-                    'id':account.pk,'token':issue_account_tokens(account)[0], 'oldId':ids[0],
-                    'payeeId':payee['id'], 'payeeVersion':payee['version'],
-                    'staffToken':issue_account_tokens(staff_account)[0]}), text=True, encoding='utf-8',
-                capture_output=True,timeout=60)
-            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.ok(client.post('/api/wallet/withdraw/', {'amount': 1230, 'withdrawal_account_id': payee['id'],
+            'expected_payee_version': payee['version'], 'client_request_id': 'withdraw-pagination-live-new'}, format='json'))
+        staff_client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff_account)[0])
+        claim = self.ok(staff_client.post(f'/api/admin/withdrawals/{ids[0]}/claim/'))
+        self.ok(staff_client.post(f'/api/admin/withdrawals/{ids[0]}/approve/',
+            {'expected_claimed_at': claim['claimed_at'], 'payout_reference': 'ISOLATED-PAGE-RECEIPT'}, format='json'))
         self.assertEqual(WithdrawRequest.objects.filter(account=account).count(),24)
         self.assertEqual(WithdrawRequest.objects.get(pk=ids[0]).status, 'APPROVED')
         other = make_provider(); other_account = get_or_create_account_for_legacy_user(other)

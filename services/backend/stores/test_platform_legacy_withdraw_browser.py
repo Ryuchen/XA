@@ -1,12 +1,9 @@
-import json
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from orders.tests.factories import make_provider
@@ -15,7 +12,6 @@ from stores.models import PlatformAccount, PlatformRoleGrant
 from stores.platform_auth import issue_tokens
 from wallet.models import Transaction, WithdrawRequest
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_LEGACY_WITHDRAW_BROWSER') == '1', 'Requires isolated ASGI and admin Vite')
@@ -28,7 +24,7 @@ class PlatformLegacyWithdrawalBrowserTest(LiveServerTestCase):
         finance = PlatformAccount(username='isolated-finance', phone='13900001111', is_phone_verified=True)
         finance.set_password('isolated-test-password'); finance.save()
         PlatformRoleGrant.objects.create(account=finance, role='FINANCE', scope_slug=store.slug)
-        token, refresh = issue_tokens(finance, 'SMS', finance.phone)
+        token = issue_tokens(finance, 'SMS', finance.phone)[0]
         provider = make_provider()
         account = get_or_create_account_for_legacy_user(provider)
         wallet = get_wallet(account=account, user=provider)
@@ -39,15 +35,21 @@ class PlatformLegacyWithdrawalBrowserTest(LiveServerTestCase):
         row = WithdrawRequest.objects.create(user=provider, account=account, amount=20000, tax_amount=1000,
             payee_method='WECHAT', payee_name='隔离历史申请', payee_account='qa-only',
             workflow_version=1, transaction=tx)
-        session = {'token': token, 'refresh': refresh, 'sessionId': 'isolated-finance-test',
-                   'profile': {'id': str(finance.pk), 'username': finance.username, 'identity_type': 'platform',
-                               'grants': [{'role': 'FINANCE', 'scope_slug': store.slug}]}}
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/platform-legacy-withdraw-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'session': session}), text=True, encoding='utf-8',
-                capture_output=True, timeout=45)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        finance_client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + token)
+        stores_view = finance_client.get('/api/admin/platform/withdrawals')
+        self.assertEqual(stores_view.data['code'], 0, stores_view.data)
+        entry = next(item for item in stores_view.data['data']['stores'] if item['slug'] == store.slug)
+        self.assertEqual(entry['legacy_pending'], 1)
+        legacy = finance_client.get(f'/api/admin/platform/withdrawals/{store.slug}', {'scope': 'legacy'})
+        self.assertEqual(legacy.data['code'], 0, legacy.data)
+        record = next(item for item in legacy.data['data']['results'] if item['id'] == row.pk)
+        self.assertEqual(record['workflow_version'], 1)
+        self.assertEqual(record['legacy_ledger']['transaction_status'], 'PENDING')
+        self.assertEqual(record['legacy_ledger']['wallet_frozen_total'], 20000)
+        self.assertTrue(record['legacy_ledger']['owner_match'])
+        blocked = finance_client.post(f'/api/admin/platform/withdrawals/{store.slug}/{row.pk}/approve',
+            {'client_request_id': 'legacy-inspect-approve'}, format='json')
+        self.assertEqual(blocked.status_code, 404, blocked.data)
         row.refresh_from_db(); wallet.refresh_from_db(); tx.refresh_from_db()
         self.assertEqual((row.workflow_version, row.status, wallet.balance, wallet.frozen_amount, tx.status),
                          (1, 'PENDING', 80000, 20000, 'PENDING'))

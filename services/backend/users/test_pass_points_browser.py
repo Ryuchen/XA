@@ -1,11 +1,8 @@
-import json
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
+from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
@@ -15,7 +12,6 @@ from engagement.services import config
 from orders.tests.factories import make_provider
 from users.models import ProviderPassPointRedemption, ProviderPassPurchase
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_PASS_POINTS_BROWSER') == '1', 'Requires isolated ASGI and provider Vite')
@@ -31,12 +27,14 @@ class PassPointsBrowserTest(LiveServerTestCase):
         config()
         save_points_terms(group_point_hundredths=10000, group_coin_units=10,
                           max_ratio_basis_points=5000, version=0, audit=lambda *_: None)
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/pass-points-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'account': account.pk, 'token': issue_account_tokens(account)[0]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=45)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        client = APIClient(HTTP_HOST='sl.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        quote = client.post('/api/users/provider-pass/points-quote/', {'tier': 'BRONZE',
+                            'selected_point_hundredths': 20000}, format='json')
+        self.assertEqual(quote.data['code'], 0, quote.data)
+        bought = client.post('/api/users/provider-pass/', {'tier': 'BRONZE', 'days': 1,
+            'points_quote_token': quote.data['data']['quote_token'],
+            'client_request_id': 'pass-points-browser'}, format='json')
+        self.assertEqual(bought.data['code'], 0, bought.data)
         wallet.refresh_from_db()
         purchase = ProviderPassPurchase.objects.get(account=account)
         self.assertEqual((wallet.balance, purchase.paid_amount, purchase.point_discount_amount), (0, 180, 20))

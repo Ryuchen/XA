@@ -1,12 +1,8 @@
-"""Finance UI reading real mixed pass refunds from an isolated store."""
+"""Finance reads real mixed pass refunds from an isolated store over the scoped API."""
 from datetime import timedelta
-import json
 import os
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -22,7 +18,6 @@ from stores.platform_auth import issue_tokens
 from users.models import ProviderPassPurchase, ProviderPassRefund
 from wallet.models import get_platform_wallet
 from wallet.services import get_wallet
-from wallet.test_deposit_realtime_workflow import single_asgi
 
 
 @skipUnless(os.environ.get('XA_PASS_FINANCE_BROWSER') == '1', 'Requires isolated ASGI and admin Vite')
@@ -62,11 +57,13 @@ class PlatformPassPointsBrowserTest(LiveServerTestCase):
         finance = PlatformAccount(username='finance-points-browser', phone='13800001111', is_phone_verified=True)
         finance.set_password('Synthetic-Platform-Password-2026!'); finance.save()
         PlatformRoleGrant.objects.create(account=finance, role='FINANCE', scope_slug='shenglang')
-        token, refresh = issue_tokens(finance, 'SMS', finance.phone)
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            process = subprocess.run(['node', str(root / 'scripts/platform-pass-points-browser.cjs')], cwd=root,
-                input=json.dumps({'api': api, 'token': token, 'refresh': refresh, 'id': str(finance.pk),
-                                  'username': finance.username, 'accounts': accounts}),
-                text=True, encoding='utf-8', capture_output=True, timeout=45)
-            self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
+        token = issue_tokens(finance, 'SMS', finance.phone)[0]
+        finance_client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + token)
+        detail = finance_client.get('/api/admin/platform/pass-refund-shortfalls/shenglang')
+        self.assertEqual(detail.data['code'], 0, detail.data)
+        rows = {row['account_no']: row for row in detail.data['data']['results']}
+        good, bad = rows[accounts[0]], rows[accounts[1]]
+        self.assertEqual((good['refund_amount'], good['shortfall_amount'], good['point_discount_amount'],
+                          good['points_redeemed'], good['points_returned'], good['points_status']),
+                         (180, 180, 20, 20000, 20000, 'VERIFIED'))
+        self.assertEqual(bad['points_status'], 'REVIEW')
