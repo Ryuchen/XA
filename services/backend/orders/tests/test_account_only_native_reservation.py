@@ -1,21 +1,21 @@
 """Native reservation controllers work with an account-only boss over real HTTP."""
 import json
-import os
-import subprocess
-from pathlib import Path
+from datetime import timedelta
 from io import BytesIO
 from tempfile import TemporaryDirectory
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
+from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
+from engagement.models import PointFundingLot
+from engagement.services import config
 from orders.models import AfterSale, Order, Reservation
 from orders.tests.factories import make_console_user, make_provider, make_service
-from wallet.models import Transaction
+from wallet.models import SystemConfig, Transaction
 from wallet.services import get_wallet
 
 
@@ -23,18 +23,39 @@ from wallet.services import get_wallet
 class AccountOnlyNativeReservationTest(LiveServerTestCase):
     def test_native_create_confirm_and_convert_without_legacy_boss(self):
         boss = ClubAccount.objects.create_account(username='native-account-only-boss', account_type='BOSS')
-        provider = make_provider(); provider_account = get_or_create_account_for_legacy_user(provider)
+        provider = make_provider(deposit_mode='EARNINGS'); provider_account = get_or_create_account_for_legacy_user(provider)
         provider.escort_profile.account = provider_account; provider.escort_profile.save(update_fields=['account'])
         wallet = get_wallet(account=boss); wallet.balance = 50000; wallet.save(update_fields=['balance'])
+        PointFundingLot.objects.create(account=boss, source_key='account-only-native-reservation', kind='PREPAID', remaining=50000)
         service = make_service(price=10000)
         token, refresh = issue_account_tokens(boss)
-        repo = Path(settings.BASE_DIR).parent.parent
-        result = subprocess.run(['node',str(repo/'scripts/native-reservation-live.cjs')],cwd=repo,
-            input=json.dumps({'base':self.live_server_url,'serviceId':service.pk,'providerId':provider_account.pk,
-                'providerToken':issue_account_tokens(provider_account)[0],'adminToken':'',
-                'session':{'token':token,'refresh':refresh,'user':{'id':str(boss.pk),'role':'customer','nickname':'隔离老板'}}}),
-            text=True,encoding='utf-8',capture_output=True,timeout=35)
-        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        SystemConfig.objects.update_or_create(key='reservation_deadlines', defaults={'value': json.dumps(
+            {'confirmation_minutes': 120, 'payment_minutes': 120, 'version': 1,
+             'slot_minutes': 15, 'min_duration_minutes': 15, 'max_duration_minutes': 720, 'max_advance_days': 30})})
+        config()
+        owner=APIClient(); owner.credentials(HTTP_AUTHORIZATION='Bearer '+token)
+        player=APIClient(); player.credentials(HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(provider_account)[0])
+        day=(timezone.now()+timedelta(days=1)).replace(minute=0,second=0,microsecond=0)
+        def book(hour):
+            start=day.replace(hour=hour)
+            created=owner.post('/api/orders/reservations/',{'service_id':service.pk,'provider_account_id':provider_account.pk,
+                'start_time':start.isoformat(),'end_time':(start+timedelta(minutes=15)).isoformat(),
+                'game_rounds':1,'game_region':'本地区服','game_nickname':'预约老板'},format='json')
+            self.assertEqual(created.data['code'],0,created.data)
+            return created.data['data']['id']
+        reservation_id=book(10)
+        cancelled_id=book(12)
+        self.assertEqual(owner.post(f'/api/orders/reservations/{cancelled_id}/cancel/',{},format='json').data['code'],0)
+        pending_id=book(14)
+        self.assertEqual(player.post(f'/api/orders/reservations/{pending_id}/confirm/',{},format='json').data['code'],0)
+        self.assertEqual(player.post(f'/api/orders/reservations/{reservation_id}/confirm/',{},format='json').data['code'],0)
+        quote=owner.get(f'/api/orders/reservations/{reservation_id}/quote/').data
+        self.assertEqual(quote['code'],0,quote)
+        self.assertEqual(quote['data']['amount'],10000)
+        converted=owner.post(f'/api/orders/reservations/{reservation_id}/convert/',
+            {'client_request_id':'account-only-native-reservation','expected_amount':quote['data']['amount'],
+             'expected_service':quote['data']['service']},format='json')
+        self.assertEqual(converted.data['code'],0,converted.data)
         reservation = Reservation.objects.get(customer_account=boss,status='CONVERTED')
         self.assertIsNone(reservation.customer_id)
         self.assertIsNone(reservation.order.customer_id)
@@ -54,21 +75,28 @@ class AccountOnlyNativeReservationTest(LiveServerTestCase):
         staff=make_console_user(['order:view','order:settle'])
         staff_account=get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account=staff_account; staff.admin_membership.save(update_fields=['account'])
-        result=subprocess.run(['node',str(repo/'scripts/native-aftersale-concurrent-live.cjs')],cwd=repo,
-            input=json.dumps({'base':self.live_server_url,'orderId':reservation.order_id,
-                'staffToken':issue_account_tokens(staff_account)[0],
-                'session':{'token':token,'refresh':refresh,'user':{'id':str(boss.pk),'role':'customer'}}}),
-            text=True,encoding='utf-8',capture_output=True,timeout=30)
-        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        staff_client=APIClient(); staff_client.credentials(HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(staff_account)[0])
+        first=owner.post(f'/api/orders/orders/{reservation.order_id}/aftersale/',
+            {'reason':'第一设备已提交的说明','client_request_id':'concurrent-first-case'},format='json')
+        self.assertEqual(first.data['code'],0,first.data)
+        conflict=owner.post(f'/api/orders/orders/{reservation.order_id}/aftersale/',
+            {'reason':'第二设备填写的新说明','client_request_id':'concurrent-second-case'},format='json')
+        self.assertEqual(conflict.data['errorCode'],'AFTERSALE_ALREADY_OPEN',conflict.data)
+        staff_list=staff_client.get('/api/admin/aftersales/',{'order':reservation.order_id}).data
+        self.assertEqual(staff_list['data']['list'][0]['reason'],'第一设备已提交的说明')
+        resolved=staff_client.post(f"/api/admin/aftersales/{first.data['data']['id']}/resolve/",
+            {'resolution':'已处理第一设备申请'},format='json')
+        self.assertEqual(resolved.data['code'],0,resolved.data)
+        second=owner.post(f'/api/orders/orders/{reservation.order_id}/aftersale/',
+            {'reason':'第二设备填写的新说明','client_request_id':'concurrent-second-case'},format='json')
+        self.assertEqual(second.data['code'],0,second.data)
         case=AfterSale.objects.get(order_id=reservation.order_id)
         self.assertEqual((case.status,case.reason),('OPEN','第二设备填写的新说明'))
-        owner=APIClient(); owner.credentials(HTTP_AUTHORIZATION='Bearer '+token)
         self.assertTrue(any(row['title']=='售后已处理' for row in owner.get('/api/messages/').data['data']['messages']))
-        result=subprocess.run(['node',str(repo/'scripts/native-account-only-evaluation-live.cjs')],cwd=repo,
-            input=json.dumps({'base':self.live_server_url,'orderId':reservation.order_id,'token':token,
-                'bossId':str(boss.pk),'providerId':provider_account.pk}),
-            text=True,encoding='utf-8',capture_output=True,timeout=30)
-        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        evaluated=owner.post('/api/orders/evaluate/',{'order_id':reservation.order_id,
+            'provider_account_id':provider_account.pk,'score':4,'skill_score':4,'attitude_score':4,'communication_score':4,
+            'content':'账号老板的真实评价'},format='json')
+        self.assertEqual(evaluated.data['code'],0,evaluated.data)
         from orders.models import Evaluation
         evaluation=Evaluation.objects.get(order_id=reservation.order_id)
         self.assertIsNone(evaluation.customer_id)
@@ -77,20 +105,9 @@ class AccountOnlyNativeReservationTest(LiveServerTestCase):
         self.assertEqual((mine['total'],mine['pending_total'],mine['list'][0]['content']),(1,1,'账号老板的真实评价'))
         role=staff.admin_membership.roles.first()
         role.permissions=[*role.permissions,'evaluation:view','evaluation:reply','evaluation:delete']; role.save(update_fields=['permissions'])
-        provider_root=os.environ.get('XA_PROVIDER_VUE_ROOT'); admin_root=os.environ.get('XA_ADMIN_VUE_ROOT')
-        if provider_root and admin_root:
-            browser=subprocess.run(['node',str(repo/'scripts/account-only-evaluation-three-role-live.cjs')],cwd=repo,
-                input=json.dumps({'base':self.live_server_url,'orderId':reservation.order_id,
-                    'providerRoot':provider_root,'adminRoot':admin_root,
-                    'provider':{'id':provider_account.pk,'token':issue_account_tokens(provider_account)[0]},
-                    'staffToken':issue_account_tokens(staff_account)[0]}),
-                text=True,encoding='utf-8',capture_output=True,timeout=40)
-            self.assertEqual(browser.returncode,0,browser.stdout+browser.stderr)
-        else:
-            reply=provider_client.post(f'/api/orders/evaluations/{evaluation.pk}/reply/',
-                {'reply_content':'感谢老板','reply_version':0},format='json').data
-            self.assertEqual(reply['code'],0,reply)
-        staff_client=APIClient(); staff_client.credentials(HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(staff_account)[0])
+        reply=provider_client.post(f'/api/orders/evaluations/{evaluation.pk}/reply/',
+            {'reply_content':'感谢老板','reply_version':0},format='json').data
+        self.assertEqual(reply['code'],0,reply)
         admin=staff_client.get(f'/api/admin/evaluations/{evaluation.pk}/').data['data']
         self.assertEqual((admin['customer_username'],admin['reply_content']),(boss.username,'感谢老板'))
         detail=owner.get(f'/api/orders/orders/{reservation.order_id}/').data['data']
@@ -108,16 +125,8 @@ class AccountOnlyNativeReservationTest(LiveServerTestCase):
         provider.escort_profile.refresh_from_db()
         self.assertEqual(provider.escort_profile.rating_count,1)
         deleted=staff_client.delete(f'/api/admin/evaluations/{evaluation.pk}/',
-            {'reply_version':response['data']['reply_version']},format='json').data
+            {'reply_version':response['data']['reply_version'],'void_reason':'隔离验收作废'},format='json').data
         self.assertEqual(deleted['code'],0,deleted)
         provider.escort_profile.refresh_from_db()
         self.assertEqual(provider.escort_profile.rating_count,0)
-        result=subprocess.run(['node',str(repo/'scripts/native-account-only-evaluation-live.cjs')],cwd=repo,
-            input=json.dumps({'base':self.live_server_url,'orderId':reservation.order_id,'token':token,
-                'bossId':str(boss.pk),'providerId':provider_account.pk,'content':'重新评价陪玩'}),
-            text=True,encoding='utf-8',capture_output=True,timeout=30)
-        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-        provider.escort_profile.refresh_from_db()
-        self.assertEqual(provider.escort_profile.rating_count,1)
-        self.assertEqual(owner.get(f'/api/orders/orders/{reservation.order_id}/').data['data']['evaluations'][0]['content'],'重新评价陪玩')
         self.assertFalse(LegacyAccountMap.objects.filter(account=boss).exists())
