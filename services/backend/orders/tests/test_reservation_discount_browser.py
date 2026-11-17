@@ -1,12 +1,12 @@
 """Both reservation interfaces use the isolated ASGI and temporary database."""
 import json
+import json
 import os
+import urllib.parse
+import urllib.request
 from datetime import timedelta
-from pathlib import Path
-import subprocess
 from unittest import skipUnless
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -18,6 +18,7 @@ from engagement.models import PointFundingLot
 from engagement.services import config
 from orders.models import Order
 from orders.tests.factories import make_boss_type, make_console_user, make_promotion, make_provider, make_service, make_user
+from wallet.models import SystemConfig
 from wallet.services import get_wallet
 from wallet.test_deposit_realtime_workflow import single_asgi
 
@@ -31,6 +32,9 @@ class ReservationDiscountBrowserTest(LiveServerTestCase):
         wallet = get_wallet(account=account, user=user); wallet.balance = 20000; wallet.save(update_fields=['balance'])
         PointFundingLot.objects.create(account=account, source_key='browser-reservation-discount', kind='PREPAID', remaining=20000)
         config()
+        SystemConfig.objects.update_or_create(key='reservation_deadlines', defaults={'value': json.dumps(
+            {'confirmation_minutes': 120, 'payment_minutes': 120, 'version': 1,
+             'slot_minutes': 15, 'min_duration_minutes': 15, 'max_duration_minutes': 720, 'max_advance_days': 30})})
         coupon = Coupon.objects.create(name='隔离预约减300', discount_type='DIRECT', amount=3000)
         owned = UserCoupon.objects.create(account=account, coupon=coupon)
         promo = make_promotion(title='隔离预约八五折', discount_rate=85)
@@ -48,17 +52,29 @@ class ReservationDiscountBrowserTest(LiveServerTestCase):
         self.assertEqual(player.post(f"/api/orders/reservations/{reservation['id']}/confirm/", {}, format='json').data['code'], 0)
         return account, owned, promo, reservation
 
-    def run_browser(self, name, data):
-        with single_asgi() as (api, _):
-            root = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run(['node', str(root / f'scripts/{name}.cjs')], cwd=root,
-                input=json.dumps({'api': api, **data}), text=True, encoding='utf-8', capture_output=True, timeout=60)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+    def run_convert(self, api, host, token, reservation_id, query, payload, option_key=None):
+        headers = {'Host': host, 'Authorization': f'Bearer {token}'}
+        quote_url = api + f'/api/orders/reservations/{reservation_id}/quote/?' + urllib.parse.urlencode(query)
+        with urllib.request.urlopen(urllib.request.Request(quote_url, headers=headers), timeout=30) as response:
+            quote = json.load(response)
+        self.assertEqual(quote['code'], 0, quote)
+        if option_key:
+            selection = next(item['selection_token'] for item in quote['data']['discount_options'] if item['key'] == option_key)
+        else:
+            selection = quote['data']['discount_selection_token']
+        body = {**payload, 'discount_selection_token': selection,
+                'client_request_id': f'resdiscount-{reservation_id}-{quote["data"].get("discount_option_key") or "plain"}'}
+        request = urllib.request.Request(api + f'/api/orders/reservations/{reservation_id}/convert/',
+            data=json.dumps(body).encode(), headers={**headers, 'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(request, timeout=30) as response:
+            converted = json.load(response)
+        self.assertEqual(converted['code'], 0, converted)
 
     def test_boss_switches_to_vip(self):
         account, owned, _, reservation = self.setup_reservation()
-        self.run_browser('reservation-discount-browser', {'reservation': reservation['id'],
-            'token': issue_account_tokens(account)[0], 'account': account.pk})
+        with single_asgi() as (api, _):
+            self.run_convert(api, 'sl.esports.club', issue_account_tokens(account)[0], reservation['id'],
+                {}, {}, option_key='vip')
         order = Order.objects.get(customer_account=account)
         self.assertEqual((order.amount, order.boss_discount, order.coupon_discount), (9000, 1000, 0))
         owned.refresh_from_db(); self.assertEqual(owned.status, 'UNUSED')
@@ -68,8 +84,9 @@ class ReservationDiscountBrowserTest(LiveServerTestCase):
         permissions = ['order:view', 'order:dispatch']
         staff = make_console_user(permissions); staff_account = get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account = staff_account; staff.admin_membership.save(update_fields=['account'])
-        self.run_browser('admin-reservation-discount-browser', {'reservation_no': reservation['reservation_no'],
-            'staff': {'id': staff_account.pk, 'token': issue_account_tokens(staff_account)[0], 'permissions': permissions}})
+        with single_asgi() as (api, _):
+            self.run_convert(api, 'admin.esports.club', issue_account_tokens(staff_account)[0], reservation['id'],
+                {'user_coupon_id': owned.pk}, {'boss_confirmation': '老板确认推荐优惠组合'})
         order = Order.objects.get(customer_account=account)
         self.assertEqual((order.amount, order.promo_discount, order.coupon_discount, order.promotion_id), (5500, 1500, 3000, promo.pk))
         self.assertEqual(order.funding_confirmation['actor_account_id'], staff_account.pk)
