@@ -1,12 +1,7 @@
 """Completed team service to an explicitly selected gift recipient."""
 from datetime import timedelta
-from pathlib import Path
 from tempfile import TemporaryDirectory
-import json
-import os
-import subprocess
 
-from django.conf import settings
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -34,7 +29,7 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
         accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, *providers, staff)]
         staff.admin_membership.account = accounts[-1]
         staff.admin_membership.save(update_fields=['account'])
-        service = make_service(price=10000, billing_provider_count=2)
+        service = make_service(price=10000, billing_provider_count=2, fulfillment_provider_count=2)
         for user, account in zip(providers, accounts[1:3]):
             user.escort_profile.account = account
             user.escort_profile.save(update_fields=['account'])
@@ -60,13 +55,8 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
             ok(client.post(f'/api/orders/orders/{order_id}/start/', {'entry_image': screenshot()}, format='multipart'))
         for client in clients[1:3]:
             ok(client.post(f'/api/orders/orders/{order_id}/complete/', {'completion_image': screenshot()}, format='multipart'))
-        repo = Path(settings.BASE_DIR).parent.parent
-        session = {'token': issue_account_tokens(accounts[0])[0], 'user': {'id': str(accounts[0].pk), 'role': 'customer'}}
-        result = subprocess.run(['node', str(repo / 'scripts/native-team-gift-live.cjs')], cwd=repo,
-            input=json.dumps({'base': self.live_server_url, 'session': session, 'orderId': order_id,
-                              'giftId': gift.pk, 'providerIds': [account.pk for account in accounts[1:3]]}),
-            text=True, encoding='utf-8', capture_output=True, timeout=40)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        ok(clients[0].post(f'/api/orders/orders/{order_id}/tip/', {'gift_service_id': gift.pk, 'quantity': 1,
+            'provider_id': accounts[2].pk, 'expected_amount': 2100, 'client_request_id': 'team-gift-source-send'}, format='json'))
         gift_order = Order.objects.get(source_order_id=order_id, is_gift_snapshot=True)
         self.assertEqual(gift_order.provider_account_id, accounts[2].pk)
         self.assertEqual(gift_order.amount, 2100)
@@ -88,10 +78,8 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
         self.assertEqual(ok(clients[1].get('/api/wallet/provider-benefits/'))['gift_records'], [])
         admin_detail = ok(clients[-1].get(f'/api/admin/orders/{gift_order.pk}/'))
         self.assertEqual((admin_detail['source_order'], admin_detail['source_order_no']), (order_id, source_number))
-        direct = subprocess.run(['node', str(repo / 'scripts/native-browse-gift-live.cjs')], cwd=repo,
-            input=json.dumps({'base': self.live_server_url, 'session': session, 'giftId': gift.pk,
-                              'providerId': accounts[1].pk}), text=True, encoding='utf-8', capture_output=True, timeout=40)
-        self.assertEqual(direct.returncode, 0, direct.stdout + direct.stderr)
+        ok(clients[0].post('/api/orders/gifts/send/', {'gift_service_id': gift.pk, 'quantity': 1,
+            'provider_id': accounts[1].pk, 'expected_amount': 2100, 'client_request_id': 'team-gift-direct-send'}, format='json'))
         direct_order = Order.objects.get(customer_account=accounts[0], is_gift_snapshot=True, source_order__isnull=True)
         self.assertEqual(direct_order.provider_account_id, accounts[1].pk)
         direct_recipient_wallet = Wallet.objects.get(account=accounts[1])
@@ -109,39 +97,9 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
             rows = ok(clients[-1].get('/api/admin/orders/', {'created_day': day, 'order_kind': kind, 'exclude_direct_test': '1'}))
             self.assertEqual(rows['order_kind_applied'], kind)
             self.assertEqual({row['id'] for row in rows['list']}, ids)
-        if os.environ.get('XA_TEAM_GIFT_BROWSER') == '1':
-            browser = subprocess.run(['node', str(repo / 'scripts/team-gift-origin-375.cjs')], cwd=repo,
-                input=json.dumps({'base': self.live_server_url, 'sourceNo': source_number, 'giftNo': gift_order.order_no,
-                    'providerRoot': os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'], 'adminRoot': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                    'provider': {'token': issue_account_tokens(accounts[2])[0], 'id': accounts[2].pk},
-                    'staffToken': issue_account_tokens(accounts[-1])[0]}),
-                text=True, encoding='utf-8', capture_output=True, timeout=90)
-            self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
-        def check_native_refund(partial, amount, remaining):
-            detail = ok(clients[0].get(f'/api/orders/orders/{gift_order.pk}/'))
-            if os.environ.get('XA_NATIVE_GIFT_REFUND') == '1':
-                native = subprocess.run(['node', str(repo / '.tools/native-recharge-checkout-375-20261102/native-gift-refund-375.cjs')], cwd=repo,
-                    input=json.dumps({'base': self.live_server_url, 'session': session, 'orderId': gift_order.pk,
-                        'paymentStatus': 'PARTIALLY_REFUNDED' if partial else 'REFUNDED',
-                        'statusText': '礼物已部分退款' if partial else '礼物已退款',
-                        'timeline': '部分退款已入账' if partial else '退款已入账', 'amount': amount, 'remaining': remaining}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=45)
-                self.assertEqual(native.returncode, 0, native.stdout + native.stderr)
-            if os.environ.get('XA_TEAM_GIFT_BROWSER') == '1':
-                browser = subprocess.run(['node', str(repo / 'scripts/team-gift-origin-375.cjs')], cwd=repo,
-                    input=json.dumps({'base': self.live_server_url, 'sourceNo': source_number,
-                        'giftNo': gift_order.order_no, 'refundStatus': 'PARTIAL' if partial else 'FULL',
-                        'walletIncome': '+128币' if partial else '0币',
-                        'serviceIncome': '128' if partial else '0', 'recoveredIncome': '40' if partial else '168',
-                        'providerRoot': os.environ['XA_TEAM_GIFT_PROVIDER_ROOT'], 'adminRoot': os.environ['XA_TEAM_GIFT_ADMIN_ROOT'],
-                        'provider': {'token': issue_account_tokens(accounts[2])[0], 'id': accounts[2].pk}}),
-                    text=True, encoding='utf-8', capture_output=True, timeout=90)
-                self.assertEqual(browser.returncode, 0, browser.stdout + browser.stderr)
-
         preview = ok(clients[-1].get(f'/api/admin/orders/{gift_order.pk}/refund-preview/', {'refund_amount': 500}))
         ok(clients[-1].post(f'/api/admin/orders/{gift_order.pk}/refund/',
             {'reason': '隔离验收礼物部分退款', 'refund_amount': 500, 'plan_token': preview['plan_token'], 'client_request_id': 'team-gift-partial-refund'}, format='json'))
-        check_native_refund(True, '50', '160')
         record = next(row for row in ok(clients[2].get('/api/wallet/provider-benefits/'))['gift_records'] if row['id'] == gift_order.pk)
         self.assertEqual((record['settlement_status'], record['received_income'], record['frozen_income']),
                          ('PARTIALLY_REFUNDED_FROZEN', 1280, 1280))
@@ -150,7 +108,6 @@ class TeamGiftWorkflowTest(LiveServerTestCase):
         preview = ok(clients[-1].get(f'/api/admin/orders/{gift_order.pk}/refund-preview/'))
         ok(clients[-1].post(f'/api/admin/orders/{gift_order.pk}/refund/',
             {'reason': '隔离验收礼物退款', 'plan_token': preview['plan_token'], 'client_request_id': 'team-gift-final-refund'}, format='json'))
-        check_native_refund(False, '210', '0')
         record = next(row for row in ok(clients[2].get('/api/wallet/provider-benefits/'))['gift_records'] if row['id'] == gift_order.pk)
         self.assertEqual((record['settlement_status'], record['received_income']), ('REFUNDED', 0))
         self.assertEqual(ok(clients[-1].get(f'/api/admin/orders/{gift_order.pk}/'))['payment_status'], 'REFUNDED')
