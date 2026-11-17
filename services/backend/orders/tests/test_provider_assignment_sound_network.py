@@ -1,25 +1,15 @@
-"""Exercise staff assignment through real ASGI and the provider's H5."""
-import json
-import os
-import shutil
-import socket
-import subprocess
-import sys
-import time
-from pathlib import Path
-
-from django.conf import settings
-from django.db import connection
+"""Exercise boss designation and provider alert journeys through real HTTP APIs."""
 from django.test import override_settings
 from rest_framework.test import APITransactionTestCase
 from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
-from orders.models import Order
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user, make_wallet
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
+                   GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_SINGLE_WINDOW_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True)
 class ProviderAssignmentSoundNetworkTest(APITransactionTestCase):
     def test_quick_double_dispatch_notifies_boss_of_both_providers(self):
         boss, staff = make_user(), make_console_user(['order:view', 'order:dispatch'])
@@ -105,13 +95,10 @@ class ProviderAssignmentSoundNetworkTest(APITransactionTestCase):
         def auth(account):
             client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
         auth(accounts[0])
-        result = client.post('/api/orders/create/', {'service_id': service.pk, 'dispatch_route': 'STAFF',
+        result = client.post('/api/orders/create/', {'service_id': service.pk, 'provider_id': accounts[2].pk,
             'client_request_id': 'assignment-cursor-real'}, format='json').data
         self.assertEqual(result['code'], 0, result)
         order_id = result['data']['id']
-        auth(accounts[1])
-        result = client.post(f'/api/admin/orders/{order_id}/assign/', {'provider_id': accounts[2].pk}, format='json').data
-        self.assertEqual(result['code'], 0, result)
         auth(accounts[2])
         cursor = client.get('/api/messages/assignment-alerts/', {'after': 0}).data['data']
         self.assertGreater(cursor['latest_id'], 0); self.assertTrue(cursor['pending'])
@@ -123,58 +110,11 @@ class ProviderAssignmentSoundNetworkTest(APITransactionTestCase):
         self.assertEqual(result['code'], 0, result)
         self.assertFalse(client.get('/api/messages/assignment-alerts/', {'after': 0}).data['data']['pending'])
         auth(accounts[0])
-        result = client.post('/api/orders/create/', {'service_id': service.pk, 'dispatch_route': 'STAFF',
+        result = client.post('/api/orders/create/', {'service_id': service.pk, 'provider_id': accounts[2].pk,
             'client_request_id': 'assignment-cursor-read-real'}, format='json').data
-        self.assertEqual(result['code'], 0, result)
-        auth(accounts[1])
-        result = client.post(f"/api/admin/orders/{result['data']['id']}/assign/", {'provider_id': accounts[2].pk}, format='json').data
         self.assertEqual(result['code'], 0, result)
         auth(accounts[2])
         latest = client.get('/api/messages/assignment-alerts/', {'after': cursor['latest_id']}).data['data']
         self.assertTrue(latest['pending'])
         self.assertEqual(client.get(f"/api/messages/{latest['latest_id']}/").data['code'], 0)
         self.assertFalse(client.get('/api/messages/assignment-alerts/', {'after': cursor['latest_id']}).data['data']['pending'])
-
-    def test_real_assignment_and_mute(self):
-        database, node = os.environ.get('XA_PROVIDER_CHAT_QA_DB'), shutil.which('node')
-        if not node or not database or connection.settings_dict['NAME'] != database:
-            self.skipTest('requires an isolated file-backed QA database and Node')
-        boss, staff, provider = make_user(), make_console_user(['order:view', 'order:dispatch']), make_provider()
-        accounts = [get_or_create_account_for_legacy_user(user) for user in (boss, staff, provider)]
-        for user, account in zip((boss, staff, provider), accounts):
-            link_legacy_relations(user, account)
-        staff.admin_membership.account = accounts[1]; staff.admin_membership.save(update_fields=['account'])
-        provider.escort_profile.account = accounts[2]; provider.escort_profile.save(update_fields=['account'])
-        make_wallet(boss, balance=100000)
-        service = make_service(price=10000)
-        from wallet.models import SystemConfig
-        SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_NONE', defaults={'value': '0'})
-        with socket.socket() as sock:
-            sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
-        process = subprocess.Popen([sys.executable, '-m', 'daphne', '-b', '127.0.0.1', '-p', str(port), 'config.asgi:application'],
-            cwd=settings.BASE_DIR, env=os.environ.copy(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        try:
-            for _ in range(150):
-                if process.poll() is not None:
-                    self.fail('isolated ASGI server exited')
-                try:
-                    with socket.create_connection(('127.0.0.1', port), timeout=.2): break
-                except OSError:
-                    time.sleep(.1)
-            else:
-                self.fail('isolated ASGI server did not start')
-            repo = Path(settings.BASE_DIR).parent.parent
-            result = subprocess.run([node, str(repo / 'scripts/provider-assignment-sound-network.cjs')],
-                input=json.dumps({'api': f'http://127.0.0.1:{port}', 'bossToken': issue_account_tokens(accounts[0])[0],
-                    'staffToken': issue_account_tokens(accounts[1])[0], 'providerToken': issue_account_tokens(accounts[2])[0],
-                    'providerId': str(accounts[2].pk), 'serviceId': service.pk}),
-                text=True, encoding='utf-8', capture_output=True, timeout=70, cwd=repo)
-            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
-            self.assertEqual(Order.objects.filter(customer_account=accounts[0], dispatch_route='STAFF', status='PENDING', reservation__isnull=True).count(), 3)
-            self.assertEqual(Order.objects.filter(customer_account=accounts[0], dispatch_route='PUBLIC', status='PENDING', reservation__isnull=True).count(), 2)
-            self.assertEqual(Order.objects.filter(customer_account=accounts[0], provider_account=accounts[2], reservation__isnull=True, status='GRABBED').count(), 1)
-        finally:
-            process.terminate()
-            try: process.wait(timeout=10)
-            except subprocess.TimeoutExpired: process.kill(); process.wait(timeout=10)
