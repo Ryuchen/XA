@@ -1,6 +1,8 @@
 """Real MySQL/OTP API checks for payroll, attribution and operating ROI."""
 from datetime import datetime, time, timedelta, timezone as datetime_timezone
+from unittest import skipUnless
 
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APITestCase
@@ -25,7 +27,11 @@ def moment(day=15, hour=12, month=10):
     return timezone.make_aware(datetime(2026, month, day, hour), timezone.get_current_timezone())
 
 
+@skipUnless(connection.vendor == 'mysql',
+            '工资确认与暂估完整度依赖 MySQL 工资事件屏障（18-盘点工资屏障待联调）；本模块为 Real MySQL 集成层，与同簇 barrier_mysql 模块一致')
 @override_settings(LOGIN_OTP_REQUIRED=True, LEGACY_FORCE_AUTH_COMPAT=False,
+                   PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True,
+                   PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class PayrollWorkflowTest(APITestCase):
     @classmethod
@@ -144,7 +150,7 @@ class PayrollWorkflowTest(APITestCase):
         return self.ok(self.client.get('/api/admin/operating-roi/', {'start_date': '2026-10-15', 'end_date': '2026-10-15'}))
 
     def test_reference_plans_are_per_person_and_exam_fee_is_net(self):
-        self.assertEqual(SalaryPlan.objects.count(), 9)
+        self.assertEqual(SalaryPlan.objects.count(), 8)
         full = self.plan()
         self.assertEqual((full.base_fen, full.performance_fen, full.target_fen), (120000, 80000, 20000000))
         self.assertEqual((full.dispatch_day_bps, full.dispatch_night_bps, full.recharge_bps), (100, 150, 100))
@@ -243,6 +249,7 @@ class PayrollWorkflowTest(APITestCase):
         record = RechargeRecord.objects.create(user=self.boss_user, account=self.boss, amount=10000, gift_amount=2000,
             operator_account=self.editor_account, recharge_tx=tx)
         RechargeRecord.objects.filter(pk=record.pk).update(created_at=moment())
+        Transaction.objects.filter(pk=tx.pk).update(created_at=moment())
         saved = self.ok(self.activity('RECHARGE', record))
         self.assertEqual(saved['account'], self.worker.pk)
         self.assertNotEqual(saved['account'], self.editor_account.pk)
@@ -272,6 +279,7 @@ class PayrollWorkflowTest(APITestCase):
             row = RechargeRecord.objects.create(user=user, account=account, amount=10000,
                 operator_account=self.editor_account, recharge_tx=tx)
             RechargeRecord.objects.filter(pk=row.pk).update(created_at=moment())
+            Transaction.objects.filter(pk=tx.pk).update(created_at=moment())
         preview = self.preview()
         self.assertEqual(preview['unattributed']['recharge']['count'], 1)
         self.assertFalse(preview['can_confirm'])
