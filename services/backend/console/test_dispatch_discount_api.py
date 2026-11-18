@@ -14,6 +14,12 @@ from wallet.services import get_wallet
 
 
 @override_settings(DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=True, BOSS_FUNDING_SELECTION_ENABLED=True,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True,
+                   SERVICE_POINTS_CHECKOUT_TESTING=True, SERVICE_POINTS_ASSIGN_TESTING=True,
+                   SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_SETTLEMENT_TESTING=True,
+                   SERVICE_POINTS_FUNDING_TESTING=True, SERVICE_ORDINARY_FUNDING_TESTING=True,
+                   ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,
                    LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False)
 class DispatchDiscountApiTest(APITestCase):
@@ -23,6 +29,8 @@ class DispatchDiscountApiTest(APITestCase):
         self.wallet = get_wallet(account=self.boss, user=user); self.wallet.balance = 20000; self.wallet.save(update_fields=['balance'])
         PointFundingLot.objects.create(account=self.boss, source_key='dispatch-discount', kind='PREPAID', remaining=20000)
         config()
+        from console.grab_config import save_grab_window
+        save_grab_window(30, 0, lambda *args: None)
         self.service = make_service(price=10000)
         self.promotion = make_promotion(title='代单八五折', discount_rate=85)
         self.coupon = Coupon.objects.create(name='代单减300', discount_type='DIRECT', amount=3000)
@@ -39,7 +47,8 @@ class DispatchDiscountApiTest(APITestCase):
 
     def submit(self, quote, **params):
         return self.admin.post('/api/admin/orders/dispatch/', {**self.params, 'expected_amount': quote['amount'],
-            'discount_selection_token': quote['discount_selection_token'], 'client_request_id': 'discount-staff', **params}, format='json')
+            'discount_selection_token': quote['discount_selection_token'], 'client_request_id': 'discount-staff',
+            'boss_confirmation_method': '微信文字确认', **params}, format='json')
 
     def test_recommended_combination_consumes_boss_coupon_and_records_confirmation(self):
         quote = self.quote()
