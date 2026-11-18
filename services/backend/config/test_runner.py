@@ -32,7 +32,9 @@ class StoreContextRunner(DiscoverRunner):
 
             def _pre_setup_with_store(cls, _original=original):
                 # TransactionTestCase 会清表；每个用例前重新确保目录行存在。
-                ensure_bootstrap_store()
+                # SimpleTestCase 等不访问数据库的用例跳过引导。
+                if getattr(cls, 'databases', None):
+                    ensure_bootstrap_store()
                 _original(cls)
 
             _pre_setup_with_store._store_bootstrap = True
