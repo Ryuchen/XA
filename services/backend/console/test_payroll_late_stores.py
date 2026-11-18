@@ -1,6 +1,7 @@
 from unittest import skipUnless
 
 from django.conf import settings
+from django.db import connection
 from django.test import TestCase, override_settings
 
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -12,8 +13,11 @@ from stores.tests_hosts import xinan_store
 from wallet.models import RechargeRecord
 
 
+@skipUnless(connection.vendor == 'mysql',
+            '工资确认依赖 MySQL 工资事件屏障（18-盘点工资屏障待联调）；本模块同时作为 barrier_mysql 簇夹具')
 @skipUnless('store_b' in settings.DATABASES, 'requires isolated two-store databases')
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'], REQUIRE_RECHARGE_PROOF=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'], REQUIRE_RECHARGE_PROOF=False,
+                   PAYROLL_REFUND_ACCOUNTING_INTERNAL_TESTING=True, PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True)
 class LatePayrollStoresTest(TestCase):
     databases = {'default', 'store_b'} if 'store_b' in settings.DATABASES else {'default'}
 
