@@ -31,13 +31,16 @@ class LiveAuthorizationTest(TransactionTestCase):
         return account, membership
 
     async def connect(self, token):
-        socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+        socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}',
+                                  headers=[(b'host', b'sl.esports.club')])
         self.assertTrue((await socket.connect())[0])
         return socket
 
     async def order(self, group):
+        # 公共陪玩组只承载空刷新信号；个人订单数据走本人账号组。
+        data = {} if group == 'providers' else {'id': 42, 'status': 'PENDING'}
         await get_channel_layer().group_send(group, {
-            'type': 'order_status_update', 'data': {'id': 42, 'status': 'PENDING'},
+            'type': 'order_status_update', 'data': data,
         })
 
     def test_disabled_provider_cannot_receive_on_an_existing_connection(self):
@@ -163,11 +166,12 @@ class LiveAuthorizationTest(TransactionTestCase):
     def test_changed_identity_cannot_reconnect_with_old_token(self):
         account = get_or_create_account_for_legacy_user(make_provider())
         token, _ = issue_account_tokens(account)
-        account.account_type = 'BOSS'
-        account.save(update_fields=['account_type'])
+        from club_accounts.models import ClubAccount
+        ClubAccount.objects.filter(pk=account.pk).update(account_type='BOSS')
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}',
+                                  headers=[(b'host', b'sl.esports.club')])
             self.assertFalse((await socket.connect())[0])
             await socket.disconnect()
 

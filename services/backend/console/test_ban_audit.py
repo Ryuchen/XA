@@ -297,8 +297,6 @@ class BossBanApiTest(APITestCase):
         self.admin = make_superuser()
         self.boss = make_user(nickname='老板甲')
         self.boss_account = _account_for(self.boss)
-        self.boss_account.account_type = ClubAccount.AccountType.BOSS
-        self.boss_account.save(update_fields=['account_type'])
 
     def _url(self, action='ban'):
         return f'/api/admin/users/{self.boss_account.id}/{action}/'
@@ -542,8 +540,6 @@ class RawSwitchPatchBlockedTest(APITestCase):
         self.admin = make_superuser()
         self.boss = make_user()
         self.account = _account_for(self.boss)
-        self.account.account_type = ClubAccount.AccountType.BOSS
-        self.account.save(update_fields=['account_type'])
         self.url = f'/api/admin/users/{self.account.id}/'
         self.client.force_authenticate(self.admin)
 
