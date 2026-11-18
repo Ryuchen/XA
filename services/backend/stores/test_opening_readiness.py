@@ -21,12 +21,14 @@ class OpeningReadinessTests(TransactionTestCase):
     databases = {'default', 'store_a', 'store_b'}
 
     def setUp(self):
-        self.store = Store.objects.create(slug='xinan', name='兴安电竞', entity_prefix='XA',
+        self.store = Store.objects.update_or_create(slug='xinan', defaults=dict( name='兴安电竞', entity_prefix='XA',
             provider_name_prefix='XA', currency_name='星辉', database_alias='store_b',
-            status=Store.Status.CONFIGURING, initialized_at=timezone.now())
-        self.other = Store.objects.create(slug='shenglang', name='声浪电竞', entity_prefix='SL',
+            status=Store.Status.CONFIGURING, initialized_at=timezone.now()))[0]
+        self.other = Store.objects.update_or_create(slug='shenglang', defaults=dict( name='声浪电竞', entity_prefix='SL',
             provider_name_prefix='SL', currency_name='浪花', database_alias='store_a',
-            status=Store.Status.CONFIGURING, initialized_at=timezone.now())
+            status=Store.Status.CONFIGURING, initialized_at=timezone.now()))[0]
+        Store.objects.update_or_create(slug='local-preview', defaults=dict(name='本地预览',
+            database_alias='default', status=Store.Status.ACTIVE))
         self.actor = PlatformAccount.objects.create(username='readiness-owner', phone='13800001111', is_phone_verified=True)
         PlatformRoleGrant.objects.create(account=self.actor, role='SUPER_ADMIN', scope_slug='*')
         token, _ = issue_tokens(self.actor, 'SMS', self.actor.phone)

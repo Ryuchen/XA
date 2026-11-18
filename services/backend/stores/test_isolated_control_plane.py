@@ -38,8 +38,8 @@ class StoreRoutingSnapshotTests(TransactionTestCase):
         from django.conf import settings
         from club_accounts.models import StoreRoutingSnapshot
         from stores.routing_snapshot import capture, lookup, publish
-        store = Store.objects.create(slug='shenglang', name='声浪电竞', currency_name='浪花',
-            database_alias='store_a', status='ACTIVE', initialized_at=timezone.now())
+        store = Store.objects.update_or_create(slug='shenglang', defaults=dict(name='声浪电竞', currency_name='浪花',
+            database_alias='store_a', status='ACTIVE', initialized_at=timezone.now()))[0]
         resolve_store('shenglang')
         with store_context(store):
             row = StoreRoutingSnapshot.objects.get(pk=1)
@@ -70,8 +70,8 @@ class StoreRoutingSnapshotTests(TransactionTestCase):
         from orders.tests.test_service_funding_api import ServiceFundingApiTest
         from stores.license_snapshot import business_status
         from stores.models import StoreLicenseCode, StoreLicenseContract
-        store = Store.objects.create(slug='xinan', name='兴安电竞', currency_name='星辉',
-            database_alias='store_b', status='ACTIVE', initialized_at=timezone.now())
+        store = Store.objects.update_or_create(slug='xinan', defaults=dict(name='兴安电竞', currency_name='星辉',
+            database_alias='store_b', status='ACTIVE', initialized_at=timezone.now()))[0]
         actor = PlatformAccount.objects.create(username='snapshot-control-owner', phone='13800001111')
         contract = StoreLicenseContract.objects.create(store=store, amount_due_fen=0, created_by=actor, updated_by=actor)
         now = timezone.now()

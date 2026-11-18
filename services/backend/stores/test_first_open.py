@@ -27,10 +27,12 @@ class FirstOpenTests(TransactionTestCase):
     databases = {'default', 'store_a', 'store_b'}
 
     def setUp(self):
-        self.stores = [Store.objects.create(slug=slug, name=name, entity_prefix=prefix,
+        self.stores = [Store.objects.update_or_create(slug=slug, defaults=dict(name=name, entity_prefix=prefix,
             provider_name_prefix=prefix, currency_name=currency, database_alias=alias,
-            status=Store.Status.CONFIGURING, initialized_at=timezone.now()) for slug, name, prefix, currency, alias in (
+            status=Store.Status.CONFIGURING, initialized_at=timezone.now()))[0] for slug, name, prefix, currency, alias in (
                 ('shenglang', '声浪电竞', 'SL', '浪花', 'store_a'), ('xinan', '兴安电竞', 'XA', '星辉', 'store_b'))]
+        Store.objects.update_or_create(slug='local-preview', defaults=dict(name='本地预览',
+            database_alias='default', status=Store.Status.ACTIVE))
         self.actor = PlatformAccount.objects.create(username='first-open-owner', phone='13800001111', is_phone_verified=True)
         PlatformRoleGrant.objects.create(account=self.actor, role='SUPER_ADMIN', scope_slug='*')
         raw, _ = issue_tokens(self.actor, 'SMS', self.actor.phone)
