@@ -631,9 +631,11 @@ def decide(case_id, *, actor, proposal_id, accepted):
     if transfer_agreement:
         from .financial_lock import lock_order_money
         lock_order_money()
-    scope = _scope(order, case, zero=proposal.refund_units == 0)
     proposal = NegotiationProposal.objects.select_for_update().filter(pk=proposal_id, case=case).first()
-    if (not proposal or proposal.affected_accounts != scope
+    if not proposal:
+        raise ValidationError('方案已变化，请刷新后核对')
+    scope = _scope(order, case, zero=proposal.refund_units == 0)
+    if (proposal.affected_accounts != scope
             or proposal.affected_segment_ids != case.affected_segment_ids):
         raise ValidationError('方案已变化，请刷新后核对')
     _verified(case, proposal)
