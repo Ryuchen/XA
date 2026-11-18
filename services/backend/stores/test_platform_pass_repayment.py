@@ -20,6 +20,10 @@ class PlatformPassRepaymentTests(TestCase):
 
     def setUp(self):
         self.first, self.second = resolve_store(), xinan_store()
+        from console.grab_config import save_grab_window
+        for store in (self.first, self.second):
+            with store_context(store):
+                save_grab_window(30, 0, lambda *args: None)
         self.finance = PlatformAccount(username='repayment-finance', phone='13800001111', is_phone_verified=True)
         self.finance.set_password('platform-password'); self.finance.save()
         self.grant = PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug='*')

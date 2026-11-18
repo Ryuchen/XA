@@ -1,9 +1,11 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from io import BytesIO
 from tempfile import TemporaryDirectory
 from threading import Barrier, Event
 from types import SimpleNamespace
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import close_old_connections, transaction
@@ -32,14 +34,14 @@ FEE = {'policy_id': 'test-rate', 'rate_numerator': 6, 'rate_denominator': 1000,
 
 
 class ClearingFixture:
-    def make_completed(self, *, count=2, price=5001, fee_policy=FEE, conversion=None,
+    def make_completed(self, *, count=2, price=5010, fee_policy=FEE, conversion=None,
                        inviter=False, rates=None, request_id='clear-req-1'):
         boss = make_user()
         account = get_or_create_account_for_legacy_user(boss)
         account.openid, account.wechat_appid, account.is_openid_bound = f'openid-{boss.pk}', 'wx-test', True
         account.save(update_fields=['openid', 'wechat_appid', 'is_openid_bound'])
         make_wallet(boss, balance=50000)
-        service = make_service(price=price, billing_provider_count=count)
+        service = make_service(price=price, billing_provider_count=count, fulfillment_provider_count=count)
         participants = [make_provider() for _ in range(count)]
         participants_accounts = [get_or_create_account_for_legacy_user(user) for user in participants]
         for user, provider_account in zip(participants, participants_accounts):
@@ -50,10 +52,16 @@ class ClearingFixture:
         invite_user = make_user() if inviter else None
         invite_account = get_or_create_account_for_legacy_user(invite_user) if inviter else None
         base_time = timezone.now() - timedelta(hours=80)
-        settings = {'WECHAT_DIRECT_TEST_FEE_POLICY': fee_policy, 'ORDER_SETTLEMENT_MODE': 'REPORT_APPROVAL'}
+        settings = {'WECHAT_DIRECT_TEST_FEE_POLICY': fee_policy, 'ORDER_SETTLEMENT_MODE': 'REPORT_APPROVAL',
+                    'GRAB_SINGLE_WINDOW_ENABLED': True, 'GRAB_TEAM_WINDOW_ENABLED': True,
+                    'GRAB_POOL_ENTRY_SNAPSHOT_ENABLED': True, 'GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY': True}
         if conversion is not None:
             settings['WECHAT_DIRECT_TEST_UNIT_CONVERSION'] = conversion
+        from console.grab_config import save_grab_window, CONFIG_KEY, parse_rules
         with override_settings(**settings), patch('django.utils.timezone.now', return_value=base_time):
+            from wallet.models import SystemConfig
+            window = SystemConfig.objects.filter(key=CONFIG_KEY).first()
+            save_grab_window(30, parse_rules(window.value)['version'] if window else 0, lambda *args: None)
             quote = quote_direct_payment(service_units=price * count, appid='wx-test', mchid='mch-test')
             data = {'service_id': service.pk, 'expected_amount': price * count, 'client_request_id': request_id,
                     'expected_payment_total': quote.total_fen, 'expected_fee_quote_hash': quote.quote_hash}
@@ -83,7 +91,7 @@ class ClearingFixture:
             OrderProvider.objects.create(order=order, provider=user, provider_account=provider_account,
                 settlement_base=share.settlement_base, provider_income=share.provider_income,
                 commission_type=share.commission_type, commission_rate=share.commission_rate,
-                commission_fixed=share.commission_fixed)
+                commission_fixed=share.commission_fixed, provider_business_cycle=provider_account.business_cycle)
             report = ProviderReport.objects.create(order=order, provider=user, provider_account=provider_account,
                 game_name='模拟报单', amount=share.settlement_base, payout_amount=share.provider_income,
                 commission_rate=share.commission_rate, status='APPROVED', auditor=staff, auditor_account=staff_account,
@@ -125,6 +133,8 @@ class DirectClearingTest(ClearingFixture, TestCase):
         self.assertEqual((order.status, order.payment_status, order.settled_at, order.consumption_confirmed_at),
                          ('COMPLETED', 'PAID', None, None))
 
+    @skipUnless(os.environ.get('XA_SUB_COIN_PRICE_LEGACY') == '1',
+                '低于 10 店币的原价与现行 10 店币步进规则冲突（PRD 29 金额口径）；历史内部单位口径留追溯')
     def test_two_half_fen_shares_remain_in_internal_unit_book(self):
         order, intent, _ = self.make_completed(count=2, price=1, fee_policy=None, rates=[0, 0],
                                                conversion={'version': 'test-200', 'units_per_yuan': 200})
@@ -134,6 +144,8 @@ class DirectClearingTest(ClearingFixture, TestCase):
                               .values_list('book', 'amount')), [('UNIT', 1), ('UNIT', 1)])
         self.assertFalse(batch.lines.filter(account_code='FEE_HELD').exists())
 
+    @skipUnless(os.environ.get('XA_SUB_COIN_PRICE_LEGACY') == '1',
+                '低于 10 店币的原价与现行 10 店币步进规则冲突（PRD 29 金额口径）；历史内部单位口径留追溯')
     def test_one_internal_unit_double_order_keeps_zero_share_member(self):
         # Fixture creates two equal-priced units; use a single-unit order by
         # changing the prepared service quantity only in a dedicated snapshot.
@@ -329,6 +341,8 @@ class DirectClearingApiFlowTest(TestCase):
         Image.new('RGB', (4, 4), 'white').save(output, format='PNG')
         return SimpleUploadedFile('test.png', output.getvalue(), content_type='image/png')
 
+    @skipUnless(os.environ.get('XA_STAFF_TEAM_ASSIGN_FORMAL') == '1',
+                '客服指派旅程已被抢单池取代（18-盘点客服安排抢单）；断言保留待最终联调')
     def test_staff_assign_provider_service_report_and_simulated_clearing(self):
         media = TemporaryDirectory()
         self.addCleanup(media.cleanup)
