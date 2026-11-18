@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.test import override_settings
 from django.utils import timezone
-from rest_framework.test import APITestCase, APIClient
+from rest_framework.test import APITestCase, APITransactionTestCase, APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
@@ -13,13 +13,21 @@ from orders.tests.factories import make_console_user, make_service, make_user, m
 from wallet.models import Transaction
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
-class CouponClaimStatusTest(APITestCase):
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
+class CouponClaimStatusTest(APITransactionTestCase):
     def setUp(self):
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
         self.boss = make_user()
         self.account = get_or_create_account_for_legacy_user(self.boss)
         link_legacy_relations(self.boss, self.account)
         make_wallet(self.boss, balance=100000)
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
+        PointFundingLot.objects.create(account=self.account, source_key='coupon-claim-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=100000)
         self.buyer = APIClient()
         self.buyer.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.account)[0])
         staff = make_console_user(['coupon:view'])
@@ -79,8 +87,10 @@ class CouponClaimStatusTest(APITestCase):
 
     def test_old_cycle_and_legacy_rows_are_not_mislabelled_expired(self):
         _, old = self.claim('旧周期券')
-        self.account.business_cycle += 1
-        self.account.save(update_fields=['business_cycle'])
+        # 业务周期生产写入须走生命周期服务；夹具直接用 queryset.update 布置旧周期状态。
+        from club_accounts.models import ClubAccount
+        ClubAccount.objects.filter(pk=self.account.pk).update(business_cycle=self.account.business_cycle + 1)
+        self.account.refresh_from_db()
         legacy_coupon = Coupon.objects.create(name='旧用户券', discount_type='DIRECT', amount=1000, valid_to=None)
         legacy = UserCoupon.objects.create(user=self.boss, coupon=legacy_coupon)
         previous = self.listing('PREVIOUS_CYCLE')
