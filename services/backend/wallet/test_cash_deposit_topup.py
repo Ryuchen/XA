@@ -26,7 +26,8 @@ class CashDepositTopupTest(APITestCase):
         self.account = get_or_create_account_for_legacy_user(self.provider)
         self.profile = self.provider.escort_profile
         self.profile.account = self.account
-        self.profile.save(update_fields=['account'])
+        self.profile.deposit_business_cycle = self.account.business_cycle
+        self.profile.save(update_fields=['account', 'deposit_business_cycle'])
         self.wallet = make_wallet(self.provider, balance=1234)
         self.wallet.account = self.account
         self.wallet.save(update_fields=['account'])
