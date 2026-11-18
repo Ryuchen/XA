@@ -886,7 +886,7 @@ class StaffAddonHandoverView(APIView):
         if (kind == 'VOLUNTARY') != voluntary:
             raise ValidationError('自愿接替不属于当前积分订单范围')
         if points_permits(order, phase='handover', kind='addon'):
-            from .models import OrderAddonHandover, OrderOriginalShareTransfer, PointsHandoverRefundInvalidation
+            from .models import OrderOriginalShareTransfer, PointsHandoverRefundInvalidation
             pending = OrderAddonHandover.objects.filter(payment__intent__order=order, status='PENDING')
             invalidated_retry = (not voluntary and not OrderOriginalShareTransfer.objects.filter(
                 previous_segment__attribution__order=order).exists()
@@ -945,7 +945,6 @@ class StaffAddonHandoverView(APIView):
                 previous_segment__attribution__order=order).order_by('-created_at', '-pk').first()
             witness = OrderPointsFundingAllocation.objects.filter(redemption__order=order,
                 receipt__usage_version__isnull=False).order_by('pk').first()
-            from .models import OrderAddonPayment, OrderAddonHandover
             refunds = list(order.addon_refunds.select_related('payment__intent', 'proposal').order_by('created_at', 'pk'))
             accepted = list(OrderAddonHandover.objects.filter(payment__intent__order=order,
                 status='ACCEPTED').order_by('accepted_at', 'pk'))

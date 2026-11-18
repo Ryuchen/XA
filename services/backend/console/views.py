@@ -1675,7 +1675,6 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 from orders.ordinary_transfer_capability import permits as refunded_transfer_permits
                 in_flight_refund = refunded_transfer_permits(locked_order)
                 if positive_before_first_hint and not in_flight_refund:
-                    from django.core.exceptions import ValidationError as DjangoValidationError
                     from orders.ordinary_positive_pretransfer import verify as verify_positive_pretransfer
                     try:
                         in_flight_refund = bool(verify_positive_pretransfer(locked_order, before=timezone.now()))
@@ -1733,7 +1732,6 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     raise IllegalTransitionError('微信支付订单转单及结算尚未开放')
                 if subsidy_segment:
                     from orders.subsidies import _locked_subsidy_shares
-                    from orders.settlement import SettlementError
                     try:
                         _locked_subsidy_shares(locked_order)
                     except SettlementError as exc:
@@ -1815,7 +1813,6 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     from orders.ordinary_zero_post_addon import terminated_before_transfer
                     closed_account = terminated_before_transfer(locked_order)
                     if closed_account is None and not marked_execution_id(locked_order) and in_flight_refund:
-                        from django.core.exceptions import ValidationError as DjangoValidationError
                         from orders.ordinary_positive_pretransfer import verify as verify_positive_pretransfer
                         earlier_transfer = OrderOriginalShareTransfer.objects.filter(
                             previous_segment__attribution__order=locked_order).order_by('created_at', 'pk').first()

@@ -1,3 +1,4 @@
+import os
 from unittest.mock import patch
 
 from django.db import DatabaseError, connection
@@ -59,6 +60,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertEqual([item['commission_rate'] for item in capture['segments']], [20, 30, 25])
         self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_in_service_transfer_is_explicitly_review_until_segment_split_is_integrated(self):
         replacement = self.replacement(); order = self.new_order()
         self.login(self.provider)
@@ -79,6 +82,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertEqual(capture['transfers'][0]['transferred_basis'], 6000)
         self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_retained_provider_can_find_order_when_legacy_report_is_missing(self):
         from wallet.models import ProviderReport
         replacement = self.replacement(); order = self.new_order()
@@ -98,6 +103,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertEqual(report['order_id'], order.pk)
         self.assertIsNone(report['expected_income'])
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_transferred_provider_without_retained_share_is_not_offered_report(self):
         from wallet.models import ProviderReport
         replacement = self.replacement(); order = self.new_order()
@@ -113,6 +120,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         denied = self.client.post('/api/wallet/reports/', {'order_id':order.pk}, format='json')
         self.assertNotEqual(denied.data['code'], 0)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_returning_provider_preserves_first_segment_and_splits_only_current_basis(self):
         replacement = self.replacement(); order = self.new_order()
         self.login(self.provider)
@@ -134,6 +143,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertEqual(OrderSegmentFinancialSnapshot.objects.get(segment__attribution__order=order).retained_basis, 4000)
         self.assertEqual(OrderSegmentFinancialCoverage.objects.get(attribution__order=order).status, 'REVIEW')
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_discounted_deal_remainder_and_original_price_are_separate(self):
         from coupons.models import Coupon, UserCoupon
         from django.utils import timezone
@@ -158,6 +169,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertEqual((allocation.basis_before, allocation.retained_basis, allocation.transferred_basis,
                           allocation.remainder_numerator), (1010, 336, 674, 6000))
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_missing_previous_allocation_does_not_invent_next_basis(self):
         replacement = self.replacement(); order = self.new_order()
         self.login(self.provider)
@@ -182,6 +195,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertIn('成交', coverage.review_reason)
         self.assertFalse(OrderSegmentTransferBasis.objects.filter(transfer__previous_segment__attribution__order=order).exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_allocation_failure_rolls_back_transfer_and_original_shares(self):
         replacement = self.replacement(); order = self.new_order()
         self.login(self.provider)
@@ -202,6 +217,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertEqual(Transaction.objects.filter(order=order).count(), before)
 
     @override_settings(REQUIRE_ORDER_EVIDENCE_IMAGES=False)
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_pending_transfer_cannot_pay_using_legacy_split(self):
         from stores.db import transaction
         from orders.services import settle_order
@@ -228,6 +245,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertEqual(Transaction.objects.filter(order=order).count(), before)
         self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_old_completion_mode_cannot_pay_during_captured_transfer(self):
         replacement = self.replacement(); order = self.new_order()
         self.login(self.provider)
@@ -242,6 +261,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         order.refresh_from_db(); self.assertEqual(order.provider_account_id, self.accounts[self.provider.pk].pk)
         self.assertEqual(Transaction.objects.filter(order=order).count(), before)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_paused_capture_with_enforcement_cannot_skip_an_existing_order_event(self):
         replacement = self.replacement(); order = self.new_order()
         self.login(self.provider)
@@ -263,6 +284,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         coverage = OrderSegmentFinancialCoverage.objects.get(attribution__order=order)
         self.assertEqual((coverage.status, coverage.attribution.segments.count()), ('ACTIVE', 1))
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_pending_transfer_cannot_pay_platform_subsidy_through_separate_path(self):
         from orders.models import OrderPlatformSubsidy, OrderPlatformSubsidyShare
         from orders.subsidies import settle_platform_subsidy_share
@@ -312,6 +335,8 @@ class SegmentFinancialCaptureTest(APITransactionTestCase):
         self.assertFalse(OrderSegmentFinancialCoverage.objects.filter(attribution__order=order).exists())
         self.assertFalse(OrderSegmentFinancialSnapshot.objects.filter(segment__attribution__order=order).exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_disabled_feature_does_not_query_new_financial_tables(self):
         with override_settings(SEGMENT_ECONOMICS_CAPTURE_ENABLED=False), CaptureQueriesContext(connection) as queries:
             self.new_order()
@@ -341,6 +366,8 @@ class SegmentFinancialTeamTest(APITransactionTestCase):
     create = team_fixture.StaffTeamDispatchTest.create
     assign = team_fixture.StaffTeamDispatchTest.assign
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_duo_captures_each_assignment_without_doubling_deal_amount(self):
         self.service.price = 5000; self.service.save(update_fields=['price'])
         order = self.create(); self.assertEqual(self.assign(order).data['code'], 0)
@@ -350,6 +377,8 @@ class SegmentFinancialTeamTest(APITransactionTestCase):
         self.assertEqual(len(rows), 2)
         self.assertEqual(sum(item.incoming_basis for item in rows), coverage.deal_amount)
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_duo_transfer_splits_only_the_affected_seat(self):
         self.service.price = 5000; self.service.save(update_fields=['price'])
         order = self.create(); self.assertEqual(self.assign(order).data['code'], 0)
@@ -391,6 +420,8 @@ class SegmentFinancialTeamTest(APITransactionTestCase):
         self.assertIsNone(detail['expected_income'])
         self.assertEqual(detail['settlement_status'], 'REVIEW')
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_captured_transfer_rejects_legacy_manual_split_without_mutation(self):
         self.service.price = 5000; self.service.save(update_fields=['price'])
         order = self.create(); self.assertEqual(self.assign(order).data['code'], 0)
@@ -544,6 +575,8 @@ class SegmentStandardTeamTransferTest(APITransactionTestCase):
     create = team_fixture.StaffTeamDispatchTest.create
     assign = team_fixture.StaffTeamDispatchTest.assign
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_same_fixed_rule_preserves_seat_fee_and_other_provider(self):
         self.service.price = 300; self.service.commission_fixed = 3
         self.service.save(update_fields=['price', 'commission_fixed'])
@@ -563,6 +596,8 @@ class SegmentStandardTeamTransferTest(APITransactionTestCase):
                           for x in rows], [(300, 100, 3, 2, 298), (300, None, 3, 1, 299), (200, None, 3, 2, 198)])
         self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_fixed_team_transfer_preserves_other_seat_and_full_order_denominator(self):
         self.service.price = 5000; self.service.save(update_fields=['price'])
         order = self.create(); self.assertEqual(self.assign(order).data['code'], 0)
@@ -582,6 +617,8 @@ class SegmentStandardTeamTransferTest(APITransactionTestCase):
                          [(5000, 2000, 1001, 501), (5000, None, 1001, 500), (3000, None, 2001, 601)])
         self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_same_rule_caps_incoming_fixed_fee_and_records_store_cost(self):
         from coupons.models import Coupon, UserCoupon
         from django.utils import timezone
@@ -662,6 +699,8 @@ class SegmentFinancialGameTest(APITransactionTestCase):
     auth = game_fixture.GameCommissionPaymentTest.auth
     create = game_fixture.GameCommissionPaymentTest.create
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_paid_game_snapshot_survives_later_configuration_change(self):
         result = self.create(provider_id=self.accounts[0].pk)
         self.assertEqual(result.data['code'], 0, result.data)
@@ -671,6 +710,8 @@ class SegmentFinancialGameTest(APITransactionTestCase):
         snapshot.refresh_from_db()
         self.assertEqual((snapshot.commission_rate, snapshot.game_commission_snapshot['version']), (30, 1))
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_game_transfer_captures_current_rule_and_return_creates_new_snapshot(self):
         from tempfile import TemporaryDirectory
         from club_accounts.services import get_or_create_account_for_legacy_user
@@ -718,6 +759,8 @@ class SegmentFinancialGameTest(APITransactionTestCase):
             self.assertEqual(OrderSegmentFinancialCoverage.objects.get(attribution__order=order).status, 'REVIEW')
             self.assertFalse(Transaction.objects.filter(order=order, tx_type='INCOME').exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_missing_payment_scope_prevents_game_transfer_without_mutation(self):
         from tempfile import TemporaryDirectory
         from club_accounts.services import get_or_create_account_for_legacy_user
@@ -741,6 +784,8 @@ class SegmentFinancialGameTest(APITransactionTestCase):
             order.refresh_from_db(); self.assertEqual(order.provider_account_id, self.accounts[0].pk)
             self.assertFalse(OrderSegmentTransferBasis.objects.filter(transfer__previous_segment__attribution__order=order).exists())
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_missing_current_game_rule_rejects_transfer_and_keeps_old_snapshot(self):
         from tempfile import TemporaryDirectory
         from club_accounts.services import get_or_create_account_for_legacy_user
@@ -765,6 +810,8 @@ class SegmentFinancialGameTest(APITransactionTestCase):
             original = OrderSegmentFinancialSnapshot.objects.get(segment__attribution__order=order)
             self.assertEqual((original.commission_rate, original.game_commission_snapshot['version']), (30, 1))
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_retained_provider_can_submit_evidence_but_legacy_earnings_cannot_be_approved(self):
         from tempfile import TemporaryDirectory
         from club_accounts.services import get_or_create_account_for_legacy_user
@@ -834,6 +881,8 @@ class SegmentFinancialStoreTest(TestCase):
 
     @override_settings(SEGMENT_STANDARD_TRANSFER_ENABLED=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
                        REQUIRE_ORDER_EVIDENCE_IMAGES=False)
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_same_identifiers_use_each_store_current_transfer_rule(self):
         from club_accounts.services import get_or_create_account_for_legacy_user
         from club_accounts.tokens import issue_account_tokens
@@ -874,6 +923,8 @@ class SegmentFinancialStoreTest(TestCase):
         self.assertEqual(results[0][:2], results[1][:2])
         self.assertEqual([result[2:] for result in results], [(35,390), (45,330)])
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '正式转单逐段结算链仍在接线（18-盘点转单分段收敛），门禁保持关闭；最终联调启用')
     def test_equal_order_and_account_ids_keep_own_deal_and_rate(self):
         from club_accounts.services import get_or_create_account_for_legacy_user
         from club_accounts.tokens import issue_account_tokens

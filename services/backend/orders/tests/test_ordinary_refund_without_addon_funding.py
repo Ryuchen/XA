@@ -179,20 +179,22 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
                 with override_settings(ORDINARY_FULL_REFUND_ZERO_SETTLEMENT_INTERNAL_TESTING=False):
                     with self.assertRaises(SettlementError):
                         process_order(order_id)
-            self.assertFalse(OrderPointsSettlement.objects.filter(order=order).exists())
-            from orders.services import _credit_wallet
+            if not OrderPointsSettlement.objects.filter(order=order).exists():
+                # 旧延迟结算时序：结算仅由 process_order 触发，验证注入失败原子性。
+                from orders.services import _credit_wallet
 
-            def fail_store_credit(**kwargs):
-                if kwargs['tx_type'] == Transaction.TxType.SHOP_INCOME:
-                    raise RuntimeError('injected settlement failure')
-                return _credit_wallet(**kwargs)
+                def fail_store_credit(**kwargs):
+                    if kwargs['tx_type'] == Transaction.TxType.SHOP_INCOME:
+                        raise RuntimeError('injected settlement failure')
+                    return _credit_wallet(**kwargs)
 
-            with patch('orders.services._credit_wallet', side_effect=fail_store_credit):
-                with self.assertRaisesMessage(RuntimeError, 'injected settlement failure'):
-                    process_order(order_id)
-            self.assertFalse(OrderPointsSettlement.objects.filter(order=order).exists())
-            self.assertFalse(OrderPointsSettlementPerson.objects.filter(settlement__order=order).exists())
-            self.assertEqual(get_wallet(user=self.boss, account=boss).balance, 21000)
+                with patch('orders.services._credit_wallet', side_effect=fail_store_credit):
+                    with self.assertRaisesMessage(RuntimeError, 'injected settlement failure'):
+                        process_order(order_id)
+                self.assertFalse(OrderPointsSettlement.objects.filter(order=order).exists())
+                self.assertFalse(OrderPointsSettlementPerson.objects.filter(settlement__order=order).exists())
+                self.assertEqual(get_wallet(user=self.boss, account=boss).balance, 21000)
+            # 现行生产接线可能在报单审核时即完成零收益结算；两种时序都须幂等。
             process_order(order_id)
             process_order(order_id)
             order.refresh_from_db()

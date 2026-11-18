@@ -46,7 +46,6 @@ def facts(row):
     paid_source = None
     if prior_settlement is not None:
         from .points_transfer_paid_addons import verify_first_refund_receipt
-        from rest_framework.exceptions import ValidationError as RestValidationError
         try:
             paid_source = verify_first_refund_receipt(order, posting, prior_settlement,
                 before=getattr(row, 'history_before', None),
@@ -87,7 +86,6 @@ def facts(row):
         raise ValidationError('转单退款加购快照缺失')
     if prior_settlement is not None and addons:
         from .points_transfer_paid_addons import unchanged, parts_before
-        from rest_framework.exceptions import ValidationError as RestValidationError
         try:
             unchanged(prior_settlement,
                       parts_before(order, evidence.addon_funding_snapshot, posting.created_at))

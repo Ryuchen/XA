@@ -147,7 +147,6 @@ def capture_locked(order, transfer, *, frozen_facts=None, before_revision_id=Non
                 verify_addon_history(order, posting, receipt_id=witness, before=transfer.created_at)
         for addon in addons:
             from .models import OrderAddonHandover
-            from django.db.models import Q
             unfinished = OrderAddonHandover.objects.filter(payment=addon, created_at__lte=transfer.created_at).filter(
                 Q(status='PENDING') | Q(status='ACCEPTED', accepted_at__gt=transfer.created_at))
             if unfinished.filter(Q(source_segment__slot=transfer.previous_segment.slot)

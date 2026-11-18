@@ -629,7 +629,7 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
             termination_processed_at__isnull=False).exists()
         has_funding = OrderPointsFundingAllocation.objects.filter(service_order=order).exists()
         if before_main and has_funding:
-            from .models import OrderAddonFundingRelease, OrderOriginalShareTransfer
+            from .models import OrderAddonFundingRelease
             allocations = OrderPointsFundingAllocation.objects.filter(service_order=order)
             releases = OrderAddonFundingRelease.objects.filter(allocation__in=allocations).select_related(
                 'run__ordinary_transfer_revision')
@@ -844,7 +844,6 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
             receipt_id = OrderPointsFundingAllocation.objects.filter(
                 pk__in=[item[0] for item in run.allocation_snapshot]).order_by('receipt_id').values_list(
                     'receipt_id', flat=True).first()
-            from django.conf import settings
             if getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is not True:
                 verified_release(run, None, order_locked=True)
             else:

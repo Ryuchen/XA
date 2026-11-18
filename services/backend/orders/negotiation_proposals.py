@@ -458,7 +458,6 @@ def _proposal_calculation(order, case, scope, refund_units, requested_terms=None
                 raise ValidationError('积分转单协商确认尚未开放')
             calculation = transfer_preview(case.pk, refund_equivalent_units=refund_units)
         elif order.refund_records.exists():
-            from django.conf import settings
             from .points_business_access import permits
             formal = any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon'))
             if not formal and not getattr(settings, 'SERVICE_POINTS_FOLLOWUP_AGREEMENT_TESTING', False):

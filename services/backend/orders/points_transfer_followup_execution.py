@@ -90,7 +90,6 @@ def _post_locked(case_id, proposal_id, *, operator, legacy_operator, request_id)
         from .points_transfer_followup_scope import supported_addon, addon_chain_before
         from .models import OrderAddonPayment
         if OrderAddonPayment.objects.filter(intent__order=order).exists() and not supported_addon(order, first):
-            from django.utils import timezone
             addon_chain_before(order, first, timezone.now())
     from .models import PointsPostRefundTransferRevision
     version = PointsPostRefundTransferRevision.objects.filter(order=order).order_by('-pk').first()
