@@ -47,7 +47,8 @@ class ReleaseFlowTest(APITestCase):
         profile.account = self.accounts[self.provider.pk]
         profile.save(update_fields=['account'])
         self.service = make_service(price=10000, commission_rate=20)
-        self.card = SupportContactCard.objects.create(name='负责客服', wecom_corp_id='wwtest', wecom_service_url='https://work.weixin.qq.com/kfid/kf-test')
+        self.card = SupportContactCard.objects.create(name='负责客服', staff_account=self.accounts[self.admin.pk],
+            wecom_corp_id='wwtest', wecom_service_url='https://work.weixin.qq.com/kfid/kf-test')
         from engagement.models import RechargePackage
         RechargePackage.objects.create(amount=20000, gift_amount=1000, active=True)
 

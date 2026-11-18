@@ -17,10 +17,16 @@ class SupportContactCardApiTest(APITestCase):
         account = get_or_create_account_for_legacy_user(self.user)
         link_legacy_relations(self.user, account)
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+        from orders.tests.factories import make_console_user
+        staff = make_console_user([])
+        self.staff_account = get_or_create_account_for_legacy_user(staff)
+        staff.admin_membership.account = self.staff_account
+        staff.admin_membership.save(update_fields=['account'])
 
     def test_contact_card_returns_wecom_configuration(self):
         SupportContactCard.objects.create(
             name='企业微信客服',
+            staff_account=self.staff_account,
             wecom_corp_id='ww1234567890',
             wecom_service_url='https://work.weixin.qq.com/kfid/kfc123456',
         )
@@ -33,8 +39,8 @@ class SupportContactCardApiTest(APITestCase):
         )
 
     def test_contact_card_list_returns_only_active_cards_in_order(self):
-        SupportContactCard.objects.create(name='客服B', sort_order=2)
-        SupportContactCard.objects.create(name='客服A', sort_order=1)
+        SupportContactCard.objects.create(name='客服B', sort_order=2, staff_account=self.staff_account)
+        SupportContactCard.objects.create(name='客服A', sort_order=1, staff_account=self.staff_account)
         SupportContactCard.objects.create(name='离岗客服', sort_order=0, is_active=False)
         response = self.client.get('/api/support/contact-cards/')
         self.assertEqual(response.data['code'], 0)
@@ -43,6 +49,7 @@ class SupportContactCardApiTest(APITestCase):
     def test_admin_configuration_requires_corp_id_and_url_together(self):
         serializer = AdminSupportCardSerializer(data={
             'name': '配置不完整的客服',
+            'staff_account': self.staff_account.pk,
             'wecom_corp_id': 'ww1234567890',
             'wecom_service_url': '',
         })
@@ -52,6 +59,7 @@ class SupportContactCardApiTest(APITestCase):
     def test_admin_configuration_rejects_non_kfid_url(self):
         serializer = AdminSupportCardSerializer(data={
             'name': '错误链接客服',
+            'staff_account': self.staff_account.pk,
             'wecom_corp_id': 'ww1234567890',
             'wecom_service_url': 'https://example.com/customer-service',
         })
@@ -62,13 +70,14 @@ class SupportContactCardApiTest(APITestCase):
         for url in ['https://work.weixin.qq.com/kfid/', 'https://work.weixin.qq.com/kfid/id/extra',
                     'https://work.weixin.qq.com/kfid/../login', 'https://work.weixin.qq.com.evil.test/kfid/id']:
             with self.subTest(url=url):
-                serializer = AdminSupportCardSerializer(data={'name': '客服', 'wecom_corp_id': 'wwtest', 'wecom_service_url': url})
+                serializer = AdminSupportCardSerializer(data={'name': '客服', 'staff_account': self.staff_account.pk,
+                    'wecom_corp_id': 'wwtest', 'wecom_service_url': url})
                 self.assertFalse(serializer.is_valid())
                 self.assertIn('wecom_service_url', serializer.errors)
 
     def test_admin_partial_update_keeps_pair_and_accepts_service_link_scene(self):
-        card = SupportContactCard.objects.create(name='客服', wecom_corp_id='wwtest',
-            wecom_service_url='https://work.weixin.qq.com/kfid/kfc_test')
+        card = SupportContactCard.objects.create(name='客服', staff_account=self.staff_account,
+            wecom_corp_id='wwtest', wecom_service_url='https://work.weixin.qq.com/kfid/kfc_test')
         unchanged = AdminSupportCardSerializer(card, data={'tips': '欢迎咨询'}, partial=True)
         self.assertTrue(unchanged.is_valid(), unchanged.errors)
         broken = AdminSupportCardSerializer(card, data={'wecom_corp_id': ''}, partial=True)
