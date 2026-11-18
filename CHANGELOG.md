@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+### 2026-11-18
+
+- **文档** 按开店到结清的业务链和 S1–S7 修订开发指南，校正提现分工与 License 故障边界，补齐阶段门禁和对账示例。修订前版本可用 `git show ce0b4d5c:AGENTS.md` 查阅。[开发指南](AGENTS.md)
+
 ### 2026-11-17
 
 - **新增**：[企业级总体规划](docs/development/26-企业级总体规划.md)（M0–M9 路线图与门禁）；[SaaS 平台产品设计](docs/prd/35-企业级SaaS平台产品设计.md)（租户模型/能力打包/生命周期/商业化）；[目标架构与重构设计](docs/architecture/SAAS_TARGET_ARCHITECTURE.md)＋[重构实施计划](docs/architecture/REFACTORING_PLAN.md)（R1–R6 波次）；[AI 驱动 SDLC 开发流程](docs/development/27-AI驱动SDLC开发流程.md)（S1–S7 阶段、G1–G7 人类门禁）；AGENTS.md 第一性原理（事实唯一，账实相符）；[门店预存尊享卡 PRD 增补](docs/prd/37-门店预存尊享卡.md)（卡式预存产品线，参考 Obsidian 东东平台尊享卡规范与声浪卡档，含 PC01–PC08 待确认决策）；[入驻培训功能对照与 SaaS 化增补](docs/prd/38-入驻培训功能对照与SaaS化增补.md)（东东平台培训 PDF 44 页示意图与规则核对，44 项功能覆盖判定、SA01–SA14 增补提案；尊享卡补卡面版权审核/逐卡转回开关/购买台账）；[SaaS 缺口整改审批单](docs/prd/39-SaaS缺口整改审批单.md) 24 项逐批审批完成（SA01 订阅＋每单 0.1% 平台服务费、SA12 增长功能全入首版等 20 项批准，SA03 不采纳、SA04/09 暂缓、SA10 维持现状），37/38 状态转已批复基线；[门店管理与派单系统产品设计](docs/prd/40-门店管理与派单系统产品设计.md)（两域专业 SaaS 整合设计，落入批复决策）＋[产品开发流程安排](docs/development/28-产品开发流程安排.md)（Claude 官方 SDLC 原理映射：spec 驱动/检查阶梯/确定性强制/独立评审/worktree 并行/无人值守五问，E1–E13 Epic 与 W0–W6 波次对齐 M/R）。
