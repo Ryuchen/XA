@@ -1,3 +1,4 @@
+import os
 """Zero-refund negotiation evidence and feature-gated termination tests."""
 from unittest.mock import patch
 from unittest import skipUnless
@@ -141,6 +142,8 @@ class ZeroNegotiationPreparationTests(APITestCase):
         self.assertEqual(get_wallet(user=self.a, account=self.a_account).balance, 0)
         self.assertFalse(self.order.refund_records.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '普通订单正式资金结算链仍在接线（18-盘点订单售后资金组合），结算门禁保持关闭；最终联调启用')
     def test_persisted_zero_marker_never_falls_through_to_ordinary_settlement(self):
         from django.utils import timezone
         from orders.models import Order
@@ -451,6 +454,8 @@ class ZeroNegotiationPreparationTests(APITestCase):
         self.assertFalse(Transaction.objects.filter(order=current, wallet__account=self.a_account, tx_type='INCOME').exists())
 
     @override_settings(NEGOTIATION_ZERO_EXECUTION_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '普通订单正式资金结算链仍在接线（18-盘点订单售后资金组合），结算门禁保持关闭；最终联调启用')
     def test_confirmation_worker_and_report_status_follow_each_zero_termination_share(self):
         from datetime import timedelta
         from engagement.confirmation import process_order

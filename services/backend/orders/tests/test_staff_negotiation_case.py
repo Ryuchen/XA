@@ -40,7 +40,8 @@ class StaffNegotiationCaseTests(APITestCase):
                                 escort_mode='DOUBLE', payment_status='PAID')
         for user, account in ((self.a, self.a_account), (self.b, self.b_account)):
             OrderProvider.objects.create(order=self.order, provider=user, provider_account=account,
-                                         provider_name_snapshot=user.nickname, settlement_base=5000, provider_income=4000)
+                                         provider_name_snapshot=user.nickname, settlement_base=5000, provider_income=4000,
+                                         provider_business_cycle=account.business_cycle)
         self.client = self.client_for(self.staff)
         self.url = '/api/admin/aftersales/open-negotiation/'
         self.payload = {'order_id':self.order.pk, 'reason':'老板请求协商终止',

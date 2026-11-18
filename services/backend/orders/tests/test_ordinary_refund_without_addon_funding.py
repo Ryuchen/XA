@@ -537,10 +537,11 @@ class OrdinaryRefundWithoutAddonFundingTest(APITestCase):
             if preallocated:
                 second.escort_profile.save(update_fields=['level'])
             self.service.billing_provider_count = 2
+            self.service.fulfillment_provider_count = 2
             if preallocated:
                 self.service.commission_policy = 'FUN'
                 self.service.save(update_fields=['commission_policy'])
-            self.service.save(update_fields=['billing_provider_count'])
+            self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         if addon:
             from orders.models import GameCategory, ServiceAddonConfiguration, ServiceAddonPriceOption
             from orders.tests.factories import make_service

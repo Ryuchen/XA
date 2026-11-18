@@ -48,9 +48,13 @@ class ProviderAfterSaleStatusTest(APITransactionTestCase):
         self.staff.admin_membership.account = self.accounts[self.staff.pk]
         self.staff.admin_membership.save(update_fields=['account'])
         self.provider.escort_profile.account = self.accounts[self.provider.pk]
-        self.provider.escort_profile.save(update_fields=['account'])
+        self.provider.escort_profile.deposit_business_cycle = self.accounts[self.provider.pk].business_cycle
+        self.provider.escort_profile.save(update_fields=['account', 'deposit_business_cycle'])
         self.service = make_service(price=10000, commission_rate=20)
         make_wallet(self.boss, balance=50000)
+        from engagement.models import PointFundingLot
+        PointFundingLot.objects.create(account=self.accounts[self.boss.pk], source_key='aftersale-status-prepaid',
+            kind='PREPAID', remaining=50000)
 
     def login(self, user):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.tokens[user.pk])
@@ -109,7 +113,8 @@ class ProviderAfterSaleStatusTest(APITransactionTestCase):
         order_id, report_id = self.prepare()
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.provider.pk]}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.provider.pk]}',
+                                           headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             try:
                 ticket = await database_sync_to_async(self.open_aftersale)(order_id)
@@ -129,7 +134,8 @@ class ProviderAfterSaleStatusTest(APITransactionTestCase):
                 # Settlement also emits order/wallet updates; reconnect starts a clean stream.
             finally:
                 await socket.disconnect()
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.provider.pk]}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={self.tokens[self.provider.pk]}',
+                                           headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             try:
                 await database_sync_to_async(self.open_aftersale)(order_id)
