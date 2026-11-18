@@ -207,6 +207,12 @@ class KookConfigTest(APITestCase):
 
     @override_settings(WECOM_DISPATCH_ENABLED=True, WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=isolated-test')
     def test_stale_multi_channel_confirmation_never_partially_queues(self):
+        # 现行企微配置读门店 WecomDispatchConfig 行（非环境变量），须落库加密 webhook。
+        from console.models import WecomDispatchConfig
+        WecomDispatchConfig.objects.update_or_create(pk=1, defaults={
+            'enabled': True,
+            'webhook_ciphertext': encrypt_token('https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=isolated-test'),
+        })
         self.save(routes=[self.route(template='旧规则 {order_no} {original_amount}')])
         url = f'/api/admin/orders/{self.order.pk}/dispatch-message/'
         def keys():
