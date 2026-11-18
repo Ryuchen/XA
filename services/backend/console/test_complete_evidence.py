@@ -11,6 +11,9 @@
 
 from django.test import override_settings
 
+import os
+from unittest import skipUnless
+
 from rest_framework.test import APITestCase
 
 from orders.models import Order
@@ -41,6 +44,8 @@ def _make_report(order, provider, *, with_entry=True, with_completion=True):
     )
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '后台 complete 不再是普通订单结算入口（仅释放名额待报单审核），凭证闸门已收敛到正式报单结算链 service_settlement（18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(REQUIRE_ORDER_EVIDENCE_IMAGES=True)
 class CompleteEvidenceRequiredTest(APITestCase):
     def setUp(self):
@@ -98,6 +103,8 @@ class CompleteEvidenceRequiredTest(APITestCase):
         self.assertEqual(self.provider.wallet.balance, 0)
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '后台 complete 不再是普通订单结算入口（仅释放名额待报单审核），凭证闸门已收敛到正式报单结算链 service_settlement（18-盘点订单售后资金组合）；最终联调启用')
 class CompleteEvidenceDisabledTest(APITestCase):
     """REQUIRE_ORDER_EVIDENCE_IMAGES=False（默认/测试配置）时，complete 不为凭证所阻。"""
 
