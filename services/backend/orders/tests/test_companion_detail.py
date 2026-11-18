@@ -3,10 +3,12 @@ from datetime import timedelta
 
 from django.test import override_settings
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APITransactionTestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from orders.models import GameCategory, Order
+from orders.tests import test_original_attribution as attribution_fixture
+from orders.tests import test_release_flow as release_flow
 from orders.tests.factories import make_order, make_provider, make_service, make_user
 from users.models import EscortLevel
 
@@ -30,25 +32,6 @@ class CompanionDetailTest(APITestCase):
         response = self.client.get(self.url, params)
         self.assertEqual(response.status_code, 200, response.data)
         return response.data['data']
-
-    def test_detail_matches_public_card_identity_and_refreshes_monthly_amount(self):
-        level = EscortLevel.objects.create(name='高级陪玩', sort_order=5, commission_rate=20)
-        self.profile.level = level
-        self.profile.save(update_fields=['level'])
-        row = self.detail(service_item=self.service.pk, gender='FEMALE')
-        self.assertEqual(row['id'], self.profile.account_id)
-        self.assertEqual(row['nickname'], '听风')
-        self.assertEqual(row['level_name'], '高级陪玩')
-        self.assertEqual(row['bio'], '一起开心开黑')
-        self.assertTrue(row['can_order'])
-        self.assertNotIn('active_pass_tier', row)
-        self.assertEqual(row['monthly_order_amount'], 0)
-        order = make_order(self.boss, service=self.service, provider=self.profile.user,
-                           customer_account=self.boss_account, provider_account=self.profile.account,
-                           status='COMPLETED', payment_status='PAID', amount=2050)
-        self.assertEqual(self.detail()['monthly_order_amount'], 2050)
-        Order.objects.filter(pk=order.pk).update(payment_status='REFUNDED')
-        self.assertEqual(self.detail()['monthly_order_amount'], 0)
 
     def test_offline_is_unavailable_but_busy_with_capacity_is_selectable(self):
         for status in ('OFFLINE',):
@@ -110,3 +93,53 @@ class CompanionDetailTest(APITestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.data['data']['nickname'], '听风')
+
+
+@override_settings(ORIGINAL_ATTRIBUTION_ENABLED=True, PRESTART_HANDOFF_ENABLED=True,
+                   LEGACY_FORCE_AUTH_COMPAT=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
+                   REQUIRE_ORDER_EVIDENCE_IMAGES=True, REQUIRE_RECHARGE_PROOF=True,
+                   KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False)
+class CompanionDetailMonthlyAmountFlowTest(APITransactionTestCase):
+    """月接单额按真实原价份额事实刷新；全额协商退款后冲销为零。"""
+    setUp = attribution_fixture.OriginalAttributionFlowTest.setUp
+    login = attribution_fixture.OriginalAttributionFlowTest.login
+    ok = attribution_fixture.OriginalAttributionFlowTest.ok
+    recharge = attribution_fixture.OriginalAttributionFlowTest.recharge
+    new_order = attribution_fixture.OriginalAttributionFlowTest.new_order
+
+    def test_detail_matches_public_card_identity_and_refreshes_monthly_amount(self):
+        profile = self.provider.escort_profile
+        level = EscortLevel.objects.create(name='高级陪玩', sort_order=5, commission_rate=20)
+        profile.display_name = '听风'
+        profile.bio = '一起开心开黑'
+        profile.gender = 'FEMALE'
+        profile.level = level
+        profile.save(update_fields=['display_name', 'bio', 'gender', 'level'])
+        account = self.accounts[self.provider.pk]
+        url = f'/api/users/escorts/{account.pk}/'
+        self.login(self.boss)
+        row = self.ok(self.client.get(url, {'service_item': self.service.pk, 'gender': 'FEMALE'}))
+        self.assertEqual(row['id'], account.pk)
+        self.assertEqual(row['nickname'], '听风')
+        self.assertEqual(row['level_name'], '高级陪玩')
+        self.assertEqual(row['bio'], '一起开心开黑')
+        self.assertTrue(row['can_order'])
+        self.assertNotIn('active_pass_tier', row)
+        self.assertEqual(row['monthly_order_amount'], 0)
+        self.card.staff_account = self.accounts[self.admin.pk]
+        self.card.save(update_fields=['staff_account'])
+        order = self.new_order()
+        self.login(self.provider)
+        self.ok(self.client.post(f'/api/orders/orders/{order.pk}/start/',
+            {'entry_image': release_flow.screenshot()}, format='multipart'))
+        self.login(self.boss)
+        row = self.ok(self.client.get(url))
+        self.assertEqual(row['monthly_order_amount'], order.original_amount)
+        self.login(self.admin)
+        quote = self.ok(self.client.get(f'/api/admin/orders/{order.pk}/refund-preview/'))
+        self.ok(self.client.post(f'/api/admin/orders/{order.pk}/refund/', {'reason': '全额协商退款',
+            'plan_token': quote['plan_token'], 'client_request_id': 'detail-monthly-full-refund'}, format='json'))
+        order.refresh_from_db()
+        self.assertEqual(order.payment_status, 'REFUNDED')
+        self.login(self.boss)
+        self.assertEqual(self.ok(self.client.get(url))['monthly_order_amount'], 0)
