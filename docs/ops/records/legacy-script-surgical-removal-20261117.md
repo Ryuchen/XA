@@ -60,8 +60,8 @@
 
 - 历史 UI 覆盖损失：旧 Vue/小程序页面布局、截图、DOM/触控、声音计数、滚动宽度、对话框草稿保留、WS 驱动 DOM 刷新、离线重连不重复响铃、传输丢包模拟等，逐模块见各批次提交说明与代理报告；React 等价覆盖留待后续界面阶段（A3 口径变更已登记 26 规划）。
 - 待 MySQL 层联调：grab/reject 行锁路径（sound、cursor、预约折扣转换等改写模块）在 SQLite harness 不可完成，登记待隔离 MySQL 矩阵复跑；B5b 三模块 harness 因既有 WIP（COMPLETION 结算门禁 funding_allocations 夹具缺口）BLOCKED。
-- 既有 WIP 红态（identifiers 门店上下文、grab 旗标、结算夹具等）与本次清理无关，维持 11-17 审计归因；全套件最终对照见 §3.1。
-- 清理中发现的既有 committed 后端 bug（非本次引入、禁改业务代码故登记待修）：①chat `ChatSessionView` `before_id` 锚点 `sender_account` deferred＋select_related 致 FieldError（B1/C2 同源 BLOCKED）；②users `/api/users/escorts/` OuterRef ValueError（C1/C2 同源）；③admin service-items PATCH 503（C1/C5 绕以 ORM）。
+- 既有 WIP 红态（identifiers 门店上下文、grab 旗标、结算夹具等）与本次清理无关，维持 11-17 审计归因；全套件最终对照见 §3.1。2026-11-18 续接开发已为官方套件建立门店上下文引导（StoreContextRunner，cc162187），identifiers 类夹具红态大幅收敛，详见 16-开发进度同日记录。
+- 清理中发现的既有 committed 后端 bug（非本次引入、禁改业务代码故登记待修）：①chat `ChatSessionView` `before_id` 锚点 `sender_account` deferred＋select_related 致 FieldError（B1/C2 同源 BLOCKED）；②users `/api/users/escorts/` OuterRef ValueError（C1/C2 同源）；③admin service-items PATCH 503（C1/C5 绕以 ORM）。**三处均已于 2026-11-18 修复（118b83f2），harness 对照基线零新增失败。**
 - 隔离 MySQL grab 竞争脚本（test_grab_receipt_mysql_isolated.py）两次复跑均内层 240s 超时；git 日志证实 grab 代码与脚本自清理开始零改动→既有环境/WIP 阻断，登记待环境修复后复跑，非清理回归。
 
 ## 7. 环境注记
