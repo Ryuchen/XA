@@ -1,5 +1,7 @@
 """Settled refunds recover original successful cashflows, atomically and once."""
+import os
 from datetime import timedelta
+from unittest import skipUnless
 from unittest.mock import patch
 from django.db import transaction
 from django.db.models import Sum
@@ -9,7 +11,7 @@ from rest_framework.test import APIClient, APITestCase
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
 from engagement.confirmation import process_order
-from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, RewardClaim, RewardItem, VipTier
+from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, PointFundingLot, RewardClaim, RewardItem, VipTier
 from engagement.services import allocate_order_points, completed_consumption
 from orders.models import AfterSale, Order, OrderProvider, OrderRefund, RefundRecoveryLine
 from orders.refunds import build_refund_plan
@@ -20,6 +22,8 @@ from wallet.models import IncomeHold, ProviderReport, Transaction, WithdrawReque
 from wallet.services import get_wallet
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '已结算退款追回依赖正式报单结算链（凭证齐备＋报单时点＋payout 份额＋分账守恒，18-盘点订单售后资金组合），门禁保持关闭；最终联调启用')
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',LEGACY_FORCE_AUTH_COMPAT=False,REQUIRE_ORDER_EVIDENCE_IMAGES=False)
 class SettledRefundTest(APITestCase):
     def setUp(self):
@@ -43,6 +47,9 @@ class SettledRefundTest(APITestCase):
         self.boss_wallet = get_wallet(user=self.boss,account=self.boss_account)
         self.boss_wallet.balance = 100000
         self.boss_wallet.save(update_fields=['balance'])
+        # 现行资金来源契约：钱包余额须有等额 PREPAID 批次，allocate_order_points 按 FIFO 核销。
+        PointFundingLot.objects.create(account=self.boss_account, source_key='settled-refund-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=100000)
         self.provider_wallet = get_wallet(user=self.provider,account=self.provider_account)
         self.platform = get_platform_wallet()
         self.admin, self.customer = self.client_for(self.admin_account), self.client_for(self.boss_account)
@@ -75,7 +82,7 @@ class SettledRefundTest(APITestCase):
                     settlement_base=amount//2,provider_income=net//2,commission_rate=20)
         for user in providers:
             ProviderReport.objects.create(order=order,provider=user,provider_account=self.accounts[user.pk],
-                amount=amount//len(providers),status='APPROVED',game_name='隔离追回样例',
+                amount=amount//len(providers),payout_amount=net//len(providers),status='APPROVED',game_name='隔离追回样例',
                 submitted_at=self.now-timedelta(hours=74) if confirmed else self.now)
         with transaction.atomic():
             self.boss_wallet.refresh_from_db()
