@@ -8,6 +8,13 @@ ISOLATED_CONTROL_PLANE = False
 SECRET_KEY = 'xa-test-only-secret-key-not-for-production-use'
 ALLOWED_HOSTS = ['*']
 
+# 官方套件由 StoreContextRunner 建立声浪目录行与夹具侧门店上下文；
+# DRF 默认测试 Host 与本机回环地址绑定到同一部署固定入口。
+TEST_RUNNER = 'config.test_runner.StoreContextRunner'
+STORE_HOST_BINDINGS = {'sl.esports.club': 'shenglang', 'xa.esports.club': 'xinan',
+                       'testserver': 'shenglang', 'localhost': 'shenglang',
+                       '127.0.0.1': 'shenglang'}
+
 # Unit tests and the default CI job run without a database or Redis service.
 # Migration/MySQL settings override DATABASES for their separate checks.
 DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_a': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_b': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}, 'store_new': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}

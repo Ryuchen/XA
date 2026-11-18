@@ -9,7 +9,7 @@ from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase, APIClient
 
-from club_accounts.services import get_or_create_account_for_legacy_user
+from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from club_accounts.tokens import issue_account_tokens
 from console.permissions import ALL_PERMISSIONS
 from console.models import AdminRole, AdminMembership, AdminAuditLog
@@ -55,7 +55,8 @@ class MenuOperationsTest(APITestCase):
             ('announcements', {'title': '菜单公告', 'content': '内容'}, 'title'),
             ('achievements', {'code': 'menu-achievement', 'title': '菜单成就', 'metric': 'orders', 'target': 2}, 'title'),
             ('checkin-gifts', {'checkin_day': 2, 'name': '菜单签到礼物', 'reward_amount': 100}, 'name'),
-            ('support-cards', {'name': '菜单客服', 'wecom_corp_id': 'wwtest', 'wecom_service_url': 'https://work.weixin.qq.com/kfid/test'}, 'name'),
+            ('support-cards', {'name': '菜单客服', 'staff_account': self.staff.pk,
+                'wecom_corp_id': 'wwtest', 'wecom_service_url': 'https://work.weixin.qq.com/kfid/test'}, 'name'),
             ('audition-links', {'title': '菜单试音', 'expire_at': future}, 'title'),
             ('roles', {'code': 'menu-role', 'name': '菜单角色', 'permissions': ['order:view']}, 'name'),
         ]
@@ -112,10 +113,19 @@ class MenuOperationsTest(APITestCase):
         self.assertEqual(provider_wallet.balance, 200)
 
     @patch('console.views._schedule_auto_cancel')
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                       GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
     def test_dispatch_and_cancel_fund_records_identify_actual_operator(self, _schedule):
+        from console.grab_config import save_grab_window
+        from engagement.models import ClubOperationConfig
+        save_grab_window(30, 0, lambda *args: None)
+        ClubOperationConfig.objects.get_or_create(pk=1)
         wallet, _ = Wallet.objects.get_or_create(user=self.boss, defaults={'account': self.boss_account})
         wallet.balance = 10000
         wallet.save(update_fields=['balance'])
+        from engagement.models import PointFundingLot
+        PointFundingLot.objects.create(account=self.boss_account, source_key='menu-dispatch-prepaid',
+            kind='PREPAID', remaining=10000)
         service = make_service(price=8000)
         order = self.ok(self.client.post('/api/admin/orders/dispatch/', {
             'customer_id': self.boss_account.pk, 'service_id': service.pk, 'game_rounds': 1,
@@ -342,15 +352,19 @@ class MenuOperationsTest(APITestCase):
         session = ChatSession.objects.create(user=self.boss, account=self.boss_account)
         self.assertEqual(self.client.post(f'/api/admin/chat-sessions/{session.pk}/reply/', {'content': '字' * 1001}, format='json').status_code, 400)
         self.assertEqual(self.client.post('/api/admin/chat-sessions/99999999/reply/', {'content': '测试'}, format='json').status_code, 404)
-        self.assertEqual(self.client.post('/api/admin/chat-sessions/99999999/read/').status_code, 404)
+        self.assertEqual(self.client.post('/api/admin/chat-sessions/99999999/read/',
+            {'message_ids': [1]}, format='json').status_code, 404)
 
     def test_audition_audit_notifies_applicant_and_preserves_records(self):
         from orders.tests.factories import make_provider
         provider = make_provider()
         account = get_or_create_account_for_legacy_user(provider)
+        link_legacy_relations(provider, account)
         link = AuditionLink.objects.create(title='待审核试音')
-        signup = AuditionSignup.objects.create(link=link, applicant=provider, applicant_account=account)
-        self.ok(self.client.post(f'/api/admin/audition-signups/{signup.pk}/approve/'))
+        signup = AuditionSignup.objects.create(link=link, applicant=provider, applicant_account=account,
+            applicant_business_cycle=account.business_cycle)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.ok(self.client.post(f'/api/admin/audition-signups/{signup.pk}/approve/'))
         signup.refresh_from_db()
         self.assertEqual(signup.status, 'APPROVED')
         self.assertEqual(signup.auditor_account_id, self.staff.pk)

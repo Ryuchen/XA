@@ -23,6 +23,7 @@ class CatalogLinkTests(APITestCase):
             self.accounts[user.pk] = account
         self.profile = self.provider.escort_profile
         self.profile.account = self.accounts[self.provider.pk]
+        self.profile.deposit_mode = 'EARNINGS'
         self.profile.save()
         membership = self.staff.admin_membership
         membership.account = self.accounts[self.staff.pk]
@@ -73,13 +74,13 @@ class CatalogLinkTests(APITestCase):
 
     def test_create_normalizes_games_and_rejects_disabled_service(self):
         serializer = AdminCreateEscortSerializer(data={'username': 'new-provider', 'password': 'test-password',
-            'display_name': '新陪玩', 'service_items': [self.service.pk]})
+            'phone': '13800138000', 'display_name': '新陪玩', 'service_items': [self.service.pk]})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(serializer.validated_data['game_categories'], [self.game])
         self.game.is_active = False
         self.game.save()
         serializer = AdminCreateEscortSerializer(data={'username': 'new-provider', 'password': 'test-password',
-            'display_name': '新陪玩', 'service_items': [self.service.pk]})
+            'phone': '13800138000', 'display_name': '新陪玩', 'service_items': [self.service.pk]})
         self.assertFalse(serializer.is_valid())
 
     def test_disabled_parent_hides_catalog_detail_and_skills_but_marks_favorites_unavailable(self):
