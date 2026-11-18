@@ -1,7 +1,5 @@
 """Native chat only marks messages actually loaded, even with backdated history."""
-import os
 from datetime import timedelta
-from unittest import skipUnless
 
 from django.test import LiveServerTestCase, override_settings
 from django.test import TestCase
@@ -16,8 +14,6 @@ from orders.tests.factories import make_console_user
 from stores.context import resolve_store, store_context
 
 
-@skipUnless(os.environ.get('XA_CHAT_READ_SCOPE_HTTP') == '1',
-            'blocked by backend chat before_id pagination FieldError (sender_account deferred + select_related); pending business-code fix')
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class BossChatReadScopeHTTPTest(LiveServerTestCase):
     def test_backdated_high_id_stays_unread_until_loaded(self):

@@ -82,7 +82,7 @@ class ChatSessionView(APIView):
         if before is not None:
             if not before.isascii() or not before.isdigit() or int(before) < 1 or len(before) > 18:
                 return Response({'code': 400, 'msg': '聊天记录位置无效'}, status=400)
-            anchor = messages.filter(pk=int(before)).only('id', 'created_at').first()
+            anchor = session.messages.filter(pk=int(before)).only('id', 'created_at').first()
             if anchor is None:
                 return Response({'code': 400, 'msg': '聊天记录位置已变化，请重新加载'}, status=400)
             messages = messages.filter(Q(created_at__lt=anchor.created_at) | Q(created_at=anchor.created_at, pk__lt=anchor.pk))

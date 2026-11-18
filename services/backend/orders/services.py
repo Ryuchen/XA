@@ -247,11 +247,46 @@ def capacity_orders_for(account=None, *, account_id=None, provider_id=None, excl
 
     Keep ``active_orders_for`` unchanged for deposit refunds, account bans and
     other outstanding-business checks: those must still see future bookings.
+
+    传入 OuterRef 等表达式时返回单层子查询可用的 Order 查询集：Django 6 的
+    OuterRef 只解析直接外层，账号维度直接引用外层字段，入池证据引用订单自身
+    主陪玩字段。主单口径与真实入池一致；双陪转预约且次席未入池的极端组合
+    留最终联调核对。具体值路径保留原嵌套口径。
     """
-    from django.db.models import Exists, OuterRef
+    from django.db.models import Exists, OuterRef, Q
+    from django.db.models.expressions import Combinable
     from club_accounts.models import LegacyAccountMap
     from .models import OrderWorkStint
     account_ids = {value for value in (getattr(account, 'pk', None), account_id) if value is not None}
+    expression_dims = isinstance(provider_id, Combinable) or any(
+        isinstance(value, Combinable) for value in account_ids)
+    if expression_dims:
+        match = Q()
+        concrete_ids = [value for value in account_ids if not isinstance(value, Combinable)]
+        if concrete_ids:
+            match |= Q(provider_account_id__in=concrete_ids)
+            match |= Q(providers__provider_account_id__in=concrete_ids,
+                       providers__released_at__isnull=True, providers__settled_at__isnull=True)
+        for value in account_ids:
+            if isinstance(value, Combinable):
+                match |= Q(provider_account_id=value)
+                match |= Q(providers__provider_account_id=value,
+                           providers__released_at__isnull=True, providers__settled_at__isnull=True)
+        if provider_id is not None:
+            match |= Q(provider_id=provider_id)
+            match |= Q(providers__provider_id=provider_id,
+                       providers__released_at__isnull=True, providers__settled_at__isnull=True)
+        if not match:
+            return Order.objects.none()
+        entered = OrderWorkStint.objects.filter(
+            order_id=OuterRef('pk'), account_id=OuterRef('provider_account_id'),
+            started_at__isnull=False, released_at__isnull=True)
+        queryset = Order.objects.filter(match, status__in=ACTIVE_ORDER_STATUSES).annotate(
+            _capacity_entered=Exists(entered)).exclude(
+            status=Order.Status.GRABBED, reservation__status='CONVERTED', _capacity_entered=False)
+        if exclude_order_ids:
+            queryset = queryset.exclude(id__in=list(exclude_order_ids))
+        return queryset.distinct()
     if provider_id is not None:
         account_ids.update(LegacyAccountMap.objects.filter(legacy_user_id=provider_id)
                            .values_list('account_id', flat=True))
