@@ -17,6 +17,12 @@ from orders.tests.factories import make_console_user, make_user
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class BusinessDictionaryWorkflowTest(APITestCase):
     def setUp(self):
+        from importlib import import_module
+        from django.apps import apps
+        from stores.db import connection as business_connection
+        if not BusinessDictionaryItem.objects.exists():
+            editor = business_connection.schema_editor(atomic=False)
+            import_module('console.migrations.0018_business_dictionaries').seed(apps, editor)
         self.editor = self.staff(['dictionary:view', 'dictionary:edit'])
 
     def staff(self, permissions):
