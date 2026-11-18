@@ -1,6 +1,6 @@
 # 遗留旧端脚本外科式清除审计（2026-11-17）
 
-日期：2026-11-17／18；状态：**执行记录（已完成；pass2 隔离区处置待用户决定）**。
+日期：2026-11-17／18；状态：**执行记录（已完成）**。
 
 ## 1. 背景与用户决定
 
@@ -53,7 +53,7 @@
 ## 5. .tools 两轮清理
 
 - 首轮：1924 项（死快照目录/旧日志/无引用一次性脚本/退役 Vue 包）→ 隔离 → 用户批准永久删除（7.5G）。保留规则：活引用、MySQL datadir 红线、validation-backups、mtime≥11-08 近期工作、基础设施脚本。
-- 二轮：脚本删除后释放的快照目录与旧证明图/beat 状态等 200 项 → `G:\XA-cleanup-quarantine-20261117-pass2`（78M，可逆，处置待用户决定）。**4 个 DPAPI 加密凭据备份（wechat-credentials-before-*.dpapi、wechat.local.env.dpapi）保留**——非代码且可能为隔离微信凭据唯一副本。
+- 二轮：脚本删除后释放的快照目录与旧证明图/beat 状态等 200 项 → 隔离 `G:\XA-cleanup-quarantine-20261117-pass2`（78M）→ 经用户 2026-11-18 批准**永久删除**。**4 个 DPAPI 加密凭据备份（wechat-credentials-before-*.dpapi、wechat.local.env.dpapi）保留**——非代码且可能为隔离微信凭据唯一副本。
 - 保留基础设施：mysql-8.0.46-winx64 发行版与全部隔离 datadir、fronted-acceptance、fronted-scaffold、runtime（便携 pwsh/node）、local-validation.env、近期日志。
 
 ## 6. 覆盖损失与待联调
