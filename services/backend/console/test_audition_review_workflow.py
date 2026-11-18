@@ -41,7 +41,8 @@ class AuditionReviewWorkflowTest(APITestCase):
             self.assertEqual([row['id'] for row in response.data['data']['list']], [signup_id])
             row = response.data['data']['list'][0]
             self.assertEqual((row['applicant_no'], row['applicant_username']), (account.account_no, account.username))
-        approved = self.client.post(f'/api/admin/audition-signups/{signup_id}/approve/')
+        with self.captureOnCommitCallbacks(execute=True):
+            approved = self.client.post(f'/api/admin/audition-signups/{signup_id}/approve/')
         self.assertEqual(approved.data['data']['status'], 'APPROVED')
         duplicate = self.client.post(f'/api/admin/audition-signups/{signup_id}/reject/', {'audit_remark': '重复审核'}, format='json')
         self.assertEqual(duplicate.status_code, 409)

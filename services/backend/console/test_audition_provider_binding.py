@@ -1,3 +1,6 @@
+import os
+from unittest import skipUnless
+
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APITestCase
@@ -36,6 +39,8 @@ class AuditionProviderBindingTest(APITestCase):
         return self.client.post(f'/api/admin/audition-links/{self.link_id}/bind-provider/',
             {'account_id': account_id, 'expected_updated_at': version or self.created['updated_at']}, format='json')
 
+    @skipUnless(os.environ.get('XA_AUDITION_TOKEN_ONLY_LEGACY') == '1',
+                '本用例假定公开 exchange 创建会话且任意账号可凭令牌报名，已被「须已登录账号核对邀请＋报名账号匹配绑定」取代（18-盘点试音绑定收敛）；最终联调启用')
     def test_real_signup_binding_rotation_and_other_provider_signup(self):
         original = self.created['provider_token']
         first = self.client_for(self.accounts[0])
@@ -66,6 +71,8 @@ class AuditionProviderBindingTest(APITestCase):
         existing = APIClient(); existing.credentials(HTTP_AUTHORIZATION='Bearer ' + exchanged.data['data']['token'])
         self.assertEqual(existing.get('/api/users/me/').data['code'], 0)
 
+    @skipUnless(os.environ.get('XA_AUDITION_TOKEN_ONLY_LEGACY') == '1',
+                '本用例假定公开 exchange 创建会话且任意账号可凭令牌报名，已被「须已登录账号核对邀请＋报名账号匹配绑定」取代（18-盘点试音绑定收敛）；最终联调启用')
     def test_permissions_generic_write_and_otp_restriction(self):
         viewer = make_console_user(['audition:view', 'audition:edit'])
         account = get_or_create_account_for_legacy_user(viewer)

@@ -36,7 +36,10 @@ class AuditionBossBindingTest(APITestCase):
                                 {'account_id': account_id, 'expected_updated_at': version or self.version}, format='json')
 
     def exchange(self, token):
-        return APIClient().post('/api/audition/exchange', {'token': token, 'role': 'boss'}, format='json').data
+        # 现行 exchange 须已登录账号核对邀请；用非受邀老板会话验证未绑定/撤销/不匹配。
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.other)[0])
+        return client.post('/api/audition/exchange', {'token': token, 'role': 'boss'}, format='json').data
 
     def wechat_session(self, account):
         # A role JWT is the already-confirmed WeChat session fixture. The
