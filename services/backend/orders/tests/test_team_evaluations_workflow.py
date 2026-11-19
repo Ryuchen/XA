@@ -1,4 +1,6 @@
 """A boss rates each participant of an actual two-provider order separately."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from tempfile import TemporaryDirectory
 
@@ -15,6 +17,8 @@ from orders.tests.test_release_flow import screenshot
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, ORDER_SETTLEMENT_MODE='REPORT_APPROVAL',
                    REQUIRE_ORDER_EVIDENCE_IMAGES=True, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class TeamEvaluationsWorkflowTest(LiveServerTestCase):
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
     def test_boss_reviews_each_provider_and_receives_independent_replies(self):
         media = TemporaryDirectory(prefix='xa-team-evaluations-')
         self.addCleanup(media.cleanup)

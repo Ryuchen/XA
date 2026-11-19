@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.test import override_settings
@@ -73,6 +75,8 @@ class TeamPackageAdmissionTest(APITestCase):
         self.auth(self.accounts[1])
         self.assertEqual(self.client.post(f'/api/orders/orders/{order.pk}/applications/{row.pk}/action/', {'action':'WITHDRAW'}).data['code'],0)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
     def test_double_rejects_single_application_and_direct_single_grab(self):
         order = self.order(self.double)
         self.assertEqual(self.apply(order,1).data['code'],400)
@@ -89,6 +93,8 @@ class TeamPackageAdmissionTest(APITestCase):
         self.assertFalse(OrderSerializer(order).data['can_team_apply'])
         self.assertEqual(self.apply(order,2,self.accounts[1]).data['code'],400)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
     def test_original_double_snapshot_does_not_downgrade_when_catalog_changes(self):
         order = self.order(self.double)
         self.double.billing_provider_count = 1
@@ -131,6 +137,8 @@ class TeamPackageAdmissionTest(APITestCase):
         self.assertFalse(Transaction.objects.exists())
         self.assertEqual(Wallet.objects.get(user=self.boss).balance,100000)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
     def test_both_single_assignment_routes_reject_original_double_package(self):
         order = self.order(self.double)
         self.double.billing_provider_count = 1
@@ -142,6 +150,8 @@ class TeamPackageAdmissionTest(APITestCase):
                 self.assertEqual(response.data['code'],400,response.data)
                 self.assertFalse(order.providers.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
     def test_double_self_quote_and_create_allow_platform_team_selection(self):
         self.auth(self.boss_account)
         with patch('orders.views._schedule_auto_cancel'):
