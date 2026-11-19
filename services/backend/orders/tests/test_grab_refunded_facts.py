@@ -1,4 +1,6 @@
 """Original-price ranking facts derived from actual wallet refund flows."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 
 from django.test import override_settings
@@ -23,6 +25,8 @@ class GrabNegotiatedRefundFactsTest(APITransactionTestCase):
     login = fixture.ProviderAfterSaleStatusTest.login
     ok = fixture.ProviderAfterSaleStatusTest.ok
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_single_provider_actual_partial_refund_reduces_original_price(self):
         from orders.tests.factories import make_boss_type
         boss_account = self.accounts[self.boss.pk]

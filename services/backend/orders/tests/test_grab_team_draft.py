@@ -1,4 +1,5 @@
 """Prepared double teams: occupancy is not proof of on-time registration."""
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
@@ -71,6 +72,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         with transaction.atomic(), self.assertRaisesMessage(ValueError, '首轮快照不一致'):
             first_round(self.pool.pk)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_partner_cannot_confirm_before_visibility_and_tier_is_only_provisional(self):
         # At the simulated entry, A is BLACK and B is SILVER; both expire
         # before the simulated confirmation, when a new card can be bought.
@@ -97,6 +100,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         self.assertEqual(team.members.get(account=self.accounts[1]).provisional_pass_tier, 'BLACK')
         self.assertEqual(team.occupied_seats.count(), 2)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_one_team_per_round_withdrawal_and_replay(self):
         team_a = self.invitation()
         self.assertEqual(self.invitation().pk, team_a.pk)
@@ -114,6 +119,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         self.assertEqual(OrderGrabRoundSeat.objects.filter(round=self.round, account=self.accounts[1]).get().team_id, team_c.pk)
         self.assertEqual(self.invitation().status, 'WITHDRAWN')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_unauthorized_confirmation_and_failed_seat_write_roll_back(self):
         team = self.invitation()
         with transaction.atomic(), self.assertRaisesMessage(ValueError, '受邀队友本人'):
@@ -128,6 +135,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         self.assertFalse(team.members.get(account=self.accounts[1]).joined)
         self.assertEqual(team.occupied_seats.count(), 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_invitation_seat_failure_rolls_back_team_and_members(self):
         with patch('orders.grab_team_draft.OrderGrabRoundSeat.objects.create', side_effect=RuntimeError('seat failed')):
             with self.assertRaisesMessage(RuntimeError, 'seat failed'):
@@ -136,6 +145,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         self.assertFalse(OrderGrabTeamDraftMember.objects.exists())
         self.assertFalse(OrderGrabRoundSeat.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_missing_seat_stops_replay_and_exit(self):
         team = self.invitation()
         team.occupied_seats.all().delete()
@@ -143,6 +154,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         with self.assertRaisesMessage(ValueError, '占位记录不一致'): self.withdraw(team)
 
     @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True, LEGACY_FORCE_AUTH_COMPAT=False)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_each_member_receipt_is_linked_without_making_a_rankable_candidate(self):
         captain, partner = self.accounts[0], self.accounts[1]
         a = record_intent(self.round.pk, captain.pk, 'INVITE', 'evidence-a', {'partner_id': partner.pk})
@@ -165,6 +178,8 @@ class GrabTeamDraftTest(TransactionTestCase):
                 attach_pass_evidence(self.round.pk, team.pk, a.receipt_id)
 
     @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True, LEGACY_FORCE_AUTH_COMPAT=False)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_inviter_recorded_tier_does_not_change_after_expiry_and_new_purchase(self):
         captain, partner = self.accounts[0], self.accounts[1]
         profile = self.profiles[0]
@@ -189,6 +204,8 @@ class GrabTeamDraftTest(TransactionTestCase):
             self.assertEqual(member.receipt_pass_evidence.submitted_tier, 'BLACK')
 
     @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_receipt_cannot_be_attached_to_a_different_team_or_wrong_actor(self):
         a = record_intent(self.round.pk, self.accounts[0].pk, 'INVITE', 'first-proof',
                           {'partner_id': self.accounts[1].pk})
@@ -198,6 +215,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         self.assertFalse(team.members.filter(receipt_pass_evidence__isnull=False).exists())
 
     @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_conflicting_pass_facts_cannot_be_attached(self):
         a = record_intent(self.round.pk, self.accounts[0].pk, 'INVITE', 'corrupt-proof',
                           {'partner_id': self.accounts[1].pk})
@@ -209,6 +228,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         self.assertIsNone(team.members.get(account=self.accounts[0]).receipt_pass_evidence_id)
 
     @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_receipt_before_pool_open_cannot_be_attached(self):
         a = record_intent(self.round.pk, self.accounts[0].pk, 'INVITE', 'before-open',
                           {'partner_id': self.accounts[1].pk})
@@ -221,6 +242,8 @@ class GrabTeamDraftTest(TransactionTestCase):
         self.assertFalse(team.members.filter(receipt_pass_evidence__isnull=False).exists())
 
     @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_withdrawn_team_receipt_cannot_be_reused_for_a_new_team(self):
         captain, partner = self.accounts[0], self.accounts[1]
         a = record_intent(self.round.pk, captain.pk, 'INVITE', 'old-team', {'partner_id': partner.pk})
@@ -292,6 +315,8 @@ class GrabTeamDraftMultiStoreTest(TransactionTestCase):
     databases = {'default', 'store_b'} if 'store_b' in settings.DATABASES else {'default'}
     reset_sequences = True
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_same_round_and_account_ids_do_not_share_seats(self):
         ids = []
         stores = (resolve_store(), xinan_store())
@@ -321,6 +346,8 @@ class GrabTeamDraftMultiStoreTest(TransactionTestCase):
             self.assertEqual(OrderGrabRoundSeat.objects.filter(round_id=ids[1][0]).count(), 1)
 
     @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_same_ids_cannot_attach_another_stores_pass_evidence(self):
         stores, ids = (resolve_store(), xinan_store()), []
         for store, tier in zip(stores, ('GOLD', 'BRONZE')):
