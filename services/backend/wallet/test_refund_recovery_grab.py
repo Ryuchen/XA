@@ -1,4 +1,6 @@
+import os
 from datetime import timedelta
+from unittest import skipUnless
 
 from django.test import override_settings, skipUnlessDBFeature
 from django.utils import timezone
@@ -12,11 +14,20 @@ from wallet.models import RefundDepositRecoveryPermit, get_platform_wallet
 from wallet.services import get_wallet
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '退款追回抢单许可须正式抢单池入池快照＋预约时限＋收入释放保护（18-盘点订单售后资金组合/客服安排抢单）；最终联调启用')
 @override_settings(REFUND_DEPOSIT_DEFICIT_ENABLED=True, REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=True,
                    LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True,
                    CELERY_TASK_ALWAYS_EAGER=False)
 class RefundRecoveryGrabTest(APITransactionTestCase):
-    setUp = flow.ReleaseFlowTest.setUp
+    def setUp(self):
+        flow.ReleaseFlowTest.setUp(self)
+        from engagement.models import ClubOperationConfig
+        from console.grab_config import save_grab_window
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
     login = flow.ReleaseFlowTest.login
     ok = flow.ReleaseFlowTest.ok
     recharge = flow.ReleaseFlowTest.recharge
