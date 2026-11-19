@@ -30,6 +30,9 @@ def store_b():
 def admin(username='store-admin', *, super_admin=False):
     user = get_user_model().objects.create_user(username=username, password='test-password', role='ADMIN')
     account = get_or_create_account_for_legacy_user(user)
+    if not account.phone:
+        account.phone = f'139{account.pk:08d}'
+        account.save(update_fields=['phone'])
     role = AdminRole.objects.create(code=f'foundation_{account.pk}', name=f'基础测试 {account.pk}',
                                     permissions=['dashboard:view'])
     membership = AdminMembership.objects.create(user=user, account=account)
