@@ -304,6 +304,7 @@ class WithdrawApplyTest(APITestCase):
             'payee_name': '李四',
         }
         payload.update(overrides)
+        payload.setdefault('client_request_id', uuid4().hex)
         self.client.force_authenticate(self.provider)
         return self.client.post('/api/wallet/withdraw/', payload)
 

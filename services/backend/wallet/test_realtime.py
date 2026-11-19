@@ -392,7 +392,7 @@ class WalletConsumerTest(WalletFixtures, TransactionTestCase):
         tokens = [issue_account_tokens(account)[0] for account in (boss, other_boss, reader)]
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')]) for token in tokens]
             try:
                 for socket in sockets:
                     self.assertTrue((await socket.connect())[0])
@@ -425,7 +425,7 @@ class WalletConsumerTest(WalletFixtures, TransactionTestCase):
         tokens = [issue_account_tokens(account)[0] for account in accounts]
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')]) for token in tokens]
             try:
                 for socket in sockets:
                     self.assertTrue((await socket.connect())[0])
@@ -455,7 +455,7 @@ class WalletConsumerTest(WalletFixtures, TransactionTestCase):
         token, _ = issue_account_tokens(reviewer)
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             try:
                 row.status = 'APPROVED'
@@ -486,7 +486,7 @@ class WalletConsumerTest(WalletFixtures, TransactionTestCase):
         tokens = [issue_account_tokens(account)[0] for account in (owner, reviewer)]
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}') for token in tokens]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')]) for token in tokens]
             try:
                 for socket in sockets:
                     self.assertTrue((await socket.connect())[0])
