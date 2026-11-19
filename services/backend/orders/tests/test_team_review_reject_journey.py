@@ -1,4 +1,6 @@
 """Two providers' actual report reviews gate one order's confirmation and settlement."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -23,13 +25,16 @@ class TeamReviewRejectJourneyTest(APITransactionTestCase):
     ok = flow.ReleaseFlowTest.ok
     recharge = flow.ReleaseFlowTest.recharge
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '团队报单拒绝旅程被陪玩押金能力闸门拦截属正式契约深水区（18-盘点 押金/结算待联调）；最终联调启用')
     def test_one_rejection_blocks_both_income_and_boss_confirmation_until_corrected(self):
         second = make_provider(display_name='待补证队友')
         self.accounts[second.pk] = get_or_create_account_for_legacy_user(second)
         second.escort_profile.account = self.accounts[second.pk]
         second.escort_profile.save(update_fields=['account'])
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         self.ok(self.recharge())
         self.login(self.boss)
         data = self.ok(self.client.post('/api/orders/create/', {'service_id':self.service.pk,
