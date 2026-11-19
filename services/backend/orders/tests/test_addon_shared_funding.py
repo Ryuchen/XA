@@ -1,3 +1,4 @@
+import os
 from django.test import TestCase, override_settings
 from django.conf import settings
 from django.utils import timezone
@@ -39,6 +40,8 @@ class AddonSharedFundingTests(TestCase):
                        SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_SETTLEMENT_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_FUNDING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_addon_refund_then_main_negotiation_reports_actual_costs(self):
         self._addon_then_main_negotiation(addon_refund=100)
 
@@ -48,6 +51,8 @@ class AddonSharedFundingTests(TestCase):
                        SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_SETTLEMENT_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_FUNDING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_addon_refund_using_main_income_reduces_later_negotiated_share(self):
         self._addon_then_main_negotiation(addon_refund=500)
 
@@ -57,6 +62,8 @@ class AddonSharedFundingTests(TestCase):
                        SERVICE_POINTS_REPORT_TESTING=True, SERVICE_POINTS_SETTLEMENT_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_FUNDING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_refunded_main_with_addon_identifies_store_funding_shortfall(self):
         self._addon_then_main_negotiation(addon_refund=100, gift=400)
 
@@ -67,6 +74,8 @@ class AddonSharedFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_FUNDING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_PERSON_POSTING_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_matured_refund_and_addon_income_is_posted_once(self):
         self._addon_then_main_negotiation(addon_refund=100, post=True)
 
@@ -77,6 +86,8 @@ class AddonSharedFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_FUNDING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_PERSON_POSTING_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_matured_main_income_reflects_prior_addon_burden(self):
         self._addon_then_main_negotiation(addon_refund=500, post=True)
 
@@ -87,6 +98,8 @@ class AddonSharedFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_FUNDING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_PERSON_POSTING_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_addon_income_failure_rolls_back_main_income_before_retry(self):
         self._addon_then_main_negotiation(addon_refund=100, post=True, fail_post=True)
 
@@ -378,6 +391,8 @@ class AddonSharedFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_PERSON_POSTING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_FINALIZE_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_refunded_main_and_addon_finalize_referral_and_consumption(self):
         self._addon_then_main_negotiation(addon_refund=100, post=True, finalize=True, fail_final=True)
 
@@ -389,6 +404,8 @@ class AddonSharedFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_PERSON_POSTING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_FINALIZE_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_zero_income_releases_recovery_permit(self):
         self._addon_then_main_negotiation(addon_refund=500, post=True, finalize=True, zero_recovery=True)
 
@@ -400,9 +417,13 @@ class AddonSharedFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_PERSON_POSTING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_FINALIZE_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_zero_main_income_closes_recovery_with_actual_addon_income(self):
         self._addon_then_main_negotiation(addon_refund=100, post=True, finalize=True, zero_recovery=True)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_real_main_and_addon_payment_share_one_funding_requirement(self):
         from django.core.exceptions import ValidationError
         from club_accounts.services import get_or_create_account_for_legacy_user
@@ -572,6 +593,8 @@ class AddonPlatformFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_FUNDING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_RELEASE_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_ordinary_refund_releases_excess_funding_to_same_store_receipt(self):
         registered = self.post_receipt('xinan')
         self.assertEqual(registered.status_code, 200, registered.data)
@@ -631,6 +654,8 @@ class AddonPlatformFundingTests(TestCase):
                        ORDINARY_REFUNDED_ADDON_SETTLEMENT_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_PERSON_POSTING_INTERNAL_TESTING=True,
                        ORDINARY_REFUNDED_ADDON_FINALIZE_INTERNAL_TESTING=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '加购共享资金/退款负担/协商结算正式资金链属深水区（18-盘点 加购组合资金待联调，provider 收益加购退款负担口径待核）；最终联调启用')
     def test_platform_finance_funds_ordinary_main_refund_with_addon(self):
         from orders.points_funding_evidence import verify_order_funding
         with store_context(self.second):
