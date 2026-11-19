@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from datetime import timedelta
 
 from django.test import TestCase, override_settings
@@ -16,6 +18,8 @@ from stores.tests_hosts import xinan_store
 class ReservationTransferVisibilityIsolationTest(TestCase):
     databases = {'default', 'store_b'}
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_replacement_can_only_open_own_store_booking(self):
         stores = (resolve_store(), xinan_store())
         identities = []

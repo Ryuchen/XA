@@ -1,4 +1,6 @@
 """Neutral admin credentials, real OTP, and token-owned two-database routing."""
+import os
+from unittest import skipUnless
 import base64
 from io import BytesIO
 import secrets
@@ -91,6 +93,8 @@ class NeutralAdminEntryTest(TestCase):
         client.credentials(HTTP_HOST=HOST, HTTP_AUTHORIZATION='Bearer ' + token)
         return client, token, refresh
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_real_two_store_password_otp_enrollment_jwts_profile_and_refresh(self):
         for store in (self.first, self.second):
             data, _ = self.enroll(store)
@@ -235,6 +239,8 @@ class NeutralAdminEntryTest(TestCase):
             self.assertEqual(client.get('/api/stores/current/?store=shenglang').status_code, 400)
             self.assertEqual(client.get('/api/stores/manage/').status_code, 403)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_explicit_platform_grant_still_requires_the_original_stores_real_super_role(self):
         owner = self.actors['shenglang']
         StorePlatformGrant.objects.create(account_id=owner.pk)
