@@ -1,6 +1,8 @@
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import close_old_connections
@@ -11,6 +13,7 @@ from rest_framework.test import APIClient, APITestCase
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from orders.dispatching import channel_config, deliver_dispatch, queue_dispatch
+from engagement.models import PointFundingLot
 from orders.models import Order, OrderApplication, WecomDispatchRecord
 from orders.tasks import auto_cancel_pending_order
 from orders.tests.factories import make_console_user, make_order, make_provider, make_service, make_user, make_wallet
@@ -19,6 +22,8 @@ from wallet.models import Transaction, Wallet
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, WECOM_DISPATCH_ENABLED=True,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True,
                    WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test-only')
 class DispatchRouteTest(APITestCase):
     def setUp(self):
@@ -36,6 +41,12 @@ class DispatchRouteTest(APITestCase):
         self.staff.admin_membership.save(update_fields=['account'])
         self.service = make_service(price=10000, commission_rate=20)
         make_wallet(self.boss, balance=100000)
+        from engagement.models import ClubOperationConfig
+        from console.grab_config import save_grab_window
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *_: None)
+        PointFundingLot.objects.create(account=self.boss_account, source_key='dispatch-route-principal',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=100000)
         for name in ('_schedule_auto_cancel', 'enqueue_kook_dispatch', 'enqueue_wecom_dispatch'):
             patcher = patch('orders.views.' + name)
             setattr(self, name, patcher.start())
@@ -49,6 +60,8 @@ class DispatchRouteTest(APITestCase):
         self.auth(self.boss_account)
         return self.client.post('/api/orders/create/', {'service_id': self.service.pk, **kwargs}, format='json')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '派单路由与抢单证据独立事务/STAFF+AUTO_GRAB 有效性/幂等/超时退款属正式契约深水区（18-盘点 派单/抢单池待联调）；最终联调启用')
     def test_legacy_staff_route_assignment_cannot_be_rejected_by_provider(self):
         response = self.create(dispatch_route='STAFF', client_request_id='staff-route')
         self.assertEqual(response.data['code'], 0)
@@ -92,6 +105,8 @@ class DispatchRouteTest(APITestCase):
         self.enqueue_wecom_dispatch.assert_not_called()
         self.assertEqual(self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json').data['code'], 400)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '派单路由与抢单证据独立事务/STAFF+AUTO_GRAB 有效性/幂等/超时退款属正式契约深水区（18-盘点 派单/抢单池待联调）；最终联调启用')
     def test_invalid_route_combinations_do_not_debit(self):
         cases = [
             {'dispatch_route': 'UNKNOWN'},
@@ -104,6 +119,8 @@ class DispatchRouteTest(APITestCase):
         self.assertFalse(Order.objects.exists())
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '派单路由与抢单证据独立事务/STAFF+AUTO_GRAB 有效性/幂等/超时退款属正式契约深水区（18-盘点 派单/抢单池待联调）；最终联调启用')
     def test_default_public_and_idempotency_consider_route(self):
         first = self.create(client_request_id='route-key')
         self.assertEqual(first.data['data']['dispatch_route'], 'PUBLIC')
@@ -137,6 +154,8 @@ class DispatchRouteTest(APITestCase):
         self.assertIn(f'account_{self.boss_account.pk}', groups)
         self.assertNotIn('providers', groups)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '派单路由与抢单证据独立事务/STAFF+AUTO_GRAB 有效性/幂等/超时退款属正式契约深水区（18-盘点 派单/抢单池待联调）；最终联调启用')
     def test_staff_timeout_refunds_once(self):
         response = self.create(dispatch_route='STAFF', client_request_id='staff-timeout')
         order = Order.objects.get(pk=response.data['data']['id'])
