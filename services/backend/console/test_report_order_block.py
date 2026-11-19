@@ -83,9 +83,9 @@ class RefundedReportWorkQueueTest(APITransactionTestCase):
         provider_token, _ = issue_account_tokens(self.accounts[self.provider.pk])
 
         async def verify():
-            staff = WebsocketCommunicator(application, f'/ws/orders/?token={staff_token}')
-            reviewer = WebsocketCommunicator(application, f'/ws/orders/?token={reviewer_token}')
-            provider = WebsocketCommunicator(application, f'/ws/orders/?token={provider_token}')
+            staff = WebsocketCommunicator(application, f'/ws/orders/?token={staff_token}', headers=[(b'host', b'sl.esports.club')])
+            reviewer = WebsocketCommunicator(application, f'/ws/orders/?token={reviewer_token}', headers=[(b'host', b'sl.esports.club')])
+            provider = WebsocketCommunicator(application, f'/ws/orders/?token={provider_token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await staff.connect())[0])
             self.assertTrue((await reviewer.connect())[0])
             self.assertTrue((await provider.connect())[0])

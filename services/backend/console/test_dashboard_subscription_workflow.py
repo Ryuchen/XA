@@ -41,7 +41,7 @@ class DashboardSubscriptionWorkflowTest(TransactionTestCase):
         token = issue_account_tokens(account)[0]
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             try:
                 role.permissions = ['dashboard:view', 'withdraw:view']
@@ -74,7 +74,7 @@ class DashboardSubscriptionWorkflowTest(TransactionTestCase):
                 await socket.disconnect()
             role.permissions = ['dashboard:view', 'withdraw:view']
             await database_sync_to_async(role.save)(update_fields=['permissions'])
-            reconnected = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            reconnected = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await reconnected.connect())[0])
             try:
                 snapshot = await database_sync_to_async(staff_client.get)('/api/admin/dashboard/stats')
