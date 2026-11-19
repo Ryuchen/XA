@@ -29,6 +29,8 @@
 
 from rest_framework.test import APITestCase
 
+from uuid import uuid4
+
 from orders.tests.factories import make_provider, make_wallet
 from wallet.models import (
     MIN_WITHDRAW_AMOUNT_KEY,
@@ -62,6 +64,7 @@ class WithdrawPreviewApiTest(APITestCase):
             'payee_name': '张三',
         }
         payload.update(overrides)
+        payload.setdefault('client_request_id', uuid4().hex)
         return self.client.post(URL, payload, format='json')
 
     def _quote(self, amount):
