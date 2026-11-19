@@ -16,9 +16,15 @@ from wallet.models import IdempotencyKey, SystemConfig, Transaction, WithdrawReq
 from wallet.services import get_wallet
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
 class FundReceiptTest(APITestCase):
     def setUp(self):
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
         self.boss = make_user()
         self.provider = make_provider(deposit_required=10000)
         self.accounts = {}
@@ -37,6 +43,8 @@ class FundReceiptTest(APITestCase):
         profile = self.provider.escort_profile
         profile.account = self.accounts[self.provider.pk]
         profile.save(update_fields=['account'])
+        PointFundingLot.objects.create(account=self.accounts[self.boss.pk], source_key='fund-receipt-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=100000)
         self.service = make_service(price=1000)
         self.gift = make_service(price=500, service_category=make_service_category(is_gift=True))
         self.source = make_order(self.boss, self.service, self.provider, status=Order.Status.COMPLETED,
