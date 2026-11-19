@@ -8,7 +8,8 @@ from django.utils import timezone
 
 from club_accounts.services import get_or_create_account_for_legacy_user, link_legacy_relations
 from engagement.confirmation import process_order
-from engagement.models import ConsumptionConfirmation
+from engagement.models import ConsumptionConfirmation, PointFundingLot
+from engagement.services import allocate_order_points
 from orders.models import AfterSale, Order, OrderProvider
 from orders.direct_payment_models import DirectPaymentIntent
 from orders.tests.factories import make_order, make_provider, make_service, make_user
@@ -28,6 +29,8 @@ class ConfirmationRealtimeTest(TransactionTestCase):
         self.customer_wallet = get_wallet(user=self.boss, account=self.boss_account)
         self.customer_wallet.balance = 100000
         self.customer_wallet.save(update_fields=['balance'])
+        PointFundingLot.objects.create(account=self.boss_account, source_key='confirmation-prepaid',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=100000)
         self.service = make_service(price=1000)
         self.now = timezone.now()
 
@@ -44,6 +47,8 @@ class ConfirmationRealtimeTest(TransactionTestCase):
         self.customer_wallet.save(update_fields=['balance'])
         Transaction.objects.create(wallet=self.customer_wallet, order=order, tx_type='PAY', amount=-1000,
                                    balance_before=before, balance_after=self.customer_wallet.balance)
+        with transaction.atomic():
+            allocate_order_points(order, self.customer_wallet, before)
         report = ProviderReport.objects.create(provider=self.provider, provider_account=self.provider_account,
                                       order=order, amount=1000, payout_amount=800, game_name='本地确认样例',
                                       entry_image='test/entry.png', completion_image='test/completion.png',
