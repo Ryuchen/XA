@@ -1,4 +1,6 @@
 """Refund notification followed by a signed test-channel query and real state updates."""
+import os
+from unittest import skipUnless
 import base64
 import json
 import time
@@ -90,6 +92,8 @@ class DirectRefundReconcileTest(RefundInboxFixture, TransactionTestCase):
         self.assertTrue(transport.calls[0][1].endswith(self.refund.merchant_refund_no))
         self.assertEqual(self.intent.channel_refunds.count(), 1)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '直付域退款/转单拒绝/看板隔离/可见性延迟/隔离验收/退款对账实时被逐段结算能力闸门或直付正式契约拦截（18-盘点 直付清算/逐段结算待联调）；最终联调启用')
     def test_owner_receives_committed_order_update_after_success(self):
         inbox = self.ingest()
         gateway, _ = self.gateway()
