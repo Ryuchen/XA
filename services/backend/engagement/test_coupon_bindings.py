@@ -15,7 +15,9 @@ from .services import update_vip
 from .serializers import TierSerializer
 
 
-@override_settings(LEGACY_FORCE_AUTH_COMPAT=True, CELERY_TASK_ALWAYS_EAGER=False)
+@override_settings(LEGACY_FORCE_AUTH_COMPAT=True, CELERY_TASK_ALWAYS_EAGER=False,
+                   GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True,
+                   GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)
 class CouponBindingTests(APITestCase):
     def setUp(self):
         self.user = make_user()
@@ -25,6 +27,12 @@ class CouponBindingTests(APITestCase):
         self.single = make_service(name='单陪娱乐', price=5000, service_category=self.category, benefit_kind='COMPANION_HOUR', platform='PC', price_unit='小时')
         self.double = make_service(name='双陪娱乐', price=10000, service_category=self.category)
         self.client.force_authenticate(self.user)
+        from engagement.models import ClubOperationConfig, PointFundingLot
+        from console.grab_config import save_grab_window
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        save_grab_window(30, 0, lambda *args: None)
+        PointFundingLot.objects.create(account=self.account, source_key='coupon-binding-prepaid',
+            kind=PointFundingLot.Kind.PREPAID, remaining=100000)
 
     def test_explicit_binding_can_match_a_renamed_service_but_never_another_tier(self):
         issue(self.account, 'bound', name='陪玩赠券', rate=0, scope='COMPANION', variant='娱乐女陪',
@@ -38,9 +46,9 @@ class CouponBindingTests(APITestCase):
         self.assertEqual([row['id'] for row in allowed], [coupon.pk])
         self.assertEqual(allowed[0]['service_ids'], [self.single.pk])
         self.assertEqual(denied, [])
-        failed = self.client.post('/api/orders/create/', {'service_id': self.double.pk, 'user_coupon_id': coupon.pk}, format='json')
+        failed = self.client.post('/api/orders/create/', {'service_id': self.double.pk, 'user_coupon_id': coupon.pk, 'client_request_id': 'binding-failed'}, format='json')
         self.assertEqual(failed.data['code'], 400)
-        paid = self.client.post('/api/orders/create/', {'service_id': self.single.pk, 'user_coupon_id': coupon.pk, 'game_rounds': 2}, format='json')
+        paid = self.client.post('/api/orders/create/', {'service_id': self.single.pk, 'user_coupon_id': coupon.pk, 'game_rounds': 2, 'client_request_id': 'binding-paid'}, format='json')
         self.assertEqual(paid.data['code'], 0, paid.data)
         self.assertEqual(paid.data['data']['amount'], 5000)
 
