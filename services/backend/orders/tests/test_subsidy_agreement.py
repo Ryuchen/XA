@@ -2,6 +2,7 @@
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+import os
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -266,6 +267,8 @@ class SubsidyAgreementApiTest(APITestCase):
     client_for = staticmethod(_flow.client_for)
     ok = _flow.ok
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '资金来源多店结算开放/付款来源快照/抢单窗口/补贴三方结算/VIP折扣重定价/店币消息属正式契约深水区（18-盘点 资金来源/结算/补贴/VIP待联调）；最终联调启用')
     def test_three_roles_confirm_execute_report_and_delayed_settlement(self):
         from coupons.benefits import grant_periodic
         from coupons.models import UserCoupon

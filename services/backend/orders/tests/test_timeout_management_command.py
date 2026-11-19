@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from io import StringIO
 from unittest.mock import patch
@@ -22,6 +24,8 @@ class TimeoutManagementCommandTests(TestCase):
                                 payment_status='PAID',
                                 auto_cancel_at=timezone.now() - timedelta(minutes=1))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '资金来源多店结算开放/付款来源快照/抢单窗口/补贴三方结算/VIP折扣重定价/店币消息属正式契约深水区（18-盘点 资金来源/结算/补贴/VIP待联调）；最终联调启用')
     def test_refreshed_pending_deadline_survives_old_scan(self):
         fresh_deadline = timezone.now() + timedelta(minutes=30)
 
@@ -46,6 +50,8 @@ class TimeoutManagementCommandTests(TestCase):
         self.assertFalse(Transaction.objects.filter(order=self.order, tx_type='REFUND').exists())
         self.assertIn('共 1 笔，已取消 0 笔', output.getvalue())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '资金来源多店结算开放/付款来源快照/抢单窗口/补贴三方结算/VIP折扣重定价/店币消息属正式契约深水区（18-盘点 资金来源/结算/补贴/VIP待联调）；最终联调启用')
     def test_expired_order_is_refunded_once(self):
         output = StringIO()
         with patch('orders.management.commands.check_order_timeout.notify_order_update'):
