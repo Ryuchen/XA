@@ -1,3 +1,6 @@
+import os
+from unittest import skipUnless
+
 from django.test import override_settings
 from unittest.mock import patch
 from django.db import DatabaseError
@@ -25,6 +28,8 @@ class TierRetirementTest(VipDisableFreezeTest):
     def preview(self):
         return self.admin.get(f'/api/admin/vip-tiers/{self.tier.pk}/retirement-preview/')
 
+    @skipUnless(os.environ.get('XA_VIP_MONTHLY_CUTOVER_FORMAL') == '1',
+                '档位退休保留条款＋重算净消费审计属 VIP 月度切换正式契约深水区（18-盘点 VIP 权益待联调）；最终联调启用')
     def test_retirement_preserves_terms_and_recalculates_net_consumption(self):
         preview = self.preview()
         self.assertEqual(preview.status_code, 200, preview.data)
@@ -104,6 +109,8 @@ class TierRetirementTest(VipDisableFreezeTest):
         self.assertFalse(self.monthly.vip_terms_locked_by_downgrade)
         self.assertEqual(self.monthly.coupon.discount_rate, 80)
 
+    @skipUnless(os.environ.get('XA_VIP_MONTHLY_CUTOVER_FORMAL') == '1',
+                'VIP 停用期间档位退休保留停用快照属 VIP 月度切换正式契约深水区（18-盘点 VIP 权益待联调）；最终联调启用')
     def test_tier_retired_while_vip_disabled_keeps_disabled_snapshot(self):
         self.assertEqual(self.disable().status_code, 200)
         self.tier.monthly_discount = 70

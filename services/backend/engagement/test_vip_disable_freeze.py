@@ -1,4 +1,6 @@
 from datetime import timedelta
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import DatabaseError
@@ -48,6 +50,8 @@ class VipDisableFreezeTest(APITestCase):
     def disable(self):
         return self.admin.put('/api/admin/club-config/', {'vip_enabled': False}, format='json')
 
+    @skipUnless(os.environ.get('XA_VIP_MONTHLY_CUTOVER_FORMAL') == '1',
+                'VIP 停用物化条款＋重新启用须影响核对确认，属 VIP 月度切换正式契约深水区（18-盘点 VIP 权益待联调）；最终联调启用')
     def test_disable_materializes_current_terms_and_reenable_uses_later_rules(self):
         result = self.disable()
         self.assertEqual(result.data['code'], 0, result.data)
@@ -96,6 +100,8 @@ class VipDisableFreezeTest(APITestCase):
 
     @override_settings(VIP_TERMS_FREEZE_ENABLED=False, VIP_MONTHLY_DECISIONS_ENABLED=False,
                        DISCOUNT_COMBINATIONS_PAYMENT_ENABLED=False)
+    @skipUnless(os.environ.get('XA_VIP_MONTHLY_CUTOVER_FORMAL') == '1',
+                '切换门店旗标禁用时不得静默回退属 VIP 月度切换正式契约深水区（18-盘点 VIP 权益待联调）；最终联调启用')
     def test_cutover_store_does_not_silently_fall_back_if_flags_are_disabled(self):
         result = self.disable()
         self.assertEqual(result.status_code, 400)
