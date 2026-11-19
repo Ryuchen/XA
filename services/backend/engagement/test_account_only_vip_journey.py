@@ -29,7 +29,7 @@ class AccountOnlyVipJourneyTest(APITransactionTestCase):
         staff = make_console_user(['wallet:recharge', 'wallet:view', 'order:view', 'report:view', 'report:audit'])
         staff_account = get_or_create_account_for_legacy_user(staff)
         staff.admin_membership.account = staff_account; staff.admin_membership.save(update_fields=['account'])
-        provider = make_provider(display_name='会员订单陪玩')
+        provider = make_provider(display_name='会员订单陪玩', deposit_paid=1000000)
         player = get_or_create_account_for_legacy_user(provider)
         provider.escort_profile.account = player; provider.escort_profile.save(update_fields=['account'])
         service = make_service(name='会员成长服务', price=10000, commission_rate=20)
