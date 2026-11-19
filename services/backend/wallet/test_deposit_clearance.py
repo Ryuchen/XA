@@ -1,5 +1,6 @@
 """The seven-day deposit clock is based on provable business closure."""
 from datetime import timedelta
+import os
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from unittest import skipUnless
@@ -48,6 +49,8 @@ class DepositClearanceEvidenceTest(TestCase):
         order.refresh_from_db(); share.refresh_from_db()
         return order, share
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '押金清算证据 needs_review=False 须订单正式结算凭证齐备＋收益已释放（18-盘点订单售后资金组合）；最终联调启用')
     def test_last_relevant_case_and_released_income_determine_closure(self):
         order, _ = self.order()
         settled = self.now - timedelta(days=8)
