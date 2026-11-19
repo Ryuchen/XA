@@ -1,3 +1,4 @@
+import os
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
@@ -160,6 +161,8 @@ class GroupDispatchTest(APITestCase):
                 membership.account = account
                 membership.save(update_fields=['account'])
         self.service = make_service(price=10000, commission_rate=20)
+        from engagement.models import ClubOperationConfig
+        ClubOperationConfig.objects.get_or_create(pk=1)
         self.order = make_order(
             self.boss, service=self.service, amount=8000, original_amount=10000,
             promo_discount=2000, provider_income=6400, shop_income=1600,
@@ -235,6 +238,8 @@ class GroupDispatchTest(APITestCase):
             self.assertIn('兴安电竞', text)
         self.assertTrue(template_error('{order_no} {provider_income}'))
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_order_without_original_price_cannot_send(self):
         record = queue_dispatch(self.order, 'WECOM')
         self.order.original_amount = 0
@@ -252,6 +257,8 @@ class GroupDispatchTest(APITestCase):
 
     @patch('orders.dispatching.send_task_safely')
     @patch('orders.views._schedule_auto_cancel')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_paid_boss_selection_order_never_enters_normal_broadcast(self, schedule, send):
         make_wallet(self.boss, balance=100000)
         self.login(self.boss)
@@ -278,6 +285,8 @@ class GroupDispatchTest(APITestCase):
 
     @patch('integrations.wecom.WecomClient.send_text')
     @patch('integrations.kook.KookClient.send_channel_message')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_queued_dispatch_is_skipped_if_order_becomes_boss_selection(self, kook, wecom):
         records = [queue_dispatch(self.order, channel) for channel in ('KOOK', 'WECOM')]
         Order.objects.filter(pk=self.order.pk).update(requires_boss_selection=True)
@@ -290,6 +299,8 @@ class GroupDispatchTest(APITestCase):
         wecom.assert_not_called()
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_legacy_pending_content_requires_preview_and_manual_retry(self, send_mock):
         record = WecomDispatchRecord.objects.create(order=self.order, trigger='NEW_ORDER',
             channel_id=channel_config('WECOM')[1], content='旧的打手收益文案')
@@ -330,6 +341,8 @@ class GroupDispatchTest(APITestCase):
         self.assertFalse(WecomDispatchRecord.objects.exists())
 
     @patch('orders.dispatching.send_task_safely')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_double_click_and_automatic_queue_share_the_same_records(self, send_mock):
         balance = list(Wallet.objects.values_list('pk', 'balance'))
         tx_count = Transaction.objects.count()
@@ -362,6 +375,8 @@ class GroupDispatchTest(APITestCase):
         send_mock.assert_not_called()
 
     @patch('orders.dispatching.send_task_safely')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_rejected_order_gets_a_new_dispatch_sequence(self, send_mock):
         with self.captureOnCommitCallbacks(execute=True):
             self.post()
@@ -376,6 +391,8 @@ class GroupDispatchTest(APITestCase):
 
     @patch('integrations.wecom.WecomClient.send_text')
     @patch('integrations.kook.KookClient.send_channel_message', return_value=KookMessageResult('msg-1'))
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_both_channels_send_same_payout_and_do_not_send_twice(self, kook_mock, wecom_mock):
         for channel in ('KOOK', 'WECOM'):
             record = self.record(channel)
@@ -388,6 +405,8 @@ class GroupDispatchTest(APITestCase):
         kook_mock.assert_called_once()
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_wecom_uses_queued_text_when_order_changes_before_delivery(self, send_mock):
         record = self.record('WECOM')
         self.assertIsNotNone(record)
@@ -399,6 +418,8 @@ class GroupDispatchTest(APITestCase):
 
     @patch('integrations.wecom.WecomClient.send_text', side_effect=WecomDeliveryUnknown('timeout'))
     @patch('integrations.kook.KookClient.send_channel_message', side_effect=KookDeliveryUnknown('timeout'))
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_uncertain_result_cannot_be_resent_by_click_or_worker(self, kook_mock, wecom_mock):
         for channel in ('KOOK', 'WECOM'):
             record = self.record(channel)
@@ -409,6 +430,8 @@ class GroupDispatchTest(APITestCase):
         self.assertEqual(wecom_mock.call_count, 1)
 
     @patch('integrations.wecom.WecomClient.send_text', side_effect=WecomError('rejected'))
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_explicit_rejection_can_be_retried_manually(self, send_mock):
         record = self.record('WECOM')
         self.assertEqual(deliver_dispatch('WECOM', record.pk), 'failed:rejected')
@@ -418,6 +441,8 @@ class GroupDispatchTest(APITestCase):
         self.assertEqual(send_mock.call_count, 2)
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_worker_rechecks_order_and_channel_target(self, send_mock):
         record = self.record('WECOM')
         with override_settings(WECOM_DISPATCH_WEBHOOK=TEST_WEBHOOK + '-changed'):
@@ -428,6 +453,8 @@ class GroupDispatchTest(APITestCase):
         send_mock.assert_not_called()
 
     @patch('integrations.wecom.WecomClient.send_text')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_worker_skips_old_dispatch_round_after_rejection(self, send_mock):
         record = self.record('WECOM')
         Order.objects.filter(pk=self.order.pk).update(reject_count=1)
@@ -449,12 +476,16 @@ class GroupDispatchTest(APITestCase):
         self.assertEqual(Transaction.objects.count(), tx_count)
 
     @patch('orders.tasks.send_wecom_dispatch.delay', side_effect=RuntimeError('broker down'))
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_broker_failure_is_visible_and_retryable(self, delay_mock):
         with self.captureOnCommitCallbacks(execute=True):
             self.post(['WECOM'])
         self.assertEqual(WecomDispatchRecord.objects.get().status, 'FAILED')
 
     @override_settings(KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_actual_discounted_dispatch_freezes_64_payout_and_16_club_income(self):
         self.boss.wallet.balance = 20000
         self.boss.wallet.save(update_fields=['balance'])

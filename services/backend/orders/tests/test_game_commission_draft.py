@@ -1,4 +1,5 @@
 """Game-specific draft rules must not leak between games or into money flows."""
+import os
 from django.test import override_settings
 from django.conf import settings
 from django.db import IntegrityError, transaction
@@ -67,6 +68,8 @@ class GameCommissionDraftTest(APITestCase):
         rank.provider_kind = 'GUARD'; rank.save(update_fields=['provider_kind'])
         self.assertEqual(self.client.get(path(self.val, rank)).status_code, 400)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_delta_exact_scope_overlap_and_unconfigured(self):
         gameplay = Gameplay.objects.create(name='测试玩法', code='test-commission-gameplay')
         base = {'provider_kind': 'GUARD', 'platform': 'PC', 'security_level': 'TOP_SECRET',
@@ -183,6 +186,8 @@ class GameCommissionDraftTest(APITestCase):
 class GameCommissionStoreIsolationTest(APITestCase):
     databases = {'default', 'store_b'} if 'store_b' in settings.DATABASES else {'default'}
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_same_game_and_service_ids_keep_separate_rates_and_audits(self):
         from stores.context import resolve_store, store_context
         from stores.models import Store

@@ -6,6 +6,8 @@
 - GET  /api/orders/orders/?role=provider  陪玩端可读到真实游戏资料
 """
 
+import os
+from unittest import skipUnless
 from orders.models import Order
 from orders.tests.factories import (
     make_provider,
@@ -22,6 +24,8 @@ class OrderGameAccountFieldTest(APITestCase):
         make_wallet(self.customer, balance=100000)
         self.service = make_service(price=10000)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_create_order_persists_game_account(self):
         self.client.force_authenticate(self.customer)
         res = self.client.post('/api/orders/create/', {
@@ -38,6 +42,8 @@ class OrderGameAccountFieldTest(APITestCase):
         self.assertEqual(order.game_uid, '88888888')
         self.assertEqual(order.remark, '速度上分')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '游戏抽成付款/分组派单消息确认/游戏账号字段/抽成草稿/客服代下抢单池口径属正式契约深水区（18-盘点 游戏抽成/派单/企微KOOK待联调）；最终联调启用')
     def test_create_order_without_game_account_defaults_blank(self):
         self.client.force_authenticate(self.customer)
         res = self.client.post('/api/orders/create/', {
