@@ -1,6 +1,5 @@
 """Real paid order: staff assignment ends the old public application round."""
 import os
-from unittest import skipUnless
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
