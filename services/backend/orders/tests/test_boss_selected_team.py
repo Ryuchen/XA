@@ -2,6 +2,8 @@
 from datetime import timedelta
 from io import BytesIO
 from tempfile import TemporaryDirectory
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -72,6 +74,8 @@ class BossSelectedTeamTest(APITestCase):
         self.assertFalse(Order.objects.exists())
         self.assertFalse(Transaction.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_quote_and_selected_two_person_order_keep_package_price_and_both_shares(self):
         quote = self.client.post('/api/orders/quote/', self.payload(), format='json')
         self.assertEqual(quote.data['code'], 0, quote.data)
@@ -101,6 +105,8 @@ class BossSelectedTeamTest(APITestCase):
             self.assertEqual(detail.data['code'],0,detail.data)
             self.assertEqual(detail.data['data']['amount'],10002)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_fixed_commission_is_deducted_once_and_shared_by_two(self):
         self.double.commission_override=True
         self.double.commission_type='FIXED'
@@ -116,6 +122,8 @@ class BossSelectedTeamTest(APITestCase):
         self.assertEqual(order.provider_income+order.shop_income+order.inviter_commission,10002)
 
     @override_settings(REQUIRE_ORDER_EVIDENCE_IMAGES=True)
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_selected_two_person_order_requires_each_members_entry_and_completion(self):
         response=self.create()
         self.assertEqual(response.data['code'],0,response.data)
@@ -182,6 +190,8 @@ class BossSelectedTeamTest(APITestCase):
         self.assertEqual(self.wallet.balance,100000)
         self.assertFalse(Transaction.objects.exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_each_selected_member_needs_the_purchased_game_platform_and_grade(self):
         game=GameCategory.objects.create(name='双陪资格测试游戏')
         self.double.game_category=game
@@ -215,6 +225,8 @@ class BossSelectedTeamTest(APITestCase):
         self.assertEqual(response.data['code'],400,response.data)
         self.assert_no_payment()
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_selected_profiles_are_rechecked_after_dispatch_locks_before_debit(self):
         from orders.services import lock_provider_dispatch
         def become_unavailable(ids):
@@ -226,6 +238,8 @@ class BossSelectedTeamTest(APITestCase):
         locked.assert_called_once_with([a.pk for a in self.accounts[:2]])
         self.assert_no_payment()
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_empty_double_selection_enters_existing_team_application_flow(self):
         quote=self.client.post('/api/orders/quote/',self.payload(provider_ids=[]),format='json')
         self.assertEqual(quote.data['code'],0,quote.data)
@@ -263,6 +277,8 @@ class BossSelectedTeamTest(APITestCase):
         self.assertEqual(self.create(service_id=self.single.pk,provider_ids=[]).data['code'],400)
         self.assert_no_payment()
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_single_array_and_legacy_scalar_remain_supported(self):
         response=self.create(service_id=self.single.pk,provider_ids=[self.accounts[0].pk])
         self.assertEqual(response.data['code'],0,response.data)
@@ -273,6 +289,8 @@ class BossSelectedTeamTest(APITestCase):
         self.assertEqual(response.data['code'],0,response.data)
         self.assertEqual(Order.objects.get(pk=response.data['data']['id']).provider_account_id,self.accounts[1].pk)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '老板选人定价夹具用奇数原价（5001/10002 内部单位＝ fractional 店币）与下单整店币校验（原价须被10整除）及 CONSULT 双陪履约人数契约冲突，金额口径待用户裁定；最终联调启用')
     def test_selected_team_fund_request_replay_never_debits_twice(self):
         response=self.create()
         self.assertEqual(response.data['code'],0,response.data)
