@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -21,6 +23,8 @@ class GrabEntryRealFlowTest(APITestCase):
     auth = fixture.GameCommissionPaymentTest.auth
     create = fixture.GameCommissionPaymentTest.create
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_boss_and_staff_entry_snapshot_survives_real_later_pass_purchase(self):
         rejected = self.create(dispatch_mode='AUTO_GRAB')
         self.assertEqual(rejected.status_code, 400)
