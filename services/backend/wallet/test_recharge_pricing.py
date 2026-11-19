@@ -62,7 +62,9 @@ class RechargePricingTest(APITestCase):
         self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type='GIFT').count(), 1)
         repeat = self.client.post('/api/admin/wallets/recharge/', {**payload, 'gift_amount': 36000,
                                   'bonus_version': quote['version']}, format='json')
-        self.assertNotEqual(repeat.data.get('code'), 0, repeat.data)
+        # 现行幂等：同键同内容按原回执恢复（code 0＋replayed），不重复入账。
+        self.assertEqual(repeat.data['code'], 0, repeat.data)
+        self.assertTrue(repeat.data['data']['replayed'])
         self.assertEqual(RechargeRecord.objects.count(), 1)
 
     def test_custom_bonus_credits_principal_then_approval_credits_once(self):
