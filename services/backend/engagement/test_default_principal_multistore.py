@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
-from engagement.models import DefaultPaymentSource, PointFundingLot
+from engagement.models import ClubOperationConfig, DefaultPaymentSource, PointFundingLot
 from engagement.services import wallet_funding_parts
 from orders.models import Order
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
@@ -43,6 +43,7 @@ class DefaultPrincipalMultistoreTest(TestCase):
                 from console.reservation_deadlines import save_deadlines
                 save_grab_window(1, 0, lambda *_: None)
                 save_deadlines(30, 60, 0, lambda *_: None)
+                ClubOperationConfig.objects.get_or_create(pk=1)
                 staff_user = make_console_user(['order:view', 'order:dispatch'])
                 staff = get_or_create_account_for_legacy_user(staff_user)
                 staff_user.admin_membership.account = staff
@@ -99,6 +100,7 @@ class DefaultPrincipalMultistoreTest(TestCase):
                 from console.reservation_deadlines import save_deadlines
                 save_grab_window(1, 0, lambda *_: None)
                 save_deadlines(30, 60, 0, lambda *_: None)
+                ClubOperationConfig.objects.get_or_create(pk=1)
                 staff_user = make_console_user(['order:view', 'order:dispatch'])
                 staff = get_or_create_account_for_legacy_user(staff_user)
                 staff_user.admin_membership.account = staff
