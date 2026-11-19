@@ -42,7 +42,7 @@ class ClaimQueueRealtimeTest(TransactionTestCase):
         self.assertIsNone(clients[2].get('/api/admin/dashboard/stats').data['data']['pending_tag_review_total'])
 
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}') for account in accounts[1:]]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}', headers=[(b'host', b'sl.esports.club')]) for account in accounts[1:]]
             for socket in sockets: self.assertTrue((await socket.connect())[0])
             async def next_claim():
                 while True:
@@ -97,7 +97,7 @@ class ClaimQueueRealtimeTest(TransactionTestCase):
             'client_request_id': 'claim-live-recharge'}, format='multipart')
         self.assertEqual(recharge.data['code'], 0, recharge.data)
         async def verify():
-            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}') for account in accounts[2:4]]
+            sockets = [WebsocketCommunicator(application, f'/ws/orders/?token={issue_account_tokens(account)[0]}', headers=[(b'host', b'sl.esports.club')]) for account in accounts[2:4]]
             for socket in sockets:
                 self.assertTrue((await socket.connect())[0])
             async def next_claim():

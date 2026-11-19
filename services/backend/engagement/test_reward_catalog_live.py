@@ -59,7 +59,7 @@ class RewardCatalogLiveTest(TransactionTestCase):
         for client,account in zip(clients,accounts): client.credentials(HTTP_AUTHORIZATION='Bearer '+issue_account_tokens(account)[0])
         reward=RewardItem.objects.create(code='catalog-live',name='实时库存',kind='SERVICE',audience='ALL',point_cost=1,stock=1,in_shop=True,is_active=True)
         async def verify():
-            sockets=[WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(account)[0]}') for account in accounts[:2]]
+            sockets=[WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(account)[0]}', headers=[(b'host', b'sl.esports.club')]) for account in accounts[:2]]
             for socket in sockets: self.assertTrue((await socket.connect())[0])
             try:
                 for active in (False,True):

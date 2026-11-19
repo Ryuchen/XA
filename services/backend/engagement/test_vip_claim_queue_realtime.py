@@ -73,7 +73,7 @@ class VipClaimQueueRealtimeTest(APITransactionTestCase):
             return claim.status
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             async def next_claim():
                 while True:
@@ -137,7 +137,7 @@ class VipClaimQueueRealtimeTest(APITransactionTestCase):
             return claim.duration_days, claim.duration_months
 
         async def verify():
-            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}')
+            socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await socket.connect())[0])
             try:
                 self.assertEqual(await database_sync_to_async(upgrade)(), (0, 1))

@@ -35,8 +35,8 @@ class KookBindingLiveTest(TransactionTestCase):
                 'msg_id':ident,'msg_timestamp':int(now.timestamp()*1000),'content':content,
                 'extra':{'guild_id':'live-guild','author':{'username':'陪玩','bot':False}}}
         async def verify():
-            owner_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(owner_account)[0]}')
-            other_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(other_account)[0]}')
+            owner_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(owner_account)[0]}', headers=[(b'host', b'sl.esports.club')])
+            other_socket=WebsocketCommunicator(application,f'/ws/orders/?token={issue_account_tokens(other_account)[0]}', headers=[(b'host', b'sl.esports.club')])
             self.assertTrue((await owner_socket.connect())[0]); self.assertTrue((await other_socket.connect())[0])
             try:
                 self.assertTrue(await database_sync_to_async(process_event)(event('绑定 '+code,'bind-event'),now))
