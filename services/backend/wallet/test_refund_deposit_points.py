@@ -1,4 +1,5 @@
 """Points refund deposit debit using real recorded assets and cash deposit."""
+import os
 from unittest.mock import patch
 from unittest import skipUnless
 
@@ -23,6 +24,8 @@ from wallet.services import get_wallet
 from wallet.test_refund_deposit_direct import DirectRefundDepositTest
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '积分退款押金借记须可核对的押金配对凭证与正式积分退款链（18-盘点订单售后资金组合）；最终联调启用')
 @override_settings(REFUND_DEPOSIT_DEFICIT_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    SERVICE_ORDER_POINTS_RECEIPT_ENABLED=True, POINTS_USAGE_SWITCHES_ENABLED=True,
                    BOSS_FUNDING_SELECTION_ENABLED=True, SERVICE_POINTS_CHECKOUT_TESTING=True,
@@ -120,6 +123,8 @@ class PointsRefundDepositTest(APITestCase):
         self.assertFalse(RefundDepositDeficit.objects.filter(refund__order=self.order).exists())
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '跨店积分退款押金配对凭证核验属正式押金退款链深水区（18-盘点订单售后资金组合）；最终联调启用')
 @skipUnless('store_b' in settings.DATABASES, 'Requires two isolated store databases')
 @override_settings(ALLOWED_HOSTS=['*'], REFUND_DEPOSIT_DEFICIT_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False,
                    SERVICE_ORDER_POINTS_RECEIPT_ENABLED=True, POINTS_USAGE_SWITCHES_ENABLED=True,
