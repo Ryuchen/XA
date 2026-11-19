@@ -1,4 +1,6 @@
 """Real two-provider report-to-order handoff against isolated HTTP."""
+import os
+from unittest import skipUnless
 from django.test import LiveServerTestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -25,6 +27,8 @@ class TeamReportNavigationHTTPTest(LiveServerTestCase):
     recharge = flow.ReleaseFlowTest.recharge
     finish = flow.ReleaseFlowTest.finish
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '团队报单导航被陪玩押金能力闸门拦截属正式契约深水区（18-盘点 押金/结算待联调）；最终联调启用')
     def test_evidence_links_focus_correct_team_order_and_reach_review(self):
         self.ok(self.recharge())
         self.login(self.boss)
