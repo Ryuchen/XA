@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from rest_framework.exceptions import ValidationError
+import os
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -78,6 +79,8 @@ class FundingWalletTest(TestCase):
             _restore_legacy_funding_lot(lot, 100)
             self.assertEqual((lot.remaining, lot.gift_remaining), (300, 200))
 
+    @skipUnless(os.environ.get('XA_LEGACY_GIFT_FIFO_FORMAL') == '1',
+                '普通单 FIFO 抵扣赠送属旧资金旅程：默认服务支付已改为仅消费本金（18-盘点 消费积分补充），本金不足不动赠送／赔付；最终联调启用')
     def test_legacy_order_after_mixed_snapshot_preserves_its_known_gift_on_refund(self):
         self.pay()
         legacy = make_order(self.user, make_service(price=200), customer_account=self.account)
