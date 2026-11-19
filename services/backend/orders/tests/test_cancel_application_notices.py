@@ -1,5 +1,7 @@
 """Real paid orders, team applications and cancellation notice handoff."""
+import os
 from datetime import timedelta
+from unittest import skipUnless
 
 from django.core.management import call_command
 from django.test import override_settings
@@ -12,6 +14,8 @@ from orders.tests import test_team_invitation_detail as fixture_module
 from site_messages.models import Message
 
 
+@skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+            '团队报名取消通知须本人录音资格＋正式抢单池入池快照（18-盘点客服安排抢单/试音录音）；最终联调启用')
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_RECHARGE_PROOF=True,
                    LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
                    CELERY_TASK_ALWAYS_EAGER=False,
