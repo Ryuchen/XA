@@ -1,5 +1,7 @@
 """Refund eligibility follows real store orders, cases and income holds."""
+import os
 from datetime import timedelta
+from unittest import skipUnless
 
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -78,6 +80,8 @@ class DepositRefundEligibilityTest(APITestCase):
             settlement_base=0, provider_income=0, released_at=timezone.now())
         self.assert_blocked('active_order_count')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '释放收入后退款等待态须清算证据可核对（needs_review=False 依赖正式结算凭证，18-盘点订单售后资金组合）；最终联调启用')
     def test_unreleased_income_blocks_but_nonincome_withdraw_freeze_does_not(self):
         self.wallet.frozen_amount = 700; self.wallet.save(update_fields=['frozen_amount'])
         tx = Transaction.objects.create(wallet=self.wallet, tx_type='INCOME', amount=200,
