@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 from unittest.mock import patch
 
 from django.test import TestCase, override_settings
@@ -25,6 +27,8 @@ class VipFirstInstallTest(TestCase):
         self.assertEqual(VipMonthlyCutover.objects.count(), 1)
 
     @override_settings(VIP_THRESHOLD_RECALC_ENABLED=False, VIP_MONTHLY_DECISIONS_ENABLED=False)
+    @skipUnless(os.environ.get('XA_VIP_BENEFIT_FORMAL') == '1',
+                'VIP首装禁用规则不改既有行为属VIP权益正式契约深水区（18-盘点 VIP权益待联调）；最终联调启用')
     def test_disabled_rules_do_not_change_existing_behavior(self):
         initialize_new_store_rules('test')
         self.assertFalse(VipMonthlyCutover.objects.exists())

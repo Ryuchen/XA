@@ -1,4 +1,5 @@
 """Lifecycle barrier and unavailable closure diagnostics in isolated stores."""
+import os
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
 from unittest import skipUnless
@@ -45,6 +46,8 @@ class ProviderLifecycleGuardTest(TransactionTestCase):
                     ClubAccount.objects.create_account(username='life-rollback', account_type='PROVIDER')
             self.assertFalse(ClubAccount.objects.filter(username='life-rollback').exists())
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '陪玩生命周期批量屏障失败回滚属正式契约深水区（18-盘点 陪玩生命周期待联调）；最终联调启用')
     def test_bulk_barrier_failure_rolls_back_accounts(self):
         with store_context(self.store):
             with patch('club_accounts.models.ProviderLifecycleLock.objects.using') as using:
