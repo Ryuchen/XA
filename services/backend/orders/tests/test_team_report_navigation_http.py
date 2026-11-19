@@ -39,7 +39,8 @@ class TeamReportNavigationHTTPTest(LiveServerTestCase):
         second.escort_profile.save(update_fields=['account'])
         self.ok(self.recharge(trade_no='receipt-2', request_id='recharge-2'))
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count'])
         self.login(self.boss)
         team = self.ok(self.client.post('/api/orders/create/', {
             'service_id': self.service.pk,
