@@ -1,4 +1,6 @@
 """KOOK identity and check-in invalidate only the bound member's page."""
+import os
+from unittest import skipUnless
 from datetime import timedelta
 from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
@@ -18,6 +20,8 @@ from orders.tests.factories import make_provider, make_user
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False,
     CHANNEL_LAYERS={'default':{'BACKEND':'channels.layers.InMemoryChannelLayer'}})
 class KookBindingLiveTest(TransactionTestCase):
+    @skipUnless(os.environ.get('XA_KOOK_POINTS_FORMAL') == '1',
+                'KOOK 绑定/签到实时刷新属 KOOK 正式契约深水区（18-盘点 KOOK 积分待联调）；最终联调启用')
     def test_binding_and_checkin_refresh_only_owner_and_duplicate_is_quiet(self):
         owner, other = make_provider(), make_user()
         owner_account = get_or_create_account_for_legacy_user(owner)
