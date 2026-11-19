@@ -36,6 +36,11 @@ class GiftReferralRealTest(APITestCase):
         self.boss.inviter = self.provider
         self.boss.inviter_commission_rate = 50
         self.boss.save(update_fields=['inviter', 'inviter_commission_rate'])
+        # 现行推荐分佣按业务账号维度计提，须同步账号级邀请绑定。
+        boss_account = self.accounts[self.boss.pk]
+        boss_account.inviter = self.accounts[self.provider.pk]
+        boss_account.inviter_commission_rate = 50
+        boss_account.save(update_fields=['inviter', 'inviter_commission_rate'])
         wallet = get_wallet(user=self.boss, account=self.accounts[self.boss.pk])
         wallet.balance = 50000
         wallet.save(update_fields=['balance'])
