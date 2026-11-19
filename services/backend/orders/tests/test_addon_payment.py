@@ -121,8 +121,10 @@ class AddonPaymentTests(TestCase):
 
     def test_independent_debit_evidence_blocks_if_receipt_row_is_missing(self):
         from orders.settlement import SettlementError
+        from site_messages.models import AddonPaymentNotice
         payment = addon_payment.pay(self.intent_id, actor=self.fixture.boss)
         OrderAddonFundingAllocation.objects.filter(payment=payment).delete()
+        AddonPaymentNotice.objects.filter(payment=payment).delete()
         payment.delete()
         with self.assertRaises(ValidationError):
             addon_payment.pay(self.intent_id, actor=self.fixture.boss)
