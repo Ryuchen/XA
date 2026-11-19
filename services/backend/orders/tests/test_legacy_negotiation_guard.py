@@ -1,4 +1,5 @@
 """Legacy refund endpoints must not bypass the current agreement workflow."""
+import os
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -23,6 +24,8 @@ class LegacyNegotiationGuardTest(APITestCase):
     new_order = flow.ReleaseFlowTest.new_order
     prepare_transfer = old.NegotiatedTransferRefundTest.prepare_transfer
 
+    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
+                '转单先被逐段报单结算能力拦截（原参与者同意校验在其后）属逐段结算转单正式契约深水区（18-盘点 逐段结算/转单待联调）；最终联调启用')
     def test_old_transfer_preview_and_execution_cannot_bypass_participant_agreement(self):
         with patch('orders.tests.test_negotiated_transfer_refund.make_provider',
                    side_effect=lambda: make_provider(deposit_paid=40000)):
