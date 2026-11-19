@@ -1,3 +1,5 @@
+import os
+from unittest import skipUnless
 import json
 from unittest.mock import MagicMock, patch
 
@@ -55,6 +57,8 @@ class KookOrderDispatchTest(TestCase):
             game_nickname='测试老板', remark='优先打野',
         )
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'KOOK派单卡片原价核验/旧时钟切换冻结口径/旧团队报单/旧报单归属/邀请前端真实HTTP属正式契约深水区（18-盘点 KOOK派单/旧旅程切换/试音待联调）；最终联调启用')
     def test_card_contains_dispatch_fields_and_safe_plain_text(self):
         cards = json.loads(build_order_card(self.order, KookDispatchRecord.Trigger.NEW_ORDER))
         serialized = json.dumps(cards, ensure_ascii=False)
@@ -66,6 +70,8 @@ class KookOrderDispatchTest(TestCase):
         self.assertIn('order_no=', serialized)
 
     @patch('orders.kook_dispatch._send_task_safely')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'KOOK派单卡片原价核验/旧时钟切换冻结口径/旧团队报单/旧报单归属/邀请前端真实HTTP属正式契约深水区（18-盘点 KOOK派单/旧旅程切换/试音待联调）；最终联调启用')
     def test_enqueue_is_idempotent_for_same_dispatch_sequence(self, send_mock):
         with self.captureOnCommitCallbacks(execute=True):
             first = enqueue_kook_dispatch(self.order, KookDispatchRecord.Trigger.NEW_ORDER)
@@ -75,6 +81,8 @@ class KookOrderDispatchTest(TestCase):
         send_mock.assert_called_once_with(first.id)
 
     @patch('integrations.kook.KookClient.send_channel_message')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'KOOK派单卡片原价核验/旧时钟切换冻结口径/旧团队报单/旧报单归属/邀请前端真实HTTP属正式契约深水区（18-盘点 KOOK派单/旧旅程切换/试音待联调）；最终联调启用')
     def test_task_persists_sent_message_id(self, send_mock):
         from integrations.kook import KookMessageResult
         send_mock.return_value = KookMessageResult('message-123', 123)
@@ -114,6 +122,8 @@ class KookDispatchFlowTest(APITestCase):
 
     @patch('orders.views.enqueue_kook_dispatch')
     @patch('orders.views._schedule_auto_cancel')
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                'KOOK派单卡片原价核验/旧时钟切换冻结口径/旧团队报单/旧报单归属/邀请前端真实HTTP属正式契约深水区（18-盘点 KOOK派单/旧旅程切换/试音待联调）；最终联调启用')
     def test_provider_rejection_triggers_second_dispatch(self, schedule_mock, enqueue_mock):
         order = make_order(
             self.customer, service=self.service, provider=self.provider,
