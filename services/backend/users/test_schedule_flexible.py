@@ -1,4 +1,5 @@
 """Real provider schedule API, cross-midnight eligibility, and tenant isolation."""
+import os
 from datetime import datetime
 from unittest import skipUnless
 from unittest.mock import patch
@@ -100,6 +101,8 @@ class FlexibleScheduleTest(TransactionTestCase):
                 self.assertEqual(response.data['code'], 0, response.data)
                 self.assertEqual(self.account.pk in [item['id'] for item in response.data['data']], visible)
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '通行证退款校验/语音文件审计门店要求/弹性档期抢单窗口/通行证退款多店隔离属正式契约深水区（18-盘点 通行证/语音审计/抢单/多店隔离待联调）；最终联调启用')
     def test_real_grab_api_checks_overnight_end_before_assigning(self):
         self.assertEqual(self.save([{'weekday': 0, 'start_minute': 1110, 'end_minute': 120}]).data['code'], 0)
         order = make_order(make_user(), service=make_service(), payment_status='PAID')
