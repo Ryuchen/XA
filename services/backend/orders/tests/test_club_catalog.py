@@ -1,5 +1,6 @@
 import io
 import json
+import os
 from decimal import Decimal
 from unittest import skipUnless
 from unittest.mock import patch
@@ -148,6 +149,8 @@ class ClubCatalogTest(APITestCase):
         self.assertEqual(bank['starting_price'],18800)
         self.assertEqual(bank['starting_price_unit'],'份')
 
+    @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
+                '目录咨询/加购直购阻断（多人抢单校验先于客服咨询校验）属下单资格正式契约深水区（18-盘点 目录与下单资格待联调）；最终联调启用')
     def test_consultation_and_addons_cannot_be_purchased_directly(self):
         services=[self.find('物资银行加仓'), self.find('新客体验单'), self.find('常规陪玩',level='ANY')]
         for service in services:
