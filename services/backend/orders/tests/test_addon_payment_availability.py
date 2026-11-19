@@ -34,9 +34,10 @@ class AddonPaymentAvailabilityTest(APITestCase):
         second.escort_profile.account = second_account
         second.escort_profile.save(update_fields=['account'])
         self.service.billing_provider_count = 2
+        self.service.fulfillment_provider_count = 2
         game = GameCategory.objects.create(name='加购支付状态')
         self.service.game_category = game
-        self.service.save(update_fields=['billing_provider_count', 'game_category'])
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count', 'game_category'])
         for player in (self.provider, second):
             player.escort_profile.service_items.add(self.service)
         addon = make_service(name='状态加购', game_category=game, is_addon=True)
