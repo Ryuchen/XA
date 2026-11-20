@@ -3,11 +3,13 @@
 ORM routing alone does not route transaction.atomic(), on_commit(), or raw
 connection cursors. Business code imports those three APIs from this module.
 Explicit non-default aliases remain explicit, for migration/operations tools.
+Control-plane code uses Django's own database APIs.
 """
 import inspect
 from contextlib import ContextDecorator
 from functools import wraps
 
+from django.conf import settings
 from django.db import connections as django_connections
 from django.db import transaction as django_transaction
 
@@ -15,7 +17,12 @@ from .context import current_database, current_store, store_context
 
 
 def _alias(using):
-    return current_database() if using in (None, 'default') else using
+    if using not in (None, 'default'):
+        return using
+    alias = current_database()
+    if alias == 'default' and settings.ISOLATED_CONTROL_PLANE:
+        raise ValueError('平台控制库不能访问门店业务数据，请先确定门店')
+    return alias
 
 
 class Connections:
@@ -31,10 +38,10 @@ connections = Connections()
 
 class Connection:
     def __getattr__(self, name):
-        return getattr(django_connections[current_database()], name)
+        return getattr(connections['default'], name)
 
     def __setattr__(self, name, value):
-        return setattr(django_connections[current_database()], name, value)
+        setattr(connections['default'], name, value)
 
 
 connection = Connection()

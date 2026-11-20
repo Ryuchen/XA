@@ -4,13 +4,16 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from stores.db import connection
+from django.db import connections
+
+from stores.context import current_database
 
 
 class Command(BaseCommand):
     help = '检查正式 MySQL 的事务隔离、存储引擎和命名时区表（只读）'
 
     def handle(self, *args, **options):
+        connection = connections[current_database()]
         if connection.vendor != 'mysql':
             raise CommandError('此命令必须连接正式部署使用的 MySQL 数据库')
         errors = []
