@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from uuid import UUID
 from django.conf import settings
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -166,6 +166,8 @@ class PlatformDashboardView(APIView):
             data = aggregate_dashboard(request.platform_account)
         except PermissionError:
             return fail('无平台汇总权限', 403, 'PLATFORM_FORBIDDEN')
+        except (DatabaseError, InterfaceError):
+            return fail('平台汇总暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
         return Response({'code': 0, 'data': data})
 
 

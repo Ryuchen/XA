@@ -1,5 +1,5 @@
 """Read each authorized business database separately; failures stay visible."""
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from django.db.models import F, Q, Sum
 from django.utils import timezone
 
@@ -64,7 +64,7 @@ def aggregate_dashboard(account):
                         readable_withdrawal_stores += 1
                         withdrawal_totals['count'] += withdrawal['count']
                         withdrawal_totals['actual_amount_fen'] += withdrawal['actual_amount_fen']
-            except (DatabaseError, ValueError):
+            except (DatabaseError, InterfaceError, ValueError):
                 # Never replace an unavailable store with another database or zero.
                 pass
         records.append(row)

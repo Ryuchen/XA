@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, InterfaceError, transaction
 from django.db.models import Sum
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
@@ -226,7 +226,7 @@ class PlatformAuthentication(BaseAuthentication):
         try:
             token = AccessToken(header[1])
             account = account_for_token(token)
-        except DatabaseError as error:
+        except (DatabaseError, InterfaceError) as error:
             raise PlatformAuthenticationUnavailable() from error
         except (TokenError, ValueError, TypeError) as error:
             raise AuthenticationFailed('平台登录已失效，请重新登录') from error
