@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import datetime, time, timedelta
+import os
 from select import select
 import socket
 from socketserver import BaseRequestHandler, ThreadingTCPServer
@@ -182,6 +183,28 @@ def _stop_registered_control():
         yield SimpleNamespace(set=stop, clear=restart)
     finally:
         restart()
+
+
+@contextmanager
+def _celery_process(command, *, env, log):
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    with log.open('wb') as output:
+        process = subprocess.Popen([sys.executable, '-m', 'celery', '-A', 'config', *command],
+            cwd=Path(__file__).resolve().parents[1], env=env, stdout=output, stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL)
+        try:
+            yield process
+        finally:
+            if process.poll() is None:
+                process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=10)
 
 
 @skipUnless(settings.SETTINGS_MODULE == 'config.certificate_mysql_test_settings',
@@ -420,24 +443,135 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
     def test_beat_and_redis_settle_both_stores_when_control_instance_stops(self):
         self._verify_periodic_settlement(standalone=True)
 
-    def _verify_periodic_settlement(self, *, standalone=False):
-        from tempfile import TemporaryDirectory
+    @skipUnless(os.environ.get('XA_SA14_BEAT_DAEMON') == '1'
+                and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None) and getattr(settings, 'SA14_TEST_REDIS', None),
+                'Requires opt-in, independently registered control MySQL and Redis')
+    @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
+    def test_cli_beat_resumes_persisted_schedule_during_control_instance_stop(self):
+        import json
+        from pathlib import Path
+        import re
+        import shelve
+        from tempfile import mkdtemp
 
-        from celery import Celery, current_app
-        from celery.contrib.testing.worker import start_worker
+        import redis
+
+        from orders.models import Order
+        from wallet.models import ProviderReport
+
+        directory = Path(os.environ['XA_SA14_MYSQL_REGISTRATION']).resolve().parent
+        work = Path(mkdtemp(prefix='beat-daemon-', dir=directory))
+        schedule = work / 'celerybeat-schedule'
+        worker_log = work / 'worker.log'
+        queue = f'xa_sa14_cli_{uuid4().hex}'
+        env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.certificate_celery_test_settings',
+               'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media')}
+        key = 'confirm-member-consumption'
+        entry = settings.CELERY_BEAT_SCHEDULE[key]
+        interval = entry['schedule']
+        self.assertEqual(interval, 60.0)
+        sent = re.compile(re.escape(entry['task']) + r' sent\. id->([0-9a-f-]{36})')
+        print(f'SA14 Celery CLI evidence={work.name}', flush=True)
+        self.enterContext(override_settings(MEDIA_ROOT=str(work / 'media')))
+        cases = self._prepare_periodic_orders()
+        # Keep the actual payment and approved report. Only age the fixture
+        # timestamps used to determine settlement eligibility.
+        completed = timezone.now() - timedelta(hours=80)
+        submitted = completed + timedelta(minutes=10)
+        for case in cases:
+            with store_context(case.store):
+                order = Order.objects.get(pk=case.order_id)
+                order.completed_at, order.report_ready_at = completed, submitted
+                order.consumption_ready_at = submitted + timedelta(hours=order.service_freeze_hours)
+                order.save(update_fields=['completed_at', 'report_ready_at', 'consumption_ready_at'])
+                ProviderReport.objects.filter(order=order, status='APPROVED').update(submitted_at=submitted)
+
+        def wait_for(read, timeout, watching, reason):
+            deadline = monotonic() + timeout
+            while monotonic() < deadline:
+                for process in watching:
+                    self.assertIsNone(process.poll(), f'Celery PID {process.pid} 提前退出，查看 {work}')
+                value = read()
+                if value:
+                    return value
+                sleep(.15)
+            self.fail(f'{reason}，查看 {work}')
+
+        def receive(log, seen, watching, fallback):
+            task_id = wait_for(lambda: next((value for value in sent.findall(log.read_text()) if value not in seen),
+                                           None), interval + 20, watching, 'Beat 未按时发布结算任务')
+            observed = monotonic()
+            seen.add(task_id)
+
+            def result(identifier):
+                redis_key = f'{queue}:celery-task-meta-{identifier}'
+                value = wait_for(lambda: backend.get(redis_key), 15, watching, f'缺少任务 {identifier} 的 Redis 结果')
+                receipt = json.loads(value)
+                self.assertEqual(receipt['status'], 'SUCCESS')
+                return receipt['result']
+
+            fanout = result(task_id)
+            self.assertEqual(fanout['directory_fallback'], fallback)
+            self.assertEqual(fanout['enqueue_unknown'], [])
+            self.assertCountEqual([job['store'] for job in fanout['stores']], ['shenglang', 'xinan'])
+            for job in fanout['stores']:
+                result(job['task_id'])
+            print(f'SA14 Beat scan={task_id} fallback={fallback} stores={fanout["stores"]}', flush=True)
+            return observed
+
+        broker = settings.SA14_TEST_REDIS
+        backend = self.enterContext(redis.Redis(host='127.0.0.1', port=broker['port'], db=1,
+            password=broker['password'], socket_connect_timeout=2, socket_timeout=2))
+        beat_command = ['beat', '-l', 'DEBUG', '--schedule', str(schedule)]
+        worker_command = ['worker', '-P', 'solo', '-l', 'INFO', '--without-mingle', '--without-gossip']
+        first_log, resumed_log = work / 'beat-first.log', work / 'beat-resumed.log'
+        seen = set()
+
+        with _stop_registered_control() as control, _celery_process(worker_command, env=env, log=worker_log) as worker:
+            wait_for(lambda: ' ready.' in worker_log.read_text(), 20, (worker,), 'Worker 未就绪')
+            control.set()
+            with _celery_process(beat_command, env=env, log=first_log) as beat:
+                print(f'SA14 Celery worker PID={worker.pid} Beat PID={beat.pid}', flush=True)
+                started = monotonic()
+                first_send = receive(first_log, seen, (worker, beat), fallback=True)
+                self.assertGreaterEqual(first_send - started, interval - 2)
+                ledger = [self._periodic_ledger(case) for case in cases]
+            self.assertEqual(beat.returncode, 0, f'Beat 未正常退出，查看 {first_log}')
+            with shelve.open(str(schedule), flag='r') as saved:
+                first_entry = saved['entries'][key]
+                self.assertEqual(first_entry.total_run_count, 1)
+            wait_for(lambda: monotonic() - first_send >= 24, 30, (worker,), '未到计划重启时点')
+            with _celery_process(beat_command, env=env, log=resumed_log) as beat:
+                print(f'SA14 Celery Beat restarted PID={beat.pid}', flush=True)
+                restarted = monotonic()
+                second_send = receive(resumed_log, seen, (worker, beat), fallback=True)
+                self.assertAlmostEqual(second_send - first_send, interval, delta=8)
+                self.assertLess(second_send - restarted, interval - 10)
+                self.assertEqual([self._periodic_ledger(case) for case in cases], ledger)
+                control.clear()
+                third_send = receive(resumed_log, seen, (worker, beat), fallback=False)
+                self.assertAlmostEqual(third_send - second_send, interval, delta=8)
+                self.assertEqual([self._periodic_ledger(case) for case in cases], ledger)
+            self.assertEqual(beat.returncode, 0, f'Beat 未正常退出，查看 {resumed_log}')
+            with shelve.open(str(schedule), flag='r') as saved:
+                last_entry = saved['entries'][key]
+                self.assertEqual(last_entry.total_run_count, 3)
+                self.assertAlmostEqual((last_entry.last_run_at - first_entry.last_run_at).total_seconds(),
+                                       2 * interval, delta=8)
+
+        print(f'SA14 Beat intervals={second_send-first_send:.2f},{third_send-second_send:.2f}s '
+              f'restart-to-dispatch={second_send-restarted:.2f}s', flush=True)
+        for case, (_, vip_id, points_id, entries) in zip(cases, ledger):
+            print(f'SA14 Beat store={case.store.slug} order={case.order_id} ledger={entries} '
+                  f'vip={vip_id} points={points_id}', flush=True)
+
+    def _prepare_periodic_orders(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
-        from kombu import Exchange, Queue
 
         from club_accounts.services import get_or_create_account_for_legacy_user
-        from engagement import tasks as consumption_tasks
-        from engagement.models import LicenseConsumptionPointsDecision, LicenseRefundVipDecision, PointLedger
         from orders.models import Order
         from orders.tests.factories import make_console_user
-        from wallet.models import ProviderReport, Transaction
-        from .context import current_store
-
-        media = self.enterContext(TemporaryDirectory(prefix='xa-sa14-worker-'))
-        self.enterContext(override_settings(MEDIA_ROOT=media))
+        from wallet.models import ProviderReport
 
         def report_image():
             return SimpleUploadedFile('evidence.png', self.image(), content_type='image/png')
@@ -478,6 +612,47 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
                 self.assertIsNone(order.settled_at)
                 self.assertFalse(order.transactions.filter(amount__gt=0).exists())
         self.assertEqual(cases[0].order_id, cases[1].order_id)
+        return cases
+
+    def _periodic_ledger(self, case):
+        from engagement.models import LicenseConsumptionPointsDecision, LicenseRefundVipDecision, PointLedger
+        from orders.models import Order
+        from wallet.models import Transaction
+
+        with store_context(case.store):
+            order = Order.objects.get(pk=case.order_id)
+            self.assertIsNotNone(order.settled_at)
+            self.assertIsNotNone(order.funding_benefits_resolved_at)
+            vip = LicenseRefundVipDecision.objects.get(order=order)
+            points = LicenseConsumptionPointsDecision.objects.get(order=order)
+            self.assertEqual((vip.outcome, points.outcome), ('UNKNOWN', 'UNKNOWN'))
+            self.assertEqual(points.license_evidence['vip_decision_id'], vip.pk)
+            self.assertEqual(points.license_evidence['points_outcome'], 'UNKNOWN')
+            for evidence in (vip.license_evidence, points.license_evidence['points_evidence']):
+                self.assertEqual(evidence['license_source'], 'CACHE')
+                self.assertEqual(evidence['business_certificate']['status'], 'CONTROL_UNAVAILABLE')
+            self.assertFalse(PointLedger.objects.filter(order=order).exists())
+            entries = list(order.transactions.order_by('pk').values_list('tx_type', 'amount'))
+            self.assertCountEqual(entries, [(Transaction.TxType.PAY, -case.debit),
+                (Transaction.TxType.INCOME, order.provider_income),
+                (Transaction.TxType.SHOP_INCOME, order.shop_income)])
+            self.assertEqual(sum(amount for _, amount in entries), 0)
+            return order.settled_at, vip.pk, points.pk, entries
+
+    def _verify_periodic_settlement(self, *, standalone=False):
+        from tempfile import TemporaryDirectory
+
+        from celery import Celery, current_app
+        from celery.contrib.testing.worker import start_worker
+        from kombu import Exchange, Queue
+
+        from engagement import tasks as consumption_tasks
+        from .context import current_store
+
+        media = self.enterContext(TemporaryDirectory(prefix='xa-sa14-worker-'))
+        self.enterContext(override_settings(MEDIA_ROOT=media))
+        left = self.stores['shenglang']
+        cases = self._prepare_periodic_orders()
 
         queue = f'xa_sa14_worker_{uuid4().hex}'
         previous_app = current_app._get_current_object()
@@ -535,27 +710,6 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
                     app.AsyncResult(job['task_id']).get(timeout=15, disable_sync_subtasks=False)
                 return result.id
 
-            def ledger(case):
-                with store_context(case.store):
-                    order = Order.objects.get(pk=case.order_id)
-                    self.assertIsNotNone(order.settled_at)
-                    self.assertIsNotNone(order.funding_benefits_resolved_at)
-                    vip = LicenseRefundVipDecision.objects.get(order=order)
-                    points = LicenseConsumptionPointsDecision.objects.get(order=order)
-                    self.assertEqual((vip.outcome, points.outcome), ('UNKNOWN', 'UNKNOWN'))
-                    self.assertEqual(points.license_evidence['vip_decision_id'], vip.pk)
-                    self.assertEqual(points.license_evidence['points_outcome'], 'UNKNOWN')
-                    for evidence in (vip.license_evidence, points.license_evidence['points_evidence']):
-                        self.assertEqual(evidence['license_source'], 'CACHE')
-                        self.assertEqual(evidence['business_certificate']['status'], 'CONTROL_UNAVAILABLE')
-                    self.assertFalse(PointLedger.objects.filter(order=order).exists())
-                    entries = list(order.transactions.order_by('pk').values_list('tx_type', 'amount'))
-                    self.assertCountEqual(entries, [(Transaction.TxType.PAY, -case.debit),
-                        (Transaction.TxType.INCOME, order.provider_income),
-                        (Transaction.TxType.SHOP_INCOME, order.shop_income)])
-                    self.assertEqual(sum(amount for _, amount in entries), 0)
-                    return order.settled_at, vip.pk, points.pk, entries
-
             control_outage = _stop_registered_control if standalone else _control_link
             with control_outage() as disconnected, patch('django.utils.timezone.now', return_value=recovered):
                 disconnected.set()
@@ -568,12 +722,12 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
                                                                  int(tenant.settings_dict['PORT'])))
                 with start_worker(app, pool='solo', queues=[queue], perform_ping_check=False, without_heartbeat=True):
                     original = run_scan(fallback=True)
-                    first = [ledger(case) for case in cases]
+                    first = [self._periodic_ledger(case) for case in cases]
                     run_scan(fallback=True)
-                    self.assertEqual([ledger(case) for case in cases], first)
+                    self.assertEqual([self._periodic_ledger(case) for case in cases], first)
                     disconnected.clear()
                     run_scan(fallback=False)
-                    self.assertEqual([ledger(case) for case in cases], first)
+                    self.assertEqual([self._periodic_ledger(case) for case in cases], first)
                     left.refresh_from_db()
                     disabled = self.owner.patch(f'/api/admin/platform/store-management/{left.pk}', {
                         'status': 'DISABLED', 'expected_updated_at': left.updated_at.isoformat(),
@@ -581,7 +735,7 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
                     self.assertEqual(disabled.status_code, 200, disabled.data)
                     disconnected.set()
                     run_scan(fallback=True, slugs=('xinan',))
-                    self.assertEqual([ledger(case) for case in cases], first)
+                    self.assertEqual([self._periodic_ledger(case) for case in cases], first)
             for case, (_, vip_id, points_id, entries) in zip(cases, first):
                 print(f'SA14 Celery 扫描={original} 门店={case.store.slug} 订单={case.order_id} '
                       f'流水={entries} VIP待核={vip_id} 积分待核={points_id}', flush=True)
