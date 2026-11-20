@@ -103,20 +103,47 @@ class TeamInviteView(APIView):
             return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT', 'msg': str(exc)}, status=409)
         except ValueError as exc:
             return Response({'code': 400, 'msg': str(exc)}, status=400)
+        if result.state == 'PENDING':
+            return Response({'code': 409, 'errorCode': 'GRAB_INVITE_PENDING', 'receipt_id': result.receipt_id,
+                             'msg': '邀请已登记，结果待确认，请用原请求号重试'}, status=409)
         if result.state not in ('BEFORE', 'AFTER'):
-            return Response({'code': 409, 'msg': '邀请时间已截止或待核对'}, status=409)
+            return Response({'code': 409, 'errorCode': 'GRAB_INVITE_REVIEW',
+                             'msg': '邀请时间待核对，请勿重新发起'}, status=409)
         team = OrderGrabTeamDraft.objects.filter(round__pool__order_id=order_id,
             round__receipt_probes__pk=result.receipt_id, captain=request.account, partner_id=partner, request_key=key).first()
         if not team:
             return Response({'code': 409, 'msg': '原组队登记待核对'}, status=409)
-        if result.state == 'AFTER' and team.round_id == state.round_id:
-            _release_late_team(team.pk, confirmation=False, receipt_id=result.receipt_id)
-        if result.state != 'BEFORE':
-            return Response({'code': 409, 'msg': '邀请时间已截止或待核对'}, status=409)
+        if result.state == 'AFTER':
+            if team.round_id == state.round_id:
+                _release_late_team(team.pk, confirmation=False, receipt_id=result.receipt_id)
+            return Response({'code': 409, 'errorCode': 'GRAB_INVITE_CLOSED', 'msg': '本轮邀请已截止'}, status=409)
         if team.round_id == state.round_id:
             from site_messages.grab_invite import schedule
             schedule(result.receipt_id)
         return Response({'code': 0, 'data': {'team_id': team.pk, 'status': team.status}})
+
+
+def _invitation_visibility(team, account_id):
+    from .grab_admission import GrabAdmissionError, check_candidate
+    from .grab_clock_contract import production_enabled
+    from .grab_pool_visibility import initial_visibility
+    from .grab_round_opening import opening_bounds
+
+    try:
+        if team.round.simultaneous_visibility:
+            visible_at = opening_bounds(team.round)[1] if production_enabled() else team.round.opened_at
+        else:
+            visibility = initial_visibility(team.round.pool_id, account_id)
+            if visibility.opening_pending:
+                return None, False, 'PENDING'
+            visible_at = visibility.visible_at
+    except ValueError:
+        return None, False, 'REVIEW'
+    try:
+        check_candidate(team.round.pool_id, account_id, round_id=team.round_id)
+    except GrabAdmissionError:
+        return visible_at, False, 'KNOWN'
+    return visible_at, True, 'KNOWN'
 
 
 class TeamInvitationsView(APIView):
@@ -125,9 +152,7 @@ class TeamInvitationsView(APIView):
     def get(self, request):
         if not enabled() or request.account.account_type != 'PROVIDER':
             return Response({'code': 404, 'msg': '组队邀请不存在'}, status=404)
-        from .grab_pool_visibility import initial_visibility
-        from .grab_admission import check_candidate, GrabAdmissionError
-        from .grab_receipt_probe import team_invitation_cycles_match
+        from .grab_receipt_probe import _effective_state, team_invitation_cycles_match
         before = request.query_params.get('before_id')
         if before is not None and (not before.isascii() or not before.isdigit() or len(before) > 19
                                    or not 0 < int(before) <= 9223372036854775807):
@@ -140,46 +165,20 @@ class TeamInvitationsView(APIView):
         data = []
         for team in rows.iterator(chunk_size=100):
             captain_member = team.members.filter(account_id=team.captain_id).select_related(
-                'receipt_pass_evidence__receipt').first()
+                'receipt_pass_evidence__receipt__actor').first()
             evidence = captain_member.receipt_pass_evidence if captain_member else None
+            receipt = evidence.receipt if evidence else None
             if (not team.captain.is_active or not team.captain.can_login
                     or not team.captain.license_membership_active
-                    or not team_invitation_cycles_match(team, evidence.receipt if evidence else None,
+                    or not team_invitation_cycles_match(team, receipt,
                         captain_cycle=team.captain.business_cycle, partner_cycle=request.account.business_cycle)):
                 continue
-            try:
-                from .grab_clock_contract import production_enabled
-                opening_pending = False
-                if team.round.simultaneous_visibility and production_enabled():
-                    from .grab_round_opening import opening_bounds, provisional_opening_lower
-                    try:
-                        _, visible_at = opening_bounds(team.round)
-                    except ValueError:
-                        # A valid provisional lower bound is not an observed
-                        # activation or a time we can show as fact.
-                        provisional_opening_lower(team.round)
-                        opening_pending, visible_at = True, None
-                elif team.round.simultaneous_visibility:
-                    visible_at = team.round.opened_at
-                else:
-                    visibility = initial_visibility(team.round.pool_id, request.account.pk)
-                    opening_pending = visibility.opening_pending
-                    visible_at = None if opening_pending else visibility.visible_at
-            except ValueError:
-                # One unavailable opening/pass snapshot must not hide every
-                # other real invitation. Never infer its visibility time.
-                visible_at, visible, visibility_state = None, False, 'REVIEW'
-            else:
-                if opening_pending:
-                    visible, visibility_state = False, 'PENDING'
-                else:
-                    visibility_state = 'KNOWN'
-                    try:
-                        check_candidate(team.round.pool_id, request.account.pk, round_id=team.round_id)
-                    except GrabAdmissionError:
-                        visible = False
-                    else:
-                        visible = True
+            receipt_state = _effective_state(receipt, evidence)
+            if receipt_state == 'AFTER':
+                continue
+            visible_at, visible, visibility_state = (None, False, receipt_state)
+            if receipt_state == 'BEFORE':
+                visible_at, visible, visibility_state = _invitation_visibility(team, request.account.pk)
             item = {'team_id': team.pk, 'captain_name': team.captain.nickname or '陪玩', 'status': team.status,
                     'visible_at': visible_at, 'order_visible': visible, 'visibility_state': visibility_state}
             if visible:

@@ -6,6 +6,7 @@ from unittest import skipUnless
 from unittest.mock import patch
 
 from django.conf import settings
+from django.db import DatabaseError
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -58,11 +59,7 @@ class ReopenedRoundTests(TransactionTestCase):
             with transaction.atomic():
                 return preview(round_.pk, ids)
 
-    @override_settings(GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
-    @patch('club_accounts.provider_lifecycle.lock_provider_operations')
-    def test_team_invitation_replay_does_not_enter_the_reopened_round(self, _lock_provider_operations):
-        captain, partner, other = (item[1] for item in self.users)
-        opened = timezone.now() - timedelta(seconds=40)
+    def create_team_order(self, opened):
         save_grab_window(30, current_rules()['version'], lambda *args: None)
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
             SystemConfig.objects.update_or_create(key=f'provider_pass_delay_seconds_{tier}', defaults={'value': '0'})
@@ -73,7 +70,52 @@ class ReopenedRoundTests(TransactionTestCase):
             with transaction.atomic():
                 pool = create_initial_snapshot(order.pk)
                 first = first_round(pool.pk)
-                original_state = OrderGrabTeamRoundState.objects.create(round=first)
+                state = OrderGrabTeamRoundState.objects.create(round=first)
+        return order, state
+
+    @override_settings(GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
+    @patch('club_accounts.provider_lifecycle.lock_provider_operations')
+    def test_pending_team_invitation_reports_the_original_receipt(self, _lock_provider_operations):
+        from orders import grab_receipt_probe
+
+        captain, partner, _ = (item[1] for item in self.users)
+        order, state = self.create_team_order(timezone.now() - timedelta(seconds=1))
+        client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(captain)[0])
+        url = f'/api/orders/orders/{order.pk}/grab-team/'
+        payload = {'partner_id': partner.pk, 'client_request_id': 'pending-invitation'}
+        original_sample = grab_receipt_probe._db_clock
+
+        def lose_post_commit_observation():
+            if not transaction.get_connection().in_atomic_block and state.round.receipt_probes.exists():
+                raise DatabaseError('test database connection lost after the first commit')
+            return original_sample()
+
+        with patch('orders.grab_receipt_probe._db_clock', side_effect=lose_post_commit_observation):
+            sent = client.post(url, payload, format='json')
+        repeated = client.post(url, payload, format='json')
+
+        receipt = state.round.receipt_probes.get()
+        self.assertEqual((receipt.state, receipt.upper_observed_at), ('PENDING', None))
+        teammate = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(partner)[0])
+        invitations = teammate.get('/api/orders/grab-team/invitations/').data['data']
+        self.assertEqual(len(invitations), 1)
+        self.assertEqual(invitations[0]['visibility_state'], 'PENDING')
+        self.assertFalse(invitations[0]['order_visible'])
+        self.assertIsNone(invitations[0]['visible_at'])
+        self.assertNotIn('order_id', invitations[0])
+        for response in (sent, repeated):
+            self.assertEqual(response.status_code, 409, response.data)
+            self.assertEqual(response.data.get('errorCode'), 'GRAB_INVITE_PENDING')
+            self.assertEqual(response.data.get('receipt_id'), receipt.pk)
+        self.assertEqual(state.round.occupied_seats.count(), 1)
+
+    @override_settings(GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
+    @patch('club_accounts.provider_lifecycle.lock_provider_operations')
+    def test_team_invitation_replay_does_not_enter_the_reopened_round(self, _lock_provider_operations):
+        captain, partner, other = (item[1] for item in self.users)
+        opened = timezone.now() - timedelta(seconds=40)
+        order, original_state = self.create_team_order(opened)
+        first = original_state.round
         url = f'/api/orders/orders/{order.pk}/grab-team/'
         payload = {'partner_id': partner.pk, 'client_request_id': 'lost-invitation-response'}
         with patch('django.utils.timezone.now', return_value=opened + timedelta(seconds=1)):
@@ -85,7 +127,7 @@ class ReopenedRoundTests(TransactionTestCase):
         original_state.status = 'REOPENED'
         original_state.save(update_fields=['status'])
         reopened_at = timezone.now() - timedelta(seconds=1)
-        second = OrderGrabRound.objects.create(pool=pool, number=2, opened_at=reopened_at,
+        second = OrderGrabRound.objects.create(pool=first.pool, number=2, opened_at=reopened_at,
             deadline=reopened_at + timedelta(seconds=30), total_deadline=first.total_deadline,
             simultaneous_visibility=True)
         OrderGrabTeamRoundState.objects.create(round=second)
