@@ -1,7 +1,7 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 import os
 from unittest import skipUnless
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from orders.tests.factories import make_user,make_provider
@@ -95,7 +95,7 @@ class KookPointsTests(TestCase):
     def test_newly_readable_channel_starts_now_without_backfilling_missing_permission_time(self):
         binding=self.bind();binding.accounted_at=self.now-timedelta(hours=3);binding.save()
         with patch('engagement.management.commands.run_kook_points.timezone.now',return_value=self.now):
-            attach_verified_presence({'kook-user':'sleep'})
+            attach_verified_presence({'kook-user':'sleep'}, self.cfg.listener_revision)
         checkpoint(self.now+timedelta(seconds=30));binding.refresh_from_db()
         self.assertEqual(binding.channel_id,'sleep')
         self.assertEqual(binding.online_milliseconds,30000)
@@ -124,6 +124,205 @@ class KookPointsTests(TestCase):
         RewardItem.objects.create(code='provider',audience='PROVIDER',kind='SERVICE',name='账号补贴',point_cost=30000,is_active=True)
         self.assertEqual(client.get('/api/club/points/').status_code,200)
         data=client.get('/api/club/rewards/').data['data'];self.assertEqual([r['code'] for r in data],['provider'])
+
+
+@override_settings(STORE_CERTIFICATE_ENFORCEMENT_ENABLED=True)
+class KookCertificateTests(TestCase):
+    databases = {'default', 'store_b'}
+
+    def setUp(self):
+        from stores.context import store_context
+        from stores.models import PlatformAccount
+        from stores.tests_hosts import xinan_store
+        from engagement.models import ClubOperationConfig, KookOnlineRuleVersion
+        from stores.business_certificates import CERTIFICATE_TIMEZONE
+
+        self.store = xinan_store()
+        self.owner = PlatformAccount.objects.create(username='kook-certificate-reviewer')
+        self.midnight = datetime(2026, 11, 22, tzinfo=CERTIFICATE_TIMEZONE)
+        with store_context(self.store), override_settings(STORE_CERTIFICATE_ENFORCEMENT_ENABLED=False):
+            KookOnlineRuleVersion.objects.get_or_create(pk=0, defaults={'revision': 0, 'window_ms': 7200000, 'points': 1})
+            self.account = mapped(make_user())
+            self.binding = KookBinding.objects.create(account=self.account, user_id='certificate-member',
+                business_cycle=self.account.business_cycle, channel_id='voice',
+                accounted_at=self.midnight - timedelta(seconds=20), online_milliseconds=7160000)
+            KookPointsConfig.objects.create(enabled=True, guild_id='guild', checkin_channel_id='hall',
+                voice_channel_ids=['voice'], started_at=self.midnight - timedelta(hours=2))
+            operation, _ = ClubOperationConfig.objects.get_or_create(pk=1)
+            ClubOperationConfig.objects.filter(pk=operation.pk).update(updated_at=self.midnight - timedelta(hours=2))
+
+    def certificate(self, registered_at, expires_on=None, supersedes=None):
+        from uuid import uuid4
+        from stores.models import StoreBusinessCertificate
+
+        with patch('django.utils.timezone.now', return_value=registered_at):
+            return StoreBusinessCertificate.objects.create(store=self.store, confirmed_by=self.owner,
+                expires_on=expires_on, document=b'fixture', content_type='image/png',
+                client_request_id=uuid4(), supersedes=supersedes)
+
+    @staticmethod
+    def fail_certificates(execute, sql, params, many, context):
+        from django.db import DatabaseError
+        if 'stores_storebusinesscertificate' in sql:
+            raise DatabaseError('fixture certificate query unavailable')
+        return execute(sql, params, many, context)
+
+    def test_midnight_counts_only_the_eligible_part_and_renewal_does_not_restore_the_gap(self):
+        from engagement.models import KookOnlineInterval
+        from stores.certificate_admission import interval_admission
+        from stores.context import store_context
+        from stores.models import Store
+
+        signed = self.certificate(self.midnight - timedelta(days=2), self.midnight.date() - timedelta(days=1))
+        other = Store.objects.get(slug='shenglang')
+        with store_context(other):
+            _, _, outcome, facts = interval_admission(self.midnight - timedelta(seconds=20), self.midnight)[0]
+            self.assertEqual((outcome, facts['store_id'], facts['status']), ('DENY', other.pk, 'MISSING'))
+        with store_context(self.store):
+            checkpoint(self.midnight + timedelta(seconds=20))
+            self.binding.refresh_from_db()
+            self.assertEqual((self.binding.online_milliseconds, self.binding.awarded_points), (7180000, 0))
+            self.assertEqual(list(KookOnlineInterval.objects.order_by('started_at')
+                .values_list('ended_at', 'elapsed_ms', 'interval_outcome')), [
+                    (self.midnight, 20000, 'ALLOW'), (self.midnight + timedelta(seconds=20), 20000, 'DENY')])
+        self.certificate(self.midnight + timedelta(seconds=30), supersedes=signed)
+        at = self.midnight + timedelta(seconds=50)
+        with store_context(self.store), patch('django.utils.timezone.now', return_value=at):
+            leave = {'type': 255, 'target_id': 'guild', 'msg_id': 'certificate-voice-exit',
+                'msg_timestamp': int(at.timestamp() * 1000), 'extra': {'type': 'exited_channel',
+                    'body': {'user_id': self.binding.user_id, 'channel_id': 'voice'}}}
+            self.assertTrue(process_event(leave, at))
+            self.assertFalse(process_event(leave, at))
+            self.binding.refresh_from_db()
+            self.assertEqual((self.binding.online_milliseconds, self.binding.awarded_points), (7200000, 1))
+            self.assertEqual(self.binding.channel_id, '')
+            self.assertEqual(list(PointLedger.objects.filter(kind='KOOK_ONLINE').values_list('amount', flat=True)), [100])
+
+    def test_review_after_control_outage_counts_only_originally_eligible_time(self):
+        from uuid import uuid4
+        from django.db import connections
+        from console.models import AdminAuditLog
+        from engagement.kook_license_review import resolve_locked
+        from engagement.models import KookOnlineInterval
+        from stores.context import store_context
+        from stores.db import transaction
+
+        original = self.certificate(self.midnight - timedelta(days=2), self.midnight.date() - timedelta(days=1))
+        with store_context(self.store):
+            with connections['default'].execute_wrapper(self.fail_certificates):
+                checkpoint(self.midnight + timedelta(seconds=20))
+            checkpoint(self.midnight + timedelta(seconds=30))
+            event = AdminAuditLog.objects.get(resource='kook-license-points')
+            self.assertEqual(event.request_body['business_certificate_interval']['status'], 'CONTROL_UNAVAILABLE')
+            self.assertEqual(event.request_body['evidence_version'], 3)
+            self.assertEqual(KookOnlineInterval.objects.filter(processing_status='WAITING').count(), 2)
+            self.assertFalse(PointLedger.objects.exists())
+
+        self.certificate(self.midnight + timedelta(seconds=30), supersedes=original)
+        with store_context(self.store), transaction.atomic():
+            request_id = uuid4()
+            kwargs = dict(request_id=request_id, actor_id=self.owner.pk, outcome='ALLOW', reason='复核隔离证照历史')
+            review = resolve_locked(event.pk, **kwargs)
+            self.assertEqual((review.credited_milliseconds, review.awarded_points), (20000, 0))
+            self.assertEqual(resolve_locked(event.pk, **kwargs).pk, review.pk)
+            self.binding.refresh_from_db()
+            self.assertEqual(self.binding.online_milliseconds, 7180000)
+            self.assertFalse(KookOnlineInterval.objects.filter(processing_status='WAITING').exists())
+            self.assertFalse(PointLedger.objects.exists())
+
+    def test_versioned_review_keeps_original_rule_and_replays_only_definite_waiting_time(self):
+        from uuid import uuid4
+        from django.db import connections
+        from console.models import AdminAuditLog
+        from engagement.kook_license_review import resolve_locked
+        from engagement.models import KookOnlineCursor, KookOnlineRuleVersion
+        from stores.context import store_context
+        from stores.db import transaction
+
+        original = self.certificate(self.midnight - timedelta(days=2), self.midnight.date() - timedelta(days=1))
+        with store_context(self.store):
+            KookOnlineRuleVersion.objects.create(revision=1, window_ms=20000, points=3,
+                effective_at=self.midnight - timedelta(hours=1))
+            KookBinding.objects.filter(pk=self.binding.pk).update(online_milliseconds=0)
+            with connections['default'].execute_wrapper(self.fail_certificates):
+                checkpoint(self.midnight + timedelta(seconds=20))
+            event = AdminAuditLog.objects.get(resource='kook-license-points')
+            self.assertEqual(event.request_body['rule_revision'], 1)
+
+        self.certificate(self.midnight + timedelta(seconds=20), supersedes=original)
+        with store_context(self.store), transaction.atomic():
+            checkpoint(self.midnight + timedelta(seconds=30))
+            self.assertFalse(PointLedger.objects.exists())
+            kwargs = dict(request_id=uuid4(), actor_id=self.owner.pk, outcome='ALLOW', reason='原规则时段核对')
+            review = resolve_locked(event.pk, **kwargs)
+            self.assertEqual((review.credited_milliseconds, review.awarded_points), (20000, 300))
+            self.assertEqual(resolve_locked(event.pk, **kwargs).pk, review.pk)
+            self.binding.refresh_from_db()
+            cursor = KookOnlineCursor.objects.get(account=self.account)
+            self.assertEqual((self.binding.online_milliseconds, self.binding.awarded_points, cursor.remainder_ms),
+                (30000, 3, 10000))
+            self.assertEqual(PointLedger.objects.count(), 1)
+
+    def test_later_registration_cannot_approve_a_wholly_unlicensed_interval(self):
+        from uuid import uuid4
+        from django.db import connections
+        from console.models import AdminAuditLog
+        from engagement.kook_license_review import resolve_locked
+        from stores.context import store_context
+        from stores.db import transaction
+
+        with store_context(self.store), connections['default'].execute_wrapper(self.fail_certificates):
+            checkpoint(self.midnight + timedelta(seconds=20))
+            event = AdminAuditLog.objects.get(resource='kook-license-points')
+        self.certificate(self.midnight + timedelta(seconds=20))
+        with store_context(self.store), transaction.atomic(), override_settings(STORE_CERTIFICATE_ENFORCEMENT_ENABLED=False):
+            kwargs = dict(request_id=uuid4(), actor_id=self.owner.pk, reason='已核对原时段')
+            with self.assertRaisesMessage(ValidationError, '原在线时段缺少有效的本店证照'):
+                resolve_locked(event.pk, outcome='ALLOW', **kwargs)
+            review = resolve_locked(event.pk, outcome='DENY', **kwargs)
+            self.assertEqual((review.credited_milliseconds, review.awarded_points), (0, 0))
+            self.assertFalse(PointLedger.objects.exists())
+
+    def test_originally_valid_certificate_does_not_increase_the_recorded_milliseconds(self):
+        from uuid import uuid4
+        from console.models import AdminAuditLog
+        from engagement.kook_license_review import resolve_locked
+        from engagement.models import KookOnlineInterval
+        from stores.context import store_context
+        from stores.db import transaction
+
+        self.certificate(self.midnight - timedelta(days=2))
+        with store_context(self.store), transaction.atomic():
+            KookBinding.objects.filter(pk=self.binding.pk).update(online_milliseconds=7198999)
+            with patch('stores.license_benefits.check_license_benefits',
+                       return_value=('UNKNOWN', {'status': 'CONTROL_UNAVAILABLE'})):
+                checkpoint(self.binding.accounted_at + timedelta(milliseconds=1001))
+            event = AdminAuditLog.objects.get(resource='kook-license-points')
+            interval = KookOnlineInterval.objects.get(decision_source=event)
+            review = resolve_locked(event.pk, request_id=uuid4(), actor_id=self.owner.pk, outcome='ALLOW',
+                reason='核对原在线毫秒和证照')
+            self.assertEqual((review.credited_milliseconds, review.awarded_points), (interval.elapsed_ms, 0))
+            self.assertFalse(PointLedger.objects.exists())
+
+    def test_manual_queue_rejects_interval_with_an_ineligible_replacement_in_the_middle(self):
+        from engagement.models import KookManualOnlineReview, KookOnlineCursor
+        from stores.context import store_context
+
+        first = self.certificate(self.midnight - timedelta(days=2))
+        expired = self.certificate(self.midnight - timedelta(minutes=30),
+            self.midnight.date() - timedelta(days=2), supersedes=first)
+        self.certificate(self.midnight - timedelta(minutes=10), supersedes=expired)
+        start, end = self.midnight - timedelta(hours=1), self.midnight - timedelta(minutes=5)
+        with (store_context(self.store), patch('django.utils.timezone.now', return_value=self.midnight),
+              self.assertRaisesMessage(ValidationError, '原在线时段缺少有效的本店证照')):
+            KookPointsConfig.objects.update(enabled=False)
+            KookOnlineCursor.objects.create(account=self.account, business_cycle=self.account.business_cycle,
+                binding=self.binding, blocked=True)
+            record_external_points(self.account, kind='KOOK_ONLINE', source_id='certificate-history',
+                day=start.date(), units=3300, operator=self.account, observed_start=start, observed_end=end)
+        with store_context(self.store):
+            self.assertFalse(KookManualOnlineReview.objects.exists())
+            self.assertFalse(PointLedger.objects.exists())
 
 
 @skipUnlessDBFeature('has_select_for_update')

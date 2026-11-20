@@ -1511,6 +1511,8 @@ def record_external_points(account, *, kind, source_id, day, units, operator, ob
         points, revision = points_for_manual_day(day, observed_at)
         amount = points * 100
     else:
+        from stores.certificate_admission import require_interval_admission
+        require_interval_admission(observed_start, observed_end)
         pending, manual_cursor = defer_if_needed(current, operator, source_id, observed_start, observed_end, units)
         if pending:
             return pending

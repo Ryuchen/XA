@@ -94,9 +94,10 @@ def _license_point_evidence(binding, *, outcome, stage, now, detail):
     from .models import ClubOperationConfig
     config()
     operation = ClubOperationConfig.objects.select_for_update().get(pk=1)
+    evidence_version = 3 if ('business_certificate_interval' in detail or 'business_certificate' in detail) else 2
     return AdminAuditLog.objects.create(operator_name='系统', method='SYSTEM', path='kook/license-points',
         resource='kook-license-points', object_id=str(binding.pk), status_code=200,
-        request_body={'evidence_version': 2, 'account_id': binding.account_id, 'account_type': binding.account.account_type,
+        request_body={'evidence_version': evidence_version, 'account_id': binding.account_id, 'account_type': binding.account.account_type,
                       'business_cycle': binding.account.business_cycle, 'binding_cycle': binding.business_cycle,
                       'membership_active': binding.account.license_membership_active,
                       'channel_id': binding.channel_id, 'points_enabled': operation.points_enabled,
@@ -108,23 +109,41 @@ def _accrue(binding, now, *, outcome):
     # Validate every segment before changing any counter. New rule versions
     # must remain unpublished until replay and manual review support them.
     if binding.channel_id and binding.accounted_at and 0 < (now - binding.accounted_at).total_seconds() <= 90:
+        from stores.certificate_admission import interval_admission
         from .kook_online_rules import interval_segments
-        segments = interval_segments(binding.accounted_at, now)
-        for segment_start, segment_end, rule in segments:
-            if int((segment_end - segment_start).total_seconds() * 1000) == 0:
+        parts = interval_admission(binding.accounted_at, now) or [(binding.accounted_at, now, 'ALLOW', None)]
+        segments = [(start, end, rule, certificate_status, evidence)
+                    for interval_start, interval_end, certificate_status, evidence in parts
+                    for start, end, rule in interval_segments(interval_start, interval_end)]
+        result = outcome
+        for segment_start, segment_end, rule, certificate_status, evidence in segments:
+            if segment_end - segment_start < timedelta(milliseconds=1):
                 # Accounting is millisecond based; never fabricate a full unit
                 # for a sub-millisecond piece at a rule boundary.
                 binding.accounted_at = segment_end
                 continue
+            certificate = (certificate_status, evidence) if evidence is not None else None
             if rule.revision == 0:
-                outcome = _accrue_one(binding, segment_end, outcome=outcome)
+                segment_result = _accrue_one(binding, segment_end, outcome=outcome, certificate=certificate)
             else:
-                outcome = _accrue_versioned(binding, segment_start, segment_end, rule, outcome=outcome)
-        return outcome
+                segment_result = _accrue_versioned(binding, segment_start, segment_end, rule, outcome=outcome,
+                                                   certificate=certificate)
+            if segment_result == 'UNKNOWN' or result == 'ALLOW':
+                result = segment_result
+        return result
     return _accrue_one(binding, now, outcome=outcome)
 
 
-def _accrue_versioned(binding, started_at, ended_at, rule, *, outcome):
+def _with_certificate(outcome, certificate):
+    if certificate is None:
+        return outcome, {}
+    decision, evidence = certificate
+    if decision == 'DENY' or (decision == 'UNKNOWN' and outcome == 'ALLOW'):
+        outcome = decision
+    return outcome, {'business_certificate_interval': evidence}
+
+
+def _accrue_versioned(binding, started_at, ended_at, rule, *, outcome, certificate=None):
     """Record one definite authorized segment before the ordered consumer."""
     from stores.license_benefits import check_license_benefits
     from .models import KookOnlineInterval
@@ -141,6 +160,7 @@ def _accrue_versioned(binding, started_at, ended_at, rule, *, outcome):
         segment_outcome = 'UNKNOWN'
     else:
         segment_outcome = 'ALLOW'
+    segment_outcome, certificate_facts = _with_certificate(segment_outcome, certificate)
     cursor = lock_cursor(binding)
     elapsed = int((ended_at - started_at).total_seconds() * 1000)
     if elapsed <= 0 or elapsed > 90000 or (cursor.last_ended_at and started_at < cursor.last_ended_at):
@@ -153,7 +173,8 @@ def _accrue_versioned(binding, started_at, ended_at, rule, *, outcome):
                     'previous_online_base': binding.cycle_online_base,
                     'previous_awarded_points': binding.awarded_points,
                     'cycle_awarded_base': binding.cycle_awarded_base,
-                    'rule_revision': rule.revision, 'rule_window_ms': rule.window_ms, 'rule_points': rule.points})
+                    'rule_revision': rule.revision, 'rule_window_ms': rule.window_ms, 'rule_points': rule.points,
+                    **certificate_facts})
     KookOnlineInterval.objects.create(binding=binding, account_id=binding.account_id,
         account_cycle=binding.account.business_cycle, binding_cycle=binding.business_cycle,
         channel_id=binding.channel_id, started_at=started_at, ended_at=ended_at, elapsed_ms=elapsed,
@@ -174,7 +195,7 @@ def _accrue_versioned(binding, started_at, ended_at, rule, *, outcome):
     return segment_outcome
 
 
-def _accrue_one(binding, now, *, outcome):
+def _accrue_one(binding, now, *, outcome, certificate=None):
     eligible = binding.channel_id and binding.accounted_at and allowed_account(binding.account)
     interval_start = binding.accounted_at if eligible else None
     interval_channel = binding.channel_id if eligible else ''
@@ -196,6 +217,7 @@ def _accrue_one(binding, now, *, outcome):
         # or unverifiable interval. Do not blend it into the new grant.
         if outcome == 'ALLOW' and effective and binding.accounted_at < effective:
             outcome = 'UNKNOWN'
+    outcome, certificate_facts = _with_certificate(outcome, certificate)
     interval_outcome = outcome
     cursor = None
     deferred = False
@@ -216,7 +238,7 @@ def _accrue_one(binding, now, *, outcome):
                         'online_milliseconds': binding.online_milliseconds,
                         'previous_online_base': binding.cycle_online_base,
                         'previous_awarded_points': binding.awarded_points,
-                        'cycle_awarded_base': binding.cycle_awarded_base})
+                        'cycle_awarded_base': binding.cycle_awarded_base, **certificate_facts})
     if outcome == 'ALLOW' and eligible and not deferred:
         elapsed=int((now-binding.accounted_at).total_seconds()*1000)
         prior_online = binding.online_milliseconds
@@ -236,8 +258,16 @@ def _accrue_one(binding, now, *, outcome):
             points_enabled_used = config().points_enabled
         if total > binding.awarded_points and points_enabled_used:
             profile=locked_profile(binding.account)
-            from stores.license_benefits import check_license_benefits
-            final_outcome, _ = check_license_benefits()
+            from stores.license_benefits import check_license_benefits, check_new_benefits
+            award_certificate_facts = certificate_facts
+            if certificate is None:
+                # Releasing a group without a new observed segment uses the
+                # current certificate. Observed intervals carry their own proof.
+                final_outcome, award_evidence = check_new_benefits()
+                if 'business_certificate' in award_evidence:
+                    award_certificate_facts = {'business_certificate': award_evidence['business_certificate']}
+            else:
+                final_outcome, _ = check_license_benefits()
             if final_outcome == 'ALLOW':
                 points_ledger = change_points(profile,(total-binding.awarded_points)*100,
                     f'KOOK_ONLINE_TOTAL:{binding.pk}:{total}','KOOK_ONLINE',
@@ -255,7 +285,8 @@ def _accrue_one(binding, now, *, outcome):
                             'previous_awarded_points': binding.awarded_points,
                             'cycle_awarded_base': binding.cycle_awarded_base, 'points_not_awarded': missed,
                             'prior_online_milliseconds': prior_online, 'eligible_interval_ms': credited_elapsed,
-                            'prior_pending_points': prior_pending, 'prior_remainder_ms': prior_remainder})
+                            'prior_pending_points': prior_pending, 'prior_remainder_ms': prior_remainder,
+                            **award_certificate_facts})
                 # Preserve only the fraction already counted before this
                 # uncertain interval; neither it nor denied full units may
                 # silently reappear after a future renewal.
@@ -329,7 +360,8 @@ def _checkpoint(now=None, status='已连接，自动计分中', *, _provider_sna
     now=now or timezone.now()
     from stores.license_benefits import check_license_benefits
     from club_accounts.models import ClubAccount
-    outcome, _ = check_license_benefits()
+    license_outcome, _ = check_license_benefits()
+    outcome = license_outcome
     bindings = list(KookBinding.objects.select_for_update().filter(channel_id__gt='').select_related('account').order_by('id'))
     if _boss_snapshot is not None and {row.pk: (row.account_id, row.account.business_cycle) for row in bindings
             if row.account.account_type == 'BOSS'} != _boss_snapshot:
@@ -344,8 +376,8 @@ def _checkpoint(now=None, status='已连接，自动计分中', *, _provider_sna
                             or (binding.account.license_membership_active and binding.business_cycle is not None
                                 and binding.business_cycle == binding.account.business_cycle))
         provider_allowed = provider_allowed and _boss_binding_current(binding)
-        result = _accrue(binding,now,outcome=outcome if provider_allowed else 'DENY')
-        if result != 'ALLOW' and provider_allowed:
+        result = _accrue(binding, now, outcome=license_outcome if provider_allowed else 'DENY')
+        if provider_allowed and (result == 'UNKNOWN' or outcome == 'ALLOW'):
             outcome = result
         binding.save(update_fields=['accounted_at','online_milliseconds','awarded_points','cycle_online_base'])
     if outcome == 'UNKNOWN':
