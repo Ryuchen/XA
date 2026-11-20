@@ -55,9 +55,26 @@ async function screenshot(page, name) {
 async function contractTests(browser) {
   const fixture = await fixtureContext(browser), page = await fixture.context.newPage()
   page.on('pageerror', error => report.errors.push(error.message))
+  const dashboardRoute = '**/api/admin/platform/dashboard'
+  const summaryValues = page.locator('dl.saas-definition dd')
+  await page.route(dashboardRoute, route => route.fulfill({ json: { code: 0, data: {
+    complete: false,
+    generated_at: '2026-11-11T02:00:00Z',
+    partial_totals: null,
+    stores: [{ slug: store.slug, name: store.name, status: 'NOT_ACTIVE', counts: null, read_at: null }],
+  } } }))
   await page.goto('http://admin.esports.club/#/platform/overview')
   await page.getByRole('heading', { name: '平台总览', exact: true }).waitFor()
+  await page.getByRole('cell', { name: '未营业或未初始化', exact: true }).waitFor()
+  await page.getByText('尚未读取到俱乐部数据，暂时无法汇总。', { exact: true }).waitFor()
+  assert.deepEqual(await summaryValues.allTextContents(), ['—', '—', '—'])
+  assert.equal(await summaryValues.getByLabel('未读取', { exact: true }).count(), 3)
+
+  await page.unroute(dashboardRoute)
+  await page.reload()
   await page.getByText('部分俱乐部未取得数据', { exact: false }).waitFor()
+  assert.deepEqual(await summaryValues.allTextContents(), ['1', '1', '0'])
+  report.contractChecks.push('平台总览在无可读门店时标明未读取，部分门店可读时显示已知数量并保留零值')
   await screenshot(page, 'contract-platform-overview')
   await page.getByRole('link', { name: '模块与购买', exact: true }).click()
   await page.getByRole('combobox').selectOption('shenglang')
