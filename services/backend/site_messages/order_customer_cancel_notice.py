@@ -9,7 +9,7 @@ def enabled():
             and getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False))
 
 
-def prepare(order, *, refund, receipt=None):
+def prepare(order, *, refund, receipt=None, review_audit=None):
     if not enabled() or not refund:
         return
     from orders.points_payment_models import OrderPointsRefund
@@ -20,7 +20,9 @@ def prepare(order, *, refund, receipt=None):
     wallet_units = points.coin_units if points else refund.amount
     points_units = points.points_hundredths if points else 0
     wallet_tx_id = points.coin_transaction_id if points else None
-    if not points and wallet_units and order.refund_records.count() == 1:
+    if review_audit and not points:
+        wallet_tx_id = refund.customer_transaction_id
+    elif not points and wallet_units and order.refund_records.count() == 1:
         matches = list(Transaction.objects.filter(order=order, wallet__account_id=order.customer_account_id,
             tx_type='REFUND', status='SUCCESS', amount=wallet_units).values_list('pk', flat=True)[:2])
         if len(matches) == 1:
@@ -29,6 +31,7 @@ def prepare(order, *, refund, receipt=None):
     if points_units:
         preview += '抵扣积分已退回。'
     expected = {'refund_id': refund.pk, 'receipt_id': receipt.pk if receipt else None,
+                'review_audit_id': review_audit.pk if review_audit else None,
                 'wallet_transaction_id': wallet_tx_id, 'account_id': order.customer_account_id,
                 'business_cycle': order.business_cycle, 'legacy_user_id': order.customer_id,
                 'refunded_to_wallet': bool(wallet_units), 'refunded_points': bool(points_units), 'preview': preview[:255]}
@@ -36,6 +39,50 @@ def prepare(order, *, refund, receipt=None):
     if not created and any(getattr(intent, key) != value for key, value in expected.items()):
         raise ValueError('客户取消通知来源不一致')
     transaction.on_commit(lambda: deliver(intent.pk), robust=True)
+
+
+def _review_operator_id(intent, order, refund, points):
+    from engagement.models import PointLedger
+    from orders.models import OrderGrabReviewCancellation
+    from orders.points_payment_models import OrderPointsRedemption
+    from wallet.models import Transaction
+
+    if (not order or not refund or intent.receipt_id or not refund.operator_account_id
+            or refund.operator_account_id == intent.account_id or order.cancel_reason != refund.reason
+            or refund.amount != order.amount or order.refund_records.count() != 1):
+        return None
+    audit = intent.review_audit
+    body = audit.request_body
+    operator_id = refund.operator_account_id
+    if (audit.resource != 'grab-review' or audit.object_id != str(order.pk) or audit.method != 'POST'
+            or audit.status_code != 200 or audit.operator_account_id != operator_id
+            or not isinstance(body, dict) or body.get('action') != 'CANCEL' or body.get('reason') != refund.reason
+            or not OrderGrabReviewCancellation.objects.filter(order=order, customer_id=intent.account_id,
+                status='CANCELLED', completed_at__isnull=False).exists()):
+        return None
+
+    redemption = points.redemption if points else None
+    if redemption:
+        if (redemption.order_id != order.pk or points.coin_units != redemption.paid_units
+                or points.coin_units != refund.amount or points.points_hundredths != redemption.points_hundredths
+                or points.equivalent_units != redemption.deal_units):
+            return None
+    elif OrderPointsRedemption.objects.filter(order=order).exists():
+        return None
+
+    transaction_id = points.coin_transaction_id if points else refund.customer_transaction_id
+    if transaction_id != intent.wallet_transaction_id:
+        return None
+    if transaction_id:
+        credit = Transaction.objects.filter(pk=transaction_id, operator_account_id=operator_id)
+        if redemption:
+            credit = credit.filter(wallet_id=redemption.payment.wallet_id)
+        if not credit.exists():
+            return None
+    if points and points.points_ledger_id and not PointLedger.objects.filter(
+            pk=points.points_ledger_id, operator_id=operator_id).exists():
+        return None
+    return operator_id
 
 
 def deliver(intent_id):
@@ -76,10 +123,15 @@ def deliver(intent_id):
         receipt_valid = (not intent.receipt_id or bool(order and OrderGrabReceiptProbe.objects.filter(
             pk=intent.receipt_id, round__pool__order=order, actor_id=intent.account_id,
             kind='BOSS_CANCEL', state='BEFORE').exists()))
+        operator_id = (_review_operator_id(intent, order, refund, points)
+                       if intent.review_audit_id else intent.account_id)
+        log_facts = {'from_status': 'PENDING', 'to_status': 'CANCELLED', 'action': 'CANCEL',
+                     'operator_account_id': operator_id}
+        if intent.review_audit_id and refund:
+            log_facts['reason'] = refund.reason
         cycle = intent.business_cycle
         valid = bool(order and order.status == Order.Status.CANCELLED and order.payment_status == Order.PaymentStatus.REFUNDED
-            and order.status_logs.filter(from_status='PENDING', to_status='CANCELLED', action='CANCEL',
-                                         operator_account_id=intent.account_id).exists()
+            and operator_id and order.status_logs.filter(**log_facts).exists()
             and refund and receipt_valid and wallet_valid and points_valid
             and intent.refunded_to_wallet == bool(wallet_units) and intent.refunded_points == bool(points_units)
             and intent.account_id == order.customer_account_id and intent.legacy_user_id == order.customer_id

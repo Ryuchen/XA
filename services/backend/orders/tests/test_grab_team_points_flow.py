@@ -106,6 +106,65 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
             {'client_request_id': 'points-team-confirm'}, format='json')
         self.assertEqual(confirm.status_code, 200, confirm.data)
 
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_staff_review_cancellation_notice_uses_the_final_coin_and_points_refund(self):
+        from site_messages.models import CustomerCancellationNotice
+
+        actor = self.refund_points_after_owner_review()
+        intent = CustomerCancellationNotice.objects.get(order=self.order)
+        posting = OrderPointsRefund.objects.get(redemption=self.receipt)
+        self.assertEqual((intent.refund_id, intent.wallet_transaction_id),
+                         (posting.refund_id, posting.coin_transaction_id))
+        self.assertEqual(posting.points_ledger.operator_id, actor.pk)
+        self.assertTrue(intent.refunded_to_wallet and intent.refunded_points)
+        self.assertEqual(intent.skipped_reason, '')
+        self.assertEqual(intent.message.recipient_account_id, self.account.pk)
+        self.assertIn('抵扣积分已退回', intent.message.preview)
+
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_staff_review_notice_rejects_a_short_points_return(self):
+        from site_messages.models import CustomerCancellationNotice
+        from site_messages.tasks import recover_customer_cancellation_notices
+
+        with patch('site_messages.order_customer_cancel_notice.deliver'):
+            self.refund_points_after_owner_review()
+        posting = OrderPointsRefund.objects.get(redemption=self.receipt)
+        fewer_points = posting.points_hundredths - 1
+        OrderPointsRefund.objects.filter(pk=posting.pk).update(points_hundredths=fewer_points)
+        PointLedger.objects.filter(pk=posting.points_ledger_id).update(amount=fewer_points)
+
+        self.assertEqual(recover_customer_cancellation_notices.run(), 1)
+        intent = CustomerCancellationNotice.objects.get(order=self.order)
+        self.assertIsNotNone(intent.completed_at)
+        self.assertTrue(intent.skipped_reason)
+        self.assertIsNone(intent.message_id)
+
+    def refund_points_after_owner_review(self):
+        from orders.grab_review import mark_round_review
+        from orders.models import OrderGrabSingleRoundState
+        from orders.tests.factories import make_console_user
+
+        self.prepare(team_size=1, mixed_sources=True)
+        round_state = OrderGrabSingleRoundState.objects.get(round__pool__order=self.order)
+        mark_round_review(round_state, '隔离用例：开池后待核对')
+        requested = self.client.post(f'/api/orders/orders/{self.order.pk}/cancel/',
+                                     {'client_request_id': 'points-boss-review', 'reason': '申请核对'},
+                                     format='json')
+        self.assertEqual(requested.data.get('data'), {'status': 'PENDING'}, requested.data)
+
+        user = make_console_user(['order:dispatch', 'order:refund'])
+        actor = get_or_create_account_for_legacy_user(user)
+        user.admin_membership.account = actor
+        user.admin_membership.save(update_fields=['account'])
+        staff = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(actor)[0])
+        action = staff.post(f'/api/admin/grab-reviews/{self.order.pk}/actions/',
+            {'action': 'CANCEL', 'reason': '查清原店币和抵扣积分', 'client_request_id': 'points-staff-review'},
+            format='json')
+        self.assertEqual(action.status_code, 200, action.data)
+        return actor
+
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')
     def test_team_assignment_captures_each_share_on_pre_points_deal(self):

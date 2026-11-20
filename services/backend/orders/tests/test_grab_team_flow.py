@@ -141,19 +141,83 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertFalse(order.refund_records.exists())
 
     def test_review_cancellation_replays_the_owner_request_without_a_round(self):
+        self.assert_review_cancellation_replay(self.paid_order_with_opening_review())
+
+    def paid_order_with_opening_review(self, *, client_request_id='pay-for-opening-review'):
+        from console.grab_config import current_rules
         from orders.models import OrderGrabPoolOpeningIntent, OrderGrabRound
 
         self.service.fulfillment_provider_count = 2
         self.service.save(update_fields=['fulfillment_provider_count'])
-        save_grab_window(30, 0, lambda *args: None)
+        save_grab_window(30, current_rules()['version'], lambda *args: None)
         with patch('orders.grab_pool_snapshot.initialize_entry', return_value=None):
-            bought = self.create(dispatch_mode='AUTO_GRAB')
+            bought = self.create(dispatch_mode='AUTO_GRAB', client_request_id=client_request_id)
         self.assertEqual(bought.data['code'], 0, bought.data)
         order = Order.objects.get(pk=bought.data['data']['id'])
         OrderGrabPoolOpeningIntent.objects.create(order=order, payment=order.transactions.get(tx_type='PAY'),
             paid_amount=order.amount, state='REVIEW', reason='缺少开池证据')
-        self.assert_review_cancellation_replay(order)
         self.assertFalse(OrderGrabRound.objects.filter(pool__order=order).exists())
+        return order
+
+    @override_settings(CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True, PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_staff_review_refund_notice_recovers_once_for_original_boss(self):
+        from console.models import AdminAuditLog
+        from site_messages.models import CustomerCancellationNotice, Message
+        from site_messages.tasks import recover_customer_cancellation_notices
+
+        order = self.paid_order_with_opening_review()
+        with patch('site_messages.order_customer_cancel_notice.deliver',
+                   side_effect=RuntimeError('提交后通知进程中断')) as interrupted:
+            self.assert_review_cancellation_replay(order)
+        intent = CustomerCancellationNotice.objects.get(order=order)
+        interrupted.assert_called_once_with(intent.pk)
+        audit = AdminAuditLog.objects.get(resource='grab-review', object_id=str(order.pk))
+        refund = order.refund_records.get()
+        self.assertEqual((intent.review_audit_id, intent.refund_id, intent.wallet_transaction_id,
+                          intent.account_id, intent.business_cycle, intent.receipt_id),
+                         (audit.pk, refund.pk, refund.customer_transaction_id,
+                          self.boss_account.pk, order.business_cycle, None))
+        self.assertIsNone(intent.completed_at)
+        self.assertFalse(Message.objects.filter(related_order_id=order.pk, title='订单已取消').exists())
+
+        self.assertEqual(recover_customer_cancellation_notices.run(), 1)
+        self.assertEqual(recover_customer_cancellation_notices.run(), 0)
+        intent.refresh_from_db()
+        self.assertIsNotNone(intent.completed_at)
+        self.assertEqual(intent.skipped_reason, '')
+        message = Message.objects.get(related_order_id=order.pk, title='订单已取消')
+        self.assertEqual((intent.message_id, message.recipient_account_id, message.recipient_business_cycle),
+                         (message.pk, self.boss_account.pk, order.business_cycle))
+        self.assertIn('退款已退回', message.preview)
+        self.assertEqual(order.refund_records.get().pk, refund.pk)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 100000)
+
+    @override_settings(CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True, PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_staff_review_refund_notice_skips_unverified_source_or_changed_boss_cycle(self):
+        from club_accounts.models import ClubAccount
+        from console.models import AdminAuditLog
+        from site_messages.models import CustomerCancellationNotice, Message
+        from site_messages.tasks import recover_customer_cancellation_notices
+
+        for mismatch in ('audit', 'cycle'):
+            with self.subTest(mismatch=mismatch):
+                order = self.paid_order_with_opening_review(client_request_id=f'notice-{mismatch}')
+                with patch('site_messages.order_customer_cancel_notice.deliver'):
+                    self.assert_review_cancellation_replay(order)
+                intent = CustomerCancellationNotice.objects.get(order=order)
+                if mismatch == 'audit':
+                    AdminAuditLog.objects.filter(pk=intent.review_audit_id).update(object_id='wrong-order')
+                else:
+                    ClubAccount.objects.filter(pk=self.boss_account.pk).update(
+                        business_cycle=order.business_cycle + 1)
+                self.assertEqual(recover_customer_cancellation_notices.run(), 1)
+                intent.refresh_from_db()
+                self.assertIsNotNone(intent.completed_at)
+                self.assertTrue(intent.skipped_reason)
+                self.assertIsNone(intent.message_id)
+                self.assertFalse(Message.objects.filter(related_order_id=order.pk, title='订单已取消').exists())
+                self.assertEqual(order.refund_records.count(), 1)
 
     def test_review_cancellation_keeps_an_unobserved_timed_receipt(self):
         from django.db import DatabaseError

@@ -395,6 +395,7 @@ class CustomerCancellationNotice(models.Model):
     order = models.OneToOneField('orders.Order', on_delete=models.PROTECT, related_name='customer_cancel_notice_intent')
     refund = models.ForeignKey('orders.OrderRefund', on_delete=models.PROTECT, related_name='+')
     receipt = models.ForeignKey('orders.OrderGrabReceiptProbe', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    review_audit = models.ForeignKey('console.AdminAuditLog', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
     wallet_transaction = models.ForeignKey('wallet.Transaction', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
     account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
     business_cycle = models.PositiveIntegerField(null=True, blank=True)
@@ -406,6 +407,12 @@ class CustomerCancellationNotice(models.Model):
     skipped_reason = models.CharField(max_length=100, blank=True, default='')
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(
+            condition=models.Q(receipt__isnull=True) | models.Q(review_audit__isnull=True),
+            name='customer_cancel_notice_one_source',
+        )]
 
 
 class OrderRefundNotice(models.Model):

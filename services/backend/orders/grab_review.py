@@ -229,15 +229,19 @@ class GrabReviewActionView(APIView):
                 from .models import OrderStatusLog
                 from .settlement import SettlementError
                 from rest_framework.exceptions import ValidationError
+                refund_result = None
+
                 def refund(locked):
+                    nonlocal refund_result
                     if needs_integrated_processing(locked):
                         from .points_service_timeout import refund_staff_review_locked
-                        refund_staff_review_locked(locked, operator=request.legacy_user, operator_account=request.account,
+                        refund_result = refund_staff_review_locked(
+                            locked, operator=request.legacy_user, operator_account=request.account,
                             reason=data['reason'], grab_single_state=state if order.required_provider_count == 1 else None,
                             grab_team_state=state if order.required_provider_count == 2 else None,
                             opening_intent=opening if not state else None)
                     else:
-                        refund_to_customer(locked, reason=data['reason'],
+                        refund_result = refund_to_customer(locked, reason=data['reason'],
                             operator=request.legacy_user, operator_account=request.account)
                     locked.cancel_reason = data['reason']
                 try:
@@ -252,13 +256,16 @@ class GrabReviewActionView(APIView):
                     state.status, state.reason = 'CANCELLED', data['reason'][:255]
                     state.save(update_fields=['status', 'reason', 'updated_at'])
                 from django.utils import timezone
-                OrderGrabReviewCancellation.objects.filter(order=order, status='PENDING').update(
-                    status='CANCELLED', completed_at=timezone.now())
+                completed_application = OrderGrabReviewCancellation.objects.filter(
+                    order=order, status='PENDING').update(status='CANCELLED', completed_at=timezone.now())
                 from .notifier import notify_order_update
                 transaction.on_commit(lambda: notify_order_update(order), robust=True)
-            AdminAuditLog.objects.create(operator=request.legacy_user, operator_account=request.account,
+            audit = AdminAuditLog.objects.create(operator=request.legacy_user, operator_account=request.account,
                 operator_name=(request.account.nickname or request.account.username)[:150], method='POST',
                 path=request.path[:255], resource='grab-review', object_id=str(order.pk),
                 request_body=dict(data), status_code=200)
+            if data['action'] == 'CANCEL' and completed_application:
+                from site_messages.order_customer_cancel_notice import prepare
+                prepare(order, refund=refund_result, review_audit=audit)
             request._request._business_audit_recorded = True
         return Response({'code': 0, 'data': {'order_id': order_id, 'action': data['action']}})
