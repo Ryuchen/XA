@@ -3005,6 +3005,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 raise IllegalTransitionError('订单未支付或已退款，不能开始服务')
             if not o.provider_id:
                 raise IllegalTransitionError('请先指派陪玩')
+            from orders.team_fulfillment import require_staff_team_evidence
+            require_staff_team_evidence(o, '入队截图')
             if booked:
                 current_accounts = set(o.providers.filter(released_at__isnull=True)
                                        .values_list('provider_account_id', flat=True)) | {o.provider_account_id}
@@ -3058,6 +3060,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             from orders.participation_entry import pending_transfer_segments
             if pending_transfer_segments(o).exists():
                 raise IllegalTransitionError('有转入陪玩尚未确认入队，请先核对')
+            from orders.team_fulfillment import require_staff_team_evidence
+            require_staff_team_evidence(o, '结单截图')
 
         def side_effect(o):
             # 与打手端共用履约完成服务，结算时机由订单快照决定。

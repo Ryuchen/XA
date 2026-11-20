@@ -10,9 +10,10 @@ from channels.testing import WebsocketCommunicator
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from config.asgi import application
-from orders.models import Order
+from orders.models import Order, OrderProvider
 from orders.tests import test_release_flow as flow
-from orders.tests.factories import make_provider
+from orders.tests.factories import make_order, make_provider
+from wallet.models import ProviderReport, Transaction
 
 
 @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', REQUIRE_ORDER_EVIDENCE_IMAGES=True,
@@ -24,6 +25,40 @@ class TeamProgressWorkflowTest(APITransactionTestCase):
     login = flow.ReleaseFlowTest.login
     ok = flow.ReleaseFlowTest.ok
     recharge = flow.ReleaseFlowTest.recharge
+
+    def test_staff_cannot_advance_a_team_with_one_members_evidence(self):
+        second = make_provider()
+        second_account = get_or_create_account_for_legacy_user(second)
+        first_account = self.accounts[self.provider.pk]
+        self.login(self.admin)
+        phases = (
+            ('start', Order.Status.GRABBED, 'entry_image', 'in_service_at', '入队截图'),
+            ('complete', Order.Status.IN_SERVICE, 'completion_image', 'completed_at', '结单截图'),
+        )
+        for action, status, image_field, timestamp, message in phases:
+            with self.subTest(action=action):
+                order = make_order(self.boss, self.service, self.provider, status,
+                                   customer_account=self.accounts[self.boss.pk], provider_account=first_account,
+                                   payment_status=Order.PaymentStatus.PAID, escort_mode='DOUBLE',
+                                   requires_boss_selection=True, settlement_mode=Order.SettlementMode.REPORT_APPROVAL)
+                OrderProvider.objects.create(order=order, provider=self.provider, provider_account=first_account)
+                OrderProvider.objects.create(order=order, provider=second, provider_account=second_account)
+                ProviderReport.objects.create(order=order, provider=self.provider, provider_account=first_account,
+                                              game_name=self.service.name, amount=order.amount,
+                                              status=ProviderReport.Status.DRAFT, **{image_field: 'first-member.png'})
+                logs_before = order.status_logs.count()
+
+                response = self.client.post(f'/api/admin/orders/{order.pk}/{action}/')
+
+                self.assertEqual(response.status_code, 200, response.data)
+                self.assertEqual(response.data['code'], 400, response.data)
+                self.assertIn(message, response.data['msg'])
+                order.refresh_from_db()
+                self.assertEqual(order.status, status)
+                self.assertIsNone(getattr(order, timestamp))
+                self.assertIsNone(order.settled_at)
+                self.assertEqual(order.status_logs.count(), logs_before)
+                self.assertFalse(Transaction.objects.filter(order=order, tx_type__in=('INCOME', 'SHOP_INCOME')).exists())
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
@@ -100,7 +135,6 @@ class TeamProgressWorkflowTest(APITransactionTestCase):
             data = progress_for(user)
             self.assertEqual(data['status'], 'COMPLETED')
             self.assertIsNone(data['team_progress'])
-        from wallet.models import ProviderReport, Transaction
         for user in (self.provider, second):
             self.login(user)
             report = ProviderReport.objects.get(order_id=order_id, provider=user)

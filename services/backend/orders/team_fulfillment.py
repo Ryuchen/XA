@@ -7,6 +7,15 @@ from .services import complete_fulfillment, push_message_safe
 from .notifier import notify_order_update
 from .settlement import SettlementError
 
+def require_staff_team_evidence(order, evidence_name):
+    """Use the active team's evidence while the state transition holds the order lock."""
+    if order.escort_mode != 'DOUBLE' or not order.requires_boss_selection:
+        return
+    from .team_progress import team_progress
+    progress = team_progress(order)
+    if not progress or progress['submitted_count'] < progress['total_count']:
+        raise IllegalTransitionError(f'请等本单参与陪玩分别提交{evidence_name}')
+
 def team_report_evidence_error(report, kind):
     """First-time team evidence belongs to the order's fulfilment action."""
     if not report.order_id or report.order.escort_mode != 'DOUBLE' or not report.order.requires_boss_selection:
