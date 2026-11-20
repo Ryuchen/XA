@@ -140,6 +140,116 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertFalse(OrderGrabReviewCancellation.objects.filter(order=order).exists())
         self.assertFalse(order.refund_records.exists())
 
+    def test_review_cancellation_replays_the_owner_request_without_a_round(self):
+        from orders.models import OrderGrabPoolOpeningIntent, OrderGrabRound
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        save_grab_window(30, 0, lambda *args: None)
+        with patch('orders.grab_pool_snapshot.initialize_entry', return_value=None):
+            bought = self.create(dispatch_mode='AUTO_GRAB')
+        self.assertEqual(bought.data['code'], 0, bought.data)
+        order = Order.objects.get(pk=bought.data['data']['id'])
+        OrderGrabPoolOpeningIntent.objects.create(order=order, payment=order.transactions.get(tx_type='PAY'),
+            paid_amount=order.amount, state='REVIEW', reason='缺少开池证据')
+        self.assert_review_cancellation_replay(order)
+        self.assertFalse(OrderGrabRound.objects.filter(pool__order=order).exists())
+
+    def test_review_cancellation_keeps_an_unobserved_timed_receipt(self):
+        from django.db import DatabaseError
+        from orders import grab_receipt_probe
+        from stores.db import transaction
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        save_grab_window(30, 0, lambda *args: None)
+        bought = self.create(dispatch_mode='AUTO_GRAB')
+        self.assertEqual(bought.data['code'], 0, bought.data)
+        order = Order.objects.get(pk=bought.data['data']['id'])
+        state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
+        probes = state.round.receipt_probes.filter(kind='BOSS_CANCEL')
+        sample = grab_receipt_probe._db_clock
+
+        def lose_post_commit_observation():
+            if not transaction.get_connection().in_atomic_block and probes.exists():
+                raise DatabaseError('取消登记已提交，第二次观察失败')
+            return sample()
+
+        with patch.object(grab_receipt_probe, '_db_clock', side_effect=lose_post_commit_observation):
+            sent = self.client.post(f'/api/orders/orders/{order.pk}/cancel/',
+                                    {'client_request_id': 'boss-review', 'reason': '  请核对原订单  '}, format='json')
+        self.assert_review_cancellation_replay(order, sent=sent)
+        receipt = probes.get()
+        self.assertEqual((receipt.request_key, receipt.state, receipt.upper_observed_at),
+                         ('boss-review', 'PENDING', None))
+
+    def test_review_cancellation_without_an_owner_key_keeps_legacy_replay(self):
+        from orders.grab_review import mark_round_review
+        from orders.models import OrderGrabReviewCancellation
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        save_grab_window(30, 0, lambda *args: None)
+        bought = self.create(dispatch_mode='AUTO_GRAB')
+        self.assertEqual(bought.data['code'], 0, bought.data)
+        order = Order.objects.get(pk=bought.data['data']['id'])
+        state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
+        mark_round_review(state, '轮次证据待核对')
+        endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+        for payload in ({'reason': '人工核对订单'}, {'reason': '另一个原因'},
+                        {'reason': '带新号重查', 'client_request_id': 'does-not-backfill'}):
+            result = self.client.post(endpoint, payload, format='json')
+            self.assertEqual(result.data.get('data'), {'status': 'PENDING'}, result.data)
+        record = OrderGrabReviewCancellation.objects.get(order=order)
+        self.assertEqual((record.request_key, record.reason), (None, '人工核对订单'))
+        self.assertFalse(state.round.receipt_probes.exists())
+
+    def assert_review_cancellation_replay(self, order, *, sent=None):
+        from orders.models import OrderGrabReviewCancellation
+
+        endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+        payload = {'client_request_id': 'boss-review', 'reason': '  请核对原订单  '}
+        if sent is None:
+            sent = self.client.post(endpoint, payload, format='json')
+        self.assertEqual(sent.status_code, 200, sent.data)
+        self.assertEqual(sent.data.get('data'), {'status': 'PENDING'})
+        self.auth(self.accounts[0])
+        rejected = self.client.post(endpoint, payload, format='json')
+        self.assertEqual(rejected.status_code, 404, rejected.data)
+        self.auth(self.boss_account)
+
+        def verify_replay(status):
+            same = self.client.post(endpoint, dict(payload, reason='请核对原订单'), format='json')
+            self.assertEqual(same.data.get('data'), {'status': status}, same.data)
+            changed = self.client.post(endpoint, dict(payload, reason='改用另一个原因'), format='json')
+            self.assertEqual((changed.status_code, changed.data.get('errorCode')),
+                             (409, 'REQUEST_ID_CONFLICT'), changed.data)
+            other = self.client.post(endpoint, dict(payload, client_request_id='new-key', reason='新请求'),
+                                     format='json')
+            self.assertEqual(other.data.get('data'), {'status': status}, other.data)
+
+        verify_replay('PENDING')
+        self.assertFalse(order.refund_records.exists())
+        user = make_console_user(['order:view', 'order:dispatch', 'order:refund'])
+        reviewer = self.link(user)
+        user.admin_membership.account = reviewer
+        user.admin_membership.save(update_fields=['account'])
+        self.auth(reviewer)
+        approved = self.client.post(f'/api/admin/grab-reviews/{order.pk}/actions/',
+            {'action': 'CANCEL', 'reason': '客服核实原付款', 'client_request_id': 'staff-review'}, format='json')
+        self.assertEqual(approved.status_code, 200, approved.data)
+
+        self.auth(self.boss_account)
+        verify_replay('CANCELLED')
+        application = OrderGrabReviewCancellation.objects.get(order=order)
+        self.assertEqual((application.customer_id, application.request_key, application.reason,
+                          application.status), (self.boss_account.pk, 'boss-review', '请核对原订单', 'CANCELLED'))
+        self.assertIsNotNone(application.completed_at)
+        self.assertEqual(order.refund_records.get().operator_account_id, reviewer.pk)
+        self.assertEqual(order.transactions.get(tx_type='REFUND').amount, order.amount)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 100000)
+
     def test_earlier_rounds_late_cancel_cannot_cancel_the_reopened_round(self):
         from orders.grab_receipt_probe import _db_clock
         from orders.models import OrderGrabRound

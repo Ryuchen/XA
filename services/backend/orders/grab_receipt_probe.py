@@ -21,8 +21,8 @@ from club_accounts.provider_lifecycle import ProviderLifecycleError
 from users.models import EscortProfile
 from users.pass_rules import lock_pass_config
 
-from .models import (Order, OrderGrabReceiptPassEvidence, OrderGrabReceiptProbe, OrderGrabRound,
-                     OrderGrabTeamDraft)
+from .models import (Order, OrderGrabReceiptPassEvidence, OrderGrabReceiptProbe,
+                     OrderGrabReviewCancellation, OrderGrabRound, OrderGrabTeamDraft)
 
 
 @dataclass(frozen=True)
@@ -252,7 +252,8 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
     method verifies store-local identity and resource ownership but is not a
     substitute for the full eligibility check. It must own both transactions;
     callers cannot wrap it in an outer atomic block.
-    With replay_only, a missing receipt returns None without a new write.
+    A missing receipt returns None without a write in replay-only mode or
+    when an existing customer cancellation application owns the review.
     """
     if transaction.get_connection().in_atomic_block or not transaction.get_autocommit():
         raise RuntimeError('登记证据必须使用独立的最外层事务')
@@ -348,7 +349,8 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
                 latest_id = pool.rounds.select_for_update().order_by('-number').values_list('pk', flat=True).first()
                 current = old.round_id == latest_id
             return ProbeOutcome(old.pk, state, replayed=True, current_round=current)
-        if replay_only:
+        if replay_only or (order_cancel and OrderGrabReviewCancellation.objects.select_for_update()
+                           .filter(order=order).exists()):
             return None
         if order_invite and len(lifecycle_accounts) != 2:
             raise ValueError('双陪队友不可用')

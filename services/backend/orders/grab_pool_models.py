@@ -7,6 +7,7 @@ class OrderGrabReviewCancellation(models.Model):
     """The customer's request for staff review; it is not a timed receipt."""
     order = models.OneToOneField('orders.Order', on_delete=models.PROTECT, related_name='grab_review_cancellation')
     customer = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    request_key = models.CharField(max_length=64, null=True, blank=True, editable=False)
     reason = models.CharField(max_length=255, blank=True, default='')
     status = models.CharField(max_length=12, choices=[('PENDING', '待处理'), ('CANCELLED', '已退款取消')], default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)

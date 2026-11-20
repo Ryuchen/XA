@@ -2113,7 +2113,7 @@ class CancelOrderView(APIView):
         if OrderGrabPoolOpeningIntent.objects.filter(order_id=order_id, state='REVIEW',
                                                       order__grab_pool_snapshot__isnull=True).exists():
             from .grab_customer_review import request_cancellation
-            return request_cancellation(request, order_id)
+            return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'))
         from .direct_payment import DirectPaymentCancellationUnconfirmed, require_cancel_channel_confirmation
         reason = (request.data.get('reason') or '').strip()[:255]
         refund_fact = {}
@@ -2184,7 +2184,7 @@ class CancelOrderView(APIView):
             if exc.route == 'team':
                 return team_cancel(request, order_id)
             from .grab_customer_review import request_cancellation
-            return request_cancellation(request, order_id)
+            return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'))
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
         except DirectPaymentCancellationUnconfirmed as exc:

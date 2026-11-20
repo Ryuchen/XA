@@ -1,6 +1,7 @@
 """Handle the buyer's timed cancellation of a single or team grab order."""
 from rest_framework.response import Response
 
+from .grab_customer_review import request_cancellation
 from .grab_receipt_probe import GrabRequestConflict, record_intent
 
 
@@ -15,8 +16,11 @@ def cancel(request, order_id, *, state, enabled, resolve, team):
     if not enabled:
         return Response({'code': 503, 'msg': '订单取消暂需客服核对，请联系客服'}, status=503)
 
-    key = request.data.get('client_request_id')
-    if key is None or (team and not key):
+    request_key = request.data.get('client_request_id')
+    if team and not request_key:
+        request_key = None
+    key = request_key
+    if key is None:
         prefix = 'cancel-team' if team else 'cancel'
         key = f'{prefix}-{order_id}-{request.account.pk}'
     if not isinstance(key, str) or not key.strip() or len(key) > 64:
@@ -38,12 +42,12 @@ def cancel(request, order_id, *, state, enabled, resolve, team):
     if result and result.state == 'AFTER':
         return Response({'code': 409, 'errorCode': 'GRAB_CANCEL_CLOSED', 'msg': '订单取消时限已到'}, status=409)
     if state.status == 'CANCELLED':
-        return _cancelled()
+        review = request_cancellation(request, order_id, request_key=request_key, replay_only=True)
+        return review if review is not None else _cancelled()
     if result and not result.current_round:
         return Response({'code': 409, 'msg': '取消登记属于旧轮，请查看原订单结果'}, status=409)
-    if state.status == 'REVIEW' or (active and result.state != 'BEFORE'):
-        from .grab_customer_review import request_cancellation
-        return request_cancellation(request, order_id)
+    if state.status == 'REVIEW' or (active and (result is None or result.state != 'BEFORE')):
+        return request_cancellation(request, order_id, request_key=request_key)
     if not active:
         return Response({'code': 409, 'msg': '订单已分配或正在核对，请查看订单状态'}, status=409)
     if resolve(order_id) != 'CANCELLED':
