@@ -15,21 +15,27 @@ type Props = {
 const storeNames: Record<string, string> = { shenglang: "声浪电竞", xinan: "兴安电竞" };
 const entryContent = {
   boss: {
-    closedMessage: "暂时无法选陪玩或下单，请稍后再来。",
-    services: [[Headphones, "挑选陪玩"], [ShoppingBag, "下单"], [ClipboardList, "订单查询"]] as const,
+    services: [
+      [Headphones, "挑选陪玩", "按游戏查看本店服务和陪玩资料。"],
+      [ShoppingBag, "在线下单", "本店开通自助下单后，可选服务并核对价格。"],
+      [ClipboardList, "查看订单", "查看自己的订单进度和售后记录。"],
+    ] as const,
     helpTitle: "已有订单或售后问题？",
-    help: "请通过下单时使用的客服渠道联系门店。提供订单编号，方便客服核对。",
+    help: "请通过下单时使用的客服渠道联系本店。提供订单编号，方便客服核对。",
   },
   provider: {
-    closedMessage: "暂时无法进入工作台，请稍后再来。",
-    services: [[UserCircle, "登录工作台"], [Gamepad2, "查看并接受订单"], [ClipboardList, "提交报单"]] as const,
+    services: [
+      [UserCircle, "进入工作台", "用本店陪玩账号登录，查看待办。"],
+      [Gamepad2, "接单与履约", "按接单资格查看订单、邀请和服务进度。"],
+      [ClipboardList, "提交报单", "提交服务记录并查看审核结果。"],
+    ] as const,
     helpTitle: "有服务正在进行？",
-    help: "如需交接服务或提交报单，请通过平时使用的渠道联系门店负责人。",
+    help: "需要交接服务或补交报单时，请通过平时使用的渠道联系本店负责人，并提供订单编号和当前进度。",
   },
 };
 
 export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry }: Props) {
-  const { closedMessage, services, helpTitle, help } = entryContent[role];
+  const { services, helpTitle, help } = entryContent[role];
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
   const storeName = brandSlug ? storeNames[brandSlug] : undefined;
@@ -62,7 +68,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
             <div className="xa-store-closed-copy">
               <h1>{issue?.closed ? "门店暂未开放" : issue ? "暂时无法进入门店" : "正在确认门店…"}</h1>
               {issue && (issue.closed
-                ? <p className="xa-store-closed-description">{closedMessage}</p>
+                ? <p className="xa-store-closed-description">开放时间以门店通知为准。请保留当前网址，稍后再来。</p>
                 : <p className="xa-store-closed-description" role="alert">{issue.message}</p>)}
               {issue && (
                 <div className="xa-store-closed-actions">
@@ -79,12 +85,6 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
             </div>
           </div>
           <div className="xa-store-closed-details">
-            {issue?.closed && <section className="xa-store-closed-services">
-              <h2>入口功能</h2>
-              <ul role="list">
-                {services.map(([Icon, label]) => <li key={label}><Icon size={18} aria-hidden="true" />{label}</li>)}
-              </ul>
-            </section>}
             <section className="xa-store-closed-help">
               <MessageCircle size={22} aria-hidden="true" />
               <div>
@@ -92,6 +92,15 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                 <p>{help}</p>
               </div>
             </section>
+            {issue?.closed && <section className="xa-store-closed-services">
+              <h2>开放后可使用</h2>
+              <ul role="list">
+                {services.map(([Icon, label, description]) => <li key={label}>
+                  <Icon size={18} aria-hidden="true" />
+                  <div><h3>{label}</h3><p>{description}</p></div>
+                </li>)}
+              </ul>
+            </section>}
           </div>
           <div className="xa-store-closed-art">
             <img src={headsetImage} width="900" height="1125" alt="" />

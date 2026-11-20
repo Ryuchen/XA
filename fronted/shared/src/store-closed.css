@@ -67,12 +67,13 @@
   text-wrap: balance;
 }
 .xa-store-closed-description {
-  max-width: 25rem;
+  max-width: 28rem;
   margin: 16px 0 0;
   color: hsl(var(--ocean-200));
   font-size: 1rem;
   line-height: 1.75;
   overflow-wrap: break-word;
+  text-wrap: pretty;
 }
 
 .xa-store-closed-actions {
@@ -122,25 +123,31 @@
   border-radius: 12px;
   background: var(--card);
 }
-.xa-store-closed-details h2 { margin: 0; font-size: 1rem; font-weight: 700; }
+.xa-store-closed-details h2 { margin: 0; font-size: 1rem; font-weight: 700; text-wrap: balance; }
+.xa-store-closed-details p {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: .875rem;
+  line-height: 1.65;
+  text-wrap: pretty;
+}
 .xa-store-closed-services ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
 }
 .xa-store-closed-services li {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: .875rem;
-  color: var(--muted-foreground);
+  align-items: flex-start;
+  gap: 12px;
+  padding-block: 12px;
 }
+.xa-store-closed-services li + li { border-top: 1px solid var(--border); }
+.xa-store-closed-services li:last-child { padding-block-end: 0; }
+.xa-store-closed-services h3 { margin: 0; font-size: .9375rem; font-weight: 600; }
+.xa-store-closed-services svg { margin-top: 2px; color: var(--muted-foreground); }
 .xa-store-closed-help { display: flex; align-items: flex-start; gap: 12px; }
 .xa-store-closed-help svg { margin-top: 2px; color: var(--muted-foreground); }
-.xa-store-closed-help p { margin: 4px 0 0; color: var(--muted-foreground); font-size: .875rem; line-height: 1.65; }
 
 .xa-store-closed-art {
   grid-area: art;
@@ -170,7 +177,15 @@
     aspect-ratio: auto;
     border-radius: 0 12px 12px 0;
   }
-  .xa-store-closed-details:has(.xa-store-closed-services) {
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  .xa-store-closed-services ul {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .xa-store-closed-services li { padding-block: 8px 0; }
+  .xa-store-closed-services li + li {
+    border-top: 0;
+    border-inline-start: 1px solid var(--border);
+    padding-inline-start: 16px;
+  }
+  .xa-store-closed-services li:not(:last-child) { padding-inline-end: 16px; }
 }
