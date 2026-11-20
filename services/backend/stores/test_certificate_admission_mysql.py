@@ -301,3 +301,129 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
                 print(f'SA14 {case.store.slug} 订单={case.order_id} 实扣={case.debit} '
                       f'在线原事件={case.source_id} 核对请求={body["request_id"]} 补记毫秒=20000 补发=100',
                       flush=True)
+
+    @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
+    def test_periodic_worker_settles_both_stores_during_control_disconnect(self):
+        from tempfile import TemporaryDirectory
+
+        from celery import Celery, current_app
+        from celery.contrib.testing.worker import start_worker
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from kombu import Exchange, Queue
+
+        from club_accounts.services import get_or_create_account_for_legacy_user
+        from engagement import tasks as consumption_tasks
+        from engagement.models import LicenseConsumptionPointsDecision, LicenseRefundVipDecision, PointLedger
+        from orders.models import Order
+        from orders.tests.factories import make_console_user
+        from wallet.models import ProviderReport, Transaction
+        from .context import current_store
+
+        media = self.enterContext(TemporaryDirectory(prefix='xa-sa14-worker-'))
+        self.enterContext(override_settings(MEDIA_ROOT=media))
+
+        def report_image():
+            return SimpleUploadedFile('evidence.png', self.image(), content_type='image/png')
+
+        def accepted(response):
+            self.assertEqual(response.data['code'], 0, response.data)
+            return response.data.get('data')
+
+        left = self.stores['shenglang']
+        self.certificates = f'/api/admin/platform/store-management/{left.pk}/business-certificates'
+        renewed = self.upload(expected=self.certificate_ids[left.slug])
+        self.assertEqual(renewed.status_code, 201, renewed.data)
+        cases = [
+            self._prepare_business(left, 'sl.esports.club', 100),
+            self._prepare_business(self.stores['xinan'], 'xa.esports.club', 200),
+        ]
+        for case in cases:
+            paid = accepted(case.boss.post('/api/orders/create/', case.payload, format='json'))
+            case.order_id = paid['id']
+            path = f'/api/orders/orders/{case.order_id}/'
+            accepted(case.player.post(path + 'start/', {'entry_image': report_image()}, format='multipart'))
+            accepted(case.player.post(path + 'complete/', {'completion_image': report_image()}, format='multipart'))
+            with store_context(case.store):
+                report = ProviderReport.objects.get(order_id=case.order_id)
+                staff = make_console_user(['report:view', 'report:audit'])
+                reviewer = get_or_create_account_for_legacy_user(staff)
+                staff.admin_membership.account = reviewer
+                staff.admin_membership.save(update_fields=['account'])
+                admin_client = APIClient(HTTP_HOST='admin.esports.club',
+                    HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(reviewer)[0])
+            path = f'/api/wallet/reports/{report.pk}/'
+            accepted(case.player.post(path + 'images/', {'kind': 'RESULT', 'image': report_image()}, format='multipart'))
+            accepted(case.player.post(path + 'submit/', {}, format='json'))
+            accepted(admin_client.post(f'/api/admin/reports/{report.pk}/approve/', {}, format='json'))
+            with store_context(case.store):
+                order = Order.objects.get(pk=case.order_id)
+                self.assertEqual(order.status, 'COMPLETED')
+                self.assertIsNone(order.settled_at)
+                self.assertFalse(order.transactions.filter(amount__gt=0).exists())
+        self.assertEqual(cases[0].order_id, cases[1].order_id)
+
+        queue = f'xa_sa14_worker_{uuid4().hex}'
+        previous_app = current_app._get_current_object()
+        app = Celery(queue, task_cls='stores.tasks:StoreTask', set_as_current=False)
+        app.conf.update(broker_url='memory://', result_backend='cache+memory://', task_default_queue=queue,
+            task_default_exchange=queue, task_default_routing_key=queue,
+            task_queues=(Queue(queue, Exchange(queue), routing_key=queue),),
+            worker_enable_remote_control=False, worker_hijack_root_logger=False)
+        app.set_current()
+        try:
+            app.finalize()
+            scan = app.tasks[consumption_tasks.confirm_due_consumption.name]
+            recovered = timezone.now() + timedelta(hours=80)
+
+            def run_scan(*, fallback, slugs=('shenglang', 'xinan')):
+                self.assertIsNone(current_store())
+                result = scan.delay()
+                fanout = result.get(timeout=15, disable_sync_subtasks=False)
+                self.assertEqual(fanout['directory_fallback'], fallback)
+                self.assertEqual(fanout['enqueue_unknown'], [])
+                self.assertCountEqual([job['store'] for job in fanout['stores']], slugs)
+                for job in fanout['stores']:
+                    app.AsyncResult(job['task_id']).get(timeout=15, disable_sync_subtasks=False)
+                return result.id
+
+            def ledger(case):
+                with store_context(case.store):
+                    order = Order.objects.get(pk=case.order_id)
+                    self.assertIsNotNone(order.settled_at)
+                    self.assertIsNotNone(order.funding_benefits_resolved_at)
+                    vip = LicenseRefundVipDecision.objects.get(order=order)
+                    points = LicenseConsumptionPointsDecision.objects.get(order=order)
+                    self.assertEqual((vip.outcome, points.outcome), ('UNKNOWN', 'UNKNOWN'))
+                    self.assertEqual(vip.license_evidence['business_certificate']['status'], 'CONTROL_UNAVAILABLE')
+                    self.assertFalse(PointLedger.objects.filter(order=order).exists())
+                    entries = list(order.transactions.order_by('pk').values_list('tx_type', 'amount'))
+                    self.assertCountEqual(entries, [(Transaction.TxType.PAY, -case.debit),
+                        (Transaction.TxType.INCOME, order.provider_income),
+                        (Transaction.TxType.SHOP_INCOME, order.shop_income)])
+                    self.assertEqual(sum(amount for _, amount in entries), 0)
+                    return order.settled_at, vip.pk, points.pk, entries
+
+            with _control_link() as disconnected, patch('django.utils.timezone.now', return_value=recovered):
+                disconnected.set()
+                with start_worker(app, pool='solo', queues=[queue], perform_ping_check=False, without_heartbeat=True):
+                    original = run_scan(fallback=True)
+                    first = [ledger(case) for case in cases]
+                    run_scan(fallback=True)
+                    self.assertEqual([ledger(case) for case in cases], first)
+                    disconnected.clear()
+                    run_scan(fallback=False)
+                    self.assertEqual([ledger(case) for case in cases], first)
+                    left.refresh_from_db()
+                    disabled = self.owner.patch(f'/api/admin/platform/store-management/{left.pk}', {
+                        'status': 'DISABLED', 'expected_updated_at': left.updated_at.isoformat(),
+                    }, format='json')
+                    self.assertEqual(disabled.status_code, 200, disabled.data)
+                    disconnected.set()
+                    run_scan(fallback=True, slugs=('xinan',))
+                    self.assertEqual([ledger(case) for case in cases], first)
+            for case, (_, vip_id, points_id, entries) in zip(cases, first):
+                print(f'SA14 Celery 扫描={original} 门店={case.store.slug} 订单={case.order_id} '
+                      f'流水={entries} VIP待核={vip_id} 积分待核={points_id}', flush=True)
+        finally:
+            app.close()
+            previous_app.set_current()

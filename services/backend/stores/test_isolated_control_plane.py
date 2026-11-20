@@ -1,6 +1,6 @@
 import os
 from unittest import skipUnless
-from django.db import DatabaseError, connections, transaction
+from django.db import DatabaseError, InterfaceError, connections, transaction
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from datetime import timedelta
@@ -308,10 +308,12 @@ class IsolatedControlPlaneTests(TransactionTestCase):
             task.apply_async = Mock(return_value=SimpleNamespace(id='periodic-job'))
             result = task()
             self.assertEqual({item['store'] for item in result['stores']}, {'shenglang', 'xinan'})
-            with patch('stores.context.active_stores', side_effect=DatabaseError('simulated directory outage')):
-                offline_result = task()
-            self.assertEqual({item['store'] for item in offline_result['stores']}, {'shenglang', 'xinan'})
-            self.assertTrue(offline_result['directory_fallback'])
+            for disconnected in (DatabaseError('directory unreachable'), InterfaceError(0, 'closed connection')):
+                with self.subTest(driver_error=type(disconnected).__name__):
+                    with patch('stores.context.active_stores', side_effect=disconnected):
+                        offline_result = task()
+                    self.assertEqual({item['store'] for item in offline_result['stores']}, {'shenglang', 'xinan'})
+                    self.assertTrue(offline_result['directory_fallback'])
             task.run.assert_not_called()
         finally:
             task.pop_request()

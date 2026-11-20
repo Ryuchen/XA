@@ -98,12 +98,12 @@ class StoreTask(Task):
             # Each store receives its own message and retry history. One store's
             # failure cannot prevent the other stores' settlement or expiry scan.
             queued = []
-            from django.db import DatabaseError, transaction
+            from django.db import DatabaseError, InterfaceError, transaction
             directory_fallback = False
             try:
                 with transaction.atomic(using='default'):
                     stores = list(active_stores())
-            except DatabaseError:
+            except (DatabaseError, InterfaceError):
                 if not getattr(settings, 'ISOLATED_CONTROL_PLANE', False):
                     raise
                 from .routing_snapshot import cached_active_stores
