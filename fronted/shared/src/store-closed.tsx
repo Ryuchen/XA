@@ -1,5 +1,5 @@
-import { Bookmark, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
-import { useRef, useState } from "react";
+import { Bookmark, CalendarClock, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import { hostStoreSlug, storeBrandLogo } from "./store.ts";
 import headsetImage from "../assets/store-closed-headset.webp";
 import "./store-closed.css";
@@ -22,7 +22,7 @@ const entryContent = {
       [ClipboardList, "查看订单", "查看自己的订单进度和售后记录。"],
     ] as const,
     helpTitle: "已有订单或售后问题？",
-    help: "请通过下单时使用的渠道联系本店客服，并提供订单编号及需要处理的问题。",
+    help: "请通过原下单渠道联系本店客服。提供订单编号和需要处理的问题，方便客服核对。",
   },
   provider: {
     unavailable: "暂时无法登录、接单或提交报单。",
@@ -32,11 +32,12 @@ const entryContent = {
       [ClipboardList, "提交报单", "提交服务记录并查看审核结果。"],
     ] as const,
     helpTitle: "有服务正在进行？",
-    help: "需要交接服务或补交报单时，请通过平时使用的渠道联系本店负责人，并提供订单编号和当前进度。",
+    help: "如需交接服务或补交报单，请联系本店负责人，提供订单编号、当前进度和待处理事项。",
   },
 };
 
 function StoreReturnLink({ url }: { url: string }) {
+  const instructionsId = useId();
   const address = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState("");
 
@@ -54,12 +55,12 @@ function StoreReturnLink({ url }: { url: string }) {
   return (
     <section className="xa-store-closed-return">
       <h2><Bookmark size={20} aria-hidden="true" />稍后访问</h2>
-      <p>保存这个入口，门店通知开放后可从这里进入。</p>
+      <p id={instructionsId}>保存当前入口，收到门店的开放通知后可从这里进入。</p>
       <div className="xa-store-closed-address">
-        <input ref={address} aria-label="门店入口链接" dir="ltr" type="text" readOnly value={url} />
+        <input ref={address} aria-label="门店入口链接" aria-describedby={instructionsId} dir="ltr" type="text" readOnly value={url} />
         <button type="button" onClick={copyLink}><Copy size={16} aria-hidden="true" />复制入口链接</button>
       </div>
-      <p role="status" aria-atomic="true" aria-live="polite">{feedback}</p>
+      <p role="status" aria-atomic="true">{feedback}</p>
     </section>
   );
 }
@@ -94,27 +95,34 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
         </header>
 
         <main className="xa-store-closed-main">
-          <div className="xa-store-closed-hero">
+          <div className={`xa-store-closed-hero${issue?.closed ? " xa-store-closed-hero-with-art" : ""}`}>
             <div className="xa-store-closed-copy">
               <h1>{issue?.closed ? "门店暂未开放" : issue ? "暂时无法进入门店" : "正在确认门店…"}</h1>
               {issue && (issue.closed
-                ? <p className="xa-store-closed-description">{entryName}{unavailable}开放时间以门店通知为准。</p>
+                ? <>
+                  <p className="xa-store-closed-description">{unavailable}</p>
+                  <p className="xa-store-closed-schedule"><CalendarClock size={17} aria-hidden="true" />开放时间以门店通知为准</p>
+                </>
                 : <p className="xa-store-closed-description" role="alert">{issue.message}</p>)}
-              {issue && (
-                <div className="xa-store-closed-actions">
+              <div className="xa-store-closed-actions">
+                {issue &&
                   <button type="button" aria-disabled={checking} onClick={() => { if (!checking) onRetry(); }}>
                     <RefreshCw size={17} aria-hidden="true" />
                     {checking ? "正在检查…" : issue.closed ? "重新检查状态" : "重试"}
-                  </button>
-                  <p role="status" aria-atomic="true">{checking ? "正在查询门店状态…" : <>
+                  </button>}
+                <p role="status" aria-atomic="true">
+                  {issue && (checking ? "正在查询门店状态…" : <>
                     {issue.closed ? "上次检查" : "上次查询失败"} <time dateTime={issue.checkedAt.toISOString()}>{issue.checkedAt.toLocaleTimeString("zh-CN", { hour12: false })}</time>
                     {issue.closed && <span className="sr-only">，门店暂未开放</span>}
-                  </>}</p>
-                </div>
-              )}
+                  </>)}
+                </p>
+              </div>
             </div>
+            {issue?.closed && <div className="xa-store-closed-art">
+              <img src={headsetImage} width="900" height="1125" alt="" decoding="async" />
+            </div>}
           </div>
-          <div className="xa-store-closed-details">
+          {issue && <div className="xa-store-closed-details">
             <section className="xa-store-closed-help">
               <h2><MessageCircle size={20} aria-hidden="true" />{helpTitle}</h2>
               <p>{help}</p>
@@ -131,10 +139,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                 </li>)}
               </ul>
             </section>}
-          </div>
-          <div className="xa-store-closed-art">
-            <img src={headsetImage} width="900" height="1125" alt="" decoding="async" />
-          </div>
+          </div>}
         </main>
       </div>
     </div>
