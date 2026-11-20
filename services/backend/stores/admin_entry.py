@@ -196,7 +196,7 @@ def neutral_admin_request(request, get_response):
                 return response
         except (signing.BadSignature, KeyError, TypeError, ValueError, UnicodeError, Store.DoesNotExist):
             return JsonResponse({'code': 400, 'msg': '微信登录请求无效或已过期，请重新发起'}, status=400)
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return JsonResponse({'code': 503, 'msg': '微信登录服务暂不可用，请稍后重试'}, status=503)
     try:
         if path == REFRESH_PATH:
@@ -259,6 +259,6 @@ def neutral_admin_request(request, get_response):
             return response
     except (TokenError, signing.BadSignature, KeyError, TypeError, ValueError, UnicodeError):
         return JsonResponse({'code': 401, 'msg': '后台登录无效或未绑定所属门店，请重新登录'}, status=401)
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         return JsonResponse({'code': 503, 'errorCode': 'STORE_DIRECTORY_UNAVAILABLE',
                              'msg': '门店服务暂不可用，请稍后重试'}, status=503)

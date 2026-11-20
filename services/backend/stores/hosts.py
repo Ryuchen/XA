@@ -26,11 +26,11 @@ def host_store_slug(host):
     # tenant-domain API; they remain stable during a directory outage.
     if domain in bindings:
         return bindings[domain]
-    from django.db import DatabaseError
+    from django.db import DatabaseError, InterfaceError
     from .models import StoreDomain
     try:
         row = StoreDomain.objects.select_related('store').filter(hostname=domain).first()
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         from .routing_snapshot import lookup_domain
         store = lookup_domain(domain)
         if store is None:
@@ -89,7 +89,7 @@ def store_entry_url(value, slug):
     """Return a store-owned link or no link while its hostname is unbound."""
     if not value:
         return ''
-    from django.db import DatabaseError
+    from django.db import DatabaseError, InterfaceError
     try:
         parts = urlsplit(value)
         if (parts.scheme not in ('http', 'https') or not parts.hostname
@@ -113,5 +113,5 @@ def store_entry_url(value, slug):
         if not domain:
             return ''
         return urlunsplit(parts._replace(netloc=domain, query=urlencode(query)))
-    except (DatabaseError, ValueError, UnicodeError):
+    except (DatabaseError, InterfaceError, ValueError, UnicodeError):
         return ''

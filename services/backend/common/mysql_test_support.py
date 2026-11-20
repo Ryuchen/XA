@@ -17,7 +17,8 @@ def require_disposable_mysql(connection):
     while module is None and (configured := getattr(configured, 'default_settings', None)) is not None:
         module = getattr(configured, 'SETTINGS_MODULE', None)
     if (connection.vendor != 'mysql'
-            or module not in {'config.mysql_test_settings', 'config.multitenant_mysql_test_settings'}
+            or module not in {'config.mysql_test_settings', 'config.multitenant_mysql_test_settings',
+                              'config.certificate_mysql_test_settings'}
             or not str(database.get('NAME', '')).startswith('test_xa_test_')
             or not str(database.get('USER', '')).startswith('xa_test')
             or database.get('HOST') not in {'127.0.0.1', 'localhost', 'db'}):

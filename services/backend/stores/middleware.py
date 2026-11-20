@@ -1,7 +1,7 @@
 import json
 
 from django.core import signing
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from django.http import JsonResponse
 
 from .context import StoreNotFound, StoreUnavailable, resolve_store, store_context
@@ -26,7 +26,7 @@ class StoreMiddleware:
             slug = request_store_slug(request.get_host(), request.headers.get('X-Store-Slug'), request.GET.getlist('store'))
         except StoreNotFound as exc:
             return JsonResponse({'code': 404, 'msg': str(exc)}, status=404)
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return JsonResponse({'code': 503, 'errorCode': 'STORE_DIRECTORY_UNAVAILABLE',
                                  'msg': '门店域名服务暂不可用，请稍后重试'}, status=503)
         except ValueError as exc:
@@ -76,7 +76,7 @@ class StoreMiddleware:
             return JsonResponse({'code': 404, 'msg': str(exc)}, status=404)
         except StoreUnavailable as exc:
             return JsonResponse({'code': 403, 'msg': str(exc)}, status=403)
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return JsonResponse({'code': 503, 'errorCode': 'STORE_DIRECTORY_UNAVAILABLE',
                                  'msg': '门店服务暂不可用，请稍后重试'}, status=503)
         except (ValueError, TypeError):

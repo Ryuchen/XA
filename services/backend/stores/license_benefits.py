@@ -3,7 +3,7 @@ import logging
 from functools import wraps
 
 from django.conf import settings
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 
 from .context import current_store
 from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
@@ -72,7 +72,7 @@ def check_license_benefits(feature=None):
     try:
         from .license_snapshot import business_status
         status = business_status(store)
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         logger.warning('License benefit admission could not be verified for store %s', store.slug)
         return 'UNKNOWN', {'status': 'CONTROL_UNAVAILABLE'}
     except ValueError:

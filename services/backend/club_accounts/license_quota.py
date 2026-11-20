@@ -1,6 +1,6 @@
 """Transactional, per-store License account admission."""
 from django.conf import settings
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, InterfaceError, transaction
 from rest_framework.exceptions import APIException
 
 from stores.context import current_database, current_store
@@ -36,7 +36,7 @@ def assert_available(account_type, *, quota):
         raise LicenseAdmissionError('无法确定账号所属门店，请从门店入口重试')
     try:
         status = business_status(store)
-    except (DatabaseError, ValueError) as exc:
+    except (DatabaseError, InterfaceError, ValueError) as exc:
         raise LicenseAdmissionUnavailable('暂时无法核验门店授权，请联系平台') from exc
     tier = TIERS.get(status['tier'])
     if not status['allow_new_accounts'] or tier is None:

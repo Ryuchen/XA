@@ -77,7 +77,7 @@ def _fetch_store(slug):
 
 
 def resolve_store(slug=None, *, require_active=True, allow_cached=False):
-    from django.db import DatabaseError, transaction
+    from django.db import DatabaseError, InterfaceError, transaction
 
     slug = default_store_slug() if slug is None else slug
     cached = False
@@ -87,7 +87,7 @@ def resolve_store(slug=None, *, require_active=True, allow_cached=False):
             store = _fetch_store(slug)
             if store is not None:
                 discover_store_connection(store)
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         if not getattr(settings, 'ISOLATED_CONTROL_PLANE', False) or not allow_cached:
             raise
         from .routing_snapshot import lookup

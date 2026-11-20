@@ -12,7 +12,7 @@ from copy import deepcopy
 from types import SimpleNamespace
 
 from django.conf import settings
-from django.db import DatabaseError, transaction as directory_transaction
+from django.db import DatabaseError, InterfaceError, transaction as directory_transaction
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from django.utils.dateparse import parse_datetime
@@ -165,7 +165,7 @@ def _persist_after_commit(store, payload, signature):
                     return
                 row.store_slug, row.payload, row.checked_at, row.signature = locked.slug, payload, checked, signature
                 row.save(using=alias, update_fields=['store_slug', 'payload', 'checked_at', 'signature'])
-    except (DatabaseError, ValueError, TypeError):
+    except (DatabaseError, InterfaceError, ValueError, TypeError):
         logger.warning('Unable to persist License snapshot for store %s', store.slug, exc_info=True)
 
 
@@ -190,7 +190,7 @@ def business_status(store):
             payload = json.loads(_canonical(payload))
             signature = _signature(payload, settings.SECRET_KEY)
             result = _evaluate(deepcopy(payload), store, now=checked, source='ONLINE', signature=signature)
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         if enabled:
             from club_accounts.models import LicenseStatusSnapshot
             # Keep a failed local cache read from poisoning an outer business

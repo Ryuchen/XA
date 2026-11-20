@@ -2,7 +2,7 @@
 from datetime import datetime, time, timedelta
 
 from django.conf import settings
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, InterfaceError, transaction
 from django.db.models import Q, Subquery
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -26,7 +26,7 @@ def _evidence_at(store, checked_at):
         with transaction.atomic(using='default'):
             record = (StoreBusinessCertificate.objects.filter(store=store, created_at__lte=checked_at)
                       .values_list('pk', 'expires_on').first())
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         return {**evidence, 'status': 'CONTROL_UNAVAILABLE'}
     if record is None:
         return {**evidence, 'status': 'MISSING'}
@@ -61,7 +61,7 @@ def _interval_parts(store, started_at, ended_at):
             rows = list(records.filter(Q(pk=Subquery(previous))
                 | Q(created_at__gt=started_at, created_at__lt=ended_at))
                 .order_by('created_at', 'id').values_list('pk', 'expires_on', 'created_at'))
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         return [(started_at, ended_at, 'UNKNOWN', {'store_id': store.pk, 'status': 'CONTROL_UNAVAILABLE'})]
 
     from .business_certificates import CERTIFICATE_TIMEZONE, expired

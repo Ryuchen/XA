@@ -9,7 +9,7 @@ import json
 import logging
 
 from django.conf import settings
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, InterfaceError, transaction
 from django.utils.crypto import salted_hmac
 from django.utils.dateparse import parse_datetime
 
@@ -150,7 +150,7 @@ def schedule(store, revision):
                 write_domain_index(domain['hostname'], slug=payload['store']['slug'],
                     alias=payload['store']['database_alias'], store_id=payload['store']['id'],
                     revision=domain['revision'], active=domain['active'] and payload['store']['status'] == 'ACTIVE')
-        except (DatabaseError, OSError, ValueError, TypeError):
+        except (DatabaseError, InterfaceError, OSError, ValueError, TypeError):
             logger.warning('Unable to persist routing snapshot for %s', store.slug, exc_info=True)
     transaction.on_commit(write, using='default', robust=True)
 
@@ -186,7 +186,7 @@ def _verified_stores(expected_slug=None):
             with transaction.atomic(using=alias):
                 row = StoreRoutingSnapshot.objects.using(alias).filter(pk=1).first()
             payload = _validated(row, alias, expected_slug=expected_slug)
-        except (DatabaseError, ValueError):
+        except (DatabaseError, InterfaceError, ValueError):
             logger.warning('Unable to read cached routing state from store database %s', alias)
             continue
         if payload is not None:
@@ -252,7 +252,7 @@ def lookup_domain(hostname):
     try:
         row = StoreRoutingSnapshot.objects.using(alias).filter(pk=1).first()
         payload = _validated(row, alias, expected_slug=index['slug'])
-    except (DatabaseError, ValueError):
+    except (DatabaseError, InterfaceError, ValueError):
         return None
     expected = {'hostname': hostname, 'revision': index['revision'], 'active': True}
     if (not payload or payload['store']['id'] != index['store_id']
