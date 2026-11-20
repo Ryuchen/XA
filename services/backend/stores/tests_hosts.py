@@ -4,8 +4,10 @@ from unittest import skipUnless
 from io import StringIO
 from urllib.parse import parse_qs, urlsplit
 import uuid
+from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
+from django.core import signing
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
@@ -107,6 +109,52 @@ class BoundStoreHttpTest(TestCase):
         response = self.client.get('/api/stores/current/', HTTP_HOST='sl.esports.club',
                                    HTTP_X_FORWARDED_HOST='xa.esports.club')
         self.assertEqual(response.data['data']['slug'], 'shenglang')
+
+    @override_settings(DEBUG=True, WECHAT_H5_APPID='wx-test', WECHAT_H5_SECRET='test-secret',
+        WECHAT_H5_ALLOWED_ORIGINS=['https://sl.esports.club', 'https://xa.esports.club'])
+    def test_h5_poll_ticket_is_validated_in_the_host_store(self):
+        start_url = '/api/users/h5-login/start/'
+        status_url = '/api/users/h5-login/status/'
+        for own_host, other_host, own_store, other_store in (
+            ('sl.esports.club', 'xa.esports.club', self.first, self.second),
+            ('xa.esports.club', 'sl.esports.club', self.second, self.first),
+        ):
+            with self.subTest(host=own_host):
+                started = self.client.post(start_url, {
+                    'audience': 'boss', 'return_origin': 'https://' + own_host,
+                }, format='json', HTTP_HOST=own_host)
+                self.assertEqual(started.status_code, 200)
+                flow = started.data['data']
+                self.assertEqual(flow['store']['slug'], own_store.slug)
+                proof = {'ticket': flow['ticket'], 'poll_token': flow['poll_token']}
+                pending = self.client.get(status_url, proof, HTTP_HOST=own_host)
+                self.assertEqual(pending.status_code, 200, pending.content)
+                self.assertEqual(pending['X-Store-Slug'], own_store.slug)
+                self.assertEqual(pending.data['data'], {'status': 'PENDING'})
+
+                for host, store, submitted in (
+                    (own_host, own_store, {**proof, 'poll_token': 'wrong-secret'}),
+                    (own_host, own_store, {**proof, 'ticket': 'malformed'}),
+                    (other_host, other_store, proof),
+                ):
+                    denied = self.client.get(status_url, submitted, HTTP_HOST=host)
+                    self.assertEqual(denied.status_code, 400)
+                    self.assertEqual(denied['X-Store-Slug'], store.slug)
+                    self.assertEqual(denied.data['errorCode'], 'WECHAT_H5_INVALID')
+                    self.assertNotIn('data', denied.data)
+
+                callback = '/api/users/h5-login/callback/'
+                state = parse_qs(urlsplit(flow['authorization_url']).query)['state'][0]
+                callback_on_other_host = self.client.get(callback, {'state': state}, HTTP_HOST=other_host)
+                self.assertEqual(callback_on_other_host.status_code, 400)
+                self.assertNotIn('X-Store-Slug', callback_on_other_host)
+                expired_at = timezone.now().timestamp() - 601
+                with patch('django.core.signing.time.time', return_value=expired_at):
+                    expired = signing.dumps({'store_slug': own_store.slug}, salt='xa.wechat-h5.login.v1')
+                for rejected_state in (state + 'tampered', expired):
+                    invalid = self.client.get(callback, {'state': rejected_state}, HTTP_HOST=own_host)
+                    self.assertEqual(invalid.status_code, 400)
+                    self.assertNotIn('X-Store-Slug', invalid)
 
     def test_unknown_domains_never_accept_valid_store_hints(self):
         for host in ('unknown.esports.club', 'nested.sl.esports.club', 'esports.club'):

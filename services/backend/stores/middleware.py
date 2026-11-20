@@ -32,20 +32,21 @@ class StoreMiddleware:
         except ValueError as exc:
             return JsonResponse({'code': 400, 'msg': str(exc)}, status=400)
         try:
-            # WeChat scenes carry a routing hint, never an authorization grant.
-            # Every web-login session view still validates its private secret,
-            # expiry and confirmation against the selected store database.
-            if any(marker in request.path for marker in ('/web-login/', '/h5-login/')):
-                ticket = request.GET.get('ticket')
-                if request.method == 'POST' and request.content_type == 'application/json':
+            # Only QR login scenes carry a ticket-based routing hint. The H5
+            # UUID is looked up with its polling secret in the host store.
+            web_login = '/web-login/' in request.path
+            h5_state = request.GET.get('state') if request.path.endswith('/h5-login/callback/') else None
+            if web_login or h5_state:
+                ticket = request.GET.get('ticket') if web_login else None
+                if web_login and request.method == 'POST' and request.content_type == 'application/json':
                     try:
                         data = json.loads(request.body or b'{}')
                         if isinstance(data, dict):
                             ticket = data.get('ticket', ticket)
                     except (ValueError, UnicodeDecodeError):
                         pass  # DRF will return the ordinary malformed-body error.
-                if request.GET.get('state'):
-                    claim = signing.loads(request.GET['state'], salt='xa.wechat-h5.login.v1', max_age=600)
+                if h5_state:
+                    claim = signing.loads(h5_state, salt='xa.wechat-h5.login.v1', max_age=600)
                     selected_slug = claim.get('store_slug')
                     if selected_slug:
                         if slug is not None and slug != selected_slug:
@@ -79,6 +80,8 @@ class StoreMiddleware:
         except (DatabaseError, InterfaceError):
             return JsonResponse({'code': 503, 'errorCode': 'STORE_DIRECTORY_UNAVAILABLE',
                                  'msg': '门店服务暂不可用，请稍后重试'}, status=503)
+        except signing.BadSignature:
+            return JsonResponse({'code': 400, 'msg': '微信授权请求已失效，请重新发起'}, status=400)
         except (ValueError, TypeError):
             return JsonResponse({'code': 400, 'msg': '登录票据格式不正确，请重新扫码'}, status=400)
         request.store = store

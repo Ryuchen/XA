@@ -400,7 +400,11 @@ class H5LoginStatusView(APIView):
 
     def get(self, request):
         try:
-            session = WebLoginSession.objects.get(ticket=request.query_params.get('ticket'))
+            ticket = uuid.UUID(request.query_params.get('ticket', ''))
+        except ValueError:
+            return fail('微信授权请求无效，请重新发起')
+        try:
+            session = WebLoginSession.objects.get(ticket=ticket)
             valid_poll(session, request)
             if session.expires_at <= timezone.now():
                 return Response({'code': 0, 'data': {'status': 'EXPIRED'}})
