@@ -20,8 +20,8 @@ def fingerprint(alias):
     return hashlib.sha256(json.dumps(identity, ensure_ascii=True, separators=(',', ':')).encode()).hexdigest()
 
 
-def reserve_claim(store):
-    """Commit the nonce before touching the target; no customer DB is inspected."""
+def reserve_claim(store, *, admin_username=None):
+    """Reserve the target and intended admin before touching any tenant database."""
     with transaction.atomic(using='default'):
         lock_store_registration()
         current = Store.objects.select_for_update().get(pk=store.pk)
@@ -36,12 +36,12 @@ def reserve_claim(store):
             defaults={'database_fingerprint': target})
         if claim.database_fingerprint != target:
             raise CommandError('目标数据库配置已变化，不能继续初始化；请人工核对')
+        _record_admin(claim, admin_username)
         return claim
 
 
 def reserve_admin_intent(store, username):
     """Persist the intended first admin before any tenant-side account write."""
-    username = (username or '').strip()
     with transaction.atomic(using='default'):
         lock_store_registration()
         current = Store.objects.select_for_update().get(pk=store.pk)
@@ -54,12 +54,20 @@ def reserve_admin_intent(store, username):
             raise CommandError(str(exc)) from exc
         if claim.database_fingerprint != target:
             raise CommandError('目标数据库配置已变化，不能继续初始化；请人工核对')
-        if username and claim.admin_username and username != claim.admin_username:
-            raise CommandError('恢复初始化须使用原先登记的管理员账号')
-        if username and not claim.admin_username:
-            claim.admin_username = username
-            claim.save(update_fields=['admin_username', 'updated_at'])
+        _record_admin(claim, username)
         return claim
+
+
+def _record_admin(claim, username):
+    username = (username or '').strip()
+    if not username or username == claim.admin_username:
+        return
+    if claim.admin_username:
+        raise CommandError('恢复初始化须使用原先登记的管理员账号')
+    if len(username) > 150:
+        raise CommandError('管理员用户名必须为1到150位')
+    claim.admin_username = username
+    claim.save(update_fields=['admin_username', 'updated_at'])
 
 
 def expected_marker(claim):

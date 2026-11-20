@@ -25,10 +25,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         slug, alias = options['slug'], options['database']
+        admin_username = options.get('admin_username')
+        if admin_username is not None:
+            admin_username = admin_username.strip()
+            if not admin_username or len(admin_username) > 150:
+                raise CommandError('管理员用户名必须为1到150位')
         phone = options.get('admin_phone') or ''
-        if options.get('admin_username') and (not phone.isascii() or not phone.isdigit() or not 5 <= len(phone) <= 20):
+        if admin_username and (not phone.isascii() or not phone.isdigit() or not 5 <= len(phone) <= 20):
             raise CommandError('新管理员需要可接收短信的手机号，请填写 --admin-phone')
-        if not options.get('admin_username') and (phone or options.get('admin_nickname')):
+        if not admin_username and (phone or options.get('admin_nickname')):
             raise CommandError('填写管理员手机号或昵称时还须指定 --admin-username')
         try:
             with transaction.atomic(using='default'):
@@ -50,14 +55,17 @@ class Command(BaseCommand):
                         setattr(store, field, options[field])
                 store.full_clean()
                 store.save()
+                if options['create_database'] and store.initialized_at is None and admin_username:
+                    from stores.provision_claim import reserve_claim
+                    reserve_claim(store, admin_username=admin_username)
         except ValueError as exc:
             raise CommandError(str(exc)) from exc
         except (ValidationError, IntegrityError) as exc:
             raise CommandError('门店名称、标识或入口配置无效/已使用') from exc
         if options['create_database']:
-            create_database(alias, admin_username=options.get('admin_username'))
+            create_database(alias, admin_username=admin_username)
         try:
-            initialize_store(store, stdout=self.stdout, admin_username=options.get('admin_username'),
+            initialize_store(store, stdout=self.stdout, admin_username=admin_username,
                              password_env=options.get('password_env'), admin_phone=phone or None,
                              admin_nickname=options.get('admin_nickname'),
                              new_database_created=options['create_database'])

@@ -1,4 +1,4 @@
-from django.db import DatabaseError, IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, InterfaceError, transaction
 from django.core.management.base import CommandError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -95,10 +95,13 @@ class StoreManageView(APIView):
                 admin = {field: serializer.validated_data.pop(field, None) for field in
                          ('admin_username', 'admin_password', 'admin_phone', 'admin_nickname')}
                 store = serializer.save(status=Store.Status.PROVISIONING)
-        except ValueError:
-            return Response({'code': 503, 'msg': '平台门店目录暂不可用，无法安全登记'}, status=503)
+                if admin['admin_username']:
+                    from .provision_claim import reserve_claim
+                    reserve_claim(store, admin_username=admin['admin_username'])
         except IntegrityError:
             return Response({'code': 409, 'msg': '门店标识或数据库已被使用，请刷新后重试'}, status=409)
+        except (CommandError, ValueError, DatabaseError, InterfaceError):
+            return Response({'code': 503, 'msg': '平台门店目录暂不可用，无法安全登记'}, status=503)
         if admin['admin_username']:
             from .provisioning import create_database, initialize_store
             try:

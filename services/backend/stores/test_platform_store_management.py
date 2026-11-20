@@ -2,6 +2,7 @@
 import json
 from unittest.mock import patch
 
+from django.core.management import call_command
 from django.db import DatabaseError
 from django.core.management.base import CommandError
 from django.test import TransactionTestCase, override_settings
@@ -10,7 +11,7 @@ from rest_framework.test import APIClient
 from club_accounts.models import ClubAccount
 from club_accounts.tokens import issue_account_tokens
 from .context import resolve_store, store_context
-from .models import PlatformAccount, PlatformAuditEvent, PlatformRoleGrant, Store
+from .models import PlatformAccount, PlatformAuditEvent, PlatformRoleGrant, Store, StoreProvisioningClaim
 from .platform_auth import issue_tokens
 from .tests_foundation import admin
 
@@ -100,6 +101,79 @@ class PlatformStoreManagementTests(TransactionTestCase):
         events = list(PlatformAuditEvent.objects.filter(account=actor, action__startswith='store.initialize_').values('detail', 'target_id'))
         self.assertEqual(len(events), 2)
         self.assertNotIn(password, json.dumps(events, ensure_ascii=False))
+
+    def test_interrupted_create_reserves_original_admin_before_database_access(self):
+        _, owner = self.platform('early-interruption-owner', 'SUPER_ADMIN')
+        admin_details = {
+            'admin_username': 'first-owner',
+            'admin_password': 'Synthetic-Safe-Resume-Password-2026!',
+            'admin_phone': '13800003333',
+            'admin_nickname': '首位管理员',
+        }
+        path = '/api/admin/platform/store-management'
+        with patch('stores.provisioning.create_database', side_effect=CommandError('建库前中断')):
+            failed = owner.post(path, {
+                'slug': 'early-interruption', 'name': '待恢复门店', 'entity_prefix': 'EI',
+                'database_alias': 'store_b', **admin_details,
+            }, format='json')
+        self.assertEqual(failed.status_code, 409, failed.data)
+        store = Store.objects.get(slug='early-interruption')
+        claim = StoreProvisioningClaim.objects.get(store=store)
+        self.assertEqual(claim.admin_username, 'first-owner')
+        self.assertEqual(store.status, Store.Status.PROVISIONING)
+        self.assertIsNone(store.initialized_at)
+
+        resume_path = f'{path}/{store.pk}/initialize'
+        swapped = owner.post(resume_path, {**admin_details, 'admin_username': 'replacement-owner'}, format='json')
+        self.assertEqual(swapped.status_code, 409, swapped.data)
+        self.assertIn('原先登记的管理员账号', swapped.data['msg'])
+        with store_context(store):
+            self.assertFalse(ClubAccount.objects.exists())
+
+        recovered = owner.post(resume_path, admin_details, format='json')
+        self.assertEqual(recovered.status_code, 200, recovered.data)
+        self.assertEqual(recovered.data['data']['status'], Store.Status.CONFIGURING)
+        claim.refresh_from_db()
+        self.assertEqual(claim.admin_username, 'first-owner')
+        with store_context(store):
+            self.assertEqual(list(ClubAccount.objects.values_list('username', 'account_type')), [('first-owner', 'STAFF')])
+
+    def test_registration_rolls_back_if_database_claim_cannot_be_saved(self):
+        _, owner = self.platform('claim-interruption-owner', 'SUPER_ADMIN')
+        with (
+            patch('stores.provision_claim.StoreProvisioningClaim.objects.get_or_create',
+                  side_effect=DatabaseError('归属记录写入中断')),
+            patch('stores.provisioning.create_database') as create_database,
+        ):
+            response = owner.post('/api/admin/platform/store-management', {
+                'slug': 'unclaimed-store', 'name': '待登记门店', 'entity_prefix': 'UC',
+                'database_alias': 'store_b', 'admin_username': 'intended-owner',
+                'admin_password': 'Synthetic-Safe-Claim-Password-2026!',
+                'admin_phone': '13800003333', 'admin_nickname': '首位管理员',
+            }, format='json')
+        self.assertEqual(response.status_code, 503, response.data)
+        self.assertFalse(Store.objects.filter(slug='unclaimed-store').exists())
+        self.assertFalse(StoreProvisioningClaim.objects.filter(store__slug='unclaimed-store').exists())
+        create_database.assert_not_called()
+
+    def test_command_records_admin_in_registration_before_database_creation(self):
+        options = {'slug': 'command-interruption', 'name': '命令登记门店', 'database': 'store_b',
+                   'create_database': True, 'admin_username': 'command-owner', 'admin_phone': '13800003333'}
+        with patch('stores.management.commands.provision_store.create_database',
+                   side_effect=CommandError('建库前中断')) as create_database:
+            with self.assertRaisesMessage(CommandError, '管理员用户名必须为1到150位'):
+                call_command('provision_store', **{**options, 'admin_username': '   '})
+            self.assertFalse(Store.objects.filter(slug=options['slug']).exists())
+            create_database.assert_not_called()
+            with self.assertRaisesMessage(CommandError, '建库前中断'):
+                call_command('provision_store', **options)
+        store = Store.objects.get(slug=options['slug'])
+        self.assertEqual(store.status, Store.Status.PROVISIONING)
+        self.assertEqual(StoreProvisioningClaim.objects.get(store=store).admin_username, 'command-owner')
+        with self.assertRaisesMessage(CommandError, '原先登记的管理员账号'):
+            call_command('provision_store', **{**options, 'admin_username': 'replacement-owner'})
+        with store_context(store):
+            self.assertFalse(ClubAccount.objects.exists())
 
     def test_result_audit_failure_reports_uncertain_after_successful_update(self):
         actor, owner = self.platform('result-audit-owner', 'SUPER_ADMIN')

@@ -20,7 +20,7 @@ def create_database(alias, *, admin_username=None):
     """Explicit deployment action; never drops or truncates an existing DB."""
     from .database_identity import assert_distinct_store_database, database_identity, identity_from_config, lock_store_registration
     from .provision_claim import (create_or_verify_mysql, create_or_verify_sqlite,
-                                  fingerprint, reserve_admin_intent, reserve_claim)
+                                  fingerprint, reserve_claim)
     from .models import StoreProvisioningClaim
     from django.db import transaction as platform_transaction
     owner = Store.objects.filter(database_alias=alias).first()
@@ -47,9 +47,7 @@ def create_database(alias, *, admin_username=None):
             raise CommandError('无法安全确认 SQLite URI 的库归属，请人工核对')
         if name == ':memory:' or (name.startswith('file:') and 'mode=memory' in name):
             # Volatile, isolated test databases have no durable retry contract.
-            reserve_claim(owner)
-            if admin_username:
-                reserve_admin_intent(owner, admin_username)
+            reserve_claim(owner, admin_username=admin_username)
             connections[alias].ensure_connection()
             return
     elif 'mysql' not in engine:
@@ -58,9 +56,7 @@ def create_database(alias, *, admin_username=None):
         name = str(configuration.get('NAME') or '')
     if 'mysql' in engine and not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]{0,63}', name):
         raise CommandError('MySQL 门店库名须为字母开头的字母数字下划线，最长64位')
-    claim = reserve_claim(owner)
-    if admin_username:
-        reserve_admin_intent(owner, admin_username)
+    claim = reserve_claim(owner, admin_username=admin_username)
     with platform_transaction.atomic(using='default'):
         lock_store_registration()
         current = Store.objects.select_for_update().get(pk=owner.pk)
