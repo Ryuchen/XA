@@ -41,8 +41,8 @@ export function StoreClosedPage({ role, entryName, checkedAt, checking, onRetry 
           <div className="xa-store-closed-copy">
             <h1>门店暂未开放</h1>
             <p className="xa-store-closed-description">{boss
-              ? "你暂时无法在这里选陪玩或下单。稍后可以回到本页，查看门店是否已开放。"
-              : "你暂时无法进入工作台接单或报单。稍后可以回到本页，查看门店是否已开放。"}</p>
+              ? "选陪玩和下单暂不可用。你可以稍后回来查看门店状态。"
+              : "登录工作台、接单和报单暂不可用。你可以稍后回来查看门店状态。"}</p>
             <div className="xa-store-closed-actions">
               <button type="button" aria-disabled={checking} onClick={() => { if (!checking) onRetry(); }}>
                 <RefreshCw size={17} aria-hidden="true" />

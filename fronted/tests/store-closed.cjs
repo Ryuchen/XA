@@ -24,6 +24,8 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     const closed = page.getByRole('heading', { name: '门店暂未开放', exact: true })
     await closed.waitFor()
     const retry = page.getByRole('button', { name: '重新检查状态', exact: true })
+    const art = page.locator('.xa-store-closed-art')
+    assert.ok((await retry.boundingBox()).y < (await art.boundingBox()).y, 'Phone users see the status action before the artwork')
     const before = reads
     hold = Promise.withResolvers()
     await retry.focus()
