@@ -15,7 +15,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from orders.models import GameCategory, GameCommissionProfile, OrderTimeoutConfig, ServiceCategory, ServiceItem
 from stores.context import store_context
 from stores.license_codes import _activate_after_verified_store_auth, issue
-from stores.models import PlatformAccount, PlatformAuditEvent, PlatformRoleGrant, Store
+from stores.models import PlatformAccount, PlatformAuditEvent, PlatformRoleGrant, Store, StoreRoutingRevision
 from stores.platform_auth import issue_tokens
 from stores.tests_foundation import admin
 from wallet.models import SystemConfig
@@ -67,9 +67,71 @@ class FirstOpenTests(TransactionTestCase):
             response = self.client.post(url+'/confirm/'+key, {'fingerprint':rows[key]['snapshot']['fingerprint']}, format='json')
             self.assertEqual(response.status_code, 200, response.data)
         now = timezone.now()
-        _, code = issue(self.token, store_slug=store.slug, tier='PRO', kind='INITIAL',
-                        starts_at=now-timedelta(minutes=1), ends_at=now+timedelta(days=1), backdate_reason='隔离测试')
-        _activate_after_verified_store_auth(store=store, actor_id=owner.pk, code=code)
+        self.activate_opening_license(store, owner.pk, kind='INITIAL', tier='PRO',
+                                      starts_at=now-timedelta(minutes=1), ends_at=now+timedelta(days=1))
+
+    def activate_opening_license(self, store, actor_id, *, kind, tier, starts_at, ends_at):
+        row, code = issue(self.token, store_slug=store.slug, tier=tier, kind=kind,
+                          starts_at=starts_at, ends_at=ends_at, backdate_reason='隔离测试')
+        _activate_after_verified_store_auth(store=store, actor_id=actor_id, code=code)
+        return row
+
+    def opening_with_license_boundary(self, *, replacement):
+        from club_accounts.models import StoreRoutingSnapshot
+        from stores import routing_snapshot
+
+        store = self.stores[0]
+        with store_context(store):
+            owner = admin('opening-license-owner', super_admin=True)
+        now = timezone.now()
+        boundary = now + timedelta(minutes=10)
+        end = now + timedelta(days=1) if replacement else boundary
+        self.activate_opening_license(store, owner.pk, kind='INITIAL', tier='PRO', starts_at=now, ends_at=end)
+        if replacement:
+            next_grant = self.activate_opening_license(store, owner.pk, kind='CHANGE', tier='BASIC',
+                                                      starts_at=boundary, ends_at=end)
+        initial_updated_at = store.updated_at
+        clock = now + timedelta(minutes=1)
+        url = f'/api/admin/platform/store-management/{store.pk}/setup/readiness'
+        latest_revision = routing_snapshot.latest_revision
+
+        def wait_for_route_revision(locked_store):
+            nonlocal clock
+            revision = latest_revision(locked_store)
+            clock = boundary
+            return revision
+
+        # Isolate the commit boundary from service/configuration fixtures. The
+        # license, directory transaction, revision and snapshot are real.
+        with (patch('stores.opening_readiness.opening_readiness', return_value={'can_open': True, 'checks': []}),
+              patch('django.utils.timezone.now', side_effect=lambda: clock),
+              patch.object(routing_snapshot, 'latest_revision', side_effect=wait_for_route_revision),
+              patch.object(routing_snapshot, 'publish', wraps=routing_snapshot.publish) as publish):
+            response = self.client.post(url, {'confirm': True}, format='json')
+            self.assertEqual(response.status_code, 409, response.data)
+            expected = 'STORE_OPENING_LICENSE_CHANGED' if replacement else 'STORE_OPENING_LICENSE_EXPIRED'
+            self.assertEqual(response.data['errorCode'], expected)
+            publish.assert_not_called()
+            store.refresh_from_db()
+            self.assertEqual((store.status, store.updated_at), (Store.Status.CONFIGURING, initial_updated_at))
+            opened_events = PlatformAuditEvent.objects.filter(action='store.first_opened', target_store_slug=store.slug)
+            self.assertFalse(opened_events.exists())
+            self.assertFalse(StoreRoutingRevision.objects.filter(store=store).exists())
+            with store_context(store):
+                self.assertFalse(StoreRoutingSnapshot.objects.exists())
+            if replacement:
+                retry = self.client.post(url, {'confirm': True}, format='json')
+                self.assertEqual(retry.status_code, 200, retry.data)
+                self.assertEqual(opened_events.get().detail['license']['id'], str(next_grant.pk))
+                publish.assert_called_once()
+
+    @override_settings(ISOLATED_CONTROL_PLANE=True, STORE_DATABASE_ALIASES=('store_a', 'store_b'))
+    def test_license_expiry_while_reading_routing_revision_rolls_back_opening(self):
+        self.opening_with_license_boundary(replacement=False)
+
+    @override_settings(ISOLATED_CONTROL_PLANE=True, STORE_DATABASE_ALIASES=('store_a', 'store_b'))
+    def test_scheduled_license_taking_effect_while_opening_requires_a_fresh_check(self):
+        self.opening_with_license_boundary(replacement=True)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')

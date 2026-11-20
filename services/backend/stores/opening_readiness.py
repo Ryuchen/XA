@@ -60,7 +60,7 @@ def admin_login_readiness():
     return sorted(methods)
 
 
-def opening_readiness(store, permissions):
+def opening_readiness(store, permissions, *, license_status=None):
     """Read the target store's actual configuration without creating defaults.
 
     Caller supplies store_context(store); directory reads are routed separately.
@@ -74,7 +74,8 @@ def opening_readiness(store, permissions):
             row['details'] = details
         checks.append(row)
 
-    license_status = status_for_store(store)
+    if license_status is None:
+        license_status = status_for_store(store)
     add('license', license_status['can_open_store'],
         '授权在有效期内' if license_status['can_open_store'] else '首次开业须先激活有效期内的门店授权',
         details={'status': license_status['status'], 'tier': license_status['tier']})
