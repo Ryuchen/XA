@@ -60,6 +60,38 @@ class DynamicDatabaseConfigurationTests(TestCase):
             with self.subTest(slug=slug), self.assertRaises(ValueError):
                 dynamic.alias_for_slug(slug)
 
+    def test_deployment_schema_prefix_preserves_alias_and_all_slug_lengths(self):
+        self.config.DYNAMIC_STORE_DATABASE_NAME_PREFIX = 'xa_test_route_'
+        alias = dynamic.materialize('new-store')
+        self.assertEqual(alias, 'tenant_new_store')
+        self.assertEqual(self.config.DATABASES[alias]['NAME'], 'xa_test_route_new_store')
+        self.config.DYNAMIC_STORE_DATABASE_NAME_PREFIX = 'a' * 15 + '_'
+        longest = dynamic.materialize('b' * 48)
+        self.assertEqual(len(self.config.DATABASES[longest]['NAME']), 64)
+        for prefix in ('', 'TEST_', 'xa.test_', 'xa_test', 'a' * 16 + '_', None):
+            with self.subTest(prefix=prefix):
+                self.config.DYNAMIC_STORE_DATABASE_NAME_PREFIX = prefix
+                with self.assertRaisesMessage(ValueError, '库名前缀'):
+                    dynamic.materialize('bad-prefix')
+                self.assertNotIn('tenant_bad_prefix', self.config.DATABASES)
+
+    def test_schema_prefix_change_rejects_existing_claim_before_registration(self):
+        store = self.register_store()
+        self.config.DYNAMIC_STORE_DATABASE_NAME_PREFIX = 'xa_test_route_'
+        with self.assertRaisesMessage(ValueError, '目标数据库配置已变化'):
+            dynamic.discover_store_connection(store)
+        self.assertNotIn(store.database_alias, self.config.DATABASES)
+
+    def test_does_not_attach_a_dynamic_alias_to_a_registered_static_schema(self):
+        self.config.DYNAMIC_STORE_DATABASE_NAME_PREFIX = 'xa_test_route_'
+        self.config.DATABASES['store_static'] = {
+            **self.config.DATABASES['template'], 'NAME': 'xa_test_route_new_store', 'USER': 'static-owner',
+        }
+        self.config.STORE_DATABASE_ALIASES += ('store_static',)
+        with self.assertRaisesMessage(ValueError, '物理库已由其他别名登记'):
+            dynamic.materialize('new-store')
+        self.assertNotIn('tenant_new_store', self.config.DATABASES)
+
     def test_unowned_existing_alias_and_changed_template_fail_closed(self):
         self.config.DATABASES['tenant_other'] = deepcopy(self.config.DATABASES['template'])
         with self.assertRaisesMessage(ValueError, '冲突'):

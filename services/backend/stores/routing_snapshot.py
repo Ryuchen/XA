@@ -239,16 +239,16 @@ def lookup_domain(hostname):
     index = read(hostname)
     if not index or not index['active']:
         return None
-    from .dynamic_database import enabled, materialize
-    if enabled():
+    alias = index['database_alias']
+    from .dynamic_database import alias_for_slug, enabled, materialize
+    if enabled() and alias == alias_for_slug(index['slug']):
         try:
-            materialize(index['slug'], expected_alias=index['database_alias'])
+            materialize(index['slug'], expected_alias=alias)
         except ValueError:
             return None
-    from club_accounts.models import StoreRoutingSnapshot
-    alias = index['database_alias']
     if alias == 'default' or alias not in settings.DATABASES:
         return None
+    from club_accounts.models import StoreRoutingSnapshot
     try:
         row = StoreRoutingSnapshot.objects.using(alias).filter(pk=1).first()
         payload = _validated(row, alias, expected_slug=index['slug'])

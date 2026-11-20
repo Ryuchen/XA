@@ -582,6 +582,7 @@ from stores.database_config import install_store_databases  # noqa: E402
 
 STORE_DATABASE_ALIASES = install_store_databases(DATABASES, os.environ.get('XA_STORE_DATABASES', '{}'))
 DYNAMIC_STORE_DATABASE_TEMPLATE_ALIAS = os.environ.get('XA_DYNAMIC_STORE_DATABASE_TEMPLATE_ALIAS', '')
+DYNAMIC_STORE_DATABASE_NAME_PREFIX = os.environ.get('XA_DYNAMIC_STORE_DATABASE_NAME_PREFIX', 'tenant_')
 DYNAMIC_STORE_DATABASE_ENABLED = env_bool(
     'XA_DYNAMIC_STORE_DATABASE_ENABLED', bool(DYNAMIC_STORE_DATABASE_TEMPLATE_ALIAS))
 from stores.conf import parse_store_integrations  # noqa: E402

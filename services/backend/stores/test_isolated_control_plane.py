@@ -4,6 +4,7 @@ from django.db import DatabaseError, InterfaceError, connections, transaction
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from datetime import timedelta
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 from django.test import SimpleTestCase, TransactionTestCase, override_settings
@@ -35,6 +36,24 @@ class StoreSocketOutageTests(SimpleTestCase):
 
 class StoreRoutingSnapshotTests(TransactionTestCase):
     databases = {'default', 'store_a', 'store_b'}
+
+    @override_settings(DYNAMIC_STORE_DATABASE_ENABLED=True, ISOLATED_CONTROL_PLANE=True,
+                       STORE_DATABASE_ALIASES=('store_a',))
+    def test_signed_domain_routes_static_store_when_dynamic_stores_are_enabled(self):
+        from stores.domain_index import read
+        from stores.models import StoreDomain
+        from stores.routing_snapshot import lookup_domain
+
+        hostname = 'static-one.test'
+        store = Store.objects.create(slug='static-one', name='测试门店', database_alias='store_a',
+                                     status=Store.Status.ACTIVE, initialized_at=timezone.now())
+        StoreDomain.objects.create(store=store, hostname=hostname, active=True, revision=1)
+        with TemporaryDirectory() as directory, override_settings(STORE_DOMAIN_INDEX_DIR=directory):
+            resolve_store(store.slug)
+            self.assertTrue(read(hostname)['active'])
+            resolved = lookup_domain(hostname)
+            self.assertIsNotNone(resolved)
+            self.assertEqual((resolved.pk, resolved.database_alias), (store.pk, 'store_a'))
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')

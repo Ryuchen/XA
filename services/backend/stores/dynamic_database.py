@@ -17,6 +17,7 @@ from .database_identity import identity_fingerprint, identity_from_config
 _lock = RLock()
 _registered = set()
 _SLUG = re.compile(r'[a-z][a-z0-9-]{0,47}\Z', re.ASCII)
+_SCHEMA_PREFIX = re.compile(r'[a-z][a-z0-9_]{0,14}_\Z', re.ASCII)
 _MISSING_CLAIM = '门店数据库缺少归属记录，请联系平台核对'
 _UNTRACKED_TARGET_OPTIONS = frozenset({
     'host', 'port', 'database', 'db', 'unix_socket', 'read_default_file',
@@ -99,7 +100,10 @@ def materialize(slug, expected_alias=None, *, expected_fingerprint=None):
     options = candidate.get('OPTIONS', {})
     if not isinstance(options, Mapping) or _UNTRACKED_TARGET_OPTIONS.intersection(options):
         raise ValueError('门店数据库模板包含无法核对归属的连接选项')
-    candidate['NAME'] = alias
+    prefix = getattr(settings, 'DYNAMIC_STORE_DATABASE_NAME_PREFIX', 'tenant_')
+    if not isinstance(prefix, str) or not _SCHEMA_PREFIX.fullmatch(prefix):
+        raise ValueError('门店库名前缀须以小写字母开头、下划线结尾，最多16位')
+    candidate['NAME'] = prefix + slug.replace('-', '_')
     # Connections added after Django's startup normalization must carry the
     # same TEST defaults, without inheriting the template's test database.
     candidate['TEST'] = {'CHARSET': None, 'COLLATION': None, 'MIGRATE': True,
@@ -109,17 +113,20 @@ def materialize(slug, expected_alias=None, *, expected_fingerprint=None):
         raise ValueError('目标数据库配置已变化，请联系平台核对门店归属')
     with _lock:
         existing = settings.DATABASES.get(alias)
+        aliases = getattr(settings, 'STORE_DATABASE_ALIASES', ())
         if existing is not None:
             if alias not in _registered:
                 raise ValueError('门店数据库标识与部署配置冲突')
             if identity_from_config(alias, existing) != identity:
                 raise ValueError('门店数据库配置冲突')
         else:
+            if any(identity_from_config(other, settings.DATABASES[other]) == identity
+                   for other in ('default', *aliases) if other in settings.DATABASES):
+                raise ValueError('门店物理库已由其他别名登记')
             settings.DATABASES[alias] = candidate
             if connections.databases is not settings.DATABASES:
                 connections.databases[alias] = candidate
             _registered.add(alias)
-        aliases = list(getattr(settings, 'STORE_DATABASE_ALIASES', ()))
         if alias not in aliases:
             settings.STORE_DATABASE_ALIASES = (*aliases, alias)
     return alias
