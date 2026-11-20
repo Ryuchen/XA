@@ -40,10 +40,13 @@ class Command(BaseCommand):
                 from stores.database_identity import assert_distinct_store_database, lock_store_registration
                 lock_store_registration()
                 store = Store.objects.filter(slug=slug).first()
-                if alias not in configured_database_aliases() and not (store and store.database_alias == alias == 'default'):
-                    raise CommandError('请先通过 XA_STORE_DATABASES 配置该门店独立数据库别名')
                 if store and store.database_alias != alias:
                     raise CommandError('已登记门店的数据库不可变更')
+                if store:
+                    from stores.dynamic_database import discover_store_connection
+                    discover_store_connection(store)
+                if alias not in configured_database_aliases() and not (store and alias == 'default'):
+                    raise CommandError('请先通过 XA_STORE_DATABASES 配置该门店独立数据库别名')
                 if Store.objects.exclude(slug=slug).filter(database_alias=alias).exists():
                     raise CommandError('该数据库已归属其他门店')
                 if store is None or store.initialized_at is None:

@@ -1,6 +1,4 @@
 """Durable proof for retrying only a database created for this store."""
-import hashlib
-import json
 import os
 import sqlite3
 from contextlib import closing
@@ -9,7 +7,8 @@ from pathlib import Path
 from django.core.management.base import CommandError
 from django.db import DatabaseError, transaction
 
-from .database_identity import assert_distinct_store_database, database_identity, lock_store_registration
+from .database_identity import (assert_distinct_store_database, database_identity,
+                                identity_fingerprint, lock_store_registration)
 from .models import Store, StoreProvisioningClaim
 
 MARKER = 'xa_store_provision_identity'
@@ -24,8 +23,7 @@ class StoreAlreadyInitialized(CommandError):
 
 
 def fingerprint(alias):
-    identity = database_identity(alias)
-    return hashlib.sha256(json.dumps(identity, ensure_ascii=True, separators=(',', ':')).encode()).hexdigest()
+    return identity_fingerprint(database_identity(alias))
 
 
 def reserve_claim(store, *, admin_username=None):

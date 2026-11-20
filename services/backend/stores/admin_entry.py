@@ -97,15 +97,12 @@ def login_context(username, password, data):
             stores = Store.objects.filter(status__in=[Store.Status.ACTIVE, Store.Status.CONFIGURING], initialized_at__isnull=False)
         matches = []
         for store in stores:
-            from .dynamic_database import discover_store_connection
-            try:
-                available = discover_store_connection(store)
-            except ValueError as exc:
-                raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503) from exc
-            if not available:
-                # An unavailable store may contain the same username; do not
-                # silently select a different store as the unique match.
-                raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503)
+            if prefix is None:
+                # Without a specified store, every candidate must be checked
+                # online before a match can be treated as unique.
+                from .dynamic_database import store_connection_ready
+                if not store_connection_ready(store):
+                    raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503)
             account = _account(store, username, password)
             if account is not None:
                 matches.append((store, account))

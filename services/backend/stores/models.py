@@ -109,7 +109,7 @@ class StoreRoutingRevision(DirectoryModel):
 
 
 class StoreProvisioningClaim(DirectoryModel):
-    """Private platform record used to verify an unfinished store database."""
+    """Private platform record of a store's database ownership and initial admin."""
 
     store = models.OneToOneField(Store, on_delete=models.PROTECT, related_name='provisioning_claim')
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)

@@ -1,8 +1,15 @@
 """Conservative checks against assigning one configured database twice."""
+import hashlib
 import ipaddress
+import json
 import os
 
 from django.conf import settings
+
+
+def identity_fingerprint(identity):
+    encoded = json.dumps(identity, ensure_ascii=True, separators=(',', ':')).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def database_identity(alias):
@@ -54,6 +61,7 @@ def identity_from_config(alias, config):
 
 def assert_distinct_store_database(alias, *, exclude_store_id=None):
     from django.db import connections
+    from .dynamic_database import discover_store_connection, enabled
     from .models import Store
     identity = database_identity(alias)
     if alias != 'default':
@@ -70,7 +78,10 @@ def assert_distinct_store_database(alias, *, exclude_store_id=None):
         # Locking reads see the latest committed registrations even if an
         # outer MySQL REPEATABLE READ transaction already has an older view.
         stores = stores.select_for_update()
-    for existing in stores.only('database_alias'):
+    dynamic = enabled()
+    for existing in stores.only('slug', 'database_alias', 'initialized_at'):
+        if dynamic:
+            discover_store_connection(existing)
         other = database_identity(existing.database_alias)
         if other == identity:
             raise ValueError('该数据库与已登记门店共用，不能用于新门店')

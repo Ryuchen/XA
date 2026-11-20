@@ -49,7 +49,9 @@ class StoreRoutingSnapshotTests(TransactionTestCase):
             row = StoreRoutingSnapshot.objects.get(pk=1)
             original = {'payload': row.payload, 'signature': row.signature}
             old_payload = capture(store, 0)
-        StoreRoutingSnapshot.objects.using('store_b').update_or_create(pk=1, defaults=original)
+        neighbor = Store.objects.create(slug='snapshot-neighbor', name='快照隔离测试店', database_alias='store_b')
+        with store_context(neighbor):
+            StoreRoutingSnapshot.objects.using('store_b').update_or_create(pk=1, defaults=original)
         self.assertEqual(lookup('shenglang').database_alias, 'store_a')
         with override_settings(SECRET_KEY='new-routing-secret', SECRET_KEY_FALLBACKS=[settings.SECRET_KEY]):
             self.assertIsNotNone(lookup('shenglang'))

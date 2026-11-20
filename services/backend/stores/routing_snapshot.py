@@ -13,7 +13,8 @@ from django.db import DatabaseError, transaction
 from django.utils.crypto import salted_hmac
 from django.utils.dateparse import parse_datetime
 
-from .database_identity import database_identity
+from .database_identity import database_identity, identity_fingerprint
+from .dynamic_database import ensure_store_connection
 
 logger = logging.getLogger(__name__)
 SALT = 'xa.store-routing.snapshot.v1'
@@ -29,6 +30,7 @@ def _signature(payload, secret):
 
 
 def capture(store, revision):
+    ensure_store_connection(store)
     if (store.database_alias == 'default' or store.database_alias not in getattr(settings, 'STORE_DATABASE_ALIASES', ())
             or type(revision) is not int or revision < 0 or not store.pk or not store.initialized_at):
         raise ValueError('门店路由状态尚未完成初始化')
@@ -87,7 +89,6 @@ def publish(payload, *, require_current=False):
     """Publish verified directory state; higher revisions always win."""
     from club_accounts.models import StoreRoutingSnapshot
     from .context import store_context
-    from .models import Store
     values = payload['store']
     alias, slug = values['database_alias'], values['slug']
     signature = _signature(payload, settings.SECRET_KEY)
@@ -107,7 +108,7 @@ def publish(payload, *, require_current=False):
                 return row.signature == signature
         return False
 
-    temporary = Store(**{key: (parse_datetime(value) if key in TIMES else value) for key, value in values.items()})
+    temporary = _store_from_snapshot(payload)
     with store_context(temporary):
         # The overwhelmingly common unchanged request never takes an exclusive
         # lock; recheck under lock whenever a write may actually be necessary.
@@ -146,6 +147,7 @@ def schedule(store, revision):
 def latest_revision(store):
     """Include durable tombstones from a control transaction that rolled back."""
     from club_accounts.models import StoreRoutingSnapshot
+    ensure_store_connection(store)
     alias = store.database_alias
     with transaction.atomic(using=alias):
         row = StoreRoutingSnapshot.objects.using(alias).filter(pk=1).first()
@@ -153,9 +155,18 @@ def latest_revision(store):
     return existing['revision'] if existing is not None else 0
 
 
+def _store_from_snapshot(payload):
+    from .models import Store
+    data = {key: (parse_datetime(value) if key in TIMES else value)
+            for key, value in payload['store'].items()}
+    store = Store(**data)
+    store._state.adding, store._state.db = False, 'default'
+    store._verified_database_fingerprint = identity_fingerprint(payload['database_identity'])
+    return store
+
+
 def _verified_stores(expected_slug=None):
     from club_accounts.models import StoreRoutingSnapshot
-    from .models import Store
     found = []
     for alias in getattr(settings, 'STORE_DATABASE_ALIASES', ()):
         if alias == 'default' or alias not in settings.DATABASES:
@@ -168,11 +179,7 @@ def _verified_stores(expected_slug=None):
             logger.warning('Unable to read cached routing state from store database %s', alias)
             continue
         if payload is not None:
-            data = {key: (parse_datetime(value) if key in TIMES else value)
-                    for key, value in payload['store'].items()}
-            store = Store(**data)
-            store._state.adding, store._state.db = False, 'default'
-            found.append(store)
+            found.append(_store_from_snapshot(payload))
     return found
 
 
@@ -228,7 +235,6 @@ def lookup_domain(hostname):
         except ValueError:
             return None
     from club_accounts.models import StoreRoutingSnapshot
-    from .models import Store
     alias = index['database_alias']
     if alias == 'default' or alias not in settings.DATABASES:
         return None
@@ -241,8 +247,4 @@ def lookup_domain(hostname):
     if (not payload or payload['store']['id'] != index['store_id']
             or expected not in payload['domains']):
         return None
-    data = {key: (parse_datetime(value) if key in TIMES else value)
-            for key, value in payload['store'].items()}
-    store = Store(**data)
-    store._state.adding, store._state.db = False, 'default'
-    return store
+    return _store_from_snapshot(payload)

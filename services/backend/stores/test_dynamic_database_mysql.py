@@ -103,13 +103,27 @@ settings.DATABASES['default']['NAME'] = os.environ['XA_DYNAMIC_TEST_CONTROL']
 settings.DATABASES['store_b']['NAME'] = os.environ['XA_DYNAMIC_TEST_TEMPLATE']
 settings.DYNAMIC_STORE_DATABASE_ENABLED = True
 settings.DYNAMIC_STORE_DATABASE_TEMPLATE_ALIAS = 'store_b'
-from stores.context import resolve_store, store_context
+from stores.context import StoreUnavailable, resolve_store, store_context
 from club_accounts.models import ClubAccount
+if os.environ.get('XA_DYNAMIC_TEST_DRIFT') == '1':
+    template = settings.DATABASES['store_b']
+    template['PORT'] = '13307' if str(template.get('PORT')) != '13307' else '13308'
+    try:
+        resolve_store('dynamic-test', require_active=False, allow_cached=True)
+    except StoreUnavailable as error:
+        assert '目标数据库配置已变化' in str(error.__cause__)
+        assert 'tenant_dynamic_test' not in settings.DATABASES
+    else:
+        raise AssertionError('Changed database template was accepted')
+    raise SystemExit(0)
 store = resolve_store('dynamic-test', require_active=False)
 with store_context(store):
     assert ClubAccount.objects.filter(username='dynamic-owner', account_type='STAFF').exists()
 '''
         env = dict(os.environ, XA_DYNAMIC_TEST_CONTROL=connections['default'].settings_dict['NAME'],
-                   XA_DYNAMIC_TEST_TEMPLATE=connections['store_b'].settings_dict['NAME'])
+                   XA_DYNAMIC_TEST_TEMPLATE=connections['store_b'].settings_dict['NAME'], XA_DYNAMIC_TEST_DRIFT='0')
         child = subprocess.run([sys.executable, '-c', script], env=env, capture_output=True, text=True, timeout=45)
+        self.assertEqual(child.returncode, 0, child.stderr)
+        child = subprocess.run([sys.executable, '-c', script], env={**env, 'XA_DYNAMIC_TEST_DRIFT': '1'},
+                               capture_output=True, text=True, timeout=45)
         self.assertEqual(child.returncode, 0, child.stderr)

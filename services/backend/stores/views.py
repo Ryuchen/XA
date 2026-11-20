@@ -51,18 +51,20 @@ class AvailableStoresView(APIView):
 
     def get(self, request):
         from .permissions import is_platform_session
-        from .dynamic_database import alias_for_slug, enabled, materialize
-        if enabled():
-            for candidate in Store.objects.filter(status=Store.Status.ACTIVE, initialized_at__isnull=False):
-                if candidate.database_alias == alias_for_slug(candidate.slug):
-                    materialize(candidate.slug, expected_alias=candidate.database_alias)
-        stores = Store.objects.filter(
-            status=Store.Status.ACTIVE, initialized_at__isnull=False,
-            database_alias__in=['default', *configured_database_aliases()],
-        )
+        from .dynamic_database import store_connection_ready, uses_dynamic_connection
+        stores = Store.objects.filter(status=Store.Status.ACTIVE, initialized_at__isnull=False)
         if not may_manage_stores(getattr(request, 'account', None)) and not is_platform_session(request):
             stores = stores.filter(pk=current_store().pk)
-        return Response({'code': 0, 'data': {'results': [public_store(store) for store in stores]}})
+        aliases = ('default', *configured_database_aliases())
+        results = []
+        for store in stores:
+            if uses_dynamic_connection(store):
+                available = store_connection_ready(store)
+            else:
+                available = store.database_alias in aliases
+            if available:
+                results.append(public_store(store))
+        return Response({'code': 0, 'data': {'results': results}})
 
 
 class StoreManageView(APIView):
@@ -190,14 +192,14 @@ class StoreResumeProvisionView(APIView):
         serializer = StoreResumeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         store = get_object_or_404(Store, pk=pk)
-        from .dynamic_database import alias_for_slug, enabled, materialize
-        if enabled() and store.database_alias == alias_for_slug(store.slug):
-            try:
-                materialize(store.slug, expected_alias=store.database_alias)
-            except ValueError:
-                return Response({'code': 409, 'msg': '门店数据库配置不可用，请联系平台运维'}, status=409)
         if store.initialized_at is not None:
             return _already_initialized(store)
+        from .dynamic_database import discover_store_connection, uses_dynamic_connection
+        if store.status == Store.Status.PROVISIONING and uses_dynamic_connection(store):
+            try:
+                discover_store_connection(store)
+            except ValueError:
+                return Response({'code': 409, 'msg': '门店数据库配置不可用，请联系平台运维'}, status=409)
         if store.status != Store.Status.PROVISIONING or store.database_alias not in configured_database_aliases():
             return Response({'code': 409, 'msg': '门店状态或数据库配置不允许恢复初始化'}, status=409)
         from .models import StoreProvisioningClaim
