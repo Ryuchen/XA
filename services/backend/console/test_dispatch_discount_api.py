@@ -64,6 +64,34 @@ class DispatchDiscountApiTest(APITestCase):
         self.assertEqual(order.funding_allocations.get(kind='PREPAID').amount, 5500)
         self.owned.refresh_from_db(); self.assertEqual((self.owned.status, self.owned.order_id), ('USED', order.pk))
 
+    def test_duplicate_recovers_receipt_if_coupon_validation_races_payment(self):
+        from wallet.models import Transaction
+        from wallet.receipts import _replay
+
+        quote = self.quote()
+        confirmation = {'boss_confirmation': '老板确认活动加金额券'}
+        committed = self.submit(quote, **confirmation).data
+        self.assertEqual(committed['code'], 0, committed)
+        saw_first_lookup = False
+
+        def observe_receipt_after_first_lookup(request, scope):
+            nonlocal saw_first_lookup
+            if not saw_first_lookup:
+                saw_first_lookup = True
+                return None
+            return _replay(request, scope)
+
+        # The retry passed both early checks before the first debit consumed the coupon.
+        with patch('wallet.receipts._replay', side_effect=observe_receipt_after_first_lookup), \
+                patch('console.views.peek_fund_write', return_value=(False, '')):
+            replay = self.submit(quote, **confirmation).data
+        self.assertEqual(replay.get('errorCode'), 'FUND_ALREADY_PROCESSED', replay)
+        self.assertEqual(replay['fundResult'], committed)
+        self.assertEqual(Order.objects.count(), 1)
+        self.assertEqual(Transaction.objects.filter(tx_type='PAY').count(), 1)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 14500)
+
     def test_staff_selects_vip_and_coupon_remains_unused(self):
         first = self.quote()
         vip = next(item for item in first['discount_options'] if item['key'] == 'vip')

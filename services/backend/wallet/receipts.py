@@ -9,6 +9,7 @@ from functools import wraps
 
 from django.core.serializers.json import DjangoJSONEncoder
 from stores.db import transaction
+from rest_framework.exceptions import ValidationError
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 
@@ -62,7 +63,13 @@ def recover_fund_result(scope):
             replay = _replay(request, scope)
             if replay is not None:
                 return replay
-            result = view(self, request, *args, **kwargs)
+            try:
+                result = view(self, request, *args, **kwargs)
+            except ValidationError:
+                replay = _replay(request, scope)
+                if replay is not None:
+                    return replay
+                raise
             if isinstance(result.data, dict) and result.data.get('code') != 0:
                 # Another request may have committed while this one waited for
                 # wallet/profile locks, changing its balance or eligibility.

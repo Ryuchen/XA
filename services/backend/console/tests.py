@@ -769,6 +769,36 @@ class OrderDispatchTest(APITestCase):
             order.status_logs.filter(action=OrderStatusLog.Action.CREATE).exists()
         )
 
+    def test_dispatch_replay_recovers_original_receipt_and_rejects_changed_request(self):
+        payload = {'customer_id': self.boss_account.pk, 'service_id': self.service.pk,
+                   'client_request_id': uuid4().hex, 'game_rounds': 2}
+        created = self.client.post(self.URL, payload, format='json').data
+        self.assertEqual(created['code'], 0, created)
+
+        self.service.is_active = False
+        self.service.save(update_fields=['is_active'])
+        replay = self.client.post(self.URL, payload, format='json').data
+        self.assertEqual(replay.get('errorCode'), 'FUND_ALREADY_PROCESSED', replay)
+        self.assertEqual(replay['fundResult'], created)
+        changed = self.client.post(self.URL, {**payload, 'game_rounds': 3}, format='json').data
+        self.assertEqual(changed['errorCode'], 'REQUEST_ID_CONFLICT')
+        self.assertNotIn('fundResult', changed)
+        self.assertEqual(Order.objects.count(), 1)
+        self.assertEqual(Transaction.objects.get(order_id=created['data']['id'], tx_type='PAY').amount, -20000)
+        self.assertEqual(Wallet.objects.get(account=self.boss_account).balance, 80000)
+
+    def test_dispatch_replay_does_not_guess_an_order_for_an_old_request_key(self):
+        from wallet.models import IdempotencyKey
+
+        request_id = uuid4().hex
+        IdempotencyKey.objects.create(account=self.admin_account, scope='admin.dispatch', request_id=request_id)
+        replay = self.client.post(self.URL, {'customer_id': self.boss_account.pk,
+            'service_id': self.service.pk, 'client_request_id': request_id}, format='json').data
+        self.assertEqual(replay.get('errorCode'), 'FUND_RESULT_UNAVAILABLE', replay)
+        self.assertNotIn('fundResult', replay)
+        self.assertFalse(Order.objects.exists())
+        self.assertEqual(Wallet.objects.get(account=self.boss_account).balance, 100000)
+
     @skipUnless(os.environ.get('XA_STAFF_TEAM_ASSIGN_FORMAL') == '1',
                 '客服指定派单旅程已被抢单池取代（18-盘点客服安排抢单）；断言保留待最终联调')
     def test_dispatch_with_provider_assigns_grabbed_and_busy(self):

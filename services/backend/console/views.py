@@ -2326,12 +2326,9 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         return Response({'code': 0, 'data': data})
 
     @action(detail=False, methods=['post'], url_path='dispatch')
+    @recover_fund_result('admin.dispatch')
     def quick_dispatch(self, request):
         if getattr(settings, 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED', False):
-            replayed, replay_reason = peek_fund_write(account=request.account,
-                request_id=request.data.get('client_request_id'))
-            if replayed:
-                return Response({'code': 409, 'msg': replay_reason})
             customer = _business_account(request.data.get('customer_id'), ClubAccount.AccountType.BOSS)
             if not customer:
                 return Response({'code': 404, 'msg': '老板不存在'})
@@ -2984,11 +2981,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
 
             # A rolled-back order must not be broadcast to other clients.
             transaction.on_commit(lambda order=order: notify_order_update(order))
-            return Response({
-                'code': 0,
-                'msg': '派单成功',
-                'data': self.get_serializer(order).data,
-            })
+            return fund_success(request, 'admin.dispatch', data=self.get_serializer(order).data, msg='派单成功')
 
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
