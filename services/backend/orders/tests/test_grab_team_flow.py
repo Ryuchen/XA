@@ -11,10 +11,10 @@ from rest_framework.test import APITransactionTestCase
 from console.capacity_config import save_capacity
 from console.grab_config import save_grab_window
 from orders.grab_team_flow import resolve
-from orders.models import Order, OrderGrabTeamRoundState
+from orders.models import Order, OrderGrabTeamRoundState, ServiceItem
 from orders.tests import test_game_commission_payment as fixture
 from orders.tests.factories import make_provider, make_console_user
-from wallet.models import SystemConfig
+from wallet.models import IdempotencyKey, SystemConfig, Transaction
 
 
 @override_settings(GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True,
@@ -27,6 +27,41 @@ class GrabTeamFlowTest(APITransactionTestCase):
     link = fixture.GameCommissionPaymentTest.link
     auth = fixture.GameCommissionPaymentTest.auth
     create = fixture.GameCommissionPaymentTest.create
+
+    def assert_stale_team_checkout_rejected(self, billing_count, changed_terms):
+        from engagement.models import PointFundingLot
+        from orders import views
+
+        self.service.fulfillment_provider_count = 2
+        self.service.billing_provider_count = billing_count
+        self.service.save(update_fields=['fulfillment_provider_count', 'billing_provider_count'])
+        save_grab_window(30, 0, lambda *args: None)
+        quote = self.client.post('/api/orders/quote/', {'service_id': self.service.pk,
+                                 'dispatch_mode': 'AUTO_GRAB'}, format='json')
+        self.assertEqual(quote.data['code'], 0, quote.data)
+        original_ensure_locks = views.ensure_provider_dispatch_locks
+
+        def change_before_payment(ids):
+            original_ensure_locks(ids)
+            ServiceItem.objects.filter(pk=self.service.pk).update(**changed_terms)
+
+        with patch('orders.views.ensure_provider_dispatch_locks', side_effect=change_before_payment) as change:
+            response = self.create(dispatch_mode='AUTO_GRAB', expected_amount=quote.data['data']['amount'])
+
+        change.assert_called_once()
+        self.assertEqual(response.data.get('errorCode'), 'SERVICE_CHANGED', response.data)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 100000)
+        self.assertEqual(PointFundingLot.objects.get(account=self.boss_account).remaining, 100000)
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(Transaction.objects.exists())
+        self.assertFalse(IdempotencyKey.objects.filter(account=self.boss_account).exists())
+
+    def test_checkout_rejects_removed_team_seat_after_quote(self):
+        self.assert_stale_team_checkout_rejected(1, {'fulfillment_provider_count': 1})
+
+    def test_checkout_rejects_repriced_team_with_same_total(self):
+        self.assert_stale_team_checkout_rejected(2, {'price': 10000, 'billing_provider_count': 1})
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')

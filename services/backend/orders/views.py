@@ -790,6 +790,11 @@ class CreateOrderView(APIView):
             locked_service = ServiceItem.objects.select_for_update().get(pk=service.pk)
             if locked_service.game_category_id != service.game_category_id:
                 return Response({'code': 409, 'errorCode': 'SERVICE_CHANGED', 'msg': '服务资料规则已变化，请重新核对'}, status=409)
+            if (locked_service.price != service.price
+                    or locked_service.billing_provider_count != service.billing_provider_count
+                    or locked_service.fulfillment_provider_count != serializer.validated_data['required_provider_count']):
+                return Response({'code': 400, 'errorCode': 'SERVICE_CHANGED',
+                                 'msg': '商品信息已变化，请刷新报价后重新确认'})
             from .account_fields import lock_and_validate
             try:
                 lock_and_validate(locked_service, {'game_region': game_region, 'game_nickname': game_nickname, 'game_uid': game_uid})
@@ -923,9 +928,6 @@ class CreateOrderView(APIView):
                     request.account, service, game_rounds, locked_coupon,
                     serializer.validated_data['pricing']) != safe_box_subsidy_basis:
                 raise rest_serializers.ValidationError('安全箱券或补贴条件已变化，请重新报价')
-            if service.fulfillment_provider_count != serializer.validated_data['required_provider_count']:
-                raise rest_serializers.ValidationError('套餐人数已变化，请刷新后重新选择陪玩')
-
             # 下单是出账动作。幂等键在「校验全过、即将扣款」这一刻抢占：
             # 弱网重试的第二个请求会在这里被拦下，而不是变成两笔扣款 + 两张单。
             # 放在校验之后，是因为视图里的 `return Response(400)` 属于正常返回，
