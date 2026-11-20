@@ -3,7 +3,7 @@ import { ApiError, createApiClient } from "./client.ts";
 import { clearSession, useSession, type Role } from "./session.ts";
 import { adoptLegacyStoreStorage, canonicalizeStoreUrl, getStoreSlug, hostStoreSlug, isAdminEntry, registerStoreCurrency, storeBrandLogo, switchStore, validStoreSlug } from "./store.ts";
 import type { H5Entitlement, H5Branding } from "./saas";
-import { StoreClosedPage } from "./store-closed";
+import { StoreEntryStatusPage } from "./store-closed";
 
 export interface StoreInfo {
   id: number;
@@ -159,12 +159,14 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
   }, [role, slug, scope, neutralAdmin, retry]);
   if (neutralAdmin) return <StoreContext.Provider key={`admin:neutral:${session.revision}`} value={neutralAdminStore}>{children}</StoreContext.Provider>;
   const issue = failure?.scope === scope ? failure : null;
-  if (issue?.closed && role !== "admin") return <StoreClosedPage role={role} entryName={entryNames[role]}
-    checkedAt={issue.checkedAt} checking={issue.attempt !== retry} onRetry={() => setRetry(value => value + 1)} />;
   const error = issue?.attempt === retry ? issue.message : "";
-  if (!store || store.slug !== slug || error) return <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6 py-12 text-foreground">
-    <h1 className="text-xl font-semibold">{error ? "暂时无法进入门店" : "正在确认门店…"}</h1>
-    {error && <><p role="alert" className="text-sm text-destructive">{error}</p><button className="min-h-10 self-start rounded-md border px-4 text-sm" onClick={() => setRetry((value) => value + 1)}>重试</button><p className="text-sm text-muted-foreground">如仍无法进入，请联系当前门店。</p></>}
-  </main>;
+  if (!store || store.slug !== slug || error) {
+    if (role !== "admin") return <StoreEntryStatusPage role={role} entryName={entryNames[role]} issue={issue}
+      checking={issue !== null && issue.attempt !== retry} onRetry={() => setRetry(value => value + 1)} />;
+    return <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6 py-12 text-foreground">
+      <h1 className="text-xl font-semibold">{error ? "暂时无法进入门店" : "正在确认门店…"}</h1>
+      {error && <><p role="alert" className="text-sm text-destructive">{error}</p><button className="min-h-10 self-start rounded-md border px-4 text-sm" onClick={() => setRetry((value) => value + 1)}>重试</button><p className="text-sm text-muted-foreground">如仍无法进入，请联系当前门店。</p></>}
+    </main>;
+  }
   return <StoreContext.Provider key={`${slug}:${session.revision}`} value={store}>{children}</StoreContext.Provider>;
 }

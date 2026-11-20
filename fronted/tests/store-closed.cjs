@@ -20,9 +20,16 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
       return route.fulfill(response)
     })
     const url = origin + '/boss/#/login'
+    hold = Promise.withResolvers()
     await page.goto(url)
+    await page.getByRole('heading', { name: '正在确认门店…', exact: true }).waitFor()
+    await page.getByText('声浪电竞', { exact: true }).waitFor()
+    hold.resolve()
     const closed = page.getByRole('heading', { name: '门店暂未开放', exact: true })
     await closed.waitFor()
+    const services = page.getByRole('heading', { name: '入口功能', exact: true })
+    await services.waitFor()
+    await page.getByRole('heading', { name: '已有订单或售后问题？', exact: true }).waitFor()
     const retry = page.getByRole('button', { name: '重新检查状态', exact: true })
     const art = page.locator('.xa-store-closed-art')
     assert.ok((await retry.boundingBox()).y < (await art.boundingBox()).y, 'Phone users see the status action before the artwork')
@@ -39,6 +46,8 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await page.getByRole('alert').filter({ hasText: response.json.msg }).waitFor()
     assert.equal(reads, before + 1)
     assert.equal(await closed.count(), 0)
+    assert.equal(await services.count(), 0)
+    assert.equal(await page.getByRole('button', { name: '重试', exact: true }).evaluate(element => element === document.activeElement), true)
 
     response = { status: 403, json: { code: 403, msg: '门店数据库尚未配置，请联系平台管理员' } }
     await page.getByRole('button', { name: '重试', exact: true }).click()
