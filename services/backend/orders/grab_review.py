@@ -237,7 +237,8 @@ class GrabReviewActionView(APIView):
                             grab_team_state=state if order.required_provider_count == 2 else None,
                             opening_intent=opening if not state else None)
                     else:
-                        refund_to_customer(locked, reason=data['reason'])
+                        refund_to_customer(locked, reason=data['reason'],
+                            operator=request.legacy_user, operator_account=request.account)
                     locked.cancel_reason = data['reason']
                 try:
                     with transaction.atomic():

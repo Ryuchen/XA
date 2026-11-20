@@ -92,6 +92,36 @@ class DispatchDiscountApiTest(APITestCase):
         self.wallet.refresh_from_db()
         self.assertEqual(self.wallet.balance, 14500)
 
+    def test_grab_review_cancellation_records_the_refund_operator(self):
+        quote = self.quote()
+        paid = self.submit(quote, boss_confirmation='老板确认活动加金额券').data
+        self.assertEqual(paid['code'], 0, paid)
+        order = Order.objects.get(pk=paid['data']['id'])
+        url = f'/api/admin/grab-reviews/{order.pk}/actions/'
+        payload = {'action': 'CANCEL', 'reason': '核对原付款并取消', 'client_request_id': 'review-coupon-order'}
+        self.assertEqual(self.admin.post(url, payload, format='json').status_code, 403)
+        self.assertFalse(order.refund_records.exists())
+
+        user = make_console_user(['order:view', 'order:dispatch', 'order:refund'])
+        reviewer = get_or_create_account_for_legacy_user(user)
+        user.admin_membership.account = reviewer
+        user.admin_membership.save(update_fields=['account'])
+        review_client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(reviewer)[0])
+        result = review_client.post(url, payload, format='json')
+        self.assertEqual(result.data['code'], 0, result.data)
+        self.assertEqual(review_client.post(url, payload, format='json').data, result.data)
+
+        refund = order.refund_records.get()
+        self.assertEqual((refund.operator_id, refund.operator_account_id), (user.pk, reviewer.pk))
+        self.assertEqual((refund.customer_transaction.operator_id, refund.customer_transaction.operator_account_id),
+                         (user.pk, reviewer.pk))
+        self.assertEqual(refund.customer_transaction.amount, 5500)
+        self.assertEqual(order.transactions.get(tx_type='PAY').operator_account_id, self.staff.pk)
+        self.wallet.refresh_from_db()
+        self.owned.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 20000)
+        self.assertEqual((self.owned.status, self.owned.order_id), ('UNUSED', None))
+
     def test_staff_selects_vip_and_coupon_remains_unused(self):
         first = self.quote()
         vip = next(item for item in first['discount_options'] if item['key'] == 'vip')
