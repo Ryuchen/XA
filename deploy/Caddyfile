@@ -63,6 +63,7 @@
 		import backend
 	}
 	import media
+	redir / /boss/ 302
 	redir /boss /boss/ permanent
 	redir /player /player/ permanent
 	handle /boss/* {

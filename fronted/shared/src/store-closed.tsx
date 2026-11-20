@@ -1,5 +1,5 @@
-import { ClipboardList, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
-import { useState } from "react";
+import { Bookmark, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
+import { useRef, useState } from "react";
 import { hostStoreSlug, storeBrandLogo } from "./store.ts";
 import headsetImage from "../assets/store-closed-headset.webp";
 import "./store-closed.css";
@@ -15,15 +15,17 @@ type Props = {
 const storeNames: Record<string, string> = { shenglang: "声浪电竞", xinan: "兴安电竞" };
 const entryContent = {
   boss: {
+    unavailable: "暂时无法登录、下单或查看订单。",
     services: [
       [Headphones, "挑选陪玩", "按游戏查看本店服务和陪玩资料。"],
       [ShoppingBag, "在线下单", "本店开通自助下单后，可选服务并核对价格。"],
       [ClipboardList, "查看订单", "查看自己的订单进度和售后记录。"],
     ] as const,
     helpTitle: "已有订单或售后问题？",
-    help: "请通过下单时使用的客服渠道联系本店。提供订单编号，方便客服核对。",
+    help: "请通过下单时使用的渠道联系本店客服，并提供订单编号及需要处理的问题。",
   },
   provider: {
+    unavailable: "暂时无法登录、接单或提交报单。",
     services: [
       [UserCircle, "进入工作台", "用本店陪玩账号登录，查看待办。"],
       [Gamepad2, "接单与履约", "按接单资格查看订单、邀请和服务进度。"],
@@ -34,8 +36,36 @@ const entryContent = {
   },
 };
 
+function StoreReturnLink({ url }: { url: string }) {
+  const address = useRef<HTMLInputElement>(null);
+  const [feedback, setFeedback] = useState("");
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setFeedback("入口链接已复制");
+    } catch {
+      address.current?.focus();
+      address.current?.select();
+      setFeedback("入口链接已选中，请手动复制");
+    }
+  }
+
+  return (
+    <section className="xa-store-closed-return">
+      <h2><Bookmark size={20} aria-hidden="true" />稍后访问</h2>
+      <p>保存这个入口，门店通知开放后可从这里进入。</p>
+      <div className="xa-store-closed-address">
+        <input ref={address} aria-label="门店入口链接" dir="ltr" type="text" readOnly value={url} />
+        <button type="button" onClick={copyLink}><Copy size={16} aria-hidden="true" />复制入口链接</button>
+      </div>
+      <p role="status" aria-atomic="true" aria-live="polite">{feedback}</p>
+    </section>
+  );
+}
+
 export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry }: Props) {
-  const { services, helpTitle, help } = entryContent[role];
+  const { services, helpTitle, help, unavailable } = entryContent[role];
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
   const storeName = brandSlug ? storeNames[brandSlug] : undefined;
@@ -68,7 +98,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
             <div className="xa-store-closed-copy">
               <h1>{issue?.closed ? "门店暂未开放" : issue ? "暂时无法进入门店" : "正在确认门店…"}</h1>
               {issue && (issue.closed
-                ? <p className="xa-store-closed-description">开放时间以门店通知为准。请保留当前网址，稍后再来。</p>
+                ? <p className="xa-store-closed-description">{entryName}{unavailable}开放时间以门店通知为准。</p>
                 : <p className="xa-store-closed-description" role="alert">{issue.message}</p>)}
               {issue && (
                 <div className="xa-store-closed-actions">
@@ -86,12 +116,12 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
           </div>
           <div className="xa-store-closed-details">
             <section className="xa-store-closed-help">
-              <MessageCircle size={22} aria-hidden="true" />
-              <div>
-                <h2>{helpTitle}</h2>
-                <p>{help}</p>
-              </div>
+              <h2><MessageCircle size={20} aria-hidden="true" />{helpTitle}</h2>
+              <p>{help}</p>
             </section>
+            {issue?.closed && brandSlug && (
+              <StoreReturnLink url={new URL(import.meta.env.BASE_URL, window.location.origin).href} />
+            )}
             {issue?.closed && <section className="xa-store-closed-services">
               <h2>开放后可使用</h2>
               <ul role="list">
@@ -103,7 +133,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
             </section>}
           </div>
           <div className="xa-store-closed-art">
-            <img src={headsetImage} width="900" height="1125" alt="" />
+            <img src={headsetImage} width="900" height="1125" alt="" decoding="async" />
           </div>
         </main>
       </div>

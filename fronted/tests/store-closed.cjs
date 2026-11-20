@@ -33,7 +33,32 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await help.waitFor()
     await page.getByText('查看自己的订单进度和售后记录。', { exact: true }).waitFor()
     await page.getByText('本店开通自助下单后，可选服务并核对价格。', { exact: true }).waitFor()
+    await page.getByText('老板服务中心暂时无法登录、下单或查看订单。开放时间以门店通知为准。', { exact: true }).waitFor()
     assert.ok((await help.boundingBox()).y < (await services.boundingBox()).y, 'Phone users see help before the service preview')
+    const address = page.getByRole('textbox', { name: '门店入口链接' })
+    assert.equal(await address.inputValue(), origin + '/boss/')
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')) },
+      })
+    })
+    const copy = page.getByRole('button', { name: '复制入口链接' })
+    await copy.click()
+    await page.getByRole('status').filter({ hasText: '入口链接已选中，请手动复制' }).waitFor()
+    assert.equal(await address.evaluate(element => element === document.activeElement &&
+      element.selectionStart === 0 && element.selectionEnd === element.value.length), true)
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async value => { window.copiedEntryLink = value } },
+      })
+    })
+    await copy.focus()
+    await page.keyboard.press('Enter')
+    await page.getByRole('status').filter({ hasText: '入口链接已复制' }).waitFor()
+    assert.equal(await page.evaluate(() => window.copiedEntryLink), origin + '/boss/')
+    assert.equal(page.url(), url)
     const retry = page.getByRole('button', { name: '重新检查状态', exact: true })
     const art = page.locator('.xa-store-closed-art')
     assert.ok((await retry.boundingBox()).y < (await art.boundingBox()).y, 'Phone users see the status action before the artwork')
@@ -51,6 +76,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(reads, before + 1)
     assert.equal(await closed.count(), 0)
     assert.equal(await services.count(), 0)
+    assert.equal(await address.count(), 0)
     assert.equal(await page.getByRole('button', { name: '重试', exact: true }).evaluate(element => element === document.activeElement), true)
 
     response = { status: 403, json: { code: 403, msg: '门店数据库尚未配置，请联系平台管理员' } }
