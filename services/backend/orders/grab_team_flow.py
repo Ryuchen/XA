@@ -250,37 +250,9 @@ class TeamActionView(APIView):
 
 
 def cancel(request, order_id):
-    state = _latest(order_id)
-    if (not state or request.account.account_type != 'BOSS'
-            or state.round.pool.order.customer_account_id != request.account.pk):
-        return Response({'code': 404, 'msg': '订单不存在'}, status=404)
-    if not enabled():
-        return Response({'code': 503, 'msg': '订单取消暂需客服核对，请联系客服'}, status=503)
-    if state.status == 'CANCELLED':
-        return Response({'code': 0, 'msg': '订单已取消，资金及权益已按规则退回', 'data': {'status': 'CANCELLED'}})
-    if state.status == 'REVIEW':
-        from .grab_customer_review import request_cancellation
-        return request_cancellation(request, order_id)
-    if state.status not in ('OPEN', 'PARKED', 'CANCELLED'):
-        return Response({'code': 409, 'msg': '订单已分配或正在核对，请查看订单状态'}, status=409)
-    try:
-        key = request.data.get('client_request_id') or f'cancel-team-{order_id}-{request.account.pk}'
-        reason = request.data.get('reason') or ''
-        if not isinstance(reason, str):
-            raise ValueError('取消原因无效')
-        from .grab_receipt_probe import record_intent
-        result = record_intent(state.round_id, request.account.pk, 'BOSS_CANCEL', key,
-                               {'reason': reason.strip()[:255]}, team_flow=True)
-    except ValueError as exc:
-        return Response({'code': 400, 'msg': str(exc)}, status=400)
-    if result.state == 'AFTER':
-        return Response({'code': 409, 'errorCode': 'GRAB_CANCEL_CLOSED', 'msg': '订单取消时限已到'}, status=409)
-    if result.state != 'BEFORE':
-        from .grab_customer_review import request_cancellation
-        return request_cancellation(request, order_id)
-    if resolve(order_id) != 'CANCELLED':
-        return Response({'code': 409, 'msg': '取消请求待核对，请查看订单状态'}, status=409)
-    return Response({'code': 0, 'msg': '订单已取消，资金及权益已按规则退回', 'data': {'status': 'CANCELLED'}})
+    from .grab_customer_cancel import cancel as customer_cancel
+
+    return customer_cancel(request, order_id, state=_latest(order_id), enabled=enabled(), resolve=resolve, team=True)
 
 
 @transaction.atomic

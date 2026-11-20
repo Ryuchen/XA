@@ -30,6 +30,7 @@ class ProbeOutcome:
     receipt_id: int
     state: str
     replayed: bool = False
+    current_round: bool = True
 
 
 class GrabRequestConflict(ValueError):
@@ -244,13 +245,14 @@ def _lock_round(round_id):
 
 
 def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow=False, team_flow=False,
-                  actor_snapshot=None):
+                  actor_snapshot=None, replay_only=False):
     """Durably record an intent, then independently record a post-commit bound.
 
     The request must already be authenticated by the future caller. This
     method verifies store-local identity and resource ownership but is not a
     substitute for the full eligibility check. It must own both transactions;
     callers cannot wrap it in an outer atomic block.
+    With replay_only, a missing receipt returns None without a new write.
     """
     if transaction.get_connection().in_atomic_block or not transaction.get_autocommit():
         raise RuntimeError('登记证据必须使用独立的最外层事务')
@@ -262,6 +264,8 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
     lifecycle_accounts = []
     lifecycle_team_ids = None
     order_invite = team_flow and kind == 'INVITE'
+    order_cancel = (single_flow or team_flow) and kind == 'BOSS_CANCEL'
+    order_request = order_invite or order_cancel
     team_cycle_guard = team_flow and kind in ('INVITE', 'CONFIRM')
     lifecycle_guard = team_cycle_guard or (single_flow and kind == 'SINGLE')
     if lifecycle_guard:
@@ -313,18 +317,22 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
         elif actor.account_type != 'PROVIDER':
             raise ValueError('仅陪玩可登记抢单意向')
         matching = OrderGrabReceiptProbe.objects.select_for_update().filter(actor_id=actor_id, request_key=request_key)
-        if order_invite:
-            # The order lock serializes invitations with changes to the active round.
-            matches = list(matching.filter(Q(round=round_) | Q(round__pool_id=pool.pk, kind='INVITE'))
+        if order_request:
+            # The order lock serializes these requests with round changes.
+            matches = list(matching.filter(round__pool_id=pool.pk).filter(Q(round=round_) | Q(kind=kind))
                            .order_by('pk')[:2])
             if len(matches) > 1:
-                raise GrabRequestConflict('请求编号关联多个组队登记，请核对原请求')
+                raise GrabRequestConflict('请求编号关联多个登记，请核对原请求')
             old = matches[0] if matches else None
         else:
             old = matching.filter(round=round_).first()
         if old:
-            if old.fingerprint != fingerprint or old.kind != kind or old.payload != payload:
-                conflict = GrabRequestConflict if order_invite else ValueError
+            expected_payload, expected_fingerprint = payload, fingerprint
+            if order_cancel and old.payload == {} and payload == {'reason': ''}:
+                expected_payload = {}
+                expected_fingerprint = hashlib.sha256(_payload(kind, {}, actor_id).encode('ascii')).hexdigest()
+            if old.fingerprint != expected_fingerprint or old.kind != kind or old.payload != expected_payload:
+                conflict = GrabRequestConflict if order_request else ValueError
                 raise conflict('请求编号已用于其他登记')
             if order_invite:
                 from club_accounts.provider_lifecycle import provider_membership_current
@@ -334,7 +342,14 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
                         or not all(provider_membership_current(account) for account in lifecycle_accounts)):
                     raise GrabRequestConflict('原组队成员身份已变化，请重新组队')
             evidence = OrderGrabReceiptPassEvidence.objects.select_for_update().filter(receipt=old).first()
-            return ProbeOutcome(old.pk, _effective_state(old, evidence), True)
+            state = _effective_state(old, evidence)
+            current = True
+            if order_cancel and state != 'AFTER' and order.status != Order.Status.CANCELLED:
+                latest_id = pool.rounds.select_for_update().order_by('-number').values_list('pk', flat=True).first()
+                current = old.round_id == latest_id
+            return ProbeOutcome(old.pk, state, replayed=True, current_round=current)
+        if replay_only:
+            return None
         if order_invite and len(lifecycle_accounts) != 2:
             raise ValueError('双陪队友不可用')
         if lifecycle_guard:

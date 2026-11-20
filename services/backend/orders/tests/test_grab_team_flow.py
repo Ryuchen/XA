@@ -101,8 +101,11 @@ class GrabTeamFlowTest(APITransactionTestCase):
                             patch('site_messages.order_customer_cancel_notice.enabled', return_value=True):
                         cancelled = self.client.post(endpoint, payload, format='json')
                         repeated = self.client.post(endpoint, payload, format='json')
+                        changed = self.client.post(endpoint, dict(payload, reason='改用另一个原因'), format='json')
                 for response in (cancelled, repeated):
                     self.assertEqual(response.data['data']['status'], 'CANCELLED', response.data)
+                self.assertEqual(changed.status_code, 409, changed.data)
+                self.assertEqual(changed.data.get('errorCode'), 'REQUEST_ID_CONFLICT')
                 refund = order.refund_records.get()
                 wallet_entry = order.transactions.get(tx_type='REFUND')
                 receipt = state.round.receipt_probes.get(kind='BOSS_CANCEL')
@@ -136,6 +139,48 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertEqual(state.round.receipt_probes.get(kind='BOSS_CANCEL').state, 'AFTER')
         self.assertFalse(OrderGrabReviewCancellation.objects.filter(order=order).exists())
         self.assertFalse(order.refund_records.exists())
+
+    def test_earlier_rounds_late_cancel_cannot_cancel_the_reopened_round(self):
+        from orders.grab_receipt_probe import _db_clock
+        from orders.models import OrderGrabRound
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        save_grab_window(30, 0, lambda *args: None)
+        bought = self.create(dispatch_mode='AUTO_GRAB', client_request_id='paid-for-reopen-cancellation')
+        self.assertEqual(bought.data['code'], 0, bought.data)
+        order = Order.objects.get(pk=bought.data['data']['id'])
+        state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
+        _, precision, driver = _db_clock()
+        endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+        payload = {'client_request_id': 'late-before-reopen', 'reason': '取消原轮'}
+        expired = state.round.total_deadline + timedelta(seconds=1)
+        with patch('orders.grab_receipt_probe._db_clock', return_value=(expired, precision, driver)):
+            closed = self.client.post(endpoint, payload, format='json')
+        self.assertEqual(closed.data.get('errorCode'), 'GRAB_CANCEL_CLOSED', closed.data)
+
+        state.status = 'REOPENED'
+        state.save(update_fields=['status'])
+        opened = expired + timedelta(seconds=1)
+        deadline = opened + timedelta(seconds=30)
+        new_round = OrderGrabRound.objects.create(pool=state.round.pool, number=2, opened_at=opened,
+            deadline=deadline, total_deadline=deadline, simultaneous_visibility=True)
+        OrderGrabTeamRoundState.objects.create(round=new_round)
+        now = opened + timedelta(seconds=1)
+        with patch('orders.grab_receipt_probe._db_clock', return_value=(now, precision, driver)):
+            repeated = self.client.post(endpoint, payload, format='json')
+            changed = self.client.post(endpoint, dict(payload, reason='改用另一个原因'), format='json')
+            self.assertEqual(repeated.data.get('errorCode'), 'GRAB_CANCEL_CLOSED', repeated.data)
+            self.assertEqual(changed.status_code, 409, changed.data)
+            self.assertEqual(changed.data.get('errorCode'), 'REQUEST_ID_CONFLICT')
+            self.assertFalse(new_round.receipt_probes.exists())
+            self.assertFalse(order.refund_records.exists())
+            fresh = self.client.post(endpoint, dict(payload, client_request_id='cancel-reopened-round'), format='json')
+        self.assertEqual(fresh.data['data']['status'], 'CANCELLED', fresh.data)
+        original_after_refund = self.client.post(endpoint, payload, format='json')
+        self.assertEqual(original_after_refund.data.get('errorCode'), 'GRAB_CANCEL_CLOSED')
+        self.assertEqual(new_round.receipt_probes.get().request_key, 'cancel-reopened-round')
+        self.assertEqual(order.refund_records.count(), 1)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
