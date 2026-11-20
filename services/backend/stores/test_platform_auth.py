@@ -81,6 +81,84 @@ class PlatformAuthenticationTests(TestCase):
         response = self.client.get('/api/admin/platform/profile', HTTP_AUTHORIZATION='Bearer ' + data['token'])
         self.assertEqual(response.status_code, 401)
 
+    def test_unified_login_can_retry_if_platform_identity_discovery_disconnects(self):
+        url = '/api/admin/auth/password-login'
+        credentials = {'username': self.account.username, 'password': 'test-platform-password'}
+
+        def disconnect(execute, sql, params, many, context):
+            if table in sql.lower():
+                raise InterfaceError('test disconnected during identity discovery')
+            return execute(sql, params, many, context)
+
+        for table in ('stores_platformaccount', 'stores_store'):
+            with self.subTest(table=table):
+                with connections['default'].execute_wrapper(disconnect):
+                    response = self.client.post(url, credentials, format='json')
+                self.assertEqual(response.status_code, 503)
+                self.assertNotIn('data', response.data)
+                self.assertFalse(PlatformLoginChallenge.objects.filter(account=self.account).exists())
+                self.assertEqual(self.codes, [])
+
+        retry = self.client.post(url, credentials, format='json')
+        self.assertEqual(retry.status_code, 200)
+        self.assertEqual(retry.data['data']['identity_kind'], 'platform')
+        self.assertEqual(len(self.codes), 1)
+
+    def test_platform_challenge_can_retry_when_profile_query_disconnects(self):
+        from stores.platform_views import profile as original_profile
+
+        draft = self.login().data['data']
+        challenge_id = draft['smsChallenge']
+        code = self.codes[-1]
+        url = '/api/admin/auth/password-login'
+        data = {'username': self.account.username, 'password': 'test-platform-password',
+                'identityKind': 'platform', 'smsChallenge': challenge_id, 'smsCode': code}
+        def disconnect(execute, sql, params, many, context):
+            raise InterfaceError('test disconnected during platform profile read')
+
+        def disconnected_profile(account):
+            with connections['default'].execute_wrapper(disconnect):
+                return original_profile(account)
+
+        with patch('stores.platform_views.profile', side_effect=disconnected_profile):
+            response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+        self.assertNotIn('data', response.data)
+        challenge = PlatformLoginChallenge.objects.get(pk=challenge_id)
+        self.assertFalse(challenge.consumed)
+        self.assertEqual(challenge.attempts, 0)
+        self.assertFalse(PlatformAuditEvent.objects.filter(
+            account=self.account, action='auth.second_factor_verified').exists())
+
+        retry = self.client.post(url, data, format='json')
+        self.assertEqual(retry.status_code, 200)
+        self.assertEqual(retry.data['data']['profile']['identity_type'], 'platform')
+        challenge.refresh_from_db()
+        self.assertTrue(challenge.consumed)
+        self.assertEqual(challenge.attempts, 1)
+        self.assertEqual(self.client.post(url, data, format='json').status_code, 400)
+
+    def test_platform_refresh_can_retry_after_a_disconnected_control_database(self):
+        tokens = self.sms_login()
+        path = '/api/admin/platform/auth/refresh'
+        payload = {'refresh': tokens['refresh']}
+
+        def disconnect(execute, sql, params, many, context):
+            raise InterfaceError('test disconnected during token validation')
+
+        with connections['default'].execute_wrapper(disconnect):
+            response = self.client.post(path, payload, format='json')
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+        self.assertNotIn('data', response.data)
+
+        retry = self.client.post(path, payload, format='json')
+        self.assertEqual(retry.status_code, 200)
+        fresh_access = retry.data['data']['token']
+        self.assertEqual(self.client.get('/api/admin/platform/profile',
+                        HTTP_AUTHORIZATION='Bearer ' + fresh_access).status_code, 200)
+
     def test_uncertain_delivery_does_not_erase_platform_cooldown(self):
         from users.sms_transport import SmsUnavailable
         with patch('stores.platform_auth.send_verification_code', side_effect=SmsUnavailable('发送结果不明')) as send:

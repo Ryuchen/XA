@@ -3,7 +3,7 @@ import json
 
 from django.conf import settings
 from django.core import signing
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from django.http import JsonResponse
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
@@ -116,7 +116,7 @@ def login_context(username, password, data):
                                   status=409, code='ADMIN_STORE_AMBIGUOUS')
         store, account = matches[0]
         return store, account, gate_data
-    except DatabaseError as exc:
+    except (DatabaseError, InterfaceError) as exc:
         # Never choose the healthy database when an unavailable database might
         # contain another matching identity.
         raise AdminLoginError('门店登录服务暂不可用，请稍后重试', status=503) from exc
