@@ -521,11 +521,12 @@ class StoreLicenseReceipt(DirectoryModel):
 
 
 class LicenseNotice(DirectoryModel):
-    """Durable control-plane outbox entry; never contains an activation secret."""
+    """Durable control-plane reminder with a single entitlement or certificate source."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     event_key = models.CharField(max_length=120, unique=True)
     store = models.ForeignKey(Store, on_delete=models.PROTECT)
-    license_code = models.ForeignKey(StoreLicenseCode, on_delete=models.PROTECT)
+    license_code = models.ForeignKey(StoreLicenseCode, on_delete=models.PROTECT, null=True, blank=True)
+    business_certificate = models.ForeignKey(StoreBusinessCertificate, on_delete=models.PROTECT, null=True, blank=True)
     kind = models.CharField(max_length=16)
     deadline = models.DateTimeField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -536,8 +537,14 @@ class LicenseNotice(DirectoryModel):
     attempts = models.PositiveIntegerField(default=0)
 
     class Meta:
-        constraints = [models.CheckConstraint(condition=models.Q(kind__in=['CANCEL', 'D30', 'D7', 'D1', 'EXPIRY', 'GRACE_END']),
-                                               name='license_notice_kind_valid')]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(kind__in=['CANCEL', 'D30', 'D7', 'D1', 'EXPIRY', 'GRACE_END']),
+                                   name='license_notice_kind_valid'),
+            models.CheckConstraint(condition=(
+                models.Q(license_code__isnull=False, business_certificate__isnull=True)
+                | models.Q(license_code__isnull=True, business_certificate__isnull=False, kind__in=['D30', 'D7', 'D1'])
+            ), name='license_notice_single_source'),
+        ]
 
 
 class PlatformLicenseNotice(DirectoryModel):

@@ -134,6 +134,8 @@ class PlatformBusinessCertificatesView(PlatformStoreManagementBase):
                     target_store_slug=store.slug, target_type='store_business_certificate', target_id=str(record.pk),
                     detail={'expires_on': _metadata(record)['expires_on'], 'supersedes_id': current_id,
                             'request_id': str(record.client_request_id), 'sha256': digest})
+                from .certificate_notices import collect_certificate_notice
+                collect_certificate_notice(store)
         except AccountChangeError as exc:
             return Response({'code': exc.status, 'msg': str(exc)}, status=exc.status)
         except DatabaseError:

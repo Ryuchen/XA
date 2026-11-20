@@ -7,6 +7,8 @@ def deliver_license_notices():
     from django.conf import settings
     if not getattr(settings, 'LICENSE_NOTICE_DISPATCH_ENABLED', True):
         return 0
+    from .certificate_notices import collect_all_certificate_notices
     from .license_notices import collect_all_notices, drain_notices
     collect_all_notices()
+    collect_all_certificate_notices()
     return drain_notices()

@@ -419,6 +419,7 @@ class PlatformLicenseNoticesView(_PlatformLicenseBase):
             for delivery in page[:100]:
                 title, detail = _text(delivery.notice)
                 result.append({'id': delivery.pk, 'store_slug': delivery.notice.store.slug,
+                    'source': 'BUSINESS_CERTIFICATE' if delivery.notice.business_certificate_id else 'LICENSE',
                     'kind': delivery.notice.kind, 'title': title, 'detail': detail,
                     'is_read': delivery.is_read, 'created_at': delivery.created_at.isoformat()})
             return _response({'code': 0, 'data': {'results': result, 'unread': unread,
