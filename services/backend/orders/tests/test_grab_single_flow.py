@@ -156,10 +156,6 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.service.save(update_fields=['game_category'])
         save_grab_window(1, 0, lambda *args: None)
         save_capacity(3, 0, lambda *args: None)
-        from engagement.models import ClubOperationConfig, PointFundingLot
-        ClubOperationConfig.objects.get_or_create(pk=1)
-        PointFundingLot.objects.get_or_create(account=self.boss_account, source_key='grab-single-principal',
-            kind=PointFundingLot.Kind.PREPAID, defaults={'remaining': self.wallet.balance})
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
             SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_' + tier,
                                                   defaults={'value': '0'})
@@ -242,7 +238,7 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual((replay.status_code, replay.data['data']['status']), (200, 'WON'), replay.data)
         self.assertEqual(order.providers.count(), 1)
 
-    def test_due_window_is_advanced_before_boss_cancel(self):
+    def test_boss_cancel_after_first_window_uses_total_deadline(self):
         self.prepare()
         self.auth(self.boss_account)
         response = self.create(dispatch_mode='AUTO_GRAB')
@@ -258,6 +254,8 @@ class GrabSingleFlowTest(APITransactionTestCase):
         self.assertEqual(result.status_code, 200, result.data)
         order.refresh_from_db(); self.wallet.refresh_from_db()
         self.assertEqual((order.status, self.wallet.balance), ('CANCELLED', 100000))
+        receipt = order.grab_pool_snapshot.rounds.get().receipt_probes.get(kind='BOSS_CANCEL')
+        self.assertEqual((receipt.round_phase, receipt.state), ('PARKED', 'BEFORE'))
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')

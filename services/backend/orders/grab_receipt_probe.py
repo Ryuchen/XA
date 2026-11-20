@@ -358,7 +358,11 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
                 raise ValueError('双陪抢单轮次已结束或正在核对')
             phase = state_row.status
             cutoff = round_.total_deadline if phase == 'PARKED' else round_.deadline
-        if (single_flow or team_flow) and phase == 'OPEN':
+        if (single_flow or team_flow) and kind == 'BOSS_CANCEL':
+            # The buyer can cancel until the total wait expires while the
+            # order is unassigned. Keep this receipt out of the OPEN seal.
+            phase, cutoff = 'PARKED', round_.total_deadline
+        elif (single_flow or team_flow) and phase == 'OPEN':
             from .grab_cutoff_watermark import enabled as watermark_enabled
             if watermark_enabled():
                 from .models import OrderGrabCutoffWatermark

@@ -63,6 +63,80 @@ class GrabTeamFlowTest(APITransactionTestCase):
     def test_checkout_rejects_repriced_team_with_same_total(self):
         self.assert_stale_team_checkout_rejected(2, {'price': 10000, 'billing_provider_count': 1})
 
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_CUTOFF_WATERMARK_TESTING=True)
+    def test_owner_cancellation_is_recorded_before_first_round_arbitration(self):
+        from orders import grab_single_flow, grab_team_flow
+        from orders.grab_cutoff_watermark import seal
+        from orders.models import OrderGrabSingleRoundState
+        from site_messages.models import CustomerCancellationNotice
+
+        save_grab_window(30, 0, lambda *args: None)
+        flows = ((1, grab_single_flow, OrderGrabSingleRoundState), (2, grab_team_flow, OrderGrabTeamRoundState))
+        for seats, flow, states in flows:
+            with self.subTest(seats=seats):
+                self.service.fulfillment_provider_count = seats
+                self.service.save(update_fields=['fulfillment_provider_count'])
+                bought = self.create(dispatch_mode='AUTO_GRAB', client_request_id=f'pay-before-cancel-{seats}')
+                self.assertEqual(bought.data['code'], 0, bought.data)
+                order = Order.objects.get(pk=bought.data['data']['id'])
+                state = states.objects.get(round__pool__order=order)
+                after_window = state.round.deadline + timedelta(seconds=1)
+                self.assertLess(after_window, state.round.total_deadline)
+                original_resolve = flow.resolve
+
+                def resolve_after_registration(order_id, **kwargs):
+                    receipt = state.round.receipt_probes.get(kind='BOSS_CANCEL')
+                    self.assertEqual((receipt.state, receipt.round_phase), ('BEFORE', 'PARKED'))
+                    return original_resolve(order_id, **kwargs)
+
+                endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+                payload = {'client_request_id': f'cancel-before-arbitration-{seats}', 'reason': '客户主动取消'}
+                from orders.grab_receipt_probe import _db_clock
+                _, precision, driver = _db_clock()
+                with patch('django.utils.timezone.now', return_value=after_window), \
+                        patch('orders.grab_receipt_probe._db_clock', return_value=(after_window, precision, driver)):
+                    if seats == 2:
+                        self.assertEqual(seal(order.pk, team=True), 'SEALED')
+                    with patch.object(flow, 'resolve', side_effect=resolve_after_registration), \
+                            patch('site_messages.order_customer_cancel_notice.enabled', return_value=True):
+                        cancelled = self.client.post(endpoint, payload, format='json')
+                        repeated = self.client.post(endpoint, payload, format='json')
+                for response in (cancelled, repeated):
+                    self.assertEqual(response.data['data']['status'], 'CANCELLED', response.data)
+                refund = order.refund_records.get()
+                wallet_entry = order.transactions.get(tx_type='REFUND')
+                receipt = state.round.receipt_probes.get(kind='BOSS_CANCEL')
+                notice = CustomerCancellationNotice.objects.get(order=order)
+                self.assertEqual((refund.operator_account_id, wallet_entry.operator_account_id),
+                                 (self.boss_account.pk, self.boss_account.pk))
+                self.assertEqual((notice.receipt_id, notice.refund_id, notice.wallet_transaction_id),
+                                 (receipt.pk, refund.pk, wallet_entry.pk))
+                self.assertIsNotNone(notice.message_id)
+                self.assertFalse(order.providers.exists())
+
+    def test_cancellation_proven_late_does_not_create_a_review_request(self):
+        from orders.grab_receipt_probe import _db_clock
+        from orders.models import OrderGrabReviewCancellation
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        save_grab_window(30, 0, lambda *args: None)
+        bought = self.create(dispatch_mode='AUTO_GRAB', client_request_id='pay-before-late-cancel')
+        self.assertEqual(bought.data['code'], 0, bought.data)
+        order = Order.objects.get(pk=bought.data['data']['id'])
+        state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
+        late = state.round.total_deadline + timedelta(seconds=1)
+        _, precision, driver = _db_clock()
+        with patch('orders.grab_receipt_probe._db_clock', return_value=(late, precision, driver)):
+            response = self.client.post(f'/api/orders/orders/{order.pk}/cancel/',
+                                        {'client_request_id': 'proven-late-cancel'}, format='json')
+
+        self.assertEqual(response.status_code, 409, response.data)
+        self.assertEqual(response.data.get('errorCode'), 'GRAB_CANCEL_CLOSED')
+        self.assertEqual(state.round.receipt_probes.get(kind='BOSS_CANCEL').state, 'AFTER')
+        self.assertFalse(OrderGrabReviewCancellation.objects.filter(order=order).exists())
+        self.assertFalse(order.refund_records.exists())
+
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
     def test_disabled_clock_keeps_existing_team_round_from_legacy_cancel_or_timeout(self):

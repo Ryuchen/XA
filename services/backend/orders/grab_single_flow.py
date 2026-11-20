@@ -112,7 +112,6 @@ def cancel(request, order_id):
         return Response({'code': 404, 'msg': '订单不存在'}, status=404)
     if not enabled():
         return Response({'code': 503, 'msg': '订单取消暂需客服核对，请联系客服'}, status=503)
-    state = _advance_due_round(order_id)
     if state.status == 'CANCELLED':
         return Response({'code': 0, 'msg': '订单已取消，资金及权益已按规则退回', 'data': {'status': 'CANCELLED'}})
     if state.status == 'REVIEW':
@@ -133,6 +132,8 @@ def cancel(request, order_id):
                                {'reason': reason.strip()[:255]}, single_flow=True)
     except ValueError as exc:
         return Response({'code': 400, 'msg': str(exc)}, status=400)
+    if result.state == 'AFTER':
+        return Response({'code': 409, 'errorCode': 'GRAB_CANCEL_CLOSED', 'msg': '订单取消时限已到'}, status=409)
     if result.state != 'BEFORE':
         from .grab_customer_review import request_cancellation
         return request_cancellation(request, order_id)
@@ -158,7 +159,8 @@ def _cancel_order(order, state, *, receipt=None):
             else:
                 refund_fact['refund'] = refund_expired_locked(locked, grab_single_state=state)
         else:
-            refund_fact['refund'] = refund_to_customer(locked, reason=reason)
+            refund_fact['refund'] = refund_to_customer(locked, reason=reason,
+                                                       operator_account=receipt.actor if receipt else None)
         after_cancel(locked, refund_fact['refund'], zero_subsidy)
         locked.cancel_reason = reason
     cancelled = transition(order.pk, Order.Status.CANCELLED,
