@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from .context import current_store
 from .models import Store
 from .permissions import IsPlatformStoreManager, may_manage_stores
+from .provision_claim import StoreAlreadyInitialized
 from .serializers import (StoreCreateSerializer, StoreResumeSerializer, StoreUpdateSerializer,
                           configured_database_aliases, public_store)
 
@@ -19,6 +20,11 @@ def managed_store(store):
             'initialized_at': store.initialized_at,
             'updated_at': store.updated_at,
             'initialization_required': store.initialized_at is None}
+
+
+def _already_initialized(store, *, status=200):
+    return Response({'code': 0, 'msg': '门店已完成初始化，请核对现有账号',
+                     'data': managed_store(store)}, status=status)
 
 
 def _keep_uninitialized_store_closed(store):
@@ -109,6 +115,8 @@ class StoreManageView(APIView):
                 initialize_store(store, admin_username=admin['admin_username'],
                                  admin_password=admin['admin_password'], admin_phone=admin['admin_phone'],
                                  admin_nickname=admin['admin_nickname'], new_database_created=True)
+            except StoreAlreadyInitialized as exc:
+                return _already_initialized(exc.store, status=201)
             except CommandError as exc:
                 _keep_uninitialized_store_closed(store)
                 return Response({'code': 409, 'msg': str(exc),
@@ -189,7 +197,7 @@ class StoreResumeProvisionView(APIView):
             except ValueError:
                 return Response({'code': 409, 'msg': '门店数据库配置不可用，请联系平台运维'}, status=409)
         if store.initialized_at is not None:
-            return Response({'code': 0, 'msg': '门店已完成初始化，请核对现有账号', 'data': managed_store(store)})
+            return _already_initialized(store)
         if store.status != Store.Status.PROVISIONING or store.database_alias not in configured_database_aliases():
             return Response({'code': 409, 'msg': '门店状态或数据库配置不允许恢复初始化'}, status=409)
         from .models import StoreProvisioningClaim
@@ -203,6 +211,8 @@ class StoreResumeProvisionView(APIView):
                 admin_password=serializer.validated_data.get('admin_password'),
                 admin_phone=serializer.validated_data.get('admin_phone'),
                 admin_nickname=serializer.validated_data.get('admin_nickname'), new_database_created=True)
+        except StoreAlreadyInitialized as exc:
+            return _already_initialized(exc.store)
         except CommandError as exc:
             _keep_uninitialized_store_closed(store)
             return Response({'code': 409, 'msg': str(exc), 'errorCode': 'STORE_INITIALIZATION_REQUIRES_REVIEW'}, status=409)

@@ -15,6 +15,14 @@ from .models import Store, StoreProvisioningClaim
 MARKER = 'xa_store_provision_identity'
 
 
+class StoreAlreadyInitialized(CommandError):
+    """A concurrent request has already committed initialization."""
+
+    def __init__(self, store):
+        super().__init__('门店已完成初始化，请核对现有账号')
+        self.store = store
+
+
 def fingerprint(alias):
     identity = database_identity(alias)
     return hashlib.sha256(json.dumps(identity, ensure_ascii=True, separators=(',', ':')).encode()).hexdigest()
@@ -25,7 +33,9 @@ def reserve_claim(store, *, admin_username=None):
     with transaction.atomic(using='default'):
         lock_store_registration()
         current = Store.objects.select_for_update().get(pk=store.pk)
-        if current.initialized_at is not None or current.status != Store.Status.PROVISIONING:
+        if current.initialized_at is not None:
+            raise StoreAlreadyInitialized(current)
+        if current.status != Store.Status.PROVISIONING:
             raise CommandError('仅待初始化门店可申请新数据库')
         try:
             assert_distinct_store_database(current.database_alias, exclude_store_id=current.pk)

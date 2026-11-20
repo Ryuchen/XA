@@ -156,6 +156,66 @@ class PlatformStoreManagementTests(TransactionTestCase):
         self.assertFalse(StoreProvisioningClaim.objects.filter(store__slug='unclaimed-store').exists())
         create_database.assert_not_called()
 
+    def test_concurrent_resume_returns_the_completed_store(self):
+        from .provisioning import create_database
+
+        actor, owner = self.platform('concurrent-resume-owner', 'SUPER_ADMIN')
+        _, other = self.platform('concurrent-resume-other', 'SUPER_ADMIN')
+        store = Store.objects.create(slug='concurrent-resume', name='并发恢复门店', entity_prefix='CR',
+                                     database_alias='store_b', status=Store.Status.PROVISIONING)
+        path = f'/api/admin/platform/store-management/{store.pk}/initialize'
+        data = {'admin_username': 'concurrent-first-owner',
+                'admin_password': 'Synthetic-Concurrent-Resume-Password-2026!',
+                'admin_phone': '13800003333', 'admin_nickname': '首位管理员'}
+
+        def second_request_finishes(alias, *, admin_username=None):
+            with patch('stores.provisioning.create_database', wraps=create_database):
+                completed = other.post(path, data, format='json')
+            self.assertEqual(completed.status_code, 200, completed.data)
+            return create_database(alias, admin_username=admin_username)
+
+        with patch('stores.provisioning.create_database', side_effect=second_request_finishes):
+            resumed = owner.post(path, data, format='json')
+        self.assertEqual(resumed.status_code, 200, resumed.data)
+        store.refresh_from_db()
+        self.assertEqual(resumed.data['data']['initialized_at'], store.initialized_at)
+        self.assertEqual(resumed.data['data']['status'], Store.Status.CONFIGURING)
+        event = PlatformAuditEvent.objects.get(account=actor, action='store.initialize_result')
+        self.assertEqual(event.detail['status_code'], 200)
+        with store_context(store):
+            self.assertEqual(list(ClubAccount.objects.values_list('username', 'account_type')),
+                             [('concurrent-first-owner', 'STAFF')])
+
+    def test_create_returns_registered_store_if_concurrent_resume_has_finished(self):
+        from .provisioning import create_database
+
+        _, owner = self.platform('concurrent-create-owner', 'SUPER_ADMIN')
+        _, recovery = self.platform('concurrent-create-recovery', 'SUPER_ADMIN')
+        path = '/api/admin/platform/store-management'
+        data = {'admin_username': 'registered-owner',
+                'admin_password': 'Synthetic-Concurrent-Create-Password-2026!',
+                'admin_phone': '13800003333', 'admin_nickname': '首位管理员'}
+
+        def recovery_finishes(alias, *, admin_username=None):
+            store = Store.objects.get(database_alias=alias)
+            with patch('stores.provisioning.create_database', wraps=create_database):
+                completed = recovery.post(f'{path}/{store.pk}/initialize', data, format='json')
+            self.assertEqual(completed.status_code, 200, completed.data)
+            return create_database(alias, admin_username=admin_username)
+
+        with patch('stores.provisioning.create_database', side_effect=recovery_finishes):
+            registered = owner.post(path, {
+                'slug': 'create-and-resume', 'name': '并发登记门店', 'entity_prefix': 'CA',
+                'database_alias': 'store_b', **data,
+            }, format='json')
+        self.assertEqual(registered.status_code, 201, registered.data)
+        store = Store.objects.get(slug='create-and-resume')
+        self.assertEqual(registered.data['data']['initialized_at'], store.initialized_at)
+        self.assertEqual(registered.data['data']['status'], Store.Status.CONFIGURING)
+        with store_context(store):
+            self.assertEqual(list(ClubAccount.objects.values_list('username', 'account_type')),
+                             [('registered-owner', 'STAFF')])
+
     def test_command_records_admin_in_registration_before_database_creation(self):
         options = {'slug': 'command-interruption', 'name': '命令登记门店', 'database': 'store_b',
                    'create_database': True, 'admin_username': 'command-owner', 'admin_phone': '13800003333'}
