@@ -2973,6 +2973,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 enqueue_wecom_dispatch(order, KookDispatchRecord.Trigger.NEW_ORDER)
                 _push_message_safe(
                     recipient_id=order.customer_id,
+                    recipient_account_id=order.customer_account_id,
+                    recipient_business_cycle=order.business_cycle,
                     title='客服已为你下单',
                     preview=f'客服为你下单「{order.service_name_snapshot}」，正在为你匹配大神',
                     msg_type='ORDER',
