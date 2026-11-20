@@ -8,20 +8,25 @@ from unittest.mock import patch
 from django.conf import settings
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
+from rest_framework.test import APIClient
 
+from club_accounts.tokens import issue_account_tokens
 from console.capacity_config import save_capacity
 from console.grab_config import save_grab_window
 from orders.grab_admission import GrabAdmissionError, check_candidate
 from orders.grab_bound_ranking import preview
 from orders.grab_config import current_rules
+from orders.grab_pool_snapshot import create_initial_snapshot
 from orders.grab_receipt_probe import record_intent
-from orders.grab_team_draft import attach_pass_evidence, confirm, invite
-from orders.models import OrderGrabRound
+from orders.grab_team_draft import attach_pass_evidence, confirm, first_round, invite
+from orders.models import OrderGrabRound, OrderGrabTeamRoundState
 from orders.paid_service_scope import capture, record
+from orders.tests.factories import make_order, make_service, make_user
 from orders.tests import test_grab_bound_ranking as fixture
 from stores.db import transaction
 from stores.context import resolve_store, store_context
 from stores.tests_hosts import xinan_store
+from wallet.models import SystemConfig
 
 
 @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
@@ -52,6 +57,52 @@ class ReopenedRoundTests(TransactionTestCase):
         with patch('django.utils.timezone.now', return_value=round_.deadline + timedelta(seconds=1)):
             with transaction.atomic():
                 return preview(round_.pk, ids)
+
+    @override_settings(GRAB_POOL_ENTRY_SNAPSHOT_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
+    @patch('club_accounts.provider_lifecycle.lock_provider_operations')
+    def test_team_invitation_replay_does_not_enter_the_reopened_round(self, _lock_provider_operations):
+        captain, partner, other = (item[1] for item in self.users)
+        opened = timezone.now() - timedelta(seconds=40)
+        save_grab_window(30, current_rules()['version'], lambda *args: None)
+        for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
+            SystemConfig.objects.update_or_create(key=f'provider_pass_delay_seconds_{tier}', defaults={'value': '0'})
+        with patch('django.utils.timezone.now', return_value=opened):
+            service = make_service(fulfillment_provider_count=2)
+            order = make_order(make_user(), service=service, payment_status='PAID', escort_mode='DOUBLE')
+            record(order, capture(service))
+            with transaction.atomic():
+                pool = create_initial_snapshot(order.pk)
+                first = first_round(pool.pk)
+                original_state = OrderGrabTeamRoundState.objects.create(round=first)
+        url = f'/api/orders/orders/{order.pk}/grab-team/'
+        payload = {'partner_id': partner.pk, 'client_request_id': 'lost-invitation-response'}
+        with patch('django.utils.timezone.now', return_value=opened + timedelta(seconds=1)):
+            client = APIClient(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(captain)[0])
+            response = client.post(url, payload, format='json')
+        self.assertEqual(response.data['code'], 0, response.data)
+        team_id = response.data['data']['team_id']
+        first_count = first.receipt_probes.count()
+        original_state.status = 'REOPENED'
+        original_state.save(update_fields=['status'])
+        reopened_at = timezone.now() - timedelta(seconds=1)
+        second = OrderGrabRound.objects.create(pool=pool, number=2, opened_at=reopened_at,
+            deadline=reopened_at + timedelta(seconds=30), total_deadline=first.total_deadline,
+            simultaneous_visibility=True)
+        OrderGrabTeamRoundState.objects.create(round=second)
+
+        repeated = client.post(url, payload, format='json')
+
+        self.assertEqual(repeated.data['code'], 0, repeated.data)
+        self.assertEqual(repeated.data['data']['team_id'], team_id)
+        conflict = client.post(url, dict(payload, partner_id=other.pk), format='json')
+        self.assertEqual(conflict.status_code, 409, conflict.data)
+        self.assertEqual(first.receipt_probes.count(), first_count)
+        self.assertFalse(second.receipt_probes.exists())
+        self.assertFalse(second.occupied_seats.exists())
+        fresh = client.post(url, dict(payload, client_request_id='intentional-reopen-invite'), format='json')
+        self.assertEqual(fresh.data['code'], 0, fresh.data)
+        self.assertNotEqual(fresh.data['data']['team_id'], team_id)
+        self.assertEqual(second.receipt_probes.count(), 1)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/团队草稿/积分抢单/退款事实/分组恢复属正式契约深水区（18-盘点 抢单池/积分/陪玩生命周期待联调）；最终联调启用')

@@ -14,6 +14,7 @@ from itertools import islice
 
 from django.conf import settings
 from django.db import DatabaseError
+from django.db.models import Q
 from stores.db import connection, transaction
 from club_accounts.models import ClubAccount
 from club_accounts.provider_lifecycle import ProviderLifecycleError
@@ -29,6 +30,10 @@ class ProbeOutcome:
     receipt_id: int
     state: str
     replayed: bool = False
+
+
+class GrabRequestConflict(ValueError):
+    pass
 
 
 def actor_membership_evidence_present(probe):
@@ -256,6 +261,7 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
     fingerprint = hashlib.sha256(canonical.encode('ascii')).hexdigest()
     lifecycle_accounts = []
     lifecycle_team_ids = None
+    order_invite = team_flow and kind == 'INVITE'
     team_cycle_guard = team_flow and kind in ('INVITE', 'CONFIRM')
     lifecycle_guard = team_cycle_guard or (single_flow and kind == 'SINGLE')
     if lifecycle_guard:
@@ -274,9 +280,10 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
             other_id = lifecycle_team_ids[0]
         if other_id is not None:
             other = ClubAccount.objects.filter(pk=other_id, account_type='PROVIDER').first()
-            if other is None:
+            if other is None and not order_invite:
                 raise ValueError('双陪队友不可用')
-            lifecycle_accounts.append(other)
+            if other is not None:
+                lifecycle_accounts.append(other)
     if single_flow and kind == 'SINGLE':
         from .services import ensure_provider_dispatch_locks
         ensure_provider_dispatch_locks([actor_id])
@@ -305,13 +312,31 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
                 raise ValueError('只能登记本人订单取消')
         elif actor.account_type != 'PROVIDER':
             raise ValueError('仅陪玩可登记抢单意向')
-        old = OrderGrabReceiptProbe.objects.select_for_update().filter(round=round_, actor_id=actor_id,
-                                                                       request_key=request_key).first()
+        matching = OrderGrabReceiptProbe.objects.select_for_update().filter(actor_id=actor_id, request_key=request_key)
+        if order_invite:
+            # The order lock serializes invitations with changes to the active round.
+            matches = list(matching.filter(Q(round=round_) | Q(round__pool_id=pool.pk, kind='INVITE'))
+                           .order_by('pk')[:2])
+            if len(matches) > 1:
+                raise GrabRequestConflict('请求编号关联多个组队登记，请核对原请求')
+            old = matches[0] if matches else None
+        else:
+            old = matching.filter(round=round_).first()
         if old:
             if old.fingerprint != fingerprint or old.kind != kind or old.payload != payload:
-                raise ValueError('请求编号已用于其他登记')
+                conflict = GrabRequestConflict if order_invite else ValueError
+                raise conflict('请求编号已用于其他登记')
+            if order_invite:
+                from club_accounts.provider_lifecycle import provider_membership_current
+                if (len(lifecycle_accounts) != 2 or not actor_membership_evidence_present(old)
+                        or old.actor_business_cycle != lifecycle_accounts[0].business_cycle
+                        or old.invitee_business_cycle != lifecycle_accounts[1].business_cycle
+                        or not all(provider_membership_current(account) for account in lifecycle_accounts)):
+                    raise GrabRequestConflict('原组队成员身份已变化，请重新组队')
             evidence = OrderGrabReceiptPassEvidence.objects.select_for_update().filter(receipt=old).first()
             return ProbeOutcome(old.pk, _effective_state(old, evidence), True)
+        if order_invite and len(lifecycle_accounts) != 2:
+            raise ValueError('双陪队友不可用')
         if lifecycle_guard:
             from club_accounts.provider_lifecycle import provider_membership_current
             if not all(provider_membership_current(account) for account in lifecycle_accounts):

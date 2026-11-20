@@ -94,21 +94,28 @@ class TeamInviteView(APIView):
         partner = request.data.get('partner_id')
         if not state or type(partner) is not int or partner <= 0 or partner == request.account.pk:
             return Response({'code': 400, 'msg': '请选择其他陪玩组队'}, status=400)
+        from .grab_receipt_probe import GrabRequestConflict, record_intent
         try:
             key = _request_key(request)
-            from .grab_receipt_probe import record_intent
             result = record_intent(state.round_id, request.account.pk, 'INVITE', key,
                                    {'partner_id': partner}, team_flow=True, actor_snapshot=request.account)
+        except GrabRequestConflict as exc:
+            return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT', 'msg': str(exc)}, status=409)
         except ValueError as exc:
             return Response({'code': 400, 'msg': str(exc)}, status=400)
-        if result.state == 'AFTER':
-            team = OrderGrabTeamDraft.objects.get(round_id=state.round_id, captain=request.account, request_key=key)
+        if result.state not in ('BEFORE', 'AFTER'):
+            return Response({'code': 409, 'msg': '邀请时间已截止或待核对'}, status=409)
+        team = OrderGrabTeamDraft.objects.filter(round__pool__order_id=order_id,
+            round__receipt_probes__pk=result.receipt_id, captain=request.account, partner_id=partner, request_key=key).first()
+        if not team:
+            return Response({'code': 409, 'msg': '原组队登记待核对'}, status=409)
+        if result.state == 'AFTER' and team.round_id == state.round_id:
             _release_late_team(team.pk, confirmation=False, receipt_id=result.receipt_id)
         if result.state != 'BEFORE':
             return Response({'code': 409, 'msg': '邀请时间已截止或待核对'}, status=409)
-        team = OrderGrabTeamDraft.objects.get(round_id=state.round_id, captain=request.account, request_key=key)
-        from site_messages.grab_invite import schedule
-        schedule(result.receipt_id)
+        if team.round_id == state.round_id:
+            from site_messages.grab_invite import schedule
+            schedule(result.receipt_id)
         return Response({'code': 0, 'data': {'team_id': team.pk, 'status': team.status}})
 
 
