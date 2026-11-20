@@ -16,7 +16,7 @@ from .serializers import (StoreCreateSerializer, StoreResumeSerializer, StoreUpd
 
 
 def managed_store(store):
-    return {**public_store(store), 'database_alias': store.database_alias,
+    return {**public_store(store), 'background_url': store.background_url, 'database_alias': store.database_alias,
             'initialized_at': store.initialized_at,
             'updated_at': store.updated_at,
             'initialization_required': store.initialized_at is None}

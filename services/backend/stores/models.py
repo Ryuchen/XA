@@ -52,6 +52,8 @@ class Store(DirectoryModel):
     ])
     currency_name = models.CharField(max_length=16, default='浪花')
     logo_url = models.CharField(max_length=500, blank=True, default='')
+    background_url = models.CharField(max_length=500, blank=True, default='')
+    introduction = models.TextField(max_length=2000, blank=True, default='')
     database_alias = models.CharField(max_length=64, unique=True, editable=False)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PROVISIONING, db_index=True)
     initialized_at = models.DateTimeField(null=True, blank=True)

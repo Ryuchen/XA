@@ -32,6 +32,7 @@ class PlatformStoreManagementBase(APIView):
         # arbitrary error strings into the platform audit record.
         field_names = sorted(set(request.data).intersection({
             'slug', 'name', 'entity_prefix', 'provider_name_prefix', 'currency_name', 'database_alias', 'status', 'logo_url',
+            'background_url', 'introduction',
             'boss_url', 'provider_url', 'admin_url', 'admin_username', 'admin_phone', 'admin_nickname',
         }))
         try:
@@ -51,6 +52,7 @@ class PlatformStoreManagementBase(APIView):
                 pass  # The previously recorded request remains available for review.
             labels = {'slug': '门店标识', 'name': '门店名称', 'entity_prefix': '编号前缀', 'provider_name_prefix': '陪玩展示简称',
                       'currency_name': '店币名称', 'database_alias': '业务库', 'status': '门店状态',
+                      'background_url': '门店背景', 'introduction': '门店介绍',
                       'boss_url': '老板端入口', 'provider_url': '陪玩端入口', 'admin_url': '后台入口',
                       'admin_username': '管理员账号', 'admin_password': '管理员密码',
                       'admin_phone': '管理员手机号', 'admin_nickname': '管理员昵称', 'non_field_errors': '门店信息'}

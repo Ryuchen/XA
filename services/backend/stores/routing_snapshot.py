@@ -21,6 +21,7 @@ SALT = 'xa.store-routing.snapshot.v1'
 FIELDS = ('id', 'slug', 'name', 'entity_prefix', 'provider_name_prefix', 'currency_name',
           'logo_url', 'database_alias', 'status', 'initialized_at', 'boss_url', 'provider_url',
           'admin_url', 'created_at', 'updated_at')
+PRESENTATION_FIELDS = ('background_url', 'introduction')
 TIMES = frozenset({'initialized_at', 'created_at', 'updated_at'})
 
 
@@ -34,12 +35,17 @@ def capture(store, revision):
     if (store.database_alias == 'default' or store.database_alias not in getattr(settings, 'STORE_DATABASE_ALIASES', ())
             or type(revision) is not int or revision < 0 or not store.pk or not store.initialized_at):
         raise ValueError('门店路由状态尚未完成初始化')
+    # Keep the exact v2 representation until a real directory update adds
+    # presentation data and advances the store's revision.
+    has_presentation = any(getattr(store, field) for field in PRESENTATION_FIELDS)
+    fields = FIELDS + PRESENTATION_FIELDS if has_presentation else FIELDS
     values = {field: (getattr(store, field).isoformat() if field in TIMES and getattr(store, field) is not None
-                      else getattr(store, field)) for field in FIELDS}
+                      else getattr(store, field)) for field in fields}
     from .models import StoreDomain
     domains = list(StoreDomain.objects.filter(store_id=store.pk).order_by('hostname')
                    .values('hostname', 'revision', 'active'))
-    return {'schema': 2, 'revision': revision, 'database_identity': list(database_identity(store.database_alias)),
+    return {'schema': 3 if has_presentation else 2, 'revision': revision,
+            'database_identity': list(database_identity(store.database_alias)),
             'store': values, 'domains': domains}
 
 
@@ -51,9 +57,12 @@ def _validated(row, alias, *, expected_slug=None):
         if not any(hmac.compare_digest(row.signature, _signature(row.payload, secret)) for secret in secrets):
             return None
         payload = row.payload
-        if (set(payload) != {'schema', 'revision', 'database_identity', 'store', 'domains'} or payload['schema'] != 2
+        schema = payload.get('schema')
+        fields = FIELDS + PRESENTATION_FIELDS if schema == 3 else FIELDS
+        if (set(payload) != {'schema', 'revision', 'database_identity', 'store', 'domains'}
+                or type(schema) is not int or schema not in (2, 3)
                 or type(payload['revision']) is not int or payload['revision'] < 0
-                or not isinstance(payload['store'], dict) or set(payload['store']) != set(FIELDS)):
+                or not isinstance(payload['store'], dict) or set(payload['store']) != set(fields)):
             return None
         domains = payload['domains']
         if (not isinstance(domains, list) or any(not isinstance(item, dict)
@@ -77,6 +86,8 @@ def _validated(row, alias, *, expected_slug=None):
                 return None
         if not all(isinstance(data[key], str) for key in (
                 'name', 'provider_name_prefix', 'currency_name', 'logo_url', 'boss_url', 'provider_url', 'admin_url')):
+            return None
+        if schema == 3 and not all(isinstance(data[key], str) for key in PRESENTATION_FIELDS):
             return None
         if data['entity_prefix'] is not None and not isinstance(data['entity_prefix'], str):
             return None

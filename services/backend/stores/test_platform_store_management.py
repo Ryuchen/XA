@@ -1,11 +1,16 @@
 """Platform identity creates a store without impersonating a store employee."""
 import json
+from io import BytesIO
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.core.management import call_command
 from django.db import DatabaseError
 from django.core.management.base import CommandError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TransactionTestCase, override_settings
+from django.utils import timezone
+from PIL import Image
 from rest_framework.test import APIClient
 
 from club_accounts.models import ClubAccount
@@ -84,6 +89,85 @@ class PlatformStoreManagementTests(TransactionTestCase):
             result = owner.post('/api/admin/platform/store-management', {'slug': 'not-created'}, format='json')
         self.assertEqual(result.status_code, 503)
         self.assertFalse(Store.objects.filter(slug='not-created').exists())
+
+    def test_store_background_and_introduction_follow_the_store_directory(self):
+        actor, owner = self.platform('presentation-owner', 'SUPER_ADMIN')
+        _, finance = self.platform('presentation-finance', 'FINANCE')
+        branch = Store.objects.create(slug='xinan', name='兴安电竞', database_alias='store_b',
+                                      initialized_at=timezone.now(), status=Store.Status.CONFIGURING)
+        route = f'/api/admin/platform/store-management/{branch.pk}'
+        asset_route = route + '/background-upload'
+
+        def background():
+            stream = BytesIO()
+            Image.new('RGB', (1280, 720), 'navy').save(stream, format='PNG')
+            return SimpleUploadedFile('background.png', stream.getvalue(), content_type='image/png')
+
+        with TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media, MEDIA_BASE_URL=''):
+            self.assertEqual(finance.post(asset_route, {'image': background()}, format='multipart').status_code, 403)
+            upload = owner.post(asset_route, {'image': background()}, format='multipart')
+            self.assertEqual(upload.status_code, 200, upload.content)
+            image_url = upload.data['data']['url']
+            uploaded = PlatformAuditEvent.objects.get(account=actor, action='store.background.upload',
+                                                      target_store_slug=branch.slug)
+            self.assertEqual(uploaded.detail['url'], image_url)
+            timestamp = branch.updated_at.isoformat()
+            changed = owner.patch(route, {'background_url': image_url, 'introduction': '  本店提供战术陪练。 ',
+                                          'expected_updated_at': timestamp}, format='json')
+            self.assertEqual(changed.status_code, 200, changed.content)
+            self.assertEqual(changed.data['data']['introduction'], '本店提供战术陪练。')
+            self.assertEqual(owner.patch(route, {'introduction': '旧版本', 'expected_updated_at': timestamp},
+                                         format='json').status_code, 409)
+            event = PlatformAuditEvent.objects.filter(account=actor, action='store.update_requested').order_by('pk').first()
+            self.assertEqual(event.detail['fields'], ['background_url', 'introduction'])
+            other = Store.objects.get(slug='shenglang')
+            denied = owner.patch(f'/api/admin/platform/store-management/{other.pk}', {
+                'background_url': image_url.split('?')[0], 'expected_updated_at': other.updated_at.isoformat(),
+            }, format='json')
+            self.assertEqual(denied.status_code, 400, denied.content)
+            checks = {row['key']: row['status'] for row in owner.get(route + '/setup/readiness').data['data']['checks']}
+            self.assertEqual((checks['store_background'], checks['store_introduction']), ('READY', 'READY'))
+            customer = APIClient(HTTP_HOST='xa.esports.club')
+            self.assertEqual(customer.get('/api/stores/current/').status_code, 403)
+            Store.objects.filter(pk=branch.pk).update(status=Store.Status.ACTIVE)
+            metadata = customer.get('/api/stores/current/').data['data']
+            self.assertEqual((metadata['background_url'], metadata['introduction']),
+                             (image_url, '本店提供战术陪练。'))
+            self.assertEqual(customer.get(image_url).status_code, 200)
+            self.assertEqual(APIClient(HTTP_HOST='sl.esports.club').get(image_url).status_code, 400)
+            other.initialized_at = timezone.now()
+            other.save(update_fields=['initialized_at'])
+            other_route = f'/api/admin/platform/store-management/{other.pk}'
+            other_upload = owner.post(other_route + '/background-upload', {'image': background()}, format='multipart')
+            self.assertEqual(other_upload.status_code, 200, other_upload.content)
+            other_image = other_upload.data['data']['url']
+            changed = owner.patch(other_route, {'background_url': other_image,
+                'expected_updated_at': other.updated_at.isoformat()}, format='json')
+            self.assertEqual(changed.status_code, 200, changed.content)
+            self.assertEqual(changed.data['data']['background_url'], other_image)
+
+    @override_settings(ISOLATED_CONTROL_PLANE=True)
+    def test_presentation_keeps_old_signed_routes_and_requires_a_new_revision(self):
+        from .routing_snapshot import capture, lookup, publish
+
+        branch = Store.objects.create(slug='xinan', name='兴安电竞', database_alias='store_b',
+                                      initialized_at=timezone.now(), status=Store.Status.ACTIVE)
+        old = capture(branch, 0)
+        self.assertEqual(old['schema'], 2)
+        publish(old)
+        self.assertEqual(lookup(branch.slug).introduction, '')
+        branch.introduction = '本店公开介绍'
+        with self.assertRaisesMessage(ValueError, '同一门店路由版本内容不一致'):
+            publish(capture(branch, 0))
+        _, owner = self.platform('presentation-snapshot-owner', 'SUPER_ADMIN')
+        changed = owner.patch(f'/api/admin/platform/store-management/{branch.pk}', {
+            'introduction': branch.introduction, 'expected_updated_at': branch.updated_at.isoformat(),
+        }, format='json')
+        self.assertEqual(changed.status_code, 200, changed.content)
+        publish(old)
+        with patch('stores.context._fetch_store', side_effect=DatabaseError('control offline')):
+            offline = resolve_store(branch.slug, allow_cached=True)
+        self.assertEqual(offline.introduction, '本店公开介绍')
 
     def test_resume_rejects_unverified_database_and_keeps_password_out_of_audit(self):
         actor, owner = self.platform('resume-platform-owner', 'SUPER_ADMIN')

@@ -1,6 +1,8 @@
 from django.conf import settings
+from django.utils.html import strip_tags
 from rest_framework import serializers
 
+from .media import public_background_url
 from .models import Store
 from .hosts import store_entry_url
 
@@ -39,6 +41,8 @@ def public_store(store):
         'entity_prefix': store.entity_prefix,
         'provider_name_prefix': store.provider_name_prefix,
         'logo_url': build_media_url_from_path(None, bounded_public_image_url(store.logo_url)),
+        'background_url': public_background_url(store),
+        'introduction': store.introduction,
         'status': store.status, 'is_active': store.is_active,
         'boss_url': store_entry_url(store.boss_url, store.slug),
         'provider_url': store_entry_url(store.provider_url, store.slug),
@@ -53,12 +57,18 @@ def configured_database_aliases():
             if alias in settings.DATABASES and alias not in ('default', template)]
 
 
+def validate_introduction(value):
+    if strip_tags(value) != value:
+        raise serializers.ValidationError('请填写纯文本介绍')
+
+
 class StoreCreateSerializer(serializers.ModelSerializer):
     database_alias = serializers.CharField(max_length=64, required=False)
     entity_prefix = serializers.CharField(max_length=4, required=True, allow_blank=False)
     provider_name_prefix = serializers.CharField(max_length=8, required=False)
     currency_name = serializers.CharField(max_length=16, required=False, allow_blank=True)
     logo_url = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    introduction = serializers.CharField(max_length=2000, required=False, allow_blank=True, validators=[validate_introduction])
     admin_username = serializers.CharField(max_length=150, required=False, write_only=True)
     admin_password = serializers.CharField(required=False, write_only=True, trim_whitespace=False)
     admin_phone = serializers.CharField(max_length=20, required=False, write_only=True)
@@ -66,7 +76,7 @@ class StoreCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Store
-        fields = ['slug', 'name', 'entity_prefix', 'provider_name_prefix', 'currency_name', 'logo_url', 'database_alias', 'boss_url', 'provider_url', 'admin_url',
+        fields = ['slug', 'name', 'entity_prefix', 'provider_name_prefix', 'currency_name', 'logo_url', 'introduction', 'database_alias', 'boss_url', 'provider_url', 'admin_url',
                   'admin_username', 'admin_password', 'admin_phone', 'admin_nickname']
 
     def validate_logo_url(self, value):
@@ -167,17 +177,31 @@ class StoreResumeSerializer(serializers.Serializer):
 
 class StoreUpdateSerializer(serializers.ModelSerializer):
     logo_url = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    introduction = serializers.CharField(max_length=2000, required=False, allow_blank=True, validators=[validate_introduction])
     provider_name_prefix = serializers.CharField(max_length=8, required=False)
 
     class Meta:
         model = Store
-        fields = ['name', 'provider_name_prefix', 'currency_name', 'logo_url', 'status', 'boss_url', 'provider_url', 'admin_url']
+        fields = ['name', 'provider_name_prefix', 'currency_name', 'logo_url', 'background_url', 'introduction',
+                  'status', 'boss_url', 'provider_url', 'admin_url']
 
     def validate_provider_name_prefix(self, value):
         return validate_provider_name_prefix(value)
 
     def validate_logo_url(self, value):
         return validate_store_logo_url(value, self.context.get('request'))
+
+    def validate_background_url(self, value):
+        if not value:
+            return value
+        from django.core.files.storage import default_storage
+        from .context import store_context
+        from .media import verified_background_path
+        with store_context(self.instance):
+            name = verified_background_path(value)
+            if not name:
+                raise serializers.ValidationError('请上传并选择本店可读取的背景图片')
+            return default_storage.url(name)
 
     def validate_name(self, value):
         value = value.strip()

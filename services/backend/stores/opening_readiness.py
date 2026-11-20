@@ -21,6 +21,7 @@ from wallet.models import SystemConfig
 
 from .hosts import DEFAULT_HOST_BINDINGS
 from .license_status import status_for_store
+from .media import verified_background_path
 from .opening_materials import order_notice_evidence, store_logo_present
 
 
@@ -149,6 +150,8 @@ def opening_readiness(store, permissions, *, license_status=None):
         details={'boss_configured': boss_ready, 'provider_configured': provider_ready})
 
     add('store_logo', store_logo_present(store, usable_domains), '请上传并保存可读取的本店 Logo')
+    add('store_background', bool(verified_background_path(store.background_url)), '请上传并保存可读取的本店背景')
+    add('store_introduction', bool(store.introduction.strip()), '请填写本店公开介绍')
     notice = order_notice_evidence(timezone.now())
     add('order_notice', notice is not None, '请发布老板端可查看的下单须知', details=notice)
     add('support_contact', selectable_cards().exists(), '请启用至少一张绑定本店在职后台员工的客服名片')
