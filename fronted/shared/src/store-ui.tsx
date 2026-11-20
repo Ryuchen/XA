@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, createApiClient } from "./client.ts";
 import { clearSession, useSession, type Role } from "./session.ts";
-import { adoptLegacyStoreStorage, canonicalizeStoreUrl, getStoreSlug, isAdminEntry, registerStoreCurrency, storeBrandLogo, switchStore, validStoreSlug } from "./store.ts";
+import { adoptLegacyStoreStorage, canonicalizeStoreUrl, getStoreSlug, hostStoreSlug, isAdminEntry, registerStoreCurrency, storeBrandLogo, switchStore, validStoreSlug } from "./store.ts";
 import type { H5Entitlement, H5Branding } from "./saas";
+import { StoreClosedPage } from "./store-closed";
 
 export interface StoreInfo {
   id: number;
@@ -23,11 +24,14 @@ export interface StoreInfo {
   boss_h5?: { entitlement: H5Entitlement; branding: H5Branding };
 }
 const StoreContext = createContext<StoreInfo | null>(null);
+// The same 403 is also used for routing and database failures.
+const closedStoreMessage = "门店尚未开放或已停用，请联系门店管理员";
+const entryNames = { admin: "管理后台", boss: "老板服务中心", provider: "陪玩工作台" };
 const neutralAdminStore: StoreInfo = {
   id: 0, slug: "", name: "电竞运营管理平台", status: "ACTIVE", is_active: true,
   boss_url: "", provider_url: "", admin_url: "/", can_manage_stores: false,
 };
-function applyStoreFavicon(store: StoreInfo) {
+function applyStoreFavicon(store: Pick<StoreInfo, "slug" | "logo_url">) {
   const href = storeBrandLogo(store, import.meta.env.BASE_URL);
   let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
   if (!link) {
@@ -97,7 +101,10 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
   const slug = getStoreSlug();
   const neutralAdmin = role === "admin" && isAdminEntry() && !session.token;
   const [store, setStore] = useState<StoreInfo | null>(null);
-  const [error, setError] = useState("");
+  const scope = `${role}:${slug}:${session.revision}`;
+  const [failure, setFailure] = useState<{
+    scope: string; attempt: number; message: string; closed: boolean; checkedAt: Date;
+  } | null>(null);
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     const refresh = () => setRetry((value) => value + 1);
@@ -106,25 +113,37 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
   }, []);
   useEffect(() => {
     const controller = new AbortController();
-    setError("");
+    function fail(message: string, closed = false) {
+      setStore(null);
+      setFailure({ scope, attempt: retry, message, closed, checkedAt: new Date() });
+      document.title = `${closed ? "门店暂未开放" : "暂时无法进入门店"} · ${entryNames[role]}`;
+      if (closed && role !== "admin" && hostStoreSlug(location.hostname) === slug) applyStoreFavicon({ slug });
+    }
     if (neutralAdmin) {
       setStore(null);
+      setFailure(null);
       canonicalizeStoreUrl();
       document.title = `${neutralAdminStore.name} · 管理后台`;
       applyStoreFavicon(neutralAdminStore);
       return;
     }
-    if (!validStoreSlug(slug)) { setStore(null); setError("门店入口无效，请联系门店获取正确链接"); return; }
+    if (!validStoreSlug(slug)) { fail("门店入口无效，请联系门店获取正确链接"); return; }
     try { canonicalizeStoreUrl(); adoptLegacyStoreStorage(); }
-    catch { setStore(null); setError("无法保存门店状态或恢复原交易请求，请检查浏览器存储后重试"); return; }
+    catch { fail("无法保存门店状态或恢复原交易请求，请检查浏览器存储后重试"); return; }
     void createApiClient(role).get<StoreInfo>("/stores/current/", undefined, { signal: controller.signal, public: !session.token })
       .then((value) => {
         if (controller.signal.aborted) return;
+        if (!value || value.slug !== slug) { fail("门店信息与当前入口不一致，请核对门店链接"); return; }
         const configuringAdmin = role === "admin" && isAdminEntry() && !!session.token && value.status === "CONFIGURING";
-        if (value.slug !== slug || (!configuringAdmin && (value.is_active === false || value.status !== "ACTIVE"))) throw new Error("该门店尚未开通或已停用，请联系门店负责人");
+        if (!configuringAdmin && (value.is_active === false || value.status !== "ACTIVE")) {
+          const closed = value.is_active === false || ["PROVISIONING", "CONFIGURING", "DISABLED"].includes(value.status);
+          fail(closed ? closedStoreMessage : "无法确认门店营业状态，请稍后重试", closed);
+          return;
+        }
         registerStoreCurrency(slug, value.currency_name);
+        setFailure(null);
         setStore(value);
-        document.title = `${value.name} · ${{ admin: "管理后台", boss: "老板服务中心", provider: "陪玩工作台" }[role]}`;
+        document.title = `${value.name} · ${entryNames[role]}`;
         applyStoreFavicon(value);
       })
       .catch((cause) => {
@@ -133,12 +152,16 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
           clearSession(role);
           return;
         }
-        setStore(null);
-        setError(cause instanceof Error ? cause.message : "门店暂时无法读取，请重试");
+        fail(cause instanceof Error ? cause.message : "门店暂时无法读取，请重试",
+          cause instanceof ApiError && cause.status === 403 && cause.message === closedStoreMessage);
       });
     return () => controller.abort();
-  }, [role, slug, session.revision, neutralAdmin, retry]);
+  }, [role, slug, scope, neutralAdmin, retry]);
   if (neutralAdmin) return <StoreContext.Provider key={`admin:neutral:${session.revision}`} value={neutralAdminStore}>{children}</StoreContext.Provider>;
+  const issue = failure?.scope === scope ? failure : null;
+  if (issue?.closed && role !== "admin") return <StoreClosedPage role={role} entryName={entryNames[role]}
+    checkedAt={issue.checkedAt} checking={issue.attempt !== retry} onRetry={() => setRetry(value => value + 1)} />;
+  const error = issue?.attempt === retry ? issue.message : "";
   if (!store || store.slug !== slug || error) return <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6 py-12 text-foreground">
     <h1 className="text-xl font-semibold">{error ? "暂时无法进入门店" : "正在确认门店…"}</h1>
     {error && <><p role="alert" className="text-sm text-destructive">{error}</p><button className="min-h-10 self-start rounded-md border px-4 text-sm" onClick={() => setRetry((value) => value + 1)}>重试</button><p className="text-sm text-muted-foreground">如仍无法进入，请联系当前门店。</p></>}

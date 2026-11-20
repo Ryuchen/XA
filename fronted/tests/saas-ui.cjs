@@ -5,6 +5,7 @@ const { chromium } = require('playwright')
 const fs = require('node:fs')
 const path = require('node:path')
 const assert = require('node:assert/strict')
+const checkStoreClosed = require('./store-closed.cjs')
 const out = path.resolve('.tools/saas-frontend-20261111')
 fs.mkdirSync(out, { recursive: true })
 const report = { contractChecks: [], realReadOnlyChecks: [], errors: [] }
@@ -261,7 +262,7 @@ async function realSmoke(browser) {
 }
 ;(async () => {
   const browser = await chromium.launch({ headless: true })
-  try { await contractTests(browser); await bossBrandTests(browser); await providerJourneyTests(browser); await realSmoke(browser); assert.deepEqual(report.errors, []) }
+  try { await checkStoreClosed(browser); await contractTests(browser); await bossBrandTests(browser); await providerJourneyTests(browser); await realSmoke(browser); assert.deepEqual(report.errors, []) }
   finally { await browser.close(); fs.writeFileSync(path.join(out, 'ui-results.json'), JSON.stringify(report, null, 2)) }
   console.log(JSON.stringify(report, null, 2))
 })().catch(error => { console.error(error.stack); process.exitCode = 1 })
