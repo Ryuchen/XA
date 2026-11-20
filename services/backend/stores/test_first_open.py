@@ -171,6 +171,56 @@ class FirstOpenTests(TransactionTestCase):
         self.assertEqual(store.status, Store.Status.CONFIGURING)
         self.assertFalse(StoreRoutingRevision.objects.filter(store=store).exists())
 
+    @override_settings(ISOLATED_CONTROL_PLANE=True, STORE_DATABASE_ALIASES=('store_a', 'store_b'))
+    def test_certificate_expiring_while_preparing_route_rolls_back_opening(self):
+        from io import BytesIO
+        from uuid import uuid4
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+        from stores import routing_snapshot
+        from stores.business_certificates import CERTIFICATE_TIMEZONE, certificate_evidence
+
+        store = self.stores[0]
+        now = timezone.now()
+        expires = (timezone.localtime(now, CERTIFICATE_TIMEZONE) + timedelta(days=1)).replace(
+            hour=23, minute=59, second=0, microsecond=0)
+        with store_context(store):
+            owner = admin('opening-certificate-owner', super_admin=True)
+        self.activate_opening_license(store, owner.pk, kind='INITIAL', tier='PRO',
+                                      starts_at=now, ends_at=expires+timedelta(days=1))
+        asset = BytesIO()
+        Image.new('RGB', (32, 24), 'navy').save(asset, format='PNG')
+        base = f'/api/admin/platform/store-management/{store.pk}'
+        uploaded = self.client.post(base + '/business-certificates', {
+            'document': SimpleUploadedFile('certificate.png', asset.getvalue(), content_type='image/png'),
+            'expires_on': expires.date().isoformat(), 'long_term': False, 'expected_certificate_id': '',
+            'client_request_id': str(uuid4()), 'confirm_verified': True,
+        }, format='multipart')
+        self.assertEqual(uploaded.status_code, 201, uploaded.content)
+        evidence = certificate_evidence(store, expires)
+        self.assertEqual(evidence['status'], 'VALID')
+        clock = expires
+        schedule = routing_snapshot.schedule
+
+        def delay_before_commit(*args):
+            nonlocal clock
+            schedule(*args)
+            clock = expires + timedelta(minutes=1)
+
+        readiness = {'can_open': True, 'checks': [{'key': 'business_certificate', 'details': evidence}]}
+        with (patch('stores.opening_readiness.opening_readiness', return_value=readiness),
+              patch('django.utils.timezone.now', side_effect=lambda: clock),
+              patch.object(routing_snapshot, 'schedule', side_effect=delay_before_commit),
+              patch.object(routing_snapshot, 'publish') as publish):
+            response = self.client.post(base + '/setup/readiness', {'confirm': True}, format='json')
+            self.assertEqual(response.status_code, 409, response.content)
+            self.assertEqual(response.data['errorCode'], 'STORE_OPENING_CERTIFICATE_EXPIRED')
+            publish.assert_not_called()
+        store.refresh_from_db()
+        self.assertEqual(store.status, Store.Status.CONFIGURING)
+        self.assertFalse(StoreRoutingRevision.objects.filter(store=store).exists())
+        self.assertFalse(PlatformAuditEvent.objects.filter(action='store.first_opened', target_store_slug=store.slug).exists())
+
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_open_valid_store_and_leave_other_store_closed(self):

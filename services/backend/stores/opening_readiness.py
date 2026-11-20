@@ -19,6 +19,7 @@ from orders.reservation_deadlines import CONFIG_KEY as RESERVATION_KEY
 from support.assignment import selectable_cards
 from wallet.models import SystemConfig
 
+from .business_certificates import certificate_evidence
 from .hosts import DEFAULT_HOST_BINDINGS
 from .license_status import status_for_store
 from .media import verified_background_path
@@ -84,6 +85,12 @@ def opening_readiness(store, permissions, *, license_status=None):
     add('license', license_status['can_open_store'],
         '授权在有效期内' if license_status['can_open_store'] else '首次开业须先激活有效期内的门店授权',
         details={'status': license_status['status'], 'tier': license_status['tier']})
+    certificate = certificate_evidence(store, timezone.now())
+    certificate_messages = {'VALID': '本店证照已核对且在有效期内', 'MISSING': '请保存并核对本店营业执照',
+                            'EXPIRED': '本店证照已到期，请登记新证照',
+                            'DOCUMENT_UNAVAILABLE': '本店证照原件无法核对，请检查证照记录'}
+    add('business_certificate', certificate['status'] == 'VALID', certificate_messages[certificate['status']],
+        details=certificate)
     admin_methods = admin_login_readiness()
     add('store_admin', bool(admin_methods),
         '至少一名本店超级管理员须绑定 OTP，或有已验证手机号及短信配置、已绑定微信及入口配置；外部渠道仍需实际联调',

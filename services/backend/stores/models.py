@@ -186,6 +186,25 @@ class PlatformAuditEvent(DirectoryModel):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
 
+class StoreBusinessCertificate(DirectoryModel):
+    """Original evidence confirmed by the platform and retained on replacement."""
+
+    store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='business_certificates')
+    confirmed_by = models.ForeignKey(PlatformAccount, on_delete=models.PROTECT)
+    supersedes = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
+    client_request_id = models.UUIDField()
+    expires_on = models.DateField(null=True, blank=True)
+    document = models.BinaryField(editable=False)
+    content_type = models.CharField(max_length=20)
+    sha256 = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-id']
+        constraints = [models.UniqueConstraint(fields=['store', 'client_request_id'],
+                                               name='store_business_certificate_request_unique')]
+
+
 class PlatformWithdrawalAuditReceipt(DirectoryModel):
     """Exactly one control-plane audit for an already committed tenant event."""
     store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='withdrawal_audit_receipts')

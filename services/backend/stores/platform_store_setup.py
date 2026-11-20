@@ -1,5 +1,6 @@
 """Platform-super-admin setup without impersonating a store employee."""
 from collections.abc import Mapping
+from datetime import date
 import hashlib
 import json
 from uuid import uuid4
@@ -302,6 +303,7 @@ class PlatformOpeningReadinessView(PlatformSetupBase):
         if not isinstance(request.data, Mapping) or set(request.data) != {'confirm'} or request.data['confirm'] is not True:
             return Response({'code': 400, 'msg': '请确认提交开业核验'}, status=400)
         try:
+            from .business_certificates import expired
             from .opening_readiness import opening_readiness
             from .license_status import status_for_store
             with directory_transaction.atomic(using='default'):
@@ -337,6 +339,9 @@ class PlatformOpeningReadinessView(PlatformSetupBase):
                     raise SetupError('授权已变化，请重新核对开业条件', 409, 'STORE_OPENING_LICENSE_CHANGED')
                 if now >= parse_datetime(current_license['ends_at']):
                     raise SetupError('授权已到期，请重新确认后再开业', 409, 'STORE_OPENING_LICENSE_EXPIRED')
+                certificate = next((row['details'] for row in result['checks'] if row['key'] == 'business_certificate'), None)
+                if certificate and certificate['expires_on'] and expired(date.fromisoformat(certificate['expires_on']), now):
+                    raise SetupError('证照已到期，请重新核对开业条件', 409, 'STORE_OPENING_CERTIFICATE_EXPIRED')
                 notice = next((row['details'] for row in result['checks'] if row['key'] == 'order_notice'), None)
                 if notice and notice['recheck_at'] and now >= parse_datetime(notice['recheck_at']):
                     raise SetupError('公开下单须知已变化，请重新核对开业条件', 409, 'STORE_OPENING_NOTICE_CHANGED')
