@@ -183,6 +183,53 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertEqual((receipt.request_key, receipt.state, receipt.upper_observed_at),
                          ('boss-review', 'PENDING', None))
 
+    @override_settings(GRAB_CUTOFF_WATERMARK_TESTING=True)
+    def test_cancellation_crossing_total_cutoff_holds_complete_team_for_review(self):
+        from orders import grab_receipt_probe
+        from orders.models import OrderGrabCutoffWatermark
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        self.prepare()
+        # SQLite cannot take the MySQL shared lifecycle lock. Keep the real
+        # invitation, confirmation and receipt writes for this cutoff test.
+        with patch('club_accounts.provider_lifecycle.lock_provider_operations'):
+            team_id = self.invite()
+            self.auth(self.accounts[1])
+            confirmed = self.client.post(f'/api/orders/grab-team/invitations/{team_id}/confirm/',
+                                         {'client_request_id': 'confirm-before-crossing'}, format='json')
+        self.assertEqual(confirmed.status_code, 200, confirmed.data)
+        self.assertEqual(confirmed.data['data']['allocation_result'], 'PENDING')
+        self.auth(self.boss_account)
+        state = OrderGrabTeamRoundState.objects.get(round__pool__order=self.order)
+        cutoff = state.round.total_deadline
+        before, after = cutoff - timedelta(seconds=1), cutoff + timedelta(seconds=1)
+        _, precision, driver = grab_receipt_probe._db_clock()
+        with patch.object(grab_receipt_probe, '_db_clock', side_effect=[
+                (before, precision, driver), (after, precision, driver)]):
+            sent = self.client.post(f'/api/orders/orders/{self.order.pk}/cancel/',
+                                    {'client_request_id': 'boss-review', 'reason': '  请核对原订单  '},
+                                    format='json')
+
+        receipt = state.round.receipt_probes.get(kind='BOSS_CANCEL')
+        self.assertEqual((receipt.state, receipt.review_reason, receipt.round_phase,
+                          receipt.lower_at, receipt.upper_observed_at, receipt.cutoff_at),
+                         ('REVIEW', 'CROSSED_CUTOFF', 'PARKED', before, after, cutoff))
+        # The first-window seal includes the valid team and leaves the
+        # uncertain cancellation to the resolver's total-wait checks.
+        from orders.grab_cutoff_watermark import seal
+        with patch.object(grab_receipt_probe, '_db_clock', return_value=(after, precision, driver)):
+            self.assertEqual(seal(self.order.pk, team=True), 'SEALED')
+            self.assertEqual(resolve(self.order.pk), 'WAIT_REVIEW')
+        mark = OrderGrabCutoffWatermark.objects.get(round=state.round)
+        self.assertEqual(mark.receipt_count, 2)
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.payment_status), ('PENDING', 'PAID'))
+        self.assertFalse(self.order.providers.exists())
+        self.assert_review_cancellation_replay(self.order, sent=sent)
+        receipt.refresh_from_db()
+        self.assertEqual((receipt.state, receipt.upper_observed_at), ('REVIEW', after))
+
     def test_review_cancellation_without_an_owner_key_keeps_legacy_replay(self):
         from orders.grab_review import mark_round_review
         from orders.models import OrderGrabReviewCancellation
