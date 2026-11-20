@@ -337,6 +337,9 @@ class PlatformOpeningReadinessView(PlatformSetupBase):
                     raise SetupError('授权已变化，请重新核对开业条件', 409, 'STORE_OPENING_LICENSE_CHANGED')
                 if now >= parse_datetime(current_license['ends_at']):
                     raise SetupError('授权已到期，请重新确认后再开业', 409, 'STORE_OPENING_LICENSE_EXPIRED')
+                notice = next((row['details'] for row in result['checks'] if row['key'] == 'order_notice'), None)
+                if notice and notice['recheck_at'] and now >= parse_datetime(notice['recheck_at']):
+                    raise SetupError('公开下单须知已变化，请重新核对开业条件', 409, 'STORE_OPENING_NOTICE_CHANGED')
             return Response({'code': 0, 'data': {'id': store.pk, 'status': store.status}, 'msg': '门店已开业'})
         except (SetupError, AccountChangeError) as exc:
             return Response({'code': exc.status, 'errorCode': getattr(exc, 'code', 'SETUP_UNAVAILABLE'),

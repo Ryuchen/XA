@@ -6,6 +6,12 @@ from console.models import AdminMembership
 from .models import SupportContactCard
 
 
+def selectable_cards():
+    return SupportContactCard.objects.filter(is_active=True, staff_account__account_type='STAFF',
+        staff_account__is_active=True, staff_account__can_login=True,
+        staff_account__admin_membership__is_active=True)
+
+
 def active_staff(account_id, *, lock=False):
     accounts = ClubAccount.objects
     memberships = AdminMembership.objects

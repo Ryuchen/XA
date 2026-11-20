@@ -133,6 +133,44 @@ class FirstOpenTests(TransactionTestCase):
     def test_scheduled_license_taking_effect_while_opening_requires_a_fresh_check(self):
         self.opening_with_license_boundary(replacement=True)
 
+    @override_settings(ISOLATED_CONTROL_PLANE=True, STORE_DATABASE_ALIASES=('store_a', 'store_b'))
+    def test_notice_expiring_while_preparing_route_rolls_back_opening(self):
+        from engagement.models import ClubContent
+        from stores import routing_snapshot
+        from stores.opening_materials import order_notice_evidence
+
+        store = self.stores[0]
+        now = timezone.now()
+        deadline = now + timedelta(minutes=10)
+        with store_context(store):
+            owner = admin('opening-notice-owner', super_admin=True)
+            ClubContent.objects.create(code='opening-notice', title='下单须知', kind=ClubContent.Kind.ORDER_RULES,
+                                       content='请确认服务时间。', ends_at=deadline)
+            evidence = order_notice_evidence(now)
+        self.activate_opening_license(store, owner.pk, kind='INITIAL', tier='PRO',
+                                      starts_at=now, ends_at=now+timedelta(days=1))
+        clock = now + timedelta(minutes=1)
+        schedule = routing_snapshot.schedule
+
+        def delay_before_commit(*args):
+            nonlocal clock
+            schedule(*args)
+            clock = deadline
+
+        readiness = {'can_open': True, 'checks': [{'key': 'order_notice', 'details': evidence}]}
+        with (patch('stores.opening_readiness.opening_readiness', return_value=readiness),
+              patch('django.utils.timezone.now', side_effect=lambda: clock),
+              patch.object(routing_snapshot, 'schedule', side_effect=delay_before_commit),
+              patch.object(routing_snapshot, 'publish') as publish):
+            url = f'/api/admin/platform/store-management/{store.pk}/setup/readiness'
+            result = self.client.post(url, {'confirm': True}, format='json')
+            self.assertEqual(result.status_code, 409, result.data)
+            self.assertEqual(result.data['errorCode'], 'STORE_OPENING_NOTICE_CHANGED')
+            publish.assert_not_called()
+        store.refresh_from_db()
+        self.assertEqual(store.status, Store.Status.CONFIGURING)
+        self.assertFalse(StoreRoutingRevision.objects.filter(store=store).exists())
+
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_open_valid_store_and_leave_other_store_closed(self):

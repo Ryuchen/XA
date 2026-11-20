@@ -12,12 +12,13 @@ from club_accounts.permissions import IsClubAccountAuthenticated
 from orders.models import Order
 from users.models import Achievement
 from wallet.models import RechargeRecord
-from .models import (Broadcast, ClubContent, LotteryCampaign, LotteryDraw, MemberProfile,
+from .models import (Broadcast, LotteryCampaign, LotteryDraw, MemberProfile,
     MemberTag, PointLedger, RechargePackage, RewardClaim, RewardItem, VipTier)
 from .serializers import (CampaignSerializer, ClaimDetailsSerializer, ClaimSerializer, ContentSerializer,
     MemberEditSerializer, RewardSerializer, TierSerializer, lottery_daily_remaining, with_claim_return_status)
 from .services import draw_batch, lottery_batch_draws, lottery_rarity, lottery_ten_guarantee, locked_profile, redeem, completed_consumption
 from .provider_entitlement_lifecycle import provider_entitlement_edit
+from .public_content import PUBLIC_CONTENT_LIMIT, current_content, published_content
 
 
 class IsBoss(IsClubAccountAuthenticated):
@@ -124,19 +125,17 @@ class ContentView(APIView):
     permission_classes = [AllowAny]
     def get(self, request, pk=None):
         now = timezone.now()
-        qs = ClubContent.objects.filter(is_active=True).exclude(kind='POPUP').filter(Q(starts_at__isnull=True) | Q(starts_at__lte=now))
         if pk:
             # 已发布活动到期后仍能从活动记录查看，未发布及下架内容不公开。
-            qs = qs.filter(Q(kind='HOT') | Q(ends_at__isnull=True) | Q(ends_at__gt=now))
+            qs = published_content(now).filter(Q(kind='HOT') | Q(ends_at__isnull=True) | Q(ends_at__gt=now))
             return Response({'code': 0, 'data': ContentSerializer(get_object_or_404(qs, pk=pk), context={"display_images": True}).data})
         if request.query_params.get('kind') == 'HOT':
-            qs = qs.filter(kind='HOT').annotate(published_at=Coalesce('starts_at', 'created_at')).order_by('-published_at', '-id')
-            if request.query_params.get('archive') != '1':
-                qs = qs.filter(Q(ends_at__isnull=True) | Q(ends_at__gt=now))
+            available = published_content(now) if request.query_params.get('archive') == '1' else current_content(now)
+            qs = available.filter(kind='HOT').annotate(published_at=Coalesce('starts_at', 'created_at')).order_by('-published_at', '-id')
             page = serializers.IntegerField(min_value=1, max_value=10000).run_validation(request.query_params.get('page', 1))
             return Response({'code': 0, 'data': ContentSerializer(qs[(page - 1) * 30:page * 30], many=True, context={"display_images": True}).data})
-        qs = qs.filter(Q(ends_at__isnull=True) | Q(ends_at__gt=now))
-        return Response({'code': 0, 'data': ContentSerializer(qs[:50], many=True, context={"display_images": True}).data})
+        rows = current_content(now)[:PUBLIC_CONTENT_LIMIT]
+        return Response({'code': 0, 'data': ContentSerializer(rows, many=True, context={"display_images": True}).data})
 
 
 class PointsView(APIView):

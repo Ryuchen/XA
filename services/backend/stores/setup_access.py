@@ -29,6 +29,7 @@ _EXACT = {
     '/api/admin/dictionary-options': {'GET'},
     '/api/admin/catalog-image': {'POST'},
     '/api/admin/club-content-image': {'POST'},
+    '/api/admin/club-content': {'GET', 'POST'},
     '/api/admin/qualification-options': {'GET'},
     '/api/admin/options/game-categories': {'GET'},
     '/api/admin/options/service-categories': {'GET'},
@@ -118,6 +119,7 @@ _DETAILS = (
     (re.compile(r'^/api/admin/gift-benefits/[1-9][0-9]*$'), {'GET', 'PUT', 'PATCH', 'DELETE'}),
     (re.compile(r'^/api/admin/recharge-packages/[1-9][0-9]*$'), {'GET', 'PUT', 'PATCH', 'DELETE'}),
     (re.compile(r'^/api/admin/(salary-plans|support-cards)/[1-9][0-9]*$'), {'GET', 'PUT', 'PATCH', 'DELETE'}),
+    (re.compile(r'^/api/admin/club-content/[1-9][0-9]*$'), {'GET', 'PUT', 'PATCH', 'DELETE'}),
     (re.compile(r'^/api/admin/vip-tiers/[1-9][0-9]*/(recalculation-preview|retirement-preview)$'), {'GET', 'POST'}),
     (re.compile(r'^/api/admin/gameplays/[1-9][0-9]*/restore$'), {'POST'}),
 )

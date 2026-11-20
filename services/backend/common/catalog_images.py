@@ -76,6 +76,29 @@ def _catalog_path(value):
     return path if path.startswith(CATALOG_PREFIXES) else ''
 
 
+def readable_image(source):
+    """Inspect an uploaded image without generating a display derivative."""
+    try:
+        with Image.open(source) as image:
+            if image.format not in {'PNG', 'JPEG', 'WEBP', 'GIF'}:
+                return False
+            image.load()
+        return True
+    except (OSError, ValueError, Image.DecompressionBombError, SyntaxError):
+        return False
+
+
+def readable_catalog_image(value):
+    path = _catalog_path(value)
+    if not path:
+        return False
+    try:
+        with default_storage.open(path, 'rb') as source:
+            return readable_image(source)
+    except (OSError, ValueError):
+        return False
+
+
 def catalog_display_url(value):
     """Return only verified bounded assets; keep source files and DB values intact.
 
