@@ -109,7 +109,8 @@ def change_points(profile, amount, key, kind, remark, *, order=None, operator=No
 def _award_license_checked_points(profile, points, key, remark, order):
     """Persist the decision alongside the ledger, so renewal cannot back-award."""
     from django.conf import settings
-    if not getattr(settings, 'LICENSE_BENEFIT_ENFORCEMENT_ENABLED', True):
+    from stores.certificate_admission import enabled as certificate_enforcement_enabled
+    if not getattr(settings, 'LICENSE_BENEFIT_ENFORCEMENT_ENABLED', True) and not certificate_enforcement_enabled():
         return change_points(profile, points, key, 'CONSUMPTION', remark, order=order)
     existing = PointLedger.objects.filter(event_key=key).first()
     if existing:

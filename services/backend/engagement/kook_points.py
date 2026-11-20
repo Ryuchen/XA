@@ -126,12 +126,12 @@ def _accrue(binding, now, *, outcome):
 
 def _accrue_versioned(binding, started_at, ended_at, rule, *, outcome):
     """Record one definite authorized segment before the ordered consumer."""
-    from stores.license_benefits import check_new_benefits
+    from stores.license_benefits import check_license_benefits
     from .models import KookOnlineInterval
     from .kook_online_queue import lock_cursor, replay_waiting
     if not allowed_account(binding.account) or not binding.channel_id or binding.accounted_at != started_at:
         raise ValidationError('KOOK 在线片段的账号或连接状态无法核验')
-    decision, evidence = check_new_benefits()
+    decision, evidence = check_license_benefits()
     from django.utils.dateparse import parse_datetime
     current = evidence.get('current') or {}
     effective = parse_datetime(current.get('effective_at', '')) if current else None
@@ -188,8 +188,8 @@ def _accrue_one(binding, now, *, outcome):
               'online_base': binding.cycle_online_base, 'award_base': binding.cycle_awarded_base}
     if eligible and outcome == 'ALLOW':
         from django.utils.dateparse import parse_datetime
-        from stores.license_benefits import check_new_benefits
-        outcome, evidence = check_new_benefits()
+        from stores.license_benefits import check_license_benefits
+        outcome, evidence = check_license_benefits()
         current = evidence.get('current') or {}
         effective = parse_datetime(current.get('effective_at', '')) if current else None
         # A checkpoint spanning a new grant can include time from an expired
@@ -236,8 +236,8 @@ def _accrue_one(binding, now, *, outcome):
             points_enabled_used = config().points_enabled
         if total > binding.awarded_points and points_enabled_used:
             profile=locked_profile(binding.account)
-            from stores.license_benefits import check_new_benefits
-            final_outcome, _ = check_new_benefits()
+            from stores.license_benefits import check_license_benefits
+            final_outcome, _ = check_license_benefits()
             if final_outcome == 'ALLOW':
                 points_ledger = change_points(profile,(total-binding.awarded_points)*100,
                     f'KOOK_ONLINE_TOTAL:{binding.pk}:{total}','KOOK_ONLINE',
@@ -327,9 +327,9 @@ def _checkpoint(now=None, status='已连接，自动计分中', *, _provider_sna
     if not cfg or (expected_revision is not None and cfg.listener_revision != expected_revision):
         return False
     now=now or timezone.now()
-    from stores.license_benefits import check_new_benefits
+    from stores.license_benefits import check_license_benefits
     from club_accounts.models import ClubAccount
-    outcome, _ = check_new_benefits()
+    outcome, _ = check_license_benefits()
     bindings = list(KookBinding.objects.select_for_update().filter(channel_id__gt='').select_related('account').order_by('id'))
     if _boss_snapshot is not None and {row.pk: (row.account_id, row.account.business_cycle) for row in bindings
             if row.account.account_type == 'BOSS'} != _boss_snapshot:
@@ -530,8 +530,8 @@ def _process_event(event, now=None, *, _provider_snapshot=None, expected_revisio
         if binding.event_at and timestamp<=binding.event_at:return False
         # Late events cannot move a checkpoint backwards or double-count.
         at=max(timestamp,binding.accounted_at or timestamp)
-        from stores.license_benefits import check_new_benefits
-        _accrue(binding,at,outcome=check_new_benefits()[0])
+        from stores.license_benefits import check_license_benefits
+        _accrue(binding,at,outcome=check_license_benefits()[0])
         if kind=='joined_channel':binding.channel_id=str(body['channel_id'])
         elif binding.channel_id==str(body['channel_id']):binding.channel_id=''
         binding.event_at=timestamp;binding.save()

@@ -36,6 +36,25 @@ def skip_denied_benefit(func):
 
 
 def check_new_benefits(feature=None):
+    """Evaluate new awards, purchases and configuration under both policies."""
+    from .certificate_admission import check_admission
+    outcome, evidence = check_license_benefits(feature)
+    if outcome == 'DENY' or feature in ('AUDIT_LOG_VIEW', 'PAYROLL', 'OPERATING_COST_ROI'):
+        return outcome, evidence
+    result = check_admission()
+    if result is None:
+        return outcome, evidence
+    certificate_outcome, certificate = result
+    evidence['business_certificate'] = certificate
+    if certificate_outcome == 'DENY':
+        return 'DENY', evidence
+    if certificate_outcome == 'UNKNOWN' and outcome == 'ALLOW':
+        evidence.update(license_status=evidence['status'], status=certificate['status'])
+        return 'UNKNOWN', evidence
+    return outcome, evidence
+
+
+def check_license_benefits(feature=None):
     """Distinguish a definite denial from an unavailable control plane.
 
     An unavailable control plane uses only a signed local snapshot. Without
@@ -71,9 +90,10 @@ def check_new_benefits(feature=None):
     return ('ALLOW' if allowed else 'DENY'), evidence
 
 
-def require_content_operations():
+def require_content_operations(*, for_existing_order=False):
     """Gate new operational content while preserving basic service notices."""
-    outcome, _ = check_new_benefits('CONTENT_OPERATIONS')
+    check = check_license_benefits if for_existing_order else check_new_benefits
+    outcome, _ = check('CONTENT_OPERATIONS')
     if outcome == 'UNKNOWN':
         raise LicenseDecisionUnavailable()
     if outcome != 'ALLOW':

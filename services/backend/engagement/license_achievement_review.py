@@ -155,6 +155,9 @@ def resolve_locked(event_id, *, request_id, actor_id, outcome, reason):
         return review
     if AchievementLicenseReview.objects.filter(request_id=request_id).exists():
         raise ValidationError('请求编号已用于其他成就核对')
+    if outcome == 'ALLOW':
+        from stores.certificate_admission import require_original_certificate
+        require_original_certificate(event.license_evidence)
     if event.sales_snapshot and outcome == 'ALLOW':
         # A third-round points transfer requires the same finalized manifest
         # and funding verifier as settlement, not merely a sales snapshot.

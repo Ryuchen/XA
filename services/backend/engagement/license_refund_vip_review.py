@@ -175,6 +175,9 @@ def _resolve_locked(decision_id, *, request_id, actor_id, outcome, reason, _batc
         return LicenseRefundVipReview.objects.create(decision=decision, request_id=request_id,
             platform_actor_id=actor_id, outcome=outcome, reason=reason,
             vip_applied=False, vip_recalculation_pending=False)
+    if existing is None:
+        from stores.certificate_admission import require_original_certificate
+        require_original_certificate(decision.license_evidence)
     current_refunded = decision.refunded_units
     # Verify the immutable original settlement and captured VIP switches.
     from .refunded_points_models import RefundedPointsConsumptionEvidence, TransferRefundPointsConsumptionEvidence

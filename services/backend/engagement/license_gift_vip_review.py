@@ -74,6 +74,8 @@ def resolve_locked(decision_id, *, request_id, actor_id, outcome, reason):
     account = ClubAccount.objects.select_for_update().get(pk=decision.account_id)
     applied, pending, skip = False, False, ''
     if outcome == 'ALLOW':
+        from stores.certificate_admission import require_original_certificate
+        require_original_certificate(decision.license_evidence)
         if account.business_cycle != decision.business_cycle or not account.license_membership_active:
             skip = 'CYCLE_CHANGED'
         elif refunds == decision.paid_units:

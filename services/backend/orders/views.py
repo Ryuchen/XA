@@ -284,8 +284,8 @@ class RankingView(APIView):
     def get(self, request):
         # Only the public leaderboards are optional; dispatch ranking and
         # personal order statistics are core business and remain available.
-        from stores.license_benefits import check_new_benefits
-        admission, _ = check_new_benefits('ACHIEVEMENTS_RANKINGS')
+        from stores.license_benefits import check_license_benefits
+        admission, _ = check_license_benefits('ACHIEVEMENTS_RANKINGS')
         if admission == 'UNKNOWN':
             return Response({'code': 503, 'msg': '暂时无法核验门店授权，请联系平台后重试'}, status=503)
         if admission != 'ALLOW':
@@ -1391,8 +1391,8 @@ class TipOrderView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
     throttle_scope = 'order_write'
 
-    @recover_fund_result('order.tip')
-    def post(self, request, order_id=None):
+    @staticmethod
+    def _admission_refusal():
         from stores.license_benefits import check_new_benefits
         admission, _ = check_new_benefits('GIFTS')
         if admission == 'UNKNOWN':
@@ -1401,6 +1401,12 @@ class TipOrderView(APIView):
         if admission != 'ALLOW':
             return Response({'code': 403, 'errorCode': 'LICENSE_GIFTS_UNAVAILABLE',
                              'msg': '本店当前授权暂不支持新增赠礼，请联系门店管理员'}, status=403)
+
+    @recover_fund_result('order.tip')
+    def post(self, request, order_id=None):
+        denied = self._admission_refusal()
+        if denied is not None:
+            return denied
         if 'items' in request.data:
             from .gift_basket import send_basket
             return send_basket(self, request, order_id=order_id)
@@ -1559,11 +1565,17 @@ class TipOrderView(APIView):
                 )
                 return Response({'code': 409, 'msg': reason})
 
-            now = timezone.now()
             from engagement.models import ClubOperationConfig
             from engagement.services import config as operation_config
             operation_config()
             gift_vip_enabled = ClubOperationConfig.objects.select_for_update().get(pk=1).vip_enabled
+            from stores.certificate_admission import enabled as certificate_enforcement_enabled
+            if certificate_enforcement_enabled():
+                denied = self._admission_refusal()
+                if denied is not None:
+                    transaction.set_rollback(True)
+                    return denied
+            now = timezone.now()
             # 礼物单必须和普通订单一样写全 account 维度。
             # 历史实现只写了 legacy user 外键，导致后台按 account 统计
             # （陪玩收益榜、老板消费榜、邀请人分佣报表）整批漏掉打赏流水 ——

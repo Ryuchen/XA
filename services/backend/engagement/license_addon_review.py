@@ -258,6 +258,11 @@ def resolve_locked(consumption_id, *, request_id, actor_id, vip_outcome, points_
             and (vip_outcome in ('ALLOW', 'DENY') if needs_vip else not vip_outcome)
             and (points_outcome in ('ALLOW', 'DENY') if needs_points else not points_outcome))
         if valid_outcomes:
+            from stores.certificate_admission import require_original_certificate
+            if vip_outcome == 'ALLOW':
+                require_original_certificate(vip.get('evidence'))
+            if points_outcome == 'ALLOW':
+                require_original_certificate(points.get('evidence'))
             from club_accounts.models import ClubAccount
             observed_cycle = ClubAccount.objects.filter(pk=consumption.account_id).values_list('business_cycle', flat=True).first()
             if observed_cycle is not None and observed_cycle > consumption.business_cycle:

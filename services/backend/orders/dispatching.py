@@ -168,8 +168,8 @@ def dispatch_preview(order, *, kook_config=None, include_plans=False):
             'target_id': record.channel_id if recorded else target,
         })
         if channel == 'KOOK':
-            from stores.license_benefits import check_new_benefits
-            outcome, _ = check_new_benefits('CONTENT_OPERATIONS')
+            from stores.license_benefits import check_license_benefits
+            outcome, _ = check_license_benefits('CONTENT_OPERATIONS')
             channels[-1]['license_status'] = outcome
             channels[-1]['can_create'] = outcome == 'ALLOW'
             from .dispatch_templates import render_template, template_error
@@ -227,7 +227,7 @@ def queue_dispatch(order, channel, *, manual=False, prepared=None):
             order=locked, sequence=locked.reject_count).first()
         if (existing is None or (manual and existing.status == model.Status.FAILED)):
             from stores.license_benefits import require_content_operations
-            require_content_operations()
+            require_content_operations(for_existing_order=True)
         due = None
         if _pool_group_enabled():
             from .grab_group_dispatch import delivery_timing
@@ -386,11 +386,11 @@ def deliver_dispatch(channel, record_id):
         wecom_config = None
         if channel == 'WECOM':
             from integrations.wecom_config import get_wecom_config
-            from stores.license_benefits import check_new_benefits
+            from stores.license_benefits import check_license_benefits
             wecom_config = get_wecom_config()
             ready = bool(wecom_config.ready)
             target = hashlib.sha256(wecom_config.webhook.encode()).hexdigest() if ready else ''
-            decision, _ = check_new_benefits('CONTENT_OPERATIONS')
+            decision, _ = check_license_benefits('CONTENT_OPERATIONS')
             if decision != 'ALLOW':
                 record.status = 'FAILED'
                 record.last_error = ('企微派单授权暂不可核验，请核对后重试' if decision == 'UNKNOWN'

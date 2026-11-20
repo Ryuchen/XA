@@ -876,6 +876,12 @@ class ProviderPassView(APIView):
                 if points_token is not None:
                     transaction.set_rollback(True)
                 return Response({'code': 400, 'msg': '平台入账金额超过系统范围，请联系客服'})
+            from stores.certificate_admission import enabled as certificate_enforcement_enabled
+            if certificate_enforcement_enabled():
+                denied = refusal(pass_license_status(lock=True))
+                if denied is not None:
+                    transaction.set_rollback(True)
+                    return denied
             allowed, reason = claim_fund_write(
                 account=request.account, request_id=request.data.get('client_request_id'),
                 scope='provider.pass', fingerprint=f'{tier}:{days}:{paid_amount}',
