@@ -1,4 +1,4 @@
-"""SA14 regression with real tenant row locks and a severed control connection."""
+"""SA14 regression with real tenant row locks and control database outages."""
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import datetime, time, timedelta
@@ -74,6 +74,114 @@ def _control_link():
                 control.settings_dict['PORT'] = original_port
                 relay.shutdown()
                 thread.join(timeout=2)
+
+
+@contextmanager
+def _stop_registered_control():
+    """Suspend only the independently registered, disposable control daemon."""
+    from pathlib import Path
+    import shutil
+    import subprocess
+
+    import pymysql
+
+    control = connections['default']
+    require_disposable_mysql(control)
+    spec = settings.SA14_TEST_CONTROL_INSTANCE
+    port = spec['port']
+    datadir = spec['datadir'].resolve()
+    if (str(port) != str(control.settings_dict['PORT'])
+            or any(str(port) == str(connections[name].settings_dict['PORT']) for name in ('store_a', 'store_b'))):
+        raise AssertionError('只允许停止独立登记的控制 MySQL')
+    pidfile = datadir.parent / 'mysql-control.pid'
+    executable = shutil.which('mysqld')
+    if not executable:
+        raise AssertionError('停机前须确认本机 mysqld 可用于恢复登记控制实例')
+    mysqld = Path(executable).resolve()
+
+    def connect():
+        return pymysql.connect(unix_socket=spec['socket'], user='root', password=spec['root_password'],
+                               connect_timeout=1, read_timeout=2, autocommit=True)
+
+    def identity(cursor):
+        cursor.execute('SELECT @@socket, @@datadir, @@port, @@pid_file, @@server_uuid')
+        endpoint, directory, observed_port, observed_pidfile, server_id = cursor.fetchone()
+        if (Path(endpoint).resolve() != Path(spec['socket']).resolve() or Path(directory).resolve() != datadir
+                or observed_port != port or Path(observed_pidfile).resolve() != pidfile):
+            raise AssertionError('控制实例的 socket、目录、端口或 PID 文件与登记不符')
+        return server_id
+
+    with connect() as db, db.cursor() as cursor:
+        server_id = identity(cursor)
+    recovery_needed = False
+    process = None
+
+    def tcp_refused():
+        try:
+            with socket.create_connection(('127.0.0.1', port), timeout=1):
+                return False
+        except ConnectionRefusedError:
+            return True
+
+    def stop():
+        nonlocal recovery_needed
+        # The test driver starts a new request when probing the two tenant
+        # databases. Worker connections remain under Celery's own lifecycle.
+        connections.close_all()
+        with connect() as db, db.cursor() as cursor:
+            if identity(cursor) != server_id:
+                raise AssertionError('控制实例身份改变，拒绝停止')
+            recovery_needed = True
+            try:
+                cursor.execute('SHUTDOWN')
+            except pymysql.err.OperationalError as exc:
+                # The daemon can close the connection before the acknowledgement.
+                if exc.args[0] not in (2006, 2013):
+                    raise
+        deadline = monotonic() + 10
+        while pidfile.exists() and monotonic() < deadline:
+            sleep(.05)
+        if pidfile.exists():
+            raise AssertionError('登记控制进程尚未退出')
+        if not tcp_refused():
+            raise AssertionError('停机期间控制库仍可建立 TCP 连接')
+        print(f'SA14 控制 MySQL 已实际退出 port={port}', flush=True)
+
+    def restart():
+        nonlocal recovery_needed, process
+        if not recovery_needed:
+            return
+        deadline = monotonic() + 15
+        started = False
+        while monotonic() < deadline:
+            if (not started and (process is None or process.poll() is not None)
+                    and not pidfile.exists() and tcp_refused()):
+                with (datadir.parent / 'mysql-control.log').open('a') as log:
+                    process = subprocess.Popen([mysqld, '--no-defaults', f'--datadir={datadir}',
+                        '--bind-address=127.0.0.1', f'--port={port}', f'--socket={spec["socket"]}',
+                        f'--pid-file={pidfile}', '--mysqlx=0', '--innodb-buffer-pool-size=64M',
+                        '--innodb-lock-wait-timeout=8', '--skip-log-bin'],
+                        stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                started = True
+            try:
+                with connect() as db, db.cursor() as cursor:
+                    if identity(cursor) != server_id:
+                        raise AssertionError('恢复后的控制库 UUID 与原登记不符')
+            except pymysql.MySQLError:
+                if started and process.poll() is not None:
+                    break
+                sleep(.1)
+                continue
+            recovery_needed = False
+            control.close()
+            print(f'SA14 控制 MySQL 已恢复 port={port} uuid={server_id}', flush=True)
+            return
+        raise AssertionError('登记控制 MySQL 未恢复，请查 mysql-control.log')
+
+    try:
+        yield SimpleNamespace(set=stop, clear=restart)
+    finally:
+        restart()
 
 
 @skipUnless(settings.SETTINGS_MODULE == 'config.certificate_mysql_test_settings',
@@ -304,6 +412,15 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
 
     @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
     def test_periodic_worker_settles_both_stores_during_control_disconnect(self):
+        self._verify_periodic_settlement()
+
+    @skipUnless(getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None) and getattr(settings, 'SA14_TEST_REDIS', None),
+                'Requires a separate registered control daemon and Redis broker')
+    @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
+    def test_beat_and_redis_settle_both_stores_when_control_instance_stops(self):
+        self._verify_periodic_settlement(standalone=True)
+
+    def _verify_periodic_settlement(self, *, standalone=False):
         from tempfile import TemporaryDirectory
 
         from celery import Celery, current_app
@@ -365,19 +482,51 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
         queue = f'xa_sa14_worker_{uuid4().hex}'
         previous_app = current_app._get_current_object()
         app = Celery(queue, task_cls='stores.tasks:StoreTask', set_as_current=False)
-        app.conf.update(broker_url='memory://', result_backend='cache+memory://', task_default_queue=queue,
+        broker_url, backend_url = 'memory://', 'cache+memory://'
+        if standalone:
+            from urllib.parse import quote
+            import redis
+
+            broker = settings.SA14_TEST_REDIS
+            port = broker['port']
+            with redis.Redis(host='127.0.0.1', port=port, password=broker['password'],
+                             socket_connect_timeout=2, socket_timeout=2) as client:
+                server = client.info('server')
+                self.assertEqual((server['process_id'], server['tcp_port']), (broker['pid'], port))
+            base = f'redis://:{quote(broker["password"], safe="")}@127.0.0.1:{port}'
+            broker_url, backend_url = f'{base}/0', f'{base}/1'
+        app.conf.update(broker_url=broker_url, result_backend=backend_url, task_default_queue=queue,
             task_default_exchange=queue, task_default_routing_key=queue,
             task_queues=(Queue(queue, Exchange(queue), routing_key=queue),),
+            task_always_eager=False, task_ignore_result=False,
+            broker_transport_options={'global_keyprefix': queue + ':'},
+            result_backend_transport_options={'global_keyprefix': queue + ':'},
             worker_enable_remote_control=False, worker_hijack_root_logger=False)
-        app.set_current()
         try:
+            # Celery's environment overrides take precedence over app.conf.
+            self.assertTrue(all(url == broker_url for url in (
+                app.conf.broker_url, app.conf.broker_read_url, app.conf.broker_write_url,
+            )) and app.conf.result_backend == backend_url, 'Celery 地址与隔离测试登记不符')
+            app.set_current()
             app.finalize()
             scan = app.tasks[consumption_tasks.confirm_due_consumption.name]
             recovered = timezone.now() + timedelta(hours=80)
 
             def run_scan(*, fallback, slugs=('shenglang', 'xinan')):
                 self.assertIsNone(current_store())
-                result = scan.delay()
+                if standalone:
+                    from celery.beat import ScheduleEntry, Scheduler
+
+                    spec = settings.CELERY_BEAT_SCHEDULE['confirm-member-consumption']
+                    self.assertEqual(spec['task'], scan.name)
+                    identifier = str(uuid4())
+                    entry = ScheduleEntry(name='confirm-member-consumption', **{**spec,
+                        'options': {**spec.get('options', {}), 'task_id': identifier}},
+                        last_run_at=app.now() - timedelta(seconds=spec['schedule'] + 1), app=app)
+                    Scheduler(app=app, schedule={entry.name: entry}, lazy=True).tick()
+                    result = app.AsyncResult(identifier)
+                else:
+                    result = scan.delay()
                 fanout = result.get(timeout=15, disable_sync_subtasks=False)
                 self.assertEqual(fanout['directory_fallback'], fallback)
                 self.assertEqual(fanout['enqueue_unknown'], [])
@@ -394,7 +543,11 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
                     vip = LicenseRefundVipDecision.objects.get(order=order)
                     points = LicenseConsumptionPointsDecision.objects.get(order=order)
                     self.assertEqual((vip.outcome, points.outcome), ('UNKNOWN', 'UNKNOWN'))
-                    self.assertEqual(vip.license_evidence['business_certificate']['status'], 'CONTROL_UNAVAILABLE')
+                    self.assertEqual(points.license_evidence['vip_decision_id'], vip.pk)
+                    self.assertEqual(points.license_evidence['points_outcome'], 'UNKNOWN')
+                    for evidence in (vip.license_evidence, points.license_evidence['points_evidence']):
+                        self.assertEqual(evidence['license_source'], 'CACHE')
+                        self.assertEqual(evidence['business_certificate']['status'], 'CONTROL_UNAVAILABLE')
                     self.assertFalse(PointLedger.objects.filter(order=order).exists())
                     entries = list(order.transactions.order_by('pk').values_list('tx_type', 'amount'))
                     self.assertCountEqual(entries, [(Transaction.TxType.PAY, -case.debit),
@@ -403,8 +556,16 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
                     self.assertEqual(sum(amount for _, amount in entries), 0)
                     return order.settled_at, vip.pk, points.pk, entries
 
-            with _control_link() as disconnected, patch('django.utils.timezone.now', return_value=recovered):
+            control_outage = _stop_registered_control if standalone else _control_link
+            with control_outage() as disconnected, patch('django.utils.timezone.now', return_value=recovered):
                 disconnected.set()
+                if standalone:
+                    for case in cases:
+                        tenant = connections[case.store.database_alias]
+                        with tenant.cursor() as cursor:
+                            cursor.execute('SELECT DATABASE(), @@port')
+                            self.assertEqual(cursor.fetchone(), (tenant.settings_dict['NAME'],
+                                                                 int(tenant.settings_dict['PORT'])))
                 with start_worker(app, pool='solo', queues=[queue], perform_ping_check=False, without_heartbeat=True):
                     original = run_scan(fallback=True)
                     first = [ledger(case) for case in cases]
