@@ -294,6 +294,55 @@ class GrabTeamFlowTest(APITransactionTestCase):
         receipt.refresh_from_db()
         self.assertEqual((receipt.state, receipt.upper_observed_at), ('REVIEW', after))
 
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_CUTOFF_WATERMARK_TESTING=True)
+    def test_cancellation_crosses_total_cutoff_after_first_window_is_sealed(self):
+        from orders import grab_receipt_probe, grab_single_flow, grab_team_flow
+        from orders.models import OrderGrabCutoffWatermark, OrderGrabReviewCancellation, OrderGrabSingleRoundState
+
+        save_grab_window(30, 0, lambda *args: None)
+        _, precision, driver = grab_receipt_probe._db_clock()
+        flows = ((1, grab_single_flow, OrderGrabSingleRoundState), (2, grab_team_flow, OrderGrabTeamRoundState))
+        for seats, flow, states in flows:
+            with self.subTest(seats=seats):
+                self.service.fulfillment_provider_count = seats
+                self.service.save(update_fields=['fulfillment_provider_count'])
+                bought = self.create(dispatch_mode='AUTO_GRAB', client_request_id=f'pay-separate-cutoffs-{seats}')
+                self.assertEqual(bought.data['code'], 0, bought.data)
+                order = Order.objects.get(pk=bought.data['data']['id'])
+                state = states.objects.get(round__pool__order=order)
+                after_first_window = state.round.deadline + timedelta(seconds=1)
+                before_total = state.round.total_deadline - timedelta(seconds=1)
+                after_total = state.round.total_deadline + timedelta(seconds=1)
+                self.assertLess(after_first_window, before_total)
+                with patch.object(grab_receipt_probe, '_db_clock',
+                                  return_value=(after_first_window, precision, driver)):
+                    self.assertEqual(flow.resolve(order.pk), 'PARKED')
+                mark = OrderGrabCutoffWatermark.objects.get(round=state.round)
+                self.assertEqual(mark.cutoff_at, state.round.deadline)
+                self.assertEqual(mark.receipt_count, 0)
+
+                endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+                payload = {'client_request_id': f'cancel-separate-cutoffs-{seats}', 'reason': '跨总截止核对'}
+                with patch.object(grab_receipt_probe, '_db_clock', side_effect=[
+                        (before_total, precision, driver), (after_total, precision, driver)]):
+                    sent = self.client.post(endpoint, payload, format='json')
+                self.assertEqual(sent.data.get('data'), {'status': 'PENDING'}, sent.data)
+                receipt = state.round.receipt_probes.get(kind='BOSS_CANCEL')
+                self.assertEqual((receipt.state, receipt.round_phase, receipt.review_reason, receipt.cutoff_at),
+                                 ('REVIEW', 'PARKED', 'CROSSED_CUTOFF', state.round.total_deadline))
+                with patch.object(grab_receipt_probe, '_db_clock', return_value=(after_total, precision, driver)):
+                    self.assertEqual(flow.resolve(order.pk), 'WAIT_REVIEW')
+                self.assertTrue(OrderGrabReviewCancellation.objects.filter(
+                    order=order, request_key=payload['client_request_id'], status='PENDING').exists())
+                order.refresh_from_db()
+                self.assertEqual((order.status, order.payment_status), ('PENDING', 'PAID'))
+                self.assertFalse(order.providers.exists())
+                self.assertFalse(order.refund_records.exists())
+                current_mark = OrderGrabCutoffWatermark.objects.get(round=state.round)
+                self.assertEqual((current_mark.pk, current_mark.cutoff_at, current_mark.observed_at,
+                                  current_mark.receipt_digest, current_mark.receipt_count),
+                                 (mark.pk, mark.cutoff_at, mark.observed_at, mark.receipt_digest, 0))
+
     def test_review_cancellation_without_an_owner_key_keeps_legacy_replay(self):
         from orders.grab_review import mark_round_review
         from orders.models import OrderGrabReviewCancellation
