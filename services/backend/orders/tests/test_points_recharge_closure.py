@@ -16,6 +16,7 @@ from orders.tests.factories import make_console_user, make_provider
 from stores.context import store_context
 from stores import test_platform_pass_repayment as platform_tests
 from wallet.models import RechargeRecord, Transaction
+from wallet.services import get_wallet
 from engagement.models import PointLedger
 from orders.models import Order, OrderPointsRefund, OrderRefund
 
@@ -76,6 +77,7 @@ class PointsRealRechargeClosureTest(TestCase):
             provider_account = get_or_create_account_for_legacy_user(provider)
             provider.escort_profile.account = provider_account
             provider.escort_profile.save(update_fields=['account'])
+            get_wallet(account=provider_account, user=provider)
             payload = {**self.payload(), 'dispatch_mode': 'BOSS_SELECT', 'dispatch_route': 'PUBLIC',
                        'provider_ids': [provider_account.pk]}
             quote = self.client.post('/api/orders/quote/', payload, format='json')
@@ -142,6 +144,7 @@ class PointsRealRechargeClosureTest(TestCase):
 
         from orders.models import OrderPointsFundingAllocation, PointsPrestartCancelFundingEvidence
         from stores.db import transaction
+        from stores.models import PlatformPointsFundingOperation
         from users.models import PassReceiptUsageEvent, PassRefundRepaymentReceipt
         from users.receipt_usage_ledger import initialize_empty_locked
         from users.receipt_usage_sources import verify_allocations_locked
@@ -183,6 +186,24 @@ class PointsRealRechargeClosureTest(TestCase):
                     for row in response.data['data']['claims']}
 
         self.assertEqual(available(), {self.receipt_id: 100, other_receipt: 300})
+        queue_url = '/api/admin/platform/points-funding/xinan/orders'
+        status_url = f'{queue_url}/{self.order.pk}'
+
+        def assert_funding_status(expected):
+            detail = self.platform_client.get(status_url, HTTP_AUTHORIZATION='Bearer ' + self.token)
+            queue = self.platform_client.get(queue_url, {'after_id': self.order.pk - 1},
+                                             HTTP_AUTHORIZATION='Bearer ' + self.token)
+            self.assertEqual(queue.status_code, 200, queue.data)
+            rows = [row for row in queue.data['data']['list'] if row['order_id'] == self.order.pk]
+            if expected == 'REVIEW':
+                self.assertEqual((detail.status_code, detail.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
+                self.assertEqual([row['funding_status'] for row in rows], ['REVIEW'])
+            else:
+                self.assertEqual(detail.status_code, 200, detail.data)
+                funding = detail.data['data']
+                self.assertEqual((funding['required_units'], funding['allocated_units'], funding['remaining_units'],
+                                  funding['fully_funded']), (0, 0, 0, True))
+                self.assertEqual(rows, [])
 
         # Substitute the MySQL configuration prerequisite for this SQLite test.
         with (store_context(self.second),
@@ -237,6 +258,11 @@ class PointsRealRechargeClosureTest(TestCase):
             self.profile.refresh_from_db()
             self.assertEqual((self.wallet.balance, self.profile.points_balance), (8000, 15000))
             self.assertEqual(PointLedger.objects.filter(order=self.order, kind='ORDER_POINTS_RETURN').count(), 1)
+            assert_funding_status('RELEASED')
+            operation = PlatformPointsFundingOperation.objects.get(claim_id=self.claim)
+            PlatformPointsFundingOperation.objects.filter(pk=operation.pk).update(payload_digest='0' * 64)
+            assert_funding_status('REVIEW')
+            PlatformPointsFundingOperation.objects.filter(pk=operation.pk).update(payload_digest=operation.payload_digest)
 
         self.assertEqual(available(), {self.receipt_id: 400, other_receipt: 500})
         with store_context(self.second):
@@ -262,6 +288,9 @@ class PointsRealRechargeClosureTest(TestCase):
             self.assertEqual(usage(), [(100, 650, 300), (0, 200, 200)])
             self.assertEqual(self.order.refund_records.get().pk, refund.pk)
             self.assertEqual(admin.post(order_url + 'refund/', request, format='json').data['code'], 0)
+            with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, RECEIPT_USAGE_LEDGER_ENABLED=True),
+                  patch('orders.points_business_access.configured', return_value=True)):
+                assert_funding_status('RELEASED')
         self.assertEqual(available(), {self.receipt_id: 50, other_receipt: 500})
         with store_context(self.first):
             self.assertFalse(PassRefundRepaymentReceipt.objects.exists())

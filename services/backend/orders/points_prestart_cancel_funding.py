@@ -16,6 +16,11 @@ def _digest(refund_id, slug, facts):
         ensure_ascii=True, separators=(',', ':')).encode()).hexdigest()
 
 
+def _prior_releases(allocation_ids):
+    return list(OrderAddonFundingRelease.objects.filter(allocation_id__in=allocation_ids)
+                .select_related('allocation__redemption', 'run__prestart_handoff').order_by('pk'))
+
+
 def capture_locked(order):
     """Call after order and money locks, before the buyer's wallet is locked."""
     if not transaction.get_connection().in_atomic_block or not current_store():
@@ -33,9 +38,7 @@ def capture_locked(order):
         return None
     if any(not item.redemption_id or item.redemption.order_id != order.pk or item.service_order_id for item in allocations):
         raise ValidationError('订单到账分配归属异常')
-    ids = [item.pk for item in allocations]
-    prior = list(OrderAddonFundingRelease.objects.filter(allocation_id__in=ids)
-        .select_related('allocation__redemption', 'run__prestart_handoff').order_by('pk'))
+    prior = _prior_releases([item.pk for item in allocations])
     from .points_prestart_receipt_usage import facts as prestart_facts
     prior_facts = [list(prestart_facts(row)) for row in prior]
     totals = {item.pk: 0 for item in allocations}
@@ -104,10 +107,20 @@ def verify_replay_locked(refund):
     receipts = list(PassRefundRepaymentReceipt.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
     if {item.pk for item in receipts} != ids:
         raise ValidationError('服务前取消原到账记录缺失')
-    allocations = list(OrderPointsFundingAllocation.objects.filter(pk__in=[row[0] for row in entries])
-                       .order_by('pk').values_list('pk', 'receipt_id', 'amount', 'redemption_id'))
-    if allocations != sorted((row[0], row[1], row[2], proof.redemption_id) for row in entries):
+    owner = Q(redemption__order_id=refund.order_id) | Q(service_order_id=refund.order_id)
+    allocations = list(OrderPointsFundingAllocation.objects.filter(owner).order_by('pk')
+                       .values_list('pk', 'receipt_id', 'amount', 'redemption_id', 'service_order_id'))
+    if allocations != sorted((row[0], row[1], row[2], proof.redemption_id, None) for row in entries):
         raise ValidationError('服务前取消原到账分配不一致')
+    from .points_prestart_receipt_usage import facts as prestart_facts
+    prior = _prior_releases([row[0] for row in entries])
+    totals = dict.fromkeys((row[0] for row in entries), 0)
+    for row in prior:
+        totals[row.allocation_id] += row.amount
+    if ([[row.pk, row.allocation_id, row.amount] for row in prior] != evidence.facts.get('prior_releases')
+            or [list(prestart_facts(row)) for row in prior] != evidence.facts.get('prior_facts')
+            or any(totals[pk] != amount for pk, _, _, amount in entries)):
+        raise ValidationError('服务前取消先前释放记录异常')
     expected = sorted((pk, amount - prior) for pk, _, amount, prior in entries if amount > prior)
     actual = list(evidence.releases.order_by('allocation_id').values_list('allocation_id', 'amount'))
     if actual != expected or any(prior > amount for _, _, amount, prior in entries):

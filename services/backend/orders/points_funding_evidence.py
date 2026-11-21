@@ -1,4 +1,4 @@
-"""Test-only verification of whole-order funding; this never pays anyone."""
+"""Verification of whole-order funding and its underlying evidence."""
 import json
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -236,7 +236,45 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
     return allocations
 
 
+def _verified_assigned_cancel_funding(order):
+    if (order.status != Order.Status.CANCELLED or order.payment_status != Order.PaymentStatus.REFUNDED):
+        return None
+    refunds = list(order.refund_records.order_by('pk')[:2])
+    if len(refunds) != 1 or not isinstance(refunds[0].benefit_effects, dict):
+        return None
+    refund = refunds[0]
+    if (refund.benefit_effects.get('points_assigned_prestart_cancel') is not True
+            or refund.benefit_effects.get('points_prestart_cancel_funding') is not True):
+        return None
+
+    from django.core.exceptions import ObjectDoesNotExist, ValidationError as DjangoValidationError
+    from wallet.models import Transaction
+    from .models import OrderOriginalShareTransfer, OrderParticipationSegment, OrderPointsSettlement, Reservation
+    from .points_prestart_cancel_funding import verify_replay_locked
+    from .points_service_refund import verify_refund_history_locked
+
+    if (order.in_service_at or order.completed_at or order.settled_at or not order.refunded_at
+            or order.aftersales.exists() or order.addon_intents.exists() or Reservation.objects.filter(order=order).exists()
+            or order.providers.filter(settled_at__isnull=False).exists()
+            or OrderParticipationSegment.objects.filter(attribution__order=order, started_at__isnull=False).exists()
+            or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
+            or OrderPointsSettlement.objects.filter(order=order).exists()
+            or Transaction.objects.filter(order=order, status='SUCCESS', amount__gt=0,
+                                          tx_type__in=('INCOME', 'GIFT', 'SHOP_INCOME')).exists()):
+        raise PointsFundingPlanError('取消订单的履约或收益凭证待核对')
+    try:
+        _verified_allocations_for_locked_order(order)
+        verify_replay_locked(refund)
+        proof = verify_refund_history_locked(refund.pk)
+    except (DjangoValidationError, ObjectDoesNotExist, ValidationError) as exc:
+        raise PointsFundingPlanError('取消订单的补资释放凭证待核对') from exc
+    if not proof.is_final:
+        raise PointsFundingPlanError('取消订单的全额退款凭证待核对')
+    return VerifiedOrderFunding(required=0, allocated=0, remaining=0, fully_funded=True)
+
+
 def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=False, allow_followup_recorded=False,
+                         include_prestart_cancelled=False,
                          _reservation_usage=False, _main_refund_usage=False, _transfer_refund_usage=False):
     """Check durable tenant and platform evidence under receipt/order locks.
 
@@ -251,6 +289,10 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
         if not order:
             raise PointsFundingPlanError('订单不存在')
         require_order_funding_access(order)
+        if include_prestart_cancelled:
+            closed_funding = _verified_assigned_cancel_funding(order)
+            if closed_funding is not None:
+                return closed_funding
         from .points_service_payment import needs_integrated_processing
         from .models import OrderOriginalShareTransfer
         from .negotiation_followup_accounting import marked_followup_id

@@ -387,7 +387,7 @@ class PlatformOrderFundingStatusView(APIView):
                     try:
                         with tenant_transaction.atomic(), _addon_funding_scope(order_id, None):
                             funding = verify_order_funding(order_id, allow_finalized=True,
-                                                           allow_followup_recorded=True)
+                                                           allow_followup_recorded=True, include_prestart_cancelled=True)
                     except (PointsFundingPlanError, RestValidationError, SettlementError) as exc:
                         raise RepaymentError('订单补资记录待核对', 409, 'POINTS_FUNDING_REVIEW') from exc
         except RepaymentError as error:
@@ -446,7 +446,7 @@ class PlatformOrderFundingQueueView(APIView):
                         continue
                     try:
                         with tenant_transaction.atomic(), _addon_funding_scope(cursor, None):
-                            funding = verify_order_funding(cursor, allow_unstarted=True)
+                            funding = verify_order_funding(cursor, allow_unstarted=True, include_prestart_cancelled=True)
                     except (PointsFundingPlanError, RestValidationError, SettlementError):
                         if not Order.objects.filter(pk=cursor, settled_at__isnull=True).exists():
                             continue
