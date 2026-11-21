@@ -1,6 +1,7 @@
 """Recoverable platform-finance allocation for enabled order funding paths."""
 import json
 from collections.abc import Mapping
+from contextlib import contextmanager
 from uuid import UUID
 
 from django.conf import settings
@@ -48,37 +49,29 @@ def _require_funding_environment():
             raise
 
 
-from contextlib import contextmanager
-
-
 @contextmanager
 def _addon_funding_scope(order_id, receipt_id):
-    from django.conf import settings
+    if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is not True:
+        yield
+        return
     from orders.models import Order, OrderOriginalShareTransfer
     from orders.points_service_payment import needs_integrated_processing
-    order = Order.objects.filter(pk=order_id).first()
-    has_transfer = bool(order and OrderOriginalShareTransfer.objects.filter(
-        previous_segment__attribution__order=order).exists())
-    if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True and order
-            and needs_integrated_processing(order) and has_transfer):
-        from orders.points_transfer_refund_access import after_transfer
-        if receipt_id is None:
-            from orders.financial_lock import lock_existing_order_money
-            Order.objects.select_for_update().get(pk=order_id)
-            lock_existing_order_money()
-        with after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id):
-            yield
+    # Transfers use the same row lock. Classify the order only after any
+    # concurrent transfer has finished in this tenant.
+    order = Order.objects.select_for_update().filter(pk=order_id).first()
+    if not order or not needs_integrated_processing(order):
+        yield
         return
-    if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True and order
-            and needs_integrated_processing(order) and not has_transfer):
-        from orders.points_business_access import service_order
-        if receipt_id is None:
-            from orders.financial_lock import lock_existing_order_money
-            Order.objects.select_for_update().get(pk=order_id)
-            lock_existing_order_money()
-        with service_order(order_id, phase='funding', addon=order.addon_intents.exists(), extra_receipt_id=receipt_id):
-            yield
+    if receipt_id is None:
+        from orders.financial_lock import lock_existing_order_money
+        lock_existing_order_money()
+    if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
+        from orders.points_transfer_refund_access import after_transfer
+        scope = after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id)
     else:
+        from orders.points_business_access import service_order
+        scope = service_order(order_id, phase='funding', addon=order.addon_intents.exists(), extra_receipt_id=receipt_id)
+    with scope:
         yield
 
 
