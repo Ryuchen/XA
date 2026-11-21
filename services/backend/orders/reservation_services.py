@@ -23,6 +23,7 @@
 首尾相接（``09:00-10:00`` 与 ``10:00-11:00``）不算冲突。
 """
 
+from collections.abc import Callable
 from datetime import timedelta
 import hashlib
 import json
@@ -34,6 +35,7 @@ from stores.context import current_currency_name
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.response import Response
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
 from common.logging_utils import log_money_event, new_trace_id
@@ -49,6 +51,8 @@ from .reservation_state_machine import (
 from .services import ensure_provider_dispatch_locks
 from .settlement import compute_split
 from .state_machine import log_only, transition
+
+RESERVATION_CONVERT_SCOPE = 'reservation.convert'
 
 # 预约时间粒度：所有起止时间必须对齐到该刻度（分钟）
 SLOT_MINUTES = 15
@@ -545,6 +549,7 @@ def convert_reservation_to_order(
     request,
     reservation_id: int,
     *,
+    record_paid: Callable[[Order, Reservation, str], Response],
     client_request_id: Optional[str] = None,
     expected_amount: Optional[int] = None,
     expected_service: Optional[dict] = None,
@@ -555,7 +560,7 @@ def convert_reservation_to_order(
     discount_selection_token: Optional[str] = None,
     points_checkout_test_token: Optional[str] = None,
     user_coupon_id: Optional[int] = None,
-) -> Tuple[int, str, Optional[Order]]:
+) -> Tuple[int, str, Optional[Tuple[Order, Response]]]:
     """把已确认的预约转成正式订单：预约链路上**唯一动钱**的一步。
 
     复用下单主路径的全部构件 —— ``CreateOrderSerializer`` 定价校验、
@@ -568,11 +573,11 @@ def convert_reservation_to_order(
     Args:
         request: DRF 请求，提供操作人身份（``account`` / ``legacy_user``）。
         reservation_id: 预约 ID。
-        client_request_id: 客户端幂等键，可为空（走降级窗口）。
+        record_paid: 在同一事务内保存订单与预约的原付款回执。
+        client_request_id: 客户端资金请求编号。
 
     Returns:
-        tuple[int, str, Order | None]: ``(业务码, 提示, 订单)``；
-        业务码取 0 / 400 / 403 / 404 / 409，非 0 时订单为 None。
+        ``(业务码, 提示, (订单, 成功响应) | None)``。
     """
     trace_id = new_trace_id()
 
@@ -848,7 +853,7 @@ def convert_reservation_to_order(
         allowed, reason = claim_fund_write(
             account=request.account,
             request_id=client_request_id,
-            scope='reservation.convert',
+            scope=RESERVATION_CONVERT_SCOPE,
             fingerprint=(f'{reservation.id}|{amount}|gift={gift_balance_amount}'
                          f'|support={request.data.get("support_contact_id") or ""}'
                          f'|compensation={compensation_balance_amount}|confirmation={boss_confirmation}'
@@ -1033,7 +1038,7 @@ def convert_reservation_to_order(
 
         if game_fields:
             reservation.save(update_fields=[field for field in FIELDS if field in game_fields])
-        transition_reservation(
+        converted = transition_reservation(
             reservation.id,
             Reservation.Status.CONVERTED,
             operator=request.legacy_user,
@@ -1042,8 +1047,10 @@ def convert_reservation_to_order(
             side_effect=bind_order,
             update_fields=['order'],
         )
+        message = '预约转单成功'
+        response = record_paid(order, converted, message)
 
-    return 0, '预约转单成功', order
+    return 0, message, (order, response)
 
 
 def _account_for_legacy_user(user):

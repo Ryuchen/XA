@@ -11,6 +11,8 @@
 * **客服（STAFF）**：按权限代客创建、取消和转单；不得代陪玩确认或拒绝。
 """
 
+from collections.abc import Mapping
+
 from stores.db import transaction
 from django.conf import settings
 from django.db.models import Q
@@ -18,9 +20,13 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
 
+from club_accounts.authentication import ClubAccountAuthentication
 from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated
+from club_accounts.tokens import account_for_claims
+from wallet.receipts import fund_success, recover_fund_result
 
 from .models import Reservation, ServiceItem
 from .notifier import notify_order_update
@@ -32,6 +38,7 @@ from .reservation_serializers import (
     ReservationSerializer,
 )
 from .reservation_services import (
+    RESERVATION_CONVERT_SCOPE,
     ReservationConflictError,
     ReservationError,
     convert_reservation_to_order,
@@ -249,7 +256,6 @@ class ReservationListCreateView(APIView):
             return Response({'code': 403, 'msg': '仅玩家或客服可发起预约'})
         if _is_staff(account) and not staff_can(account, 'order:dispatch'):
             return Response({'code': 403, 'msg': '无代派单权限'})
-
         serializer = ReservationCreateSerializer(
             data=request.data, context={'request': request},
         )
@@ -775,16 +781,39 @@ class ReservationConvertView(APIView):
         if _is_staff(account) and not staff_can(account, 'order:dispatch'):
             return Response({'code': 403, 'msg': '无代派单权限'})
 
-        if 'preview_points_hundredths' in request.data:
-            return Response({'code': 400, 'msg': '积分数量需先报价并使用报价凭据确认'})
-        if 'points_checkout_test_token' in request.data and not request.data.get('points_checkout_test_token'):
-            return Response({'code': 400, 'msg': '积分报价凭据无效，请重新报价'})
-
+        if not isinstance(request.data, Mapping):
+            return Response({'code': 400, 'msg': '请提交预约转单参数'})
         reservation = _visible_reservation(account, reservation_id, for_action=True)
         if reservation is None:
             return Response({'code': 404, 'msg': '预约不存在'})
         if not _is_staff(account) and reservation.customer_account_id != account.pk:
             return Response({'code': 403, 'msg': '仅预约所属玩家可转单'})
+        result = self._convert(request, reservation)
+        if 'fundResult' in result.data:
+            # A competing conversion may have held this request at a row lock.
+            # Recheck current access before disclosing a saved response.
+            if isinstance(request.successful_authenticator, ClubAccountAuthentication):
+                try:
+                    account = account_for_claims(request.auth)
+                except TokenError:
+                    return Response({'code': 403, 'msg': '账号状态已变化，请重新登录'}, status=403)
+            else:
+                account = ClubAccount.objects.filter(pk=account.pk, account_type=account.account_type,
+                    business_cycle=account.business_cycle, is_active=True, can_login=True).first()
+            if (not account or (account.account_type == ClubAccount.AccountType.BOSS and not account.license_membership_active)
+                    or (_is_staff(account) and not staff_can(account, 'order:dispatch'))):
+                return Response({'code': 403, 'msg': '无权查看预约付款回执'}, status=403)
+            if not _visible_reservation(account, reservation_id, for_action=True):
+                return Response({'code': 404, 'msg': '预约不存在'})
+        return result
+
+    @recover_fund_result(RESERVATION_CONVERT_SCOPE)
+    def _convert(self, request, reservation):
+        account = request.account
+        if 'preview_points_hundredths' in request.data:
+            return Response({'code': 400, 'msg': '积分数量需先报价并使用报价凭据确认'})
+        if 'points_checkout_test_token' in request.data and not request.data.get('points_checkout_test_token'):
+            return Response({'code': 400, 'msg': '积分报价凭据无效，请重新报价'})
 
         from engagement.funding_wallet import parse_funding_selection
         gift, compensation = parse_funding_selection(request.data)
@@ -825,9 +854,19 @@ class ReservationConvertView(APIView):
             if not expected_serializer.is_valid():
                 return Response({'code': 400, 'msg': '商品确认信息无效，请刷新报价'})
             expected_service = expected_serializer.validated_data
-        code, msg, order = convert_reservation_to_order(
+        from .serializers import OrderSerializer
+
+        def record_paid(order, converted, message):
+            context = {'request': request}
+            return fund_success(request, RESERVATION_CONVERT_SCOPE, msg=message, data={
+                'order': OrderSerializer(order, context=context).data,
+                'reservation': ReservationSerializer(converted, context=context).data,
+            })
+
+        code, msg, paid = convert_reservation_to_order(
             request,
             reservation.id,
+            record_paid=record_paid,
             client_request_id=request.data.get('client_request_id'),
             expected_amount=expected_amount,
             expected_service=expected_service,
@@ -841,6 +880,7 @@ class ReservationConvertView(APIView):
         )
         if code != 0:
             return Response({'code': code, 'msg': msg})
+        order, response = paid
 
         notify_reservation_after_commit(reservation)
         # 通知放在事务外：推送失败不该回滚已经成立的订单
@@ -868,15 +908,4 @@ class ReservationConvertView(APIView):
                 require_cycle=guarded,
             )
 
-        from .serializers import OrderSerializer
-        reservation.refresh_from_db()
-        return Response({
-            'code': 0,
-            'msg': msg,
-            'data': {
-                'order': OrderSerializer(order, context={'request': request}).data,
-                'reservation': ReservationSerializer(
-                    reservation, context={'request': request},
-                ).data,
-            },
-        })
+        return response
