@@ -26,6 +26,7 @@ export interface StoreInfo {
 const StoreContext = createContext<StoreInfo | null>(null);
 // The same 403 is also used for routing and database failures.
 const closedStoreMessage = "门店尚未开放或已停用，请联系门店管理员";
+const visitorStoreCheckTimeout = 10_000;
 const entryNames = { admin: "管理后台", boss: "老板服务中心", provider: "陪玩工作台" };
 const neutralAdminStore: StoreInfo = {
   id: 0, slug: "", name: "电竞运营管理平台", status: "ACTIVE", is_active: true,
@@ -130,6 +131,10 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
     if (!validStoreSlug(slug)) { fail("门店入口无效，请联系门店获取正确链接"); return; }
     try { canonicalizeStoreUrl(); adoptLegacyStoreStorage(); }
     catch { fail("无法保存门店状态或恢复原交易请求，请检查浏览器存储后重试"); return; }
+    const timeout = role === "admin" ? undefined : window.setTimeout(() => {
+      controller.abort();
+      fail("门店状态查询超时，请重试");
+    }, visitorStoreCheckTimeout);
     void createApiClient(role).get<StoreInfo>("/stores/current/", undefined, { signal: controller.signal, public: !session.token })
       .then((value) => {
         if (controller.signal.aborted) return;
@@ -154,15 +159,19 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
         }
         fail(cause instanceof Error ? cause.message : "门店暂时无法读取，请重试",
           cause instanceof ApiError && cause.status === 403 && cause.message === closedStoreMessage);
-      });
-    return () => controller.abort();
+      })
+      .finally(() => window.clearTimeout(timeout));
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
   }, [role, slug, scope, neutralAdmin, retry]);
   if (neutralAdmin) return <StoreContext.Provider key={`admin:neutral:${session.revision}`} value={neutralAdminStore}>{children}</StoreContext.Provider>;
   const issue = failure?.scope === scope ? failure : null;
   const error = issue?.attempt === retry ? issue.message : "";
   if (!store || store.slug !== slug || error) {
     if (role !== "admin") return <StoreEntryStatusPage role={role} entryName={entryNames[role]} issue={issue}
-      checking={issue !== null && issue.attempt !== retry} onRetry={() => setRetry(value => value + 1)} />;
+      checking={issue === null || issue.attempt !== retry} onRetry={() => setRetry(value => value + 1)} />;
     return <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6 py-12 text-foreground">
       <h1 className="text-xl font-semibold">{error ? "暂时无法进入门店" : "正在确认门店…"}</h1>
       {error && <><p role="alert" className="text-sm text-destructive">{error}</p><button className="min-h-10 self-start rounded-md border px-4 text-sm" onClick={() => setRetry((value) => value + 1)}>重试</button><p className="text-sm text-muted-foreground">如仍无法进入，请联系当前门店。</p></>}

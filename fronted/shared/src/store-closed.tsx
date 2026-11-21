@@ -41,7 +41,8 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
   const storeName = brandSlug ? storeNames[brandSlug] : undefined;
-  const returnUrl = issue?.closed && brandSlug ? new URL(import.meta.env.BASE_URL, window.location.origin).href : null;
+  const returnUrl = brandSlug ? new URL(import.meta.env.BASE_URL, window.location.origin).href : null;
+  const showArt = Boolean(brandSlug || issue?.closed);
   const copyStatusId = useId();
   const address = useRef<HTMLInputElement>(null);
   const copyAttempt = useRef(0);
@@ -97,7 +98,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
         </header>
 
         <main className="xa-store-closed-main">
-          <div className={`xa-store-closed-hero${issue?.closed ? " xa-store-closed-hero-with-art" : ""}`}>
+          <div className={`xa-store-closed-hero${showArt ? " xa-store-closed-hero-with-art" : ""}`}>
             <div className="xa-store-closed-copy">
               <h1>{issue?.closed ? "门店暂未开放" : issue ? "暂时无法进入门店" : "正在确认门店…"}</h1>
               {issue && (issue.closed
@@ -106,12 +107,12 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                   <p className="xa-store-closed-schedule"><CalendarClock size={17} aria-hidden="true" />开放时间以门店通知为准</p>
                 </>
                 : <p className="xa-store-closed-description" role="alert">{issue.message}</p>)}
+              {!issue && returnUrl && <p className="xa-store-closed-description">可先保存本店入口，稍后再来查看。</p>}
               <div className="xa-store-closed-actions">
-                {issue &&
-                  <button type="button" aria-disabled={checking} onClick={retryStatus}>
-                    <RefreshCw size={17} aria-hidden="true" />
-                    {checking ? "正在检查…" : issue.closed ? "重新检查状态" : "重试"}
-                  </button>}
+                <button type="button" aria-disabled={checking} onClick={retryStatus}>
+                  <RefreshCw size={17} aria-hidden="true" />
+                  {checking ? "正在检查…" : issue?.closed ? "重新检查状态" : "重试"}
+                </button>
                 {returnUrl && <button className="xa-store-closed-copy-link" type="button" onClick={() => copyLink(returnUrl)}>
                   {copyResult?.copied ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
                   复制入口链接
@@ -133,11 +134,11 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                 aria-describedby={copyStatusId} dir="ltr" type="text" readOnly value={returnUrl}
               />}
             </div>
-            {issue?.closed && <div className="xa-store-closed-art">
+            {showArt && <div className="xa-store-closed-art">
               <img src={headsetImage} width="900" height="1125" alt="" decoding="async" />
             </div>}
           </div>
-          {issue && <div className="xa-store-closed-details">
+          <div className="xa-store-closed-details">
             <section className="xa-store-closed-help">
               <h2><MessageCircle size={20} aria-hidden="true" />{helpTitle}</h2>
               <p>{help}</p>
@@ -151,7 +152,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                 </li>)}
               </ul>
             </section>}
-          </div>}
+          </div>
         </main>
       </div>
     </div>

@@ -93,8 +93,8 @@
 .xa-store-closed-actions {
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 24px;
 }
-.xa-store-closed-actions:has(button) { margin-top: 24px; }
 .xa-store-closed button {
   justify-content: center;
   gap: 8px;
@@ -106,8 +106,10 @@
   border-radius: 8px;
   background: hsl(var(--ocean-200));
   color: hsl(var(--ocean-950));
-  font: inherit;
+  font-family: inherit;
+  font-size: 1rem;
   font-weight: 600;
+  line-height: 1.25;
   cursor: pointer;
 }
 .xa-store-closed-actions button:hover:not([aria-disabled="true"], .xa-store-closed-copy-link) { background: white; }
@@ -217,7 +219,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
     align-items: stretch;
-    min-block-size: clamp(22rem, 32vw, 26rem);
+    min-block-size: clamp(22rem, 37cqi, 26rem);
   }
   .xa-store-closed-hero-with-art .xa-store-closed-copy { align-self: center; }
   .xa-store-closed-art {

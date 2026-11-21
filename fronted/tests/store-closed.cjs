@@ -16,8 +16,13 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
         return route.abort()
       }
       reads++
-      if (hold) await hold.promise
-      return route.fulfill(response)
+      const pendingResponse = hold
+      if (pendingResponse) await pendingResponse.promise
+      try {
+        await route.fulfill(response)
+      } finally {
+        pendingResponse?.handled?.resolve()
+      }
     })
     const url = origin + '/boss/#/login'
     hold = Promise.withResolvers()
@@ -25,21 +30,36 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await page.getByRole('heading', { name: '正在确认门店…', exact: true }).waitFor()
     await page.getByText('声浪电竞', { exact: true }).waitFor()
     const art = page.locator('.xa-store-closed-art')
-    assert.equal(await art.count(), 0)
-    hold.resolve()
     const closed = page.getByRole('heading', { name: '门店暂未开放', exact: true })
-    await closed.waitFor()
     const services = page.getByRole('heading', { name: '开放后可使用', exact: true })
-    await services.waitFor()
     const help = page.getByRole('heading', { name: '已有订单或售后问题？', exact: true })
+    const schedule = page.getByText('开放时间以门店通知为准', { exact: true })
+    const copy = page.getByRole('button', { name: '复制入口链接' })
+    const pending = page.getByRole('button', { name: '正在检查…', exact: true })
+    await art.waitFor()
     await help.waitFor()
+    await copy.waitFor()
+    assert.equal(await pending.getAttribute('aria-disabled'), 'true')
+    assert.equal(await closed.count(), 0)
+    assert.equal(await services.count(), 0)
+    assert.equal(await schedule.count(), 0)
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async value => { window.copiedEntryLink = value } },
+      })
+    })
+    await copy.click()
+    await page.getByRole('status').filter({ hasText: '入口链接已复制' }).waitFor()
+    assert.equal(await page.evaluate(() => window.copiedEntryLink), origin + '/boss/')
+    hold.resolve()
+    await closed.waitFor()
+    await services.waitFor()
     await page.getByText('查看自己的订单进度和售后记录。', { exact: true }).waitFor()
     await page.getByText('本店开通自助下单后，可选服务并核对价格。', { exact: true }).waitFor()
     await page.getByText('暂时无法登录、下单或查看订单。', { exact: true }).waitFor()
-    const schedule = page.getByText('开放时间以门店通知为准', { exact: true })
     await schedule.waitFor()
     assert.ok((await help.boundingBox()).y < (await services.boundingBox()).y, 'Phone users see help before the service preview')
-    const copy = page.getByRole('button', { name: '复制入口链接' })
     const copyBox = await copy.boundingBox()
     assert.ok(copyBox.y + copyBox.height <= (await help.boundingBox()).y, 'The return action is in the hero, before the help panel')
     const address = page.getByRole('textbox', { name: '门店入口链接' })
@@ -100,7 +120,6 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     hold = Promise.withResolvers()
     await retry.focus()
     await page.keyboard.press('Enter')
-    const pending = page.getByRole('button', { name: '正在检查…', exact: true })
     await pending.waitFor()
     assert.equal(await pending.getAttribute('aria-disabled'), 'true')
     await page.keyboard.press('Enter')
@@ -110,10 +129,11 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(reads, before + 1)
     assert.equal(await closed.count(), 0)
     assert.equal(await schedule.count(), 0)
-    assert.equal(await art.count(), 0)
+    await art.waitFor()
+    await help.waitFor()
+    await copy.waitFor()
     assert.equal(await services.count(), 0)
     assert.equal(await address.count(), 0)
-    assert.equal(await copy.count(), 0)
     assert.equal(await page.getByRole('button', { name: '重试', exact: true }).evaluate(element => element === document.activeElement), true)
 
     response = { status: 403, json: { code: 403, msg: '门店数据库尚未配置，请联系平台管理员' } }
@@ -129,6 +149,26 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await page.getByRole('heading', { name: '老板账号登录', exact: true }).waitFor()
     assert.equal(page.url(), url)
     assert.deepEqual(errors, [])
+
+    // A delayed status response can time out, and a late response cannot enter the store.
+    await page.clock.install()
+    const delayed = { ...Promise.withResolvers(), handled: Promise.withResolvers() }
+    hold = delayed
+    const started = page.waitForRequest(request => new URL(request.url()).pathname === '/api/stores/current/')
+    await page.reload()
+    await started
+    await pending.waitFor()
+    await page.clock.fastForward(10_001)
+    await page.getByRole('alert').filter({ hasText: '门店状态查询超时，请重试' }).waitFor()
+    await help.waitFor()
+    await copy.waitFor()
+    delayed.resolve()
+    await delayed.handled.promise
+    assert.equal(await page.getByRole('heading', { name: '老板账号登录', exact: true }).count(), 0)
+    hold = null
+    await page.getByRole('button', { name: '重试', exact: true }).click()
+    await page.getByRole('heading', { name: '老板账号登录', exact: true }).waitFor()
+    assert.equal(page.url(), url)
   } finally {
     await context.close()
   }
