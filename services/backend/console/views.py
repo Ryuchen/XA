@@ -4113,7 +4113,7 @@ class ProviderReportViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             qs = qs.filter(provider_match('nickname', provider_nickname) | profile_name_match(provider_nickname) | profile_no_match(provider_nickname))
         if self.request.query_params.get('order_blocked') == '1':
             from .serializers import pending_report_order_block_q
-            qs = qs.filter(pending_report_order_block_q(qs))
+            qs = qs.filter(pending_report_order_block_q(qs, verify_formal_points=self.request.method == 'GET'))
         return qs
 
     def list(self, request, *args, **kwargs):

@@ -1,12 +1,25 @@
 """Read the same commission snapshots used when approving a provider report."""
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 from users.models import EscortProfile
 from django.conf import settings
 
 from .models import ProviderReport, get_commission_rate
 
+if TYPE_CHECKING:
+    from orders.models import OrderSegmentFinancialSnapshot
 
-def formal_points_report_fields(report):
-    """Return (verified share, funding shortfall), or None outside the formal path."""
+
+@dataclass(frozen=True)
+class FormalPointsReportFields:
+    snapshot: 'OrderSegmentFinancialSnapshot | None'
+    funding_insufficient: bool | None = None
+    approval_block_reason: str = ''
+
+
+def formal_points_report_fields(report, *, check_approval=False):
+    """Verify report fields under the tenant order lock, when formally supported."""
     from orders.points_business_access import formal_service_read_candidate, formal_service_read_scope_locked
     from orders.points_checkout_test import report_enabled
     if (not report.order_id or report_enabled()
@@ -18,8 +31,10 @@ def formal_points_report_fields(report):
     from orders.models import Order
     from orders.points_funding_evidence import verify_order_funding
     from orders.points_funding_plan import PointsFundingPlanError
+    from orders.services import report_approval_evidence_error
     from orders.settlement import SettlementError
     from stores.db import transaction
+    review = FormalPointsReportFields(None, approval_block_reason='积分订单报单或收益快照待核对')
     try:
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=report.order_id)
@@ -31,24 +46,29 @@ def formal_points_report_fields(report):
                     provider_account_id=report.provider_account_id, status=report.status,
                     amount=report.amount, commission_rate=report.commission_rate, payout_amount=report.payout_amount)
                 locked.order = order
-                snapshot = points_report_snapshot(locked)
+                pending_approval = check_approval and locked.status == ProviderReport.Status.PENDING
+                snapshot = points_report_snapshot(locked, allow_finalized=not pending_approval)
                 if not snapshot:
-                    return None, None
+                    return review
                 if locked.status != ProviderReport.Status.APPROVED:
-                    return snapshot, False
+                    reason = ''
+                    if pending_approval:
+                        reason = ('订单未完成，不能通过报单' if order.status != Order.Status.COMPLETED
+                                  else report_approval_evidence_error(order, locked))
+                    return FormalPointsReportFields(snapshot, False, reason)
                 if order.status != Order.Status.COMPLETED:
-                    return None, None
+                    return review
                 try:
                     funding = verify_order_funding(order.pk, allow_finalized=True)
                 except (PointsFundingPlanError, SettlementError, ValidationError):
-                    return snapshot, None
-                return snapshot, not funding.fully_funded
+                    return FormalPointsReportFields(snapshot)
+                return FormalPointsReportFields(snapshot, not funding.fully_funded)
     except (PointsFundingPlanError, SettlementError, ValidationError, DatabaseError,
             Order.DoesNotExist, ProviderReport.DoesNotExist):
-        return None, None
+        return review
 
 
-def points_report_snapshot(report):
+def points_report_snapshot(report, *, allow_finalized=True):
     """Return the report share proven by the current capability."""
     if not report.order_id:
         return None
@@ -59,7 +79,7 @@ def points_report_snapshot(report):
     from orders.points_report_test import verified_report_snapshot
     try:
         snapshot = verified_report_snapshot(report.order, report.provider_account_id, report.provider_id,
-                                            allow_finalized=True)
+                                            allow_finalized=allow_finalized)
     except PointsFundingPlanError:
         return None
     expected_payout = snapshot.income_at_entry
@@ -321,7 +341,7 @@ def report_financial_snapshot(report, *, formal_fields=None):
     if report.order_id:
         from orders.points_service_payment import display_has_points
         if display_has_points(report.order):
-            snapshot = formal_fields[0] if formal_fields is not None else points_report_snapshot(report)
+            snapshot = formal_fields.snapshot if formal_fields is not None else points_report_snapshot(report)
             if snapshot:
                 income = snapshot.income_at_entry
                 if formal_fields is None and report.order.refund_records.exists():

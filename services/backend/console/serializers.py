@@ -10,6 +10,7 @@ from stores.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
+from wallet.serializers import PointsReportReadMixin
 from wallet.settlement_display import OrderSettlementListSerializer, ReportSettlementListSerializer
 
 from announcements.models import Announcement
@@ -1079,19 +1080,23 @@ class AdminDisposeRecordSerializer(EntityNumberModelSerializer):
 
 
 # ---------------- 陪玩报单 ----------------
-def report_order_approval_block_reason(obj):
-    """The same state/receipt checks used by the report approval action."""
+def report_order_approval_block_reason(obj, *, formal_fields=None):
+    """Explain whether the order and its verified report can be approved."""
     if obj.status != ProviderReport.Status.PENDING or not obj.order_id:
         return ''
     order = obj.order
     from orders.points_service_payment import display_has_points
     if display_has_points(order):
-        from orders.points_checkout_test import report_enabled
-        if not report_enabled():
-            return '积分订单报单及收益结算尚未接通'
-        from wallet.reporting import points_report_snapshot
-        if not points_report_snapshot(obj):
-            return '积分订单报单或收益快照待核对'
+        if formal_fields is not None:
+            if formal_fields.approval_block_reason:
+                return formal_fields.approval_block_reason
+        else:
+            from orders.points_checkout_test import report_enabled
+            if not report_enabled():
+                return '积分订单报单及收益结算尚未接通'
+            from wallet.reporting import points_report_snapshot
+            if not points_report_snapshot(obj):
+                return '积分订单报单或收益快照待核对'
     from orders.segment_financial_capture import transfer_income_pending
     if transfer_income_pending(order, obj.provider_account_id):
         return '转单收益尚未完成逐段核对，暂不能审核'
@@ -1111,7 +1116,7 @@ def report_order_approval_block_reason(obj):
     return '' if order.status == Order.Status.COMPLETED else '订单未完成，不能通过报单'
 
 
-def pending_report_order_block_q(base_queryset=None):
+def pending_report_order_block_q(base_queryset=None, *, verify_formal_points=True):
     """Classify order state, verified negotiations, and transfer review."""
     from django.db.models import Exists, OuterRef, Q
     from orders.models import OrderRefund
@@ -1166,17 +1171,28 @@ def pending_report_order_block_q(base_queryset=None):
         points = points.annotate(_points_receipt=Exists(receipts))
         points_evidence |= Q(_points_receipt=True)
     from orders.points_checkout_test import report_enabled
+    point_candidates = points.filter(points_evidence)
     if report_enabled():
-        point_candidates = points.filter(points_evidence).select_related('order')
-        point_blocked = [row.pk for row in point_candidates.iterator(chunk_size=100)
+        point_blocked = [row.pk for row in point_candidates.select_related('order').iterator(chunk_size=100)
                          if report_order_approval_block_reason(row)]
         points_q = Q(pk__in=point_blocked)
     else:
-        points_q = Q(pk__in=points.filter(points_evidence).values('pk'))
+        if verify_formal_points and getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True:
+            from wallet.reporting import formal_points_report_fields
+            complete_paid = point_candidates.filter(order__status=Order.Status.COMPLETED,
+                order__payment_status=Order.PaymentStatus.PAID).select_related('order')
+            verified_ids = []
+            for row in complete_paid.iterator(chunk_size=100):
+                fields = formal_points_report_fields(row, check_approval=True)
+                if fields is not None and not report_order_approval_block_reason(row, formal_fields=fields):
+                    verified_ids.append(row.pk)
+            point_candidates = point_candidates.exclude(pk__in=verified_ids)
+        points_q = Q(pk__in=point_candidates.values('pk'))
     return (blocked & ~Q(pk__in=allowed)) | Q(pk__in=transfer_blocked) | points_q
 
 
-class AdminProviderReportSerializer(EntityNumberModelSerializer):
+class AdminProviderReportSerializer(PointsReportReadMixin, EntityNumberModelSerializer):
+    check_formal_approval = True
     amount = serializers.SerializerMethodField()
     commission_rate = serializers.SerializerMethodField()
     payout_amount = serializers.SerializerMethodField()
@@ -1193,16 +1209,14 @@ class AdminProviderReportSerializer(EntityNumberModelSerializer):
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from wallet.reporting import points_report_snapshot
-            return obj.amount if points_report_snapshot(obj) else None
+            return obj.amount if self._points_snapshot(obj) else None
         return None if obj.order_id and transfer_income_pending(obj.order, obj.provider_account_id) else obj.amount
 
     def get_commission_rate(self, obj):
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from wallet.reporting import points_report_snapshot
-            return obj.commission_rate if points_report_snapshot(obj) else None
+            return obj.commission_rate if self._points_snapshot(obj) else None
         return None if obj.order_id and transfer_income_pending(obj.order, obj.provider_account_id) else obj.commission_rate
 
     def get_aftersale_status(self, obj):
@@ -1213,16 +1227,14 @@ class AdminProviderReportSerializer(EntityNumberModelSerializer):
         return legacy_customer_settlement_reason(obj.order) if obj.order_id else ''
 
     def get_order_approval_block_reason(self, obj):
-        # Other evidence and share checks are enforced by the actual action.
-        return report_order_approval_block_reason(obj)
+        return report_order_approval_block_reason(obj, formal_fields=self._formal_points_fields)
 
     def get_payout_amount(self, obj):
         from wallet.reporting import report_has_valid_order_share
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from wallet.reporting import points_report_snapshot
-            return obj.payout_amount if obj.status == ProviderReport.Status.APPROVED and points_report_snapshot(obj) else None
+            return obj.payout_amount if obj.status == ProviderReport.Status.APPROVED and self._points_snapshot(obj) else None
         if obj.order_id and transfer_income_pending(obj.order, obj.provider_account_id):
             return None
         from orders.negotiation_settlement import report_income
@@ -1316,19 +1328,6 @@ class AdminProviderReportSerializer(EntityNumberModelSerializer):
 
     def get_platform_subsidy_income(self, obj):
         return self._financial_snapshot(obj)['platform_subsidy_income']
-
-    def get_platform_funding_insufficient(self, obj):
-        from wallet.reporting import report_platform_funding_insufficient
-        return report_platform_funding_insufficient(obj, self.context)
-
-    def _financial_snapshot(self, obj):
-        from wallet.reporting import report_financial_snapshot
-        cache = getattr(self, '_report_financial_snapshots', None)
-        if cache is None:
-            cache = self._report_financial_snapshots = {}
-        if obj.pk not in cache:
-            cache[obj.pk] = report_financial_snapshot(obj)
-        return cache[obj.pk]
 
     def get_commission_type(self, obj):
         return self._financial_snapshot(obj)['commission_type']

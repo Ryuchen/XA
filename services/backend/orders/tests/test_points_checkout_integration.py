@@ -1408,10 +1408,41 @@ class PointsSettlementTwoStoreTests(TestCase):
                 self.assertEqual(result.data['code'], 0, result.data)
                 result = player.post(f'/api/wallet/reports/{report.pk}/submit/', {}, format='json')
                 self.assertEqual(result.data['code'], 0, result.data)
-                admin = make_console_user(['report:view', 'report:audit'])
+                admin = make_console_user(['dashboard:view', 'report:view', 'report:audit'])
                 account = get_or_create_account_for_legacy_user(admin)
                 admin.admin_membership.account = account; admin.admin_membership.save(update_fields=['account'])
                 reviewer = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
+                report_url = f'/api/admin/reports/{report.pk}/'
+                money_fields = ('amount', 'commission_rate', 'expected_income', 'payout_amount')
+
+                def review_queue():
+                    rows = reviewer.get('/api/admin/reports/', {
+                        'status': 'PENDING', 'order_blocked': 1, 'exclude_direct_test': 1,
+                    }).data['data']['list']
+                    stats = reviewer.get('/api/admin/dashboard/stats').data['data']
+                    return [row['id'] for row in rows], stats['pending_report_order_blocked_total']
+
+                with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, SERVICE_POINTS_REPORT_TESTING=False,
+                                    SERVICE_POINTS_SETTLEMENT_TESTING=False, SERVICE_ORDINARY_FUNDING_TESTING=False),
+                      patch('orders.points_business_access.configured', return_value=True)):
+                    pending = reviewer.get(report_url).data['data']
+                    self.assertEqual([pending[key] for key in money_fields], [6000, 20, 4800, None])
+                    self.assertEqual(pending['order_approval_block_reason'], '')
+                    self.assertEqual(review_queue(), ([], 0))
+                    for field, value, message in (
+                        ('amount', 6001, '待核对'), ('completion_image', '', '报单缺少：结单截图'),
+                    ):
+                        with self.subTest(field=field), transaction.atomic():
+                            ProviderReport.objects.filter(pk=report.pk).update(**{field: value})
+                            blocked = reviewer.get(report_url).data['data']
+                            self.assertIn(message, blocked['order_approval_block_reason'])
+                            self.assertEqual(review_queue(), ([report.pk], 1))
+                            with patch('wallet.reporting.formal_points_report_fields') as display_read:
+                                rejected = reviewer.post(report_url + 'approve/?order_blocked=1', {}, format='json')
+                                self.assertEqual(rejected.data['code'], 400)
+                            display_read.assert_not_called()
+                            self.assertEqual(ProviderReport.objects.get(pk=report.pk).status, 'PENDING')
+                            transaction.set_rollback(True)
                 approved = reviewer.post(f'/api/admin/reports/{report.pk}/approve/', {}, format='json')
                 self.assertEqual(approved.data['code'], 0, approved.data)
                 report.refresh_from_db()
@@ -1428,6 +1459,9 @@ class PointsSettlementTwoStoreTests(TestCase):
                                       formal['expected_income'], formal['payout_amount']),
                                      (report.pk, 6000, 20, 4800, 4800))
                     self.assertIs(formal['platform_funding_insufficient'], True)
+                    console = reviewer.get(report_url).data['data']
+                    self.assertEqual([console[key] for key in money_fields], [6000, 20, 4800, 4800])
+                    self.assertIs(console['platform_funding_insufficient'], True)
                     with transaction.atomic():
                         ProviderReport.objects.filter(pk=report.pk).update(payout_amount=4801)
                         damaged = player.get('/api/wallet/reports/', {'order_id': self.order.pk}).data['data'][0]

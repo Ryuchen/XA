@@ -6,24 +6,16 @@ from .models import ProviderReport, WithdrawRequest
 from .settlement_display import ReportSettlementListSerializer
 
 
-class ReportSerializer(EntityNumberModelSerializer):
-    """C 端报单：陪玩提交与查询自己的报单。"""
-
+class PointsReportReadMixin:
+    check_formal_approval = False
     _formal_points_fields = None
     _report_financial_snapshot = None
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    amount = serializers.SerializerMethodField()
-    commission_rate = serializers.SerializerMethodField()
-    proof_image_url = serializers.SerializerMethodField()
-    order_id = serializers.IntegerField(read_only=True)
-    order_no = serializers.CharField(source='order.order_no', read_only=True, default='')
-    order_entity_no = serializers.SerializerMethodField()
 
     def to_representation(self, instance):
         request = self.context.get('request')
         if getattr(request, 'method', None) == 'GET':
             from .reporting import formal_points_report_fields
-            self._formal_points_fields = formal_points_report_fields(instance)
+            self._formal_points_fields = formal_points_report_fields(instance, check_approval=self.check_formal_approval)
         try:
             return super().to_representation(instance)
         finally:
@@ -33,8 +25,32 @@ class ReportSerializer(EntityNumberModelSerializer):
     def _points_snapshot(self, obj):
         from .reporting import points_report_snapshot
         if self._formal_points_fields is not None:
-            return self._formal_points_fields[0]
+            return self._formal_points_fields.snapshot
         return points_report_snapshot(obj)
+
+    def _financial_snapshot(self, obj):
+        from .reporting import report_financial_snapshot
+        if self._report_financial_snapshot is None:
+            self._report_financial_snapshot = report_financial_snapshot(obj, formal_fields=self._formal_points_fields)
+        return self._report_financial_snapshot
+
+    def get_platform_funding_insufficient(self, obj):
+        from .reporting import report_platform_funding_insufficient
+        if self._formal_points_fields is not None:
+            return self._formal_points_fields.funding_insufficient
+        return report_platform_funding_insufficient(obj, self.context)
+
+
+class ReportSerializer(PointsReportReadMixin, EntityNumberModelSerializer):
+    """C 端报单：陪玩提交与查询自己的报单。"""
+
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    amount = serializers.SerializerMethodField()
+    commission_rate = serializers.SerializerMethodField()
+    proof_image_url = serializers.SerializerMethodField()
+    order_id = serializers.IntegerField(read_only=True)
+    order_no = serializers.CharField(source='order.order_no', read_only=True, default='')
+    order_entity_no = serializers.SerializerMethodField()
 
     def get_order_entity_no(self, obj):
         if not obj.order_id:
@@ -153,12 +169,6 @@ class ReportSerializer(EntityNumberModelSerializer):
     def get_expected_income(self, obj):
         return self._financial_snapshot(obj)['expected_income']
 
-    def get_platform_funding_insufficient(self, obj):
-        from .reporting import report_platform_funding_insufficient
-        if self._formal_points_fields is not None:
-            return self._formal_points_fields[1]
-        return report_platform_funding_insufficient(obj, self.context)
-
     def get_payout_amount(self, obj):
         from .reporting import report_has_valid_order_share
         from orders.segment_financial_capture import transfer_income_pending
@@ -184,12 +194,6 @@ class ReportSerializer(EntityNumberModelSerializer):
         if has_subsidy:
             return amount if obj.status == ProviderReport.Status.APPROVED else None
         return obj.payout_amount
-
-    def _financial_snapshot(self, obj):
-        from .reporting import report_financial_snapshot
-        if self._report_financial_snapshot is None:
-            self._report_financial_snapshot = report_financial_snapshot(obj, formal_fields=self._formal_points_fields)
-        return self._report_financial_snapshot
 
     def get_commission_type(self, obj):
         return self._financial_snapshot(obj)['commission_type']

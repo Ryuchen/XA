@@ -1008,6 +1008,13 @@ def missing_report_evidence(report):
     return missing
 
 
+def report_approval_evidence_error(order, report):
+    if order.settlement_mode != Order.SettlementMode.REPORT_APPROVAL and not settings.REQUIRE_ORDER_EVIDENCE_IMAGES:
+        return ''
+    missing = missing_report_evidence(report)
+    return '报单缺少：' + '、'.join(missing) if missing else ''
+
+
 def required_report_providers(order):
     rows = list(order.providers.all())
     funded_ids = set()
@@ -1128,12 +1135,9 @@ def _approve_order_report(report_id, *, operator, operator_account, lifecycle=No
     from .segment_financial_capture import transfer_income_pending
     if transfer_income_pending(order, report.provider_account_id):
         raise SettlementError('转单收益尚未完成逐段核对，暂不能审核')
-    missing = missing_report_evidence(report) if (
-        order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL
-        or settings.REQUIRE_ORDER_EVIDENCE_IMAGES
-    ) else []
-    if missing:
-        raise SettlementError('报单缺少：' + '、'.join(missing))
+    evidence_error = report_approval_evidence_error(order, report)
+    if evidence_error:
+        raise SettlementError(evidence_error)
     own_share = order.providers.filter(provider_id=report.provider_id).first()
     if not own_share and order.provider_id != report.provider_id:
         raise SettlementError('报单人不属于该订单')
