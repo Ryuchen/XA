@@ -162,6 +162,27 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             with self.assertRaisesMessage(DjangoValidationError, '未保留可接替份额'):
                 verify_refunds_before_second_handover(refunds, first, before=boundary, receipt_id=5)
 
+    def test_pending_second_handover_scope_requires_the_recorded_allocation_action(self):
+        from orders.models import OrderAddonHandover, OrderPointsFundingAllocation
+        from orders.points_funding_write import pending_handover_for_allocation_replay
+
+        order = SimpleNamespace(pk=11)
+        key = 'points:original-action'
+        with (patch.object(OrderPointsFundingAllocation.objects, 'filter') as allocations,
+              patch.object(OrderAddonHandover.objects, 'filter') as handovers):
+            self.assertIsNone(pending_handover_for_allocation_replay(order, 5, None))
+            allocations.assert_not_called()
+            allocations.return_value.exists.return_value = False
+            self.assertIsNone(pending_handover_for_allocation_replay(order, 5, key))
+            allocations.assert_called_once_with(request_key=key, redemption__order=order, receipt_id=5,
+                                                platform_action__request_key=key)
+            handovers.assert_not_called()
+            allocations.return_value.exists.return_value = True
+            handovers.return_value.values_list.return_value = [7]
+            self.assertEqual(pending_handover_for_allocation_replay(order, 5, key), 7)
+            handovers.return_value.values_list.return_value = [7, 8]
+            self.assertIsNone(pending_handover_for_allocation_replay(order, 5, key))
+
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated store databases')
 @override_settings(ALLOWED_HOSTS=['*'], PLATFORM_IDENTITY_ENABLED=True, PLATFORM_PASS_REPAYMENT_ENABLED=True,
