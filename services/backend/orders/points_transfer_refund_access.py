@@ -613,6 +613,47 @@ def _successive_addon_handovers(order, payment, transfers, *, allow_waiting=Fals
     return accepted
 
 
+def unaffected_addon_for_return(order, payment, payments, first_transfer, *, boundary=None):
+    """Prove the other paid add-on stays with the original teammate."""
+    from .models import OrderOriginalShareTransfer
+
+    if len(payments) != 2 or order.required_provider_count != 2 or order.room_required_snapshot:
+        return False
+    other = next(item for item in payments if item.pk != payment.pk)
+    segment = other.intent.segment
+    origin = first_transfer.previous_segment
+    paid_at = other.buyer_transaction.created_at
+    if (other.intent.order_id != order.pk or segment.attribution_id != origin.attribution_id or segment.slot == origin.slot
+            or other.intent.provider_id != segment.provider_account_id
+            or segment.provider_account_id in (origin.provider_account_id, first_transfer.next_segment.provider_account_id)
+            or other.intent.buyer_id != order.customer_account_id
+            or not segment.provider_business_cycle or not segment.started_at
+            or (segment.released_at and (boundary is None or segment.released_at <= boundary))
+            or not segment.started_at < paid_at < first_transfer.created_at):
+        return False
+    transfers = OrderOriginalShareTransfer.objects.filter(previous_segment=segment)
+    handovers, refunds, deductions = other.handovers.all(), other.refund_records.all(), other.refund_earning_deductions.all()
+    if boundary is not None:
+        transfers = transfers.filter(created_at__lte=boundary)
+        handovers = handovers.filter(created_at__lte=boundary)
+        refunds = refunds.filter(created_at__lte=boundary)
+        deductions = deductions.filter(refund__created_at__lte=boundary)
+    return not (transfers.exists() or handovers.exists() or refunds.exists() or deductions.exists())
+
+
+def _multi_addon_return_chain(order, payments, transfers, *, allow_waiting=False):
+    if len(payments) != 2 or not 1 <= len(transfers) <= 2:
+        return []
+    if len(transfers) == 2 and (transfers[1].next_segment.provider_account_id !=
+                                transfers[0].previous_segment.provider_account_id):
+        return []
+    for payment in payments:
+        chain = _successive_addon_handovers(order, payment, transfers, allow_waiting=allow_waiting)
+        if chain and unaffected_addon_for_return(order, payment, payments, transfers[0]):
+            return chain
+    return []
+
+
 def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pending_payment_id=None,
                      pending_intent_id=None, allow_voluntary=False, allow_successive=False):
     """Admit verified add-on histories with explicit transfer boundaries."""
@@ -701,6 +742,19 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
     origin_history = _origin_addon_history(order, pending_payment_id=pending_payment_id,
                                           pending_intent_id=pending_intent_id, allow_voluntary=allow_voluntary)
     if len(payments) > 1:
+        if len(transfers) == 2 and (allow_handover or allow_successive):
+            chain = _multi_addon_return_chain(order, payments, transfers, allow_waiting=allow_handover)
+            if chain:
+                if allow_handover and not _pending_allowed(chain[-1].payment_id, pending_payment_id):
+                    return False
+                if verify:
+                    from .addon_payment import verify_receipt
+                    from .addon_handover import verify_transferred_handover_funding
+                    for payment in payments:
+                        verify_receipt(payment)
+                    for handover in chain:
+                        verify_transferred_handover_funding(order, handover.payment, handover)
+                return True
         has_handover = any(payment.handovers.filter(status='ACCEPTED').exists() for payment in payments)
         from .models import PointsPostRefundTransferRevision
         initial = (order.refund_records.count() == 1
@@ -816,16 +870,21 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None,
             allow_handover=addon_handover, pending_payment_id=pending_payment_id):
         raise ValidationError('积分转单加购资金范围尚未接通')
     preceding_handover = None
+    return_to = None
     if not addon_handover:
         from .models import OrderAddonHandover
         from .models import OrderAddonPayment, OrderParticipationSegment
         payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('intent'))
         if OrderAddonHandover.objects.filter(payment__intent__order=order, status='ACCEPTED').exists():
-            chain = (_successive_addon_handovers(order, payments[0], transfers)
-                     if len(payments) == len(transfers) == 1 else [])
+            chain = []
+            if len(transfers) == 1:
+                chain = (_successive_addon_handovers(order, payments[0], transfers) if len(payments) == 1 else
+                         _multi_addon_return_chain(order, payments, transfers))
             if not chain or set(outgoing_accounts) != {chain[0].target_segment.provider_account_id}:
                 raise ValidationError('加购接替后的再次转单资金尚待核对')
             preceding_handover = chain[0]
+            if len(payments) == 2:
+                return_to = transfers[0].previous_segment.provider_account_id
         if len(payments) > 1:
             from .addon_handover import current_responsibilities
             for payment in payments:
@@ -863,6 +922,10 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None,
             except PointsFundingPlanError as exc:
                 raise ValidationError('既有积分转单履约及资金凭证待核对') from exc
         yield order
+        if return_to and not OrderOriginalShareTransfer.objects.filter(
+                previous_segment_id=preceding_handover.target_segment_id,
+                next_segment__provider_account_id=return_to).exists():
+            raise ValidationError('多项加购的第二次转单须转回原席陪玩')
 
 
 @contextmanager

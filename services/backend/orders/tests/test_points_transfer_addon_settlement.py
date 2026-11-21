@@ -3,7 +3,7 @@ from datetime import timedelta
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest import skipUnless
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from django.conf import settings
@@ -212,6 +212,39 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             refunds[1].amount = 40
             with self.assertRaisesMessage(DjangoValidationError, '未保留可接替份额'):
                 verify_refunds_before_second_handover(refunds, first, before=boundary, receipt_id=5)
+
+    def test_same_seat_return_uses_only_an_unaffected_teammate_payment(self):
+        from orders.models import OrderOriginalShareTransfer
+        from orders.points_transfer_refund_access import unaffected_addon_for_return
+
+        at = timezone.now()
+        boundary = at + timedelta(seconds=1)
+        order = SimpleNamespace(pk=12, required_provider_count=2, room_required_snapshot=False, customer_account_id=18)
+        original = SimpleNamespace(attribution_id=8, slot=1, provider_account_id=20)
+        transfer = SimpleNamespace(previous_segment=original, next_segment=SimpleNamespace(provider_account_id=22), created_at=at)
+        moved = SimpleNamespace(pk=3)
+        segment = SimpleNamespace(attribution_id=8, slot=2, provider_account_id=21, provider_business_cycle=1,
+            started_at=at - timedelta(seconds=2), released_at=None)
+        teammate = SimpleNamespace(pk=4, intent=SimpleNamespace(order_id=12, segment=segment, provider_id=21, buyer_id=18),
+            buyer_transaction=SimpleNamespace(created_at=at - timedelta(seconds=1)), handovers=Mock(), refund_records=Mock(),
+            refund_earning_deductions=Mock())
+        with patch.object(OrderOriginalShareTransfer.objects, 'filter') as transfers:
+            rows = [transfers.return_value, teammate.handovers.all.return_value, teammate.refund_records.all.return_value,
+                    teammate.refund_earning_deductions.all.return_value]
+            for query in rows:
+                query.exists.return_value = False
+                query.filter.return_value.exists.return_value = False
+            payments = [moved, teammate]
+            self.assertTrue(unaffected_addon_for_return(order, moved, payments, transfer, boundary=boundary))
+            rows[-1].filter.assert_called_once_with(refund__created_at__lte=boundary)
+            rows[-1].filter.return_value.exists.return_value = True
+            self.assertFalse(unaffected_addon_for_return(order, moved, payments, transfer, boundary=boundary))
+            rows[-1].filter.return_value.exists.return_value = False
+            rows[-1].exists.return_value = True
+            self.assertFalse(unaffected_addon_for_return(order, moved, payments, transfer))
+            self.assertTrue(unaffected_addon_for_return(order, moved, payments, transfer, boundary=boundary))
+            segment.slot = original.slot
+            self.assertFalse(unaffected_addon_for_return(order, moved, payments, transfer, boundary=boundary))
 
     def test_pending_second_handover_scope_requires_the_recorded_allocation_action(self):
         from orders.models import OrderAddonHandover, OrderPointsFundingAllocation

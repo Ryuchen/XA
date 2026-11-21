@@ -156,18 +156,29 @@ def _require_refund_operator(operator):
 
 def _has_handover_refund_receipt(order, payment_id, proposal_id):
     recorded = OrderAddonRefund.objects.filter(order=order, payment_id=payment_id, proposal_id=proposal_id)
-    if order.room_required_snapshot or not recorded.filter(
+    if order.room_required_snapshot:
+        return False
+    refund = recorded.filter(
             payment__handovers__status='ACCEPTED', payment__handovers__kind='STANDARD',
-            payment__handovers__previous__isnull=True, payment__handovers__accepted_at__lt=F('created_at')).exists():
+            payment__handovers__previous__isnull=True, payment__handovers__accepted_at__lt=F('created_at')).first()
+    if not refund or order.refund_records.exists() or order.prestart_handoffs.exists():
+        return False
+    payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
+    transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
+    if len(payments) == 2:
+        from .points_transfer_refund_access import unaffected_addon_for_return
+        original = transfers.select_related('previous_segment').order_by('created_at', 'pk').first()
+        if (not original or original.created_at >= refund.created_at
+                or original.previous_segment_id != refund.payment.intent.segment_id
+                or not unaffected_addon_for_return(order, refund.payment, payments, original, boundary=refund.created_at)):
+            return False
+    elif len(payments) != 1 or not transfers.exists():
         return False
     # A refund posted before the first allocation can still use the original refund path.
     # An accepted second handover, however, requires its original funded proof on readback.
-    return (not order.refund_records.exists() and not order.prestart_handoffs.exists()
-            and OrderAddonPayment.objects.filter(intent__order=order).count() == 1
-            and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
-            and (recorded.filter(funding_release_run__isnull=False).exists()
-                 or recorded.filter(payment__handovers__status='ACCEPTED',
-                                    payment__handovers__previous__isnull=False).exists()))
+    return (recorded.filter(funding_release_run__isnull=False).exists()
+            or recorded.filter(payment__handovers__status='ACCEPTED',
+                               payment__handovers__previous__isnull=False).exists())
 
 
 def _replay_handover_refund(order_id, payment_id, proposal_id, operator):
@@ -440,9 +451,13 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
                 or third_refund_active(order, payment)):
             raise ValidationError('已接替加购的独立退款资金尚未接入')
         first_transfer_handover = (first_handover and len(transfers) == 1 and not order.refund_records.exists()
-            and not OrderAddonPayment.objects.filter(intent__order=order).exclude(pk=payment.pk).exists()
             and payment.handovers.filter(status='ACCEPTED', kind='STANDARD', previous__isnull=True,
                 source_segment_id=transfers[0].previous_segment_id, target_segment_id=transfers[0].next_segment_id).exists())
+        if first_transfer_handover:
+            payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
+            from .points_transfer_refund_access import unaffected_addon_for_return
+            first_transfer_handover = (len(payments) == 1
+                or unaffected_addon_for_return(order, payment, payments, transfers[0]))
     proposal = OrderAddonRefundProposal.objects.select_for_update().filter(
         pk=proposal_id, payment=payment, case=case).first()
     if (not proposal or proposal.status != 'ACCEPTED' or proposal.case_opened_at != case.created_at
