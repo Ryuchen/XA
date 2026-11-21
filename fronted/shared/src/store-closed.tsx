@@ -22,7 +22,8 @@ const entryContent = {
       [ClipboardList, "查看订单", "查看自己的订单进度和售后记录。"],
     ] as const,
     helpTitle: "已有订单或售后问题？",
-    help: "请通过原下单渠道联系本店客服。提供订单编号和需要处理的问题，方便客服核对。",
+    help: "请通过原下单渠道联系本店客服。",
+    helpDetails: "准备好订单编号和需要处理的问题，方便客服核对。",
   },
   provider: {
     unavailable: "暂时无法登录、接单或提交报单。",
@@ -32,12 +33,13 @@ const entryContent = {
       [ClipboardList, "提交报单", "提交服务记录并查看审核结果。"],
     ] as const,
     helpTitle: "有服务正在进行？",
-    help: "如需交接服务或补交报单，请联系本店负责人，提供订单编号、当前进度和待处理事项。",
+    help: "如需交接服务或补交报单，请联系本店负责人。",
+    helpDetails: "准备好订单编号、当前进度和待处理事项。",
   },
 };
 
 export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry }: Props) {
-  const { services, helpTitle, help, unavailable } = entryContent[role];
+  const { services, helpTitle, help, helpDetails, unavailable } = entryContent[role];
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
   const storeName = brandSlug ? storeNames[brandSlug] : undefined;
@@ -104,7 +106,13 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
               {issue && (issue.closed
                 ? <>
                   <p className="xa-store-closed-description">{unavailable}</p>
-                  <p className="xa-store-closed-schedule"><CalendarClock size={17} aria-hidden="true" />开放时间以门店通知为准</p>
+                  <div className="xa-store-closed-schedule">
+                    <CalendarClock size={20} aria-hidden="true" />
+                    <div>
+                      <p>开放时间以门店通知为准</p>
+                      {returnUrl && <p>可保存下方的入口链接，收到通知后回来查看。</p>}
+                    </div>
+                  </div>
                 </>
                 : <p className="xa-store-closed-description" role="alert">{issue.message}</p>)}
               {!issue && returnUrl && <p className="xa-store-closed-description">可先保存本店入口，稍后再来查看。</p>}
@@ -120,10 +128,10 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
               </div>
               <div className="xa-store-closed-feedback">
                 <p role="status" aria-atomic="true">
-                  {issue && (checking ? "正在查询门店状态…" : <>
+                  {checking ? "正在查询门店状态…" : issue && <>
                     {issue.closed ? "上次检查" : "上次查询失败"} <time dateTime={issue.checkedAt.toISOString()}>{issue.checkedAt.toLocaleTimeString("zh-CN", { hour12: false })}</time>
                     {issue.closed && <span className="sr-only">，门店暂未开放</span>}
-                  </>)}
+                  </>}
                 </p>
                 {returnUrl && <p id={copyStatusId} role="status" aria-atomic="true">
                   {copyResult && (copyResult.copied ? "入口链接已复制" : "入口链接已选中，请手动复制")}
@@ -142,6 +150,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
             <section className="xa-store-closed-help">
               <h2><MessageCircle size={20} aria-hidden="true" />{helpTitle}</h2>
               <p>{help}</p>
+              <p>{helpDetails}</p>
             </section>
             {issue?.closed && <section className="xa-store-closed-services">
               <h2>开放后可使用</h2>
