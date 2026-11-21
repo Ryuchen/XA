@@ -583,13 +583,16 @@ def _followup_transfer_handover_scope(order, *, pending_payment_id=None):
                     and any(row[0] == item.payment_id for row in frozen) for item in pending))
 
 
-def _successive_addon_handovers(order, payment, transfers):
-    """The no-refund handovers must follow actual transfers on the same seat."""
+def _successive_addon_handovers(order, payment, transfers, *, allow_waiting=False):
+    """The handovers without main refunds must follow actual same-seat transfers."""
     if (not 1 <= len(transfers) <= 2 or order.room_required_snapshot or order.refund_records.exists()
-            or payment.refund_records.exists() or order.prestart_handoffs.exists()):
+            or order.prestart_handoffs.exists()):
         return []
     accepted = list(payment.handovers.filter(status='ACCEPTED').order_by('version'))
-    if len(accepted) != len(transfers):
+    waiting = (allow_waiting and len(accepted) == 1 and len(transfers) == 2
+               and accepted[0].accepted_at and accepted[0].accepted_at < transfers[1].created_at
+               and accepted[0].target_segment_id == transfers[1].previous_segment_id)
+    if len(accepted) != len(transfers) and not waiting:
         return []
     previous = None
     for handover, event in zip(accepted, transfers):
@@ -602,6 +605,10 @@ def _successive_addon_handovers(order, payment, transfers):
                     (event.previous_segment_id, event.next_segment_id)):
             return []
         previous = handover
+    refunds = list(payment.refund_records.order_by('pk')[:2])
+    if refunds and (len(refunds) != 1 or refunds[0].created_at <= accepted[0].accepted_at
+                    or (len(transfers) == 2 and refunds[0].created_at >= transfers[1].created_at)):
+        return []
     return accepted
 
 
@@ -720,6 +727,13 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
         successive = _successive_addon_handovers(order, payments[0], transfers) if allow_successive else []
         if not successive:
             return False
+    elif (len(payments) == 1 and len(transfers) == 2 and allow_handover
+            and _pending_allowed(payments[0].pk, pending_payment_id) and not order.refund_records.exists()
+            and payments[0].refund_records.exists()
+            and payments[0].handovers.filter(status='ACCEPTED', target_segment_id=transfers[1].previous_segment_id).exists()):
+        successive = _successive_addon_handovers(order, payments[0], transfers, allow_waiting=True)
+        if not successive:
+            return False
     if (len(payments) != 1 or (intent_count != 1 and not post_history)
             or (payments[0].refund_records.count() > 1 and order.refund_records.exists()
                 and payments[0].refund_records.filter(created_at__lt=order.refund_records.order_by('created_at').first().created_at).exists()
@@ -730,7 +744,7 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
             or (payments[0].refund_records.exists() and payments[0].handovers.filter(status='ACCEPTED').exists()
                 and not first_handover_refund(order, transfers)
                 and not single_post_refund_handover(order, pending_payment_id=pending_payment_id)
-                and not post_history and not origin_history)
+                and not post_history and not origin_history and not successive)
             or (not allow_handover and payments[0].handovers.filter(status='PENDING').exists())
             or not payments[0].buyer_transaction.created_at
             or any(payments[0].buyer_transaction.created_at == event.created_at for event in transfers)):
@@ -831,6 +845,15 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None,
         if preceding_handover:
             from .addon_handover import verify_transferred_handover_funding
             verify_transferred_handover_funding(order, preceding_handover.payment, preceding_handover)
+            refund = preceding_handover.payment.refund_records.first()
+            if refund:
+                from django.utils import timezone
+                from .points_addon_handover_refund_facts import verify_before_second_handover
+                try:
+                    verify_before_second_handover(refund, preceding_handover, before=timezone.now(),
+                        receipt_id=receipts[0].pk if receipts else None)
+                except DjangoValidationError as exc:
+                    raise ValidationError('再次转单前的加购退款凭证待核对') from exc
         if transfers:
             from .points_transfer_funding import plan_points_transfer
             from .points_funding_plan import PointsFundingPlanError

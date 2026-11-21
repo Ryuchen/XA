@@ -694,6 +694,34 @@ def funding_facts(refund, *, receipt_id):
             'prior_releases': [[row.pk, row.allocation_id, row.run_id, row.amount] for row in prior]}
 
 
+def verify_before_second_handover(refund, first, *, before, receipt_id=None):
+    """Prove the only refund carried from the first owner into a later transfer."""
+    from .addon_funding_release import verify_run
+    from .models import OrderAddonFundingReleaseRun
+
+    if (refund.payment_id != first.payment_id or refund.order_id != first.payment.intent.order_id
+            or first.previous_id or first.kind != 'STANDARD' or not first.accepted_at
+            or not first.accepted_at < refund.created_at < before
+            or not 0 < refund.amount < first.transferred_basis or refund.wallet_deduction or refund.deposit_deduction):
+        raise ValidationError('再次加购接替的前序退款范围异常')
+    run = OrderAddonFundingReleaseRun.objects.filter(refund=refund,
+        created_at__gt=refund.created_at, created_at__lt=before).first()
+    if not run or not run.points_addon_snapshot or not run.points_addon_hash:
+        raise ValidationError('再次加购接替缺少原退款补资凭证')
+    try:
+        verify_run(run, _skip_usage=True, witness_receipt_id=receipt_id)
+    except RestValidationError as exc:
+        raise ValidationError('再次加购接替的原退款凭证待核对') from exc
+    proof = run.points_addon_snapshot.get('handover_refund') or {}
+    members = proof.get('participants', [])
+    if (proof.get('handover_id') != first.pk or len(members) != 1
+            or members[0][1] != first.target_segment.provider_account_id
+            or any(row[1:3] != [refund.payment_id, first.target_segment_id] for row in members[0][8])
+            or any(row[1] != first.target_segment_id for row in members[0][9])):
+        raise ValidationError('再次加购接替的原退款未归属同一履约段')
+    return [refund.pk, run.pk, run.points_addon_hash]
+
+
 def settlement_parts(refund, *, before=None, receipt_id=None):
     """Verify segment shares at a boundary, or against current obligations."""
     from .addon_handover import current_responsibilities

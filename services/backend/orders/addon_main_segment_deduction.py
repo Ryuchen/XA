@@ -334,7 +334,7 @@ def verified_deductions(order, *, before=None, include_refund_id=None):
         from django.db.models import Q
         cutoff = Q(proposal__refund__created_at__lt=before)
         if include_refund_id is not None:
-            cutoff |= Q(proposal__refund_id=include_refund_id, proposal__refund__created_at=before)
+            cutoff |= Q(proposal__refund__pk=include_refund_id, proposal__refund__created_at=before)
         participants = participants.filter(cutoff)
     result = defaultdict(int)
     for participant in participants:

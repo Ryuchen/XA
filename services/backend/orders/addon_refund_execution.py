@@ -146,33 +146,63 @@ def _main_pending_income(order, provider_id):
     return assignment.provider_income
 
 
+def _require_refund_operator(operator):
+    from .refunds import authorized_refund
+    if (not operator or operator._state.db != transaction.get_connection().alias
+            or not operator.is_active or not operator.can_login or not authorized_refund(operator)):
+        raise ValidationError('仅有退款权限的有效后台账号可以执行退款')
+
+
+def _replay_after_second_handover(order_id, payment_id, proposal_id, operator):
+    from console.models import AdminAuditLog
+    from .points_transfer_refund_access import after_transfer
+
+    _require_refund_operator(operator)
+    with after_transfer(order_id, phase='report', read_only=True) as order:
+        refund = OrderAddonRefund.objects.select_related('funding_release_run').filter(
+            order=order, payment_id=payment_id, proposal_id=proposal_id).first()
+        if not refund or order.refund_records.exists():
+            raise ValidationError('原加购退款状态已变化，请先核对')
+        audits = list(AdminAuditLog.objects.filter(resource='addon-refund', object_id=str(refund.pk),
+            method='POST', path=f'/api/admin/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/{proposal_id}/execute/',
+            status_code=200))
+        expected = {'order_id': order_id, 'payment_id': payment_id, 'proposal_id': proposal_id, 'amount': refund.amount}
+        if len(audits) != 1 or audits[0].operator_account_id != refund.operator_id or audits[0].request_body != expected:
+            raise ValidationError('原加购退款审计凭证待核对')
+        snapshot = refund.funding_release_run.points_addon_snapshot
+        history = snapshot['funding']['addon_history']
+        return refund, next(row['provider_units'] for row in history if row['payment_id'] == payment_id)
+
+
 @transaction.atomic
 def execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
+    """Return the refund and the original income when replaying after a later handover."""
     from .points_service_payment import needs_integrated_processing
     order = Order.objects.filter(pk=order_id).first()
     if (order and getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
             and needs_integrated_processing(order)):
+        from .points_business_access import service_order, transferred_refunded_addon
+        transferred = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
+        if transferred and not order.refund_records.exists() and OrderAddonRefund.objects.filter(
+                order=order, payment_id=payment_id, proposal_id=proposal_id,
+                payment__handovers__status='ACCEPTED', payment__handovers__previous__isnull=False).exists():
+            return _replay_after_second_handover(order_id, payment_id, proposal_id, operator)
         if getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
             from console.payroll_event_barrier import lock_payment_refund_events
             lock_payment_refund_events()
-        from .points_business_access import service_order, transferred_refunded_addon
-        transferred = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
         scope = (transferred_refunded_addon(order_id, payment_id, replay_proposal_id=proposal_id)
                  if transferred and order.refund_records.exists()
                  else service_order(order_id, phase='refund', addon=True, refund_payment_id=payment_id))
         with scope:
-            return _execute(order_id, payment_id, proposal_id, operator=operator, legacy_operator=legacy_operator)
-    return _execute(order_id, payment_id, proposal_id, operator=operator, legacy_operator=legacy_operator)
+            return _execute(order_id, payment_id, proposal_id, operator=operator, legacy_operator=legacy_operator), None
+    return _execute(order_id, payment_id, proposal_id, operator=operator, legacy_operator=legacy_operator), None
 
 
 def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
     if getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
         from console.payroll_event_barrier import lock_payment_refund_events
         lock_payment_refund_events()
-    from .refunds import authorized_refund
-    if (not operator or operator._state.db != transaction.get_connection().alias
-            or not operator.is_active or not operator.can_login or not authorized_refund(operator)):
-        raise ValidationError('仅有退款权限的有效后台账号可以执行退款')
+    _require_refund_operator(operator)
     order = Order.objects.select_for_update().filter(pk=order_id).first()
     if not order:
         raise ValidationError('订单不存在')

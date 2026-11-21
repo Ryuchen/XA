@@ -179,7 +179,7 @@ def _participants(payment, case, amount, selected):
     return result
 
 
-def _data(proposal, *, account=None):
+def _data(proposal, *, account=None, execution_income=None):
     payment = proposal.payment
     from .addon_refund_execution import enabled
     executed = hasattr(proposal, 'refund')
@@ -211,13 +211,13 @@ def _data(proposal, *, account=None):
         from .points_third_addon_responsibilities import current as current_responsibilities
     else:
         from .addon_handover import current_responsibilities
-    _, shares = current_responsibilities(payment)
+    shares = current_responsibilities(payment)[1] if execution_income is None else []
     people = list(proposal.participants.order_by('account_id'))
     is_provider = account is not None and account.account_type == 'PROVIDER'
     if is_provider:
         people = [row for row in people if row.account_id == account.pk]
         shares = [row for row in shares if row['provider_id'] == account.pk]
-    incomes = sum(row['income'] for row in shares)
+    incomes = sum(row['income'] for row in shares) if execution_income is None else execution_income
     burden = sum(row.burden for row in people)
     settled = set(payment.settlements.values_list('segment_id', flat=True)) | set(
         payment.segment_settlements.values_list('segment_id', flat=True))
@@ -487,13 +487,12 @@ class StaffAddonRefundExecuteView(APIView):
 
     @protect_addon_refund
     @transaction.atomic
-    @scoped_addon_refund_action
     def post(self, request, order_id, payment_id, proposal_id):
         if 'order:refund' not in get_account_permissions(request.account):
             return Response({'code': 403, 'msg': '无权执行退款'}, status=403)
         from .addon_refund_execution import execute
-        refund = execute(order_id, payment_id, proposal_id, operator=request.account,
-                         legacy_operator=request.legacy_user)
+        refund, execution_income = execute(order_id, payment_id, proposal_id, operator=request.account,
+                                           legacy_operator=request.legacy_user)
         from console.models import AdminAuditLog
         if not AdminAuditLog.objects.filter(resource='addon-refund', object_id=str(refund.pk)).exists():
             AdminAuditLog.objects.create(operator=request.legacy_user, operator_account=request.account,
@@ -502,4 +501,5 @@ class StaffAddonRefundExecuteView(APIView):
                 request_body={'order_id': order_id, 'payment_id': payment_id, 'proposal_id': proposal_id,
                               'amount': refund.amount}, status_code=200)
         request._request._business_audit_recorded = True
-        return Response({'code': 0, 'data': _data(refund.proposal, account=request.account)})
+        return Response({'code': 0, 'data': _data(refund.proposal, account=request.account,
+                                                  execution_income=execution_income)})

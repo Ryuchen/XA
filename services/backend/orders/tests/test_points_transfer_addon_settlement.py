@@ -112,6 +112,35 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             verify_transferred_handover_funding(order, payment, proposal)
             verify_unfunded.assert_called_once_with(payment, proposal)
 
+    def test_second_handover_requires_the_original_refund_run_and_same_segment_deductions(self):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from orders.models import OrderAddonFundingReleaseRun
+        from orders.points_addon_handover_refund_facts import verify_before_second_handover
+
+        refunded_at = timezone.now()
+        before = refunded_at + timedelta(seconds=1)
+        refund = SimpleNamespace(pk=11, payment_id=3, order_id=12, created_at=refunded_at,
+            amount=50, wallet_deduction=0, deposit_deduction=0)
+        first = SimpleNamespace(pk=6, payment_id=3, payment=SimpleNamespace(intent=SimpleNamespace(order_id=12)),
+            previous_id=None, kind='STANDARD', accepted_at=refunded_at - timedelta(seconds=1), transferred_basis=60,
+            target_segment_id=9, target_segment=SimpleNamespace(provider_account_id=20))
+        participant = [1, 20, 60, 50, [], [48, 2, 0, 0], None, [], [[15, 3, 9, 48]], [[16, 9, 2]]]
+        run = SimpleNamespace(pk=14, released_amount=0, points_addon_hash='original-digest',
+            points_addon_snapshot={'handover_refund': {'handover_id': 6, 'participants': [participant]}})
+        with (patch.object(OrderAddonFundingReleaseRun.objects, 'filter') as runs,
+              patch('orders.addon_funding_release.verify_run') as verify):
+            runs.return_value.first.return_value = None
+            with self.assertRaisesMessage(DjangoValidationError, '缺少原退款补资凭证'):
+                verify_before_second_handover(refund, first, before=before, receipt_id=5)
+            runs.assert_called_once_with(refund=refund, created_at__gt=refunded_at, created_at__lt=before)
+            runs.return_value.first.return_value = run
+            self.assertEqual(verify_before_second_handover(refund, first, before=before, receipt_id=5),
+                             [11, 14, 'original-digest'])
+            verify.assert_called_once_with(run, _skip_usage=True, witness_receipt_id=5)
+            participant[9][0][1] = 10
+            with self.assertRaisesMessage(DjangoValidationError, '未归属同一履约段'):
+                verify_before_second_handover(refund, first, before=before, receipt_id=5)
+
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated store databases')
 @override_settings(ALLOWED_HOSTS=['*'], PLATFORM_IDENTITY_ENABLED=True, PLATFORM_PASS_REPAYMENT_ENABLED=True,
