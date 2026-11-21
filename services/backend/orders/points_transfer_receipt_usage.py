@@ -84,7 +84,7 @@ def facts(row):
         raise ValidationError('转单时加购来源或时序尚未接入')
     addon_events = None
     handover_event = None
-    intervening_refund = None
+    intervening_refunds = []
     read_receipt_id = getattr(row, 'read_receipt_id', allocation.receipt_id)
     if addons:
         from .points_addon_receipt_usage import payment_facts, facts as addon_refund_facts
@@ -114,13 +114,11 @@ def facts(row):
             except RestValidationError as exc:
                 raise ValidationError('转单时此前加购接替凭证异常') from exc
             handover_event = [first.pk, prior.pk if prior else None, prior.points_handover_hash if prior else None]
-            refunds = list(addons[0].refund_records.filter(created_at__lt=boundary).order_by('pk')[:2])
+            refunds = list(addons[0].refund_records.filter(created_at__lt=boundary).order_by('created_at', 'pk'))
             if refunds:
-                if len(refunds) != 1:
-                    raise ValidationError('再次转单前仅支持一笔加购退款')
-                from .points_addon_handover_refund_facts import verify_before_second_handover
-                intervening_refund = verify_before_second_handover(refunds[0], first, before=boundary,
-                                                                  receipt_id=read_receipt_id)
+                from .points_addon_handover_refund_facts import verify_refunds_before_second_handover
+                intervening_refunds = verify_refunds_before_second_handover(refunds, first, before=boundary,
+                                                                           receipt_id=read_receipt_id)
         for addon in addons:
             payment_facts(addon, read_receipt_id=read_receipt_id)
             for prior_refund in addon.refund_records.filter(created_at__lt=boundary).order_by('pk'):
@@ -263,4 +261,4 @@ def facts(row):
                      revision.pk, revision.evidence_hash, original.pk, spent.pk]
                     + ([addon_events] if addon_events is not None else [])
                     + ([handover_event] if handover_event is not None else [])
-                    + ([intervening_refund] if intervening_refund is not None else [])))
+                    + intervening_refunds))

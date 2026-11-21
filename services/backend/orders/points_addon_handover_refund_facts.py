@@ -695,7 +695,7 @@ def funding_facts(refund, *, receipt_id):
 
 
 def verify_before_second_handover(refund, first, *, before, receipt_id=None):
-    """Prove the only refund carried from the first owner into a later transfer."""
+    """Prove a refund against the first owner's original fulfillment segment."""
     from .addon_funding_release import verify_run
     from .models import OrderAddonFundingReleaseRun
 
@@ -720,6 +720,15 @@ def verify_before_second_handover(refund, first, *, before, receipt_id=None):
             or any(row[1] != first.target_segment_id for row in members[0][9])):
         raise ValidationError('再次加购接替的原退款未归属同一履约段')
     return [refund.pk, run.pk, run.points_addon_hash]
+
+
+def verify_refunds_before_second_handover(refunds, first, *, before, receipt_id=None):
+    """Prove the ordered refund history before liability passes to the next segment."""
+    if sum(refund.amount for refund in refunds) >= first.transferred_basis:
+        raise ValidationError('再次加购接替前的累计退款未保留可接替份额')
+    boundaries = [refund.created_at for refund in refunds[1:]] + [before]
+    return [verify_before_second_handover(refund, first, before=boundary, receipt_id=receipt_id)
+            for refund, boundary in zip(refunds, boundaries)]
 
 
 def settlement_parts(refund, *, before=None, receipt_id=None):

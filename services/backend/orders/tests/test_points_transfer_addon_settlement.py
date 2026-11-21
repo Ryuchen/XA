@@ -141,6 +141,27 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             with self.assertRaisesMessage(DjangoValidationError, '未归属同一履约段'):
                 verify_before_second_handover(refund, first, before=before, receipt_id=5)
 
+    def test_second_handover_checks_each_refund_before_the_next_event(self):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from orders.points_addon_handover_refund_facts import verify_refunds_before_second_handover
+
+        created = timezone.now()
+        first = SimpleNamespace(transferred_basis=60)
+        refunds = [SimpleNamespace(pk=11, amount=20, created_at=created),
+                   SimpleNamespace(pk=12, amount=30, created_at=created + timedelta(seconds=1))]
+        boundary = created + timedelta(seconds=2)
+        facts = [[11, 21, 'first-digest'], [12, 22, 'second-digest']]
+        with patch('orders.points_addon_handover_refund_facts.verify_before_second_handover',
+                   side_effect=facts) as verify:
+            self.assertEqual(verify_refunds_before_second_handover(refunds, first, before=boundary, receipt_id=5),
+                             facts)
+            self.assertEqual([call.kwargs['before'] for call in verify.call_args_list],
+                             [refunds[1].created_at, boundary])
+            self.assertEqual([call.args[0] for call in verify.call_args_list], refunds)
+            refunds[1].amount = 40
+            with self.assertRaisesMessage(DjangoValidationError, '未保留可接替份额'):
+                verify_refunds_before_second_handover(refunds, first, before=boundary, receipt_id=5)
+
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated store databases')
 @override_settings(ALLOWED_HOSTS=['*'], PLATFORM_IDENTITY_ENABLED=True, PLATFORM_PASS_REPAYMENT_ENABLED=True,

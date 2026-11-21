@@ -15,7 +15,7 @@ def facts(run, receipt_id):
         raise ValidationError('积分加购接替确认凭证缺失')
     payment, order = handover.payment, handover.payment.intent.order
     later = handover.previous_id is not None
-    prior_refunds = (list(payment.refund_records.filter(created_at__lt=handover.created_at).order_by('pk')[:2])
+    prior_refunds = (list(payment.refund_records.filter(created_at__lt=handover.created_at).order_by('created_at', 'pk'))
                      if later else [])
     if receipt_id:
         from .models import OrderPointsFundingAllocation
@@ -24,7 +24,6 @@ def facts(run, receipt_id):
     if (order.refund_records.filter(created_at__lte=run.created_at).exists()
             or payment.refund_records.filter(created_at__gte=handover.created_at,
                                              created_at__lte=run.created_at).exists()
-            or len(prior_refunds) > 1
             or payment.handovers.filter(status='ACCEPTED', accepted_at__lte=run.created_at).count() != (2 if later else 1)
             or handover.accepted_at >= run.created_at):
         raise ValidationError('积分加购接替的退款或时序尚未接入')
@@ -91,9 +90,9 @@ def facts(run, receipt_id):
         'shares': [[row.pk, row.segment_id, row.position, row.basis, row.income,
                     row.commission_snapshot, row.is_current] for row in shares], 'funding': combined}
     if prior_refunds:
-        from .points_addon_handover_refund_facts import verify_before_second_handover
-        result['prior_refunds'] = [verify_before_second_handover(prior_refunds[0], handover.previous,
-            before=event.created_at, receipt_id=receipt_id)]
+        from .points_addon_handover_refund_facts import verify_refunds_before_second_handover
+        result['prior_refunds'] = verify_refunds_before_second_handover(prior_refunds, handover.previous,
+            before=event.created_at, receipt_id=receipt_id)
     elif not later and order.addon_refunds.filter(created_at__lt=handover.accepted_at).exists():
         from .points_transfer_handover_prior_refunds import facts as prior_refund_facts
         result['prior_refunds'] = prior_refund_facts(payment, handover, receipt_id=receipt_id)

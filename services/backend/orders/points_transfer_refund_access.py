@@ -605,9 +605,10 @@ def _successive_addon_handovers(order, payment, transfers, *, allow_waiting=Fals
                     (event.previous_segment_id, event.next_segment_id)):
             return []
         previous = handover
-    refunds = list(payment.refund_records.order_by('pk')[:2])
-    if refunds and (len(refunds) != 1 or refunds[0].created_at <= accepted[0].accepted_at
-                    or (len(transfers) == 2 and refunds[0].created_at >= transfers[1].created_at)):
+    refund_times = list(payment.refund_records.order_by('created_at', 'pk').values_list('created_at', flat=True))
+    if refund_times and (refund_times[0] <= accepted[0].accepted_at
+                        or len(set(refund_times)) != len(refund_times)
+                        or (len(transfers) == 2 and refund_times[-1] >= transfers[1].created_at)):
         return []
     return accepted
 
@@ -845,12 +846,12 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None,
         if preceding_handover:
             from .addon_handover import verify_transferred_handover_funding
             verify_transferred_handover_funding(order, preceding_handover.payment, preceding_handover)
-            refund = preceding_handover.payment.refund_records.first()
-            if refund:
+            refunds = list(preceding_handover.payment.refund_records.order_by('created_at', 'pk'))
+            if refunds:
                 from django.utils import timezone
-                from .points_addon_handover_refund_facts import verify_before_second_handover
+                from .points_addon_handover_refund_facts import verify_refunds_before_second_handover
                 try:
-                    verify_before_second_handover(refund, preceding_handover, before=timezone.now(),
+                    verify_refunds_before_second_handover(refunds, preceding_handover, before=timezone.now(),
                         receipt_id=receipts[0].pk if receipts else None)
                 except DjangoValidationError as exc:
                     raise ValidationError('再次转单前的加购退款凭证待核对') from exc
