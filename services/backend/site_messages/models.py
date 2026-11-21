@@ -524,6 +524,27 @@ class ServiceTransferNotice(models.Model):
         constraints = [models.UniqueConstraint(fields=['transfer', 'account'], name='service_transfer_notice_once')]
 
 
+class ServiceTransferAssignmentNotice(models.Model):
+    """A staff transfer submission and its store-local recipient."""
+
+    status_log = models.ForeignKey('orders.OrderStatusLog', on_delete=models.PROTECT, related_name='+')
+    account = models.ForeignKey('club_accounts.ClubAccount', on_delete=models.PROTECT, related_name='+')
+    assignment = models.ForeignKey('orders.OrderProvider', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    seat_event_ids = models.JSONField(default=list)
+    transferred_at = models.DateTimeField()
+    role = models.CharField(max_length=8)
+    business_cycle = models.PositiveIntegerField(null=True, blank=True)
+    legacy_user_id = models.PositiveBigIntegerField(null=True, blank=True)
+    title = models.CharField(max_length=100)
+    preview = models.CharField(max_length=255)
+    message = models.OneToOneField(Message, on_delete=models.PROTECT, null=True, blank=True, related_name='+')
+    skipped_reason = models.CharField(max_length=100, blank=True, default='')
+    completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['status_log', 'account'], name='service_transfer_assignment_notice_once')]
+
+
 class ReservationSeatTimeoutNotice(models.Model):
     event = models.OneToOneField('orders.ReservationSeatEvent', on_delete=models.PROTECT, related_name='timeout_provider_notice')
     invitation_event = models.ForeignKey('orders.ReservationSeatEvent', on_delete=models.PROTECT, null=True, blank=True, related_name='+')

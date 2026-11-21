@@ -1909,8 +1909,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         for cmd in parsed:
                             cmd['_segment_commission_plan'] = plans[cmd['new_provider_account'].pk]
                 from orders.transfer_limit import record_locked
-                record_locked(locked_order, [(cmd['old_provider_account_id'], cmd['new_provider_account'].pk)
-                                             for cmd in parsed])
+                seat_events = record_locked(locked_order, [(cmd['old_provider_account_id'], cmd['new_provider_account'].pk)
+                                                           for cmd in parsed])
                 last_new_provider = None
                 last_new_provider_account = None
                 transfer_at = timezone.now()
@@ -2216,65 +2216,21 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         raise IllegalTransitionError(str(exc)) from exc
                 from orders.room_completion_review import invalidate_for_transfer_locked
                 invalidate_for_transfer_locked(locked_order, request.account)
-                log_only(
+                transfer_log = log_only(
                     locked_order,
                     action=OrderStatusLog.Action.TRANSFER,
                     operator=request.legacy_user,
                     operator_account=request.account,
                     reason=reason,
                 )
+                from site_messages.service_transfer_assignment_notice import record_or_schedule
+                record_or_schedule(locked_order, transfer_log, seat_events, rows,
+                                   transferred_at=transfer_at, subsidy_segment=subsidy_segment)
                 order = locked_order
                 transaction.on_commit(lambda: notify_order_update(order))
         except IllegalTransitionError as exc:
             return Response({'code': 400, 'msg': str(exc) or '转单失败'})
 
-        # A teammate who remains on a two-person service must also learn about
-        # the handoff, including when they were offline during the update.
-        if order.escort_mode == Order.EscortMode.DOUBLE:
-            for row in rows.values():
-                if row.provider_account_id in changed_accounts or row.released_at:
-                    continue
-                _push_message_safe(
-                    recipient_id=row.provider_id,
-                    recipient_account_id=row.provider_account_id,
-                    title='服务搭档已更换',
-                    preview=f'「{order.service_name_snapshot}」的服务搭档已更换，请查看订单并确认服务安排',
-                    msg_type='ORDER', related_order_id=order.id,
-                )
-        for cmd in parsed:
-            _push_message_safe(
-                recipient_id=rows[cmd['old_provider_account_id']].provider_id,
-                recipient_account_id=cmd['old_provider_account_id'],
-                title='订单已转出',
-                preview=(
-                    f'你的「{order.service_name_snapshot}」已转交其他大神，'
-                    + ('请按履约情况提交报单，收益将在整单完成后核算'
-                       if subsidy_segment else '本单无保留份额，无需提交报单'
-                       if rows[cmd['old_provider_account_id']].settlement_base <= 0 else
-                       '保留收益待整单报单通过后结算'
-                       if order.settlement_mode == Order.SettlementMode.REPORT_APPROVAL
-                       else '本次转单份额已结算')
-                ),
-                msg_type='ORDER',
-                related_order_id=order.id,
-            )
-            _push_message_safe(
-                recipient_id=cmd['new_provider'].id,
-                recipient_account_id=cmd['new_provider_account'].pk,
-                title='客服转单给你',
-                preview=f'客服为你转入「{order.service_name_snapshot}」，请接手并继续服务，完成后提交结单截图',
-                msg_type='ORDER',
-                assignment_alert=True,
-                related_order_id=order.id,
-            )
-        _push_message_safe(
-            recipient_id=order.customer_id,
-            recipient_account_id=order.customer_account_id,
-            title='已为你更换大神',
-            preview=f'你的「{order.service_name_snapshot}」已更换服务大神',
-            msg_type='ORDER',
-            related_order_id=order.id,
-        )
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '转单成功'})
 
     @action(detail=False, methods=['get'], url_path='suggest-commission')

@@ -47,11 +47,14 @@ def record_locked(order, commands):
         if len(events) != seat.transfer_count or current != seat.current_account_id:
             raise IllegalTransitionError('订单转单次数凭证异常，请先核对')
     by_account = {seat.current_account_id:seat for seat in seats}
+    created_events = []
     for old, new in commands:
         seat = by_account[old]
         if seat.transfer_count >= 2:
             raise IllegalTransitionError('该席位已转单两次，不能继续更换陪玩')
         sequence = seat.transfer_count + 1
-        OrderTransferSeatEvent.objects.create(seat=seat, sequence=sequence, old_account_id=old, new_account_id=new)
+        created_events.append(OrderTransferSeatEvent.objects.create(
+            seat=seat, sequence=sequence, old_account_id=old, new_account_id=new))
         seat.transfer_count = sequence; seat.current_account_id = new
         seat.save(update_fields=['transfer_count', 'current_account'])
+    return created_events
