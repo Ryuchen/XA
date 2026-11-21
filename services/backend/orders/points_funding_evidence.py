@@ -236,25 +236,28 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
     return allocations
 
 
-def _verified_assigned_cancel_funding(order):
+def _verified_prestart_cancel_funding(order):
     if (order.status != Order.Status.CANCELLED or order.payment_status != Order.PaymentStatus.REFUNDED):
         return None
     refunds = list(order.refund_records.order_by('pk')[:2])
     if len(refunds) != 1 or not isinstance(refunds[0].benefit_effects, dict):
         return None
     refund = refunds[0]
-    if (refund.benefit_effects.get('points_assigned_prestart_cancel') is not True
-            or refund.benefit_effects.get('points_prestart_cancel_funding') is not True):
+    effects = refund.benefit_effects
+    assigned = effects.get('points_assigned_prestart_cancel') is True
+    reserved = effects.get('reservation_points_prestart_cancel') is True
+    if effects.get('points_prestart_cancel_funding') is not True or not (assigned or reserved):
         return None
 
     from django.core.exceptions import ObjectDoesNotExist, ValidationError as DjangoValidationError
     from wallet.models import Transaction
-    from .models import OrderOriginalShareTransfer, OrderParticipationSegment, OrderPointsSettlement, Reservation
+    from .models import (OrderOriginalShareTransfer, OrderParticipationSegment, OrderPointsSettlement,
+                         OrderStatusLog, Reservation, ReservationStatusLog)
     from .points_prestart_cancel_funding import verify_replay_locked
     from .points_service_refund import verify_refund_history_locked
 
-    if (order.in_service_at or order.completed_at or order.settled_at or not order.refunded_at
-            or order.aftersales.exists() or order.addon_intents.exists() or Reservation.objects.filter(order=order).exists()
+    if (order.in_service_at or order.completed_at or order.settled_at or order.consumption_confirmed_at
+            or not order.refunded_at or order.aftersales.exists() or order.addon_intents.exists()
             or order.providers.filter(settled_at__isnull=False).exists()
             or OrderParticipationSegment.objects.filter(attribution__order=order, started_at__isnull=False).exists()
             or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
@@ -262,6 +265,27 @@ def _verified_assigned_cancel_funding(order):
             or Transaction.objects.filter(order=order, status='SUCCESS', amount__gt=0,
                                           tx_type__in=('INCOME', 'GIFT', 'SHOP_INCOME')).exists()):
         raise PointsFundingPlanError('取消订单的履约或收益凭证待核对')
+    booking = Reservation.objects.filter(order=order).first()
+    if reserved:
+        if (assigned or not booking or booking.status != Reservation.Status.CONVERTED
+                or not booking.confirmed_at or not booking.converted_at
+                or not booking.confirmed_at <= booking.converted_at <= order.refunded_at
+                or booking.customer_account_id != order.customer_account_id or booking.customer_id != order.customer_id
+                or booking.customer_business_cycle != order.business_cycle or booking.service_id != order.service_id
+                or booking.required_provider_count != order.required_provider_count):
+            raise PointsFundingPlanError('原预约和已退款订单的转单凭证待核对')
+        conversions = list(booking.status_logs.filter(action=ReservationStatusLog.Action.CONVERT).order_by('pk')[:2])
+        if len(conversions) != 1:
+            raise PointsFundingPlanError('预约转单状态记录待核对')
+        conversion = conversions[0]
+        if (conversion.from_status != Reservation.Status.CONFIRMED or conversion.to_status != Reservation.Status.CONVERTED
+                or conversion.reason != f'转为订单：{order.order_no}' or not conversion.operator_account_id
+                or not booking.converted_at <= conversion.created_at <= order.refunded_at
+                or not order.status_logs.filter(action=OrderStatusLog.Action.CREATE, reason=f'预约转单：{booking.reservation_no}',
+                    operator_account_id=conversion.operator_account_id, created_at__lte=booking.converted_at).exists()):
+            raise PointsFundingPlanError('预约与订单的原转单记录待核对')
+    elif booking:
+        raise PointsFundingPlanError('取消订单的预约归属待核对')
     try:
         _verified_allocations_for_locked_order(order)
         verify_replay_locked(refund)
@@ -290,7 +314,7 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
             raise PointsFundingPlanError('订单不存在')
         require_order_funding_access(order)
         if include_prestart_cancelled:
-            closed_funding = _verified_assigned_cancel_funding(order)
+            closed_funding = _verified_prestart_cancel_funding(order)
             if closed_funding is not None:
                 return closed_funding
         from .points_service_payment import needs_integrated_processing

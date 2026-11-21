@@ -183,7 +183,12 @@ class ReservationPointsFinanceTest(TestCase):
     def test_cancel_release_is_recorded_in_shared_receipt_ledger(self):
         self._cancel_funding_case(usage=True)
 
-    def _cancel_funding_case(self, *, usage):
+    @override_settings(RECEIPT_USAGE_LEDGER_INTERNAL_TESTING=True,
+                       RECEIPT_USAGE_ALLOCATIONS_INTERNAL_TESTING=True)
+    def test_prestart_refund_with_formal_release_closes_platform_funding(self):
+        self._cancel_funding_case(usage=True, formal=True)
+
+    def _cancel_funding_case(self, *, usage, formal=False):
         from orders.models import ReservationPointsCancelFundingEvidence, ReservationPointsCancelFundingRelease
         from stores import test_platform_pass_repayment as platform_tests
         from stores.db import transaction
@@ -206,6 +211,7 @@ class ReservationPointsFinanceTest(TestCase):
             provider = get_or_create_account_for_legacy_user(provider_user)
             link_legacy_relations(provider_user, provider)
             EscortProfile.objects.filter(user=provider_user).update(account=provider)
+            get_wallet(account=provider, user=provider_user)
             service = make_service(price=10000, commission_rate=20)
             admin = make_console_user(['order:view', 'order:refund'])
             staff = get_or_create_account_for_legacy_user(admin)
@@ -250,6 +256,9 @@ class ReservationPointsFinanceTest(TestCase):
             return self.client.post(funding_url, {'request_id': str(uuid4()), 'order_id': order_id, 'amount': amount},
                 format='json', HTTP_AUTHORIZATION='Bearer '+self.token)
         self.assertEqual(fund(first, 2000).status_code, 200)
+        if formal:
+            self._verify_formal_cancel_status(first, reviewer)
+            return
         preview = reviewer.get(f'/api/admin/orders/{first}/refund-preview/')
         self.assertEqual(preview.data['code'], 0, preview.data)
         self.assertEqual(preview.data['data']['released_funding_units'], 2000)
@@ -308,6 +317,46 @@ class ReservationPointsFinanceTest(TestCase):
             self.assertEqual(broken['status'], 'REVIEW', broken)
             self.assertIsNone(broken['claims'][0]['receipt']['unallocated_amount'])
             transaction.set_rollback(True)
+
+    def _verify_formal_cancel_status(self, order_id, reviewer):
+        from orders.models import PointsPrestartCancelFundingEvidence, ReservationStatusLog
+        from stores.db import transaction
+
+        refund_url = f'/api/admin/orders/{order_id}/refund/'
+        queue_url = '/api/admin/platform/points-funding/xinan/orders'
+        auth = {'HTTP_AUTHORIZATION': 'Bearer ' + self.token}
+
+        # Use the production refund and evidence on SQLite, substituting the
+        # MySQL-only capability check after the isolated checkout.
+        with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, RECEIPT_USAGE_LEDGER_ENABLED=True),
+              patch('orders.points_business_access.configured', return_value=True)):
+            payload = {'reason': '未开工，取消已转单预约', 'client_request_id': 'reservation-formal-release'}
+            refunded = reviewer.post(refund_url, payload, format='json')
+            self.assertEqual(refunded.data['code'], 0, refunded.data)
+            with store_context(self.second):
+                booking = Reservation.objects.get(order_id=order_id, status=Reservation.Status.CONVERTED)
+                release = PointsPrestartCancelFundingEvidence.objects.get(points_refund__refund__order_id=order_id)
+                self.assertEqual(release.releases.get().amount, 2000)
+
+            detail = self.client.get(f'{queue_url}/{order_id}', **auth)
+            self.assertEqual(detail.status_code, 200, detail.data)
+            funding = detail.data['data']
+            self.assertEqual((funding['required_units'], funding['allocated_units'], funding['remaining_units'],
+                              funding['fully_funded']), (0, 0, 0, True))
+            queue = self.client.get(queue_url, {'after_id': order_id - 1}, **auth)
+            self.assertEqual(queue.data['data']['list'], [], queue.data)
+
+            with store_context(self.second), transaction.atomic():
+                Reservation.objects.filter(pk=booking.pk).update(required_provider_count=2)
+                damaged = self.client.get(f'{queue_url}/{order_id}', **auth)
+                self.assertEqual((damaged.status_code, damaged.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
+                transaction.set_rollback(True)
+            with store_context(self.second):
+                booking.status_logs.filter(action=ReservationStatusLog.Action.CONVERT).update(reason='转为订单：另一订单')
+            damaged = self.client.get(f'{queue_url}/{order_id}', **auth)
+            self.assertEqual((damaged.status_code, damaged.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
+            queue = self.client.get(queue_url, {'after_id': order_id - 1}, **auth)
+            self.assertEqual([row['funding_status'] for row in queue.data['data']['list']], ['REVIEW'])
 
     def test_platform_receipt_funds_booking_before_payout_and_vip_confirmation(self):
         from engagement.confirmation import process_order
