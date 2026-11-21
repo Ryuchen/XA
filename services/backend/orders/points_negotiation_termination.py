@@ -137,6 +137,12 @@ def available_for_order(order):
             or bool(getattr(settings, 'SERVICE_POINTS_FUNDING_RELEASE_TESTING', False)))
 
 
+def formal_first_service_refund_available(order, case):
+    from .points_business_access import permits
+    return bool(case.client_request_id and permits(order, phase='refund', kind='service')
+                and available_for_order(order))
+
+
 def _verify_transfer_termination_segments(order, posting, shares):
     """Check the affected current segment without mistaking older transfers."""
     facts = posting.participants['facts']

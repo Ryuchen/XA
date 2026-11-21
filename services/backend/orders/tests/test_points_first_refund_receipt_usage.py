@@ -19,7 +19,7 @@ from orders.tests.factories import make_console_user
 from stores import test_platform_pass_repayment as platform_tests
 from stores.context import store_context
 from stores.db import transaction
-from users.models import PassReceiptUsageEvent
+from users.models import EscortProfile, PassReceiptUsageEvent
 from users.receipt_usage_ledger import initialize_empty_locked
 from users.receipt_usage_sources import verify_allocations_locked
 
@@ -128,7 +128,53 @@ class FirstNegotiationReceiptUsageTest(TestCase):
                     'client_request_id': 'receipt-main-case'}, format='json')
                 self.assertEqual(opened.data['code'], 0, opened.data)
                 case_id = opened.data['data']['id']
-                proposal = manager.post(f'/api/admin/aftersales/{case_id}/negotiation-proposal/', {
+                case_url = f'/api/admin/aftersales/{case_id}/'
+                amount = {'refund_units': 3000}
+                self.assertFalse(manager.get(case_url + 'negotiation-preview/', amount).data['data']['execution_available'])
+                self.assertTrue(manager.get(case_url + 'negotiation-funding/', amount).data['data']['read_only_points'])
+                viewer = make_console_user(['order:view', 'support:edit'])
+                viewer_account = get_or_create_account_for_legacy_user(viewer)
+                viewer.admin_membership.account = viewer_account
+                viewer.admin_membership.save(update_fields=['account'])
+                support_only = APIClient(HTTP_HOST='admin.esports.club',
+                    HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(viewer_account)[0])
+                # Exercise the response inside an order-bound capability. The
+                # registered MySQL run verifies how the real scope is entered.
+                from orders.points_business_access import _bind
+                with (patch('orders.points_business_access.configured', return_value=True), transaction.atomic(),
+                      _bind(phase='refund', kind='service', order_id=order.pk)):
+                    preview = manager.get(case_url + 'negotiation-preview/', amount)
+                    self.assertEqual(preview.data['code'], 0, preview.data)
+                    self.assertTrue(preview.data['data']['execution_available'], preview.data)
+                    self.assertTrue(manager.get(case_url + 'negotiation-proposal/').data['data']['execution_available'])
+                    funding = manager.get(case_url + 'negotiation-funding/', amount).data['data']
+                    self.assertTrue(funding['executable'])
+                    self.assertFalse(funding['read_only_points'])
+                    high_amount = {'refund_units': 5800}
+                    short = manager.get(case_url + 'negotiation-funding/', high_amount).data['data']
+                    self.assertFalse(short['book_amounts_sufficient'])
+                    self.assertFalse(short['executable'])
+                    self.assertFalse(short['read_only_points'])
+                    with transaction.atomic(), override_settings(REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=False):
+                        EscortProfile.objects.filter(account_id=assignment.provider_account_id).update(deposit_paid=1000)
+                        deposit = manager.get(case_url + 'negotiation-funding/', high_amount).data['data']
+                        self.assertTrue(deposit['book_amounts_sufficient'])
+                        self.assertEqual(deposit['providers'][0]['deposit_units'], 1000)
+                        self.assertFalse(deposit['executable'])
+                        transaction.set_rollback(True)
+                    viewer_preview = support_only.get(case_url + 'negotiation-preview/', amount).data['data']
+                    self.assertTrue(viewer_preview['agreement_available'])
+                    self.assertFalse(viewer_preview['execution_available'])
+                    self.assertEqual(support_only.get(case_url + 'negotiation-funding/', amount).status_code, 403)
+                    with override_settings(NEGOTIATION_REFUND_EXECUTION_ENABLED=False):
+                        disabled = manager.get(case_url + 'negotiation-preview/', amount).data['data']
+                        self.assertTrue(disabled['agreement_available'])
+                        self.assertFalse(disabled['execution_available'])
+                        funding = manager.get(case_url + 'negotiation-funding/', amount).data['data']
+                        self.assertFalse(funding['executable'])
+                        self.assertTrue(funding['read_only_points'])
+                    self.assertFalse(order.refund_records.exists())
+                proposal = manager.post(case_url + 'negotiation-proposal/', {
                     'request_id': 'receipt-main-proposal', 'expected_version': 0, 'refund_units': 3000,
                     'provider_terms': [{'account_id': assignment.provider_account_id, 'retained_units': 1800}],
                     'explanation': '双方确认部分退款'}, format='json')

@@ -517,15 +517,20 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                             ('可确认方案，退款暂未开放' if formal_followup else '仅隔离测试确认，后续退款尚未开放') if can_agree
                             else '仅供核对，后续协商确认和退款尚未开放')})
             from .points_negotiation_preview import agreement_enabled, preview_locked
+            from .points_negotiation_termination import formal_first_service_refund_available
+            from .refunds import authorized_refund
             calculated = preview_locked(case.pk, refund_equivalent_units=requested)
             can_agree = agreement_enabled() and bool(case.client_request_id)
+            available = can_agree and formal_first_service_refund_available(order, case)
             return Response({'code': 0, 'data': {
                 'refund_units': requested, 'refund_coin_units': calculated['coin_units'],
                 'refund_points_hundredths': calculated['points_hundredths'],
                 'provider_terms': calculated['provider_terms'],
                 'rounding_to_store_units': calculated['rounding_to_store_units'],
-                'read_only': not can_agree, 'agreement_available': can_agree, 'execution_available': False},
-                'msg': '仅隔离测试确认，积分订单退款尚未开放' if can_agree else '仅供核对，积分订单协商确认和退款尚未开放'})
+                'read_only': not can_agree, 'agreement_available': can_agree,
+                'execution_available': available and authorized_refund(request.account)},
+                'msg': ('当事人确认后，由具备退款权限的客服核对并执行' if available else
+                        '可确认方案，当前退款暂不可执行' if can_agree else '仅供核对，当前协商方案不可确认')})
         from .ordinary_transfer_followup import applies as transfer_followup_applies, calculation_locked
         if transfer_followup_applies(order):
             from .financial_lock import lock_order_money
@@ -622,14 +627,29 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     'refund_coin_units': calculated['coin_units'], 'refund_points_hundredths': calculated['points_hundredths']},
                     'msg': '仅供核对，转单后的积分协商退款尚未开放'})
             from .points_negotiation_preview import preview_locked
+            from .points_negotiation_termination import formal_first_service_refund_available
+            from .refunds import authorized_refund
+            from wallet.refund_recovery_order import enabled as deposit_recovery_enabled
             calculated = preview_locked(case.pk, refund_equivalent_units=requested)
             result = funding_preview(order, calculated['provider_terms'])
+            available = formal_first_service_refund_available(order, case) and authorized_refund(request.account)
+            needs_deposit = any(row['deposit_units'] for row in result['providers'])
+            executable = available and result['book_amounts_sufficient'] and (not needs_deposit or deposit_recovery_enabled())
             result.update(refund_units=requested, refund_coin_units=calculated['coin_units'],
-                          refund_points_hundredths=calculated['points_hundredths'], read_only_points=True)
+                          refund_points_hundredths=calculated['points_hundredths'],
+                          read_only_points=not available, executable=executable)
             if calculated.get('conditional_combined_funding') is not None:
                 from dataclasses import asdict
                 result['conditional_combined_funding'] = asdict(calculated['conditional_combined_funding'])
-            return Response({'code': 0, 'data': result, 'msg': '仅供核对，积分协商退款尚未开放'})
+            if not available:
+                message = '仅供核对，当前退款暂不可执行'
+            elif not result['book_amounts_sufficient']:
+                message = '陪玩承担资金不足，补足后才能退款'
+            elif not executable:
+                message = '本次需要扣减押金，当前押金扣款或后续补差尚未启用'
+            else:
+                message = '当事人确认后可处理，执行时重新核验资金与凭证'
+            return Response({'code': 0, 'data': result, 'msg': message})
         from .negotiation_zero import marked_execution_id
         followup = (order.payment_status in (Order.PaymentStatus.PARTIALLY_REFUNDED, Order.PaymentStatus.REFUNDED)
                     or marked_execution_id(order) is not None)
