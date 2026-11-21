@@ -277,8 +277,8 @@ def record_release_locked(posting, calculation):
                               addon_snapshot, prior_addon))
     OrderPointsFundingRelease.objects.bulk_create([OrderPointsFundingRelease(posting=posting,
         allocation_id=part.allocation_id, amount=part.amount) for part in parts])
-    verified = verify_release_locked(evidence, _skip_usage=True)
-    _usage_scope_locked(evidence, verify_ledger=False)
+    # Checking the original allocations reads the whole receipt ledger, which
+    # must already include events for the release rows written in this transaction.
     from .points_transfer_refund_access import permits
     if permits(order, phase='refund') or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_RECEIPT_USAGE_TESTING', False):
         from users.receipt_usage_sources import record_transfer_refund_release_locked as record_usage, verify_allocations_locked
@@ -290,4 +290,6 @@ def record_release_locked(posting, calculation):
                 touched.add(row.allocation.receipt_id)
         for receipt_id in sorted(touched):
             verify_allocations_locked(receipt_id)
+    verified = verify_release_locked(evidence, _skip_usage=True)
+    _usage_scope_locked(evidence, verify_ledger=False)
     return verified
