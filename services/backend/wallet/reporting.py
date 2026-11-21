@@ -5,8 +5,51 @@ from django.conf import settings
 from .models import ProviderReport, get_commission_rate
 
 
+def formal_points_report_fields(report):
+    """Return (verified share, funding shortfall), or None outside the formal path."""
+    from orders.points_business_access import formal_service_read_candidate, formal_service_read_scope_locked
+    from orders.points_checkout_test import report_enabled
+    if (not report.order_id or report_enabled()
+            or not formal_service_read_candidate(report.order, phase='report')):
+        return None
+
+    from django.db import DatabaseError
+    from rest_framework.exceptions import ValidationError
+    from orders.models import Order
+    from orders.points_funding_evidence import verify_order_funding
+    from orders.points_funding_plan import PointsFundingPlanError
+    from orders.settlement import SettlementError
+    from stores.db import transaction
+    try:
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=report.order_id)
+            with formal_service_read_scope_locked(order, phase='report') as active:
+                if not active:
+                    return None
+                locked = ProviderReport.objects.select_for_update().get(
+                    pk=report.pk, order=order, provider_id=report.provider_id,
+                    provider_account_id=report.provider_account_id, status=report.status,
+                    amount=report.amount, commission_rate=report.commission_rate, payout_amount=report.payout_amount)
+                locked.order = order
+                snapshot = points_report_snapshot(locked)
+                if not snapshot:
+                    return None, None
+                if locked.status != ProviderReport.Status.APPROVED:
+                    return snapshot, False
+                if order.status != Order.Status.COMPLETED:
+                    return None, None
+                try:
+                    funding = verify_order_funding(order.pk, allow_finalized=True)
+                except (PointsFundingPlanError, SettlementError, ValidationError):
+                    return snapshot, None
+                return snapshot, not funding.fully_funded
+    except (PointsFundingPlanError, SettlementError, ValidationError, DatabaseError,
+            Order.DoesNotExist, ProviderReport.DoesNotExist):
+        return None, None
+
+
 def points_report_snapshot(report):
-    """Only isolated tests may expose a fully verified points report."""
+    """Return the report share proven by the current capability."""
     if not report.order_id:
         return None
     from orders.points_checkout_test import report_enabled
@@ -273,15 +316,15 @@ def legacy_report_commission(report):
     return get_commission_rate(), '全局默认'
 
 
-def report_financial_snapshot(report):
+def report_financial_snapshot(report, *, formal_fields=None):
     approved = report.status == ProviderReport.Status.APPROVED
     if report.order_id:
         from orders.points_service_payment import display_has_points
         if display_has_points(report.order):
-            snapshot = points_report_snapshot(report)
+            snapshot = formal_fields[0] if formal_fields is not None else points_report_snapshot(report)
             if snapshot:
                 income = snapshot.income_at_entry
-                if report.order.refund_records.exists():
+                if formal_fields is None and report.order.refund_records.exists():
                     from orders.negotiation_settlement import report_income
                     negotiated, retained = report_income(report, display_only=True)
                     if negotiated:
@@ -289,8 +332,8 @@ def report_financial_snapshot(report):
                 return {'commission_type': snapshot.commission_type, 'commission_fixed': snapshot.commission_fixed,
                         'suggested_commission_rate': snapshot.commission_rate, 'commission_source_label': '积分订单分成快照',
                         'expected_income': income, 'platform_subsidy_income': None}
-            return {'commission_type': None, 'commission_fixed': None,
-                    'suggested_commission_rate': None, 'commission_source_label': '积分订单收益待接通',
+            return {'commission_type': None, 'commission_fixed': None, 'suggested_commission_rate': None,
+                    'commission_source_label': '积分订单收益待核对' if formal_fields is not None else '积分订单收益待接通',
                     'expected_income': None, 'platform_subsidy_income': None}
         from orders.segment_financial_capture import transfer_income_pending
         if transfer_income_pending(report.order, report.provider_account_id):

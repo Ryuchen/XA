@@ -1396,6 +1396,7 @@ class PointsSettlementTwoStoreTests(TestCase):
         with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
             with store_context(self.second):
                 assignment = OrderProvider.objects.get(order_id=self.order.pk)
+                get_wallet(user=assignment.provider, account=assignment.provider_account)
                 player = APIClient(HTTP_HOST='xa.esports.club',
                     HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(assignment.provider_account)[0])
                 for action, key in (('start', 'entry_image'), ('complete', 'completion_image')):
@@ -1417,6 +1418,23 @@ class PointsSettlementTwoStoreTests(TestCase):
                 matured = report.submitted_at + timedelta(hours=73)
                 shown = player.get('/api/wallet/reports/').data['data'][0]
                 self.assertTrue(shown['platform_funding_insufficient'])
+                # Exercise the formal GET while leaving the SQLite write
+                # fixture unchanged. Only the MySQL environment check is replaced.
+                with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, SERVICE_POINTS_REPORT_TESTING=False,
+                                    SERVICE_POINTS_SETTLEMENT_TESTING=False, SERVICE_ORDINARY_FUNDING_TESTING=False),
+                      patch('orders.points_business_access.configured', return_value=True)):
+                    formal = player.get('/api/wallet/reports/', {'order_id': self.order.pk}).data['data'][0]
+                    self.assertEqual((formal['id'], formal['amount'], formal['commission_rate'],
+                                      formal['expected_income'], formal['payout_amount']),
+                                     (report.pk, 6000, 20, 4800, 4800))
+                    self.assertIs(formal['platform_funding_insufficient'], True)
+                    with transaction.atomic():
+                        ProviderReport.objects.filter(pk=report.pk).update(payout_amount=4801)
+                        damaged = player.get('/api/wallet/reports/', {'order_id': self.order.pk}).data['data'][0]
+                        for field in ('amount', 'commission_rate', 'expected_income', 'payout_amount',
+                                      'platform_funding_insufficient'):
+                            self.assertIsNone(damaged[field], field)
+                        transaction.set_rollback(True)
                 profile = assignment.provider.escort_profile
                 deposit_before = profile.deposit_paid
                 with patch('django.utils.timezone.now', return_value=matured):

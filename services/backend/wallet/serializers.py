@@ -9,6 +9,8 @@ from .settlement_display import ReportSettlementListSerializer
 class ReportSerializer(EntityNumberModelSerializer):
     """C 端报单：陪玩提交与查询自己的报单。"""
 
+    _formal_points_fields = None
+    _report_financial_snapshot = None
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     amount = serializers.SerializerMethodField()
     commission_rate = serializers.SerializerMethodField()
@@ -16,6 +18,23 @@ class ReportSerializer(EntityNumberModelSerializer):
     order_id = serializers.IntegerField(read_only=True)
     order_no = serializers.CharField(source='order.order_no', read_only=True, default='')
     order_entity_no = serializers.SerializerMethodField()
+
+    def to_representation(self, instance):
+        request = self.context.get('request')
+        if getattr(request, 'method', None) == 'GET':
+            from .reporting import formal_points_report_fields
+            self._formal_points_fields = formal_points_report_fields(instance)
+        try:
+            return super().to_representation(instance)
+        finally:
+            self._formal_points_fields = None
+            self._report_financial_snapshot = None
+
+    def _points_snapshot(self, obj):
+        from .reporting import points_report_snapshot
+        if self._formal_points_fields is not None:
+            return self._formal_points_fields[0]
+        return points_report_snapshot(obj)
 
     def get_order_entity_no(self, obj):
         if not obj.order_id:
@@ -27,16 +46,14 @@ class ReportSerializer(EntityNumberModelSerializer):
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from .reporting import points_report_snapshot
-            return obj.amount if points_report_snapshot(obj) else None
+            return obj.amount if self._points_snapshot(obj) else None
         return None if obj.order_id and transfer_income_pending(obj.order, obj.provider_account_id) else obj.amount
 
     def get_commission_rate(self, obj):
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from .reporting import points_report_snapshot
-            return obj.commission_rate if points_report_snapshot(obj) else None
+            return obj.commission_rate if self._points_snapshot(obj) else None
         return None if obj.order_id and transfer_income_pending(obj.order, obj.provider_account_id) else obj.commission_rate
 
     fulfillment = serializers.CharField(source='order.fulfillment', read_only=True, default='')
@@ -138,6 +155,8 @@ class ReportSerializer(EntityNumberModelSerializer):
 
     def get_platform_funding_insufficient(self, obj):
         from .reporting import report_platform_funding_insufficient
+        if self._formal_points_fields is not None:
+            return self._formal_points_fields[1]
         return report_platform_funding_insufficient(obj, self.context)
 
     def get_payout_amount(self, obj):
@@ -145,10 +164,9 @@ class ReportSerializer(EntityNumberModelSerializer):
         from orders.segment_financial_capture import transfer_income_pending
         from orders.points_service_payment import display_has_points
         if obj.order_id and display_has_points(obj.order):
-            from .reporting import points_report_snapshot
-            if obj.status != ProviderReport.Status.APPROVED or not points_report_snapshot(obj):
+            if obj.status != ProviderReport.Status.APPROVED or not self._points_snapshot(obj):
                 return None
-            if obj.order.refund_records.exists():
+            if self._formal_points_fields is None and obj.order.refund_records.exists():
                 from orders.negotiation_settlement import report_income
                 negotiated, income = report_income(obj, display_only=True)
                 return income if negotiated else None
@@ -169,12 +187,9 @@ class ReportSerializer(EntityNumberModelSerializer):
 
     def _financial_snapshot(self, obj):
         from .reporting import report_financial_snapshot
-        cache = getattr(self, '_report_financial_snapshots', None)
-        if cache is None:
-            cache = self._report_financial_snapshots = {}
-        if obj.pk not in cache:
-            cache[obj.pk] = report_financial_snapshot(obj)
-        return cache[obj.pk]
+        if self._report_financial_snapshot is None:
+            self._report_financial_snapshot = report_financial_snapshot(obj, formal_fields=self._formal_points_fields)
+        return self._report_financial_snapshot
 
     def get_commission_type(self, obj):
         return self._financial_snapshot(obj)['commission_type']

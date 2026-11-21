@@ -25,6 +25,33 @@ def configured():
         and store.database_alias == connection.alias)
 
 
+def formal_service_read_candidate(order, *, phase):
+    if phase not in ('report', 'settlement'):
+        return False
+    from .models import Order
+    from .points_service_payment import display_has_points
+    statuses = (Order.Status.IN_SERVICE, Order.Status.COMPLETED) if phase == 'report' else (Order.Status.COMPLETED,)
+    return (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+            and order.status in statuses and display_has_points(order))
+
+
+@contextmanager
+def formal_service_read_scope_locked(order, *, phase):
+    """Reenter the plain service capability after locking the tenant order."""
+    from .addon_settlement import has_paid_addons
+    from .models import Order, OrderOriginalShareTransfer
+    if (not configured() or not formal_service_read_candidate(order, phase=phase)
+            or order.payment_status != Order.PaymentStatus.PAID or order.refund_records.exists()
+            or has_paid_addons(order)
+            or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+        yield False
+        return
+    from .financial_lock import lock_existing_order_money
+    lock_existing_order_money()
+    with service_order(order.pk, phase=phase):
+        yield True
+
+
 def checkout_shape_allowed(data):
     """Specified one- or two-person services with frozen assignment rules."""
     from .models import Order
