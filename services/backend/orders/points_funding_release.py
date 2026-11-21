@@ -1,9 +1,7 @@
-"""Test-only refund funding releases against immutable allocation evidence.
+"""First-refund funding releases against immutable allocation evidence.
 
-Receipt consumers must hold the receipt lock before using a returned net
-amount. Releases are currently enabled only on the isolated SQLite databases;
-the receipt-first consumers must not acquire order locks on MySQL until the
-cross-flow lock ordering has been redesigned and tested there.
+Order-side writers acquire receipt locks after the order and money locks.
+Receipt-side readers verify source facts without acquiring order locks.
 """
 from dataclasses import asdict
 import hashlib
@@ -194,8 +192,8 @@ def verify_release_locked(evidence, *, _skip_usage=False):
     if prior_addon != evidence.prior_addon_release_snapshot:
         raise ValidationError('主单退款前的加购补资释放凭证已变化')
     net_items, addon_released = _net_allocations(items, prior_addon)
-    # Recheck the original platform authorization without calling its normal
-    # receipt-total helper: doing so would recurse back into this verifier.
+    # Recheck platform authorization without calling the order-level totals
+    # helper, which would recurse back into this verifier.
     from stores.models import PlatformPointsFundingOperation
     from stores.platform_pass_repayment import RepaymentError, _claimed_receipt, _sha
     from stores.platform_points_funding import _verified_receipt
@@ -365,7 +363,8 @@ def record_release_locked(posting, calculation):
         evidence_hash=_digest(posting, items, income, settlement_id, actual.release_units, addon_snapshot, prior_addon))
     OrderPointsFundingRelease.objects.bulk_create([OrderPointsFundingRelease(posting=posting,
         allocation_id=item.allocation_id, amount=item.amount) for item in parts])
-    verified = verify_release_locked(evidence, _skip_usage=True)
+    # Receipt verification checks the full usage chain, including the release
+    # rows above. Append their events before verifying the completed write.
     if formal_service or getattr(settings, 'SERVICE_POINTS_FIRST_REFUND_USAGE_TESTING', False):
         from .points_receipt_usage import eligible
         if not eligible(order):
@@ -382,7 +381,7 @@ def record_release_locked(posting, calculation):
                 touched.add(row.allocation.receipt_id)
         for receipt_id in sorted(touched):
             verify_allocations_locked(receipt_id)
-    return verified
+    return verify_release_locked(evidence, _skip_usage=True)
 
 
 def receipt_points_used_locked(receipt, *, pending_followup_posting_id=None):

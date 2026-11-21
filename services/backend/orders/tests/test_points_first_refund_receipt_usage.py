@@ -110,7 +110,8 @@ class FirstNegotiationReceiptUsageTest(TestCase):
             {'request_id': str(uuid4()), 'order_id': other_order_id, 'amount': 100},
             format='json', HTTP_AUTHORIZATION='Bearer ' + self.token)
         self.assertEqual(second.status_code, 200, second.data)
-        with TemporaryDirectory(prefix='xa-first-receipt-refund-') as media, override_settings(MEDIA_ROOT=media):
+        with (TemporaryDirectory(prefix='xa-first-receipt-refund-') as media,
+              override_settings(MEDIA_ROOT=media, RECEIPT_USAGE_LEDGER_ENABLED=True)):
             with store_context(self.second):
                 order = Order.objects.get(pk=self.order.pk)
                 assignment = OrderProvider.objects.get(order=order)
