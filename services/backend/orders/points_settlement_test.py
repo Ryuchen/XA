@@ -1,6 +1,8 @@
 """Isolated settlement of unrefunded, untransferred service orders."""
+from contextlib import ExitStack
 from datetime import timedelta
 
+from django.conf import settings
 from django.db.models import F, Q
 from django.utils import timezone
 
@@ -371,18 +373,24 @@ def _continued_ordinary_refund_display(order_id, report_id=None):
         return 'REVIEW', None
 
 
+def _formal_points_display_candidate(order):
+    from .points_service_payment import display_has_points
+    return (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+            and order.status == Order.Status.COMPLETED and display_has_points(order))
+
+
 def verified_person_settlement_display(report):
     """Return a status/time only after checking persisted settlement evidence."""
     if not report.order_id:
         return 'REVIEW', None
-    if not (settlement_enabled() or ordinary_settlement_enabled()):
+    if not (settlement_enabled() or ordinary_settlement_enabled()
+            or _formal_points_display_candidate(report.order)):
         return _continued_ordinary_refund_display(report.order_id, report.pk)
-    from django.conf import settings
     from django.db import DatabaseError
     from django.db.models import Q
     from rest_framework.exceptions import ValidationError
     try:
-        with transaction.atomic():
+        with transaction.atomic(), ExitStack() as scopes:
             order = Order.objects.select_for_update().get(pk=report.order_id)
             from .points_service_payment import needs_integrated_processing
             is_points = needs_integrated_processing(order)
@@ -400,6 +408,15 @@ def verified_person_settlement_display(report):
                 from .points_refunded_settlement import verified_person_display
                 return verified_person_display(report)
             if is_points:
+                from .addon_settlement import has_paid_addons
+                from .models import OrderOriginalShareTransfer
+                from .points_business_access import configured, service_order
+                if (not settlement_enabled() and configured() and order.status == Order.Status.COMPLETED
+                        and not has_paid_addons(order)
+                        and not OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+                    from .financial_lock import lock_existing_order_money
+                    lock_existing_order_money()
+                    scopes.enter_context(service_order(order.pk, phase='settlement'))
                 plan = plan_verified_order(order.pk, allow_finalized=True)
             else:
                 from .service_funding_plan import plan_verified_ordinary_order
@@ -453,6 +470,11 @@ def verified_person_settlement_display(report):
                     return 'REVIEW', None
                 _verify_person(order, person, snapshot, assignment,
                                deduction=main_deductions.get(assignment.provider_account_id, 0))
+            if is_points and not addon:
+                income_ids = set(order.transactions.filter(tx_type=Transaction.TxType.INCOME,
+                    status=Transaction.Status.SUCCESS, remark=f'订单收入：{order.order_no}').values_list('pk', flat=True))
+                if income_ids != {person.income_transaction_id for person in people if person.income_transaction_id}:
+                    return 'REVIEW', None
             if addon:
                 addon_ids = verify_addon_records(order, settlement, addon.addon_parts, people)
                 settled_segments = {person.segment_id for person in people}
@@ -517,7 +539,7 @@ def verified_person_settlement_display(report):
 
 
 def verified_order_settlement_display(order):
-    if not (settlement_enabled() or ordinary_settlement_enabled()):
+    if not (settlement_enabled() or ordinary_settlement_enabled() or _formal_points_display_candidate(order)):
         from django.db import DatabaseError
         try:
             with transaction.atomic():

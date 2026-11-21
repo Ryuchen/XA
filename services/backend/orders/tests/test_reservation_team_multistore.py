@@ -39,7 +39,7 @@ class TeamReservationStoreTest(TransactionTestCase):
                     link_legacy_relations(user, account)
                     EscortProfile.objects.filter(user=user).update(account=account)
                     providers.append(account)
-                service = make_service(price=1000, billing_provider_count=2, price_unit='份')
+                service = make_service(price=1000, billing_provider_count=2, fulfillment_provider_count=2, price_unit='份')
                 boss_token = issue_account_tokens(boss_account)[0]
                 provider_token = issue_account_tokens(providers[0])[0]
                 ids = [account.pk for account in providers]

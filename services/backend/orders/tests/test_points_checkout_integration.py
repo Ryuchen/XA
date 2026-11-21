@@ -1599,6 +1599,7 @@ class PointsSettlementTwoStoreTests(TestCase):
         from orders.points_redemption_config import current_rules
         from orders.tests.factories import make_boss_type, make_console_user
         from orders.tests.test_release_flow import screenshot
+        from stores.db import transaction
         from wallet.models import ProviderReport, Wallet
         with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media), store_context(self.second):
             buyer, inviter = make_user(), make_user()
@@ -1644,6 +1645,19 @@ class PointsSettlementTwoStoreTests(TestCase):
             reviewer = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
             result = reviewer.post(f'/api/admin/reports/{report.pk}/approve/', {}, format='json')
             self.assertEqual(result.data['code'], 0, result.data)
+
+            def assert_formal_display(status, settled_at):
+                # Replace only the MySQL prerequisite so SQLite can exercise
+                # the production settlement reads with the test gate closed.
+                with (self.settings(SERVICE_POINTS_MYSQL_ENABLED=True, SERVICE_POINTS_SETTLEMENT_TESTING=False,
+                                    SERVICE_ORDINARY_FUNDING_TESTING=False),
+                      patch('orders.points_business_access.configured', return_value=True)):
+                    rows = player.get('/api/wallet/reports/').data['data']
+                    self.assertEqual([(row['settlement_status'], row['settled_at']) for row in rows],
+                                     [(status, settled_at)])
+                    detail = player.get(f'/api/orders/orders/{order.pk}/').data['data']
+                    self.assertEqual(detail['settlement_status'], status)
+
             with patch('django.utils.timezone.now', return_value=report.submitted_at + timedelta(hours=73)):
                 self.assertFalse(process_order(order.pk))
                 settlement = OrderPointsSettlement.objects.get(order=order)
@@ -1655,11 +1669,22 @@ class PointsSettlementTwoStoreTests(TestCase):
                 self.assertEqual((lot.account_id, lot.kind, lot.remaining), (inviter_account.pk, 'PREPAID', 597))
                 self.assertEqual(settlement.inviter_transaction.amount, 597)
                 self.assertEqual(settlement.store_transaction.amount, 573)
-                self.assertEqual(player.get('/api/wallet/reports/').data['data'][0]['settlement_status'], 'SETTLED')
+                row = player.get('/api/wallet/reports/').data['data'][0]
+                self.assertEqual(row['settlement_status'], 'SETTLED')
+                self.assertIsNotNone(row['settled_at'])
+                assert_formal_display('SETTLED', row['settled_at'])
                 self.assertFalse(process_order(order.pk))
                 self.assertEqual(PointFundingLot.objects.filter(pk=lot.pk).count(), 1)
+                with transaction.atomic():
+                    Transaction.objects.create(order=order, wallet=inviter_wallet, amount=1,
+                                               tx_type=Transaction.TxType.INCOME, remark=f'订单收入：{order.order_no}',
+                                               balance_before=inviter_wallet.balance,
+                                               balance_after=inviter_wallet.balance + 1)
+                    assert_formal_display('REVIEW', None)
+                    transaction.set_rollback(True)
                 PointFundingLot.objects.filter(pk=lot.pk).update(kind='GIFT')
                 self.assertEqual(player.get('/api/wallet/reports/').data['data'][0]['settlement_status'], 'REVIEW')
+                assert_formal_display('REVIEW', None)
 
     @override_settings(SERVICE_POINTS_CONSUMPTION_TESTING=True)
     @skipUnless(os.environ.get('XA_POINTS_GRAB_RECEIPT_FORMAL') == '1',
