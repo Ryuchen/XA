@@ -486,8 +486,9 @@ def execute_and_terminate(case_id, proposal_id, *, operator, legacy_operator, re
             'client_request_id': request_id}, status_code=200)
     verify_termination_locked(posting)
     from .notifier import notify_order_update
-    refresh_providers = (termination_in_service and not transferred
-                         and any(service_permits(order, phase='refund', kind=kind) for kind in ('service', 'addon')))
+    refresh_providers = (termination_in_service and (permits(order, phase='refund')
+                         or (not transferred and any(service_permits(order, phase='refund', kind=kind)
+                                                    for kind in ('service', 'addon')))))
     transaction.on_commit(lambda: notify_order_update(order, refresh_providers=refresh_providers))
     transaction.on_commit(lambda: notify_aftersale_reports(order))
     schedule_aftersale_notices(order, case, resolved=True)
