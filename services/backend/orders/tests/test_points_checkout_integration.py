@@ -1034,19 +1034,25 @@ class PointsFundingPlatformRecoveryTests(TestCase):
 
     def test_tenant_commit_directory_failure_replays_exactly_once(self):
         from django.db import DatabaseError
+        from stores import platform_points_funding
         from stores.models import PlatformAuditEvent, PlatformPointsFundingOperation
         from stores import test_platform_pass_repayment as platform_tests
         from orders.models import OrderPointsFundingAction, OrderPointsFundingAllocation
         self.assertEqual(self.verify().status_code, 200)
-        original = PlatformAuditEvent.objects.create
-        def fail_completion(**kwargs):
-            if kwargs.get('action') == 'points_funding.allocate_completed':
-                raise DatabaseError('simulated directory failure')
-            return original(**kwargs)
-        with patch('stores.platform_points_funding.PlatformAuditEvent.objects.create', side_effect=fail_completion):
+        enqueue = platform_points_funding._enqueue_settlement_after_commit
+
+        def fail_before_commit(slug, order_id):
+            enqueue(slug, order_id)
+            raise DatabaseError('simulated directory failure before commit')
+
+        publish_path = 'engagement.tasks.process_funded_order.apply_async'
+        with (patch.object(platform_points_funding, '_enqueue_settlement_after_commit', side_effect=fail_before_commit),
+              patch(publish_path) as publish, self.captureOnCommitCallbacks(using='default', execute=True)):
             failed = self.fund()
+        publish.assert_not_called()
         self.assertEqual((failed.status_code, failed.data['errorCode']), (503, 'POINTS_FUNDING_UNCERTAIN'))
         self.assertIsNone(PlatformPointsFundingOperation.objects.get().tenant_action_id)
+        self.assertFalse(PlatformAuditEvent.objects.filter(action='points_funding.allocate_completed').exists())
         with store_context(self.second):
             self.assertEqual((OrderPointsFundingAction.objects.count(), OrderPointsFundingAllocation.objects.count()), (1, 1))
         reconciliation = platform_tests.PlatformPassRepaymentTests.reconciliation(self)
@@ -1058,14 +1064,19 @@ class PointsFundingPlatformRecoveryTests(TestCase):
                                        HTTP_AUTHORIZATION='Bearer ' + self.token)
         self.assertEqual(cannot_void.data['errorCode'], 'RECOVERY_EVIDENCE_EXISTS')
         _, other_token = platform_tests.PlatformPassRepaymentTests.other_finance(self)
-        recovered = self.client.post(recovery_url + '/recover', {}, format='json',
-                                     HTTP_AUTHORIZATION='Bearer ' + other_token)
+        with patch(publish_path) as publish, self.captureOnCommitCallbacks(using='default', execute=True):
+            recovered = self.client.post(recovery_url + '/recover', {}, format='json',
+                                         HTTP_AUTHORIZATION='Bearer ' + other_token)
+            publish.assert_not_called()
+        publish.assert_called_once_with(args=[self.order.pk], headers={'store_slug': 'xinan'},
+                                        retry=False, ignore_result=True)
         self.assertEqual(recovered.status_code, 200, recovered.data)
         self.assertEqual(recovered.data['data']['status'], 'COMPLETED')
         replay = self.fund()
         self.assertEqual(replay.status_code, 200, replay.data)
+        self.assertEqual(replay.data['data'], recovered.data['data'])
         self.assertEqual(self.fund().data, replay.data)
-        self.assertTrue(PlatformAuditEvent.objects.filter(action='points_funding.allocate_recovered').exists())
+        self.assertEqual(PlatformAuditEvent.objects.filter(action='points_funding.allocate_recovered').count(), 1)
         with store_context(self.second):
             self.assertEqual((OrderPointsFundingAction.objects.count(), OrderPointsFundingAllocation.objects.count()), (1, 1))
 
