@@ -106,13 +106,10 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
               {issue && (issue.closed
                 ? <>
                   <p className="xa-store-closed-description">{unavailable}</p>
-                  <div className="xa-store-closed-schedule">
+                  <p className="xa-store-closed-schedule">
                     <CalendarClock size={20} aria-hidden="true" />
-                    <div>
-                      <p>开放时间以门店通知为准</p>
-                      {returnUrl && <p>可保存下方的入口链接，收到通知后回来查看。</p>}
-                    </div>
-                  </div>
+                    <span>开放时间以门店通知为准</span>
+                  </p>
                 </>
                 : <p className="xa-store-closed-description" role="alert">{issue.message}</p>)}
               {!issue && returnUrl && <p className="xa-store-closed-description">可先保存本店入口，稍后再来查看。</p>}

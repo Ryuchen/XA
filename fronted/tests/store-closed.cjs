@@ -2,7 +2,8 @@ const assert = require('node:assert/strict')
 
 // Only the browser sees these store responses. No store state is changed.
 module.exports = async function checkStoreClosed(browser, origin = 'http://sl.esports.club') {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const viewport = { width: 320, height: 568 }
+  const context = await browser.newContext({ viewport })
   try {
     const page = await context.newPage()
     const errors = [], businessCalls = []
@@ -34,7 +35,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     const services = page.getByRole('heading', { name: '开放后可使用', exact: true })
     const help = page.getByRole('heading', { name: '已有订单或售后问题？', exact: true })
     const schedule = page.getByText('开放时间以门店通知为准', { exact: true })
-    const returnHint = page.getByText('可保存下方的入口链接，收到通知后回来查看。', { exact: true })
+    const helpChannel = page.getByText('请通过原下单渠道联系本店客服。', { exact: true })
     const copy = page.getByRole('button', { name: '复制入口链接' })
     const pending = page.getByRole('button', { name: '正在检查…', exact: true })
     await art.waitFor()
@@ -60,7 +61,11 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await page.getByText('本店开通自助下单后，可选服务并核对价格。', { exact: true }).waitFor()
     await page.getByText('暂时无法登录、下单或查看订单。', { exact: true }).waitFor()
     await schedule.waitFor()
-    await returnHint.waitFor()
+    await helpChannel.waitFor()
+    await page.evaluate(() => window.scrollTo(0, 0))
+    const channelBox = await helpChannel.boundingBox()
+    assert.ok(channelBox.y >= 0 && channelBox.y + channelBox.height <= viewport.height,
+      'The support channel is readable above the fold at 320×568')
     await page.getByText('准备好订单编号和需要处理的问题，方便客服核对。', { exact: true }).waitFor()
     assert.ok((await help.boundingBox()).y < (await services.boundingBox()).y, 'Phone users see help before the service preview')
     const copyBox = await copy.boundingBox()
@@ -132,7 +137,6 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(reads, before + 1)
     assert.equal(await closed.count(), 0)
     assert.equal(await schedule.count(), 0)
-    assert.equal(await returnHint.count(), 0)
     await art.waitFor()
     await help.waitFor()
     await copy.waitFor()

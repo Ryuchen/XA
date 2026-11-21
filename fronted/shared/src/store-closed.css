@@ -59,7 +59,7 @@
 .xa-store-closed-copy {
   z-index: 1;
   min-width: 0;
-  padding: clamp(24px, 5vw, 64px);
+  padding: clamp(16px, 5vw, 64px);
 }
 .xa-store-closed-copy h1 {
   margin: 0;
@@ -82,25 +82,20 @@
 .xa-store-closed-schedule {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
   max-inline-size: 28rem;
-  margin-block-start: 20px;
-  padding: 12px;
-  border: 1px solid hsl(var(--ocean-200) / .38);
-  border-radius: 8px;
-  background: hsl(var(--ocean-950) / .62);
+  margin: 12px 0 0;
   color: white;
   font-size: .9375rem;
+  font-weight: 500;
   line-height: 1.5;
 }
 .xa-store-closed-schedule svg { margin-top: .125em; color: hsl(var(--ocean-200)); }
-.xa-store-closed-schedule p { margin: 0; }
-.xa-store-closed-schedule p + p { margin-block-start: 4px; color: hsl(var(--ocean-200)); font-size: .875rem; }
 
 .xa-store-closed-actions {
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 24px;
+  margin-top: 16px;
 }
 .xa-store-closed button {
   justify-content: center;
@@ -222,7 +217,8 @@
 
 @container store-entry (min-width: 46rem) {
   .xa-store-closed-main { row-gap: 20px; }
-  .xa-store-closed-actions { column-gap: 12px; }
+  .xa-store-closed-schedule { margin-block-start: 16px; }
+  .xa-store-closed-actions { column-gap: 12px; margin-block-start: 24px; }
   .xa-store-closed-hero-with-art {
     display: grid;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
