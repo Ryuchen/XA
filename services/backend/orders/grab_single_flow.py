@@ -268,11 +268,12 @@ def resolve(order_id, *, _cancel_only=False):
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order:
             return 'NOT_FOUND'
-        from .applications import ApplicationError, _enter_assignment_scope
-        try:
-            _enter_assignment_scope(stack, order)
-        except ApplicationError:
-            return 'WAIT_POINTS_FUNDING_REVIEW'
+        if order.status == Order.Status.PENDING:
+            from .applications import ApplicationError, _enter_assignment_scope
+            try:
+                _enter_assignment_scope(stack, order)
+            except ApplicationError:
+                return 'WAIT_POINTS_FUNDING_REVIEW'
         state = (OrderGrabSingleRoundState.objects.select_for_update().select_related('round__pool')
                  .filter(round__pool__order=order).order_by('-round__number').first())
         if not state or state.status not in ('OPEN', 'PARKED') or order.status != Order.Status.PENDING:

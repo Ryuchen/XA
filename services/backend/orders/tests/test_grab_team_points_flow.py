@@ -109,6 +109,7 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
     @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True,
                        PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
     def test_staff_review_cancellation_notice_uses_the_final_coin_and_points_refund(self):
+        from orders.grab_single_flow import resolve as resolve_single
         from site_messages.models import CustomerCancellationNotice
 
         actor = self.refund_points_after_owner_review()
@@ -121,6 +122,17 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.assertEqual(intent.skipped_reason, '')
         self.assertEqual(intent.message.recipient_account_id, self.account.pk)
         self.assertIn('抵扣积分已退回', intent.message.preview)
+        with self.settings(SERVICE_POINTS_MYSQL_ENABLED=True):
+            self.assertEqual(resolve_single(self.order.pk), 'CANCELLED')
+        self.assertEqual(OrderPointsRefund.objects.get(redemption=self.receipt).pk, posting.pk)
+
+    def test_team_points_cancelled_round_replays_without_assignment_scope(self):
+        self.refund_points_after_owner_review(team_size=2)
+        posting = OrderPointsRefund.objects.get(redemption=self.receipt)
+
+        with self.settings(SERVICE_POINTS_MYSQL_ENABLED=True):
+            self.assertEqual(resolve(self.order.pk), 'CANCELLED')
+        self.assertEqual(OrderPointsRefund.objects.get(redemption=self.receipt).pk, posting.pk)
 
     @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True,
                        PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
@@ -141,18 +153,35 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.assertTrue(intent.skipped_reason)
         self.assertIsNone(intent.message_id)
 
-    def refund_points_after_owner_review(self):
-        from orders.grab_review import mark_round_review
-        from orders.models import OrderGrabSingleRoundState
+    def refund_points_after_owner_review(self, *, team_size=1):
+        from orders import grab_receipt_probe, grab_single_flow
+        from orders.models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
         from orders.tests.factories import make_console_user
 
-        self.prepare(team_size=1, mixed_sources=True)
-        round_state = OrderGrabSingleRoundState.objects.get(round__pool__order=self.order)
-        mark_round_review(round_state, '隔离用例：开池后待核对')
-        requested = self.client.post(f'/api/orders/orders/{self.order.pk}/cancel/',
-                                     {'client_request_id': 'points-boss-review', 'reason': '申请核对'},
-                                     format='json')
+        self.service.fulfillment_provider_count = team_size
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        self.prepare(team_size=team_size, mixed_sources=True)
+        states = OrderGrabTeamRoundState if team_size == 2 else OrderGrabSingleRoundState
+        arbitrate = resolve if team_size == 2 else grab_single_flow.resolve
+        round_state = states.objects.get(round__pool__order=self.order)
+        cutoff = round_state.round.total_deadline
+        before, after = cutoff - timedelta(seconds=1), cutoff + timedelta(seconds=1)
+        _, precision, driver = grab_receipt_probe._db_clock()
+        with patch.object(grab_receipt_probe, '_db_clock', side_effect=[
+                (before, precision, driver), (after, precision, driver)]):
+            requested = self.client.post(f'/api/orders/orders/{self.order.pk}/cancel/',
+                                         {'client_request_id': 'points-boss-review', 'reason': '申请核对'},
+                                         format='json')
         self.assertEqual(requested.data.get('data'), {'status': 'PENDING'}, requested.data)
+        receipt = round_state.round.receipt_probes.get(kind='BOSS_CANCEL')
+        self.assertEqual((receipt.state, receipt.review_reason), ('REVIEW', 'CROSSED_CUTOFF'))
+        with patch.object(grab_receipt_probe, '_db_clock', return_value=(after, precision, driver)):
+            self.assertEqual(arbitrate(self.order.pk), 'WAIT_REVIEW')
+        self.order.refresh_from_db()
+        self.assertEqual((self.order.status, self.order.payment_status), ('PENDING', 'PAID'))
+        self.assertFalse(self.order.providers.exists())
+        self.assertFalse(self.order.refund_records.exists())
+        self.assertFalse(OrderPointsRefund.objects.filter(redemption=self.receipt).exists())
 
         user = make_console_user(['order:dispatch', 'order:refund'])
         actor = get_or_create_account_for_legacy_user(user)
