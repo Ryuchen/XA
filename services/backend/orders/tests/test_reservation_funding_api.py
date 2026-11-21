@@ -3,17 +3,21 @@ from rest_framework.test import APIClient
 
 from club_accounts.tokens import issue_account_tokens
 from engagement.models import PointFundingLot
-from engagement.services import wallet_funding_parts
+from engagement.services import config, wallet_funding_parts
 from orders.models import Order, Reservation
 from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase
 from wallet.models import Wallet
 
 
 @override_settings(BOSS_FUNDING_SELECTION_ENABLED=True, LEGACY_FORCE_AUTH_COMPAT=False,
+                   ORDINARY_SERVICE_FUNDING_ENABLED=True, ORIGINAL_ATTRIBUTION_ENABLED=True,
+                   SEGMENT_ECONOMICS_CAPTURE_ENABLED=True, PLATFORM_IDENTITY_ENABLED=True,
+                   PLATFORM_PASS_REPAYMENT_ENABLED=True,
                    KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 class ReservationFundingApiTest(ReservationApiTestBase):
     def setUp(self):
         super().setUp()
+        config()
         self.boss_client = self.login(self.boss_account)
         self.provider_client = self.login(self.provider_account)
         self.staff_client = self.login(self.staff_account)

@@ -13,7 +13,7 @@ from club_accounts.services import get_or_create_account_for_legacy_user, link_l
 from club_accounts.tokens import issue_account_tokens
 from console.points_redemption_config import save_points_terms
 from console.reservation_deadlines import save_deadlines
-from engagement.models import MemberProfile
+from engagement.models import MemberProfile, PointFundingLot
 from engagement.services import config
 from orders.models import Order, Reservation
 from orders.tests.factories import make_console_user, make_provider, make_service, make_user
@@ -22,6 +22,14 @@ from stores.tests_hosts import xinan_store
 from users.models import EscortProfile
 from wallet.models import Wallet
 from wallet.services import get_wallet
+
+
+def seed_principal_balance(wallet, amount):
+    wallet.balance = amount
+    wallet.save(update_fields=['balance'])
+    PointFundingLot.objects.create(account_id=wallet.account_id,
+        source_key=f'isolated-reservation-principal-{wallet.account_id}',
+        kind=PointFundingLot.Kind.PREPAID, remaining=amount)
 
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated stores')
@@ -48,8 +56,7 @@ class ReservationPointsStoresTest(TestCase):
                 boss = get_or_create_account_for_legacy_user(user)
                 link_legacy_relations(user, boss)
                 wallet = get_wallet(user=user, account=boss)
-                wallet.balance = 20000
-                wallet.save(update_fields=['balance'])
+                seed_principal_balance(wallet, 20000)
                 MemberProfile.objects.create(account=boss, points_balance=10000)
                 player_user = make_provider(deposit_mode='EARNINGS')
                 player = get_or_create_account_for_legacy_user(player_user)
@@ -81,6 +88,7 @@ class ReservationPointsStoresTest(TestCase):
         with store_context(rows[1][0]):
             self.assertFalse(Order.objects.exists())
             self.assertEqual(Wallet.objects.get(account_id=rows[1][3]).balance, 20000)
+            self.assertEqual(PointFundingLot.objects.get(account_id=rows[1][3]).remaining, 20000)
             self.assertEqual(MemberProfile.objects.get(account_id=rows[1][3]).points_balance, 10000)
         payload['points_checkout_test_token'] = rows[1][4]['points_preview']['checkout_test_token']
         self.assertEqual(rows[1][1].post(path, payload, format='json').data['code'], 0)
@@ -104,7 +112,7 @@ class ReservationPointsStoresTest(TestCase):
                 boss = get_or_create_account_for_legacy_user(boss_user)
                 link_legacy_relations(boss_user, boss)
                 wallet = get_wallet(user=boss_user, account=boss)
-                wallet.balance = 20000; wallet.save(update_fields=['balance'])
+                seed_principal_balance(wallet, 20000)
                 MemberProfile.objects.create(account=boss, points_balance=10000)
                 provider_user = make_provider(deposit_mode='EARNINGS')
                 provider = get_or_create_account_for_legacy_user(provider_user)
@@ -124,7 +132,9 @@ class ReservationPointsStoresTest(TestCase):
             self.assertEqual(created.data['code'], 0, created.data)
             path = f"/api/orders/reservations/{created.data['data']['id']}/"
             self.assertEqual(player.post(path+'confirm/', {}, format='json').data['code'], 0)
-            quote = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000}).data['data']
+            quoted = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000})
+            self.assertEqual(quoted.data['code'], 0, quoted.data)
+            quote = quoted.data['data']
             paid = boss_client.post(path+'convert/', {'discount_selection_token': quote['discount_selection_token'],
                 'points_checkout_test_token': quote['points_preview']['checkout_test_token'],
                 'expected_amount': 6000, 'client_request_id': 'same-store-payment'}, format='json')
@@ -139,8 +149,9 @@ class ReservationPointsStoresTest(TestCase):
             with store_context(store):
                 self.assertEqual(Order.objects.get(pk=order_id).payment_status,
                                  'REFUNDED' if store.slug == 'xinan' else 'PAID')
-                self.assertEqual(Wallet.objects.get(account_id=boss_id).balance,
-                                 20000 if store.slug == 'xinan' else 14000)
+                expected_balance = 20000 if store.slug == 'xinan' else 14000
+                self.assertEqual(Wallet.objects.get(account_id=boss_id).balance, expected_balance)
+                self.assertEqual(PointFundingLot.objects.get(account_id=boss_id).remaining, expected_balance)
                 self.assertEqual(OrderPointsRefund.objects.filter(redemption__order_id=order_id).count(),
                                  1 if store.slug == 'xinan' else 0)
 
@@ -189,9 +200,7 @@ class ReservationPointsFinanceTest(TestCase):
             boss = get_or_create_account_for_legacy_user(boss_user)
             link_legacy_relations(boss_user, boss)
             wallet = get_wallet(user=boss_user, account=boss)
-            wallet.balance = 40000; wallet.save(update_fields=['balance'])
-            from engagement.models import PointFundingLot
-            PointFundingLot.objects.create(account=boss, source_key='reservation-funding-fixture', kind='PREPAID', remaining=40000)
+            seed_principal_balance(wallet, 40000)
             MemberProfile.objects.create(account=boss, points_balance=20000)
             provider_user = make_provider(deposit_mode='EARNINGS')
             provider = get_or_create_account_for_legacy_user(provider_user)
@@ -321,7 +330,7 @@ class ReservationPointsFinanceTest(TestCase):
                 boss = get_or_create_account_for_legacy_user(boss_user)
                 link_legacy_relations(boss_user, boss)
                 wallet = get_wallet(user=boss_user, account=boss)
-                wallet.balance = 20000; wallet.save(update_fields=['balance'])
+                seed_principal_balance(wallet, 20000)
                 MemberProfile.objects.create(account=boss, points_balance=10000)
                 provider_user = make_provider(deposit_mode='EARNINGS')
                 provider = get_or_create_account_for_legacy_user(provider_user)
@@ -336,7 +345,9 @@ class ReservationPointsFinanceTest(TestCase):
                 self.assertEqual(response.data['code'], 0, response.data)
                 path = f"/api/orders/reservations/{response.data['data']['id']}/"
                 self.assertEqual(player.post(path+'confirm/', {}, format='json').data['code'], 0)
-                quote = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000}).data['data']
+                quoted = boss_client.get(path+'quote/', {'preview_points_hundredths': 10000})
+                self.assertEqual(quoted.data['code'], 0, quoted.data)
+                quote = quoted.data['data']
                 paid = boss_client.post(path+'convert/', {'discount_selection_token': quote['discount_selection_token'],
                     'points_checkout_test_token': quote['points_preview']['checkout_test_token'],
                     'expected_amount': 6000, 'client_request_id': 'finance-reservation-pay'}, format='json')
