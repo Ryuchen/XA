@@ -153,7 +153,10 @@ def _enqueue_settlement_after_commit(store_slug, order_id):
     def enqueue():
         try:
             from engagement.tasks import process_funded_order
-            process_funded_order.apply_async(args=[order_id], headers={'store_slug': store_slug}, retry=False)
+            # The finance response uses the committed receipt. Subscribing to
+            # this task's result can block it while the result store reconnects.
+            process_funded_order.apply_async(args=[order_id], headers={'store_slug': store_slug},
+                                             retry=False, ignore_result=True)
         except Exception:
             import logging
             logging.getLogger(__name__).exception(

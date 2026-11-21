@@ -997,6 +997,41 @@ class PointsFundingPlatformRecoveryTests(TestCase):
         self.assertEqual(self.verify().status_code, 200)
         self.assertEqual(self.fund().status_code, 200)
 
+    def test_failed_settlement_wakeup_keeps_the_committed_funding_receipt(self):
+        from kombu.exceptions import OperationalError
+        from orders.models import OrderPointsFundingAction, OrderPointsFundingAllocation
+        from stores.models import PlatformAuditEvent, PlatformPointsFundingOperation
+
+        self.assertEqual(self.verify().status_code, 200)
+
+        def broker_unavailable(**kwargs):
+            operation = PlatformPointsFundingOperation.objects.get()
+            self.assertIsNotNone(operation.completed_at)
+            with store_context(self.second):
+                action = OrderPointsFundingAction.objects.get(pk=operation.tenant_action_id)
+                self.assertEqual(action.allocation.funding_order_id, self.order.pk)
+            raise OperationalError('isolated settlement broker unavailable')
+
+        callback = 'engagement.tasks.process_funded_order.apply_async'
+        with (patch(callback, side_effect=broker_unavailable) as publish,
+              self.assertLogs('stores.platform_points_funding', 'ERROR') as errors):
+            with self.captureOnCommitCallbacks(using='default', execute=True):
+                funded = self.fund()
+                publish.assert_not_called()
+            publish.assert_called_once_with(args=[self.order.pk], headers={'store_slug': 'xinan'},
+                                            retry=False, ignore_result=True)
+        self.assertEqual(funded.status_code, 200, funded.data)
+        self.assertEqual(funded.data['data']['status'], 'COMPLETED')
+        self.assertIn('awaits the periodic settlement scan', errors.output[0])
+
+        with patch(callback), self.captureOnCommitCallbacks(using='default', execute=True):
+            replayed = self.fund()
+        self.assertEqual(replayed.data, funded.data)
+        self.assertEqual(PlatformAuditEvent.objects.filter(action='points_funding.allocate_completed').count(), 1)
+        with store_context(self.second):
+            self.assertEqual((OrderPointsFundingAction.objects.count(), OrderPointsFundingAllocation.objects.count()), (1, 1))
+            self.assertFalse(self.order.transactions.filter(tx_type='INCOME').exists())
+
     def test_tenant_commit_directory_failure_replays_exactly_once(self):
         from django.db import DatabaseError
         from stores.models import PlatformAuditEvent, PlatformPointsFundingOperation
