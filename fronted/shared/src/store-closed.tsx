@@ -1,5 +1,5 @@
-import { Bookmark, CalendarClock, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { CalendarClock, Check, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { hostStoreSlug, storeBrandLogo } from "./store.ts";
 import headsetImage from "../assets/store-closed-headset.webp";
 import "./store-closed.css";
@@ -36,40 +36,16 @@ const entryContent = {
   },
 };
 
-function StoreReturnLink({ url }: { url: string }) {
-  const instructionsId = useId();
-  const address = useRef<HTMLInputElement>(null);
-  const [feedback, setFeedback] = useState("");
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setFeedback("入口链接已复制");
-    } catch {
-      address.current?.focus();
-      address.current?.select();
-      setFeedback("入口链接已选中，请手动复制");
-    }
-  }
-
-  return (
-    <section className="xa-store-closed-return">
-      <h2><Bookmark size={20} aria-hidden="true" />稍后访问</h2>
-      <p id={instructionsId}>保存当前入口，收到门店的开放通知后可从这里进入。</p>
-      <div className="xa-store-closed-address">
-        <input ref={address} aria-label="门店入口链接" aria-describedby={instructionsId} dir="ltr" type="text" readOnly value={url} />
-        <button type="button" onClick={copyLink}><Copy size={16} aria-hidden="true" />复制入口链接</button>
-      </div>
-      <p role="status" aria-atomic="true">{feedback}</p>
-    </section>
-  );
-}
-
 export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry }: Props) {
   const { services, helpTitle, help, unavailable } = entryContent[role];
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
   const storeName = brandSlug ? storeNames[brandSlug] : undefined;
+  const returnUrl = issue?.closed && brandSlug ? new URL(import.meta.env.BASE_URL, window.location.origin).href : null;
+  const copyStatusId = useId();
+  const address = useRef<HTMLInputElement>(null);
+  const copyAttempt = useRef(0);
+  const [copyResult, setCopyResult] = useState<{ copied: boolean } | null>(null);
   const [dark] = useState(() => {
     try {
       const saved = localStorage.getItem(role === "boss" ? "xa:boss:web:theme" : "xa_fronted_provider_theme");
@@ -77,6 +53,32 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
     } catch { /* The entrance also works without browser storage. */ }
     return document.documentElement.classList.contains("dark") || window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
+
+  useEffect(() => {
+    if (copyResult && !copyResult.copied) {
+      address.current?.focus();
+      address.current?.select();
+    }
+  }, [copyResult]);
+
+  async function copyLink(url: string) {
+    const attempt = ++copyAttempt.current;
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    } catch {
+      // An unavailable clipboard still allows the visitor to copy the address by hand.
+    }
+    if (attempt === copyAttempt.current) setCopyResult({ copied });
+  }
+
+  function retryStatus() {
+    if (checking) return;
+    copyAttempt.current += 1;
+    setCopyResult(null);
+    onRetry();
+  }
 
   return (
     <div className={`xa-store-closed${dark ? " dark" : ""}`}>
@@ -106,17 +108,30 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                 : <p className="xa-store-closed-description" role="alert">{issue.message}</p>)}
               <div className="xa-store-closed-actions">
                 {issue &&
-                  <button type="button" aria-disabled={checking} onClick={() => { if (!checking) onRetry(); }}>
+                  <button type="button" aria-disabled={checking} onClick={retryStatus}>
                     <RefreshCw size={17} aria-hidden="true" />
                     {checking ? "正在检查…" : issue.closed ? "重新检查状态" : "重试"}
                   </button>}
+                {returnUrl && <button className="xa-store-closed-copy-link" type="button" onClick={() => copyLink(returnUrl)}>
+                  {copyResult?.copied ? <Check size={17} aria-hidden="true" /> : <Copy size={17} aria-hidden="true" />}
+                  复制入口链接
+                </button>}
+              </div>
+              <div className="xa-store-closed-feedback">
                 <p role="status" aria-atomic="true">
                   {issue && (checking ? "正在查询门店状态…" : <>
                     {issue.closed ? "上次检查" : "上次查询失败"} <time dateTime={issue.checkedAt.toISOString()}>{issue.checkedAt.toLocaleTimeString("zh-CN", { hour12: false })}</time>
                     {issue.closed && <span className="sr-only">，门店暂未开放</span>}
                   </>)}
                 </p>
+                {returnUrl && <p id={copyStatusId} role="status" aria-atomic="true">
+                  {copyResult && (copyResult.copied ? "入口链接已复制" : "入口链接已选中，请手动复制")}
+                </p>}
               </div>
+              {returnUrl && copyResult && !copyResult.copied && <input
+                className="xa-store-closed-address" ref={address} aria-label="门店入口链接"
+                aria-describedby={copyStatusId} dir="ltr" type="text" readOnly value={returnUrl}
+              />}
             </div>
             {issue?.closed && <div className="xa-store-closed-art">
               <img src={headsetImage} width="900" height="1125" alt="" decoding="async" />
@@ -127,9 +142,6 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
               <h2><MessageCircle size={20} aria-hidden="true" />{helpTitle}</h2>
               <p>{help}</p>
             </section>
-            {issue?.closed && brandSlug && (
-              <StoreReturnLink url={new URL(import.meta.env.BASE_URL, window.location.origin).href} />
-            )}
             {issue?.closed && <section className="xa-store-closed-services">
               <h2>开放后可使用</h2>
               <ul role="list">

@@ -18,8 +18,7 @@
 .xa-store-closed-identity,
 .xa-store-closed-host,
 .xa-store-closed-actions,
-.xa-store-closed-actions button,
-.xa-store-closed-address button {
+.xa-store-closed-actions button {
   display: flex;
   align-items: center;
 }
@@ -93,7 +92,7 @@
 
 .xa-store-closed-actions {
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 8px;
 }
 .xa-store-closed-actions:has(button) { margin-top: 24px; }
 .xa-store-closed button {
@@ -111,19 +110,31 @@
   font-weight: 600;
   cursor: pointer;
 }
-.xa-store-closed-actions button:hover:not([aria-disabled="true"]) { background: white; }
+.xa-store-closed-actions button:hover:not([aria-disabled="true"], .xa-store-closed-copy-link) { background: white; }
+.xa-store-closed-actions .xa-store-closed-copy-link {
+  border-color: hsl(var(--ocean-200) / .6);
+  background: hsl(var(--ocean-950) / .78);
+  color: white;
+}
+.xa-store-closed-actions .xa-store-closed-copy-link:hover { background: hsl(var(--ocean-800)); }
 .xa-store-closed :is(button, input):focus-visible { outline: 3px solid hsl(var(--ocean-400)); outline-offset: 3px; }
 .xa-store-closed-actions button[aria-disabled="true"] {
   cursor: progress;
   background: hsl(var(--ocean-800));
   color: white;
 }
-.xa-store-closed-actions p {
+.xa-store-closed-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 16px;
+}
+.xa-store-closed-feedback p {
   margin: 0;
   color: hsl(var(--ocean-200));
   font-size: .8125rem;
   font-variant-numeric: tabular-nums;
 }
+.xa-store-closed-feedback p:not(:empty) { margin-top: 8px; }
 
 .xa-store-closed-details {
   display: grid;
@@ -163,34 +174,17 @@
 .xa-store-closed-services h3 { margin: 0; font-size: .9375rem; font-weight: 600; }
 .xa-store-closed-services svg { margin-top: 2px; color: var(--muted-foreground); }
 .xa-store-closed-address {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-}
-.xa-store-closed-address input {
-  flex: 1 1 17rem;
-  min-width: 0;
+  width: min(100%, 28rem);
   min-block-size: 44px;
+  margin-top: 8px;
   padding: 8px 12px;
-  border: 1px solid var(--input);
+  border: 1px solid hsl(var(--ocean-200) / .6);
   border-radius: 8px;
-  background: var(--background);
-  color: var(--foreground);
+  background: hsl(var(--ocean-950));
+  color: white;
   font: inherit;
   font-size: .875rem;
 }
-.xa-store-closed-address button {
-  min-block-size: 44px;
-  padding: 8px 12px;
-  border-color: var(--border);
-  background: var(--secondary);
-  color: var(--secondary-foreground);
-  font-size: .875rem;
-}
-.xa-store-closed-address button:hover { background: var(--accent); }
-.xa-store-closed-return [role="status"]:empty { margin: 0; }
 
 .xa-store-closed-art {
   position: absolute;
@@ -218,6 +212,7 @@
 
 @container store-entry (min-width: 46rem) {
   .xa-store-closed-main { row-gap: 20px; }
+  .xa-store-closed-actions { column-gap: 12px; }
   .xa-store-closed-hero-with-art {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
@@ -234,9 +229,11 @@
   .xa-store-closed-art::after {
     background: linear-gradient(to right, hsl(var(--ocean-900)), transparent 25%);
   }
-  .xa-store-closed-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .xa-store-closed-details .xa-store-closed-help:only-child,
-  .xa-store-closed-services { grid-column: 1 / -1; }
+}
+
+@container store-entry (min-width: 60rem) {
+  .xa-store-closed-details { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  .xa-store-closed-help:only-child { grid-column: 1 / -1; }
   .xa-store-closed-services ul {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

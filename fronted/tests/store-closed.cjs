@@ -39,17 +39,21 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     const schedule = page.getByText('开放时间以门店通知为准', { exact: true })
     await schedule.waitFor()
     assert.ok((await help.boundingBox()).y < (await services.boundingBox()).y, 'Phone users see help before the service preview')
+    const copy = page.getByRole('button', { name: '复制入口链接' })
+    const copyBox = await copy.boundingBox()
+    assert.ok(copyBox.y + copyBox.height <= (await help.boundingBox()).y, 'The return action is in the hero, before the help panel')
     const address = page.getByRole('textbox', { name: '门店入口链接' })
-    assert.equal(await address.inputValue(), origin + '/boss/')
+    assert.equal(await address.count(), 0)
+    const readsBeforeCopy = reads
     await page.evaluate(() => {
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
         value: { writeText: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')) },
       })
     })
-    const copy = page.getByRole('button', { name: '复制入口链接' })
     await copy.click()
     await page.getByRole('status').filter({ hasText: '入口链接已选中，请手动复制' }).waitFor()
+    assert.equal(await address.inputValue(), origin + '/boss/')
     assert.equal(await address.evaluate(element => element === document.activeElement &&
       element.selectionStart === 0 && element.selectionEnd === element.value.length), true)
     await page.evaluate(() => {
@@ -61,11 +65,36 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await copy.focus()
     await page.keyboard.press('Enter')
     await page.getByRole('status').filter({ hasText: '入口链接已复制' }).waitFor()
+    assert.equal(await address.count(), 0)
     assert.equal(await page.evaluate(() => window.copiedEntryLink), origin + '/boss/')
+    assert.equal(await copy.evaluate(element => element === document.activeElement), true)
+    assert.equal(reads, readsBeforeCopy)
     assert.equal(page.url(), url)
     const retry = page.getByRole('button', { name: '重新检查状态', exact: true })
     assert.ok((await schedule.boundingBox()).y < (await retry.boundingBox()).y, 'The opening notice sits above the status action')
     assert.ok((await art.boundingBox()).y < (await help.boundingBox()).y, 'The artwork shares the hero and does not add another mobile panel')
+
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: () => new Promise((_, reject) => {
+          window.failCopy = () => reject(new DOMException('Denied', 'NotAllowedError'))
+        }) },
+      })
+    })
+    await copy.click()
+    await retry.focus()
+    const recheck = page.waitForResponse(result => new URL(result.url()).pathname === '/api/stores/current/')
+    await page.keyboard.press('Enter')
+    await recheck
+    await retry.waitFor()
+    await page.evaluate(async () => {
+      window.failCopy()
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    })
+    assert.equal(await address.count(), 0)
+    assert.equal(await retry.evaluate(element => element === document.activeElement), true)
+
     await retry.click({ trial: true })
     const before = reads
     hold = Promise.withResolvers()
@@ -84,6 +113,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(await art.count(), 0)
     assert.equal(await services.count(), 0)
     assert.equal(await address.count(), 0)
+    assert.equal(await copy.count(), 0)
     assert.equal(await page.getByRole('button', { name: '重试', exact: true }).evaluate(element => element === document.activeElement), true)
 
     response = { status: 403, json: { code: 403, msg: '门店数据库尚未配置，请联系平台管理员' } }
