@@ -55,7 +55,7 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             ordinary.assert_called_once()
 
     @override_settings(SERVICE_POINTS_MYSQL_ENABLED=True)
-    def test_original_acceptance_uses_read_scope_with_its_own_pending_payment(self):
+    def test_decision_locks_order_before_choosing_original_acceptance_scope(self):
         from orders.addon_handover import _points_handover_scope
         from orders.models import OrderAddonHandover, OrderOriginalShareTransfer
 
@@ -68,6 +68,7 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             return getattr(request, '_points_transferred_handover_replay', False)
 
         with (patch.object(Order.objects, 'filter') as orders,
+              patch.object(Order.objects, 'select_for_update') as lock,
               patch.object(OrderOriginalShareTransfer.objects, 'filter') as transfers,
               patch.object(OrderAddonHandover.objects, 'filter') as prior,
               patch('orders.points_service_payment.needs_integrated_processing', return_value=True),
@@ -75,9 +76,18 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
               patch('orders.points_transfer_refund_access.after_transfer', return_value=nullcontext()) as read,
               patch('orders.points_transfer_refund_access.transfer_capture', return_value=nullcontext()) as capture):
             orders.return_value.first.return_value = order
+            locked = lock.return_value.filter.return_value
+            locked.first.return_value = order
             transfers.return_value.exists.return_value = True
+
+            def find_receipt(**kwargs):
+                self.assertEqual(locked.first.call_count, prior.call_count)
+                return prior.return_value
+
+            prior.side_effect = find_receipt
             prior.return_value.exists.return_value = True
             self.assertTrue(confirm(None, request, order.pk, 3, 6))
+            lock.return_value.filter.assert_called_once_with(pk=order.pk)
             prior.assert_called_once_with(pk=6, payment_id=3, payment__intent__order=order,
                 kind='STANDARD', status='ACCEPTED', decisions__account=account, decisions__accepted=True)
             read.assert_called_once_with(order.pk, phase='report', pending_payment_id=3, read_only=True)

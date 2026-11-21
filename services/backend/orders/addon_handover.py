@@ -127,7 +127,13 @@ def _points_handover_scope(method):
                 and getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
                 and transaction.get_connection().vendor == 'mysql'):
             payment_id = args[0] if args else kwargs.get('payment_id')
+            handover_id = args[1] if len(args) > 1 else kwargs.get('handover_id')
             creation = len(args) < 2 and kwargs.get('handover_id') is None
+            if handover_id is not None:
+                # Another final decision can commit while this request waits.
+                order = Order.objects.select_for_update().filter(pk=order_id).first()
+                if not order:
+                    raise ValidationError('订单不存在')
             if (creation and payment_id and order.refund_records.count() == 2
                     and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
                 replay = _replay_followup_create(request, order_id, payment_id)
@@ -135,8 +141,6 @@ def _points_handover_scope(method):
                     return replay
             if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
                 if order.refund_records.exists():
-                    payment_id = args[0] if args else kwargs.get('payment_id')
-                    handover_id = args[1] if len(args) > 1 else kwargs.get('handover_id')
                     voluntary = (OrderAddonHandover.objects.filter(pk=handover_id, payment_id=payment_id,
                         payment__intent__order=order, kind='VOLUNTARY').exists() if handover_id else
                         isinstance(request.data, Mapping) and request.data.get('kind') == 'VOLUNTARY')
@@ -168,8 +172,6 @@ def _points_handover_scope(method):
                                 if isinstance(request.data, Mapping) else None)
                 else:
                     from .points_transfer_refund_access import after_transfer, transfer_capture
-                    payment_id = args[0] if args else kwargs.get('payment_id')
-                    handover_id = args[1] if len(args) > 1 else kwargs.get('handover_id')
                     replay = handover_id and OrderAddonHandover.objects.filter(pk=handover_id, payment_id=payment_id,
                         payment__intent__order=order, kind='STANDARD', status='ACCEPTED',
                         decisions__account=request.account, decisions__accepted=True).exists()
@@ -180,8 +182,6 @@ def _points_handover_scope(method):
                         scope = transfer_capture(order.pk, addon_handover=True, pending_payment_id=payment_id)
             else:
                 from .points_business_access import service_order
-                payment_id = args[0] if args else kwargs.get('payment_id')
-                handover_id = args[1] if len(args) > 1 else kwargs.get('handover_id')
                 replay = (order.status == Order.Status.COMPLETED and payment_id and handover_id
                           and OrderAddonHandover.objects.filter(pk=handover_id, payment_id=payment_id,
                               payment__intent__order=order, status='ACCEPTED',
