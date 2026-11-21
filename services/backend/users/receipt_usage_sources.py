@@ -230,7 +230,7 @@ def first_negotiation_release_facts(row):
     """Recheck frozen first-refund facts without locking an order or another receipt."""
     from orders.models import (OrderPointsFundingReleaseEvidence, OrderAddonFundingReleaseRun,
                                PointsFirstRefundPaidPersonEvidence)
-    from orders.points_funding_release import _digest as evidence_digest
+    from orders.points_funding_release import first_release_hash_matches
     from orders.points_negotiation_execution import participant_digest
     from orders.points_funding_allocation import plan_release, PointsFundingAllocationError
     posting, allocation = row.posting, row.allocation
@@ -260,9 +260,7 @@ def first_negotiation_release_facts(row):
             or (terms.coin_units, terms.points_hundredths, terms.prepaid_units, terms.gift_units,
                 terms.compensation_units, terms.is_final) != (proof.coin_units, proof.points_hundredths,
                 proof.prepaid_units, proof.gift_units, proof.compensation_units, proof.is_final)
-            or evidence.evidence_hash != evidence_digest(posting, evidence.allocations,
-                evidence.original_provider_income, evidence.original_settlement_id, evidence.expected_release,
-                evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)):
+            or not first_release_hash_matches(evidence, posting)):
         raise ValidationError('首次积分退款释放来源凭证异常')
     from orders.models import OrderPointsSettlement
     original = OrderPointsSettlement.objects.filter(order_id=redemption.order_id,

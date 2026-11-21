@@ -54,14 +54,25 @@ def release_tables_exist():
     return False
 
 
-def _digest(posting, allocations, provider_income, settlement_id, expected, addon_snapshot=None, prior_addon=None):
+def _digest(posting, allocations, provider_income, settlement_id, expected, addon_snapshot=None, prior_addon=None,
+            *, sort_keys=False):
     payload = [posting.pk, posting.terms_hash, posting.points_refund_id, allocations,
                provider_income, settlement_id, expected]
     if addon_snapshot is not None:
         payload.append(addon_snapshot)
     if prior_addon:
         payload.append(prior_addon)
-    return hashlib.sha256(json.dumps(payload, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(payload, separators=(',', ':'), ensure_ascii=True,
+                                     sort_keys=sort_keys).encode()).hexdigest()
+
+
+def first_release_hash_matches(evidence, posting):
+    """Check both the canonical hash and the encoding used for older first refunds."""
+    facts = (posting, evidence.allocations, evidence.original_provider_income,
+             evidence.original_settlement_id, evidence.expected_release,
+             evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)
+    return (evidence.evidence_hash == _digest(*facts, sort_keys=True)
+            or evidence.evidence_hash == _digest(*facts))
 
 
 def _prior_addon_releases(allocations, boundary):
@@ -177,9 +188,7 @@ def verify_release_locked(evidence, *, _skip_usage=False):
             or any(type(value) is not int or value <= 0 for value in item) for item in items)
             or len({item[0] for item in items}) != len(items)
             or items != sorted(items, key=lambda item: item[0])
-            or evidence.evidence_hash != _digest(posting, items, evidence.original_provider_income,
-                                                 evidence.original_settlement_id, evidence.expected_release,
-                                                 evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)):
+            or not first_release_hash_matches(evidence, posting)):
         raise ValidationError('补资释放快照异常')
     owner = Q(redemption__order=order) | Q(service_order=order)
     max_id = items[-1][0] if items else 0
@@ -360,7 +369,8 @@ def record_release_locked(posting, calculation):
         original_provider_income=income, original_settlement_id=settlement_id, expected_release=actual.release_units,
         addon_funding_snapshot=addon_snapshot,
         prior_addon_release_snapshot=prior_addon,
-        evidence_hash=_digest(posting, items, income, settlement_id, actual.release_units, addon_snapshot, prior_addon))
+        evidence_hash=_digest(posting, items, income, settlement_id, actual.release_units, addon_snapshot, prior_addon,
+                              sort_keys=True))
     OrderPointsFundingRelease.objects.bulk_create([OrderPointsFundingRelease(posting=posting,
         allocation_id=item.allocation_id, amount=item.amount) for item in parts])
     # Receipt verification checks the full usage chain, including the release

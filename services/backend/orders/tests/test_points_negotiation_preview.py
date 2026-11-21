@@ -345,6 +345,21 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                                  (1160, 340) if addon_refund_first else (260, 140 if preallocated else 0))
                 self.assertEqual(Transaction.objects.filter(order=order, tx_type='REFUND', amount=660).count(), 1)
                 with transaction.atomic():
+                    # MySQL may return object keys in another order after a JSON round trip.
+                    reordered = [dict(sorted(item.items())) for item in evidence.addon_funding_snapshot]
+                    OrderPointsFundingReleaseEvidence.objects.filter(pk=evidence.pk).update(addon_funding_snapshot=reordered)
+                    self.assertEqual(verify_release_locked(evidence).release_units, verified.release_units)
+                    transaction.set_rollback(True)
+                with transaction.atomic():
+                    from orders.points_funding_release import _digest
+                    legacy = _digest(evidence.posting, evidence.allocations, evidence.original_provider_income,
+                        evidence.original_settlement_id, evidence.expected_release,
+                        evidence.addon_funding_snapshot, evidence.prior_addon_release_snapshot)
+                    self.assertNotEqual(legacy, evidence.evidence_hash)
+                    OrderPointsFundingReleaseEvidence.objects.filter(pk=evidence.pk).update(evidence_hash=legacy)
+                    self.assertEqual(verify_release_locked(evidence).release_units, verified.release_units)
+                    transaction.set_rollback(True)
+                with transaction.atomic():
                     altered = [dict(item) for item in evidence.addon_funding_snapshot]
                     altered[0]['principal_units'] += 1
                     OrderPointsFundingReleaseEvidence.objects.filter(pk=evidence.pk).update(addon_funding_snapshot=altered)
