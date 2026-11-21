@@ -5,10 +5,9 @@ from rest_framework.test import APIClient
 
 from club_accounts.tokens import issue_account_tokens
 from coupons.models import Coupon, UserCoupon
-from engagement.services import config
 from orders.models import Order
 from orders.tests.factories import make_boss_type, make_promotion, make_user
-from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase
+from orders.tests.test_reservation_api import LIST_URL, ReservationApiTestBase, prepare_reservation_payment
 from club_accounts.services import get_or_create_account_for_legacy_user
 from wallet.models import Wallet
 
@@ -21,7 +20,7 @@ class ReservationDiscountApiTest(ReservationApiTestBase):
         super().setUp()
         self.boss_account.boss_type = make_boss_type(name='预约九折', discount_rate=90)
         self.boss_account.save(update_fields=['boss_type'])
-        config()
+        prepare_reservation_payment(self.boss_account)
         self.promotion = make_promotion(title='预约八五折', discount_rate=85)
         self.coupon = Coupon.objects.create(name='预约减50', discount_type='DIRECT', amount=500)
         self.owned = UserCoupon.objects.create(account=self.boss_account, coupon=self.coupon)

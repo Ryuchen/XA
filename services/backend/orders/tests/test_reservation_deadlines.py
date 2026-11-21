@@ -15,7 +15,7 @@ from console.reservation_deadlines import save_deadlines
 from orders.models import Order, Reservation
 from orders.reservation_expiration import expire_due_reservations
 from orders.reservation_services import find_conflicting_reservations
-from orders.tests.test_reservation_api import ReservationApiTestBase
+from orders.tests.test_reservation_api import ReservationApiTestBase, prepare_reservation_payment
 from orders.tests.factories import make_provider, make_service, make_user
 from stores.context import resolve_store, store_context
 from stores.db import transaction
@@ -139,6 +139,7 @@ class ReservationDeadlineWorkflowTest(ReservationApiTestBase):
         self.assertEqual(booking.payment_deadline, booking.start_time)
 
     def test_confirmed_booking_converts_once_before_payment_deadline(self):
+        prepare_reservation_payment(self.boss_account)
         self.configure()
         with patch('django.utils.timezone.now', return_value=self.start_clock):
             result = self.create()
@@ -160,6 +161,7 @@ class ReservationDeadlineWorkflowTest(ReservationApiTestBase):
         self.assertEqual(booking.order.provider_account_id, self.provider_account.pk)
 
     def test_payment_deadline_during_locked_checkout_rolls_back_idempotency_claim(self):
+        prepare_reservation_payment(self.boss_account)
         self.configure()
         with patch('django.utils.timezone.now', return_value=self.start_clock):
             response = self.create()

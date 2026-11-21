@@ -15,7 +15,7 @@ from orders.models import Order, Reservation, ReservationSeat, ReservationSeatEv
 from orders.reservation_services import ReservationConflictError, create_reservation, find_conflicting_reservations
 from orders.reservation_team import create_team_reservation, decide, refresh_pending, replace
 from orders.tests.factories import make_provider, make_service
-from orders.tests.test_reservation_api import ReservationApiTestBase, slot
+from orders.tests.test_reservation_api import ReservationApiTestBase, prepare_reservation_payment, slot
 from stores.db import transaction
 from users.models import EscortProfile
 from wallet.models import Transaction, Wallet
@@ -27,8 +27,7 @@ class TeamReservationDomainTest(ReservationApiTestBase):
         super().setUp()
         from console.room_confirmation_config import save_room_confirmation
         save_room_confirmation(60, 0, lambda *_: None)
-        from engagement.services import config
-        config()
+        prepare_reservation_payment(self.boss_account)
         self.members = [self.provider_account]
         for _ in range(2):
             user = make_provider(deposit_mode='EARNINGS')
@@ -36,7 +35,8 @@ class TeamReservationDomainTest(ReservationApiTestBase):
             link_legacy_relations(user, account)
             EscortProfile.objects.filter(user=user).update(account=account)
             self.members.append(account)
-        self.team_service = make_service(price=10000, billing_provider_count=2, price_unit='小时')
+        self.team_service = make_service(price=10000, billing_provider_count=2,
+                                         fulfillment_provider_count=2, price_unit='小时')
         self.start = slot(hour=10)
         self.end = self.start + timedelta(minutes=90)
 
@@ -174,7 +174,16 @@ class TeamReservationDomainTest(ReservationApiTestBase):
                          [self.members[0].pk, self.members[2].pk])
         self.assertEqual(Wallet.objects.get(account=self.boss_account).balance, 70000)
         self.assertEqual(Transaction.objects.filter(order=booking.order, tx_type='PAY').count(), 1)
-        self.assertNotEqual(rejected.get(path).data['code'], 0)
+        history = rejected.get(path).data
+        self.assertEqual(history['code'], 0, history)
+        summary = history['data']
+        self.assertEqual((summary['viewer_participation_status'], summary['allowed_actions']), ('HISTORICAL', []))
+        for field in ('customer', 'provider', 'seats', 'current_providers', 'order', 'order_no', 'game_uid', 'remark'):
+            self.assertNotIn(field, summary)
+        denied = rejected.post(path + 'cancel/', {'reason': '已拒绝的陪玩不能取消预约'}, format='json')
+        self.assertEqual(denied.data['code'], 404, denied.data)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'CONVERTED')
 
     def test_paid_team_reservation_creates_room_in_same_transaction(self):
         from orders.models import OrderRoom

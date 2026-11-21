@@ -21,6 +21,8 @@ from club_accounts.services import (
     get_or_create_account_for_legacy_user,
     link_legacy_relations,
 )
+from engagement.models import PointFundingLot
+from engagement.services import config
 from orders.models import Order, Reservation, ReservationStatusLog
 from orders.tests.factories import (
     make_provider,
@@ -30,7 +32,7 @@ from orders.tests.factories import (
     make_wallet,
 )
 from users.models import EscortProfile
-from wallet.models import Transaction, Wallet
+from wallet.models import IdempotencyKey, Transaction, Wallet
 
 LIST_URL = '/api/orders/reservations/'
 
@@ -44,6 +46,14 @@ def slot(days_ahead=1, hour=10, minute=0):
 
 def iso(dt):
     return dt.isoformat()
+
+
+def prepare_reservation_payment(account):
+    config()
+    balance = Wallet.objects.get(account=account).balance
+    return PointFundingLot.objects.create(account=account,
+        source_key=f'isolated-reservation-api-principal:{account.pk}',
+        kind=PointFundingLot.Kind.PREPAID, remaining=balance)
 
 
 class ReservationApiTestBase(APITestCase):
@@ -123,6 +133,7 @@ class ReservationStaffBusinessAccountTest(ReservationApiTestBase):
 
     def test_staff_books_and_converts_for_actual_boss(self):
         from club_accounts.tokens import issue_account_tokens
+        prepare_reservation_payment(self.boss_account)
         self.client.force_authenticate(user=None)
         def login(account):
             token, _ = issue_account_tokens(account)
@@ -178,6 +189,7 @@ class ReservationCreateApiTest(ReservationApiTestBase):
         self.assertIn('仅玩家或客服', res.data['msg'])
 
     def test_staff_can_create_on_behalf(self):
+        prepare_reservation_payment(self.boss_account)
         self.client.force_authenticate(self.staff)
         res = self.client.post(LIST_URL, self.create_payload(customer_account_id=self.boss_account.pk))
         self.assertEqual(res.data['code'], 0)
@@ -448,11 +460,13 @@ class ReservationConvertApiTest(ReservationApiTestBase):
 
     def setUp(self):
         super().setUp()
+        self.principal = prepare_reservation_payment(self.boss_account)
         self.reservation = self.create_reservation_via_api()
         self.convert_url = f'{LIST_URL}{self.reservation.id}/convert/'
         # 先由陪玩确认，转单前置条件是 CONFIRMED
         self.client.force_authenticate(self.provider)
-        self.client.post(f'{LIST_URL}{self.reservation.id}/confirm/', {})
+        confirmed = self.client.post(f'{LIST_URL}{self.reservation.id}/confirm/', {})
+        self.assertEqual(confirmed.data['code'], 0, confirmed.data)
         self.client.force_authenticate(self.boss)
 
     def test_convert_creates_paid_order(self):
@@ -471,6 +485,8 @@ class ReservationConvertApiTest(ReservationApiTestBase):
         # 扣款与流水
         wallet = Wallet.objects.get(user=self.boss)
         self.assertEqual(wallet.balance, 98000)
+        self.principal.refresh_from_db()
+        self.assertEqual(self.principal.remaining, wallet.balance)
         tx = Transaction.objects.get(order=order, tx_type=Transaction.TxType.PAY)
         self.assertEqual(tx.amount, -2000)
         self.assertEqual(tx.balance_before, 100000)
@@ -505,6 +521,7 @@ class ReservationConvertApiTest(ReservationApiTestBase):
         self.assertEqual(stale.data['code'], 409, stale.data)
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
         self.assertFalse(Order.objects.exists())
+        self.assertFalse(IdempotencyKey.objects.filter(account=self.boss_account, request_id='quoted-reservation').exists())
         updated = self.client.get(quote_url)
         self.assertEqual(updated.data['data']['amount'], 3000)
         result = self.client.post(self.convert_url, {'client_request_id': 'quoted-reservation', 'expected_amount': 3000})
@@ -513,7 +530,9 @@ class ReservationConvertApiTest(ReservationApiTestBase):
 
     def test_same_price_service_change_requires_fresh_reservation_confirmation(self):
         quote_url = f'{LIST_URL}{self.reservation.id}/quote/'
-        quote = self.client.get(quote_url).data['data']
+        response = self.client.get(quote_url)
+        self.assertEqual(response.data['code'], 0, response.data)
+        quote = response.data['data']
         self.service.name = '变更后的服务'
         self.service.save(update_fields=['name'])
         stale = self.client.post(self.convert_url, {'client_request_id': 'service-terms-reservation',
@@ -521,7 +540,9 @@ class ReservationConvertApiTest(ReservationApiTestBase):
         self.assertEqual(stale.data['code'], 409, stale.data)
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
         self.assertFalse(Order.objects.exists())
-        fresh = self.client.get(quote_url).data['data']
+        updated = self.client.get(quote_url)
+        self.assertEqual(updated.data['code'], 0, updated.data)
+        fresh = updated.data['data']
         result = self.client.post(self.convert_url, {'client_request_id': 'service-terms-reservation',
                                   'expected_amount': fresh['amount'], 'expected_service': fresh['service']}, format='json')
         self.assertEqual(result.data['code'], 0, result.data)
@@ -538,10 +559,16 @@ class ReservationConvertApiTest(ReservationApiTestBase):
 
     def test_convert_rejects_insufficient_balance(self):
         Wallet.objects.filter(user=self.boss).update(balance=100)
-        res = self.client.post(self.convert_url, {})
+        self.principal.remaining = 100
+        self.principal.save(update_fields=['remaining'])
+        request_id = 'reservation-balance-insufficient'
+        res = self.client.post(self.convert_url, {'client_request_id': request_id})
         self.assertEqual(res.data['code'], 400)
         self.assertIn('浪花不足', res.data['msg'])
         self.assertFalse(Order.objects.exists())
+        self.assertFalse(IdempotencyKey.objects.filter(account=self.boss_account, request_id=request_id).exists())
+        self.principal.refresh_from_db()
+        self.assertEqual((Wallet.objects.get(user=self.boss).balance, self.principal.remaining), (100, 100))
         self.reservation.refresh_from_db()
         self.assertEqual(self.reservation.status, Reservation.Status.CONFIRMED)
 
@@ -549,17 +576,24 @@ class ReservationConvertApiTest(ReservationApiTestBase):
         first = self.client.post(self.convert_url, {'client_request_id': 'cvt-9'})
         self.assertEqual(first.data['code'], 0)
         second = self.client.post(self.convert_url, {'client_request_id': 'cvt-9'})
-        self.assertEqual(second.data['code'], 409)
+        self.assertEqual((second.data['code'], second.data.get('errorCode')), (409, 'FUND_ALREADY_PROCESSED'))
+        self.assertEqual(second.data['fundResult'], first.data)
         self.assertEqual(Order.objects.count(), 1)
         self.assertEqual(
             Transaction.objects.filter(tx_type=Transaction.TxType.PAY).count(), 1,
         )
 
     def test_second_convert_without_key_blocked_by_state(self):
-        self.client.post(self.convert_url, {})
+        missing = self.client.post(self.convert_url, {})
+        self.assertEqual(missing.data['code'], 409, missing.data)
+        self.assertIn('缺少 client_request_id', missing.data['msg'])
+        self.assertFalse(Order.objects.exists())
+        self.assertEqual(Wallet.objects.get(user=self.boss).balance, 100000)
+        first = self.client.post(self.convert_url, {'client_request_id': 'cvt-with-required-key'})
+        self.assertEqual(first.data['code'], 0, first.data)
         res = self.client.post(self.convert_url, {})
-        # 预约已是 CONVERTED，状态机这道闸门同样兜得住
         self.assertEqual(res.data['code'], 409)
+        self.assertIn('仅已确认', res.data['msg'])
         self.assertEqual(Order.objects.count(), 1)
 
     def test_provider_cannot_convert(self):
@@ -571,7 +605,7 @@ class ReservationConvertApiTest(ReservationApiTestBase):
 
     def test_staff_can_convert_on_behalf_and_charges_the_boss(self):
         self.client.force_authenticate(self.staff)
-        res = self.client.post(self.convert_url, {})
+        res = self.client.post(self.convert_url, {'client_request_id': 'staff-reservation-convert'})
         self.assertEqual(res.data['code'], 0, res.data.get('msg'))
         # 钱必须从老板钱包出，而不是客服钱包
         self.assertEqual(Wallet.objects.get(user=self.boss).balance, 98000)
