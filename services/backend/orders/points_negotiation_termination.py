@@ -115,8 +115,9 @@ def available_for_order(order):
             return False
         from .models import OrderSegmentSettlementManifest
         from .points_transfer_refund_access import permits as transfer_permits
+        formal_transfer = transfer_permits(order, phase='refund')
         if ((OrderSegmentSettlementManifest.objects.filter(order=order).exists()
-                and not (transfer_permits(order, phase='refund')
+                and not (formal_transfer
                          or getattr(settings, 'SERVICE_POINTS_TRANSFER_REFUND_PRIOR_SETTLEMENT_TESTING', False)))
                 or OrderParticipationSegment.objects.filter(attribution__order=order,
                     started_at__isnull=True, original_share__gt=0).exists()):
@@ -128,8 +129,8 @@ def available_for_order(order):
                 if not case or not case.client_request_id:
                     return False
                 from .points_transfer_refund_preview import preview_locked
-                preview_locked(case.pk, refund_equivalent_units=10)
-            return True
+                preview = preview_locked(case.pk, refund_equivalent_units=10)
+            return not formal_transfer or 1 <= len(preview['provider_terms']) <= 2
         except (ValidationError, Order.DoesNotExist):
             return False
     return (formal_addon or service_permits(order, phase='refund', kind='service')
@@ -141,7 +142,8 @@ def main_refund_preview_capability(order, case):
     """Return whether the formal funding check applies and the path is enabled."""
     from .points_business_access import permits
     check_required = (permits(order, phase='refund', kind='service')
-                      or (case.addon_payment_id is None and permits(order, phase='refund', kind='addon')
+                      or (case.addon_payment_id is None
+                          and any(permits(order, phase='refund', kind=kind) for kind in ('addon', 'transfer'))
                           and not order.refund_records.exists()))
     available = bool(check_required and case.client_request_id and available_for_order(order))
     return check_required, available

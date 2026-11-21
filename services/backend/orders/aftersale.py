@@ -618,15 +618,34 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         'refund_points_hundredths': calculated['points_hundredths']},
                         'msg': '双方确认后可由授权客服处理' if can_execute else '仅供核对，转单后的追加协商退款尚未开放'})
                 from .points_transfer_refund_preview import preview_locked
+                from .points_negotiation_termination import main_refund_preview_capability
+                from .refunds import authorized_refund
+                from wallet.refund_recovery_order import enabled as deposit_recovery_enabled
                 calculated = preview_locked(case.pk, refund_equivalent_units=requested)
                 providers = [{'account_id': item['account_id'], 'pending_income_units': item['pending_units'],
                               'wallet_units': item['wallet_units'], 'deposit_units': item['deposit_units'],
                               'shortfall_units': item['shortfall_units']} for item in calculated['provider_recovery_preview']]
-                return Response({'code': 0, 'data': {'providers': providers,
-                    'book_amounts_sufficient': calculated['estimated_sufficient'], 'calculated_at': timezone.now(),
-                    'executable': False, 'read_only_points': True, 'refund_units': requested,
-                    'refund_coin_units': calculated['coin_units'], 'refund_points_hundredths': calculated['points_hundredths']},
-                    'msg': '仅供核对，转单后的积分协商退款尚未开放'})
+                check_required, path_enabled = main_refund_preview_capability(order, case)
+                available = path_enabled and authorized_refund(request.account)
+                sufficient = calculated['estimated_sufficient']
+                needs_deposit = any(row['deposit_units'] for row in providers)
+                executable = available and sufficient and (not needs_deposit or deposit_recovery_enabled())
+                result = {'providers': providers, 'book_amounts_sufficient': sufficient, 'calculated_at': timezone.now(),
+                    'executable': executable, 'read_only_points': not available, 'refund_units': requested,
+                    'refund_coin_units': calculated['coin_units'], 'refund_points_hundredths': calculated['points_hundredths']}
+                if check_required:
+                    result['execution_check_required'] = True
+                if check_required and len(providers) > 2:
+                    message = '当前转单首退最多支持两名受影响陪玩，请核对售后范围'
+                elif not available:
+                    message = '仅供核对，当前转单退款暂不可执行'
+                elif not sufficient:
+                    message = '陪玩承担资金不足，补足后才能退款'
+                elif not executable:
+                    message = '本次需要扣减押金，当前押金扣款或后续补差尚未启用'
+                else:
+                    message = '当事人确认后可处理，执行时重新核验资金与凭证'
+                return Response({'code': 0, 'data': result, 'msg': message})
             from .points_business_access import permits
             from .points_negotiation_preview import combined_funding_sufficient, preview_locked
             from .points_negotiation_termination import main_refund_preview_capability
