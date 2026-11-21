@@ -137,10 +137,14 @@ def available_for_order(order):
             or bool(getattr(settings, 'SERVICE_POINTS_FUNDING_RELEASE_TESTING', False)))
 
 
-def formal_first_service_refund_available(order, case):
+def main_refund_preview_capability(order, case):
+    """Return whether the formal funding check applies and the path is enabled."""
     from .points_business_access import permits
-    return bool(case.client_request_id and permits(order, phase='refund', kind='service')
-                and available_for_order(order))
+    check_required = (permits(order, phase='refund', kind='service')
+                      or (case.addon_payment_id is None and permits(order, phase='refund', kind='addon')
+                          and not order.refund_records.exists()))
+    available = bool(check_required and case.client_request_id and available_for_order(order))
+    return check_required, available
 
 
 def _verify_transfer_termination_segments(order, posting, shares):

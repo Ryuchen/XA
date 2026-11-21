@@ -262,6 +262,32 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                              else (4340, 4340, 4600, 3340, 0, 260))
             self.assertTrue(result.data['data']['read_only_points'])
             case_id = case.data['data']['id']
+            if preallocated and not addon_refund_first:
+                from orders.points_business_access import _bind
+                case_path = f'/api/admin/aftersales/{case_id}/'
+                amount = {'refund_units': 1000}
+                self.assertNotIn('execution_check_required', result.data['data'])
+                with (patch('orders.points_business_access.configured', return_value=True), transaction.atomic(),
+                      _bind(phase='refund', kind='addon', order_id=order.pk)):
+                    preview = admin.get(case_path + 'negotiation-preview/', amount)
+                    self.assertTrue(preview.data['data']['execution_available'], preview.data)
+                    funding_result = admin.get(case_path + 'negotiation-funding/', amount)
+                    funding = funding_result.data['data']
+                    self.assertIs(funding['execution_check_required'], True)
+                    self.assertTrue(funding['book_amounts_sufficient'])
+                    self.assertFalse(funding['executable'])
+                    self.assertFalse(funding['read_only_points'])
+                    self.assertEqual(funding['conditional_combined_funding'], combined)
+                    self.assertGreater(combined['remaining_units'], 0)
+                    self.assertIn('到账补资不足', funding_result.data['msg'])
+                    with override_settings(NEGOTIATION_REFUND_EXECUTION_ENABLED=False):
+                        preview = admin.get(case_path + 'negotiation-preview/', amount)
+                        self.assertFalse(preview.data['data']['execution_available'])
+                        funding = admin.get(case_path + 'negotiation-funding/', amount).data['data']
+                        self.assertIs(funding['execution_check_required'], True)
+                        self.assertFalse(funding['executable'])
+                        self.assertTrue(funding['read_only_points'])
+                    self.assertFalse(order.refund_records.exists())
             proposal = admin.post(f'/api/admin/aftersales/{case_id}/negotiation-proposal/', {
                 'request_id': 'main-refund-addon-proposal', 'expected_version': 0, 'refund_units': 1000,
                 'provider_terms': [{'account_id': assignment.provider_account_id,
@@ -287,6 +313,13 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                 funded = self.fund({'request_id': '00000000-0000-4000-8000-000000000119',
                                     'order_id': order.pk, 'amount': 400})
                 self.assertEqual(funded.status_code, 200, funded.data)
+                with (patch('orders.points_business_access.configured', return_value=True), transaction.atomic(),
+                      _bind(phase='refund', kind='addon', order_id=order.pk)):
+                    funding = admin.get(case_path + 'negotiation-funding/', amount).data['data']
+                    self.assertIs(funding['execution_check_required'], True)
+                    self.assertEqual(funding['conditional_combined_funding']['remaining_units'], 0)
+                    self.assertTrue(funding['executable'])
+                    self.assertFalse(order.refund_records.exists())
             # The isolated-only switch exercises the real refund and release;
             # the public path stays closed until refunded add-on settlement exists.
             with override_settings(SERVICE_POINTS_REFUND_ADDON_RELEASE_TESTING=True):

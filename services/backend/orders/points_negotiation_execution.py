@@ -19,7 +19,7 @@ from .financial_lock import lock_order_money
 from .models import NegotiationProposal
 from .negotiation_proposals import _decisions, _lock_case, _scope, _verified, enabled
 from .points_checkout_test import require_isolated_checkout
-from .points_negotiation_preview import asset_terms, preview_locked, verified_asset_terms
+from .points_negotiation_preview import asset_terms, combined_funding_sufficient, preview_locked, verified_asset_terms
 from .refunds import authorized_refund
 
 
@@ -421,10 +421,8 @@ def _post_locked(case_id, proposal_id, *, operator, legacy_operator, request_id)
     if formal_service and not 1 <= len(plan['providers']) <= 2:
         raise ValidationError('积分退款陪玩承担范围待核对')
     proposal, calc = plan['proposal'], plan['calculation']
-    if service_permits(order, phase='refund', kind='addon'):
-        combined = calc.get('conditional_combined_funding')
-        if combined is None or combined.remaining_units:
-            raise ValidationError('该主单与加购退款叠加的到账补资不足，暂不能执行')
+    if service_permits(order, phase='refund', kind='addon') and not combined_funding_sufficient(calc):
+        raise ValidationError('该主单与加购退款叠加的到账补资不足，暂不能执行')
     from .models import OrderPointsFundingAllocation
     has_funding = OrderPointsFundingAllocation.objects.filter(Q(redemption__order=order) | Q(service_order=order)).exists()
     if has_funding and not (permits(order, phase='refund') or formal_service or getattr(settings, 'SERVICE_POINTS_FUNDING_RELEASE_TESTING', False)):

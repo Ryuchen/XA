@@ -204,6 +204,11 @@ def funding_after_refund(*, principal_units, gift_units, compensation_units,
                            rounding_reserved_units)
 
 
+def combined_funding_sufficient(calculation):
+    combined = calculation.get('conditional_combined_funding')
+    return combined is not None and combined.remaining_units == 0
+
+
 def preview_locked(case_id, *, refund_equivalent_units):
     """Reconcile a first refund with actual payment, terms and reserved funds.
 

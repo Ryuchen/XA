@@ -517,11 +517,12 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                             ('可确认方案，退款暂未开放' if formal_followup else '仅隔离测试确认，后续退款尚未开放') if can_agree
                             else '仅供核对，后续协商确认和退款尚未开放')})
             from .points_negotiation_preview import agreement_enabled, preview_locked
-            from .points_negotiation_termination import formal_first_service_refund_available
+            from .points_negotiation_termination import main_refund_preview_capability
             from .refunds import authorized_refund
             calculated = preview_locked(case.pk, refund_equivalent_units=requested)
             can_agree = agreement_enabled() and bool(case.client_request_id)
-            available = can_agree and formal_first_service_refund_available(order, case)
+            _, path_enabled = main_refund_preview_capability(order, case)
+            available = can_agree and path_enabled
             return Response({'code': 0, 'data': {
                 'refund_units': requested, 'refund_coin_units': calculated['coin_units'],
                 'refund_points_hundredths': calculated['points_hundredths'],
@@ -626,20 +627,24 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     'executable': False, 'read_only_points': True, 'refund_units': requested,
                     'refund_coin_units': calculated['coin_units'], 'refund_points_hundredths': calculated['points_hundredths']},
                     'msg': '仅供核对，转单后的积分协商退款尚未开放'})
-            from .points_negotiation_preview import preview_locked
             from .points_business_access import permits
-            from .points_negotiation_termination import formal_first_service_refund_available
+            from .points_negotiation_preview import combined_funding_sufficient, preview_locked
+            from .points_negotiation_termination import main_refund_preview_capability
             from .refunds import authorized_refund
             from wallet.refund_recovery_order import enabled as deposit_recovery_enabled
             calculated = preview_locked(case.pk, refund_equivalent_units=requested)
             result = funding_preview(order, calculated['provider_terms'])
-            available = formal_first_service_refund_available(order, case) and authorized_refund(request.account)
+            check_required, path_enabled = main_refund_preview_capability(order, case)
+            available = path_enabled and authorized_refund(request.account)
+            combined_ready = (not permits(order, phase='refund', kind='addon')
+                              or combined_funding_sufficient(calculated))
             needs_deposit = any(row['deposit_units'] for row in result['providers'])
-            executable = available and result['book_amounts_sufficient'] and (not needs_deposit or deposit_recovery_enabled())
+            executable = (available and result['book_amounts_sufficient'] and combined_ready
+                          and (not needs_deposit or deposit_recovery_enabled()))
             result.update(refund_units=requested, refund_coin_units=calculated['coin_units'],
                           refund_points_hundredths=calculated['points_hundredths'],
                           read_only_points=not available, executable=executable)
-            if permits(order, phase='refund', kind='service'):
+            if check_required:
                 result['execution_check_required'] = True
             if calculated.get('conditional_combined_funding') is not None:
                 from dataclasses import asdict
@@ -648,6 +653,8 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 message = '仅供核对，当前退款暂不可执行'
             elif not result['book_amounts_sufficient']:
                 message = '陪玩承担资金不足，补足后才能退款'
+            elif not combined_ready:
+                message = '主单与加购的到账补资不足，补足后才能退款'
             elif not executable:
                 message = '本次需要扣减押金，当前押金扣款或后续补差尚未启用'
             else:
