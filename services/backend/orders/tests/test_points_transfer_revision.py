@@ -5,6 +5,7 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.conf import settings
+from django.db.migrations.recorder import MigrationRecorder
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -163,9 +164,14 @@ class PointsTransferRevisionTests(TestCase):
                     missing = {OrderPointsTransferFundingRevision._meta.db_table,
                                OrderPointsTransferFundingRelease._meta.db_table}
                     tables = [name for name in connection.introspection.table_names() if name not in missing]
-                    with patch.object(connection.introspection, 'table_names', return_value=tables):
-                        with self.assertRaises(DatabaseError):
-                            receipt_points_used_locked(receipt)
+                    with transaction.atomic():
+                        # The fast test runner synchronizes models without recording this migration.
+                        MigrationRecorder(connection).migration_qs.get_or_create(
+                            app='orders', name='0141_orderpointstransferfundingrevision_and_more')
+                        with patch.object(connection.introspection, 'table_names', return_value=tables):
+                            with self.assertRaises(DatabaseError):
+                                receipt_points_used_locked(receipt)
+                        transaction.set_rollback(True)
                 with transaction.atomic():
                     from orders.models import OrderPointsFundingAllocation
                     from rest_framework.exceptions import ValidationError

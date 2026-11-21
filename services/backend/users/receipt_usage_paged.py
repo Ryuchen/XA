@@ -53,26 +53,32 @@ def verify_sources(receipt, state):
     for row in _pages(ReferralRefundFundingRelease.objects.filter(allocation__receipt=receipt)
                       .select_related('allocation__refund')):
         match(source.referral_release_facts(row))
+
+    # Load order snapshots only for actual transfer sources, once per page.
     for row in _pages(OrderPointsTransferFundingRelease.objects.filter(allocation__receipt=receipt)
-                      .select_related('allocation__redemption__payment', 'allocation__receipt', 'revision__order')):
+                      .select_related('allocation__redemption__payment', 'allocation__receipt', 'revision')
+                      .prefetch_related('revision__order')):
         if not (getattr(settings, 'SERVICE_POINTS_TRANSFER_FUNDING_REVISION_TESTING', False) or points):
             raise ValidationError('转单到账释放尚未开放')
         match(transfer_revision_facts(row))
     for row in _pages(PointsPostRefundTransferRelease.objects.filter(allocation__receipt=receipt)
-                      .select_related('allocation__redemption', 'allocation__receipt', 'revision__order', 'revision__transfer')):
+                      .select_related('allocation__redemption', 'allocation__receipt', 'revision__transfer')
+                      .prefetch_related('revision__order')):
         if not points:
             raise ValidationError('退款后转单到账释放尚未开放')
         match(post_refund_transfer_facts(row))
     for row in _pages(PointsFollowupTransferRelease.objects.filter(allocation__receipt=receipt)
-                      .select_related('allocation__redemption', 'allocation__receipt', 'revision__order',
+                      .select_related('allocation__redemption', 'allocation__receipt',
                                       'revision__transfer__previous_segment__attribution',
                                       'revision__first_posting', 'revision__second_posting',
-                                      'revision__followup_revision')):
+                                      'revision__followup_revision')
+                      .prefetch_related('revision__order')):
         if not points:
             raise ValidationError('二次退款后转单到账释放尚未开放')
         match(followup_transfer_facts(row))
     for row in _pages(PointsThirdTransferRelease.objects.filter(allocation__receipt=receipt)
-                      .select_related('allocation__receipt', 'revision__order')):
+                      .select_related('allocation__receipt', 'revision')
+                      .prefetch_related('revision__order')):
         if not points:
             raise ValidationError('第三轮后转单到账释放尚未开放')
         from orders.points_third_addon_receipt_usage import third_transfer_facts

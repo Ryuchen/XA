@@ -4,13 +4,15 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import transaction as django_transaction
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
-from orders.models import Order, OrderProvider, OrderPointsFundingRelease, OrderPointsFundingReleaseEvidence
+from orders.models import (AfterSale, NegotiationDecision, Order, OrderProvider, OrderPointsFundingRelease,
+                           OrderPointsFundingReleaseEvidence)
 from orders.tests import test_points_recharge_closure as base
 from orders.tests.test_release_flow import screenshot
 from orders.tests.factories import make_console_user
@@ -160,16 +162,34 @@ class FirstNegotiationReceiptUsageTest(TestCase):
                 from django.test.utils import CaptureQueriesContext
                 from stores.context import current_database
                 with transaction.atomic():
+                    mismatches = (
+                        (AfterSale.objects.filter(pk=case_id), {'account_id': other.account.pk}),
+                        (AfterSale.objects.filter(pk=case_id), {'order_id': other_order_id}),
+                        (NegotiationDecision.objects.filter(proposal_id=proposal_id, role='BOSS'),
+                         {'account_id': other.account.pk}),
+                    )
+                    for rows, change in mismatches:
+                        with self.subTest(change=change), transaction.atomic():
+                            self.assertEqual(rows.update(**change), 1)
+                            with self.assertRaises(ValidationError):
+                                verify_allocations_locked(self.receipt_id)
+                            transaction.set_rollback(True)
                     with CaptureQueriesContext(connections[current_database()]) as queries:
                         state = verify_allocations_locked(self.receipt_id)
-                    self.assertFalse(any('\"orders_order\"' in item['sql'].lower() for item in queries.captured_queries))
+                    for query in queries.captured_queries:
+                        self.assertNotRegex(query['sql'].lower(), r'\borders_order\b')
                     self.assertGreater(state.released_units, 0)
                     self.assertEqual(state.pass_units, 100)
                     release = OrderPointsFundingRelease.objects.get()
                     self.assertEqual(state.released_units, 100 + release.amount)
                     with transaction.atomic():
+                        AfterSale.objects.filter(pk=case_id).update(
+                            created_at=timezone.now(), client_request_id='fresh-aftersale-episode')
+                        reopened = verify_allocations_locked(self.receipt_id)
+                        self.assertEqual((reopened.version, reopened.chain_hash), (state.version, state.chain_hash))
+                        transaction.set_rollback(True)
+                    with transaction.atomic():
                         OrderPointsFundingRelease.objects.filter(pk=release.pk).update(amount=release.amount - 1)
-                        from django.core.exceptions import ValidationError
                         with self.assertRaises(ValidationError):
                             verify_allocations_locked(self.receipt_id)
                         transaction.set_rollback(True)

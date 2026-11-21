@@ -422,9 +422,10 @@ def first_negotiation_release_facts(row):
     from orders.negotiation_proposals import _digest as proposal_digest, _snapshot_terms
     episode = copy(proposal.case)
     episode.created_at, episode.client_request_id = proposal.case_opened_at, proposal.case_request_id
-    expected_decisions = {(redemption.order.customer_account_id, 'BOSS', True)} | {
+    expected_decisions = {(spent.account_id, 'BOSS', True)} | {
         (share[0], 'PROVIDER', True) for share in shares}
-    if (not shares or set((account, role, accepted) for account, role, accepted, _ in decisions) != expected_decisions
+    if (episode.order_id != redemption.order_id or episode.account_id != spent.account_id
+            or not shares or set((account, role, accepted) for account, role, accepted, _ in decisions) != expected_decisions
             or any(not decided for _, _, _, decided in decisions)
             or proposal.accepted_at != max(decided for _, _, _, decided in decisions)
             or sorted(proposal.affected_accounts) != sorted(share[0] for share in shares)
