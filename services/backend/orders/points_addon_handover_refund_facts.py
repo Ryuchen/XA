@@ -694,6 +694,42 @@ def funding_facts(refund, *, receipt_id):
             'prior_releases': [[row.pk, row.allocation_id, row.run_id, row.amount] for row in prior]}
 
 
+def _verify_prior_handover_refund_recovery(refund, first, run):
+    """Read the original wallet and deposit debits without locking another order."""
+    from .ordinary_refund_receipt_evidence import _verify_direct_deposit
+
+    segment = first.target_segment
+    account_id = segment.provider_account_id
+    user_id = refund.order.providers.filter(provider_account_id=account_id).values_list('provider_id', flat=True).first()
+    debit = refund.provider_transaction
+    if not user_id or (refund.wallet_deduction and (not debit or debit.wallet.user_id != user_id
+            or debit.order_id is not None or not first.accepted_at < debit.created_at <= refund.created_at)):
+        raise ValidationError('再次加购接替的原退款钱包流水异常')
+    if not refund.deposit_deduction:
+        return
+    cycle = segment.provider_business_cycle
+    deficits = list(refund.deposit_deficits.select_related('profile', 'source_store_transaction__wallet__user'))
+    if (not cycle or len(deficits) != 1 or deficits[0].account_business_cycle != cycle
+            or not refund.created_at <= deficits[0].source_store_transaction.created_at
+                                    <= deficits[0].created_at <= run.created_at):
+        raise ValidationError('再次加购接替的原退款押金周期或时序异常')
+    try:
+        _verify_direct_deposit(deficits[0], refund=refund, account_id=account_id, user_id=user_id,
+                               amount=refund.deposit_deduction, addon=True)
+    except RestValidationError as exc:
+        raise ValidationError('再次加购接替的原退款押金凭证异常') from exc
+    if debit:
+        if debit.balance_after != 0:
+            raise ValidationError('再次加购接替的原退款钱包尚有可用余额')
+    else:
+        zero = getattr(refund, 'zero_wallet_evidence', None)
+        if (not zero or zero.account_id != account_id or zero.wallet.account_id != account_id
+                or zero.wallet.user_id != user_id or zero.business_cycle != cycle or zero.balance != 0
+                or not zero.is_active
+                or not refund.created_at <= zero.created_at <= deficits[0].source_store_transaction.created_at):
+            raise ValidationError('再次加购接替缺少原退款零余额钱包凭证')
+
+
 def verify_before_second_handover(refund, first, *, before, receipt_id=None):
     """Prove a refund against the first owner's original fulfillment segment."""
     from .addon_funding_release import verify_run
@@ -702,7 +738,7 @@ def verify_before_second_handover(refund, first, *, before, receipt_id=None):
     if (refund.payment_id != first.payment_id or refund.order_id != first.payment.intent.order_id
             or first.previous_id or first.kind != 'STANDARD' or not first.accepted_at
             or not first.accepted_at < refund.created_at < before
-            or not 0 < refund.amount < first.transferred_basis or refund.wallet_deduction or refund.deposit_deduction):
+            or not 0 < refund.amount < first.transferred_basis):
         raise ValidationError('再次加购接替的前序退款范围异常')
     run = OrderAddonFundingReleaseRun.objects.filter(refund=refund,
         created_at__gt=refund.created_at, created_at__lt=before).first()
@@ -716,9 +752,12 @@ def verify_before_second_handover(refund, first, *, before, receipt_id=None):
     members = proof.get('participants', [])
     if (proof.get('handover_id') != first.pk or len(members) != 1
             or members[0][1] != first.target_segment.provider_account_id
+            or len(members[0][4]) != 1 or members[0][4][0]['segment_id'] != first.target_segment_id
             or any(row[1:3] != [refund.payment_id, first.target_segment_id] for row in members[0][8])
             or any(row[1] != first.target_segment_id for row in members[0][9])):
         raise ValidationError('再次加购接替的原退款未归属同一履约段')
+    if refund.wallet_deduction or refund.deposit_deduction:
+        _verify_prior_handover_refund_recovery(refund, first, run)
     return [refund.pk, run.pk, run.points_addon_hash]
 
 

@@ -417,6 +417,7 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
         if zero:
             from .points_zero_followup import verify_record_locked
             verify_record_locked(zero)
+    first_transfer_handover = False
     if (needs_integrated_processing(order) and payment.handovers.exists()
             and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
         from .models import OrderAddonHandover
@@ -432,11 +433,16 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
         if first_refund_active(order, payment.pk):
             other_pending = frozenset(OrderAddonHandover.objects.filter(
                 payment__intent__order=order, status='PENDING').values_list('payment_id', flat=True))
-        if not (first_handover_refund(order, transfers) or single_post_refund_handover(order, pending_payment_id=other_pending)
+        first_handover = first_handover_refund(order, transfers)
+        if not (first_handover or single_post_refund_handover(order, pending_payment_id=other_pending)
                 or post_refund_handover_history(order, pending_payment_id=other_pending)
                 or entry_matches(order, payment.pk) or refund_preflight_active(order, payment)
                 or third_refund_active(order, payment)):
             raise ValidationError('已接替加购的独立退款资金尚未接入')
+        first_transfer_handover = (first_handover and len(transfers) == 1 and not order.refund_records.exists()
+            and not OrderAddonPayment.objects.filter(intent__order=order).exclude(pk=payment.pk).exists()
+            and payment.handovers.filter(status='ACCEPTED', kind='STANDARD', previous__isnull=True,
+                source_segment_id=transfers[0].previous_segment_id, target_segment_id=transfers[0].next_segment_id).exists())
     proposal = OrderAddonRefundProposal.objects.select_for_update().filter(
         pk=proposal_id, payment=payment, case=case).first()
     if (not proposal or proposal.status != 'ACCEPTED' or proposal.case_opened_at != case.created_at
@@ -637,19 +643,21 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
         ordinary_followup = (transferred_addon and not needs_integrated_processing(order)
             and OrdinaryTransferFollowupRound.objects.filter(order=order,
                 execution__termination_processed_at__isnull=False).exists())
-        if (((production_addon and not needs_integrated_processing(order) and order.refund_records.count() in (0, 1)
+        if deposit_deduction and not wallet_deduction:
+            requires_zero_wallet = ((production_addon and not needs_integrated_processing(order)
+                and order.refund_records.count() in (0, 1)
                 and (order.addon_intents.count() >= 2 or order.refund_records.count() == 1
-                     or payment.handovers.filter(status='ACCEPTED').exists())) or ordinary_followup
-                  or third_refund_active(order, payment))
-                and deposit_deduction and not wallet_deduction):
-            if (not provider_wallet or not provider_wallet.is_active or provider_wallet.balance != 0
-                    or provider_wallet.account_id != person.account_id or provider_wallet.user_id != profile.user_id
-                    or not profile.deposit_business_cycle
-                    or profile.deposit_business_cycle != profile.account.business_cycle):
+                     or payment.handovers.filter(status='ACCEPTED').exists()))
+                or ordinary_followup or third_refund_active(order, payment))
+            has_zero_wallet = (provider_wallet and provider_wallet.is_active and provider_wallet.balance == 0
+                and provider_wallet.account_id == person.account_id and provider_wallet.user_id == profile.user_id
+                and profile.deposit_business_cycle and profile.deposit_business_cycle == profile.account.business_cycle)
+            if requires_zero_wallet and not has_zero_wallet:
                 raise ValidationError('退款时本人钱包或押金业务周期无法核对')
-            zero_wallet_states[person.pk] = (provider_wallet.pk, person.account_id, profile.deposit_business_cycle,
-                                              provider_wallet.balance, provider_wallet.frozen_amount,
-                                              provider_wallet.is_active)
+            # Same-seat return may need this evidence later. Cash deposits can exist without a wallet.
+            if has_zero_wallet and (requires_zero_wallet or first_transfer_handover):
+                zero_wallet_states[person.pk] = (provider_wallet.pk, person.account_id, profile.deposit_business_cycle,
+                    provider_wallet.balance, provider_wallet.frozen_amount, provider_wallet.is_active)
         plans.append((person, profile, provider_wallet, deductions, main_pending, wallet_deduction, deposit_deduction))
 
     from .points_business_access import permits

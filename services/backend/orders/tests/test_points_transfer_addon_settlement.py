@@ -134,7 +134,8 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
         first = SimpleNamespace(pk=6, payment_id=3, payment=SimpleNamespace(intent=SimpleNamespace(order_id=12)),
             previous_id=None, kind='STANDARD', accepted_at=refunded_at - timedelta(seconds=1), transferred_basis=60,
             target_segment_id=9, target_segment=SimpleNamespace(provider_account_id=20))
-        participant = [1, 20, 60, 50, [], [48, 2, 0, 0], None, [], [[15, 3, 9, 48]], [[16, 9, 2]]]
+        participant = [1, 20, 60, 50, [{'segment_id': 9}], [48, 2, 0, 0], None, [],
+                       [[15, 3, 9, 48]], [[16, 9, 2]]]
         run = SimpleNamespace(pk=14, released_amount=0, points_addon_hash='original-digest',
             points_addon_snapshot={'handover_refund': {'handover_id': 6, 'participants': [participant]}})
         with (patch.object(OrderAddonFundingReleaseRun.objects, 'filter') as runs,
@@ -150,6 +151,46 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             participant[9][0][1] = 10
             with self.assertRaisesMessage(DjangoValidationError, '未归属同一履约段'):
                 verify_before_second_handover(refund, first, before=before, receipt_id=5)
+            participant[8], participant[9] = [], []
+            participant[4][0]['segment_id'] = 10
+            with self.assertRaisesMessage(DjangoValidationError, '未归属同一履约段'):
+                verify_before_second_handover(refund, first, before=before, receipt_id=5)
+
+    def test_handover_rechecks_historical_wallet_exhaustion_and_deposit_cycle(self):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from orders.points_addon_handover_refund_facts import _verify_prior_handover_refund_recovery
+
+        stamp = timezone.now()
+        wallet = SimpleNamespace(account_id=20, user_id=21)
+        debit = SimpleNamespace(wallet=wallet, order_id=None, balance_after=0, created_at=stamp)
+        deficit = SimpleNamespace(account_business_cycle=3, created_at=stamp + timedelta(seconds=2),
+            source_store_transaction=SimpleNamespace(created_at=stamp + timedelta(seconds=1)))
+        refund = SimpleNamespace(created_at=stamp, wallet_deduction=2, deposit_deduction=28, provider_transaction=debit,
+            order=SimpleNamespace(providers=SimpleNamespace(filter=lambda **_: SimpleNamespace(
+                values_list=lambda *args, **kwargs: SimpleNamespace(first=lambda: 21)))),
+            deposit_deficits=SimpleNamespace(select_related=lambda *args: [deficit]))
+        first = SimpleNamespace(accepted_at=stamp - timedelta(seconds=1),
+            target_segment=SimpleNamespace(provider_account_id=20, provider_business_cycle=3))
+        run = SimpleNamespace(created_at=stamp + timedelta(seconds=3))
+        with patch('orders.ordinary_refund_receipt_evidence._verify_direct_deposit') as verify:
+            _verify_prior_handover_refund_recovery(refund, first, run)
+            verify.assert_called_once_with(deficit, refund=refund, account_id=20, user_id=21, amount=28, addon=True)
+            deficit.account_business_cycle = 4
+            with self.assertRaisesMessage(DjangoValidationError, '押金周期或时序异常'):
+                _verify_prior_handover_refund_recovery(refund, first, run)
+            deficit.account_business_cycle = 3
+            debit.balance_after = 1
+            with self.assertRaisesMessage(DjangoValidationError, '钱包尚有可用余额'):
+                _verify_prior_handover_refund_recovery(refund, first, run)
+            refund.wallet_deduction, refund.provider_transaction = 0, None
+            with self.assertRaisesMessage(DjangoValidationError, '缺少原退款零余额钱包凭证'):
+                _verify_prior_handover_refund_recovery(refund, first, run)
+            refund.zero_wallet_evidence = SimpleNamespace(account_id=20, wallet=wallet, business_cycle=3,
+                balance=0, is_active=True, created_at=stamp)
+            _verify_prior_handover_refund_recovery(refund, first, run)
+            refund.zero_wallet_evidence.created_at = deficit.created_at
+            with self.assertRaisesMessage(DjangoValidationError, '缺少原退款零余额钱包凭证'):
+                _verify_prior_handover_refund_recovery(refund, first, run)
 
     def test_second_handover_checks_each_refund_before_the_next_event(self):
         from django.core.exceptions import ValidationError as DjangoValidationError
