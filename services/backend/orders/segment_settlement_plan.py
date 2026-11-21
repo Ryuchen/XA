@@ -124,7 +124,7 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
         from .points_transfer_refund_access import permits
         if not _allow_recorded_refunds and not subsidy_internal and (not points_internal or not (getattr(settings, 'SERVICE_POINTS_TRANSFER_FUNDING_REVISION_TESTING', False)
                 or getattr(settings, 'SERVICE_POINTS_TRANSFER_SETTLEMENT_TESTING', False)
-                or permits(order, phase='report') or permits(order, phase='refund'))):
+                or any(permits(order, phase=phase) for phase in ('transfer', 'report', 'refund')))):
             _fail('未开始履约的资金测算尚未开放')
     if (not coverage or coverage.status != 'REVIEW' or coverage.review_reason != TRANSFER_RATE_REVIEW
             or (not points_internal and not subsidy_internal and (coverage.source != 'WALLET_NO_POINTS' or coverage.deal_amount != order.amount))

@@ -720,7 +720,7 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
 
 @contextmanager
 def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None):
-    """Hold the exact order and money mutex for one unallocated transfer.
+    """Lock this order, the money mutex and its existing funding receipts.
 
     Outer endpoint authorization, transfer proposal/acceptance, payment
     evidence and all actual mutations remain the responsibility of their
@@ -766,7 +766,7 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None)
             or OrderSegmentSettlementManifest.objects.filter(order=order).exists()
             or not isinstance(order.funding_terms, dict)
             or order.funding_terms.get(MARKER) != {'receipt_id': redemption.pk}):
-        raise ValidationError('订单不在首次无补资积分转单范围')
+        raise ValidationError('订单不在未退款的积分转单范围')
     transfers = list(OrderOriginalShareTransfer.objects.filter(
         previous_segment__attribution__order=order).select_related('previous_segment').order_by('pk'))
     _verify_prestart_history(order, transfers)

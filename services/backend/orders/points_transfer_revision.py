@@ -1,9 +1,10 @@
-"""Isolated, tenant-local audit of funding revisions for service transfers.
+"""Tenant-local audit of funding revisions for service transfers.
 
 This verifies immutable platform allocation authorizations without recursively
 asking a shared receipt for its available balance. Callers must already hold
-the order and receipt locks; production MySQL lock ordering is not enabled.
+the order and receipt locks.
 """
+from contextlib import nullcontext
 from dataclasses import dataclass
 import hashlib
 import json
@@ -104,11 +105,11 @@ def _verify_allocation(order, allocation):
     return operation.completed_at
 
 
-def _enabled():
-    from .points_transfer_refund_access import permits, require_refund_or_isolated
-    formal = permits(phase='refund') or permits(phase='transfer')
+def _enabled(order):
+    from .points_transfer_refund_access import permits
+    formal = any(permits(order, phase=phase) for phase in ('refund', 'transfer'))
     if not formal:
-        require_refund_or_isolated()
+        require_isolated_checkout()
     if ((not getattr(settings, 'SERVICE_POINTS_TRANSFER_FUNDING_REVISION_TESTING', False)
             and not formal)
             or not transaction.get_connection().in_atomic_block or current_store() is None):
@@ -117,7 +118,14 @@ def _enabled():
 
 def verify_revisions_locked(order, *, allow_missing_last=False):
     """Rebuild all revisions in transfer order; optionally return newest draft."""
-    _enabled()
+    from .points_transfer_refund_access import permits, verification_scope
+    read_phase = any(permits(order, phase=phase) for phase in ('report', 'settlement'))
+    with verification_scope(order) if read_phase else nullcontext():
+        _enabled(order)
+        return _verify_revisions_locked(order, allow_missing_last=allow_missing_last)
+
+
+def _verify_revisions_locked(order, *, allow_missing_last):
     if not revision_tables_exist():
         raise PointsFundingPlanError('转单补资版本数据尚未就绪')
     from .points_funding_release import _paged

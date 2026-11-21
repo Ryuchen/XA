@@ -104,7 +104,7 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
             formal_allowed = False
             if receipt.usage_version is not None and getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is True:
                 from .points_transfer_refund_access import permits
-                if any(permits(order, phase=phase) for phase in ('report', 'refund', 'settlement')):
+                if any(permits(order, phase=phase) for phase in ('transfer', 'report', 'refund', 'settlement')):
                     formal_allowed = True
                 from .points_business_access import permits as service_permits
                 if any(service_permits(order, phase=phase, kind='service') for phase in ('assignment', 'funding', 'report', 'refund', 'settlement')):
