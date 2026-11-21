@@ -208,7 +208,14 @@ def submit_team_evidence(request, order_id, field, image):
                 assignment.team_completion_pending = False
                 assignment.save(update_fields=['team_completion_pending'])
             from .team_progress import team_progress
-            progress = team_progress(order)
+            from .points_transfer_refund_access import permits, verification_scope
+            if continuation and permits(order, phase='report'):
+                # Resolve the remaining seat from the verified refund while
+                # the existing report scope holds the order and receipt locks.
+                with verification_scope(order):
+                    progress = team_progress(order)
+            else:
+                progress = team_progress(order)
             required_count = (order.providers.filter(released_at__isnull=True).count()
                               if continuation == 'ordinary_transfer' else 1 if continuation else 2)
             ready = bool(progress and progress['total_count'] == required_count and progress['submitted_count'] == required_count)
