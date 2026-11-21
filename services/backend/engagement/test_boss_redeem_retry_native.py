@@ -1,13 +1,41 @@
 """A lost redemption response must remain recoverable after stock sells out."""
+from contextlib import contextmanager
+
 from django.test import LiveServerTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
-from engagement.models import RewardClaim, RewardItem
+from engagement.models import MemberTag, PointLedger, RewardClaim, RewardItem
 from orders.tests.factories import make_console_user, make_user
 from stores.context import resolve_store, store_context
+from stores.db import connection
+
+
+@contextmanager
+def different_event_key_collation():
+    if connection.vendor != 'mysql':
+        yield
+        return
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT @@collation_connection')
+        original, = cursor.fetchone()
+        cursor.execute(
+            'SELECT COLLATION_NAME FROM information_schema.COLUMNS '
+            'WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (%s, %s) AND COLUMN_NAME=%s',
+            [MemberTag._meta.db_table, PointLedger._meta.db_table, 'event_key'],
+        )
+        column_collations = [row[0] for row in cursor.fetchall()]
+        assert len(column_collations) == 2
+        different = next(name for name in ('utf8mb4_unicode_ci', 'utf8mb4_general_ci', 'utf8mb4_unicode_520_ci')
+                         if name not in column_collations)
+        cursor.execute('SET SESSION collation_connection = %s', [different])
+    try:
+        yield
+    finally:
+        with connection.cursor() as cursor:
+            cursor.execute('SET SESSION collation_connection = %s', [original])
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
@@ -47,9 +75,10 @@ class BossRedemptionRetryNativeTest(LiveServerTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
         self.assertEqual(client.get('/api/club/points/').data['data']['points'], 0)
         claims = list(RewardClaim.objects.filter(account=account, reward=reward).order_by('id'))
-        self.assertTrue(client.get(f'/api/club/claims/{claims[0].pk}/').data['data']['points_returned'])
-        self.assertFalse(client.get(f'/api/club/claims/{claims[1].pk}/').data['data']['points_returned'])
-        rows = client.get('/api/club/claims/?page_size=20').data['data']['items']
+        with different_event_key_collation():
+            self.assertTrue(client.get(f'/api/club/claims/{claims[0].pk}/').data['data']['points_returned'])
+            self.assertFalse(client.get(f'/api/club/claims/{claims[1].pk}/').data['data']['points_returned'])
+            rows = client.get('/api/club/claims/?page_size=20').data['data']['items']
         self.assertEqual({row['id']: row['points_returned'] for row in rows},
                          {claims[0].pk: True, claims[1].pk: False})
         messages = client.get('/api/messages/').data['data']['messages']
