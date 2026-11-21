@@ -262,12 +262,16 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
             required[segment.provider_account_id].append(segment.pk)
     if points_internal and not order.refund_records.exists():
         from .models import OrderAddonHandover
-        from .addon_handover import verify_first_handover
+        from .addon_handover import verify_handover
         from rest_framework.exceptions import ValidationError
         from django.core.exceptions import ValidationError as DjangoValidationError
-        handovers = OrderAddonHandover.objects.filter(
-            payment__intent__order=order, status='ACCEPTED').select_related('payment__intent')
+        from django.db.models import OuterRef, Subquery
+        latest = OrderAddonHandover.objects.filter(payment_id=OuterRef('payment_id'), status='ACCEPTED').order_by('-version')
+        handovers = OrderAddonHandover.objects.filter(payment__intent__order=order,
+            pk=Subquery(latest.values('pk')[:1])).select_related('payment__intent')
         for handover in handovers:
+            if not handover.accepted_at:
+                _fail('加购接替缺少实际确认时间')
             try:
                 refunds = list(handover.payment.refund_records.order_by('created_at', 'pk'))
                 from .models import OrderAddonFundingReleaseRun
@@ -287,9 +291,11 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
                     from .models import OrderPointsFundingAllocation
                     witness = OrderPointsFundingAllocation.objects.filter(
                         redemption__order=order).order_by('pk').first()
-                    shares = verify_first_handover(handover.payment, handover,
-                        as_of=refunds[0].created_at if refunds else None,
-                        receipt_id=witness.receipt_id if witness else None)
+                    boundary = refunds[0].created_at if refunds else None
+                    if boundary and handover.previous_id:
+                        boundary = next((row.created_at for row in refunds if row.created_at > handover.accepted_at), None)
+                    shares = verify_handover(handover.payment, handover,
+                        as_of=boundary, receipt_id=witness.receipt_id if witness else None)
             except (ValidationError, DjangoValidationError) as exc:
                 raise SettlementError('加购接替凭证待核对') from exc
             for share in shares:

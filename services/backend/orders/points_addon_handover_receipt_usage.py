@@ -14,6 +14,7 @@ def facts(run, receipt_id):
     if not handover or handover.status != 'ACCEPTED' or not handover.accepted_at:
         raise ValidationError('积分加购接替确认凭证缺失')
     payment, order = handover.payment, handover.payment.intent.order
+    later = handover.previous_id is not None
     if receipt_id:
         from .models import OrderPointsFundingAllocation
         if not OrderPointsFundingAllocation.objects.filter(redemption__order=order, receipt_id=receipt_id).exists():
@@ -21,14 +22,15 @@ def facts(run, receipt_id):
     if (order.refund_records.filter(created_at__lte=run.created_at).exists()
             or payment.refund_records.filter(created_at__gte=handover.created_at,
                                              created_at__lte=run.created_at).exists()
-            or payment.handovers.filter(status='ACCEPTED', accepted_at__lte=run.created_at).count() != 1
+            or (later and payment.refund_records.filter(created_at__lte=run.created_at).exists())
+            or payment.handovers.filter(status='ACCEPTED', accepted_at__lte=run.created_at).count() != (2 if later else 1)
             or handover.accepted_at >= run.created_at):
         raise ValidationError('积分加购接替的退款或时序尚未接入')
     payment_snapshot = payment_facts(payment, read_receipt_id=receipt_id)
-    from .addon_handover import verify_first_handover
+    from .addon_handover import verify_handover
     from rest_framework.exceptions import ValidationError as RestValidationError
     try:
-        verify_first_handover(payment, handover, as_of=run.created_at, receipt_id=receipt_id)
+        verify_handover(payment, handover, as_of=run.created_at, receipt_id=receipt_id)
     except RestValidationError as exc:
         raise ValidationError('积分加购接替真实履约或确认凭证异常') from exc
     decisions = list(handover.decisions.order_by('account_id').values_list('account_id', 'role', 'accepted', 'decided_at'))
@@ -43,7 +45,7 @@ def facts(run, receipt_id):
         raise ValidationError('积分加购接替双方与负责人确认异常')
     shares = list(handover.shares.select_related('segment').order_by('position'))
     if (not shares or sum(row.is_current for row in shares) != 1
-            or sum(row.basis for row in shares) != handover.source_basis_before
+            or sum(row.basis for row in shares) != (payment.intent.amount if later else handover.source_basis_before)
             or any(row.segment.attribution.order_id != order.pk or row.income > row.basis for row in shares)):
         raise ValidationError('积分加购接替份额异常')
     prior = list(OrderAddonHandover.objects.filter(payment__intent__order=order, status='ACCEPTED',
@@ -55,8 +57,7 @@ def facts(run, receipt_id):
     prior_facts = []
     for item in prior:
         try:
-            prior_shares = verify_first_handover(item.payment, item, as_of=handover.accepted_at,
-                                                 receipt_id=receipt_id)
+            prior_shares = verify_handover(item.payment, item, as_of=handover.accepted_at, receipt_id=receipt_id)
         except RestValidationError as exc:
             raise ValidationError('此前加购接替凭证异常') from exc
         prior_decisions = list(item.decisions.order_by('account_id').values_list('account_id', 'role', 'accepted', 'decided_at'))
@@ -99,6 +100,8 @@ def facts(run, receipt_id):
                                          _prestart_slot_counts(order, prestart).items()}
     if prior_facts:
         result['prior_handovers'] = prior_facts
+    if later:
+        result.update(version=2, previous_handover_id=handover.previous_id)
     return result
 
 

@@ -1651,7 +1651,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             lifecycle = capture_transfer_lifecycle([
                 (cmd['old_provider_account_id'], cmd['new_provider_account'].pk) for cmd in parsed
             ])
-            with transaction.atomic(), revision_scope(order.pk):
+            with transaction.atomic(), revision_scope(order.pk,
+                    outgoing_accounts={cmd['old_provider_account_id'] for cmd in parsed}):
                 lock_transfer_lifecycle(lifecycle)
                 lifecycle_cycles = ({account.pk: account.business_cycle for account in lifecycle[0]}
                                     if lifecycle is not None else None)

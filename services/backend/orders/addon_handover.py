@@ -501,22 +501,27 @@ def verify_later_handover(payment, handover, *, as_of=None, receipt_id=None):
                    or row.accepted_at for row in intervening)):
         raise ValidationError('后续接替重试版本异常')
     verify_handover(payment, previous, as_of=handover.created_at, receipt_id=receipt_id)
-    revisions = PointsPostRefundTransferRevision.objects.filter(order=payment.intent.order,
-        created_at__lt=handover.created_at).order_by('-pk')
-    revision = revisions.first()
+    order = payment.intent.order
+    if order.refund_records.filter(created_at__lte=handover.accepted_at).exists():
+        revision = PointsPostRefundTransferRevision.objects.filter(order=order,
+            created_at__lt=handover.created_at).order_by('-pk').first()
+        transfer_valid = bool(revision and isinstance(revision.snapshot, dict)
+            and [payment.pk, handover.source_segment_id, handover.source_basis_before]
+                in revision.snapshot.get('pending_handover', [])
+            and revision.transfer.previous_segment_id == handover.source_segment_id
+            and revision.transfer.next_segment_id == handover.target_segment_id
+            and revision.transfer.created_at < handover.created_at)
+    else:
+        transfer_valid = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
+            previous_segment_id=handover.source_segment_id, next_segment_id=handover.target_segment_id,
+            created_at__gt=previous.accepted_at, created_at__lt=handover.created_at).exists()
     active = [row for row in shares if row['is_current']]
-    if (not revision or not isinstance(revision.snapshot, dict) or len(active) != 1
-            or [payment.pk, handover.source_segment_id, handover.source_basis_before]
-                not in revision.snapshot.get('pending_handover', [])
-            or revision.transfer.previous_segment_id != handover.source_segment_id
-            or revision.transfer.next_segment_id != handover.target_segment_id
+    if (not transfer_valid or len(active) != 1
             or active[0]['segment_id'] != handover.source_segment_id
             or active[0]['basis'] != handover.source_basis_before
             or handover.source_segment.provider_account_id == handover.target_segment.provider_account_id
-            or handover.target_segment.attribution.order_id != payment.intent.order_id
+            or handover.target_segment.attribution.order_id != order.pk
             or not handover.target_segment.started_at or handover.target_segment.started_at > handover.accepted_at
-            or not OrderOriginalShareTransfer.objects.filter(pk=revision.transfer_id,
-                created_at__lt=handover.created_at).exists()
             or handover.retained_basis + handover.transferred_basis != handover.source_basis_before
             or handover.transferred_basis <= 0 or not handover.remaining_work
             or (handover.retained_basis and not handover.completed_work)):
@@ -625,7 +630,7 @@ def assert_no_pending_handover(payment):
         raise ValidationError('加购负责人变更正在等待确认，请先处理')
 
 
-def _verify_transferred_handover_replay(order, payment, proposal):
+def verify_transferred_handover_funding(order, payment, proposal):
     from .addon_funding_release import verify_run
     from .models import OrderAddonFundingReleaseRun, OrderPointsFundingAllocation
 
@@ -760,6 +765,20 @@ def _target_commission(segment, *, pending_handover=None):
         return _commission(segment)
     except AddonSelectionError as exc:
         raise ValidationError(str(exc)) from exc
+
+
+def _check_successive_transfer_target(order, prior, source_id, target_id):
+    from .models import OrderOriginalShareTransfer
+    from .points_transfer_refund_access import permits
+
+    if not prior or not permits(order, phase='transfer') or order.refund_records.exists():
+        return
+    if not prior.accepted_at:
+        raise ValidationError('前次加购接替确认时间待核对')
+    transfer = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
+        previous_segment_id=source_id, created_at__gt=prior.accepted_at).first()
+    if transfer and transfer.next_segment_id != target_id:
+        raise ValidationError('本次加购接替须交给实际转入该席的陪玩')
 
 
 def _eligible(order, payment, *, affected_accounts=()):
@@ -951,6 +970,7 @@ class StaffAddonHandoverView(APIView):
         if retained >= source['basis']:
             raise ValidationError('接替份额须大于零')
         target = _active_target(order, target_id)
+        _check_successive_transfer_target(order, prior, source['segment_id'], target.pk)
         if zero_team:
             from .negotiation_zero import marked_execution_id
             from .models import NegotiationExecution
@@ -1129,7 +1149,7 @@ class UserAddonHandoverDecisionView(APIView):
                 raise ValidationError('确认已记录，请联系客服修改方案')
             if (proposal.status == 'ACCEPTED' and (replay_only or points_transfer_permits(order, phase='transfer'))
                     and not order.refund_records.exists()):
-                _verify_transferred_handover_replay(order, payment, proposal)
+                verify_transferred_handover_funding(order, payment, proposal)
             if proposal.status == 'ACCEPTED' and zero_team:
                 from .ordinary_refunded_team_handover import verify as verify_zero_handover
                 from .models import OrderAddonFundingReleaseRun, OrderPointsFundingAllocation
@@ -1203,6 +1223,7 @@ class UserAddonHandoverDecisionView(APIView):
                     or target.pk != proposal.target_segment_id or target_share.commission_snapshot != _target_commission(
                         target, pending_handover=proposal)):
                 raise ValidationError('加购负责人或抽成依据已变化，请重新确认')
+            _check_successive_transfer_target(order, prior, source['segment_id'], target.pk)
         third_capture = None
         if (accepted and order.refund_records.count() >= 3 and
                 _points_scope_permits(order, phase='handover', kind='transfer_addon') and

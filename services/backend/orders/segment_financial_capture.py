@@ -414,7 +414,10 @@ def service_transferred(attribution, order, event, *, game_plan=None, commission
         from .points_transfer_capture import enabled as points_enabled, locked_deal
         from .points_transfer_revision_scope import active as funding_revision_active
         from .points_transfer_refund_access import permits as points_transfer_permits
-        if points_transfer_permits(order, phase='transfer'):
+        # For a no-refund revision, transfer_capture already verified the
+        # earlier add-on handover and the outgoing account under the order lock.
+        if (points_transfer_permits(order, phase='transfer')
+                and (not funding_revision_active(order) or order.refund_records.exists())):
             from .models import OrderAddonPayment
             if OrderAddonPayment.objects.filter(intent__order=order, handovers__status='ACCEPTED',
                     handovers__shares__segment_id=event.previous_segment_id,

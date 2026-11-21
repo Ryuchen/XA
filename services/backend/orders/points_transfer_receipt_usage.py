@@ -80,14 +80,40 @@ def facts(row):
         buyer_transaction__created_at__lt=boundary).select_related('intent', 'buyer_transaction__wallet'))
     if (OrderAddonPayment.objects.filter(intent__order=order,
             buyer_transaction__created_at=boundary).exists()
-            or any(item.refund_records.filter(created_at=boundary).exists()
-                   or item.handovers.filter(status='ACCEPTED', accepted_at__lte=boundary).exists()
-                   for item in addons)):
+            or any(item.refund_records.filter(created_at=boundary).exists() for item in addons)):
         raise ValidationError('转单时加购来源或时序尚未接入')
     addon_events = None
+    handover_event = None
     read_receipt_id = getattr(row, 'read_receipt_id', allocation.receipt_id)
     if addons:
         from .points_addon_receipt_usage import payment_facts, facts as addon_refund_facts
+        from .models import OrderAddonHandover, OrderAddonFundingReleaseRun
+        handovers = list(OrderAddonHandover.objects.filter(payment_id__in=[item.pk for item in addons],
+            status='ACCEPTED', accepted_at__lte=boundary))
+        if handovers:
+            previous = by_id.get(revision.previous_transfer_id)
+            first = handovers[0]
+            if (len(addons) != 1 or len(handovers) != 1 or not previous or first.previous_id
+                    or first.kind != 'STANDARD' or first.accepted_at >= boundary
+                    or first.source_segment_id != previous['previous_segment_id']
+                    or first.target_segment_id != previous['next_segment_id']
+                    or first.target_segment_id != last['previous_segment_id']
+                    or addons[0].refund_records.filter(created_at__lt=boundary).exists()):
+                raise ValidationError('转单时此前加购接替来源异常')
+            from .addon_handover import verify_handover
+            from .addon_funding_release import verify_run
+            prior = OrderAddonFundingReleaseRun.objects.filter(handover=first, created_at__lt=boundary).first()
+            if (OrderPointsFundingAllocation.objects.filter(redemption=redemption,
+                    created_at__lte=first.accepted_at).exists()
+                    and (not prior or not prior.points_handover_hash or not prior.points_handover_snapshot)):
+                raise ValidationError('转单时此前加购接替资金凭证缺失')
+            try:
+                verify_handover(addons[0], first, as_of=boundary, receipt_id=read_receipt_id)
+                if prior:
+                    verify_run(prior, _skip_usage=True, witness_receipt_id=read_receipt_id)
+            except RestValidationError as exc:
+                raise ValidationError('转单时此前加购接替凭证异常') from exc
+            handover_event = [first.pk, prior.pk if prior else None, prior.points_handover_hash if prior else None]
         for addon in addons:
             payment_facts(addon, read_receipt_id=read_receipt_id)
             for prior_refund in addon.refund_records.filter(created_at__lt=boundary).order_by('pk'):
@@ -160,7 +186,8 @@ def facts(row):
             addon_ids = {item.pk for item in addons}
             if not addon_row.run.prestart_handoff_id and (not addons or not (addon_row.run.payment_id in addon_ids
                     or (addon_row.run.refund_id and addon_row.run.refund.payment_id in addon_ids
-                        and addon_row.run.refund.created_at < boundary))):
+                        and addon_row.run.refund.created_at < boundary)
+                    or (handover_event and addon_row.run_id == handover_event[1]))):
                 raise ValidationError('积分转单此前加购释放来源异常')
             _addon_release_facts(addon_row, witness_receipt_id=read_receipt_id)
             released += addon_row.amount
@@ -227,4 +254,5 @@ def facts(row):
     return ('RELEASE', f'order:{allocation.pk}', f'points-transfer-release:{row.pk}', row.amount,
             _digest(['points-transfer-release', row.pk, row.amount, allocation.pk, allocation.receipt_id,
                      revision.pk, revision.evidence_hash, original.pk, spent.pk]
-                    + ([addon_events] if addon_events is not None else [])))
+                    + ([addon_events] if addon_events is not None else [])
+                    + ([handover_event] if handover_event is not None else [])))

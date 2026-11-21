@@ -88,7 +88,7 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             capture.assert_called_once_with(order.pk, addon_handover=True, pending_payment_id=3)
 
     def test_funded_transfer_replay_requires_the_original_run_even_when_release_is_zero(self):
-        from orders.addon_handover import _verify_transferred_handover_replay
+        from orders.addon_handover import verify_transferred_handover_funding
         from orders.models import OrderAddonFundingReleaseRun, OrderPointsFundingAllocation
 
         order, payment = Order(pk=12), SimpleNamespace(pk=3)
@@ -100,16 +100,16 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             allocations.return_value.exists.return_value = True
             runs.return_value.first.return_value = None
             with self.assertRaisesMessage(ValidationError, '加购接替资金凭证缺失'):
-                _verify_transferred_handover_replay(order, payment, proposal)
+                verify_transferred_handover_funding(order, payment, proposal)
             allocations.assert_called_once_with(redemption__order=order, created_at__lte=proposal.accepted_at)
             zero_release = SimpleNamespace(released_amount=0, points_handover_snapshot={'version': 1},
                                            points_handover_hash='digest')
             runs.return_value.first.return_value = zero_release
-            _verify_transferred_handover_replay(order, payment, proposal)
+            verify_transferred_handover_funding(order, payment, proposal)
             verify.assert_called_once_with(zero_release)
             allocations.return_value.exists.return_value = False
             runs.return_value.first.return_value = None
-            _verify_transferred_handover_replay(order, payment, proposal)
+            verify_transferred_handover_funding(order, payment, proposal)
             verify_unfunded.assert_called_once_with(payment, proposal)
 
 

@@ -12,7 +12,7 @@ _order_id = ContextVar('points_transfer_revision_order', default=None)
 
 
 @contextmanager
-def revision_scope(order_id):
+def revision_scope(order_id, *, outgoing_accounts=()):
     if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True:
         from .models import Order
         from .points_service_payment import needs_integrated_processing
@@ -23,7 +23,8 @@ def revision_scope(order_id):
                 lock_payment_refund_events()
             from .points_transfer_refund_access import transfer_capture, post_refund_transfer, third_refund_transfer
             scope = (third_refund_transfer(order_id) if order.refund_records.count() >= 3 else
-                     post_refund_transfer(order_id) if order.refund_records.exists() else transfer_capture(order_id))
+                     post_refund_transfer(order_id) if order.refund_records.exists() else
+                     transfer_capture(order_id, outgoing_accounts=outgoing_accounts))
             with scope:
                 token = _order_id.set(order_id)
                 try:
