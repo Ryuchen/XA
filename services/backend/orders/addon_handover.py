@@ -167,9 +167,17 @@ def _points_handover_scope(method):
                             target_account_id=request.data.get('target_provider_account_id')
                                 if isinstance(request.data, Mapping) else None)
                 else:
-                    from .points_transfer_refund_access import transfer_capture
+                    from .points_transfer_refund_access import after_transfer, transfer_capture
                     payment_id = args[0] if args else kwargs.get('payment_id')
-                    scope = transfer_capture(order.pk, addon_handover=True, pending_payment_id=payment_id)
+                    handover_id = args[1] if len(args) > 1 else kwargs.get('handover_id')
+                    replay = handover_id and OrderAddonHandover.objects.filter(pk=handover_id, payment_id=payment_id,
+                        payment__intent__order=order, kind='STANDARD', status='ACCEPTED',
+                        decisions__account=request.account, decisions__accepted=True).exists()
+                    if replay:
+                        request._points_transferred_handover_replay = True
+                        scope = after_transfer(order.pk, phase='report', pending_payment_id=payment_id, read_only=True)
+                    else:
+                        scope = transfer_capture(order.pk, addon_handover=True, pending_payment_id=payment_id)
             else:
                 from .points_business_access import service_order
                 payment_id = args[0] if args else kwargs.get('payment_id')
@@ -617,6 +625,23 @@ def assert_no_pending_handover(payment):
         raise ValidationError('加购负责人变更正在等待确认，请先处理')
 
 
+def _verify_transferred_handover_replay(order, payment, proposal):
+    from .addon_funding_release import verify_run
+    from .models import OrderAddonFundingReleaseRun, OrderPointsFundingAllocation
+
+    if not proposal.accepted_at:
+        raise ValidationError('加购接替缺少确认时间，请先核对')
+    funded = OrderPointsFundingAllocation.objects.filter(
+        redemption__order=order, created_at__lte=proposal.accepted_at).exists()
+    run = OrderAddonFundingReleaseRun.objects.filter(handover=proposal).first()
+    if funded and (not run or not run.points_handover_snapshot or not run.points_handover_hash):
+        raise ValidationError('加购接替资金凭证缺失，请先核对')
+    if run:
+        verify_run(run)
+    else:
+        verify_handover(payment, proposal)
+
+
 def _payment_locked(order_id, payment_id, *, funding_first=False):
     order = Order.objects.select_for_update().filter(pk=order_id).first()
     if not order:
@@ -1059,7 +1084,9 @@ class UserAddonHandoverDecisionView(APIView):
     def post(self, request, order_id, payment_id, handover_id):
         if not isinstance(request.data, Mapping) or set(request.data) != {'accepted'} or type(request.data['accepted']) is not bool:
             raise ValidationError('请选择同意或拒绝')
-        order, payment = _payment_locked(order_id, payment_id, funding_first=True)
+        replay_only = getattr(request, '_points_transferred_handover_replay', False)
+        # The replay scope already holds the order, money mutex and receipt locks.
+        order, payment = _payment_locked(order_id, payment_id, funding_first=not replay_only)
         from .ordinary_transfer_capability import permits as transferred_permits
         from .ordinary_refunded_team_handover import permits as ordinary_team_permits
         from .ordinary_team_pre_main_handover import permits as pre_main_team_permits
@@ -1073,7 +1100,13 @@ class UserAddonHandoverDecisionView(APIView):
         pre_main_team = pre_main_team_permits(order)
         from .ordinary_zero_post_addon import handover_permitted as zero_handover_permitted
         zero_team = zero_handover_permitted(order, payment)
-        if not enabled() and not transferred_permits(order, allow_addon_handover=True, allow_addon_refund=True) and not ordinary_team and not pre_main_team and not zero_team:
+        from .points_transfer_refund_access import permits as points_transfer_permits
+        if replay_only and (proposal.status != 'ACCEPTED' or decision.accepted is not True
+                or not points_transfer_permits(order, phase='report') or order.refund_records.exists()):
+            raise ValidationError('原加购接替确认状态已变化，请先核对')
+        if (not replay_only and not enabled()
+                and not transferred_permits(order, allow_addon_handover=True, allow_addon_refund=True)
+                and not ordinary_team and not pre_main_team and not zero_team):
             if proposal.status != 'ACCEPTED' or decision.accepted is None or decision.accepted != accepted:
                 raise ValidationError('加购负责人变更尚未开放')
             first_refund = order.refund_records.order_by('created_at', 'pk').first()
@@ -1094,6 +1127,9 @@ class UserAddonHandoverDecisionView(APIView):
         if decision.accepted is not None:
             if decision.accepted != accepted:
                 raise ValidationError('确认已记录，请联系客服修改方案')
+            if (proposal.status == 'ACCEPTED' and (replay_only or points_transfer_permits(order, phase='transfer'))
+                    and not order.refund_records.exists()):
+                _verify_transferred_handover_replay(order, payment, proposal)
             if proposal.status == 'ACCEPTED' and zero_team:
                 from .ordinary_refunded_team_handover import verify as verify_zero_handover
                 from .models import OrderAddonFundingReleaseRun, OrderPointsFundingAllocation

@@ -808,15 +808,16 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None)
 
 @contextmanager
 def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_payment_id=None, pending_intent_id=None,
-                   extra_receipt_id=None, allow_voluntary_history=False):
+                   extra_receipt_id=None, allow_voluntary_history=False, read_only=False):
     """Prepare one independently authorized report, refund, or settlement.
 
     This only establishes tenant, order and receipt locks and a phase-scoped
     capability. The calling endpoint must still authorize the actor and run
     the existing financial and lifecycle verifiers before any write.
+    Read-only reporting locks an existing mutex without initializing one.
     """
     connection, store = transaction.get_connection(), current_store()
-    if (phase not in ('report', 'refund', 'settlement')
+    if (phase not in ('report', 'refund', 'settlement') or (read_only and phase != 'report')
             or getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is not True or connection.vendor != 'mysql'
             or not connection.in_atomic_block or not store or store.database_alias != connection.alias
             or type(order_id) is not int or order_id <= 0
@@ -826,7 +827,7 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
     from django.core.exceptions import ValidationError as DjangoValidationError
     from users.models import PassRefundRepaymentReceipt
     from users.receipt_usage_guard import isolated_allocation_state_locked
-    from .financial_lock import lock_order_money
+    from .financial_lock import lock_existing_order_money, lock_order_money
     from .models import (Order, OrderOriginalShareTransfer, OrderPointsFundingAllocation,
         OrderPointsTransferFundingRelease, OrderPointsTransferFundingRevision, OrderPrestartHandoff,
         OrderSegmentSettlementManifest, OrderPointsRedemption)
@@ -839,7 +840,14 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
         with round_scope(order.pk, phase=phase) as locked_order:
             yield locked_order
         return
-    lock_order_money()
+    if read_only:
+        from .settlement import SettlementError
+        try:
+            lock_existing_order_money()
+        except SettlementError as exc:
+            raise ValidationError(str(exc)) from exc
+    else:
+        lock_order_money()
     transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
                      .select_related('previous_segment').order_by('pk'))
     counts = {}

@@ -643,8 +643,10 @@ def _settle_order(order, *, operator=None, operator_account=None, trace_id=None)
             reserve_locked(order)
             return []  # Individual earnings still require the corresponding verified posting.
         from .segment_addon_settlement import enabled as segment_addon_enabled
-        if (segment_addon_enabled() and OrderOriginalShareTransfer.objects.filter(
-                previous_segment__attribution__order=order).exists()):
+        from .points_transfer_refund_access import permits as points_transfer_permits
+        if (points_transfer_permits(order, phase='settlement')
+                or (segment_addon_enabled() and OrderOriginalShareTransfer.objects.filter(
+                    previous_segment__attribution__order=order).exists())):
             from .segment_settlement import settle_due_segment_people
             return settle_due_segment_people(order, operator=operator, operator_account=operator_account, trace_id=trace_id)
         from .points_settlement_test import settle_points_order

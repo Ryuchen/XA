@@ -1,12 +1,15 @@
+from contextlib import nullcontext
 from datetime import timedelta
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest import skipUnless
 from unittest.mock import patch
 from uuid import uuid4
 
 from django.conf import settings
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
@@ -20,6 +23,94 @@ from orders.tests.test_release_flow import screenshot
 from stores.context import store_context
 from stores.db import transaction
 from wallet.models import Transaction
+
+
+class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
+    def test_formal_transfer_scope_dispatches_paid_addon_to_segment_settlement(self):
+        from orders.points_business_access import _bind
+        from orders.services import _settle_order
+
+        order = SimpleNamespace(pk=12, status='COMPLETED', Status=Order.Status,
+            settlement_mode='REPORT_APPROVAL', SettlementMode=Order.SettlementMode,
+            commission_allocation_pending=False, commission_rate=20, provider_income=80, shop_income=20,
+            is_gift_snapshot=False, service_clock_version=1, service_aftersale_hours=1,
+            service_freeze_hours=2, service_deposit_percent=0, funding_terms=None,
+            aftersales=SimpleNamespace(filter=lambda **_: SimpleNamespace(exists=lambda: False)),
+            refund_records=SimpleNamespace(exists=lambda: False))
+        store = SimpleNamespace(slug='settlement-store', database_alias='default')
+        with (patch('orders.points_business_access.configured', return_value=True),
+              patch('orders.points_business_access.current_store', return_value=store),
+              patch.object(transaction, 'get_connection', return_value=SimpleNamespace(alias='default')),
+              patch('orders.addon_settlement.enabled', return_value=True),
+              patch('orders.addon_settlement.has_paid_addons', return_value=True),
+              patch('orders.points_service_payment.needs_integrated_processing', return_value=True),
+              patch('orders.segment_addon_settlement.enabled', return_value=False),
+              patch('orders.segment_settlement.settle_due_segment_people', return_value=[9]) as segment,
+              patch('orders.points_settlement_test.settle_points_order', return_value=[20]) as ordinary):
+            with _bind(phase='settlement', kind='transfer', order_id=order.pk):
+                self.assertEqual(_settle_order(order), [9])
+            segment.assert_called_once()
+            with _bind(phase='settlement', kind='transfer', order_id=99):
+                self.assertEqual(_settle_order(order), [20])
+            ordinary.assert_called_once()
+
+    @override_settings(SERVICE_POINTS_MYSQL_ENABLED=True)
+    def test_original_acceptance_uses_read_scope_with_its_own_pending_payment(self):
+        from orders.addon_handover import _points_handover_scope
+        from orders.models import OrderAddonHandover, OrderOriginalShareTransfer
+
+        order = SimpleNamespace(pk=12, refund_records=SimpleNamespace(exists=lambda: False))
+        account = SimpleNamespace(pk=7)
+        request = SimpleNamespace(account=account)
+
+        @_points_handover_scope
+        def confirm(view, request, order_id, payment_id, handover_id):
+            return getattr(request, '_points_transferred_handover_replay', False)
+
+        with (patch.object(Order.objects, 'filter') as orders,
+              patch.object(OrderOriginalShareTransfer.objects, 'filter') as transfers,
+              patch.object(OrderAddonHandover.objects, 'filter') as prior,
+              patch('orders.points_service_payment.needs_integrated_processing', return_value=True),
+              patch.object(transaction, 'get_connection', return_value=SimpleNamespace(vendor='mysql')),
+              patch('orders.points_transfer_refund_access.after_transfer', return_value=nullcontext()) as read,
+              patch('orders.points_transfer_refund_access.transfer_capture', return_value=nullcontext()) as capture):
+            orders.return_value.first.return_value = order
+            transfers.return_value.exists.return_value = True
+            prior.return_value.exists.return_value = True
+            self.assertTrue(confirm(None, request, order.pk, 3, 6))
+            prior.assert_called_once_with(pk=6, payment_id=3, payment__intent__order=order,
+                kind='STANDARD', status='ACCEPTED', decisions__account=account, decisions__accepted=True)
+            read.assert_called_once_with(order.pk, phase='report', pending_payment_id=3, read_only=True)
+            capture.assert_not_called()
+
+            prior.return_value.exists.return_value = False
+            self.assertFalse(confirm(None, SimpleNamespace(account=account), order.pk, 3, 8))
+            capture.assert_called_once_with(order.pk, addon_handover=True, pending_payment_id=3)
+
+    def test_funded_transfer_replay_requires_the_original_run_even_when_release_is_zero(self):
+        from orders.addon_handover import _verify_transferred_handover_replay
+        from orders.models import OrderAddonFundingReleaseRun, OrderPointsFundingAllocation
+
+        order, payment = Order(pk=12), SimpleNamespace(pk=3)
+        proposal = SimpleNamespace(pk=6, accepted_at=timezone.now())
+        with (patch.object(OrderPointsFundingAllocation.objects, 'filter') as allocations,
+              patch.object(OrderAddonFundingReleaseRun.objects, 'filter') as runs,
+              patch('orders.addon_funding_release.verify_run') as verify,
+              patch('orders.addon_handover.verify_handover') as verify_unfunded):
+            allocations.return_value.exists.return_value = True
+            runs.return_value.first.return_value = None
+            with self.assertRaisesMessage(ValidationError, '加购接替资金凭证缺失'):
+                _verify_transferred_handover_replay(order, payment, proposal)
+            allocations.assert_called_once_with(redemption__order=order, created_at__lte=proposal.accepted_at)
+            zero_release = SimpleNamespace(released_amount=0, points_handover_snapshot={'version': 1},
+                                           points_handover_hash='digest')
+            runs.return_value.first.return_value = zero_release
+            _verify_transferred_handover_replay(order, payment, proposal)
+            verify.assert_called_once_with(zero_release)
+            allocations.return_value.exists.return_value = False
+            runs.return_value.first.return_value = None
+            _verify_transferred_handover_replay(order, payment, proposal)
+            verify_unfunded.assert_called_once_with(payment, proposal)
 
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated store databases')
