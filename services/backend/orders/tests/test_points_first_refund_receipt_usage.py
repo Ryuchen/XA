@@ -131,7 +131,9 @@ class FirstNegotiationReceiptUsageTest(TestCase):
                 case_url = f'/api/admin/aftersales/{case_id}/'
                 amount = {'refund_units': 3000}
                 self.assertFalse(manager.get(case_url + 'negotiation-preview/', amount).data['data']['execution_available'])
-                self.assertTrue(manager.get(case_url + 'negotiation-funding/', amount).data['data']['read_only_points'])
+                isolated_funding = manager.get(case_url + 'negotiation-funding/', amount).data['data']
+                self.assertTrue(isolated_funding['read_only_points'])
+                self.assertNotIn('execution_check_required', isolated_funding)
                 viewer = make_console_user(['order:view', 'support:edit'])
                 viewer_account = get_or_create_account_for_legacy_user(viewer)
                 viewer.admin_membership.account = viewer_account
@@ -148,10 +150,12 @@ class FirstNegotiationReceiptUsageTest(TestCase):
                     self.assertTrue(preview.data['data']['execution_available'], preview.data)
                     self.assertTrue(manager.get(case_url + 'negotiation-proposal/').data['data']['execution_available'])
                     funding = manager.get(case_url + 'negotiation-funding/', amount).data['data']
+                    self.assertIs(funding['execution_check_required'], True)
                     self.assertTrue(funding['executable'])
                     self.assertFalse(funding['read_only_points'])
                     high_amount = {'refund_units': 5800}
                     short = manager.get(case_url + 'negotiation-funding/', high_amount).data['data']
+                    self.assertIs(short['execution_check_required'], True)
                     self.assertFalse(short['book_amounts_sufficient'])
                     self.assertFalse(short['executable'])
                     self.assertFalse(short['read_only_points'])
@@ -171,6 +175,7 @@ class FirstNegotiationReceiptUsageTest(TestCase):
                         self.assertTrue(disabled['agreement_available'])
                         self.assertFalse(disabled['execution_available'])
                         funding = manager.get(case_url + 'negotiation-funding/', amount).data['data']
+                        self.assertIs(funding['execution_check_required'], True)
                         self.assertFalse(funding['executable'])
                         self.assertTrue(funding['read_only_points'])
                     self.assertFalse(order.refund_records.exists())

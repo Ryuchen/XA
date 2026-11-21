@@ -627,6 +627,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     'refund_coin_units': calculated['coin_units'], 'refund_points_hundredths': calculated['points_hundredths']},
                     'msg': '仅供核对，转单后的积分协商退款尚未开放'})
             from .points_negotiation_preview import preview_locked
+            from .points_business_access import permits
             from .points_negotiation_termination import formal_first_service_refund_available
             from .refunds import authorized_refund
             from wallet.refund_recovery_order import enabled as deposit_recovery_enabled
@@ -638,6 +639,8 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             result.update(refund_units=requested, refund_coin_units=calculated['coin_units'],
                           refund_points_hundredths=calculated['points_hundredths'],
                           read_only_points=not available, executable=executable)
+            if permits(order, phase='refund', kind='service'):
+                result['execution_check_required'] = True
             if calculated.get('conditional_combined_funding') is not None:
                 from dataclasses import asdict
                 result['conditional_combined_funding'] = asdict(calculated['conditional_combined_funding'])
