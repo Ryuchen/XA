@@ -1,5 +1,6 @@
 """Matured order through the real task, role APIs and wallet ledger."""
 from datetime import timedelta
+from unittest.mock import call, patch
 
 from django.test import override_settings
 from django.utils import timezone
@@ -106,6 +107,23 @@ class MaturedSettlementRealTest(APITestCase):
         self.login(self.boss)
         detail = self.ok(self.client.get(f'/api/orders/orders/{order.pk}/'))
         self.assertEqual((detail['aftersale_status'], detail['settlement_status']), ('RESOLVED', 'SETTLED'))
+
+    def test_scan_skips_finalized_benefits_without_a_vip_confirmation(self):
+        from orders.tests.factories import make_order
+
+        stamp = timezone.now() - timedelta(days=4)
+        terms = dict(status=Order.Status.COMPLETED, payment_status=Order.PaymentStatus.PAID,
+                     settlement_mode=Order.SettlementMode.COMPLETION,
+                     customer_account=self.accounts[self.boss.pk], completed_at=stamp, report_ready_at=stamp)
+        finalized = make_order(self.boss, settled_at=stamp, funding_benefits_resolved_at=stamp, **terms)
+        awaiting_benefits = make_order(self.boss, settled_at=stamp, **terms)
+        awaiting_income = make_order(self.boss, funding_benefits_resolved_at=stamp, **terms)
+        Order.objects.filter(pk__in=[finalized.pk, awaiting_benefits.pk, awaiting_income.pk]).update(service_clock_version=None)
+
+        with patch('engagement.confirmation.process_order', return_value=False) as processor:
+            confirm_due_consumption()
+
+        self.assertEqual(processor.call_args_list, [call(awaiting_benefits.pk), call(awaiting_income.pk)])
 
     def test_service_settlement_waits_for_both_overlapping_clocks(self):
         order = self.new_order()
