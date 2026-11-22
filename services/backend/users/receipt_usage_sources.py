@@ -501,7 +501,9 @@ def first_addon_release_facts(row, *, witness_receipt_id=None):
         verify_run(run, _skip_usage=True, witness_receipt_id=witness_receipt_id or allocation.receipt_id)
         if run.refund_id:
             from orders.ordinary_addon_paid_receipt import verify_run as verify_paid_refund
+            from orders.points_voluntary_paid_evidence import verify_standard_refund_current_read
             verify_paid_refund(run)
+            verify_standard_refund_current_read(run)
     except Exception as exc:
         from rest_framework.exceptions import ValidationError as RestValidationError
         if isinstance(exc, (RestValidationError, ValidationError)):

@@ -26,6 +26,78 @@ from wallet.models import Transaction
 
 
 class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
+    def test_standard_refund_evidence_preserves_the_original_paid_person(self):
+        from orders.models import OrderAddonFundingReleaseRun
+        from orders.points_voluntary_paid_evidence import recover_standard_refunds_locked
+
+        state = SimpleNamespace(db='tenant')
+        order = SimpleNamespace(pk=12, settled_at=None, refund_records=Mock(), _state=state)
+        order.refund_records.exists.return_value = False
+        manifest = SimpleNamespace(pk=3, order_id=order.pk, finalized_at=None, _state=state)
+        prior = {'manifest_id': manifest.pk, 'people': [{'account_id': 7}]}
+        proposal = SimpleNamespace(payment_id=4, case=SimpleNamespace(order_id=order.pk), participants=Mock())
+        refund = SimpleNamespace(pk=5, payment_id=4, created_at=timezone.now(), proposal=proposal)
+        run = SimpleNamespace(refund=refund, refund_id=refund.pk, created_at=refund.created_at + timedelta(seconds=1),
+            points_addon_snapshot={'funding': {}}, points_addon_hash='digest', refunded_main_snapshot=None,
+            points_followup_snapshot=None)
+        with (patch.object(transaction, 'get_connection', return_value=SimpleNamespace(in_atomic_block=True, alias=state.db)),
+              patch('orders.points_transfer_refund_access.permits', return_value=True) as permits,
+              patch('orders.points_transfer_refund_evidence._prior_settlement', return_value=prior),
+              patch('orders.points_transfer_refund_evidence._verify_prior_settlement') as original,
+              patch.object(OrderAddonFundingReleaseRun.objects, 'filter') as runs,
+              patch('orders.models.OrderSegmentPersonSettlement.objects.filter') as paid_people,
+              patch('orders.addon_funding_release.verify_run') as check_run,
+              patch('orders.points_voluntary_paid_evidence.verify_historical_paid') as history,
+              patch('orders.points_voluntary_paid_evidence._save_refund_evidence') as save):
+            runs.return_value.select_related.return_value.order_by.return_value = [run]
+            paid_people.return_value.exists.return_value = False
+            proposal.participants.values_list.return_value = [7]
+            with self.assertRaisesMessage(ValidationError, '已付人员与原加购退款范围不一致'):
+                recover_standard_refunds_locked(order, manifest, [refund.pk])
+            check_run.assert_not_called()
+            save.assert_not_called()
+
+            proposal.participants.values_list.return_value = [8]
+            history.side_effect = ValidationError('已付结算时间晚于退款')
+            with self.assertRaisesMessage(ValidationError, '已付结算时间晚于退款'):
+                recover_standard_refunds_locked(order, manifest, [refund.pk])
+            save.assert_not_called()
+
+            history.side_effect = None
+            self.assertIs(recover_standard_refunds_locked(order, manifest, [refund.pk]), prior)
+            permits.assert_called_with(order, phase='settlement')
+            original.assert_called_with(order, prior)
+            check_run.assert_called_with(run)
+            history.assert_called_with(order, prior, refund.created_at, manifest.pk)
+            save.assert_called_once_with(refund, run, manifest, prior)
+
+    def test_committed_standard_refund_requires_paid_witness_once_in_manifest_revision(self):
+        from orders.points_voluntary_paid_evidence import verify_standard_refund_current_read
+
+        refund = SimpleNamespace(pk=5, order_id=12, created_at=timezone.now())
+        run = SimpleNamespace(refund=refund, refund_id=refund.pk, points_addon_snapshot={'funding': {}},
+            points_addon_hash='digest', refunded_main_snapshot=None, points_followup_snapshot=None)
+        with (patch('orders.points_voluntary_paid_evidence.verify_current_read', return_value=None) as evidence,
+              patch('orders.models.OrderSegmentPersonSettlement.objects.filter') as paid,
+              patch('orders.models.OrderSegmentAddonSettlementRevision.objects.filter') as changes,
+              patch('orders.models.OrderSegmentSettlementManifest.objects.filter') as manifest):
+            paid.return_value.exists.return_value = True
+            changes.return_value.values_list.return_value = [[6]]
+            manifest.return_value.values_list.return_value.first.return_value = [6]
+            self.assertIsNone(verify_standard_refund_current_read(run))
+
+            manifest.return_value.values_list.return_value.first.return_value = [refund.pk]
+            with self.assertRaisesMessage(ValidationError, '已付加购退款缺少清单版本'):
+                verify_standard_refund_current_read(run)
+
+            changes.return_value.values_list.return_value = [[refund.pk]]
+            with self.assertRaisesMessage(ValidationError, '已付加购退款缺少人员结算凭证'):
+                verify_standard_refund_current_read(run)
+
+            evidence.return_value = {'people': [{'account_id': 7}]}
+            self.assertIsNone(verify_standard_refund_current_read(run))
+            paid.assert_called_with(manifest__order_id=refund.order_id, settled_at__lte=refund.created_at)
+
     def test_segment_addon_terms_use_verified_net_allocations(self):
         from orders.addon_funding import AddonFundingPart, CombinedAddonFunding
         from orders.points_funding_evidence import VerifiedOrderFundingWithAllocations

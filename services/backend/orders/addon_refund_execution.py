@@ -186,6 +186,7 @@ def _replay_handover_refund(order_id, payment_id, proposal_id, operator):
     from console.models import AdminAuditLog
     from .addon_funding_release import verify_run
     from .points_transfer_refund_access import after_transfer
+    from .points_voluntary_paid_evidence import verify_standard_refund_current_read
 
     _require_refund_operator(operator)
     with after_transfer(order_id, phase='report', pending_payment_id=payment_id, read_only=True) as order:
@@ -203,6 +204,7 @@ def _replay_handover_refund(order_id, payment_id, proposal_id, operator):
         if not run or not run.points_addon_hash or not run.points_addon_snapshot:
             raise ValidationError('原加购退款补资凭证待核对')
         verify_run(run, _skip_usage=True)
+        verify_standard_refund_current_read(run)
         history = run.points_addon_snapshot['funding']['addon_history']
         income = [row['provider_units'] for row in history if row['payment_id'] == payment_id]
         if len(income) != 1:
