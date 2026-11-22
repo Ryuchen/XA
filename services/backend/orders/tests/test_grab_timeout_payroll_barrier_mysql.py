@@ -10,7 +10,7 @@ from django.db import close_old_connections, connection
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
-from common.mysql_test_support import require_disposable_mysql
+from common.mysql_test_support import mysql_locking_statements, require_disposable_mysql
 from console.grab_config import save_grab_window
 from console.payroll_event_barrier import lock_payroll_events
 from console.payroll_models import PayrollEventBarrier
@@ -30,6 +30,67 @@ from stores.models import Store
     KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False, CELERY_TASK_ALWAYS_EAGER=False,
     ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
 class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
+    def prepare_flow(self):
+        require_disposable_mysql(connection)
+        Store.objects.get_or_create(slug='shenglang', defaults={'name': '测试门店', 'entity_prefix': 'SL',
+            'database_alias': 'default', 'status': Store.Status.ACTIVE})
+        store = resolve_store()
+        with store_context(store):
+            PayrollEventBarrier.objects.get_or_create(pk=1)
+            flow = test_grab_single_flow.GrabSingleFlowTest(methodName='test_disabled_clock_keeps_existing_round_from_legacy_assignment_or_refund')
+            flow.client = APIClient(HTTP_HOST='sl.esports.club')
+            self.addCleanup(flow.doCleanups)
+            flow.setUp()
+            flow.prepare()
+        return store, flow
+
+    def test_timeout_waiting_for_order_lock_reads_new_round_before_refunding(self):
+        from orders.grab_receipt_probe import record_intent
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            save_grab_window(30, 1, lambda *_: None)
+            flow.auth(flow.boss_account)
+            purchase = flow.create(dispatch_mode='AUTO_GRAB', client_request_id=str(uuid4()))
+            self.assertEqual(purchase.data['code'], 0, purchase.data)
+            order_id = purchase.data['data']['id']
+            first = OrderGrabRound.objects.get(pool__order_id=order_id)
+            receipt = record_intent(first.pk, flow.boss_account.pk, 'BOSS_CANCEL', 'before-round-changed',
+                                    {'reason': '旧轮取消'}, single_flow=True)
+            self.assertEqual(receipt.state, 'BEFORE')
+
+        def timeout():
+            close_old_connections()
+            try:
+                with store_context(store):
+                    return auto_cancel_pending_order.run(order_id)
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            with store_context(store), transaction.atomic():
+                Order.objects.select_for_update().get(pk=order_id)
+                pending = executor.submit(timeout)
+                wait_until = monotonic() + 10
+                while not mysql_locking_statements(connection, Order._meta.db_table):
+                    if pending.done():
+                        self.fail(f'Timeout did not wait for the order: {pending.result()}')
+                    self.assertLess(monotonic(), wait_until, 'Timeout did not reach the order lock')
+                    sleep(0.05)
+                deadline = first.deadline + timedelta(seconds=first.pool.window_seconds)
+                OrderGrabRound.objects.create(pool=first.pool, number=2, opened_at=first.deadline,
+                    deadline=deadline, total_deadline=max(first.total_deadline, deadline), simultaneous_visibility=True)
+            self.assertEqual(pending.result(timeout=20), 'wait_round_review')
+
+        with store_context(store):
+            order = Order.objects.get(pk=order_id)
+            flow.wallet.refresh_from_db()
+            self.assertEqual((order.status, order.payment_status, flow.wallet.balance),
+                             ('PENDING', 'PAID', 100000 - order.amount))
+            self.assertFalse(order.refund_records.exists())
+            self.assertFalse(order.providers.exists())
+            self.assertEqual(first.receipt_probes.get().pk, receipt.receipt_id)
+
     def _wait_for_gate(self, store, order_id, operation, *, cancellation_receipt=False):
         def run():
             close_old_connections()
@@ -64,18 +125,8 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             return pending.result(timeout=20)
 
     def test_cancel_priority_management_candidate_clock_and_ordinary_timeout(self):
-        require_disposable_mysql(connection)
-        Store.objects.get_or_create(slug='shenglang', defaults={'name':'测试门店', 'entity_prefix':'SL',
-            'database_alias':'default', 'status':Store.Status.ACTIVE})
-        store = resolve_store()
+        store, flow = self.prepare_flow()
         with store_context(store):
-            PayrollEventBarrier.objects.get_or_create(pk=1)
-            flow = test_grab_single_flow.GrabSingleFlowTest(
-                methodName='test_boss_cancel_before_deadline_refunds_and_cannot_allocate')
-            flow.client = APIClient(HTTP_HOST='sl.esports.club')
-            self.addCleanup(flow.doCleanups)
-            flow.setUp()
-            flow.prepare()
             save_grab_window(30, 1, lambda *_: None)
             flow.auth(flow.boss_account)
             created = flow.create(dispatch_mode='AUTO_GRAB', client_request_id=str(uuid4()))
@@ -144,7 +195,7 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             paused.refresh_from_db()
             self.assertEqual((paused.status, paused.payment_status), ('PENDING', 'PAID'))
             self.assertFalse(OrderRefund.objects.filter(order=paused).exists())
-            ordinary = flow.create(client_request_id=str(uuid4()))
+            ordinary = flow.create(dispatch_mode='BOSS_SELECT', client_request_id=str(uuid4()))
             self.assertEqual(ordinary.data['code'], 0, ordinary.data)
             ordinary = Order.objects.get(pk=ordinary.data['data']['id'])
             Order.objects.filter(pk=ordinary.pk).update(auto_cancel_at=timezone.now()-timedelta(seconds=1))
@@ -155,7 +206,7 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             self.assertEqual((ordinary.status, ordinary.payment_status), ('CANCELLED', 'REFUNDED'))
             self.assertEqual(OrderRefund.objects.filter(order=ordinary).count(), 1)
             flow.auth(flow.boss_account)
-            plain = flow.create(client_request_id=str(uuid4()))
+            plain = flow.create(dispatch_mode='BOSS_SELECT', client_request_id=str(uuid4()))
             self.assertEqual(plain.data['code'], 0, plain.data)
             plain = Order.objects.get(pk=plain.data['data']['id'])
             Order.objects.filter(pk=plain.pk).update(auto_cancel_at=timezone.now()-timedelta(seconds=1))

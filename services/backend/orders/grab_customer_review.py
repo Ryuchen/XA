@@ -1,9 +1,8 @@
 """Customer request for staff handling of an unresolved grab order."""
 from rest_framework.response import Response
 from stores.db import transaction
-from .models import (Order, OrderGrabPoolOpeningIntent, OrderGrabReceiptProbe,
-                     OrderGrabReviewCancellation, OrderGrabSingleRoundState,
-                     OrderGrabTeamRoundState)
+from .grab_round_facts import GrabRoundReviewRequired, latest_round_state
+from .models import Order, OrderGrabPoolOpeningIntent, OrderGrabReceiptProbe, OrderGrabReviewCancellation
 
 
 def request_cancellation(request, order_id, *, request_key, replay_only=False):
@@ -31,11 +30,13 @@ def request_cancellation(request, order_id, *, request_key, replay_only=False):
                              'data': {'status': existing.status}})
         if order.status != Order.Status.PENDING:
             return Response({'code': 409, 'msg': '订单状态已变化，请刷新后查看'}, status=409)
-        model = OrderGrabSingleRoundState if order.required_provider_count == 1 else OrderGrabTeamRoundState
-        state = (model.objects.select_for_update().filter(round__pool__order=order)
-                 .select_related('round').order_by('-round__number').first())
-        opening = OrderGrabPoolOpeningIntent.objects.select_for_update().filter(order=order).first()
-        unresolved = bool(not state and opening and opening.state == 'REVIEW')
+        try:
+            state = latest_round_state(order.pk, seats=order.required_provider_count, lock=True)
+        except GrabRoundReviewRequired:
+            state, unresolved = None, True
+        else:
+            unresolved = not state and OrderGrabPoolOpeningIntent.objects.select_for_update().filter(
+                order=order, state='REVIEW').exists()
         if state and state.status in ('OPEN', 'PARKED', 'REVIEW'):
             from .grab_receipt_probe import _effective_state
             from .grab_clock_contract import production_enabled

@@ -1,6 +1,6 @@
 """Existing provider pool visibility shared by listing and order consultation."""
 from datetime import timedelta
-from django.db.models import F, OuterRef, Q, Subquery
+from django.db.models import F, Q
 from django.db import DatabaseError
 from django.utils import timezone
 from .models import Order, OrderGrabRound
@@ -61,6 +61,7 @@ def visible_provider_pool(account):
             direct_payment__fee_quote__total_fen=F('direct_payment__amount_fen'))
     from .grab_single_flow import ADMISSION_STATES, enabled as single_enabled
     from .grab_team_flow import enabled as team_enabled
+    from .grab_round_facts import latest_status_for_pool
     deadline_candidates = Q(auto_cancel_at__isnull=True) | Q(auto_cancel_at__gt=now)
     if production_enabled():
         # auto_cancel_at was sampled before the opening transaction committed.
@@ -78,16 +79,15 @@ def visible_provider_pool(account):
     eligible_modes = Q(escort_mode=Order.EscortMode.SINGLE, dispatch_route=Order.DispatchRoute.PUBLIC,
                        requires_boss_selection=True, grab_pool_snapshot__isnull=True)
     if single_enabled():
-        latest_status = (OrderGrabRound.objects.filter(pool_id=OuterRef('grab_pool_snapshot__pk'))
-                         .order_by('-number').values('single_state__status')[:1])
-        orders = orders.alias(single_round_status=Subquery(latest_status))
+        orders = orders.alias(single_round_status=latest_status_for_pool(1))
         eligible_modes |= Q(escort_mode=Order.EscortMode.SINGLE, requires_boss_selection=False,
                             grab_pool_snapshot__required_provider_count=1,
                             single_round_status__in=ADMISSION_STATES)
     if team_enabled():
+        orders = orders.alias(team_round_status=latest_status_for_pool(2))
         eligible_modes |= Q(escort_mode=Order.EscortMode.DOUBLE, requires_boss_selection=False,
             grab_pool_snapshot__required_provider_count=2,
-            grab_pool_snapshot__rounds__team_state__status__in=['OPEN', 'PARKED'])
+            team_round_status__in=ADMISSION_STATES)
     orders = orders.filter(eligible_modes)
     if production_enabled():
         from .grab_round_opening import cutoff_bounds

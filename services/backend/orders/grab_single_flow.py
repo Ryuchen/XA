@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.response import Response
 from stores.db import transaction
 
+from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, pool_exists
 from .models import (Order, OrderGrabReceiptProbe, OrderGrabRound, OrderGrabSingleAdmission,
                      OrderGrabSingleRoundState, OrderStatusLog)
 
@@ -26,8 +27,7 @@ def enabled():
 def applies(order_id):
     # Existing rounds must never fall through to the old immediate assignment
     # or timeout refund merely because a process loses its clock contract.
-    return OrderGrabSingleRoundState.objects.filter(
-        round__pool__order_id=order_id, round__pool__required_provider_count=1).exists()
+    return pool_exists(order_id, seats=1)
 
 
 def has_admitting_round(order_id):
@@ -39,8 +39,7 @@ def has_admitting_round(order_id):
 
 
 def _latest(order_id):
-    return (OrderGrabSingleRoundState.objects.filter(round__pool__order_id=order_id)
-            .select_related('round__pool__order').order_by('-round__number').first())
+    return latest_round_state(order_id, seats=1)
 
 
 def _advance_due_round(order_id):
@@ -70,7 +69,7 @@ def submit(request, order_id):
         return Response({'code': 503, 'msg': '抢单暂不可用，请联系客服核对订单'}, status=503)
     state = _advance_due_round(order_id)
     if not state:
-        return Response({'code': 404, 'msg': '抢单订单不存在'}, status=404)
+        return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '当前抢单轮次待核对'}, status=409)
     request_id = request.data.get('client_request_id')
     if request_id is None:
         admission = (OrderGrabSingleAdmission.objects.filter(round_id=state.round_id, account=request.account)
@@ -283,8 +282,14 @@ def resolve(order_id, *, _cancel_only=False):
                 _enter_assignment_scope(stack, order)
             except ApplicationError:
                 return 'WAIT_POINTS_FUNDING_REVIEW'
-        state = (OrderGrabSingleRoundState.objects.select_for_update().select_related('round__pool')
-                 .filter(round__pool__order=order).order_by('-round__number').first())
+        if order.required_provider_count != 1:
+            return 'WAIT_ROUND_REVIEW'
+        try:
+            state = latest_round_state(order.pk, seats=1, lock=True)
+        except GrabRoundReviewRequired as exc:
+            from .grab_review import report_invalid_round
+            report_invalid_round(order, exc)
+            return 'WAIT_ROUND_REVIEW'
         if not state or state.status not in ('OPEN', 'PARKED') or order.status != Order.Status.PENDING:
             return state.status if state else 'NOT_FOUND'
         now, precision, _ = _db_clock()

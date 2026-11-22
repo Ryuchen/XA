@@ -11,8 +11,7 @@ import json
 from django.conf import settings
 from stores.db import connection, transaction
 
-from .models import (Order, OrderGrabCutoffWatermark, OrderGrabReceiptProbe,
-                     OrderGrabSingleRoundState, OrderGrabTeamRoundState)
+from .models import Order, OrderGrabCutoffWatermark, OrderGrabReceiptProbe
 
 
 def enabled():
@@ -74,17 +73,21 @@ def seal(order_id, *, team):
     if transaction.get_connection().in_atomic_block:
         raise RuntimeError('截止水位必须使用独立最外层事务')
     from .grab_receipt_probe import _db_clock
-    from .grab_round_facts import current_round
-    model = OrderGrabTeamRoundState if team else OrderGrabSingleRoundState
+    from .grab_round_facts import GrabRoundReviewRequired, latest_round_state
     with transaction.atomic():
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order or order.status != Order.Status.PENDING:
             return 'NO_OPEN_ROUND'
-        state = (model.objects.select_for_update().select_related('round__pool')
-                 .filter(round__pool__order=order).order_by('-round__number').first())
+        seats = 2 if team else 1
+        if order.required_provider_count != seats:
+            return 'REVIEW'
+        try:
+            state = latest_round_state(order.pk, seats=seats, lock=True)
+        except GrabRoundReviewRequired:
+            return 'REVIEW'
         if not state or state.status not in ('OPEN', 'PARKED'):
             return 'NO_OPEN_ROUND'
-        round_ = current_round(state.round.pool, state.round_id, lock=True)
+        round_ = state.round
         from .grab_clock_contract import production_enabled, round_identity_valid
         if production_enabled() and not round_identity_valid(round_):
             return 'REVIEW'

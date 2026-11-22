@@ -8,7 +8,8 @@ from dataclasses import dataclass
 
 from club_accounts.models import ClubAccount
 from club_accounts.provider_lifecycle import lock_provider_operations
-from .models import OrderGrabSingleAdmission, OrderGrabSingleRoundState, OrderGrabTeamDraft, OrderGrabTeamRoundState
+from .grab_round_facts import latest_round_state
+from .models import OrderGrabSingleAdmission, OrderGrabTeamDraft
 
 
 @dataclass(frozen=True)
@@ -20,9 +21,8 @@ class CandidateSnapshot:
 
 
 def _state(order_id, team):
-    model = OrderGrabTeamRoundState if team else OrderGrabSingleRoundState
-    return (model.objects.filter(round__pool__order_id=order_id).order_by('-round__number')
-            .values_list('pk', 'round_id', 'status').first())
+    state = latest_round_state(order_id, seats=2 if team else 1)
+    return (state.pk, state.round_id, state.status) if state else None
 
 
 def _rows(state, team, *, lock=False):

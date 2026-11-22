@@ -3,6 +3,7 @@ from rest_framework.response import Response
 
 from .grab_customer_review import request_cancellation
 from .grab_receipt_probe import GrabRequestConflict, record_intent
+from .grab_round_facts import GrabRoundReviewRequired
 
 
 def _cancelled():
@@ -10,8 +11,11 @@ def _cancelled():
 
 
 def cancel(request, order_id, *, state, enabled, resolve, team):
-    if (not state or request.account.account_type != 'BOSS'
-            or state.round.pool.order.customer_account_id != request.account.pk):
+    if request.account.account_type != 'BOSS':
+        return Response({'code': 404, 'msg': '订单不存在'}, status=404)
+    if state is None:
+        return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'))
+    if state.round.pool.order.customer_account_id != request.account.pk:
         return Response({'code': 404, 'msg': '订单不存在'}, status=404)
     if not enabled:
         return Response({'code': 503, 'msg': '订单取消暂需客服核对，请联系客服'}, status=503)
@@ -36,6 +40,8 @@ def cancel(request, order_id, *, state, enabled, resolve, team):
                                replay_only=not active)
     except GrabRequestConflict as exc:
         return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT', 'msg': str(exc)}, status=409)
+    except GrabRoundReviewRequired:
+        return request_cancellation(request, order_id, request_key=request_key)
     except ValueError as exc:
         return Response({'code': 400, 'msg': str(exc)}, status=400)
 
@@ -50,6 +56,9 @@ def cancel(request, order_id, *, state, enabled, resolve, team):
         return request_cancellation(request, order_id, request_key=request_key)
     if not active:
         return Response({'code': 409, 'msg': '订单已分配或正在核对，请查看订单状态'}, status=409)
-    if resolve(order_id) != 'CANCELLED':
+    outcome = resolve(order_id)
+    if outcome == 'WAIT_ROUND_REVIEW':
+        return request_cancellation(request, order_id, request_key=request_key)
+    if outcome != 'CANCELLED':
         return Response({'code': 409, 'msg': '取消请求已登记，请查看订单状态'}, status=409)
     return _cancelled()

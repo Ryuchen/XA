@@ -2141,10 +2141,9 @@ class CancelOrderView(APIView):
                 raise IllegalTransitionError('订单已被接单，无法取消')
             # The opening worker uses this same order lock. Its round may have
             # committed after the initial unlocked route check above.
-            from .models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
-            if OrderGrabSingleRoundState.objects.filter(round__pool__order=order).exists():
+            if applies(order.pk):
                 raise GrabCancellationReroute('single')
-            if OrderGrabTeamRoundState.objects.filter(round__pool__order=order).exists():
+            if team_applies(order.pk):
                 raise GrabCancellationReroute('team')
             if OrderGrabPoolOpeningIntent.objects.filter(
                     order=order, state='REVIEW', order__grab_pool_snapshot__isnull=True).exists():

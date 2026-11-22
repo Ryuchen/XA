@@ -25,6 +25,8 @@ class Command(BaseCommand):
     help = '扫描超时未接单的 PENDING 订单并自动取消退款'
 
     def handle(self, *args, **options):
+        from orders.grab_round_facts import pool_exists
+        from orders.models import OrderGrabPoolOpeningIntent
         from orders.timeout import expired_order_candidates
         expired = expired_order_candidates()
         total = expired.count()
@@ -65,6 +67,8 @@ class Command(BaseCommand):
                 # new pending round before transition acquires the order lock.
                 if o.status != Order.Status.PENDING:
                     raise IllegalTransitionError('订单已离开待接单池')
+                if pool_exists(o.pk) or OrderGrabPoolOpeningIntent.objects.filter(order=o).exists():
+                    raise IllegalTransitionError('订单须由当前抢单轮次处理')
                 if not o.auto_cancel_at or o.auto_cancel_at > timezone.now():
                     raise IllegalTransitionError('当前接单期限尚未到达')
 

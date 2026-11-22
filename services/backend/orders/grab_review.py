@@ -1,15 +1,17 @@
 """Store staff review of unresolved grab receipts; no timestamps are edited."""
 from contextlib import ExitStack
-from django.db.models import Q
+from django.db.models import F, Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from club_accounts.permissions import IsClubAccountAuthenticated
 from console.permissions import get_account_permissions, is_console_account
 from stores.db import transaction
+from .grab_round_facts import GrabRoundReviewRequired, current_round, latest_round_state, latest_status_for_pool, pool_exists
 from .models import (Order, OrderGrabPoolOpeningIntent, OrderGrabReceiptProbe,
-                     OrderGrabReviewCancellation, OrderGrabSingleRoundState, OrderGrabTeamRoundState,
-                     OrderGrabRoundOpeningEvidence)
+                     OrderGrabReviewCancellation, OrderGrabRound, OrderGrabRoundOpeningEvidence)
+
+MISSING_ROUND_REASON = '当前抢单轮次状态或人数待核对'
 
 
 def mark_round_review(state, reason):
@@ -21,14 +23,30 @@ def mark_round_review(state, reason):
     state.save(update_fields=['status', 'reason', 'ranking_snapshot', 'updated_at'])
 
 
+def report_invalid_round(order, error):
+    state = error.state
+    if (order.status == Order.Status.PENDING and state is not None
+            and state.status in ('OPEN', 'PARKED') and isinstance(state.ranking_snapshot, dict)):
+        mark_round_review(state, str(error))
+
+
 def _allowed(account, *permissions):
     return is_console_account(account) and set(permissions).issubset(get_account_permissions(account))
 
 
 def _state(order, *, lock=False):
-    model = OrderGrabSingleRoundState if order.required_provider_count == 1 else OrderGrabTeamRoundState
-    rows = model.objects.select_related('round__pool').filter(round__pool__order=order).order_by('-round__number')
-    return rows.select_for_update().first() if lock else rows.first()
+    return latest_round_state(order.pk, seats=order.required_provider_count, lock=lock)
+
+
+def _customer_cancellation(order):
+    row = OrderGrabReviewCancellation.objects.filter(order=order).first()
+    return {'status': row.status, 'reason': row.reason, 'created_at': row.created_at} if row else None
+
+
+def _missing_round_review(order):
+    round_ = OrderGrabRound.objects.filter(pool__order=order).order_by('-number').values('pk', 'number').first()
+    return {'order_id': order.pk, 'round_id': round_['pk'] if round_ else None,
+            'round_number': round_['number'] if round_ else None, 'status': 'REVIEW', 'reason': MISSING_ROUND_REASON}
 
 
 def _receipt(row):
@@ -54,18 +72,24 @@ class GrabReviewView(APIView):
             order = Order.objects.filter(pk=order_id).first()
             state = _state(order) if order else None
             if not state:
+                if order and pool_exists(order.pk):
+                    return Response({'code': 0, 'data': {**_missing_round_review(order), 'receipts': [],
+                        'customer_cancellation': _customer_cancellation(order)}})
                 opening = OrderGrabPoolOpeningIntent.objects.filter(order=order).first() if order else None
                 if not opening:
                     return Response({'code': 404, 'msg': '抢单订单不存在'}, status=404)
-                cancellation = OrderGrabReviewCancellation.objects.filter(order=order).first()
                 return Response({'code': 0, 'data': {'order_id': order.pk, 'status': 'OPENING_' + opening.state,
                     'reason': opening.reason, 'payment_observed_at': opening.commit_observed_at,
                     'database_identity': opening.database_identity, 'receipts': [],
-                    'customer_cancellation': ({'status': cancellation.status, 'reason': cancellation.reason,
-                                               'created_at': cancellation.created_at} if cancellation else None)}})
+                    'customer_cancellation': _customer_cancellation(order)}})
             rows = OrderGrabReceiptProbe.objects.filter(round=state.round).order_by('pk')
             teams = state.round.team_drafts.order_by('pk') if order.required_provider_count == 2 else []
-            cancellation = OrderGrabReviewCancellation.objects.filter(order=order).first()
+            status, reason = state.status, state.reason
+            if order.status == Order.Status.PENDING:
+                try:
+                    current_round(state.round.pool, state.round_id)
+                except ValueError as exc:
+                    status, reason = 'REVIEW', str(exc)
             evidence = OrderGrabRoundOpeningEvidence.objects.filter(round=state.round).first()
             from .grab_clock_contract import production_enabled
             from .grab_round_opening import cutoff_bounds
@@ -77,7 +101,7 @@ class GrabReviewView(APIView):
                 except ValueError:
                     pass
             return Response({'code': 0, 'data': {'order_id': order.pk, 'round_id': state.round_id,
-                'round_number': state.round.number, 'status': state.status, 'reason': state.reason,
+                'round_number': state.round.number, 'status': status, 'reason': reason,
                 'ranking_snapshot': state.ranking_snapshot,
                 'deadline': None if production_enabled() else state.round.deadline,
                 'total_deadline': None if production_enabled() else state.round.total_deadline,
@@ -86,14 +110,18 @@ class GrabReviewView(APIView):
                 'round_opening': ({'state': evidence.state, 'reason': evidence.reason,
                     'activation_lower_at': evidence.activation_lower_at,
                     'activation_upper_at': evidence.activation_upper_at} if evidence else None),
-                'customer_cancellation': ({'status': cancellation.status, 'reason': cancellation.reason,
-                                           'created_at': cancellation.created_at} if cancellation else None),
+                'customer_cancellation': _customer_cancellation(order),
                 'receipts': [_receipt(row) for row in rows],
                 'teams': [{'id': team.pk, 'captain_id': team.captain_id, 'partner_id': team.partner_id,
                            'status': team.status, 'reason': team.disqualification_reason} for team in teams]}})
-        query = Order.objects.filter(status=Order.Status.PENDING).filter(
+        query = Order.objects.filter(status=Order.Status.PENDING).alias(
+            latest_single_status=latest_status_for_pool(1), latest_team_status=latest_status_for_pool(2),
+        ).filter(
             Q(grab_pool_snapshot__rounds__single_state__status='REVIEW')
             | Q(grab_pool_snapshot__rounds__team_state__status='REVIEW')
+            | Q(grab_pool_snapshot__required_provider_count=1, latest_single_status__isnull=True)
+            | Q(grab_pool_snapshot__required_provider_count=2, latest_team_status__isnull=True)
+            | (Q(grab_pool_snapshot__isnull=False) & ~Q(grab_pool_snapshot__required_provider_count=F('required_provider_count')))
             | Q(grab_pool_snapshot__rounds__receipt_probes__state__in=['PENDING', 'WAIT_OPENING', 'REVIEW'])
             | Q(grab_pool_snapshot__rounds__opening_evidence__state__in=['PENDING', 'PREPARED', 'REVIEW'])
             | Q(grab_review_cancellation__status='PENDING')
@@ -110,6 +138,9 @@ class GrabReviewView(APIView):
                 result.append({'order_id': order.pk, 'round_id': state.round_id,
                                'status': state.status, 'reason': state.reason})
             elif not state:
+                if pool_exists(order.pk):
+                    result.append(_missing_round_review(order))
+                    continue
                 opening = OrderGrabPoolOpeningIntent.objects.filter(order=order, state='REVIEW').first()
                 if opening:
                     result.append({'order_id': order.pk, 'round_id': None,
@@ -171,7 +202,10 @@ class GrabReviewActionView(APIView):
                     _enter_assignment_scope(stack, order)
                 except ApplicationError:
                     return Response({'code': 409, 'msg': '积分订单资金凭证待核对，暂不能取消'}, status=409)
-            state = _state(order, lock=True)
+            try:
+                state = _state(order, lock=True)
+            except GrabRoundReviewRequired:
+                return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': MISSING_ROUND_REASON}, status=409)
             opening = (OrderGrabPoolOpeningIntent.objects.select_for_update().filter(order=order).first()
                        if not state else None)
             if (order.status != Order.Status.PENDING

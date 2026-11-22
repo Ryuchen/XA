@@ -126,9 +126,8 @@ def auto_cancel_pending_order(self, order_id: int) -> str:
             raise IllegalTransitionError('订单已离开待接单池')
         if OrderGrabPoolOpeningIntent.objects.filter(order=order, order__grab_pool_snapshot__isnull=True).exists():
             raise IllegalTransitionError('订单等待抢单池初始化')
-        from .models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
-        if (OrderGrabSingleRoundState.objects.filter(round__pool__order=order).exists()
-                or OrderGrabTeamRoundState.objects.filter(round__pool__order=order).exists()):
+        from .grab_round_facts import pool_exists
+        if pool_exists(order.pk):
             raise IllegalTransitionError('抢单订单须由本轮仲裁处理')
         if not order.auto_cancel_at or order.auto_cancel_at > timezone.now():
             raise IllegalTransitionError('当前接单期限尚未到达')

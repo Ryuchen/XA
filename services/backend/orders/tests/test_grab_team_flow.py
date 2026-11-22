@@ -64,6 +64,140 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assert_stale_team_checkout_rejected(2, {'price': 10000, 'billing_provider_count': 1})
 
     @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_CUTOFF_WATERMARK_TESTING=True)
+    def test_timeout_never_refunds_a_legacy_receipt_when_the_latest_state_is_missing(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from orders import grab_single_flow, grab_team_flow
+        from orders.grab_receipt_probe import record_intent
+        from orders.models import OrderGrabRound
+        from orders.tasks import auto_cancel_pending_order
+
+        save_grab_window(30, 0, lambda *args: None)
+        staff = make_console_user(['order:view', 'order:dispatch', 'order:refund', 'order:cancel'])
+        staff_account = self.link(staff)
+        staff.admin_membership.account = staff_account
+        staff.admin_membership.save(update_fields=['account'])
+        for seats, flow in ((1, grab_single_flow), (2, grab_team_flow)):
+            with self.subTest(seats=seats):
+                self.auth(self.boss_account)
+                self.service.fulfillment_provider_count = seats
+                self.service.save(update_fields=['fulfillment_provider_count'])
+                purchase = self.create(dispatch_mode='AUTO_GRAB', client_request_id=f'missing-state-pay-{seats}')
+                self.assertEqual(purchase.data['code'], 0, purchase.data)
+                order = Order.objects.get(pk=purchase.data['data']['id'])
+                first = OrderGrabRound.objects.get(pool__order=order)
+                receipt = record_intent(first.pk, self.boss_account.pk, 'BOSS_CANCEL', 'old-round-cancellation',
+                                        {'reason': '旧轮取消'}, single_flow=seats == 1, team_flow=seats == 2)
+                self.assertEqual(receipt.state, 'BEFORE')
+                opened = first.deadline
+                deadline = opened + timedelta(seconds=first.pool.window_seconds)
+                latest = OrderGrabRound.objects.create(pool=first.pool, number=2, opened_at=opened, deadline=deadline,
+                                                       total_deadline=max(first.total_deadline, deadline),
+                                                       simultaneous_visibility=True)
+                self.wallet.refresh_from_db()
+                paid_balance = self.wallet.balance
+                for _ in range(2):
+                    self.assertEqual(flow.resolve(order.pk), 'WAIT_ROUND_REVIEW')
+                    self.assertEqual(auto_cancel_pending_order.run(order.pk), 'wait_round_review')
+                with patch('django.utils.timezone.now', return_value=first.total_deadline + timedelta(seconds=1)):
+                    call_command('check_order_timeout', stdout=StringIO())
+
+                self.auth(staff_account)
+                review_path = f'/api/admin/grab-reviews/{order.pk}/'
+                detail = self.client.get(review_path)
+                self.assertEqual(detail.data['data']['status'], 'REVIEW')
+                self.assertEqual(detail.data['data']['round_id'], latest.pk)
+                listed = self.client.get('/api/admin/grab-reviews/').data['data']
+                self.assertIn(latest.pk, {row['round_id'] for row in listed}, listed)
+                for action in ('RESUME', 'CANCEL'):
+                    result = self.client.post(review_path + 'actions/', {
+                        'action': action, 'reason': '验证证据不全', 'client_request_id': f'blocked-{action}-{seats}',
+                    }, format='json')
+                    self.assertEqual((result.status_code, result.data['errorCode']), (409, 'GRAB_ROUND_REVIEW'), result.data)
+                cancelled = self.client.post(f'/api/admin/orders/{order.pk}/cancel/', {}, format='json')
+                self.assertEqual((cancelled.status_code, cancelled.data['errorCode']), (409, 'GRAB_ROUND_REVIEW'), cancelled.data)
+                refund = self.client.post(f'/api/admin/orders/{order.pk}/refund/', {'reason': '回归核对'}, format='json')
+                self.assertEqual((refund.status_code, refund.data.get('errorCode')), (409, 'GRAB_ROUND_REVIEW'), refund.data)
+                order.refresh_from_db()
+                self.wallet.refresh_from_db()
+                self.assertEqual((order.status, order.payment_status, self.wallet.balance),
+                                 ('PENDING', 'PAID', paid_balance))
+                self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -order.amount)])
+                self.assertFalse(order.refund_records.exists())
+                self.assertFalse(order.providers.exists())
+                self.assertEqual(first.receipt_probes.get().pk, receipt.receipt_id)
+
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True)
+    def test_paid_pool_without_any_state_records_only_the_owners_review_request(self):
+        from orders.models import OrderGrabReviewCancellation, OrderGrabSingleRoundState
+        from orders.tasks import auto_cancel_pending_order
+
+        save_grab_window(30, 0, lambda *args: None)
+        with patch.object(OrderGrabSingleRoundState.objects, 'get_or_create', return_value=(None, False)):
+            purchase = self.create(dispatch_mode='AUTO_GRAB', client_request_id='state-row-missing')
+        self.assertEqual(purchase.data['code'], 0, purchase.data)
+        order = Order.objects.get(pk=purchase.data['data']['id'])
+        path = f'/api/orders/orders/{order.pk}/cancel/'
+        payload = {'client_request_id': 'cancel-missing-state', 'reason': '请核对未分配订单'}
+        self.auth(self.accounts[0])
+        self.assertEqual(self.client.post(path, payload, format='json').status_code, 404)
+        self.auth(self.boss_account)
+        for _ in range(2):
+            result = self.client.post(path, payload, format='json')
+            self.assertEqual(result.data.get('data'), {'status': 'PENDING'}, result.data)
+        conflict = self.client.post(path, dict(payload, reason='切换取消原因'), format='json')
+        self.assertEqual((conflict.status_code, conflict.data.get('errorCode')), (409, 'REQUEST_ID_CONFLICT'))
+        self.assertEqual(auto_cancel_pending_order.run(order.pk), 'wait_round_review')
+        self.assertEqual(OrderGrabReviewCancellation.objects.filter(order=order).count(), 1)
+        order.refresh_from_db()
+        self.wallet.refresh_from_db()
+        self.assertEqual((order.status, order.payment_status, self.wallet.balance), ('PENDING', 'PAID', 100000 - order.amount))
+        self.assertFalse(order.refund_records.exists())
+        self.assertFalse(order.providers.exists())
+
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True)
+    def test_inconsistent_round_time_is_reported_without_overwriting_old_evidence(self):
+        from orders.grab_single_flow import resolve
+        from orders.models import OrderGrabReviewCancellation, OrderGrabRound, OrderGrabSingleRoundState
+
+        save_grab_window(30, 0, lambda *args: None)
+        purchase = self.create(dispatch_mode='AUTO_GRAB', client_request_id='inconsistent-round-payment')
+        self.assertEqual(purchase.data['code'], 0, purchase.data)
+        order_id = purchase.data['data']['id']
+        first = OrderGrabRound.objects.get(pool__order_id=order_id)
+        opened = first.deadline - timedelta(seconds=1)
+        deadline = opened + timedelta(seconds=first.pool.window_seconds)
+        latest = OrderGrabRound.objects.create(pool=first.pool, number=2, opened_at=opened, deadline=deadline,
+                                               total_deadline=max(first.total_deadline, deadline), simultaneous_visibility=True)
+        state = OrderGrabSingleRoundState.objects.create(round=latest)
+        staff = make_console_user(['order:view'])
+        staff_account = self.link(staff)
+        staff.admin_membership.account = staff_account
+        staff.admin_membership.save(update_fields=['account'])
+        self.auth(staff_account)
+        review = self.client.get(f'/api/admin/grab-reviews/{order_id}/').data['data']
+        self.assertEqual((review['status'], review['round_id']), ('REVIEW', latest.pk))
+        self.assertIn('重开抢单轮次不一致', review['reason'])
+
+        self.auth(self.boss_account)
+        cancellation = self.client.post(f'/api/orders/orders/{order_id}/cancel/', {
+            'client_request_id': 'cancel-on-inconsistent-round', 'reason': '请客服核对',
+        }, format='json')
+        self.assertEqual(cancellation.data.get('data'), {'status': 'PENDING'}, cancellation.data)
+        for _ in range(2):
+            self.assertEqual(resolve(order_id), 'WAIT_ROUND_REVIEW')
+        state.refresh_from_db()
+        self.assertEqual((state.status, state.ranking_snapshot.get('review_phase')), ('REVIEW', 'OPEN'))
+        self.assertEqual(first.single_state.status, 'OPEN')
+        self.assertFalse(first.receipt_probes.exists())
+        self.assertFalse(latest.receipt_probes.exists())
+        self.assertEqual(OrderGrabReviewCancellation.objects.filter(order_id=order_id).count(), 1)
+        order = Order.objects.get(pk=order_id)
+        self.assertEqual((order.status, order.payment_status), ('PENDING', 'PAID'))
+        self.assertFalse(order.refund_records.exists())
+        self.assertFalse(order.providers.exists())
+
+    @override_settings(GRAB_SINGLE_WINDOW_ENABLED=True, GRAB_CUTOFF_WATERMARK_TESTING=True)
     def test_owner_cancellation_is_recorded_before_first_round_arbitration(self):
         from orders import grab_single_flow, grab_team_flow
         from orders.grab_cutoff_watermark import seal
