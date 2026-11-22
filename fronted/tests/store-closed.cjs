@@ -102,9 +102,13 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
       'The support channel is readable above the fold at 320×568')
     await page.getByText('联系前请准备', { exact: true }).waitFor()
     await page.getByText('订单编号和需要处理的问题。', { exact: true }).waitFor()
-    assert.ok((await help.boundingBox()).y < (await services.boundingBox()).y, 'Phone users see help before the service preview')
+    const helpBox = await help.boundingBox()
+    const returnBox = await returnGuide.boundingBox()
+    const servicesBox = await services.boundingBox()
+    assert.ok(helpBox.y < returnBox.y && returnBox.y < servicesBox.y,
+      'Phone users see support and return instructions before the service preview')
     const copyBox = await copy.boundingBox()
-    assert.ok(copyBox.y + copyBox.height <= (await help.boundingBox()).y, 'The return action is in the hero, before the help panel')
+    assert.ok(copyBox.y + copyBox.height <= helpBox.y, 'The return action is in the hero, before the help panel')
     const address = page.getByRole('textbox', { name: '门店入口链接' })
     assert.equal(await address.count(), 0)
     const readsBeforeCopy = reads

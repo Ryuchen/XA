@@ -154,6 +154,10 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                 <dd>{helpDetails}</dd>
               </dl>
             </section>
+            {issue?.closed && returnUrl && <section className="xa-store-closed-return">
+              <h2><CalendarClock size={20} aria-hidden="true" />收到开放通知后</h2>
+              <p>{returnGuide}</p>
+            </section>}
             {issue?.closed && <section className="xa-store-closed-services">
               <h2>开放后可使用</h2>
               <ul role="list">
@@ -162,10 +166,6 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                   <div><h3>{label}</h3><p>{description}</p></div>
                 </li>)}
               </ul>
-              {returnUrl && <div className="xa-store-closed-return">
-                <h3>收到开放通知后</h3>
-                <p>{returnGuide}</p>
-              </div>}
             </section>}
           </div>
         </main>
