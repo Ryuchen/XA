@@ -44,36 +44,47 @@ def _latest(order_id):
     return latest_round_state(order_id, seats=1)
 
 
-def _advance_due_round(order_id):
+def _advance_due_round(order_id, state):
     """Do not depend on a timely worker to move an expired window into its next state."""
-    state = _latest(order_id)
-    if state and state.status == 'OPEN':
+    if state.status == 'OPEN':
         from .grab_receipt_probe import _db_clock
         now, precision, _ = _db_clock()
         if now - timedelta(microseconds=precision) > state.round.deadline:
-            resolve(order_id)
-    return _latest(order_id)
+            resolve(order_id, expected_round_id=state.round_id)
+            return _latest(order_id)
+    return state
 
 
-def enqueue(order_id, *, eta=None, expected_round_id=None):
+def enqueue(order_id, *, expected_round_id, eta=None):
     from .tasks import finalize_single_grab
-    args = [order_id] if expected_round_id is None else [order_id, expected_round_id]
     try:
-        finalize_single_grab.apply_async(args=args, eta=eta)
+        finalize_single_grab.apply_async(args=[order_id, expected_round_id], eta=eta)
     except Exception:
         logger.exception('抢单轮次任务入队失败，等待定时扫描：order=%s', order_id)
 
 
 def submit(request, order_id):
-    from .grab_receipt_probe import record_intent
+    from .grab_receipt_probe import GrabRequestConflict, record_intent
     if request.account.account_type != 'PROVIDER':
         return Response({'code': 404, 'msg': '抢单订单不存在'}, status=404)
     if not enabled():
         return Response({'code': 503, 'msg': '抢单暂不可用，请联系客服核对订单'}, status=503)
-    state = _advance_due_round(order_id)
+    request_id = request.data.get('client_request_id')
+    if request_id is not None and (not isinstance(request_id, str) or not request_id.strip() or len(request_id) > 64):
+        return Response({'code': 400, 'msg': '抢单请求编号无效'}, status=400)
+    if request.data.get('team_size', 1) != 1:
+        return Response({'code': 400, 'msg': '当前订单为单陪'}, status=400)
+    state = _latest(order_id)
     if not state:
         return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '当前抢单轮次待核对'}, status=409)
-    request_id = request.data.get('client_request_id')
+    # A retry from a closed round must not drive the current round's resolution.
+    previous_request = (state.round.number > 1 and request_id is not None
+        and OrderGrabReceiptProbe.objects.filter(round__pool_id=state.round.pool_id,
+            actor=request.account, kind='SINGLE', request_key=request_id).exclude(round_id=state.round_id).exists())
+    if not previous_request:
+        state = _advance_due_round(order_id, state)
+        if not state:
+            return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '当前抢单轮次待核对'}, status=409)
     if request_id is None:
         admission = (OrderGrabSingleAdmission.objects.filter(round_id=state.round_id, account=request.account)
                      .select_related('receipt').order_by('-pk').first()) if state.status not in ('OPEN', 'PARKED') else None
@@ -82,14 +93,13 @@ def submit(request, order_id):
         else:
             previous = OrderGrabSingleAdmission.objects.filter(round_id=state.round_id, account=request.account,
                 phase=state.status, status='DISQUALIFIED').count()
-            request_id = f'single-{order_id}-{request.account.pk}-{state.status.lower()}-{previous}'
-    if not isinstance(request_id, str) or not request_id.strip() or len(request_id) > 64:
-        return Response({'code': 400, 'msg': '抢单请求编号无效'}, status=400)
-    if request.data.get('team_size', 1) != 1:
-        return Response({'code': 400, 'msg': '当前订单为单陪'}, status=400)
+            scope = f'r{state.round_id}' if state.round.number > 1 else str(order_id)
+            request_id = f'single-{scope}-{request.account.pk}-{state.status.lower()}-{previous}'
     try:
         result = record_intent(state.round_id, request.account.pk, 'SINGLE', request_id, {},
                                single_flow=True, actor_snapshot=request.account)
+    except GrabRequestConflict as exc:
+        return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT', 'msg': str(exc)}, status=409)
     except PendingGrabCancellationReview:
         return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '订单正在核对，暂时无法抢单'}, status=409)
     except ValueError as exc:
@@ -98,6 +108,9 @@ def submit(request, order_id):
         return Response({'code': 409, 'msg': '抢单登记时间待核对，请勿重复提交'}, status=409)
     if result.state == 'AFTER':
         return Response({'code': 409, 'msg': '本轮抢单已截止，请等待结果'}, status=409)
+    if not result.current_round:
+        return Response({'code': 0, 'msg': '原抢单轮次已结束',
+                         'data': {'receipt_id': result.receipt_id, 'status': 'NOT_WON'}})
     if result.replayed and state.status == 'ASSIGNED':
         won = state.winner_id == result.receipt_id
         return Response({'code': 0, 'msg': '抢单成功' if won else '本次未抢到订单',
@@ -106,13 +119,13 @@ def submit(request, order_id):
         return Response({'code': 0, 'msg': '订单已取消',
                          'data': {'receipt_id': result.receipt_id, 'status': 'CANCELLED'}})
     if state.status == 'PARKED':
-        outcome = resolve(order_id)
+        outcome = resolve(order_id, expected_round_id=state.round_id)
         if outcome == 'ASSIGNED':
             current = _latest(order_id)
             won = current.winner_id == result.receipt_id
             return Response({'code': 0, 'msg': '抢单成功' if won else '本次未抢到订单',
                              'data': {'receipt_id': result.receipt_id, 'status': 'WON' if won else 'NOT_WON'}})
-    enqueue(order_id)
+    enqueue(order_id, expected_round_id=state.round_id)
     return Response({'code': 0, 'msg': '抢单已提交，请等待系统分配',
                      'data': {'receipt_id': result.receipt_id, 'status': 'PENDING'}})
 
@@ -236,7 +249,7 @@ def _reopen(order, state, now):
     state.save(update_fields=['status', 'updated_at'])
     order.auto_cancel_at = total
     order.save(update_fields=['auto_cancel_at', 'updated_at'])
-    transaction.on_commit(lambda: enqueue(order.pk, eta=deadline))
+    transaction.on_commit(lambda: enqueue(order.pk, eta=deadline, expected_round_id=round_.pk))
 
 
 def resolve(order_id, *, _cancel_only=False, expected_round_id=None):
@@ -371,7 +384,7 @@ def resolve(order_id, *, _cancel_only=False, expected_round_id=None):
                         round=state.round, phase='PARKED', status='ACTIVE', receipt_id__in=parked_ids).exists():
                     state.status = 'PARKED'
                     state.save(update_fields=['status', 'updated_at'])
-                    transaction.on_commit(lambda: enqueue(order.pk), robust=True)
+                    transaction.on_commit(lambda: enqueue(order.pk, expected_round_id=state.round_id), robust=True)
                     return 'PARKED'
             if now - timedelta(microseconds=precision) >= total_upper:
                 cancelled = _cancel_order(order, state)

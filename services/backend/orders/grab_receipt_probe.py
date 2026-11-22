@@ -260,7 +260,8 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
     lifecycle_team_ids = None
     order_invite = team_flow and kind == 'INVITE'
     order_cancel = (single_flow or team_flow) and kind == 'BOSS_CANCEL'
-    order_request = order_invite or order_cancel
+    order_single = single_flow and kind == 'SINGLE'
+    order_request = order_invite or order_cancel or order_single
     team_cycle_guard = team_flow and kind in ('INVITE', 'CONFIRM')
     lifecycle_guard = team_cycle_guard or (single_flow and kind == 'SINGLE')
     if lifecycle_guard:
@@ -339,9 +340,15 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
             evidence = OrderGrabReceiptPassEvidence.objects.select_for_update().filter(receipt=old).first()
             state = _effective_state(old, evidence)
             current = True
-            if order_cancel and state != 'AFTER' and order.status != Order.Status.CANCELLED:
+            if order_single or (order_cancel and state != 'AFTER' and order.status != Order.Status.CANCELLED):
                 latest_id = pool.rounds.select_for_update().order_by('-number').values_list('pk', flat=True).first()
                 current = old.round_id == latest_id
+            if order_single:
+                from club_accounts.provider_lifecycle import provider_membership_current
+                if (not actor_membership_evidence_present(old)
+                        or old.actor_business_cycle != actor_snapshot.business_cycle
+                        or not provider_membership_current(actor_snapshot)):
+                    raise GrabRequestConflict('原抢单登记的陪玩身份已变化，请重新提交')
             return ProbeOutcome(old.pk, state, replayed=True, current_round=current)
         if replay_only or (order_cancel and OrderGrabReviewCancellation.objects.select_for_update()
                            .filter(order=order).exists()):

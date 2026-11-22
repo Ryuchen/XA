@@ -117,7 +117,7 @@ def initialize_entry(order, *, committed_opening=False):
         OrderGrabSingleRoundState.objects.get_or_create(round=round_)
         from .grab_single_flow import enqueue
         if single_window_enabled():
-            transaction.on_commit(lambda: enqueue(order.pk, eta=round_.deadline))
+            transaction.on_commit(lambda: enqueue(order.pk, eta=round_.deadline, expected_round_id=round_.pk))
     elif order.required_provider_count == 2:
         from .models import OrderGrabTeamRoundState
         from .grab_team_flow import enqueue

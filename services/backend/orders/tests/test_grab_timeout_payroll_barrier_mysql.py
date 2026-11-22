@@ -80,6 +80,87 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
         return order, round_, team, receipt, observe.call_args.args
 
     @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_single_reopen_replays_the_original_request_before_accepting_a_new_one(self):
+        from orders.grab_receipt_probe import _db_clock
+        from orders.grab_round_opening import cutoff_bounds, opening_bounds
+        from orders.tasks import check_pending_timeouts, finalize_single_grab
+
+        def wait_past(bound):
+            deadline = monotonic() + 8
+            while _db_clock()[0] <= bound + timedelta(milliseconds=60):
+                self.assertLess(monotonic(), deadline)
+                sleep(.025)
+
+        store, flow = self.prepare_flow()
+        with store_context(store), patch('orders.grab_single_flow.enqueue') as enqueue:
+            order = self.buy_for_committed_opening(flow, 'reopen-single-payment', window=2)
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            first = OrderGrabRound.objects.get(pool__order=order, number=1)
+            wait_past(opening_bounds(first)[1])
+            path = f'/api/orders/orders/{order.pk}/grab/'
+            runner_up, winner = flow.accounts
+            old_key = 'reopen-single-original'
+            flow.auth(runner_up)
+            first_response = flow.client.post(path, {'client_request_id': old_key}, format='json')
+            self.assertEqual(first_response.status_code, 200, first_response.data)
+            first_id = first_response.data['data']['receipt_id']
+            flow.auth(winner)
+            submitted = flow.client.post(path, {'client_request_id': 'reopen-single-first'}, format='json')
+            self.assertEqual(submitted.status_code, 200, submitted.data)
+            self.assertTrue(enqueue.call_args_list)
+            self.assertTrue(all(call.kwargs.get('expected_round_id') == first.pk for call in enqueue.call_args_list))
+            profile = flow.providers[1].escort_profile
+            profile.status = 'OFFLINE'
+            profile.save(update_fields=['status'])
+            wait_past(cutoff_bounds(first, 'OPEN')[1])
+            enqueue.reset_mock()
+            self.assertEqual(finalize_single_grab.run(order.pk, first.pk), 'REOPENED')
+            second = OrderGrabRound.objects.get(pool__order=order, number=2)
+            self.assertTrue(second.simultaneous_visibility)
+            wait_past(opening_bounds(second)[1])
+
+            flow.auth(runner_up)
+            replay = flow.client.post(path, {'client_request_id': old_key}, format='json')
+            self.assertEqual(replay.data.get('data'), {'receipt_id': first_id, 'status': 'NOT_WON'}, replay.data)
+            self.assertFalse(second.receipt_probes.exists())
+            self.assertTrue(enqueue.call_args_list)
+            self.assertTrue(all(call.kwargs.get('expected_round_id') == second.pk for call in enqueue.call_args_list))
+            self.assertEqual(finalize_single_grab.run(order.pk, first.pk), 'STALE_ROUND')
+
+            fresh = flow.client.post(path, {'client_request_id': 'reopen-single-new'}, format='json')
+            self.assertEqual(fresh.status_code, 200, fresh.data)
+            fresh_id = fresh.data['data']['receipt_id']
+            self.assertNotEqual(fresh_id, first_id)
+            self.assertEqual(list(second.receipt_probes.values_list('pk', flat=True)), [fresh_id])
+            wait_past(cutoff_bounds(second, 'OPEN')[1])
+            due_replay = flow.client.post(path, {'client_request_id': old_key}, format='json')
+            self.assertEqual(due_replay.data.get('data'), replay.data['data'], due_replay.data)
+            with patch.object(finalize_single_grab, 'delay') as scheduled:
+                check_pending_timeouts.run()
+            scheduled.assert_called_once_with(order.pk, second.pk)
+            self.assertEqual(finalize_single_grab.run(order.pk, first.pk), 'STALE_ROUND')
+            self.assertEqual(finalize_single_grab.run(order.pk), 'STALE_ROUND')
+            order.refresh_from_db()
+            self.assertEqual(order.status, Order.Status.PENDING)
+            self.assertEqual(finalize_single_grab.run(order.pk, second.pk), 'ASSIGNED')
+            order.refresh_from_db()
+            self.assertEqual((order.status, order.provider_account_id), (Order.Status.GRABBED, runner_up.pk))
+            self.assertEqual(list(order.providers.values_list('provider_account_id', flat=True)), [runner_up.pk])
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+            repeated = flow.client.post(path, {'client_request_id': old_key}, format='json')
+            self.assertEqual(repeated.data.get('data'), replay.data['data'], repeated.data)
+            # Model a new membership without running the separate retirement workflow.
+            type(runner_up).objects.filter(pk=runner_up.pk).update(business_cycle=runner_up.business_cycle + 1)
+            runner_up.refresh_from_db()
+            flow.auth(runner_up)
+            for key in (old_key, 'reopen-single-new'):
+                repeated = flow.client.post(path, {'client_request_id': key}, format='json')
+                self.assertEqual((repeated.status_code, repeated.data.get('errorCode')),
+                                 (409, 'REQUEST_ID_CONFLICT'), repeated.data)
+            self.assertEqual(OrderGrabReceiptProbe.objects.filter(round__pool__order=order).count(), 3)
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
                        PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
     def test_formal_team_receipts_prove_sequence_when_commit_intervals_overlap(self):
         from orders.grab_bound_ranking import preview

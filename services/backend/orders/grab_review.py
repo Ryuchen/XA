@@ -262,7 +262,8 @@ class GrabReviewActionView(APIView):
                             for row in rows:
                                 if row.kind == 'INVITE' and row.state == 'BEFORE':
                                     schedule(row.pk)
-                    transaction.on_commit(lambda: (team_enqueue if team else single_enqueue)(order.pk), robust=True)
+                    enqueue = team_enqueue if team else single_enqueue
+                    transaction.on_commit(lambda: enqueue(order.pk, expected_round_id=state.round_id), robust=True)
             else:
                 from .services import refund_to_customer
                 from .state_machine import transition

@@ -165,14 +165,14 @@ def check_pending_timeouts() -> int:
     """
     import logging
 
-    def enqueue_candidate(task, order_id):
+    def enqueue_candidate(task, *args):
         try:
-            task.delay(order_id)
+            task.delay(*args)
         except Exception:
             # A broker error can happen before or after acceptance. Keep the
             # persisted business state unchanged and retry in the next scan.
             logging.getLogger(__name__).exception(
-                '订单恢复任务入队结果未确认 task=%s order_id=%s', task.name, order_id)
+                '订单恢复任务入队结果未确认 task=%s args=%s', task.name, args)
 
     from .timeout import expired_order_candidates
     if getattr(settings, 'GRAB_COMMITTED_OPENING_ENABLED', False):
@@ -213,9 +213,9 @@ def check_pending_timeouts() -> int:
             round__receipt_probes__kind='SINGLE', round__receipt_probes__state='BEFORE',
             round__receipt_probes__single_admission__status='ACTIVE')
         due = OrderGrabSingleRoundState.objects.filter(due_rounds | committed_cancel | parked_candidate,
-            round__pool__order__status=Order.Status.PENDING).values_list('round__pool__order_id', flat=True).distinct()
-        for order_id in due:
-            enqueue_candidate(finalize_single_grab, order_id)
+            round__pool__order__status=Order.Status.PENDING).values_list('round__pool__order_id', 'round_id').distinct()
+        for order_id, round_id in due:
+            enqueue_candidate(finalize_single_grab, order_id, round_id)
     from .grab_team_flow import enabled as team_enabled
     if team_enabled():
         from .models import OrderGrabTeamRoundState
@@ -250,6 +250,12 @@ def open_committed_grab_order(order_id):
 @shared_task
 def finalize_single_grab(order_id, expected_round_id=None):
     from .grab_single_flow import resolve
+    if expected_round_id is None:
+        # Legacy queue messages carry only the order ID. Bind them to round one.
+        from .models import OrderGrabRound
+        expected_round_id = OrderGrabRound.objects.filter(pool__order_id=order_id, number=1).values_list('pk', flat=True).first()
+        if expected_round_id is None:
+            return 'NOT_FOUND'
     return resolve(order_id, expected_round_id=expected_round_id)
 
 
