@@ -16,18 +16,19 @@ from django.core.files.storage import default_storage
 from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from PIL import Image
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from chat.models import ChatMessage, ChatSession
 from club_accounts.models import ClubAccount
 from club_accounts.tokens import account_for_claims, issue_account_tokens, refresh_account_access_token
+from common.media import build_media_url
 from common.private_media import private_media_url
 from stores.channels import StoreChannelLayer
 from stores.context import current_database, current_store, resolve_store, store_context
 from stores.media import decode_login_scene, encode_login_scene, media_root
-from stores.models import Store
+from stores.models import Store, StoreDomain
 from stores.tasks import StoreTask
 from users.models import WebLoginSession
 from users.login_sessions import session_for
@@ -125,6 +126,8 @@ class StoreRuntimeDatabaseTest(TestCase):
         cls.branch = Store.objects.create(slug='runtime-b', name='运行隔离测试B店',
             database_alias='store_b', status=Store.Status.ACTIVE,
             initialized_at=timezone.now())
+        cls.branch_host = 'runtime-b.esports.club'
+        StoreDomain.objects.create(store=cls.branch, hostname=cls.branch_host)
         cls.accounts = {}
         for store in (cls.original, cls.branch):
             with store_context(store):
@@ -200,13 +203,14 @@ class StoreRuntimeDatabaseTest(TestCase):
                 urls[store.slug] = private_media_url(SimpleNamespace(account=account), message.image)
                 self.assertTrue(message.image.path.startswith(str(media_root())))
         for slug, url in urls.items():
-            response = self.client.get(url)
+            host = self.branch_host if slug == self.branch.slug else 'sl.esports.club'
+            response = self.client.get(url, HTTP_HOST=host)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(b''.join(response.streaming_content), expected[slug])
         branch_url = urls[self.branch.slug]
         self.assertEqual(parse_qs(urlsplit(branch_url).query)['store'], [self.branch.slug])
-        self.assertEqual(self.client.get(urlsplit(branch_url).path).status_code, 404)
-        self.assertEqual(self.client.get(branch_url.replace('store=runtime-b', 'store=shenglang')).status_code, 404)
+        self.assertEqual(self.client.get(urlsplit(branch_url).path, HTTP_HOST='sl.esports.club').status_code, 404)
+        self.assertEqual(self.client.get(branch_url, HTTP_HOST='sl.esports.club').status_code, 400)
 
     def test_media_renewal_rejects_another_stores_signed_ticket(self):
         with store_context(self.branch):
@@ -229,12 +233,79 @@ class StoreRuntimeDatabaseTest(TestCase):
             second = default_storage.save('accounts/avatars/shared.png', ContentFile(picture('#ef4444')))
             self.assertEqual(path, second)
             url = default_storage.url(second)
-        response = self.client.get(url)
+        response = self.client.get(url, HTTP_HOST=self.branch_host)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b''.join(response.streaming_content), picture('#ef4444'))
         response = self.client.get('/media/' + path)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b''.join(response.streaming_content), picture('#2563eb'))
+
+    @override_settings(MEDIA_BASE_URL='https://api.gateway.test')
+    def test_public_presentation_uses_bound_store_origin_and_shared_platform_logo(self):
+        self.branch.boss_url = f'http://{self.branch_host}/boss/'
+        self.branch.logo_url = '/media/stores/logos/shared.png?store=runtime-b'
+        self.branch.background_url = '/media/club-catalog/store-backgrounds/' + 'a' * 32 + '.jpg?store=runtime-b'
+        self.branch.save(update_fields=['boss_url', 'logo_url', 'background_url'])
+        with store_context(self.branch):
+            default_storage.save('stores/logos/shared.png', ContentFile(picture('#ef4444')))
+        response = self.client.get('/api/stores/current/', HTTP_HOST=self.branch_host, secure=True)
+        self.assertEqual(response.status_code, 200, response.data)
+        for field in ('logo_url', 'background_url'):
+            media = urlsplit(response.data['data'][field])
+            self.assertEqual((media.scheme, media.netloc), ('https', self.branch_host))
+        logo = self.client.get(self.branch.logo_url, HTTP_HOST=self.branch_host)
+        self.assertEqual(b''.join(logo.streaming_content), picture('#ef4444'))
+        self.branch.logo_url = '/media/platform/logos/shared.png'
+        self.branch.save(update_fields=['logo_url'])
+        response = self.client.get('/api/stores/current/', HTTP_HOST=self.branch_host, secure=True)
+        self.assertEqual(response.data['data']['logo_url'], 'https://api.gateway.test/media/platform/logos/shared.png')
+        with store_context(self.branch):
+            account = self.accounts[self.branch.slug]
+            account.avatar.save('shared.png', ContentFile(picture('#ef4444')))
+            admin = APIRequestFactory().get('/', HTTP_HOST='admin.esports.club', secure=True)
+            admin.store = self.branch
+            self.assertEqual(urlsplit(build_media_url(admin, account.avatar)).netloc, self.branch_host)
+            self.assertEqual(urlsplit(build_media_url(admin, account.avatar)).scheme, 'https')
+        from stores.serializers import public_store
+        with store_context(None), patch('stores.context.ensure_store_connection', side_effect=AssertionError):
+            self.assertEqual(public_store(self.branch)['logo_url'], 'https://api.gateway.test/media/platform/logos/shared.png')
+
+    @override_settings(MEDIA_BASE_URL='https://api.gateway.test')
+    def test_saved_public_links_redirect_only_from_the_configured_media_origin(self):
+        path = '/media/accounts/avatars/shared.png'
+        public_hosts = ((self.original, 'sl.esports.club'), (self.branch, self.branch_host))
+        for index, (store, host) in enumerate(public_hosts):
+            content = picture(('#2563eb', '#ef4444')[index])
+            with store_context(store):
+                self.assertEqual(default_storage.save(path.removeprefix('/media/'), ContentFile(content)),
+                                 path.removeprefix('/media/'))
+            legacy = path if index == 0 else f'{path}?store={store.slug}'
+            response = self.client.get(legacy, HTTP_HOST='api.gateway.test', secure=True)
+            self.assertEqual((response.status_code, response.content), (307, b''))
+            self.assertEqual(response['Location'], f'https://{host}{legacy}')
+            self.assertIn('no-store', response['Cache-Control'])
+            local = self.client.get(legacy, HTTP_HOST=host, secure=True)
+            self.assertEqual(b''.join(local.streaming_content), content)
+        self.assertEqual(self.client.get(legacy, HTTP_HOST='sl.esports.club').status_code, 400)
+        self.assertEqual(self.client.get(path, HTTP_HOST='unknown.gateway.test').status_code, 404)
+        self.assertEqual(self.client.get('/media/private/recording.wav', HTTP_HOST='api.gateway.test').status_code, 404)
+
+    @override_settings(MEDIA_BASE_URL='https://api.gateway.test')
+    def test_managed_local_logo_preview_keeps_the_original_storage_value_on_save(self):
+        from stores.serializers import StoreUpdateSerializer
+        from stores.views import managed_store
+
+        self.branch.logo_url = '/media/stores/logos/archived.png?store=runtime-b'
+        self.branch.save(update_fields=['logo_url'])
+        with store_context(None):
+            preview = managed_store(self.branch)['logo_url']
+            self.assertEqual(preview, f'https://{self.branch_host}{self.branch.logo_url}')
+            editing = StoreUpdateSerializer(self.branch, data={'logo_url': preview}, partial=True)
+            self.assertTrue(editing.is_valid(), editing.errors)
+            self.assertEqual(editing.validated_data['logo_url'], self.branch.logo_url)
+            clearing = StoreUpdateSerializer(self.branch, data={'logo_url': ''}, partial=True)
+            self.assertTrue(clearing.is_valid(), clearing.errors)
+            self.assertEqual(clearing.validated_data['logo_url'], '')
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')

@@ -25,6 +25,10 @@ class StoreMiddleware:
         try:
             slug = request_store_slug(request.get_host(), request.headers.get('X-Store-Slug'), request.GET.getlist('store'))
         except StoreNotFound as exc:
+            from .media import legacy_public_media_redirect
+            response = legacy_public_media_redirect(request)
+            if response is not None:
+                return response
             return JsonResponse({'code': 404, 'msg': str(exc)}, status=404)
         except (DatabaseError, InterfaceError):
             return JsonResponse({'code': 503, 'errorCode': 'STORE_DIRECTORY_UNAVAILABLE',

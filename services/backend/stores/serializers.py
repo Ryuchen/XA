@@ -33,15 +33,14 @@ def validate_store_logo_url(value, request=None):
     return value
 
 
-def public_store(store):
-    from common.catalog_images import bounded_public_image_url
+def public_store(store, request=None):
     from common.media import build_media_url_from_path
     return {
         'id': store.pk, 'slug': store.slug, 'name': store.name, 'currency_name': store.currency_name,
         'entity_prefix': store.entity_prefix,
         'provider_name_prefix': store.provider_name_prefix,
-        'logo_url': build_media_url_from_path(None, bounded_public_image_url(store.logo_url)),
-        'background_url': public_background_url(store),
+        'logo_url': build_media_url_from_path(request, store.logo_url, store=store),
+        'background_url': public_background_url(store, request),
         'introduction': store.introduction,
         'status': store.status, 'is_active': store.is_active,
         'boss_url': store_entry_url(store.boss_url, store.slug),
@@ -189,6 +188,10 @@ class StoreUpdateSerializer(serializers.ModelSerializer):
         return validate_provider_name_prefix(value)
 
     def validate_logo_url(self, value):
+        if value and self.instance:
+            from common.media import build_media_url_from_path
+            if value == build_media_url_from_path(None, self.instance.logo_url, store=self.instance):
+                return self.instance.logo_url
         return validate_store_logo_url(value, self.context.get('request'))
 
     def validate_background_url(self, value):

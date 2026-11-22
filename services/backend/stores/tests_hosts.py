@@ -10,7 +10,7 @@ from asgiref.sync import async_to_sync
 from django.core import signing
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
@@ -32,7 +32,7 @@ def xinan_store():
         boss_url='http://xa.esports.club/boss', provider_url='http://xa.esports.club/player')
 
 
-class BoundStoreLinkTest(SimpleTestCase):
+class BoundStoreLinkTest(TestCase):
     def test_bound_entries_remove_store_hints_and_keep_path_route_and_other_query(self):
         url = store_entry_url('https://sl.esports.club/boss?campaign=qa&store=xinan#/orders', 'shenglang')
         self.assertEqual(url, 'https://sl.esports.club/boss?campaign=qa#/orders')
@@ -44,8 +44,8 @@ class BoundStoreLinkTest(SimpleTestCase):
     def test_integration_base_is_rebound_to_the_current_store_origin(self):
         self.assertEqual(store_entry_url('https://sl.esports.club/player#/orders', 'xinan'),
                          'https://xa.esports.club/player#/orders')
-        self.assertEqual(parse_qs(urlsplit(store_entry_url('http://localhost:13101/#/home', 'xinan')).query),
-                         {'store': ['xinan']})
+        self.assertEqual(store_entry_url('http://localhost:13101/#/home', 'xinan'),
+                         'http://xa.esports.club/#/home')
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')

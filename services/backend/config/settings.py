@@ -197,8 +197,8 @@ STORAGES = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-# 对外媒体域名（对象存储 / 独立媒体域名的过渡入口）。
-# 留空时由请求 Host 推导绝对 URL，本地开发零配置。
+# 平台公共素材及历史公开链接的共享入口。门店新链接使用本店域名。
+# 留空时由请求 Host 或已登记门店入口构建链接。
 MEDIA_BASE_URL = os.environ.get('DJANGO_MEDIA_BASE_URL', '').strip()
 
 # 履约凭证策略可按部署环境配置；生产默认强制上传，历史客户端过渡期

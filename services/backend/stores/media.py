@@ -159,11 +159,50 @@ def _background_name(value, slug):
         return ''
 
 
-def public_background_url(store):
+def public_background_url(store, request=None):
     if not _background_name(store.background_url, store.slug):
         return ''
-    base = getattr(settings, 'MEDIA_BASE_URL', '').rstrip('/')
-    return base + store.background_url
+    from common.media import render_public_media_url
+    return render_public_media_url(request, store.background_url, store=store)
+
+
+def legacy_public_media_redirect(request):
+    """Resolve previously published URLs at the configured shared media origin."""
+    from django.db import DatabaseError, InterfaceError
+    from django.http.request import split_domain_port
+    from django.http import HttpResponseRedirect, JsonResponse
+    from django.views.decorators.cache import add_never_cache_headers
+
+    from common.private_media import public_media_path
+    from .context import default_store_slug
+    from .hosts import STORE_SLUG, store_media_origin
+    from .models import Store, StoreDomain
+
+    base = urlsplit(getattr(settings, 'MEDIA_BASE_URL', ''))
+    if (base.scheme not in ('http', 'https') or not base.netloc or base.username or base.password
+            or base.netloc.lower() != request.get_host().lower()
+            or request.method not in ('GET', 'HEAD') or not request.path.startswith(settings.MEDIA_URL)
+            or request.path.startswith(settings.MEDIA_URL + 'platform/logos/')
+            or not public_media_path(request.path)):
+        return None
+    hints = request.GET.getlist('store')
+    slug = hints[0] if hints else default_store_slug()
+    if (request.headers.get('X-Store-Slug') is not None or len(hints) > 1
+            or not STORE_SLUG.fullmatch(slug)):
+        return JsonResponse({'code': 400, 'msg': '公开素材的门店地址无效'}, status=400)
+    try:
+        hostname, _ = split_domain_port(base.netloc.lower())
+        if StoreDomain.objects.filter(hostname=hostname).exists():
+            return None
+        store = Store.objects.filter(slug=slug, status=Store.Status.ACTIVE).first()
+    except (DatabaseError, InterfaceError):
+        return JsonResponse({'code': 503, 'msg': '门店域名服务暂不可用，请稍后重试'}, status=503)
+    origin = store_media_origin(store) if store else ''
+    if not origin or urlsplit(origin).netloc.lower() == base.netloc.lower():
+        return None
+    response = HttpResponseRedirect(origin + request.get_full_path(), preserve_request=True)
+    add_never_cache_headers(response)
+    return response
 
 
 def verified_background_path(value):

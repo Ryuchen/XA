@@ -132,8 +132,8 @@ class PlatformStoreManagementTests(TransactionTestCase):
             Store.objects.filter(pk=branch.pk).update(status=Store.Status.ACTIVE)
             metadata = customer.get('/api/stores/current/').data['data']
             self.assertEqual((metadata['background_url'], metadata['introduction']),
-                             (image_url, '本店提供战术陪练。'))
-            self.assertEqual(customer.get(image_url).status_code, 200)
+                             (f'http://xa.esports.club{image_url}', '本店提供战术陪练。'))
+            self.assertEqual(customer.get(metadata['background_url']).status_code, 200)
             self.assertEqual(APIClient(HTTP_HOST='sl.esports.club').get(image_url).status_code, 400)
             other.initialized_at = timezone.now()
             other.save(update_fields=['initialized_at'])

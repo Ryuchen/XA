@@ -2,23 +2,24 @@
 	auto_https off
 }
 
-# Resolve every replica separately; one DNS-named upstream otherwise shares
-# a keep-alive pool and does not guarantee balanced requests across replicas.
-# Only these published assets may bypass API authorization.
+# The shared logo directory is global. Django resolves store media from Host.
 (media) {
 	handle /media/* {
-		@public_media path /media/accounts/avatars/* /media/customers/avatars/* /media/escorts/avatars/* /media/escorts/videos/* /media/escorts/voice_cards/* /media/game_categories/* /media/banners/* /media/club-catalog/* /media/stores/logos/*
+		@public_media path /media/accounts/avatars/* /media/customers/avatars/* /media/escorts/avatars/* /media/escorts/videos/* /media/escorts/voice_cards/* /media/game_categories/* /media/banners/* /media/club-catalog/* /media/stores/logos/* /media/platform/logos/*
 		route {
-			handle @public_media {
-				uri strip_prefix /media
-				root * /srv/media
+			handle_path /media/platform/logos/* {
+				root * /srv/media/platform/logos
 				file_server
+			}
+			handle @public_media {
+				import backend
 			}
 			respond 404
 		}
 	}
 }
 
+# Resolve each web replica separately.
 (backend) {
 	reverse_proxy {
 		dynamic a web 8000 {

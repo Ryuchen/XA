@@ -16,7 +16,8 @@ from .serializers import (StoreCreateSerializer, StoreResumeSerializer, StoreUpd
 
 
 def managed_store(store):
-    return {**public_store(store), 'background_url': store.background_url, 'database_alias': store.database_alias,
+    return {**public_store(store), 'background_url': store.background_url,
+            'database_alias': store.database_alias,
             'initialized_at': store.initialized_at,
             'updated_at': store.updated_at,
             'initialization_required': store.initialized_at is None}
@@ -41,7 +42,7 @@ class CurrentStoreView(APIView):
         store = current_store()
         allowed = may_manage_stores(getattr(request, 'account', None)) or is_platform_session(request)
         return Response({'code': 0, 'data': {
-            **public_store(store), 'can_manage_stores': allowed,
+            **public_store(store, request), 'can_manage_stores': allowed,
             'is_platform_admin': allowed,
         }})
 
@@ -63,7 +64,7 @@ class AvailableStoresView(APIView):
             else:
                 available = store.database_alias in aliases
             if available:
-                results.append(public_store(store))
+                results.append(public_store(store, request))
         return Response({'code': 0, 'data': {'results': results}})
 
 
