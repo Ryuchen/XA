@@ -579,7 +579,8 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                 from .points_transfer_revision import verify_revisions_locked
                 from .points_transfer_refund_access import addon_payment_read
                 with addon_payment_read(order):
-                    transfer_releases, _ = verify_revisions_locked(order)
+                    transfer_releases, _ = verify_revisions_locked(order,
+                        locked_receipt_ids={row.receipt_id for row in allocations})
             elif OrderPointsTransferFundingRelease.objects.filter(allocation__in=allocations).exists():
                 raise PointsFundingPlanError('转单补资释放凭证缺失')
         from .addon_funding_release import addon_release_totals
