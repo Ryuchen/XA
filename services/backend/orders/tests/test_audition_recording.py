@@ -151,9 +151,13 @@ class AuditionRecordingTests(APITransactionTestCase):
         self.login(self.boss)
         listing = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['applications'][0]
         self.assertTrue(listing['ready'])
+        path = urlsplit(listing['members'][0]['recording']['audio_url']).path
+        ticket = path.rstrip('/').rsplit('/', 1)[-1]
         file_path.unlink()
         listing = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))['applications'][0]
         self.assertFalse(listing['ready'])
+        self.assertIsNone(listing['members'][0]['recording'])
+        self.assertEqual(self.client.post('/api/media/renew/', {'ticket': ticket}, format='json').status_code, 404)
         self.assertIn('录音暂不可用', listing['not_ready_reason'])
         select = f"/api/orders/orders/{order['id']}/applications/{application.pk}/select/"
         self.assertNotEqual(self.client.post(select, {}, format='json').data['code'], 0)
@@ -164,6 +168,49 @@ class AuditionRecordingTests(APITransactionTestCase):
         self.assertTrue(detail['application']['my_recording_unavailable'])
         file_path.write_bytes(content)
         self.login(self.boss)
+        self.ok(self.client.post(select, {}, format='json'))
+
+    def test_submitted_audio_must_match_the_uploaded_snapshot(self):
+        from pathlib import Path
+        from users.models import VoiceRecording
+
+        self.prepare(self.provider)
+        uploaded = self.upload(self.provider, '原始试音')
+        file_path = Path(VoiceRecording.objects.get(pk=uploaded['id']).audio.path)
+        original = file_path.read_bytes()
+        order = self.order()
+        self.login(self.provider)
+        grab = f"/api/orders/orders/{order['id']}/grab/"
+        application_params = {'recording_id': uploaded['id']}
+        replacement = original[:-1] + b'\x01'
+        self.assertNotEqual(original, replacement)
+        file_path.write_bytes(replacement)
+        self.assertNotEqual(self.client.post(grab, application_params, format='json').data['code'], 0)
+        self.assertFalse(OrderApplication.objects.filter(order_id=order['id']).exists())
+
+        file_path.write_bytes(original)
+        self.ok(self.client.post(grab, application_params, format='json'))
+        application = OrderApplication.objects.get(order_id=order['id'])
+        self.login(self.boss)
+        detail = self.ok(self.client.get(f"/api/orders/orders/{order['id']}/"))
+        path = urlsplit(detail['applications'][0]['members'][0]['recording']['audio_url']).path
+        ticket = path.rstrip('/').rsplit('/', 1)[-1]
+        select = f"/api/orders/orders/{order['id']}/applications/{application.pk}/select/"
+        for content in (original[:20], replacement):
+            with self.subTest(size=len(content)):
+                file_path.write_bytes(content)
+                self.assertEqual(self.client.get(path).status_code, 404)
+                self.assertEqual(self.client.head(path).status_code, 404)
+                self.assertEqual(self.client.get(path, HTTP_RANGE='bytes=0-43').status_code, 404)
+                self.assertEqual(self.client.post('/api/media/renew/', {'ticket': ticket}, format='json').status_code, 404)
+                self.assertNotEqual(self.client.post(select, {}, format='json').data['code'], 0)
+                application.refresh_from_db()
+                self.assertEqual(application.status, 'PENDING')
+
+        file_path.write_bytes(original)
+        audio = self.client.get(path, HTTP_RANGE='bytes=44-53')
+        self.assertEqual(audio.status_code, 206)
+        self.assertEqual(b''.join(audio.streaming_content), original[44:54])
         self.ok(self.client.post(select, {}, format='json'))
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',

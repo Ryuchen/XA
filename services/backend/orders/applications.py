@@ -176,7 +176,7 @@ def application_data(row,order=None, *, profiles=None, request=None):
             voice = voices.get(member['id'])
             if voice and not recording_available(voice.recording):
                 unavailable.add(member['id'])
-            url = private_media_url(request, voice.recording.audio) if voice else ''
+            url = private_media_url(request, voice.recording.audio) if voice and member['id'] not in unavailable else ''
             member['recording'] = ({'id': voice.recording_id, 'title': voice.recording.title,
                 'duration_ms': voice.recording.duration_ms, 'audio_url': url} if url else None)
     if audition_recordings_required(order or row.order):
@@ -217,7 +217,7 @@ def attach_voice(row, account, recording_id):
     if recording is None:
         raise ApplicationError('录音不存在或已移除，请重新选择')
     from users.voice_availability import recording_available
-    if not recording_available(recording):
+    if not recording_available(recording, verify_content=True):
         raise ApplicationError('录音暂不可用，请选择其他录音或重新上传')
     OrderApplicationVoice.objects.create(application=row, owner=account, recording=recording)
     return True
@@ -844,7 +844,7 @@ class SelectApplicationView(APIView):
                     voices = {voice.owner_id: voice for voice in row.voices.select_related('recording')}
                     if not expected.issubset(voices):
                         raise ApplicationError('报名录音不完整，请等待陪玩提交')
-                    if any(not recording_available(voices[owner].recording) for owner in expected):
+                    if any(not recording_available(voices[owner].recording, verify_content=True) for owner in expected):
                         raise ApplicationError('报名录音暂不可用，请联系陪玩撤回后重新报名')
                 accounts = [row.applicant] + ([row.partner] if row.partner_id else [])
                 error = team_size_error(order, len(accounts))

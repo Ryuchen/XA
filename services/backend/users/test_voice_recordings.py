@@ -21,13 +21,13 @@ from orders.tests.factories import make_provider, make_user
 from users.models import VoiceRecording
 
 
-def audio_file():
+def audio_file(*, sample=0):
     data = BytesIO()
     with wave.open(data, 'wb') as audio:
         audio.setnchannels(1)
         audio.setsampwidth(2)
         audio.setframerate(8000)
-        audio.writeframes(b'\0\0' * 800)
+        audio.writeframes(sample.to_bytes(2, 'little', signed=True) * 800)
     return SimpleUploadedFile('sample.wav', data.getvalue(), content_type='audio/wav')
 
 
@@ -84,6 +84,17 @@ class VoiceRecordingApiTests(APITestCase):
             self.assertEqual(response.status_code, 400, response.data)
         self.assertFalse(VoiceRecording.objects.exists())
 
+    def test_legacy_audio_without_upload_fingerprint_still_plays(self):
+        self.auth(self.provider)
+        original = audio_file().read()
+        result = self.client.post('/api/users/recordings/',
+            {'audio': audio_file(), 'client_request_id': uuid4().hex}, format='multipart').data['data']
+        VoiceRecording.objects.filter(pk=result['id']).update(client_request_id=None, request_fingerprint='')
+        path = urlsplit(result['audio_url']).path
+        playback = self.client.get(path, HTTP_RANGE='bytes=44-53')
+        self.assertEqual(playback.status_code, 206)
+        self.assertEqual(b''.join(playback.streaming_content), original[44:54])
+
     def test_expired_recording_link_renews_only_for_its_owner(self):
         from common.private_media import MAX_AGE, private_media_url
         self.auth(self.provider)
@@ -123,7 +134,6 @@ class VoiceRecordingApiTests(APITestCase):
                 self.assertEqual(response['Content-Type'], 'audio/wav')
                 self.assertIn('no-store', response['Cache-Control'])
                 self.assertEqual(b''.join(response.streaming_content), original[start:end+1])
-                response.close()
         for header in (f'bytes={size}-', 'bytes=9-1', 'bytes=-0', 'bytes=-', 'bytes=' + '9' * 100 + '-'):
             with self.subTest(header=header):
                 response = self.client.get(url, HTTP_RANGE=header)
@@ -133,7 +143,6 @@ class VoiceRecordingApiTests(APITestCase):
             response = self.client.get(url, **headers)
             self.assertEqual(response.status_code, 200)
             self.assertEqual(b''.join(response.streaming_content), original)
-            response.close()
         head = self.client.head(url, HTTP_RANGE='bytes=0-1')
         self.assertEqual((head.status_code, head['Content-Length']), (200, str(size)))
         self.assertEqual(head.content, b'')

@@ -1,6 +1,5 @@
 """Provider-owned private recording library; order binding is a separate action."""
 import hashlib
-import json
 import math
 import re
 from pathlib import Path
@@ -20,10 +19,9 @@ from club_accounts.permissions import IsClubAccountAuthenticated
 from common.private_media import private_media_url
 from stores.db import transaction
 from .voice_models import VoiceRecording
-from .voice_availability import recording_available
+from .voice_availability import MAX_BYTES, recording_available, recording_fingerprint
 
 
-MAX_BYTES = 10 * 1024 * 1024
 FORMATS = {
     '.wav': (WAVE, 'audio/wav'),
     '.mp3': (MP3, 'audio/mpeg'),
@@ -34,10 +32,11 @@ FORMATS = {
 
 
 def recording_data(recording, request):
+    available = recording_available(recording)
     return {'id': recording.pk, 'title': recording.title, 'duration_ms': recording.duration_ms,
             'size': recording.size, 'created_at': recording.created_at,
-            'available': recording_available(recording),
-            'audio_url': private_media_url(request, recording.audio)}
+            'available': available,
+            'audio_url': private_media_url(request, recording.audio) if available else ''}
 
 
 def valid_request_id(value):
@@ -114,8 +113,7 @@ def upload_recording(request):
         digest.update(chunk)
     upload.seek(0)
     final_title = title.strip() or Path(upload.name).stem[:80] or '未命名录音'
-    fingerprint = hashlib.sha256(json.dumps({'sha256': digest.hexdigest(), 'title': final_title,
-        'content_type': audio_format[1]}, sort_keys=True, ensure_ascii=False).encode('utf-8')).hexdigest()
+    fingerprint = recording_fingerprint(digest.hexdigest(), final_title, audio_format[1])
     with transaction.atomic():
         # Serialize competing retries even before a recording exists; use a
         # current read under MySQL's repeatable-read isolation.

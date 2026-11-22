@@ -9,7 +9,6 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.db import DatabaseError
@@ -84,7 +83,7 @@ class VoiceFileAuditTests(TestCase):
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '通行证退款校验/语音文件审计门店要求/弹性档期抢单窗口/通行证退款多店隔离属正式契约深水区（18-盘点 通行证/语音审计/抢单/多店隔离待联调）；最终联调启用')
     def test_requires_store_and_does_not_claim_success_on_database_error(self):
-        with self.assertRaises(CommandError):
+        with store_context(None), self.assertRaises(CommandError):
             call_command('audit_voice_files', stdout=StringIO())
         with store_context(self.first), patch.object(VoiceRecording.objects, 'using', side_effect=DatabaseError('failure')):
             with self.assertRaises(DatabaseError):
@@ -94,8 +93,7 @@ class VoiceFileAuditTests(TestCase):
 
     def test_directory_link_is_not_followed(self):
         with store_context(self.first):
-            root = Path(settings.MEDIA_ROOT)
-            target = root / 'private'
+            target = media_root() / 'private'
             real_lstat = Path.lstat
             def fake_lstat(path, *args, **kwargs):
                 if path == target:

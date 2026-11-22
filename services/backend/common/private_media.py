@@ -1,6 +1,6 @@
-"""Short-lived image capabilities, issued only to the resource's current reader.
+"""Short-lived media capabilities, issued only to the resource's current reader.
 
-Images cannot attach the API's Bearer header. A signed URL therefore delegates
+Media elements cannot attach the API's Bearer header. A signed URL delegates
 read access for 15 minutes; every read rechecks the issuing account and record.
 It is not a login token and is never valid for a different file or API action.
 """
@@ -163,7 +163,7 @@ class RenewPrivateMediaView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request):
-        """Refresh a displayed image without reloading forms or chat drafts."""
+        """Reissue a capability after rechecking the current reader and file."""
         ticket = request.data.get('ticket', '')
         try:
             if not isinstance(ticket, str) or len(ticket) > 2048:
@@ -185,6 +185,10 @@ class RenewPrivateMediaView(APIView):
             field = getattr(obj, grant['field'])
             if not field or _fingerprint(field) != grant['file']:
                 raise Http404
+            if grant['model'] == 'users.voicerecording':
+                from users.voice_availability import recording_available
+                if not recording_available(obj, verify_content=True):
+                    raise Http404
             return Response({'code': 0, 'data': {'url': private_media_url(request, field)}})
         except (signing.BadSignature, KeyError, TypeError, ValueError, Http404):
             return Response({'code': 404, 'msg': '图片已变更或无查看权限，请刷新列表'}, status=404)
@@ -230,8 +234,10 @@ def private_media(request, ticket):
                     raise Http404
                 handle.seek(0)
             if label == 'users.voicerecording':
-                if obj.content_type not in ('audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/ogg'):
+                from users.voice_availability import recording_matches
+                if not recording_matches(obj, handle, verify_content=True):
                     raise Http404
+                handle.seek(0)
                 from .audio_ranges import audio_response
                 response = audio_response(request, handle, obj.content_type)
                 response['Cache-Control'] = 'private, no-store, max-age=0'
