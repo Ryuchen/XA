@@ -56,14 +56,17 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
         order.refund_records.exists.return_value = False
         original = {'order_id': order.pk, 'payment_id': 7, 'proposal_id': 8, 'amount': 100}
         run = SimpleNamespace(points_addon_hash='digest')
-        refund = SimpleNamespace(pk=5, operator_id=2, amount=100, funding_release_run=run)
+        refund = SimpleNamespace(pk=5, operator_id=2, amount=100, funding_release_run=run, payment=object())
         audit = SimpleNamespace(operator_account_id=refund.operator_id, request_body=original)
         operator = object()
         with (patch('orders.addon_refund_execution._require_refund_operator') as require_operator,
               patch('orders.points_transfer_refund_access.after_transfer', return_value=nullcontext(order)) as read,
               patch('orders.addon_refund_execution.OrderAddonRefund.objects.select_related') as refunds,
+              patch('orders.addon_refund_execution._has_transfer_addon_refund_receipt', return_value=True) as has_receipt,
               patch('console.models.AdminAuditLog.objects.filter', return_value=[audit]),
               patch('orders.addon_funding_release.verify_run') as verify_run,
+              patch('orders.addon_refund_execution._first_handover_after_refund', return_value=None) as later_handover,
+              patch('orders.addon_handover.verify_transferred_handover_funding') as verify_handover,
               patch('orders.points_voluntary_paid_evidence.verify_standard_refund_current_read') as verify_paid):
             refunds.return_value.filter.return_value.first.return_value = refund
             run.points_addon_snapshot = {'payment_id': 7, 'addon_income': 0}
@@ -72,6 +75,24 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             read.assert_called_once_with(12, phase='report', pending_payment_id=7, read_only=True)
             verify_run.assert_called_once_with(run, _skip_usage=True)
             verify_paid.assert_called_once_with(run)
+            verify_handover.assert_not_called()
+            has_receipt.assert_called_once_with(order, 7, 8)
+
+            has_receipt.return_value = False
+            with self.assertRaisesMessage(ValidationError, '原加购退款状态已变化'):
+                _replay_transfer_addon_refund(12, 7, 8, operator)
+            verify_run.assert_called_once()
+            has_receipt.return_value = True
+
+            handover = object()
+            later_handover.return_value = handover
+            run.points_addon_snapshot = {'payment_id': 7, 'addon_income': 65}
+            self.assertEqual(_replay_transfer_addon_refund(12, 7, 8, operator), (refund, 65))
+            verify_handover.assert_called_once_with(order, refund.payment, handover)
+            verify_handover.side_effect = ValidationError('加购接替资金凭证缺失，请先核对')
+            with self.assertRaisesMessage(ValidationError, '加购接替资金凭证缺失'):
+                _replay_transfer_addon_refund(12, 7, 8, operator)
+            later_handover.return_value = None
 
             run.points_addon_snapshot = {'payment_id': 7, 'funding': {'addon_history': [
                 {'payment_id': 7, 'provider_units': 18}]}}

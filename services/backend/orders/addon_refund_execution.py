@@ -154,6 +154,20 @@ def _require_refund_operator(operator):
         raise ValidationError('仅有退款权限的有效后台账号可以执行退款')
 
 
+def _first_handover_after_refund(refund):
+    handovers = list(refund.payment.handovers.filter(status='ACCEPTED', kind='STANDARD',
+        previous__isnull=True, created_at__gt=refund.created_at, accepted_at__gt=F('created_at'),
+        source_segment_id=refund.payment.intent.segment_id)[:2])
+    if len(handovers) != 1:
+        return None
+    handover = handovers[0]
+    if OrderOriginalShareTransfer.objects.filter(previous_segment_id=handover.source_segment_id,
+            previous_segment__attribution__order_id=refund.order_id, next_segment_id=handover.target_segment_id,
+            created_at__gt=refund.payment.buyer_transaction.created_at, created_at__lt=refund.created_at).exists():
+        return handover
+    return None
+
+
 def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
     recorded = OrderAddonRefund.objects.filter(order=order, payment_id=payment_id, proposal_id=proposal_id)
     if order.room_required_snapshot or order.refund_records.exists() or order.prestart_handoffs.exists():
@@ -165,11 +179,15 @@ def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
     if not refund:
         if not order.settled_at or order.status != order.Status.COMPLETED:
             return False
-        direct = recorded.filter(payment__handovers__isnull=True, funding_release_run__points_addon_snapshot__isnull=False,
+        prior = recorded.filter(funding_release_run__points_addon_snapshot__isnull=False,
             payment__buyer_transaction__created_at__lt=F('created_at')).select_related(
                 'payment__intent', 'payment__buyer_transaction').first()
-        return bool(direct and transfers.filter(next_segment_id=direct.payment.intent.segment_id,
-            created_at__lt=direct.payment.buyer_transaction.created_at).exists())
+        if not prior:
+            return False
+        if not prior.payment.handovers.exists():
+            return transfers.filter(next_segment_id=prior.payment.intent.segment_id,
+                created_at__lt=prior.payment.buyer_transaction.created_at).exists()
+        return _first_handover_after_refund(prior) is not None
     payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
     if len(payments) > 1:
         from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
@@ -196,9 +214,10 @@ def _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator):
 
     _require_refund_operator(operator)
     with after_transfer(order_id, phase='report', pending_payment_id=payment_id, read_only=True) as order:
-        refund = OrderAddonRefund.objects.select_related('funding_release_run').filter(
+        refund = OrderAddonRefund.objects.select_related('funding_release_run', 'payment__intent',
+            'payment__buyer_transaction').filter(
             order=order, payment_id=payment_id, proposal_id=proposal_id).first()
-        if not refund or order.refund_records.exists():
+        if not refund or not _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
             raise ValidationError('原加购退款状态已变化，请先核对')
         audits = list(AdminAuditLog.objects.filter(resource='addon-refund', object_id=str(refund.pk),
             method='POST', path=f'/api/admin/orders/{order_id}/addons/payments/{payment_id}/refund-proposals/{proposal_id}/execute/',
@@ -214,6 +233,10 @@ def _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator):
         snapshot = run.points_addon_snapshot
         funding = snapshot.get('funding')
         if funding is None:
+            handover = _first_handover_after_refund(refund)
+            if handover:
+                from .addon_handover import verify_transferred_handover_funding
+                verify_transferred_handover_funding(order, refund.payment, handover)
             income = [snapshot.get('addon_income')] if snapshot.get('payment_id') == payment_id else []
         else:
             history = funding['addon_history']

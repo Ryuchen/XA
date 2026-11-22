@@ -291,9 +291,9 @@ def build_segment_settlement_plan(order, *, now=None, allow_recorded=False, _all
                     from .models import OrderPointsFundingAllocation
                     witness = OrderPointsFundingAllocation.objects.filter(
                         redemption__order=order).order_by('pk').first()
-                    boundary = refunds[0].created_at if refunds else None
-                    if boundary and handover.previous_id:
-                        boundary = next((row.created_at for row in refunds if row.created_at > handover.accepted_at), None)
+                    # Earlier refunds reduce the source shares inside verify_handover.
+                    # Only a later refund can be the upper bound for this handover.
+                    boundary = next((row.created_at for row in refunds if row.created_at > handover.accepted_at), None)
                     shares = verify_handover(handover.payment, handover,
                         as_of=boundary, receipt_id=witness.receipt_id if witness else None)
             except (ValidationError, DjangoValidationError) as exc:
