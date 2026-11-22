@@ -166,11 +166,12 @@ def _has_handover_refund_receipt(order, payment_id, proposal_id):
     payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
     transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
     if len(payments) == 2:
-        from .points_transfer_refund_access import unaffected_addon_for_return
+        from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
         original = transfers.select_related('previous_segment').order_by('created_at', 'pk').first()
         if (not original or original.created_at >= refund.created_at
                 or original.previous_segment_id != refund.payment.intent.segment_id
-                or not unaffected_addon_for_return(order, refund.payment, payments, original, boundary=refund.created_at)):
+                or not (same_seat_addon_payments(order, payments, original)
+                        or unaffected_addon_for_return(order, refund.payment, payments, original, boundary=refund.created_at))):
             return False
     elif len(payments) != 1 or not transfers.exists():
         return False
@@ -455,8 +456,9 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
                 source_segment_id=transfers[0].previous_segment_id, target_segment_id=transfers[0].next_segment_id).exists())
         if first_transfer_handover:
             payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
-            from .points_transfer_refund_access import unaffected_addon_for_return
+            from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
             first_transfer_handover = (len(payments) == 1
+                or same_seat_addon_payments(order, payments, transfers[0])
                 or unaffected_addon_for_return(order, payment, payments, transfers[0]))
     proposal = OrderAddonRefundProposal.objects.select_for_update().filter(
         pk=proposal_id, payment=payment, case=case).first()

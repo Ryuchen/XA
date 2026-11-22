@@ -69,7 +69,7 @@ def _addon_funding_scope(order_id, receipt_id, *, request_key=None):
         from orders.points_transfer_refund_access import after_transfer
         pending_payment_id = pending_handover_for_allocation_replay(order, receipt_id, request_key)
         scope = after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id,
-                               pending_payment_id=pending_payment_id)
+                               pending_payment_id=pending_payment_id, allocation_request_key=request_key)
     else:
         from orders.points_business_access import service_order
         scope = service_order(order_id, phase='funding', addon=order.addon_intents.exists(), extra_receipt_id=receipt_id)

@@ -246,6 +246,35 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             segment.slot = original.slot
             self.assertFalse(unaffected_addon_for_return(order, moved, payments, transfer, boundary=boundary))
 
+    def test_original_replays_can_continue_between_two_paid_addon_returns(self):
+        from orders.models import OrderAddonHandover, OrderAddonPayment
+        from orders import points_transfer_refund_access as scope
+
+        order = Mock()
+        order.addon_intents.exclude.return_value.values_list.return_value = []
+        transfers = [Mock(), Mock()]
+        chains = [[SimpleNamespace(payment_id=3), SimpleNamespace(payment_id=3)], [SimpleNamespace(payment_id=4)]]
+        with (patch.object(OrderAddonPayment.objects, 'filter') as payments,
+              patch.object(OrderAddonHandover.objects, 'filter') as handovers,
+              patch.object(scope, '_followup_transfer_handover_scope', return_value=False),
+              patch.object(scope, '_postrefund_transfer_addon_scope', return_value=False),
+              patch.object(scope, 'post_refund_handover_history', return_value=False),
+              patch.object(scope, '_origin_addon_history', return_value=False),
+              patch.object(scope, '_multi_addon_return_chains', return_value=chains)):
+            payments.return_value.select_related.return_value = [SimpleNamespace(intent_id=1), SimpleNamespace(intent_id=2)]
+            handovers.return_value.exists.return_value = False
+            handovers.return_value.values_list.return_value = []
+            self.assertFalse(scope._supported_addon(order, transfers, allow_successive=True))
+            self.assertTrue(scope._supported_addon(order, transfers, allow_successive=True, allocation_replay=True))
+            self.assertTrue(scope._supported_addon(order, transfers, allow_handover=True, pending_payment_id=4))
+            handovers.return_value.values_list.return_value = [4]
+            self.assertFalse(scope._supported_addon(order, transfers, allow_handover=True, pending_payment_id=3))
+            self.assertTrue(scope._supported_addon(order, transfers, allow_handover=True, pending_payment_id=3,
+                                                  allow_successive=True))
+            handovers.return_value.values_list.return_value = [3, 4]
+            self.assertFalse(scope._supported_addon(order, transfers, allow_handover=True, pending_payment_id=3,
+                                                   allow_successive=True))
+
     def test_pending_second_handover_scope_requires_the_recorded_allocation_action(self):
         from orders.models import OrderAddonHandover, OrderPointsFundingAllocation
         from orders.points_funding_write import pending_handover_for_allocation_replay

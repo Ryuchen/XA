@@ -777,7 +777,7 @@ def _check_successive_transfer_target(order, prior, source_id, target_id):
         raise ValidationError('前次加购接替确认时间待核对')
     transfer = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
         previous_segment_id=source_id, created_at__gt=prior.accepted_at).first()
-    if transfer and transfer.next_segment_id != target_id:
+    if not transfer or transfer.next_segment_id != target_id:
         raise ValidationError('本次加购接替须交给实际转入该席的陪玩')
 
 

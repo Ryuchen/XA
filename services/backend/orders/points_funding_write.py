@@ -113,12 +113,16 @@ def _verify_replay_order_locked(order, existing):
     return receipts[existing.receipt_id]
 
 
+def has_allocation_replay(order, receipt_id, request_key):
+    return bool(request_key and OrderPointsFundingAllocation.objects.filter(
+        request_key=request_key, redemption__order=order, receipt_id=receipt_id,
+        platform_action__request_key=request_key).exists())
+
+
 def pending_handover_for_allocation_replay(order, receipt_id, request_key):
     """Allow a recorded allocation to be verified during its next add-on handover."""
     from .models import OrderAddonHandover
-    if not request_key or not OrderPointsFundingAllocation.objects.filter(
-            request_key=request_key, redemption__order=order, receipt_id=receipt_id,
-            platform_action__request_key=request_key).exists():
+    if not has_allocation_replay(order, receipt_id, request_key):
         return None
     pending = list(OrderAddonHandover.objects.filter(payment__intent__order=order, status='PENDING',
         kind='STANDARD', previous__status='ACCEPTED').values_list('payment_id', flat=True)[:2])
@@ -137,7 +141,7 @@ def allocate(*, actor, request_key, receipt_id, order_id, amount):
                     from .points_transfer_refund_access import after_transfer
                     pending_payment_id = pending_handover_for_allocation_replay(order, receipt_id, request_key)
                     scope = after_transfer(order_id, phase='settlement', extra_receipt_id=receipt_id,
-                                           pending_payment_id=pending_payment_id)
+                                           pending_payment_id=pending_payment_id, allocation_request_key=request_key)
                 else:
                     from .points_business_access import service_order
                     scope = service_order(order_id, phase='funding', extra_receipt_id=receipt_id,
