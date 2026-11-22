@@ -13,6 +13,7 @@ from stores.context import current_store
 from stores.db import transaction
 from users.models import PassRefundRepaymentReceipt
 from .ordinary_addon_production import eligible as _ordinary_addon_eligible
+from .ordinary_funding_continuation import finalized_read_active
 from .models import Order, OrderPointsFundingAction, OrderPointsFundingAllocation
 from .points_checkout_test import require_order_funding_access, ordinary_refund_production_order
 from .points_funding_plan import PointsFundingPlanError, plan_verified_order
@@ -62,7 +63,8 @@ def verified_order_allocations_locked(order, *, pending_followup_posting_id=None
     order = Order.objects.select_for_update().filter(pk=getattr(order, 'pk', None)).first()
     if not order:
         raise PointsFundingPlanError('订单不存在')
-    require_order_funding_access(order)
+    if not finalized_read_active(order):
+        require_order_funding_access(order)
     return _verified_allocations_for_locked_order(order, pending_followup_posting_id=pending_followup_posting_id,
                                                   allocation_ids=allocation_ids, _reservation_usage=_reservation_usage,
                                                   _main_refund_usage=_main_refund_usage,
@@ -110,6 +112,7 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
                 raise DjangoValidationError('到账用途账本尚未建立')
             formal_allowed = False
             if receipt.usage_version is not None and getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is True:
+                formal_allowed = finalized_read_active(order)
                 from .points_transfer_refund_access import permits
                 if any(permits(order, phase=phase) for phase in ('transfer', 'report', 'refund', 'settlement')):
                     formal_allowed = True
@@ -324,7 +327,8 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order:
             raise PointsFundingPlanError('订单不存在')
-        require_order_funding_access(order)
+        if not (allow_finalized and finalized_read_active(order)):
+            require_order_funding_access(order)
         if include_prestart_cancelled:
             closed_funding = _verified_prestart_cancel_funding(order)
             if closed_funding is not None:

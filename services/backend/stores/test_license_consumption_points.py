@@ -560,6 +560,92 @@ class LicenseConsumptionPointsTests(TestCase):
 
         self._assert_pending_vip_review_lock_order(decision, LicenseRefundVipReview, 'license-vip-review')
 
+    @override_settings(ORDINARY_SERVICE_FUNDING_ENABLED=True, ORIGINAL_ATTRIBUTION_ENABLED=True,
+                       SEGMENT_ECONOMICS_CAPTURE_ENABLED=True, PLATFORM_PASS_REPAYMENT_ENABLED=True,
+                       ORDER_SETTLEMENT_MODE='REPORT_APPROVAL', LICENSE_SNAPSHOT_CACHE_ENABLED=False)
+    def test_structured_service_vip_review_uses_finalized_settlement(self):
+        from tempfile import TemporaryDirectory
+        from uuid import uuid4
+        from engagement import license_refund_vip_review
+        from engagement.confirmation import process_order
+        from engagement.models import LicenseRefundVipDecision, LicenseRefundVipReview
+        from engagement.services import completed_consumption
+        from orders.models import OrderPointsSettlement
+        from orders.points_checkout_test import require_order_funding_access
+        from orders.tests.test_release_flow import screenshot
+        from wallet.models import ProviderReport, Transaction
+
+        def success(response):
+            self.assertEqual(response.status_code, 200, response.data)
+            self.assertEqual(response.data['code'], 0, response.data)
+            return response.data['data']
+
+        with store_context(self.second), TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
+            self.admin.defaults['HTTP_HOST'] = 'admin.esports.club'
+            role = self.staff.admin_membership.roles.get()
+            role.permissions += ['report:audit', 'report:view']
+            role.save(update_fields=['permissions'])
+            player = APIClient(HTTP_HOST='xa.esports.club',
+                HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(self.provider)[0])
+            paid = success(self.boss.post('/api/orders/create/', self.payload(), format='json'))
+            order = Order.objects.get(pk=paid['id'])
+            order_url = f'/api/orders/orders/{order.pk}/'
+            success(player.post(order_url + 'start/', {'entry_image': screenshot()}, format='multipart'))
+            success(player.post(order_url + 'complete/', {'completion_image': screenshot()}, format='multipart'))
+            report = ProviderReport.objects.get(order=order)
+            report_url = f'/api/wallet/reports/{report.pk}/'
+            success(player.post(report_url + 'images/', {'kind': 'RESULT', 'image': screenshot()}, format='multipart'))
+            success(player.post(report_url + 'submit/'))
+            success(self.admin.post(f'/api/admin/reports/{report.pk}/approve/'))
+            record = license_refund_vip_review.record_locked
+
+            def record_during_outage(*args, **kwargs):
+                with patch('stores.license_status.status_for_store', side_effect=DatabaseError('isolated VIP outage')):
+                    return record(*args, **kwargs)
+
+            settled_at = timezone.now() + timedelta(hours=80)
+            with (patch('django.utils.timezone.now', return_value=settled_at),
+                  patch.object(license_refund_vip_review, 'record_locked', side_effect=record_during_outage),
+                  override_settings(ORDINARY_SERVICE_FUNDING_ENABLED=False)):
+                process_order(order.pk)
+            order.refresh_from_db()
+            settlement = OrderPointsSettlement.objects.get(order=order, finalized_at=order.settled_at, redemption=None)
+            self.assertIsNotNone(settlement.finalized_at)
+            self.assertEqual(order.service_clock_version, 0)
+            self.assertIsNone(order.providers.get().settled_at)
+            decision = LicenseRefundVipDecision.objects.get(order=order, outcome='UNKNOWN')
+            self.assertFalse(ConsumptionConfirmation.objects.filter(order=order).exists())
+            before = list(order.transactions.order_by('pk').values())
+            points = list(PointLedger.objects.filter(order=order).order_by('pk').values())
+
+            url = f'/api/admin/platform/store-management/{self.second.pk}/license-vip-review/{decision.pk}/resolve'
+            body = {'request_id': str(uuid4()), 'outcome': 'ALLOW', 'reason': '按原结算凭证核对'}
+            with (patch('django.utils.timezone.now', return_value=settled_at + timedelta(minutes=1)),
+                  override_settings(ORDINARY_SERVICE_FUNDING_ENABLED=False)):
+                with self.assertRaises(ValidationError):
+                    require_order_funding_access(order)
+                with patch.object(OrderPointsSettlement.objects, 'select_for_update',
+                                  return_value=OrderPointsSettlement.objects.none()):
+                    denied = self.platform.post(url, body, format='json')
+                self.assertEqual(denied.status_code, 409, denied.data)
+                self.assertEqual(denied.data['msg'], '普通服务人员结算及补资凭证待核对')
+                with transaction.atomic():
+                    credit = settlement.persons.get().income_transaction_id
+                    Transaction.objects.filter(pk=credit).update(created_at=settled_at - timedelta(seconds=1))
+                    early = self.platform.post(url, body, format='json')
+                    self.assertEqual(early.status_code, 409, early.data)
+                    self.assertEqual(early.data['msg'], '普通服务原时点收益流水待核对')
+                    transaction.set_rollback(True)
+                self.assertFalse(LicenseRefundVipReview.objects.filter(decision=decision).exists())
+                reviewed = success(self.platform.post(url, body, format='json'))
+                self.assertTrue(reviewed['vip_applied'])
+                replayed = success(self.platform.post(url, body, format='json'))
+                self.assertEqual(replayed['id'], reviewed['id'])
+                self.assertFalse(replayed['vip_recalculation_pending'])
+            self.assertEqual(completed_consumption(self.account), order.amount)
+            self.assertEqual(list(order.transactions.order_by('pk').values()), before)
+            self.assertEqual(list(PointLedger.objects.filter(order=order).order_by('pk').values()), points)
+
     def _assert_pending_vip_review_lock_order(self, decision, model, endpoint):
         from django.db.models import QuerySet
         from uuid import uuid4

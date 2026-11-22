@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 _active = ContextVar('ordinary_funding_continuation', default=None)
+_finalized_read = ContextVar('ordinary_finalized_funding_read', default=None)
 
 
 def permits_unmodified_order(order, *, allow_open_case=False, allow_paid_addons=False):
@@ -79,6 +80,36 @@ def refunded_continuation_active(order):
 
 def addon_settlement_active(order):
     return bool(continuation_active(order) and _active.get()[3] == 'unrefunded_addon')
+
+
+def finalized_read_active(order):
+    scope = _finalized_read.get()
+    if scope is None or not order or not order.settled_at:
+        return False
+    connection = transaction.get_connection()
+    store = current_store()
+    return bool(store and connection.in_atomic_block and scope == (connection.alias, store.slug, order.pk))
+
+
+@contextmanager
+def finalized_read_scope(order):
+    """Read a simple ordinary order's existing settlement under its original locks."""
+    from rest_framework.exceptions import ValidationError
+    from .models import OrderPointsSettlement
+    from .points_checkout_test import matches_simple_ordinary_funding_order
+    connection = transaction.get_connection()
+    store = current_store()
+    if (not order or not order.pk or not order.settled_at or not store or not connection.in_atomic_block
+            or store.database_alias != connection.alias or order.status != 'COMPLETED' or order.payment_status != 'PAID'
+            or not matches_simple_ordinary_funding_order(order)
+            or not OrderPointsSettlement.objects.select_for_update().filter(
+                order=order, redemption__isnull=True, finalized_at=order.settled_at).exists()):
+        raise ValidationError('普通服务人员结算及补资凭证待核对')
+    token = _finalized_read.set((connection.alias, store.slug, order.pk))
+    try:
+        yield
+    finally:
+        _finalized_read.reset(token)
 
 
 @contextmanager

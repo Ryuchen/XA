@@ -11,6 +11,7 @@ from stores.db import transaction
 from users.models import EscortProfile
 from wallet.models import ProviderReport, Transaction
 from .ordinary_addon_production import eligible as _ordinary_addon_eligible
+from .ordinary_funding_continuation import finalized_read_active
 from .models import (Order, OrderPointsFundingAllocation, OrderPointsRedemption, OrderPointsSettlement,
                      OrderPointsSettlementFunding, OrderPointsSettlementPerson, OrderProvider,
                      OrderSegmentFinancialSnapshot)
@@ -378,7 +379,7 @@ def verified_person_settlement_display(report):
     """Return a status/time only after checking persisted settlement evidence."""
     if not report.order_id:
         return 'REVIEW', None
-    if not (settlement_enabled() or ordinary_settlement_enabled()
+    if not (settlement_enabled() or ordinary_settlement_enabled() or finalized_read_active(report.order)
             or formal_service_read_candidate(report.order, phase='settlement')):
         return _continued_ordinary_refund_display(report.order_id, report.pk)
     from django.db import DatabaseError
@@ -408,7 +409,7 @@ def verified_person_settlement_display(report):
                 plan = plan_verified_order(order.pk, allow_finalized=True)
             else:
                 from .service_funding_plan import plan_verified_ordinary_order
-                if not ordinary_settlement_enabled():
+                if not (ordinary_settlement_enabled() or finalized_read_active(order)):
                     return 'REVIEW', None
                 plan = plan_verified_ordinary_order(order.pk, allow_finalized=True)
             settlement = OrderPointsSettlement.objects.select_for_update().filter(order=order).first()
@@ -527,7 +528,8 @@ def verified_person_settlement_display(report):
 
 
 def verified_order_settlement_display(order):
-    if not (settlement_enabled() or ordinary_settlement_enabled() or formal_service_read_candidate(order, phase='settlement')):
+    if not (settlement_enabled() or ordinary_settlement_enabled() or finalized_read_active(order)
+            or formal_service_read_candidate(order, phase='settlement')):
         from django.db import DatabaseError
         try:
             with transaction.atomic():
