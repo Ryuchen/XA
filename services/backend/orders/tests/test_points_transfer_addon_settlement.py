@@ -1176,17 +1176,39 @@ class PointsTransferAddonSettlementTest(TestCase):
                     self.assertEqual(audit.account_id, replacement.pk)
                     self.assertEqual(audit.detail['original_actor_id'], str(supervisor.pk))
                 if defer_vip:
+                    from django.db.models import QuerySet
+                    from wallet.services import get_wallet
+
                     with patch('stores.license_benefits.check_new_benefits', return_value=('DENY', {'status': 'EXPIRED'})):
                         response = self.client.post(resolve_url, body, format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
-                    self.assertTrue(response.data['data']['vip_recalculation_pending'])
+                        self.assertTrue(response.data['data']['vip_recalculation_pending'])
+                        select_for_update = QuerySet.select_for_update
+
+                        def check_lock_order(rows, *args, **kwargs):
+                            if rows.model is LicenseAddonBenefitsReview:
+                                lock_wallet.assert_called_once_with(account_id=account.pk, for_update=True, create=False)
+                            return select_for_update(rows, *args, **kwargs)
+
+                        with (patch('wallet.services.get_wallet', wraps=get_wallet) as lock_wallet,
+                              patch.object(QuerySet, 'select_for_update', new=check_lock_order)):
+                            replay = self.client.post(resolve_url, body, format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                        self.assertEqual(replay.status_code, 200, replay.data)
+                        self.assertEqual(replay.data, response.data)
+                        with patch('wallet.services.get_wallet', wraps=get_wallet) as lock_wallet:
+                            changed = self.client.post(resolve_url, {**body, 'reason': body['reason'].replace('VIP', 'vip')},
+                                format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                        self.assertEqual(changed.status_code, 409, changed.data)
+                        lock_wallet.assert_not_called()
                     with store_context(self.first), override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=False):
                         from engagement.tasks import retry_addon_vip_recalculations
                         self.assertEqual(retry_addon_vip_recalculations.run(), 0)
                     with store_context(self.second), override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=False):
                         from engagement.tasks import retry_addon_vip_recalculations
                         self.assertEqual(retry_addon_vip_recalculations.run(), 1)
-                    with override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=False):
+                    with (override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=False),
+                          patch('wallet.services.get_wallet', wraps=get_wallet) as lock_wallet):
                         response = self.client.post(resolve_url, body, format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
+                    lock_wallet.assert_not_called()
                     self.assertFalse(response.data['data']['vip_recalculation_pending'])
                 else:
                     response = self.client.post(resolve_url, body, format='json', HTTP_AUTHORIZATION='Bearer ' + supervisor_token)
