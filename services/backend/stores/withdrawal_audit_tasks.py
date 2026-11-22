@@ -3,9 +3,10 @@ import logging
 
 from celery import Task, shared_task
 from django.conf import settings
-from django.db import DatabaseError, transaction
+from django.db import DatabaseError, InterfaceError, transaction
 
 from .context import store_context
+from .dynamic_database import discover_store_connection
 from .models import (PlatformWithdrawalAuditDispatchCursor, PlatformWithdrawalAuditScanCursor, Store)
 from .platform_withdrawal_audit import read_event, record_committed_event
 
@@ -34,13 +35,17 @@ def scan_store(store_id):
             cursor, _ = PlatformWithdrawalAuditScanCursor.objects.get_or_create(store=store)
             cursor = PlatformWithdrawalAuditScanCursor.objects.select_for_update().get(pk=cursor.pk)
             try:
+                # Dynamic routing claims live in the control database.
+                if not discover_store_connection(store):
+                    raise StoreReadUnavailable()
+            except ValueError as exc:
+                raise StoreReadUnavailable() from exc
+            try:
                 with store_context(store):
-                    if store.database_alias not in settings.DATABASES:
-                        raise StoreReadUnavailable()
                     from wallet.models import WithdrawalPlatformEvent
                     events = list(WithdrawalPlatformEvent.objects.filter(pk__gt=cursor.last_event_id)
                                   .order_by('pk').values_list('pk', 'withdrawal_id')[:MAX_EVENTS + 1])
-            except (DatabaseError, ValueError) as exc:
+            except (DatabaseError, InterfaceError, ValueError) as exc:
                 raise StoreReadUnavailable() from exc
             selected = events[:MAX_EVENTS]
             created = already = 0
@@ -49,7 +54,7 @@ def scan_store(store_id):
                 try:
                     try:
                         facts = read_event(store, withdrawal_id, event_id)
-                    except DatabaseError as exc:
+                    except (DatabaseError, InterfaceError) as exc:
                         raise StoreReadUnavailable() from exc
                     _, was_created = record_committed_event(store, facts)
                     if was_created:
@@ -70,7 +75,7 @@ def scan_store(store_id):
     except StoreReadUnavailable:
         logger.warning('Withdrawal audit scan could not read store %s', store_id)
         return {'status': 'STORE_UNAVAILABLE', 'store_id': store_id}
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         logger.warning('Withdrawal audit scan could not reach platform control for store %s', store_id)
         return {'status': 'CONTROL_UNAVAILABLE', 'store_id': store_id}
 
@@ -93,6 +98,6 @@ def dispatch():
             cursor.last_store_id = selected[-1] if len(ids) > MAX_STORES else 0
             cursor.save(update_fields=['last_store_id', 'updated_at'])
         return {'status': 'OK', 'queued': len(selected), 'next_after': cursor.last_store_id}
-    except DatabaseError:
+    except (DatabaseError, InterfaceError):
         logger.warning('Withdrawal audit dispatcher could not reach platform control')
         return {'status': 'CONTROL_UNAVAILABLE', 'queued': 0}
