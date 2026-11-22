@@ -12,6 +12,7 @@ from django.db.models import Q
 from stores.db import transaction
 
 from .dispatching import MODELS, _pool_group_enabled, send_task_safely
+from .grab_customer_review import has_pending_review
 from .models import Order
 
 LEASE_SECONDS = 90
@@ -63,12 +64,13 @@ def recover_due(*, limit=100):
     for channel, model in MODELS.items():
         candidates = list(model.objects.filter(eligible_status, lease_expired,
             content_contract_version=2, pool_delivery_due_at__lte=now)
+            .exclude(order__grab_review_cancellation__status='PENDING')
             .order_by('pool_delivery_due_at', 'pk').values_list('pk', 'order_id')[:limit])
         for record_id, order_id in candidates:
             with transaction.atomic():
                 # Match the sender and reopening lock order to avoid deadlocks.
                 order = Order.objects.select_for_update().filter(pk=order_id).first()
-                if not order:
+                if not order or has_pending_review(order_id, lock=True):
                     continue
                 record = model.objects.select_for_update().filter(pk=record_id, order=order).first()
                 if (not record or record.content_contract_version != 2 or not record.pool_delivery_due_at
@@ -91,7 +93,8 @@ def recover_due(*, limit=100):
     from .kook_dispatch import enqueue_kook_dispatch
     from .dispatching import enqueue_wecom_dispatch
     pending_orders = (Order.objects.filter(status=Order.Status.PENDING,
-        grab_opening_intent__state='OBSERVED', grab_pool_snapshot__isnull=False).order_by('pk'))
+        grab_opening_intent__state='OBSERVED', grab_pool_snapshot__isnull=False)
+        .exclude(grab_review_cancellation__status='PENDING').order_by('pk'))
     examined = 0
     from .grab_group_dispatch import delivery_timing, deadline_reached
     for order in pending_orders.iterator(chunk_size=200):

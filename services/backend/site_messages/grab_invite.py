@@ -54,6 +54,12 @@ def deliver(receipt_id):
             return
         if _effective_state(receipt, getattr(receipt, 'pass_evidence', None)) != 'BEFORE':
             return
+        from orders.grab_customer_review import has_pending_review
+        if has_pending_review(order.pk, lock=True):
+            GrabInviteNoticeDelivery.objects.get_or_create(receipt=receipt, defaults={
+                'skipped_reason': '订单取消申请待核对，邀请未发送',
+            })
+            return
         from datetime import timedelta
         from orders.grab_clock_contract import production_enabled
         from orders.models import OrderGrabTeamRoundState, Order

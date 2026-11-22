@@ -6,6 +6,7 @@ import logging
 from stores.db import transaction
 from django.utils import timezone
 
+from .grab_customer_review import has_pending_review
 from .models import KookDispatchRecord, Order, WecomDispatchRecord
 from integrations.kook_config import get_kook_config, route_for_order
 from stores.conf import store_name
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 MODELS = {'KOOK': KookDispatchRecord, 'WECOM': WecomDispatchRecord}
 CONTENT_CONTRACT_VERSION = 1
 MISSING_ORIGINAL_PRICE = '订单原价快照缺失，请先核对后发单'
+PENDING_CANCEL_REVIEW = '订单取消申请待核对，暂不能发单'
 QUEUE_ERROR = '任务入队结果未确认，请先检查群内消息后处理'
 
 
@@ -28,7 +30,9 @@ def _contract_version():
     return 2 if _pool_group_enabled() else CONTENT_CONTRACT_VERSION
 
 
-def eligibility_error(order):
+def eligibility_error(order, *, lock_review=False):
+    if order.status == Order.Status.PENDING and has_pending_review(order.pk, lock=lock_review):
+        return PENDING_CANCEL_REVIEW
     pool_group = _pool_group_enabled()
     from .models import OrderGrabPoolOpeningIntent
     if OrderGrabPoolOpeningIntent.objects.filter(order=order).exists():
@@ -210,7 +214,7 @@ def queue_dispatch(order, channel, *, manual=False, prepared=None):
         return None
     with transaction.atomic():
         locked = Order.objects.select_for_update().get(pk=order.pk)
-        if eligibility_error(locked):
+        if eligibility_error(locked, lock_review=True):
             return None
         # Automatic callers build their plan after acquiring the order lock.
         plan = prepared if prepared is not None else prepare_dispatch(locked, channel)
@@ -264,7 +268,7 @@ def reschedule_pool_dispatch(order_id):
     from .grab_group_dispatch import delivery_timing
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
-        if eligibility_error(order):
+        if eligibility_error(order, lock_review=True):
             return 0
         due, _ = delivery_timing(order)
         count = 0
@@ -342,6 +346,11 @@ def deliver_dispatch(channel, record_id):
             return f'already_sent:{record.message_id}'
         if record.status != 'PENDING':
             return f'skip:delivery={record.status}'
+        reason = eligibility_error(order, lock_review=True)
+        if reason == PENDING_CANCEL_REVIEW:
+            record.status, record.last_error = 'SKIPPED', reason
+            record.save(update_fields=['status', 'last_error'])
+            return 'skip:pending_cancel_review'
         if _pool_group_enabled():
             from .grab_clock_contract import production_enabled
             from .models import OrderGrabRound
@@ -354,7 +363,6 @@ def deliver_dispatch(channel, record_id):
                         # Keep the pending delivery recoverable until a real
                         # activation, rather than sending or marking skipped.
                         return 'waiting:round_activation'
-        reason = eligibility_error(order)
         if record.sequence != order.reject_count:
             reason = '订单已进入新的派单轮次'
         if reason:

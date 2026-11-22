@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.response import Response
 from stores.db import transaction
 
+from .grab_customer_review import PendingGrabCancellationReview
 from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, pool_exists
 from .models import (Order, OrderGrabReceiptProbe, OrderGrabRound, OrderGrabSingleAdmission,
                      OrderGrabSingleRoundState, OrderStatusLog)
@@ -34,6 +35,7 @@ def has_admitting_round(order_id):
     if not enabled():
         return False
     status = (OrderGrabRound.objects.filter(pool__order_id=order_id, pool__required_provider_count=1)
+              .exclude(pool__order__grab_review_cancellation__status='PENDING')
               .order_by('-number').values_list('single_state__status', flat=True).first())
     return status in ADMISSION_STATES
 
@@ -87,6 +89,8 @@ def submit(request, order_id):
     try:
         result = record_intent(state.round_id, request.account.pk, 'SINGLE', request_id, {},
                                single_flow=True, actor_snapshot=request.account)
+    except PendingGrabCancellationReview:
+        return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '订单正在核对，暂时无法抢单'}, status=409)
     except ValueError as exc:
         return Response({'code': 400, 'msg': str(exc)}, status=400)
     if result.state in ('PENDING', 'REVIEW'):

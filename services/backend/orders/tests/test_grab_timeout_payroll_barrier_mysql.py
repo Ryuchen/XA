@@ -4,6 +4,7 @@ from datetime import timedelta
 from time import monotonic, sleep
 from types import SimpleNamespace
 from unittest import skipUnless
+from unittest.mock import patch
 from uuid import uuid4
 
 from django.core.management import call_command
@@ -44,6 +45,113 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             flow.setUp()
             flow.prepare()
         return store, flow
+
+    def test_single_grab_waits_for_order_then_rejects_new_receipt_and_keeps_the_original(self):
+        from club_accounts.tokens import issue_account_tokens
+        from orders.grab_customer_review import request_cancellation
+        from orders.grab_review import mark_round_review
+        from orders.models import OrderGrabSingleAdmission, OrderGrabSingleRoundState
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            save_grab_window(30, 1, lambda *_: None)
+            purchase = flow.create(dispatch_mode='AUTO_GRAB', client_request_id='single-pause-payment')
+            self.assertEqual(purchase.data['code'], 0, purchase.data)
+            order_id = purchase.data['data']['id']
+            path = f'/api/orders/orders/{order_id}/grab/'
+            flow.auth(flow.accounts[0])
+            original = flow.client.post(path, {'client_request_id': 'first-candidate'}, format='json')
+            self.assertEqual(original.data.get('data', {}).get('status'), 'PENDING', original.data)
+            other_token = issue_account_tokens(flow.accounts[1])[0]
+
+        def new_grab():
+            close_old_connections()
+            try:
+                with store_context(store):
+                    client = APIClient(HTTP_HOST='sl.esports.club', HTTP_AUTHORIZATION=f'Bearer {other_token}')
+                    return client.post(path, {'client_request_id': 'waiting-candidate'}, format='json')
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            with store_context(store), transaction.atomic():
+                Order.objects.select_for_update().get(pk=order_id)
+                pending = executor.submit(new_grab)
+                wait_until = monotonic() + 10
+                while not mysql_locking_statements(connection, Order._meta.db_table):
+                    self.assertFalse(pending.done(), 'Grab finished before the order lock was released')
+                    self.assertLess(monotonic(), wait_until, 'Grab did not reach the order lock')
+                    sleep(.05)
+                state = OrderGrabSingleRoundState.objects.select_for_update().get(round__pool__order_id=order_id)
+                mark_round_review(state, '原取消仍需核对')
+                request = SimpleNamespace(account=flow.boss_account, data={'reason': '核对原付款'})
+                accepted = request_cancellation(request, order_id, request_key='before-second-candidate')
+                self.assertEqual(accepted.data.get('data'), {'status': 'PENDING'}, accepted.data)
+                OrderGrabSingleRoundState.objects.filter(pk=state.pk).update(status='OPEN', reason='')
+            rejected = pending.result(timeout=20)
+        self.assertEqual((rejected.status_code, rejected.data.get('errorCode')), (409, 'GRAB_ROUND_REVIEW'), rejected.data)
+
+        with store_context(store):
+            repeated = flow.client.post(path, {'client_request_id': 'first-candidate'}, format='json')
+            self.assertEqual(repeated.data.get('data'), original.data['data'], repeated.data)
+            order = Order.objects.get(pk=order_id)
+            self.assertEqual(list(OrderGrabSingleAdmission.objects.filter(round__pool__order=order)
+                                  .values_list('receipt_id', flat=True)), [original.data['data']['receipt_id']])
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -order.amount)])
+            self.assertFalse(order.providers.exists())
+
+    @override_settings(GRAB_TEAM_WINDOW_ENABLED=True)
+    def test_existing_team_can_be_read_or_withdrawn_while_new_invites_and_confirmation_pause(self):
+        from orders.grab_review import mark_round_review
+        from orders.models import OrderGrabTeamRoundState
+        from site_messages.models import GrabInviteNoticeDelivery
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            save_grab_window(30, 1, lambda *_: None)
+            flow.service.fulfillment_provider_count = 2
+            flow.service.save(update_fields=['fulfillment_provider_count'])
+            purchase = flow.create(dispatch_mode='AUTO_GRAB', client_request_id='team-pause-payment')
+            self.assertEqual(purchase.data['code'], 0, purchase.data)
+            order = Order.objects.get(pk=purchase.data['data']['id'])
+            path = f'/api/orders/orders/{order.pk}/'
+            invite = {'partner_id': flow.accounts[1].pk, 'client_request_id': 'original-team-invite'}
+            flow.auth(flow.accounts[0])
+            with patch('site_messages.grab_invite.deliver'):
+                original = flow.client.post(path + 'grab-team/', invite, format='json')
+            self.assertEqual(original.status_code, 200, original.data)
+            team_id = original.data['data']['team_id']
+            state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
+            receipt = state.round.receipt_probes.get(kind='INVITE')
+            mark_round_review(state, '原取消仍需核对')
+            flow.auth(flow.boss_account)
+            accepted = flow.client.post(path + 'cancel/', {'client_request_id': 'team-cancel-review'}, format='json')
+            self.assertEqual(accepted.data.get('data'), {'status': 'PENDING'}, accepted.data)
+            OrderGrabTeamRoundState.objects.filter(pk=state.pk).update(status='OPEN', reason='')
+
+            flow.auth(flow.accounts[1])
+            invitations = '/api/orders/grab-team/invitations/'
+            listed = flow.client.get(invitations).data['data']
+            item = next(row for row in listed if row['team_id'] == team_id)
+            self.assertEqual((item['order_visible'], item['visibility_state']), (False, 'REVIEW'))
+            self.assertNotIn('order_id', item)
+            confirmed = flow.client.post(f'{invitations}{team_id}/confirm/', {'client_request_id': 'paused-confirm'}, format='json')
+            self.assertEqual((confirmed.status_code, confirmed.data.get('errorCode')), (409, 'GRAB_ROUND_REVIEW'), confirmed.data)
+
+            flow.auth(flow.accounts[0])
+            another = flow.client.post(path + 'grab-team/', dict(invite, client_request_id='paused-new-team'), format='json')
+            self.assertEqual((another.status_code, another.data.get('errorCode')), (409, 'GRAB_ROUND_REVIEW'), another.data)
+            repeated = flow.client.post(path + 'grab-team/', invite, format='json')
+            self.assertEqual(repeated.data.get('data'), original.data['data'], repeated.data)
+            notice = GrabInviteNoticeDelivery.objects.get(receipt=receipt)
+            self.assertIsNone(notice.message_id)
+            self.assertTrue(notice.skipped_reason)
+
+            withdrawn = flow.client.post(f'{invitations}{team_id}/withdraw/', {'client_request_id': 'withdraw-original-team'}, format='json')
+            self.assertEqual((withdrawn.status_code, withdrawn.data.get('data', {}).get('status')), (200, 'WITHDRAWN'), withdrawn.data)
+            self.assertCountEqual(state.round.receipt_probes.values_list('kind', flat=True), ['INVITE', 'WITHDRAW'])
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -order.amount)])
+            self.assertFalse(order.providers.exists())
 
     def test_waiting_staff_refund_cannot_bypass_a_committed_customer_review(self):
         from club_accounts.tokens import issue_account_tokens

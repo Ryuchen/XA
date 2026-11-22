@@ -291,6 +291,71 @@ class GrabTeamFlowTest(APITransactionTestCase):
     def test_review_cancellation_replays_the_owner_request_without_a_round(self):
         self.assert_review_cancellation_replay(self.paid_order_with_opening_review())
 
+    def test_pending_review_hides_an_open_pool_and_skips_queued_group_delivery(self):
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        from integrations.wecom_config import WecomRuntimeConfig
+        from orders.dispatching import deliver_dispatch, dispatch_preview, queue_dispatch
+        from orders.grab_group_recovery import recover_due
+        from orders.grab_review import mark_round_review
+        from orders.models import KookDispatchRecord
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        save_window = save_grab_window
+        with patch('orders.tests.test_grab_team_flow.save_grab_window',
+                   side_effect=lambda seconds, version, audit: save_window(30, version, audit)):
+            self.prepare()
+        order = self.order
+        self.auth(self.accounts[0])
+        endpoint = f'/api/orders/orders/{order.pk}/'
+        pool_path = '/api/orders/orders/?status=pending'
+        self.assertIn(order.pk, {row['id'] for row in self.client.get(pool_path).data['data']})
+        self.assertEqual(self.client.get(endpoint).status_code, 200)
+
+        wecom = WecomRuntimeConfig(enabled=True, webhook='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=isolated-test')
+        with self.settings(GRAB_POOL_GROUP_DISPATCH_ENABLED=True), \
+                patch('integrations.wecom_config.get_wecom_config', return_value=wecom), \
+                patch('orders.dispatching.send_task_safely'), \
+                patch('integrations.wecom.WecomClient.send_text') as send_wecom, \
+                patch('integrations.kook.KookClient.send_channel_message') as send_kook:
+            record = queue_dispatch(order, 'WECOM')
+            self.assertIsNotNone(record)
+            kook = KookDispatchRecord.objects.create(order=order, trigger='NEW_ORDER', channel_id='isolated-test',
+                content_contract_version=2, pool_delivery_due_at=record.pool_delivery_due_at)
+            state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
+            mark_round_review(state, '核对原取消凭证')
+            self.auth(self.boss_account)
+            key = {'client_request_id': 'pause-cancel-review'}
+            channel = SimpleNamespace(group_send=AsyncMock())
+            with patch('orders.notifier.get_channel_layer', return_value=channel):
+                self.assertEqual(self.client.post(endpoint + 'cancel/', key, format='json').data.get('data'),
+                                 {'status': 'PENDING'})
+                self.assertEqual(self.client.post(endpoint + 'cancel/', key, format='json').data.get('data'),
+                                 {'status': 'PENDING'})
+            # The operational state can become readable while the owner request stays pending.
+            OrderGrabTeamRoundState.objects.filter(pk=state.pk).update(status='OPEN', reason='')
+            self.auth(self.accounts[0])
+            self.assertNotIn(order.pk, {row['id'] for row in self.client.get(pool_path).data['data']})
+            self.assertEqual(self.client.get(endpoint).status_code, 404)
+            chat = self.client.post('/api/chat/send/', {'order_ref': order.order_no, 'content': '待核对订单'}, format='json')
+            self.assertEqual(chat.status_code, 404, chat.data)
+            self.assertFalse(dispatch_preview(order)['can_send'])
+            self.assertIsNone(queue_dispatch(order, 'WECOM', manual=True))
+            self.assertEqual(recover_due(), 0)
+            for channel_name, pending in (('WECOM', record), ('KOOK', kook)):
+                self.assertEqual(deliver_dispatch(channel_name, pending.pk), 'skip:pending_cancel_review')
+                pending.refresh_from_db()
+                self.assertEqual((pending.status, pending.attempts), ('SKIPPED', 0))
+            send_wecom.assert_not_called()
+            send_kook.assert_not_called()
+
+        pool_events = [call.args[1] for call in channel.group_send.await_args_list if call.args[0] == 'providers']
+        self.assertEqual(pool_events, [{'type': 'order_status_update', 'data': {}}])
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.payment_status), ('PENDING', 'PAID'))
+        self.assertFalse(order.refund_records.exists())
+
     def test_review_request_stays_in_queue_while_opening_evidence_is_being_recovered(self):
         from orders.models import OrderGrabPoolOpeningIntent, OrderGrabReviewCancellation
 

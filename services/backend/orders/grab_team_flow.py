@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from stores.db import transaction
 
 from club_accounts.permissions import IsClubAccountAuthenticated
+from .grab_customer_review import PendingGrabCancellationReview
 from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, pool_exists
 from .models import (Order, OrderGrabReceiptProbe, OrderGrabRound, OrderGrabTeamDraft,
                      OrderGrabTeamRoundState, OrderStatusLog)
@@ -102,6 +103,8 @@ class TeamInviteView(APIView):
                                    {'partner_id': partner}, team_flow=True, actor_snapshot=request.account)
         except GrabRequestConflict as exc:
             return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT', 'msg': str(exc)}, status=409)
+        except PendingGrabCancellationReview:
+            return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '订单正在核对，暂时无法组队'}, status=409)
         except ValueError as exc:
             return Response({'code': 400, 'msg': str(exc)}, status=400)
         if result.state == 'PENDING':
@@ -159,7 +162,7 @@ class TeamInvitationsView(APIView):
                                    or not 0 < int(before) <= 9223372036854775807):
             return Response({'code': 400, 'msg': '邀请位置无效，请刷新列表'}, status=400)
         rows = (OrderGrabTeamDraft.objects.filter(partner=request.account, status__in=['INVITING', 'UNVERIFIED'],
-            round__team_state__status__in=['OPEN', 'PARKED']).select_related('captain', 'round__pool__order')
+            round__team_state__status__in=['OPEN', 'PARKED']).select_related('captain', 'round__pool__order__grab_review_cancellation')
             .order_by('-pk'))
         if before is not None:
             rows = rows.filter(pk__lt=int(before))
@@ -178,7 +181,10 @@ class TeamInvitationsView(APIView):
             if receipt_state == 'AFTER':
                 continue
             visible_at, visible, visibility_state = (None, False, receipt_state)
-            if receipt_state == 'BEFORE':
+            review = getattr(team.round.pool.order, 'grab_review_cancellation', None)
+            if review and review.status == 'PENDING':
+                visibility_state = 'REVIEW'
+            elif receipt_state == 'BEFORE':
                 visible_at, visible, visibility_state = _invitation_visibility(team, request.account.pk)
             item = {'team_id': team.pk, 'captain_name': team.captain.nickname or '陪玩', 'status': team.status,
                     'visible_at': visible_at, 'order_visible': visible, 'visibility_state': visibility_state}
@@ -215,6 +221,8 @@ class TeamActionView(APIView):
                 from .grab_team_draft import withdraw_with_receipt
                 with transaction.atomic():
                     withdraw_with_receipt(team.round_id, team.pk, result.receipt_id)
+        except PendingGrabCancellationReview:
+            return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': '订单正在核对，暂时无法确认组队'}, status=409)
         except ValueError as exc:
             return Response({'code': 400, 'msg': str(exc)}, status=400)
         if result.state == 'AFTER' and action == 'confirm':

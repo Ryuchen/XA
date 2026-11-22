@@ -9,9 +9,14 @@ class PendingGrabCancellationReview(ValueError):
     """The order's original review request must be completed by the review flow."""
 
 
+def has_pending_review(order_id, *, lock=False):
+    rows = OrderGrabReviewCancellation.objects.filter(order_id=order_id, status='PENDING')
+    return (rows.select_for_update() if lock else rows).exists()
+
+
 def require_no_pending_review(order_id):
-    """Recheck while holding the order lock, before an ordinary refund."""
-    if OrderGrabReviewCancellation.objects.select_for_update().filter(order_id=order_id, status='PENDING').exists():
+    """Recheck while holding the order lock, before a competing operation."""
+    if has_pending_review(order_id, lock=True):
         raise PendingGrabCancellationReview('老板已提交取消申请，请在抢单核对中处理')
 
 
@@ -98,4 +103,6 @@ def request_cancellation(request, order_id, *, request_key, replay_only=False):
             return Response({'code': 409, 'msg': '订单无需人工核对，请使用正常取消流程'}, status=409)
         OrderGrabReviewCancellation.objects.create(order=order, customer=request.account,
                                                   request_key=request_key, reason=reason)
+        from .notifier import notify_order_update
+        transaction.on_commit(lambda: notify_order_update(order, refresh_pool=True), robust=True)
     return Response({'code': 0, 'msg': '已提交客服核对，处理完成后通知你', 'data': {'status': 'PENDING'}})

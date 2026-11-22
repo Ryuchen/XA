@@ -53,10 +53,10 @@ def notify_report_update(report, *, notify_owner=True):
         logging.getLogger(__name__).warning('报单实时通知失败: report_id=%s', report.pk, exc_info=True)
 
 
-def notify_order_update(order, *, refresh_providers=False):
+def notify_order_update(order, *, refresh_providers=False, refresh_pool=False):
     # 订单和账务已经提交，消息通道故障不能把成功操作伪装成失败。
     try:
-        _notify_order_update(order, refresh_providers=refresh_providers)
+        _notify_order_update(order, refresh_providers=refresh_providers, refresh_pool=refresh_pool)
     except Exception:
         logging.getLogger(__name__).warning('订单实时通知失败: order_id=%s', order.pk, exc_info=True)
     try:
@@ -76,7 +76,7 @@ def notify_evaluation_update():
         logging.getLogger(__name__).warning('评价实时通知失败', exc_info=True)
 
 
-def _notify_order_update(order, *, refresh_providers=False):
+def _notify_order_update(order, *, refresh_providers=False, refresh_pool=False):
     channel_layer = get_channel_layer()
     if channel_layer is None:
         return
@@ -165,7 +165,9 @@ def _notify_order_update(order, *, refresh_providers=False):
     send('operators', rendered())
 
     # 抢单池相关状态广播给全部陪玩：PENDING 加入/退回，GRABBED/CANCELLED 移除。
-    if order.dispatch_route == order.DispatchRoute.PUBLIC and order.payment_status != order.PaymentStatus.UNPAID and order.status in (order.Status.PENDING, order.Status.GRABBED, order.Status.CANCELLED):
+    if refresh_pool or (order.dispatch_route == order.DispatchRoute.PUBLIC
+                        and order.payment_status != order.PaymentStatus.UNPAID
+                        and order.status in (order.Status.PENDING, order.Status.GRABBED, order.Status.CANCELLED)):
         # 公共组只提供无订单编号的刷新信号；通行证尚未到可见时间的陪玩
         # 不能通过 WebSocket 提前获知具体订单。列表接口仍按本人资格过滤。
         send('providers', {})

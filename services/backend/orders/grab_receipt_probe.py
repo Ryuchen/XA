@@ -352,6 +352,9 @@ def record_intent(round_id, actor_id, kind, request_key, payload, *, single_flow
         if replay_only or (order_cancel and OrderGrabReviewCancellation.objects.select_for_update()
                            .filter(order=order).exists()):
             return None
+        if kind in ('SINGLE', 'INVITE', 'CONFIRM'):
+            from .grab_customer_review import require_no_pending_review
+            require_no_pending_review(order.pk)
         if order_invite and len(lifecycle_accounts) != 2:
             raise ValueError('双陪队友不可用')
         if lifecycle_guard:

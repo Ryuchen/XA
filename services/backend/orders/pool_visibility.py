@@ -88,7 +88,7 @@ def visible_provider_pool(account):
         eligible_modes |= Q(escort_mode=Order.EscortMode.DOUBLE, requires_boss_selection=False,
             grab_pool_snapshot__required_provider_count=2,
             team_round_status__in=ADMISSION_STATES)
-    orders = orders.filter(eligible_modes)
+    orders = orders.filter(eligible_modes).exclude(grab_review_cancellation__status='PENDING')
     if production_enabled():
         from .grab_round_opening import cutoff_bounds
         # Only orders excluded by the provisional timestamp need this extra
