@@ -1,6 +1,7 @@
 """Grab and timeout refunds serialize with payroll in disposable MySQL."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from threading import Event
 from time import monotonic, sleep
 from types import SimpleNamespace
 from unittest import skipUnless
@@ -17,7 +18,7 @@ from console.grab_config import save_grab_window
 from console.payroll_event_barrier import lock_payroll_events
 from console.payroll_models import PayrollEventBarrier
 from orders.models import Order, OrderGrabPoolSnapshot, OrderGrabRound, OrderGrabReceiptProbe, OrderRefund
-from orders.tasks import auto_cancel_pending_order
+from orders.tasks import auto_cancel_pending_order, open_committed_grab_order
 from orders.tests import test_grab_single_flow
 from stores.context import resolve_store, store_context
 from stores.db import transaction
@@ -45,6 +46,156 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             flow.setUp()
             flow.prepare()
         return store, flow
+
+    def buy_for_committed_opening(self, flow, request_id):
+        save_grab_window(30, 1, lambda *_: None)
+        with patch.object(open_committed_grab_order, 'delay') as enqueue:
+            purchase = flow.create(dispatch_mode='AUTO_GRAB', client_request_id=request_id)
+        self.assertEqual(purchase.data['code'], 0, purchase.data)
+        order = Order.objects.get(pk=purchase.data['data']['id'])
+        enqueue.assert_called_once_with(order.pk)
+        self.assertFalse(OrderGrabPoolSnapshot.objects.filter(order=order).exists())
+        return order
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_opening_redelivery_preserves_original_activation_even_if_the_clock_changed(self):
+        from orders.grab_clock_contract import round_identity_valid
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            order = self.buy_for_committed_opening(flow, 'formal-open-replay')
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            order.refresh_from_db()
+            intent = order.grab_opening_intent
+            original = OrderGrabRound.objects.get(pool__order=order)
+            evidence = original.opening_evidence
+            self.assertEqual(evidence.state, 'OBSERVED')
+            self.assertTrue(round_identity_valid(original))
+            payload = evidence.activation_clock_evidence
+            due_at = order.auto_cancel_at
+            paid_at = intent.commit_observed_at
+            with self.subTest(replay='ordinary'):
+                self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            wrong_clock = (paid_at, intent.clock_precision_us, 'different-isolated-clock')
+            with self.subTest(replay='different clock'):
+                with patch('orders.grab_opening_intent._clock_observation', return_value=wrong_clock) as sample:
+                    self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+                    sample.assert_not_called()
+            evidence.refresh_from_db()
+            intent.refresh_from_db()
+            order.refresh_from_db()
+            self.assertEqual((intent.state, intent.reason, evidence.state, evidence.activation_clock_evidence),
+                             ('OBSERVED', '', 'OBSERVED', payload))
+            self.assertEqual((intent.commit_observed_at, order.auto_cancel_at), (paid_at, due_at))
+            self.assertTrue(round_identity_valid(original))
+            self.assertEqual(OrderGrabRound.objects.filter(pool__order=order).count(), 1)
+            self.assertEqual(list(order.transactions.values_list('pk', 'tx_type', 'amount')),
+                             [(intent.payment_id, 'PAY', -5000)])
+            flow.wallet.refresh_from_db()
+            self.assertEqual(flow.wallet.balance, 95000)
+            type(evidence).objects.filter(pk=evidence.pk).update(activation_clock_evidence={})
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'REVIEW')
+            evidence.refresh_from_db()
+            self.assertEqual((evidence.state, evidence.activation_clock_evidence), ('OBSERVED', {}))
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_opening_redelivery_leaves_missing_activation_for_review(self):
+        from orders.grab_opening_intent import _clock_observation
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            order = self.buy_for_committed_opening(flow, 'formal-open-no-activation')
+            with patch('orders.grab_round_opening._observe_activation') as observe:
+                result = open_committed_grab_order.run(order.pk)
+                observe.assert_called_once()
+            original = OrderGrabRound.objects.get(pool__order=order).opening_evidence
+            self.assertEqual((original.state, original.activation_upper_at), ('PREPARED', None))
+            with patch('orders.grab_opening_intent._clock_observation', wraps=_clock_observation) as sample:
+                replay = open_committed_grab_order.run(order.pk)
+                sample.assert_not_called()
+            self.assertEqual((result, replay), ('WAIT_OPENING', 'WAIT_OPENING'))
+            original.refresh_from_db()
+            self.assertEqual((original.state, original.activation_upper_at), ('PREPARED', None))
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_initial_opening_waits_for_a_worker_with_the_formal_clock(self):
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            order = self.buy_for_committed_opening(flow, 'formal-open-worker-clock-disabled')
+            with override_settings(PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=False):
+                self.assertEqual(open_committed_grab_order.run(order.pk), 'DISABLED')
+            self.assertEqual(order.grab_opening_intent.state, 'PENDING')
+            self.assertFalse(OrderGrabPoolSnapshot.objects.filter(order=order).exists())
+            with patch('orders.grab_pool_snapshot.initialize_entry', side_effect=ValueError('pool setup unavailable')):
+                self.assertEqual(open_committed_grab_order.run(order.pk), 'RETRY')
+            intent = order.grab_opening_intent
+            intent.refresh_from_db()
+            self.assertEqual(intent.state, 'OBSERVED')
+            paid_at = intent.commit_observed_at
+            self.assertIsNotNone(paid_at)
+            self.assertFalse(OrderGrabPoolSnapshot.objects.filter(order=order).exists())
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            self.assertEqual(OrderGrabRound.objects.get(pool__order=order).opening_evidence.state, 'OBSERVED')
+            intent.refresh_from_db()
+            self.assertEqual(intent.commit_observed_at, paid_at)
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_POOL_GROUP_DISPATCH_ENABLED=True,
+                       GRAB_TEAM_WINDOW_ENABLED=True)
+    def test_concurrent_opening_delivery_keeps_one_round_and_one_group_enqueue(self):
+        from orders.grab_pool_snapshot import initialize_entry
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            flow.service.fulfillment_provider_count = 2
+            flow.service.save(update_fields=['fulfillment_provider_count'])
+            order = self.buy_for_committed_opening(flow, 'formal-open-concurrent')
+            self.assertEqual(order.required_provider_count, 2)
+        entered, release = Event(), Event()
+
+        def initialize(*args, **kwargs):
+            entered.set()
+            if not release.wait(15):
+                raise RuntimeError('Opening transaction did not receive the release signal')
+            return initialize_entry(*args, **kwargs)
+
+        def open_order():
+            close_old_connections()
+            try:
+                with store_context(store):
+                    return open_committed_grab_order.run(order.pk)
+            finally:
+                close_old_connections()
+
+        with (patch('orders.grab_pool_snapshot.initialize_entry', side_effect=initialize) as create_pool,
+              patch('orders.grab_team_flow.enqueue'),
+              patch('orders.kook_dispatch.enqueue_kook_dispatch') as kook,
+              patch('orders.dispatching.enqueue_wecom_dispatch') as wecom,
+              ThreadPoolExecutor(max_workers=2) as executor):
+            first = executor.submit(open_order)
+            try:
+                self.assertTrue(entered.wait(10))
+                second = executor.submit(open_order)
+                deadline = monotonic() + 10
+                while not mysql_locking_statements(connection, Order._meta.db_table):
+                    self.assertFalse(second.done(), 'Second task finished before the order lock was released')
+                    self.assertLess(monotonic(), deadline, 'Second task did not wait for the order lock')
+                    sleep(.05)
+            finally:
+                release.set()
+            self.assertEqual(first.result(timeout=20), 'OPENED')
+            self.assertIn(second.result(timeout=20), ('WAIT_OPENING', 'OPENED'))
+        create_pool.assert_called_once()
+        kook.assert_called_once()
+        wecom.assert_called_once()
+        with store_context(store):
+            round_ = OrderGrabRound.objects.get(pool__order=order)
+            self.assertEqual((round_.team_state.status, round_.opening_evidence.state), ('OPEN', 'OBSERVED'))
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
 
     def test_single_grab_waits_for_order_then_rejects_new_receipt_and_keeps_the_original(self):
         from club_accounts.tokens import issue_account_tokens

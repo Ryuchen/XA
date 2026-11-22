@@ -88,11 +88,12 @@ class GrabPoolSnapshotTest(TransactionTestCase):
     def test_real_row_lock_serializes_duplicate_openings(self):
         if connection.vendor != 'mysql':
             self.skipTest('requires isolated MySQL row locks')
+        store = resolve_store()
         barrier = Barrier(2)
         def attempt(_):
             close_old_connections()
             try:
-                with transaction.atomic():
+                with store_context(store), transaction.atomic():
                     # Establish a potentially stale repeatable-read snapshot
                     # before either transaction acquires the order row lock.
                     OrderGrabPoolSnapshot.objects.count()
@@ -108,11 +109,12 @@ class GrabPoolSnapshotTest(TransactionTestCase):
     def test_real_current_read_does_not_freeze_stale_pass_delays(self):
         if connection.vendor != 'mysql':
             self.skipTest('requires isolated MySQL repeatable-read transactions')
+        store = resolve_store()
         def change_delay():
             close_old_connections()
             try:
                 from users.pass_rules import lock_pass_config
-                with transaction.atomic():
+                with store_context(store), transaction.atomic():
                     lock_pass_config()
                     SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_GOLD', defaults={'value': '20'})
             finally:
@@ -128,10 +130,12 @@ class GrabPoolSnapshotTest(TransactionTestCase):
     def test_real_current_read_does_not_freeze_stale_window(self):
         if connection.vendor != 'mysql':
             self.skipTest('requires isolated MySQL repeatable-read transactions')
+        store = resolve_store()
         def change_window():
             close_old_connections()
             try:
-                save_grab_window(40, 1, lambda *args: None)
+                with store_context(store):
+                    save_grab_window(40, 1, lambda *args: None)
             finally:
                 close_old_connections()
         with transaction.atomic():
