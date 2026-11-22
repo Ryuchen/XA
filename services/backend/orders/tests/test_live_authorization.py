@@ -53,7 +53,7 @@ class LiveAuthorizationTest(TransactionTestCase):
             with patch('orders.consumers.get_account_permissions', side_effect=InterfaceError('role read failed')):
                 socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}',
                                                headers=[(b'host', b'sl.esports.club')])
-                self.assertEqual(await socket.connect(), (False, 1013))
+                self.assertEqual(await socket.connect(), (False, 4503))
                 self.assertFalse(get_channel_layer().groups.get(group))
                 self.assertFalse(get_channel_layer().groups.get('operators'))
                 await socket.disconnect()
@@ -62,7 +62,7 @@ class LiveAuthorizationTest(TransactionTestCase):
             try:
                 with patch('orders.consumers.get_account_permissions', side_effect=InterfaceError('role read failed')):
                     await self.order(group)
-                    self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 1013})
+                    self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 4503})
             finally:
                 await socket.disconnect()
 

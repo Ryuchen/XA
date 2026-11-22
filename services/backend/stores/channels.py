@@ -7,6 +7,10 @@ from django.utils.module_loading import import_string
 from .context import current_store
 
 
+# Daphne only allows application-initiated closes with 1000 or codes 3000–4999.
+STORE_UNAVAILABLE_CLOSE_CODE = 4503
+
+
 class StoreChannelLayer:
     def __init__(self, backend=None, config=None, **kwargs):
         configured = getattr(settings, 'STORE_CHANNEL_LAYER', {})

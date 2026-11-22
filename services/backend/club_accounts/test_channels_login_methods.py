@@ -69,7 +69,7 @@ class ChannelLoginMethodTests(TransactionTestCase):
             socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token,
                                            headers=[(b'host', b'sl.esports.club')])
             with patch(lookup, side_effect=error('store connection lost')):
-                self.assertEqual(await socket.connect(), (False, 1013))
+                self.assertEqual(await socket.connect(), (False, 4503))
 
         for lookup in ('club_accounts.channels_middleware.account_for_claims', 'orders.consumers.account_for_claims'):
             for error in (OperationalError, InterfaceError):
@@ -89,7 +89,7 @@ class ChannelLoginMethodTests(TransactionTestCase):
                 self.assertTrue(connected)
                 with patch('orders.consumers.account_for_claims', side_effect=error('store connection lost')):
                     await socket.send_json_to({'type': 'ping'})
-                    self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 1013})
+                    self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 4503})
                 with patch('orders.consumers.account_for_claims') as lookup:
                     await socket.send_json_to({'type': 'ping'})
                     self.assertTrue(await socket.receive_nothing())

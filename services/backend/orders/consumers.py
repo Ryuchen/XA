@@ -9,6 +9,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from club_accounts.models import ClubAccount
 from club_accounts.tokens import account_for_claims
 from console.permissions import get_account_permissions, is_console_account
+from stores.channels import STORE_UNAVAILABLE_CLOSE_CODE
 
 
 @database_sync_to_async
@@ -187,7 +188,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 raise
             if not self.closing:
                 self.closing = True
-                await self.close(code=1013)
+                await self.close(code=STORE_UNAVAILABLE_CLOSE_CODE)
 
     async def connect(self):
         account = await current_socket_account(self.scope.get('account_auth'))

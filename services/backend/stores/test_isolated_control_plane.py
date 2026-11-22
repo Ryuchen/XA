@@ -31,7 +31,7 @@ class StoreSocketOutageTests(SimpleTestCase):
             with self.subTest(error=error), patch('club_accounts.channels_middleware.websocket_store_slug',
                                                  side_effect=error('simulated directory outage')):
                 await ClubAccountTokenAuthMiddleware(downstream)(scope, AsyncMock(), send)
-                send.assert_awaited_once_with({'type': 'websocket.close', 'code': 1013})
+                send.assert_awaited_once_with({'type': 'websocket.close', 'code': 4503})
                 downstream.assert_not_awaited()
                 send.reset_mock()
 
