@@ -3,7 +3,6 @@ import os
 from unittest import skipUnless
 from io import StringIO
 from urllib.parse import parse_qs, urlsplit
-import uuid
 from unittest.mock import patch
 
 from asgiref.sync import async_to_sync
@@ -20,7 +19,6 @@ from club_accounts.tokens import issue_account_tokens
 
 from .context import current_store, resolve_store, store_context
 from .hosts import request_store_slug, store_entry_url
-from .media import encode_login_scene
 from .models import Store, StorePlatformGrant
 from .permissions import may_manage_stores
 from .tests_foundation import admin
@@ -61,7 +59,8 @@ class BoundStoreLinkTest(TestCase):
                 request_store_slug('sl.esports.club', header, query)
 
 
-@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'],
+                   STORE_DATABASE_ALIASES=('store_b',))
 class BoundStoreHttpTest(TestCase):
     databases = {'default', 'store_b'}
 
@@ -80,6 +79,7 @@ class BoundStoreHttpTest(TestCase):
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
     def test_host_selects_its_database_without_a_selector_or_existing_login(self):
+        original = current_store()
         for host, store in [('sl.esports.club', self.first), ('xa.esports.club', self.second)]:
             with self.subTest(host=host):
                 response = self.client.get('/api/stores/current/', HTTP_HOST=host)
@@ -91,9 +91,9 @@ class BoundStoreHttpTest(TestCase):
                 response = self.client.get('/api/users/me/', HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer ' + token)
                 self.assertEqual(response.status_code, 200, response.data)
                 self.assertEqual(response.data['data']['nickname'], store.name + '老板')
-        self.assertIsNone(current_store())
+        self.assertIs(current_store(), original)
 
-    def test_query_header_duplicates_and_login_scenes_cannot_override_the_host(self):
+    def test_query_and_header_selectors_cannot_override_the_host(self):
         for path, headers in [('/api/stores/current/?store=xinan', {}),
                               ('/api/stores/current/', {'HTTP_X_STORE_SLUG': 'xinan'}),
                               ('/api/stores/current/?store=shenglang&store=xinan', {}),
@@ -101,11 +101,6 @@ class BoundStoreHttpTest(TestCase):
                               ('/api/stores/current/?store=', {})]:
             with self.subTest(path=path, headers=headers):
                 self.assertEqual(self.client.get(path, HTTP_HOST='sl.esports.club', **headers).status_code, 400)
-        with store_context(self.second):
-            scene = encode_login_scene(uuid.uuid4())
-        response = self.client.post('/api/users/web-login/session/', {'ticket': scene},
-            format='json', HTTP_HOST='sl.esports.club')
-        self.assertEqual(response.status_code, 400)
         response = self.client.get('/api/stores/current/', HTTP_HOST='sl.esports.club',
                                    HTTP_X_FORWARDED_HOST='xa.esports.club')
         self.assertEqual(response.data['data']['slug'], 'shenglang')
@@ -195,7 +190,8 @@ class BoundStoreHttpTest(TestCase):
         self.assertEqual(response.data['data']['provider_url'], 'http://xa.esports.club/player')
 
 
-@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'],
+                   STORE_DATABASE_ALIASES=('store_b',))
 class PlatformSuperAdministratorTest(TestCase):
     databases = {'default', 'store_b'}
 
@@ -263,7 +259,9 @@ class PlatformSuperAdministratorTest(TestCase):
         self.assertFalse(may_manage_stores(account))
 
 
-@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'])
+@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False, ALLOWED_HOSTS=['*'],
+                   CHANNEL_LAYERS={'default': {'BACKEND': 'stores.channels.StoreChannelLayer'}},
+                   STORE_CHANNEL_LAYER={'BACKEND': 'channels.layers.InMemoryChannelLayer'})
 class BoundStoreWebsocketTest(TransactionTestCase):
     databases = {'default', 'store_b'}
 

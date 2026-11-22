@@ -65,6 +65,12 @@ PERIODIC_STORE_TASKS = frozenset({
 })
 
 
+def _validate_store_slug(slug):
+    from .hosts import STORE_SLUG
+    if not isinstance(slug, str) or not STORE_SLUG.fullmatch(slug):
+        raise ValueError('门店业务任务的门店标识无效')
+
+
 class StoreTask(Task):
     abstract = True
 
@@ -79,55 +85,58 @@ class StoreTask(Task):
         elif 'store_slug' not in headers and self.name not in PERIODIC_STORE_TASKS:
             raise ValueError('门店业务任务必须指定所属门店')
         if 'store_slug' in headers:
-            from .hosts import STORE_SLUG
-            if not isinstance(headers['store_slug'], str) or not STORE_SLUG.fullmatch(headers['store_slug']):
-                raise ValueError('门店业务任务的门店标识无效')
+            _validate_store_slug(headers['store_slug'])
         return super().apply_async(args=args, kwargs=kwargs, headers=headers, **options)
 
     def __call__(self, *args, **kwargs):
-        from django.conf import settings
-        from .context import active_stores, current_store, resolve_store, store_context
-        slug = (self.request.headers or {}).get('store_slug')
-        if slug:
+        from .context import current_store, resolve_store, store_context
+        headers = self.request.headers or {}
+        if 'store_slug' in headers:
+            slug = headers['store_slug']
+            _validate_store_slug(slug)
             store = resolve_store(slug, allow_cached=True)
             with store_context(store):
                 return self.run(*args, **kwargs)
-        if current_store() is not None:
-            return self.run(*args, **kwargs)
-        if self.name in PERIODIC_STORE_TASKS and not self.request.called_directly:
-            # Each store receives its own message and retry history. One store's
-            # failure cannot prevent the other stores' settlement or expiry scan.
-            queued = []
-            from django.db import DatabaseError, InterfaceError, transaction
-            directory_fallback = False
-            try:
-                with transaction.atomic(using='default'):
-                    stores = list(active_stores())
-            except (DatabaseError, InterfaceError):
-                if not getattr(settings, 'ISOLATED_CONTROL_PLANE', False):
-                    raise
-                from .routing_snapshot import cached_active_stores
-                stores = cached_active_stores()
-                if not stores:
-                    raise
-                directory_fallback = True
-            enqueue_unknown = []
-            for store in stores:
-                try:
-                    result = self.apply_async(args=args, kwargs=kwargs,
-                        headers={'store_slug': store.slug})
-                except Exception:
-                    # A broker error may occur after acceptance. Do not claim
-                    # failure or success, and keep routing the other stores.
-                    import logging
-                    logging.getLogger(__name__).warning(
-                        'Periodic store task enqueue unconfirmed: task=%s store=%s', self.name, store.slug)
-                    enqueue_unknown.append(store.slug)
-                    continue
-                queued.append({'store': store.slug, 'task_id': result.id})
-            return {'stores': queued, 'enqueue_unknown': enqueue_unknown,
-                    'directory_fallback': directory_fallback}
+        if self.request.called_directly:
+            if current_store() is not None:
+                return self.run(*args, **kwargs)
+        elif self.name in PERIODIC_STORE_TASKS:
+            with store_context(None):
+                return self._dispatch_periodic(args, kwargs)
         raise ValueError('门店业务任务必须指定所属门店')
+
+    def _dispatch_periodic(self, args, kwargs):
+        import logging
+        from django.conf import settings
+        from django.db import DatabaseError, InterfaceError, transaction
+        from .context import active_stores
+
+        # Each store receives its own message and retry history.
+        directory_fallback = False
+        try:
+            with transaction.atomic(using='default'):
+                stores = list(active_stores())
+        except (DatabaseError, InterfaceError):
+            if not getattr(settings, 'ISOLATED_CONTROL_PLANE', False):
+                raise
+            from .routing_snapshot import cached_active_stores
+            stores = cached_active_stores()
+            if not stores:
+                raise
+            directory_fallback = True
+        queued, enqueue_unknown = [], []
+        for store in stores:
+            try:
+                result = self.apply_async(args=args, kwargs=kwargs, headers={'store_slug': store.slug})
+            except Exception:
+                # A broker error may occur after acceptance. Keep routing the other stores.
+                logging.getLogger(__name__).warning(
+                    'Periodic store task enqueue unconfirmed: task=%s store=%s', self.name, store.slug)
+                enqueue_unknown.append(store.slug)
+                continue
+            queued.append({'store': store.slug, 'task_id': result.id})
+        return {'stores': queued, 'enqueue_unknown': enqueue_unknown,
+                'directory_fallback': directory_fallback}
 
 
 # Register the platform-wide task without StoreTask's default-store routing.

@@ -30,9 +30,6 @@ from stores.context import current_database, current_store, resolve_store, store
 from stores.media import decode_login_scene, encode_login_scene, media_root
 from stores.models import Store, StoreDomain
 from stores.tasks import StoreTask
-from users.models import WebLoginSession
-from users.login_sessions import session_for
-from users.views import WechatLoginError
 
 
 def picture(color):
@@ -63,9 +60,10 @@ class StoreNamespaceTest(SimpleTestCase):
             self.assertEqual(cache.get('same-key'), 12)
             self.assertEqual(cache.get('rate'), 1)
 
+    @override_settings(STORE_CHANNEL_LAYER={'BACKEND': 'channels.layers.InMemoryChannelLayer'})
     def test_identical_account_and_operator_groups_do_not_leak(self):
         async def check():
-            layer = StoreChannelLayer(backend='channels.layers.InMemoryChannelLayer')
+            layer = StoreChannelLayer()
             first, second = await layer.new_channel(), await layer.new_channel()
             with store_context(self.store('shenglang')):
                 await layer.group_add('account_7', first)
@@ -94,12 +92,16 @@ class StoreNamespaceTest(SimpleTestCase):
                 return current_store().slug
         async def check():
             return await asyncio.gather(task('branch-b'), task('shenglang'))
-        self.assertEqual(async_to_sync(check)(), ['branch-b', 'shenglang'])
-        self.assertIsNone(current_store())
-        with self.assertRaises(RuntimeError):
-            with store_context(self.store('branch-b')):
-                raise RuntimeError('rollback context')
-        self.assertEqual(current_database(), 'default')
+        original = current_store()
+        with store_context(None):
+            self.assertEqual(async_to_sync(check)(), ['branch-b', 'shenglang'])
+            self.assertIsNone(current_store())
+            with self.assertRaises(RuntimeError):
+                with store_context(self.store('branch-b')):
+                    raise RuntimeError('rollback context')
+            self.assertIsNone(current_store())
+            self.assertEqual(current_database(), 'default')
+        self.assertIs(current_store(), original)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
@@ -109,7 +111,12 @@ class StoreNamespaceTest(SimpleTestCase):
             scene = encode_login_scene(value)
         self.assertLessEqual(len(scene), 32)
         self.assertEqual(decode_login_scene(scene), (2, value))
-        self.assertEqual(decode_login_scene(value.hex), (None, value))
+        self.assertEqual(decode_login_scene(value), (None, value))
+        with store_context(None):
+            platform_scene = encode_login_scene(value, platform=True)
+        self.assertEqual(decode_login_scene(platform_scene), (None, value))
+        with self.assertRaises(ValueError):
+            decode_login_scene(value.hex)
         with self.assertRaises(ValueError):
             decode_login_scene('0_' + scene.split('_', 1)[1])
         with self.assertRaises(ValueError):
@@ -163,25 +170,28 @@ class StoreRuntimeDatabaseTest(TestCase):
         token, refresh = self.tokens(self.branch)
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
         self.assertEqual(self.client.get('/api/users/me/').status_code, 401)
-        response = self.client.get('/api/users/me/', HTTP_X_STORE_SLUG=self.branch.slug)
+        self.assertEqual(self.client.get('/api/users/me/', HTTP_X_STORE_SLUG=self.branch.slug).status_code, 400)
+        response = self.client.get('/api/users/me/', HTTP_HOST=self.branch_host)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['code'], 0)
+        self.assertEqual(response['X-Store-Slug'], self.branch.slug)
         self.client.credentials()
         self.assertEqual(self.client.post('/api/users/refresh/', {'refresh': refresh}, format='json').status_code, 401)
         self.assertEqual(self.client.post('/api/users/refresh/', {'refresh': refresh}, format='json',
-            HTTP_X_STORE_SLUG=self.branch.slug).status_code, 200)
+            HTTP_X_STORE_SLUG=self.branch.slug).status_code, 400)
+        refreshed = self.client.post('/api/users/refresh/', {'refresh': refresh}, format='json', HTTP_HOST=self.branch_host)
+        self.assertEqual(refreshed.status_code, 200)
+        self.assertEqual(refreshed['X-Store-Slug'], self.branch.slug)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
-    def test_legacy_tokens_only_work_in_the_original_store(self):
+    def test_unbound_claims_are_rejected_in_both_stores(self):
         _, raw = self.tokens(self.original)
-        refresh = RefreshToken(raw)
-        del refresh['store_slug']
-        with store_context(self.original):
-            self.assertEqual(account_for_claims(refresh).pk, 777000)
-        with store_context(self.branch):
-            with self.assertRaises(TokenError):
-                account_for_claims(refresh)
+        claims = RefreshToken(raw).payload.copy()
+        claims.pop('store_slug')
+        for store in (self.original, self.branch):
+            with self.subTest(store=store.slug), store_context(store), self.assertRaises(TokenError):
+                account_for_claims(claims)
 
     def test_issuing_token_for_foreign_database_object_fails(self):
         with store_context(self.original):
@@ -309,25 +319,23 @@ class StoreRuntimeDatabaseTest(TestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
-    def test_wechat_ticket_routes_to_its_store_without_bridge_header(self):
-        with store_context(self.branch):
-            row = WebLoginSession.objects.create(poll_token_hash='x' * 64,
-                expires_at=timezone.now() + timezone.timedelta(minutes=5))
-            scene = encode_login_scene(row.ticket)
-            self.assertEqual(session_for(scene).pk, row.pk)
-        with store_context(self.original):
-            with self.assertRaises(WechatLoginError):
-                session_for(scene)
-        # The bridge proof is deliberately invalid. Reaching the branch's own
-        # session gives 403 instead of falling back to the default DB's 400.
-        response = self.client.post('/api/users/web-login/sms/',
-            {'ticket': scene, 'bridge_token': 'not-authorized'}, format='json')
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response['X-Store-Slug'], self.branch.slug)
-        conflict = self.client.post('/api/users/web-login/sms/',
-            {'ticket': scene, 'bridge_token': 'not-authorized'}, format='json',
-            HTTP_X_STORE_SLUG=self.original.slug)
-        self.assertEqual(conflict.status_code, 400)
+    @override_settings(WECHAT_H5_APPID='isolated-h5', WECHAT_H5_SECRET='isolated-test-only',
+                       WECHAT_H5_ALLOWED_ORIGINS=['https://runtime-b.esports.club'])
+    def test_h5_poll_only_reads_the_registered_store(self):
+        started = self.client.post('/api/users/h5-login/start/',
+            {'return_origin': 'https://' + self.branch_host}, HTTP_HOST=self.branch_host, format='json')
+        self.assertEqual(started.status_code, 200, started.data)
+        flow = started.data['data']
+        self.assertEqual(flow['store']['slug'], self.branch.slug)
+        proof = {'ticket': flow['ticket'], 'poll_token': flow['poll_token']}
+        status_path = '/api/users/h5-login/status/'
+        local = self.client.get(status_path, proof, HTTP_HOST=self.branch_host)
+        self.assertEqual(local.data['data'], {'status': 'PENDING'})
+        self.assertEqual(local['X-Store-Slug'], self.branch.slug)
+        self.assertEqual(self.client.get(status_path, proof, HTTP_HOST='sl.esports.club').status_code, 400)
+        hinted = self.client.get(status_path, proof, HTTP_HOST='sl.esports.club', HTTP_X_STORE_SLUG=self.branch.slug)
+        self.assertEqual(hinted.status_code, 400)
+        self.assertNotIn('X-Store-Slug', hinted)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
@@ -339,12 +347,30 @@ class StoreRuntimeDatabaseTest(TestCase):
         task = ReadName()
         from config.celery import app
         task.bind(app)
-        task.push_request(headers={'store_slug': self.branch.slug}, called_directly=False)
-        try:
-            self.assertEqual(task(), self.branch.name)
-        finally:
-            task.pop_request()
-        self.assertIsNone(current_store())
+        with store_context(self.original):
+            task.push_request(headers={'store_slug': self.branch.slug}, called_directly=False)
+            try:
+                self.assertEqual(task(), self.branch.name)
+            finally:
+                task.pop_request()
+            self.assertIs(current_store(), self.original)
+
+    def test_unrouted_record_delivery_cannot_adopt_ambient_store(self):
+        task = StoreTask()
+        task.name = 'stores.tests_runtime.single_record'
+        task.run = Mock()
+        with store_context(self.original):
+            for headers in ({}, {'store_slug': None}, {'store_slug': ''}):
+                task.push_request(headers=headers, called_directly=False)
+                try:
+                    with self.subTest(headers=headers), self.assertRaises(ValueError):
+                        task()
+                finally:
+                    task.pop_request()
+            task.run.assert_not_called()
+            self.assertIs(current_store(), self.original)
+            task()
+            task.run.assert_called_once()
 
     def test_disabled_store_cannot_run_a_queued_task(self):
         Store.objects.filter(pk=self.branch.pk).update(status=Store.Status.DISABLED)
@@ -367,17 +393,22 @@ class StoreRuntimeDatabaseTest(TestCase):
         from config.celery import app
         task.bind(app)
         task.name = 'orders.tasks.expire_reservations'
-        task.apply_async = Mock(return_value=SimpleNamespace(id='isolated-test-job'))
         task.run = Mock()
-        task.push_request(headers={}, called_directly=False)
-        try:
-            result = task()
-            self.assertEqual({row['store'] for row in result['stores']}, {'shenglang', self.branch.slug})
-            task.run.assert_not_called()
-            self.assertEqual({call.kwargs['headers']['store_slug'] for call in task.apply_async.call_args_list},
-                {'shenglang', self.branch.slug})
-        finally:
-            task.pop_request()
+        with patch('celery.app.task.Task.apply_async', return_value=SimpleNamespace(id='isolated-test-job')) as send:
+            for ambient in (None, self.original):
+                with self.subTest(ambient=ambient), store_context(ambient):
+                    task.push_request(headers={}, called_directly=False)
+                    try:
+                        result = task()
+                        self.assertCountEqual([row['store'] for row in result['stores']], ['shenglang', self.branch.slug])
+                        self.assertEqual(result['enqueue_unknown'], [])
+                        self.assertIs(current_store(), ambient)
+                        task.run.assert_not_called()
+                        self.assertCountEqual([call.kwargs['headers']['store_slug'] for call in send.call_args_list],
+                                              ['shenglang', self.branch.slug])
+                        send.reset_mock()
+                    finally:
+                        task.pop_request()
 
     def test_async_transport_keeps_store_header_and_rejects_conflicting_store(self):
         task = StoreTask()
@@ -391,7 +422,9 @@ class StoreRuntimeDatabaseTest(TestCase):
                     task.apply_async(args=[777000], headers={'store_slug': 'shenglang'})
 
 
-@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False)
+@override_settings(LOGIN_OTP_REQUIRED=False, LEGACY_FORCE_AUTH_COMPAT=False,
+                   CHANNEL_LAYERS={'default': {'BACKEND': 'stores.channels.StoreChannelLayer'}},
+                   STORE_CHANNEL_LAYER={'BACKEND': 'channels.layers.InMemoryChannelLayer'})
 class StoreRuntimeSocketTest(TransactionTestCase):
     databases = {'default', 'store_b'}
 
@@ -405,6 +438,8 @@ class StoreRuntimeSocketTest(TransactionTestCase):
 
         branch = Store.objects.create(slug='socket-b', name='实时隔离测试B店',
             database_alias='store_b', status=Store.Status.ACTIVE, initialized_at=timezone.now())
+        host = 'socket-b.esports.club'
+        StoreDomain.objects.create(store=branch, hostname=host)
         original = resolve_store('shenglang')
         with store_context(branch):
             account = ClubAccount.objects.create_account(username='socket-boss',
@@ -413,7 +448,8 @@ class StoreRuntimeSocketTest(TransactionTestCase):
         application = ClubAccountTokenAuthMiddleware(OrderConsumer.as_asgi())
 
         async def check():
-            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token)
+            headers = [(b'host', host.encode('ascii'))]
+            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token, headers=headers)
             connected, _ = await socket.connect()
             self.assertTrue(connected)
             layer = get_channel_layer()
@@ -431,7 +467,7 @@ class StoreRuntimeSocketTest(TransactionTestCase):
             self.assertEqual(closed['code'], 4401)
             await socket.disconnect()
             conflicting = WebsocketCommunicator(application,
-                '/ws/orders/?token=' + token + '&store=shenglang')
+                '/ws/orders/?token=' + token + '&store=shenglang', headers=headers)
             connected, _ = await conflicting.connect()
             self.assertFalse(connected)
             await conflicting.disconnect()
