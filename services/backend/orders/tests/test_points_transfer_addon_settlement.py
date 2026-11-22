@@ -26,6 +26,60 @@ from wallet.models import Transaction
 
 
 class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
+    def test_full_refund_allows_empty_addon_earnings_in_verified_transfer_manifest(self):
+        from engagement.confirmation import _fully_refunded_points_transfer_addons
+
+        order = SimpleNamespace(refund_records=Mock())
+        order.refund_records.exists.return_value = False
+        totals = dict.fromkeys(('paid_units', 'principal_units', 'gift_units', 'compensation_units',
+                               'provider_units', 'inviter_units'), 0)
+        funding = {'addons': [], 'addon_refund_ids': [5], 'addon_totals': totals}
+        with patch('orders.points_transfer_refund_access.permits', return_value=True) as permits:
+            self.assertTrue(_fully_refunded_points_transfer_addons(order, funding))
+            permits.assert_called_once_with(order, phase='settlement')
+            self.assertFalse(_fully_refunded_points_transfer_addons(order, {**funding, 'addon_refund_ids': []}))
+            self.assertFalse(_fully_refunded_points_transfer_addons(order, {**funding, 'addons': None}))
+            for value in (None, False, 1):
+                with self.subTest(value=value):
+                    changed = {**totals, 'paid_units': value}
+                    self.assertFalse(_fully_refunded_points_transfer_addons(order, {**funding, 'addon_totals': changed}))
+            order.refund_records.exists.return_value = True
+            self.assertFalse(_fully_refunded_points_transfer_addons(order, funding))
+            order.refund_records.exists.return_value = False
+            permits.return_value = False
+            self.assertFalse(_fully_refunded_points_transfer_addons(order, funding))
+
+    def test_transfer_addon_refund_readback_uses_the_income_from_its_verified_snapshot(self):
+        from orders.addon_refund_execution import _replay_transfer_addon_refund
+
+        order = SimpleNamespace(pk=12, refund_records=Mock())
+        order.refund_records.exists.return_value = False
+        original = {'order_id': order.pk, 'payment_id': 7, 'proposal_id': 8, 'amount': 100}
+        run = SimpleNamespace(points_addon_hash='digest')
+        refund = SimpleNamespace(pk=5, operator_id=2, amount=100, funding_release_run=run)
+        audit = SimpleNamespace(operator_account_id=refund.operator_id, request_body=original)
+        operator = object()
+        with (patch('orders.addon_refund_execution._require_refund_operator') as require_operator,
+              patch('orders.points_transfer_refund_access.after_transfer', return_value=nullcontext(order)) as read,
+              patch('orders.addon_refund_execution.OrderAddonRefund.objects.select_related') as refunds,
+              patch('console.models.AdminAuditLog.objects.filter', return_value=[audit]),
+              patch('orders.addon_funding_release.verify_run') as verify_run,
+              patch('orders.points_voluntary_paid_evidence.verify_standard_refund_current_read') as verify_paid):
+            refunds.return_value.filter.return_value.first.return_value = refund
+            run.points_addon_snapshot = {'payment_id': 7, 'addon_income': 0}
+            self.assertEqual(_replay_transfer_addon_refund(12, 7, 8, operator), (refund, 0))
+            require_operator.assert_called_once_with(operator)
+            read.assert_called_once_with(12, phase='report', pending_payment_id=7, read_only=True)
+            verify_run.assert_called_once_with(run, _skip_usage=True)
+            verify_paid.assert_called_once_with(run)
+
+            run.points_addon_snapshot = {'payment_id': 7, 'funding': {'addon_history': [
+                {'payment_id': 7, 'provider_units': 18}]}}
+            self.assertEqual(_replay_transfer_addon_refund(12, 7, 8, operator), (refund, 18))
+            run.points_addon_snapshot = {'payment_id': 9, 'addon_income': 0}
+            with self.assertRaisesMessage(ValidationError, '原加购退款收益凭证待核对'):
+                _replay_transfer_addon_refund(12, 7, 8, operator)
+
     def test_standard_refund_evidence_preserves_the_original_paid_person(self):
         from orders.models import OrderAddonFundingReleaseRun
         from orders.points_voluntary_paid_evidence import recover_standard_refunds_locked

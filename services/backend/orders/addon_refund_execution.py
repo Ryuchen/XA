@@ -154,17 +154,23 @@ def _require_refund_operator(operator):
         raise ValidationError('仅有退款权限的有效后台账号可以执行退款')
 
 
-def _has_handover_refund_receipt(order, payment_id, proposal_id):
+def _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
     recorded = OrderAddonRefund.objects.filter(order=order, payment_id=payment_id, proposal_id=proposal_id)
-    if order.room_required_snapshot:
+    if order.room_required_snapshot or order.refund_records.exists() or order.prestart_handoffs.exists():
         return False
+    transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
     refund = recorded.filter(
             payment__handovers__status='ACCEPTED', payment__handovers__kind='STANDARD',
             payment__handovers__previous__isnull=True, payment__handovers__accepted_at__lt=F('created_at')).first()
-    if not refund or order.refund_records.exists() or order.prestart_handoffs.exists():
-        return False
+    if not refund:
+        if not order.settled_at or order.status != order.Status.COMPLETED:
+            return False
+        direct = recorded.filter(payment__handovers__isnull=True, funding_release_run__points_addon_snapshot__isnull=False,
+            payment__buyer_transaction__created_at__lt=F('created_at')).select_related(
+                'payment__intent', 'payment__buyer_transaction').first()
+        return bool(direct and transfers.filter(next_segment_id=direct.payment.intent.segment_id,
+            created_at__lt=direct.payment.buyer_transaction.created_at).exists())
     payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
-    transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
     if len(payments) > 1:
         from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
         original = transfers.select_related('previous_segment').order_by('created_at', 'pk').first()
@@ -182,7 +188,7 @@ def _has_handover_refund_receipt(order, payment_id, proposal_id):
                                payment__handovers__previous__isnull=False).exists())
 
 
-def _replay_handover_refund(order_id, payment_id, proposal_id, operator):
+def _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator):
     from console.models import AdminAuditLog
     from .addon_funding_release import verify_run
     from .points_transfer_refund_access import after_transfer
@@ -205,23 +211,28 @@ def _replay_handover_refund(order_id, payment_id, proposal_id, operator):
             raise ValidationError('原加购退款补资凭证待核对')
         verify_run(run, _skip_usage=True)
         verify_standard_refund_current_read(run)
-        history = run.points_addon_snapshot['funding']['addon_history']
-        income = [row['provider_units'] for row in history if row['payment_id'] == payment_id]
-        if len(income) != 1:
+        snapshot = run.points_addon_snapshot
+        funding = snapshot.get('funding')
+        if funding is None:
+            income = [snapshot.get('addon_income')] if snapshot.get('payment_id') == payment_id else []
+        else:
+            history = funding['addon_history']
+            income = [row['provider_units'] for row in history if row['payment_id'] == payment_id]
+        if len(income) != 1 or type(income[0]) is not int or income[0] < 0:
             raise ValidationError('原加购退款收益凭证待核对')
         return refund, income[0]
 
 
 @transaction.atomic
 def execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
-    """Return the refund and any frozen income for an original handover refund receipt."""
+    """Return the refund and any frozen income from an original transfer add-on refund."""
     from .points_service_payment import needs_integrated_processing
     order = Order.objects.filter(pk=order_id).first()
     if (order and getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
             and needs_integrated_processing(order)):
         from .points_business_access import service_order, transferred_refunded_addon
-        if _has_handover_refund_receipt(order, payment_id, proposal_id):
-            return _replay_handover_refund(order_id, payment_id, proposal_id, operator)
+        if _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
+            return _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator)
         if getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
             from console.payroll_event_barrier import lock_payment_refund_events
             lock_payment_refund_events()
@@ -229,8 +240,8 @@ def execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
         if not order:
             raise ValidationError('订单不存在')
         # A same-proposal request can commit while this request waits for the order.
-        if _has_handover_refund_receipt(order, payment_id, proposal_id):
-            return _replay_handover_refund(order_id, payment_id, proposal_id, operator)
+        if _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
+            return _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator)
         transferred = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
         scope = (transferred_refunded_addon(order_id, payment_id, replay_proposal_id=proposal_id)
                  if transferred and order.refund_records.exists()

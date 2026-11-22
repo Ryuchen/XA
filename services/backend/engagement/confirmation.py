@@ -138,6 +138,19 @@ def _confirm_refunded_addons(order, confirmed):
     return confirmed
 
 
+def _fully_refunded_points_transfer_addons(order, funding):
+    """Identify a zero-net add-on after the finalized manifest has been verified."""
+    from orders.points_transfer_refund_access import permits
+
+    refund_ids = funding.get('addon_refund_ids')
+    if (funding.get('addons') != [] or not isinstance(refund_ids, list) or not refund_ids
+            or not permits(order, phase='settlement') or order.refund_records.exists()):
+        return False
+    totals = funding.get('addon_totals')
+    return isinstance(totals, dict) and all(type(totals.get(key)) is int and totals[key] == 0 for key in (
+        'paid_units', 'principal_units', 'gift_units', 'compensation_units', 'provider_units', 'inviter_units'))
+
+
 @transaction.atomic
 def _process_order(order_id, *, lifecycle=None):
     from orders.services import required_report_providers, settle_order
@@ -337,7 +350,8 @@ def _process_order(order_id, *, lifecycle=None):
                 verify_finalized(order, manifest)
             terms = manifest.plan if isinstance(manifest.plan, dict) else {}
             funding = terms.get('ordinary_transfer_funding') or terms.get('points_funding') or {}
-            if not funding.get('addons') and not funding.get('addon_history'):
+            if (not funding.get('addons') and not funding.get('addon_history')
+                    and not _fully_refunded_points_transfer_addons(order, funding)):
                 return False
         else:
             if not addon_settlement_enabled(order):
