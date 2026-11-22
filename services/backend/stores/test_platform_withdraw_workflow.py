@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from django.db import DatabaseError, connections
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -210,6 +211,71 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         with store_context(self.second):
             wallet = get_wallet(account=self.account)
             self.assertEqual((wallet.balance, wallet.frozen_amount), (100000, 0))
+
+    def test_dashboard_keeps_unconfirmed_payouts_out_of_a_complete_total(self):
+        pk = self.apply()
+        self.initial(pk)
+        self.assertEqual(self.action(pk, 'approve', client_request_id='dashboard-approve').status_code, 200)
+
+        actor = PlatformAccount(username='qa-dashboard-admin', phone='13800003333')
+        actor.set_password('test-only-dashboard-password')
+        actor.save()
+        PlatformRoleGrant.objects.create(account=actor, role='SUPER_ADMIN', scope_slug='*')
+        dashboard = APIClient(HTTP_HOST='admin.esports.club')
+        credentials = {'username': actor.username, 'password': 'test-only-dashboard-password'}
+        delivered = []
+        login = '/api/admin/platform/auth/login'
+        with patch('stores.platform_auth.send_verification_code',
+                   side_effect=lambda phone, code: delivered.append(code)):
+            challenge = dashboard.post(login, credentials, format='json')
+            self.assertEqual(challenge.status_code, 200, challenge.data)
+            signed = dashboard.post(login, {**credentials, 'smsChallenge': challenge.data['data']['smsChallenge'],
+                                            'smsCode': delivered[0]}, format='json')
+            self.assertEqual(signed.status_code, 200, signed.data)
+        dashboard.credentials(HTTP_AUTHORIZATION='Bearer ' + signed.data['data']['token'])
+        path = '/api/admin/platform/dashboard'
+        zero = {'count': 0, 'actual_amount_fen': 0}
+        approved = dashboard.get(path).data['data']
+        self.assertTrue(approved['complete'])
+        self.assertEqual(approved['partial_paid_withdrawals'], zero)
+
+        unknown = self.action(pk, 'mark-unknown', client_request_id='dashboard-unknown', reason='等待核实')
+        self.assertEqual(unknown.status_code, 200, unknown.data)
+        with CaptureQueriesContext(connections[self.second.database_alias]) as queries:
+            pending = dashboard.get(path)
+        self.assertEqual(pending.status_code, 200, pending.data)
+        data = pending.data['data']
+        rows = {row['slug']: row for row in data['stores']}
+        self.assertFalse(data['complete'])
+        self.assertEqual(data['partial_paid_withdrawals'], zero)
+        self.assertEqual(rows[self.first.slug]['counts']['paid_withdrawals'],
+                         {**zero, 'status': 'OK', 'actual_amount': 0})
+        self.assertEqual(rows[self.second.slug]['status'], 'OK')
+        self.assertIsNotNone(rows[self.second.slug]['read_at'])
+        self.assertEqual(rows[self.second.slug]['counts']['paid_withdrawals'],
+                         {'status': 'REVIEW', 'count': None, 'actual_amount': None, 'actual_amount_fen': None})
+        payout_queries = [query for query in queries if query['sql'].lstrip().upper().startswith('SELECT')
+                          and 'wallet_withdrawrequest' in query['sql'].lower()]
+        self.assertEqual(len(payout_queries), 1)
+
+        with store_context(self.second):
+            row = WithdrawRequest.objects.select_related('transaction').get(pk=pk)
+            wallet = get_wallet(account=self.account)
+            self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
+                             ('PAYMENT_UNKNOWN', 'PENDING', 80000, 20000))
+            self.assertEqual((row.actual_amount, row.tax_amount), (19000, 1000))
+            self.assertFalse(WithdrawalPlatformEvent.objects.filter(withdrawal=row, action='paid').exists())
+        rejected = self.action(pk, 'reject', client_request_id='dashboard-rejected',
+                               reason='确认未付', confirmed_unpaid=True)
+        self.assertEqual(rejected.status_code, 200, rejected.data)
+        resolved = dashboard.get(path).data['data']
+        self.assertTrue(resolved['complete'])
+        self.assertEqual(resolved['partial_paid_withdrawals'], zero)
+        with store_context(self.second):
+            row.refresh_from_db()
+            wallet.refresh_from_db()
+            self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
+                             ('REJECTED', 'FAILED', 100000, 0))
 
     def test_old_pending_record_cannot_be_mistaken_for_unpaid(self):
         pk = self.apply()

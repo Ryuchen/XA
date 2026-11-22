@@ -1,6 +1,6 @@
 """Read each authorized business database separately; failures stay visible."""
 from django.db import DatabaseError, InterfaceError
-from django.db.models import F, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 
 from club_accounts.models import ClubAccount
@@ -13,21 +13,28 @@ from .platform_permissions import platform_may, platform_stores_for
 
 def _read_store(store):
     with store_context(store), transaction.atomic():
-        paid = WithdrawRequest.objects.filter(workflow_version=2, status=WithdrawRequest.Status.PAID)
-        verified = (Q(paid_at__isnull=False, payout_recorded_at__isnull=False,
+        paid = WithdrawRequest.Status.PAID
+        candidates = WithdrawRequest.objects.filter(
+            workflow_version=2, status__in=(paid, WithdrawRequest.Status.PAYMENT_UNKNOWN))
+        verified = (Q(status=paid, actual_amount__gt=0, paid_at__isnull=False, payout_recorded_at__isnull=False,
                       platform_payer_id__isnull=False, transaction__isnull=False)
                     & ~Q(payout_reference='')
-                    & Q(actual_amount=F('amount') - F('tax_amount'),
+                    & Q(amount=F('actual_amount') + F('tax_amount'),
                         transaction__tx_type=Transaction.TxType.WITHDRAW,
                         transaction__status=Transaction.Status.SUCCESS,
-                        transaction__amount=-F('amount'), transaction__wallet__account_id=F('account_id')))
-        needs_review = paid.exclude(verified).exists()
-        if needs_review:
+                        transaction__wallet__account_id=F('account_id'))
+                    & Q(amount=-F('transaction__amount')))
+        # Keep the count, evidence check and sum on the same database snapshot.
+        payout = candidates.aggregate(
+            count=Count('pk'), verified_count=Count('pk', filter=verified),
+            actual_amount=Sum('actual_amount', filter=verified, default=0),
+        )
+        if payout['count'] != payout['verified_count']:
             paid_summary = {'status': 'REVIEW', 'count': None, 'actual_amount': None, 'actual_amount_fen': None}
         else:
             from console.payroll_calculation import raw_to_fen
-            amount = paid.aggregate(value=Sum('actual_amount'))['value'] or 0
-            paid_summary = {'status': 'OK', 'count': paid.count(), 'actual_amount': amount,
+            amount = payout['actual_amount']
+            paid_summary = {'status': 'OK', 'count': payout['count'], 'actual_amount': amount,
                             'actual_amount_fen': raw_to_fen(amount)}
         return {
             'orders': Order.objects.count(),
