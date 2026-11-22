@@ -26,6 +26,57 @@ from wallet.models import Transaction
 
 
 class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
+    def test_segment_addon_terms_use_verified_net_allocations(self):
+        from orders.addon_funding import AddonFundingPart, CombinedAddonFunding
+        from orders.points_funding_evidence import VerifiedOrderFundingWithAllocations
+        from orders.points_funding_plan import plan_service_funding
+        from orders.points_transfer_funding import PointsTransferFunding
+        from orders.segment_settlement import _points_transfer_terms_verified
+        from orders.segment_settlement_plan import PersonAmount, SegmentSettlementPlan
+        from orders.settlement import ProviderShare, SettlementError
+
+        order = SimpleNamespace(pk=12, refund_records=SimpleNamespace(exists=lambda: False))
+        funding = plan_service_funding(deal_units=100, point_discount_units=10, inviter_rate=0,
+            shares=[ProviderShare(100, 'PERCENT', 20, 0, 80)])
+        segments = SegmentSettlementPlan(100, (), (PersonAmount(7, (8,), 80, None, ()),), 0, 10, 0)
+        combined = CombinedAddonFunding(main=funding, addon_payment_ids=(9,),
+            addon_parts=(AddonFundingPart(9, 7, 8, 40),), addon_paid_units=50, addon_principal_units=30,
+            addon_gift_units=20, addon_compensation_units=0, addon_provider_income_units=40,
+            addon_inviter_income_units=0, addon_provider_recovery_units=5,
+            main_deductions=(), store_income_units=20, additional_store_funding_units=15)
+        with (patch('orders.points_transfer_funding.plan_points_transfer',
+                    return_value=PointsTransferFunding(segments, funding)),
+              patch('orders.addon_settlement.combined_terms', return_value=combined),
+              patch('orders.points_transfer_refund_access.permits', return_value=True),
+              patch('orders.models.OrderAddonSettlement.objects.filter') as existing_settlements,
+              patch('orders.models.OrderAddonRefund.objects.filter') as refunds,
+              patch('orders.models.OrderAddonRefundEarningDeduction.objects.filter') as deductions,
+              patch('orders.points_funding_evidence.verify_order_funding') as verify_funding,
+              patch('orders.points_funding_evidence.verified_order_allocations_locked') as reload_allocations,
+              patch('orders.points_transfer_revision.verify_revisions_locked') as reload_transfers,
+              patch('orders.addon_funding_release.addon_release_totals') as reload_addons):
+            existing_settlements.return_value.exists.return_value = False
+            refunds.return_value.distinct.return_value.select_related.return_value = []
+            refunds.return_value.order_by.return_value.values_list.return_value = []
+            deductions.return_value.exclude.return_value.select_related.return_value.order_by.return_value.distinct.return_value = []
+
+            verify_funding.return_value = VerifiedOrderFundingWithAllocations(15, 15, 0, True,
+                ((11, 2, 0), (13, 4, 15)))
+            plan, terms = _points_transfer_terms_verified(order)
+            self.assertEqual(plan.store_income, 20)
+            self.assertEqual(terms['allocations'], [{'id': 11, 'receipt_id': 2, 'amount': 0},
+                                                    {'id': 13, 'receipt_id': 4, 'amount': 15}])
+            verify_funding.assert_called_once_with(12, allow_finalized=True, include_net_allocations=True)
+
+            verify_funding.return_value = VerifiedOrderFundingWithAllocations(15, 14, 1, False, ((13, 4, 14),))
+            self.assertEqual(_points_transfer_terms_verified(order), (segments, None))
+            verify_funding.return_value = VerifiedOrderFundingWithAllocations(15, 15, 0, True, ((13, 4, 14),))
+            with self.assertRaisesMessage(SettlementError, '积分转单及加购补资与收益不守恒'):
+                _points_transfer_terms_verified(order)
+            reload_allocations.assert_not_called()
+            reload_transfers.assert_not_called()
+            reload_addons.assert_not_called()
+
     def test_history_reuse_is_limited_to_locked_order_receipt_and_access_scope(self):
         from orders import points_addon_receipt_usage as usage
         from orders.points_business_access import _scope

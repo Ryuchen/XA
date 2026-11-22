@@ -182,7 +182,8 @@ def _points_transfer_terms(order):
 
 def _points_transfer_terms_verified(order):
     from .points_funding_plan import PointsFundingPlanError
-    from .points_funding_evidence import verify_order_funding, verified_order_allocations_locked
+    from .points_funding_evidence import (VerifiedOrderFundingWithAllocations, verify_order_funding,
+                                          verified_order_allocations_locked)
     if order.refund_records.exists():
         if order.refund_records.count() > 3:
             from .points_transfer_refund_access import permits as transfer_permits
@@ -368,23 +369,32 @@ def _points_transfer_terms_verified(order):
             from .models import OrderAddonSettlement
             if OrderAddonSettlement.objects.filter(payment_id__in=combined.addon_payment_ids).exists():
                 raise SettlementError('加购已有其他结算记录，请核对')
-        verified = verify_order_funding(order.pk, allow_finalized=True)
-        allocations = verified_order_allocations_locked(order)
-        from .points_transfer_revision import revision_tables_exist, verify_revisions_locked
-        from .models import OrderPointsTransferFundingRevision
-        released = (verify_revisions_locked(order)[0] if revision_tables_exist()
-                    and OrderPointsTransferFundingRevision.objects.filter(order=order).exists() else {})
-        from .addon_funding_release import addon_release_totals
-        addon_released = {}
-        if combined:
-            from .points_addon_receipt_usage import reuse_history_locked
-            with reuse_history_locked(order, {row.receipt_id for row in allocations}):
-                addon_released = addon_release_totals(allocations)
+        verified = verify_order_funding(order.pk, allow_finalized=True, include_net_allocations=bool(combined))
+        if isinstance(verified, VerifiedOrderFundingWithAllocations):
+            net_allocations = verified.net_allocations
+        else:
+            # Keep the independent release calculation for legacy funding
+            # branches without itemized proof, including orders without add-ons.
+            allocations = verified_order_allocations_locked(order)
+            from .points_transfer_revision import revision_tables_exist, verify_revisions_locked
+            from .models import OrderPointsTransferFundingRevision
+            released = (verify_revisions_locked(order)[0] if revision_tables_exist()
+                        and OrderPointsTransferFundingRevision.objects.filter(order=order).exists() else {})
+            addon_released = {}
+            if combined:
+                from .addon_funding_release import addon_release_totals
+                from .points_addon_receipt_usage import reuse_history_locked
+                with reuse_history_locked(order, {row.receipt_id for row in allocations}):
+                    addon_released = addon_release_totals(allocations)
+            net_allocations = tuple((row.pk, row.receipt_id,
+                row.amount - released.get(row.pk, 0) - addon_released.get(row.pk, 0)) for row in allocations)
     except (PointsFundingPlanError, ValidationError) as exc:
         raise SettlementError(str(exc)) from exc
     if not verified.fully_funded:
         return calculated.segments, None
     funding = calculated.funding
+    uses = [{'id': allocation_id, 'receipt_id': receipt_id, 'amount': amount}
+            for allocation_id, receipt_id, amount in net_allocations]
     if combined:
         from dataclasses import replace
         parts = [asdict(part) for part in combined.addon_parts]
@@ -417,9 +427,6 @@ def _points_transfer_terms_verified(order):
         plan = replace(_deduct_addon_refunds(calculated.segments, combined),
             inviter_income=funding.inviter_income_units + combined.addon_inviter_income_units,
             store_income=combined.store_income_units)
-        uses = [{'id': row.pk, 'receipt_id': row.receipt_id,
-                 'amount': row.amount - released.get(row.pk, 0) - addon_released.get(row.pk, 0)}
-                for row in allocations]
         if (any(item['amount'] < 0 for item in uses) or verified.required != combined.additional_store_funding_units
                 or verified.allocated != sum(item['amount'] for item in uses)
                 or funding.principal_units + combined.addon_principal_units
@@ -441,11 +448,9 @@ def _points_transfer_terms_verified(order):
                 'recovery_units': combined.addon_provider_recovery_units},
             'addon_refund_ids': refund_ids,
             'main_deductions': [list(item) for item in combined.main_deductions]}
-    terms = {'calculation': asdict(funding), 'allocations': [
-        {'id': row.pk, 'receipt_id': row.receipt_id, 'amount': row.amount - released.get(row.pk, 0)}
-        for row in allocations]}
+    terms = {'calculation': asdict(funding), 'allocations': uses}
     if (verified.required != funding.additional_store_funding_units
-            or verified.allocated != sum(row.amount - released.get(row.pk, 0) for row in allocations)
+            or verified.allocated != sum(item['amount'] for item in uses)
             or funding.principal_units + verified.allocated != funding.provider_income_units
                 + funding.inviter_income_units + funding.store_income_units):
         raise SettlementError('积分订单补资与收益不守恒')

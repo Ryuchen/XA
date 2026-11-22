@@ -1,6 +1,6 @@
 """Verification of whole-order funding and its underlying evidence."""
 import json
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass
 from uuid import UUID
@@ -45,6 +45,12 @@ class VerifiedOrderFunding:
     allocated: int
     remaining: int
     fully_funded: bool
+
+
+@dataclass(frozen=True)
+class VerifiedOrderFundingWithAllocations(VerifiedOrderFunding):
+    # (allocation ID, receipt ID, net amount), in original allocation order.
+    net_allocations: tuple[tuple[int, int, int], ...]
 
 
 def verified_order_allocations_locked(order, *, pending_followup_posting_id=None, allocation_ids=None,
@@ -299,16 +305,20 @@ def _verified_prestart_cancel_funding(order):
 
 
 def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=False, allow_followup_recorded=False,
-                         include_prestart_cancelled=False,
+                         include_prestart_cancelled=False, include_net_allocations=False,
                          _reservation_usage=False, _main_refund_usage=False, _transfer_refund_usage=False):
     """Check durable tenant and platform evidence under receipt/order locks.
 
     Locks follow allocation's order-then-receipt order. A changed set of
     receipts is rejected, not silently counted as available. This function
     neither releases earnings nor makes a reservation across transactions.
+    The optional net rows are for consumption under the caller's existing
+    order transaction, where all source locks survive this savepoint.
     """
     if type(order_id) is not int or order_id <= 0 or current_store() is None:
         raise PointsFundingPlanError('订单或门店无效')
+    if include_net_allocations and not transaction.get_connection().in_atomic_block:
+        raise PointsFundingPlanError('逐笔净补资须在原订单事务内核对')
     with transaction.atomic():
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order:
@@ -572,11 +582,15 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
             elif OrderPointsTransferFundingRelease.objects.filter(allocation__in=allocations).exists():
                 raise PointsFundingPlanError('转单补资释放凭证缺失')
         from .addon_funding_release import addon_release_totals
+        from .points_addon_receipt_usage import reuse_history_locked
         try:
-            addon_releases = addon_release_totals(allocations)
+            with (reuse_history_locked(order, {row.receipt_id for row in allocations})
+                  if include_net_allocations else nullcontext()):
+                addon_releases = addon_release_totals(allocations)
         except ValidationError as exc:
             raise PointsFundingPlanError('加购补资释放凭证待核对') from exc
         total = 0
+        net_allocations = []
         for allocation in allocations:
             released = 0
             if refunded_points:
@@ -594,8 +608,14 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                     allocation=allocation).values_list('amount', flat=True))
             if released > allocation.amount:
                 raise PointsFundingPlanError('补资释放金额超过原分配')
-            total += allocation.amount - released
+            net_amount = allocation.amount - released
+            total += net_amount
+            if include_net_allocations:
+                net_allocations.append((allocation.pk, allocation.receipt_id, net_amount))
         if total > plan.additional_store_funding_units:
             raise PointsFundingPlanError('补资超出订单实际缺口，请先核对')
         remaining = plan.additional_store_funding_units - total
+        if include_net_allocations:
+            return VerifiedOrderFundingWithAllocations(plan.additional_store_funding_units, total, remaining,
+                                                       remaining == 0, tuple(net_allocations))
         return VerifiedOrderFunding(plan.additional_store_funding_units, total, remaining, remaining == 0)
