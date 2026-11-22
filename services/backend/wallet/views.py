@@ -33,7 +33,7 @@ from .models import (
 )
 from .serializers import ReportSerializer, WithdrawRequestSerializer
 from .services import claim_fund_write, get_wallet, peek_fund_write
-from .receipts import fund_success, recover_fund_result
+from .receipts import fund_success, recover_fund_result, recover_withdrawal_result
 from .payees import validate_payee
 from .report_lifecycle import provider_report_operation
 from common.logging_utils import log_money_event, new_trace_id
@@ -345,7 +345,7 @@ class WithdrawView(APIView):
 
         return Response({'code': 0, 'data': data})
 
-    @recover_fund_result('withdraw')
+    @recover_withdrawal_result('withdraw')
     def post(self, request):
         if request.account.account_type != ClubAccount.AccountType.PROVIDER:
             return Response({'code': 403, 'msg': '仅陪玩可申请提现'})

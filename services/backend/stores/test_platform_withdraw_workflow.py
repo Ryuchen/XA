@@ -17,7 +17,7 @@ from stores.db import transaction
 from stores.models import PlatformAccount, PlatformRoleGrant
 from stores.platform_auth import issue_tokens
 from stores.tests_hosts import xinan_store
-from wallet.models import (SystemConfig, Transaction, WithdrawalPlatformEvent, WithdrawalRelease,
+from wallet.models import (IdempotencyKey, SystemConfig, Transaction, WithdrawalPlatformEvent, WithdrawalRelease,
                            WithdrawRequest, get_platform_wallet)
 from wallet.services import get_wallet
 from site_messages.models import Message
@@ -611,13 +611,7 @@ class PlatformWithdrawalCommitRecoveryTest(TransactionTestCase):
     def setUp(self):
         PlatformWithdrawalWorkflowTest.setUp(self)
 
-    def test_unpaid_rejection_replays_after_commit_confirmation_is_lost(self):
-        from stores.models import PlatformWithdrawalAuditReceipt
-
-        pk = self.apply()
-        self.initial(pk)
-        key = 'reject-commit-retry'
-        payload = {'client_request_id': key, 'reason': '已核实未打款', 'confirmed_unpaid': True}
+    def lose_commit_confirmation(self, operation):
         store_db = connections[self.second.database_alias]
         commit = store_db._commit
 
@@ -626,7 +620,85 @@ class PlatformWithdrawalCommitRecoveryTest(TransactionTestCase):
             raise OperationalError('isolated confirmation loss after commit')
 
         with patch.object(store_db, '_commit', side_effect=lose_confirmation):
-            unavailable = self.action(pk, 'reject', **payload)
+            return operation()
+
+    def test_owner_submit_and_cancel_replay_after_commit_confirmation_is_lost(self):
+        apply_path = '/api/wallet/withdraw/'
+        apply_payload = {'client_request_id': 'owner-apply-commit-retry', 'amount': 20000,
+                         'payee_method': 'WECHAT', 'payee_account': 'qa-only', 'payee_name': '隔离测试'}
+
+        def submit(payload):
+            return self.p.post(apply_path, payload, format='json')
+
+        unavailable = self.lose_commit_confirmation(lambda: submit(apply_payload))
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertEqual(unavailable.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
+        self.assertNotIn('fundResult', unavailable.data)
+        with store_context(self.second):
+            row = WithdrawRequest.objects.select_related('transaction').get(account=self.account)
+            wallet = get_wallet(account=self.account)
+            self.assertEqual((wallet.balance, wallet.frozen_amount, row.status, row.transaction.status),
+                             (80000, 20000, 'PENDING', 'PENDING'))
+        applied = submit(apply_payload).data
+        self.assertEqual(applied['errorCode'], 'FUND_ALREADY_PROCESSED')
+        self.assertEqual(applied['fundResult']['data']['request']['id'], row.pk)
+        self.assertEqual(submit({**apply_payload, 'amount': 19000}).data['errorCode'], 'REQUEST_ID_CONFLICT')
+
+        cancel_path = f'{apply_path}{row.pk}/cancel/'
+        cancel_payload = {'client_request_id': 'owner-cancel-commit-retry'}
+
+        def cancel():
+            return self.p.post(cancel_path, cancel_payload, format='json')
+
+        unavailable = self.lose_commit_confirmation(cancel)
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertEqual(unavailable.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
+        cancelled = cancel().data
+        self.assertEqual(cancelled['errorCode'], 'FUND_ALREADY_PROCESSED')
+        self.assertEqual(cancelled['fundResult']['data'], {'id': row.pk, 'status': 'CANCELLED', 'balance': 100000})
+        with store_context(self.second):
+            row.refresh_from_db()
+            wallet.refresh_from_db()
+            release = WithdrawalRelease.objects.get(withdrawal=row)
+            self.assertEqual((wallet.balance, wallet.frozen_amount, row.status, row.transaction.status),
+                             (100000, 0, 'CANCELLED', 'FAILED'))
+            self.assertEqual((release.amount, release.original_transaction_id), (20000, row.transaction_id))
+            self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type=Transaction.TxType.WITHDRAW).count(), 1)
+            self.assertEqual(IdempotencyKey.objects.filter(account=self.account, scope__in=('withdraw', 'withdraw.cancel')).count(), 2)
+            titles = Message.objects.filter(recipient_account=self.account,
+                action_url=f'/pages/wallet/index?withdraw_id={row.pk}').values_list('title', flat=True)
+            self.assertCountEqual(titles, ('提现申请已提交', '提现申请已取消'))
+
+    def test_owner_withdrawal_retries_only_with_an_original_receipt_key(self):
+        def disconnect_on_read(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('SELECT') and 'wallet_idempotencykey' in sql.lower():
+                raise InterfaceError('isolated withdrawal receipt lookup interrupted')
+            return execute(sql, params, many, context)
+
+        payload = {'amount': 20000, 'payee_method': 'WECHAT', 'payee_account': 'qa-only', 'payee_name': '隔离测试'}
+        with connections[self.second.database_alias].execute_wrapper(disconnect_on_read):
+            unavailable = self.p.post('/api/wallet/withdraw/', {**payload, 'client_request_id': 'owner-original-key'},
+                                      format='json')
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertIn('原操作编号', unavailable.data['msg'])
+        with patch('wallet.withdraw_rules.lock_withdraw_rules', side_effect=InterfaceError('isolated disconnect')):
+            unavailable = self.p.post('/api/wallet/withdraw/', payload, format='json')
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertIn('请先核对提现记录', unavailable.data['msg'])
+        self.assertNotIn('原操作编号', unavailable.data['msg'])
+        with store_context(self.second):
+            self.assertFalse(WithdrawRequest.objects.filter(account=self.account).exists())
+            wallet = get_wallet(account=self.account)
+            self.assertEqual((wallet.balance, wallet.frozen_amount), (100000, 0))
+
+    def test_unpaid_rejection_replays_after_commit_confirmation_is_lost(self):
+        from stores.models import PlatformWithdrawalAuditReceipt
+
+        pk = self.apply()
+        self.initial(pk)
+        key = 'reject-commit-retry'
+        payload = {'client_request_id': key, 'reason': '已核实未打款', 'confirmed_unpaid': True}
+        unavailable = self.lose_commit_confirmation(lambda: self.action(pk, 'reject', **payload))
         self.assertEqual(unavailable.status_code, 503, unavailable.data)
         self.assertEqual(unavailable.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
         self.assertFalse(PlatformWithdrawalAuditReceipt.objects.filter(store=self.second).exists())
