@@ -191,6 +191,10 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             refund.zero_wallet_evidence.created_at = deficit.created_at
             with self.assertRaisesMessage(DjangoValidationError, '缺少原退款零余额钱包凭证'):
                 _verify_prior_handover_refund_recovery(refund, first, run)
+            refund.wallet_deduction, refund.deposit_deduction, refund.provider_transaction = 2, 0, debit
+            debit.balance_after = -1
+            with self.assertRaisesMessage(DjangoValidationError, '原退款钱包流水异常'):
+                _verify_prior_handover_refund_recovery(refund, first, run)
 
     def test_cross_payment_debit_must_follow_the_same_first_service_transfer(self):
         from orders.models import OrderAddonHandover, OrderAddonPayment, OrderOriginalShareTransfer
@@ -235,7 +239,7 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             self.assertFalse(_same_seat_cross_handovers(refund, first, donor))
             third.accepted_at = first.accepted_at
             refund.wallet_deduction = 1
-            self.assertFalse(_same_seat_cross_handovers(refund, first, donor))
+            self.assertEqual(_same_seat_cross_handovers(refund, first, donor), (first, donor, third))
             refund.wallet_deduction = 0
             payments.return_value.select_related.return_value.append(SimpleNamespace(pk=6))
             fourth = SimpleNamespace(**{**vars(first), 'pk': 13, 'payment_id': 6})
@@ -278,6 +282,27 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             income.side_effect = [1, 1, 48]
             with self.assertRaisesMessage(DjangoValidationError, '未按原付款顺序扣减'):
                 _verify_same_seat_debits(refund, handovers, person, state, skipped, receipt_id=7)
+
+    def test_same_seat_cross_refund_exhausts_addon_and_main_earnings_before_cash(self):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from orders.points_addon_handover_refund_facts import _verify_same_seat_debits, _verify_same_seat_main_debit
+
+        refund = SimpleNamespace(payment_id=3)
+        person = SimpleNamespace(account_id=11, burden=50, addon_pending_deduction=9, main_pending_deduction=1)
+        handovers = [SimpleNamespace(payment_id=pk, target_segment_id=9) for pk in (3, 4, 5)]
+        state = {(9, 11): {'income': 3}}
+        deductions = [SimpleNamespace(payment_id=pk, segment_id=9, amount=3) for pk in (3, 4, 5)]
+        with patch('orders.points_addon_handover_refund_facts._same_seat_cross_income', return_value=3):
+            _verify_same_seat_debits(refund, handovers, person, state, deductions,
+                                     receipt_id=7, following_deductions=41)
+            with self.assertRaisesMessage(DjangoValidationError, '未按原付款顺序扣减'):
+                _verify_same_seat_debits(refund, handovers, person, state, deductions[:-1],
+                                         receipt_id=7, following_deductions=44)
+        _verify_same_seat_main_debit(person, 1, 0)
+        person.main_pending_deduction = 0
+        with self.assertRaisesMessage(DjangoValidationError, '未按顺序使用原履约段主单待结收益'):
+            _verify_same_seat_main_debit(person, 1, 0)
+        _verify_same_seat_main_debit(person, 1, 1)
 
     def test_second_handover_checks_each_refund_before_the_next_event(self):
         from django.core.exceptions import ValidationError as DjangoValidationError

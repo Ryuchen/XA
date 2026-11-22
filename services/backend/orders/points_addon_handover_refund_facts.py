@@ -45,8 +45,6 @@ def _same_seat_cross_handovers(refund, first, other_handover):
         return ()
     if paid_ids == debit_ids:
         return first, other_handover
-    if refund.main_pending_deduction or refund.wallet_deduction or refund.deposit_deduction:
-        return ()
     handovers = list(OrderAddonHandover.objects.filter(payment_id__in=paid_ids,
         status='ACCEPTED', accepted_at__lte=refund.created_at).select_related('payment__intent'))
     by_payment = {row.payment_id: row for row in handovers}
@@ -96,7 +94,7 @@ def _same_seat_cross_income(refund, handover, segment_id, account_id, *, receipt
     return matching[0].income - used
 
 
-def _verify_same_seat_debits(refund, handovers, person, state, deductions, *, receipt_id):
+def _verify_same_seat_debits(refund, handovers, person, state, deductions, *, receipt_id, following_deductions=0):
     """Replay the posting order, including an earlier payment with no debit row."""
     segment_id = handovers[0].target_segment_id
     message = '跨加购待结收益未按原付款顺序扣减'
@@ -116,8 +114,15 @@ def _verify_same_seat_debits(refund, handovers, person, state, deductions, *, re
             remaining -= amount
         if not remaining:
             break
-    if remaining or expected != {row.payment_id: row.amount for row in deductions}:
+    if remaining != following_deductions or expected != {row.payment_id: row.amount for row in deductions}:
         raise ValidationError(message)
+
+
+def _verify_same_seat_main_debit(person, income, prior_deductions):
+    """Main earnings must be applied before charging the wallet or deposit."""
+    if income is None or income < prior_deductions or person.main_pending_deduction != min(
+            person.burden - person.addon_pending_deduction, income - prior_deductions):
+        raise ValidationError('跨加购退款未按顺序使用原履约段主单待结收益')
 
 
 def followup_cross_income(refund, deduction, *, receipt_id=None):
@@ -324,6 +329,7 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
             raise ValidationError('接替后退款逐人分摊与确认方案不一致')
     totals = [0, 0, 0, 0]
     people = []
+    same_seat_main_segment_id = None
     for person in participants:
         entries = person.share_plan
         if not isinstance(entries, list) or not entries:
@@ -456,7 +462,18 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
                     available = sum(row.income for row in matching) - used
                 elif (chain := _same_seat_cross_handovers(refund, handovers[-1], latest)):
                     if len(chain) > 2:
-                        _verify_same_seat_debits(refund, chain, person, state, addon_deductions, receipt_id=receipt_id)
+                        following = sum(amounts[1:])
+                        _verify_same_seat_debits(refund, chain, person, state, addon_deductions,
+                                                 receipt_id=receipt_id, following_deductions=following)
+                        if following:
+                            first = chain[0]
+                            if (len(participants) != 1 or person.account_id != first.target_segment.provider_account_id
+                                    or any(row.segment_id != first.target_segment_id for row in main_deductions)):
+                                raise ValidationError('跨加购退款的后续扣款须归属原接替段陪玩')
+                            if person.wallet_deduction or person.deposit_deduction:
+                                run = OrderAddonFundingReleaseRun.objects.filter(refund=refund).first()
+                                _verify_prior_handover_refund_recovery(refund, first, run)
+                            same_seat_main_segment_id = first.target_segment_id
                         break
                     available = _same_seat_cross_income(refund, latest, deduction.segment_id,
                                                         person.account_id, receipt_id=receipt_id)
@@ -514,6 +531,8 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
                                  row.income, row.commission_snapshot] for row in shares],
             'decisions': [[account, role, accepted, at.isoformat()] for account, role, accepted, at in decisions],
             'participants': people}
+    if same_seat_main_segment_id is not None:
+        result['same_seat_main_segment_id'] = same_seat_main_segment_id
     if proposal.cross_pending_plan is not None:
         result['cross_pending_plan'] = proposal.cross_pending_plan
     if prior_facts:
@@ -715,6 +734,11 @@ def funding_facts(refund, *, receipt_id):
     except DRFValidationError as exc:
         raise ValidationError('此前主单段收益占用异常') from exc
     for person in proposal.participants.all():
+        segment_id = people.get('same_seat_main_segment_id')
+        if segment_id is not None:
+            if {line[0] for line in lines if line[1] == person.account_id} != {segment_id}:
+                raise ValidationError('跨加购退款的主单原履约段异常')
+            _verify_same_seat_main_debit(person, available_main.get(segment_id), used_main.get(segment_id, 0))
         for row in person.main_segment_deductions.all():
             if row.amount + used_main.get(row.segment_id, 0) > available_main.get(row.segment_id, 0):
                 raise ValidationError('退款占用的主单段收益不足')
@@ -817,15 +841,16 @@ def _verify_prior_handover_refund_recovery(refund, first, run):
     user_id = refund.order.providers.filter(provider_account_id=account_id).values_list('provider_id', flat=True).first()
     debit = refund.provider_transaction
     if not user_id or (refund.wallet_deduction and (not debit or debit.wallet.user_id != user_id
-            or debit.order_id is not None or not first.accepted_at < debit.created_at <= refund.created_at)):
+            or debit.order_id is not None or debit.balance_after < 0
+            or not first.accepted_at < debit.created_at <= refund.created_at)):
         raise ValidationError('再次加购接替的原退款钱包流水异常')
     if not refund.deposit_deduction:
         return
     cycle = segment.provider_business_cycle
     deficits = list(refund.deposit_deficits.select_related('profile', 'source_store_transaction__wallet__user'))
     if (not cycle or len(deficits) != 1 or deficits[0].account_business_cycle != cycle
-            or not refund.created_at <= deficits[0].source_store_transaction.created_at
-                                    <= deficits[0].created_at <= run.created_at):
+            or not refund.created_at <= deficits[0].source_store_transaction.created_at <= deficits[0].created_at
+            or (run is not None and deficits[0].created_at > run.created_at)):
         raise ValidationError('再次加购接替的原退款押金周期或时序异常')
     try:
         _verify_direct_deposit(deficits[0], refund=refund, account_id=account_id, user_id=user_id,
