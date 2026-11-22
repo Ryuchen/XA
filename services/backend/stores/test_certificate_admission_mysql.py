@@ -207,6 +207,54 @@ def _celery_process(command, *, env, log):
                 process.wait(timeout=10)
 
 
+def _registered_redis_urls():
+    from urllib.parse import quote
+
+    import redis
+
+    broker = settings.SA14_TEST_REDIS
+    port = broker['port']
+    with redis.Redis(host='127.0.0.1', port=port, password=broker['password'],
+                     socket_connect_timeout=2, socket_timeout=2) as client:
+        server = client.info('server')
+    if (server['process_id'], server['tcp_port']) != (broker['pid'], port):
+        raise AssertionError('Redis 实例与本次登记不符')
+    base = f'redis://:{quote(broker["password"], safe="")}@127.0.0.1:{port}'
+    return f'{base}/0', f'{base}/1'
+
+
+@contextmanager
+def _store_task_app(*, registered_redis):
+    from celery import Celery, _state, current_app
+    from kombu import Exchange, Queue
+
+    if os.environ.get('TEST_BROKER'):
+        raise AssertionError('测试 worker 只允许使用本次隔离的 broker')
+    queue = f'xa_sa14_worker_{uuid4().hex}'
+    previous_app = current_app._get_current_object()
+    previous_default = _state.default_app
+    app = Celery(queue, task_cls='stores.tasks:StoreTask', set_as_current=False)
+    try:
+        broker_url, backend_url = (_registered_redis_urls() if registered_redis
+                                   else ('memory://', 'cache+memory://'))
+        app.conf.update(broker_url=broker_url, result_backend=backend_url, task_default_queue=queue,
+            task_default_exchange=queue, task_default_routing_key=queue,
+            task_queues=(Queue(queue, Exchange(queue), routing_key=queue),),
+            task_always_eager=False, task_ignore_result=False,
+            broker_transport_options={'global_keyprefix': queue + ':'},
+            result_backend_transport_options={'global_keyprefix': queue + ':'},
+            worker_enable_remote_control=False, worker_hijack_root_logger=False)
+        if not (app.conf.broker_url == app.conf.broker_read_url == app.conf.broker_write_url == broker_url
+                and app.conf.result_backend == backend_url):
+            raise AssertionError('Celery 地址与隔离测试登记不符')
+        app.set_current()
+        yield app, queue
+    finally:
+        app.close()
+        _state.set_default_app(previous_default)
+        previous_app.set_current()
+
+
 @skipUnless(settings.SETTINGS_MODULE == 'config.certificate_mysql_test_settings',
             'Requires registered SA14 control and tenant MySQL databases')
 @override_settings(STORE_CERTIFICATE_ENFORCEMENT_ENABLED=True, LICENSE_ACCOUNT_ADMISSION_ENABLED=True,
@@ -443,6 +491,70 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
     def test_beat_and_redis_settle_both_stores_when_control_instance_stops(self):
         self._verify_periodic_settlement(standalone=True)
 
+    @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None), 'Requires a registered disposable Redis broker')
+    def test_redis_worker_requires_task_store_and_preserves_it_on_retry(self):
+        from celery.contrib.testing.worker import start_worker
+
+        from .context import current_store
+        from .tasks import StoreTask
+
+        outside = self.stores['shenglang']
+        identity = 6600001
+        for store in self.stores.values():
+            with store_context(store):
+                ClubAccount.objects.create_account(pk=identity, username='same-worker-account',
+                    account_type='BOSS', nickname=store.slug)
+
+        received = {}
+
+        class NestedStoreTask(StoreTask):
+            def __call__(self, *args, **kwargs):
+                with store_context(outside):
+                    received[self.request.id] = (current_store().slug, self.request.called_directly)
+                    return super().__call__(*args, **kwargs)
+
+        with _store_task_app(registered_redis=True) as (app, queue):
+            attempts = []
+
+            @app.task(base=NestedStoreTask, bind=True, name=f'{queue}.read_store_account',
+                      shared=False, lazy=False, max_retries=1)
+            def read_store_account(task, account_id, retry_once=False):
+                store = current_store().slug
+                attempts.append((task.request.id, store, (task.request.headers or {}).get('store_slug'),
+                                 task.request.retries))
+                nickname = ClubAccount.objects.get(pk=account_id).nickname
+                if retry_once and task.request.retries == 0:
+                    raise task.retry(countdown=0, exc=RuntimeError('temporary test read failure'))
+                return {'store': store, 'nickname': nickname}
+
+            with start_worker(app, pool='solo', queues=[queue], perform_ping_check=False,
+                              without_heartbeat=True, loglevel='WARNING'):
+                for headers, reason in (
+                    ({}, '门店业务任务必须指定所属门店'),
+                    ({'store_slug': ''}, '门店业务任务的门店标识无效'),
+                ):
+                    with self.subTest(headers=headers):
+                        rejected = app.send_task(read_store_account.name, args=[identity], headers=headers)
+                        error = rejected.get(timeout=15, propagate=False, disable_sync_subtasks=False)
+                        self.assertIsInstance(error, ValueError)
+                        self.assertEqual(str(error), reason)
+                        self.assertTrue(rejected.failed())
+                        self.assertEqual(received[rejected.id], (outside.slug, False))
+                        self.assertEqual(attempts, [])
+                        print(f'SA14 Redis worker rejected unrouted task={rejected.id}', flush=True)
+
+                for store in self.stores.values():
+                    retry_once = store.slug == 'xinan'
+                    with store_context(store):
+                        reply = read_store_account.delay(identity, retry_once=retry_once)
+                    self.assertEqual(reply.get(timeout=15, disable_sync_subtasks=False),
+                                     {'store': store.slug, 'nickname': store.slug})
+                    retries = [0, 1] if retry_once else [0]
+                    self.assertEqual([attempt[1:] for attempt in attempts if attempt[0] == reply.id],
+                        [(store.slug, store.slug, retry) for retry in retries])
+                    print(f'SA14 Redis worker task={reply.id} store={store.slug} '
+                          f'account={identity} retries={retries}', flush=True)
+
     @skipUnless(os.environ.get('XA_SA14_BEAT_DAEMON') == '1'
                 and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None) and getattr(settings, 'SA14_TEST_REDIS', None),
                 'Requires opt-in, independently registered control MySQL and Redis')
@@ -642,9 +754,7 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
     def _verify_periodic_settlement(self, *, standalone=False):
         from tempfile import TemporaryDirectory
 
-        from celery import Celery, current_app
         from celery.contrib.testing.worker import start_worker
-        from kombu import Exchange, Queue
 
         from engagement import tasks as consumption_tasks
         from .context import current_store
@@ -654,35 +764,7 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
         left = self.stores['shenglang']
         cases = self._prepare_periodic_orders()
 
-        queue = f'xa_sa14_worker_{uuid4().hex}'
-        previous_app = current_app._get_current_object()
-        app = Celery(queue, task_cls='stores.tasks:StoreTask', set_as_current=False)
-        broker_url, backend_url = 'memory://', 'cache+memory://'
-        if standalone:
-            from urllib.parse import quote
-            import redis
-
-            broker = settings.SA14_TEST_REDIS
-            port = broker['port']
-            with redis.Redis(host='127.0.0.1', port=port, password=broker['password'],
-                             socket_connect_timeout=2, socket_timeout=2) as client:
-                server = client.info('server')
-                self.assertEqual((server['process_id'], server['tcp_port']), (broker['pid'], port))
-            base = f'redis://:{quote(broker["password"], safe="")}@127.0.0.1:{port}'
-            broker_url, backend_url = f'{base}/0', f'{base}/1'
-        app.conf.update(broker_url=broker_url, result_backend=backend_url, task_default_queue=queue,
-            task_default_exchange=queue, task_default_routing_key=queue,
-            task_queues=(Queue(queue, Exchange(queue), routing_key=queue),),
-            task_always_eager=False, task_ignore_result=False,
-            broker_transport_options={'global_keyprefix': queue + ':'},
-            result_backend_transport_options={'global_keyprefix': queue + ':'},
-            worker_enable_remote_control=False, worker_hijack_root_logger=False)
-        try:
-            # Celery's environment overrides take precedence over app.conf.
-            self.assertTrue(all(url == broker_url for url in (
-                app.conf.broker_url, app.conf.broker_read_url, app.conf.broker_write_url,
-            )) and app.conf.result_backend == backend_url, 'Celery 地址与隔离测试登记不符')
-            app.set_current()
+        with _store_task_app(registered_redis=standalone) as (app, queue):
             app.finalize()
             scan = app.tasks[consumption_tasks.confirm_due_consumption.name]
             recovered = timezone.now() + timedelta(hours=80)
@@ -739,6 +821,3 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
             for case, (_, vip_id, points_id, entries) in zip(cases, first):
                 print(f'SA14 Celery 扫描={original} 门店={case.store.slug} 订单={case.order_id} '
                       f'流水={entries} VIP待核={vip_id} 积分待核={points_id}', flush=True)
-        finally:
-            app.close()
-            previous_app.set_current()
