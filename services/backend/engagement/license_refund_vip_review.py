@@ -157,7 +157,10 @@ def _resolve_locked(decision_id, *, request_id, actor_id, outcome, reason, _batc
         raise ValidationError('会员授权核对记录不存在')
     order = Order.objects.select_for_update().get(pk=source.order_id)
     decision = LicenseRefundVipDecision.objects.select_for_update().get(pk=decision_id)
-    existing = LicenseRefundVipReview.objects.select_for_update().filter(decision=decision).first()
+    reviews = LicenseRefundVipReview.objects.filter(decision=decision)
+    # The order lock serializes reviews of this decision. Leave the review
+    # row unlocked while verifying settlement and waiting for the money and wallet locks.
+    existing = reviews.first()
     if existing:
         if existing.request_id != request_id or existing.outcome != outcome or existing.reason != reason:
             raise ValidationError('该记录已核对，请查看原处理结果')
@@ -307,6 +310,9 @@ def _resolve_locked(decision_id, *, request_id, actor_id, outcome, reason, _batc
         from wallet.services import get_wallet
         if not get_wallet(account_id=decision.account_id, for_update=True, create=False):
             raise ValidationError('原老板钱包不存在，业务周期待核对')
+        existing = reviews.select_for_update().get(pk=existing.pk)
+        if not existing.vip_recalculation_pending:
+            return existing
         from club_accounts.models import ClubAccount
         account = ClubAccount.objects.select_for_update().get(pk=decision.account_id)
         if account.account_type != 'BOSS' or account.business_cycle != decision.business_cycle:

@@ -523,6 +523,74 @@ class LicenseConsumptionPointsTests(TestCase):
             self.assertEqual(MemberProfile.objects.get(account=self.account).points_balance, 0)
             self.assertEqual(PointLedger.objects.get(order=gift, kind='LICENSE_REVIEW_REFUND').amount, -decision.points_amount)
 
+    def test_pending_gift_vip_review_locks_wallet_before_review_row(self):
+        from engagement.models import LicenseGiftVipDecision, LicenseGiftVipReview
+        from engagement.services import confirm_gift_vip_consumption
+        from orders.models import ServiceCategory
+        from orders.tests.factories import make_service
+        from uuid import uuid4
+
+        def confirm_during_outage(order):
+            with patch('stores.license_status.status_for_store', side_effect=DatabaseError('isolated VIP outage')):
+                return confirm_gift_vip_consumption(order)
+
+        with store_context(self.second):
+            category = ServiceCategory.objects.create(name='隔离会员礼物', is_gift=True)
+            gift = make_service(price=100, service_category=category)
+            with patch('engagement.services.confirm_gift_vip_consumption', side_effect=confirm_during_outage):
+                paid = self.boss.post('/api/orders/gifts/send/', {'gift_service_id': gift.pk,
+                    'provider_id': self.provider.pk, 'quantity': 1, 'expected_amount': 100,
+                    'client_request_id': str(uuid4())}, format='json')
+            self.assertEqual(paid.data['code'], 0, paid.data)
+            decision = LicenseGiftVipDecision.objects.get(order_id=paid.data['data']['id'])
+
+        self._assert_pending_vip_review_lock_order(decision, LicenseGiftVipReview, 'license-gift-vip-review')
+
+    @override_settings(BOSS_FUNDING_SELECTION_ENABLED=False, ORDINARY_SERVICE_FUNDING_ENABLED=False)
+    def test_pending_service_vip_review_locks_wallet_before_review_row(self):
+        from engagement.models import LicenseRefundVipDecision, LicenseRefundVipReview
+
+        with store_context(self.second):
+            paid = self.boss.post('/api/orders/create/', self.payload(), format='json')
+            self.assertEqual(paid.data['code'], 0, paid.data)
+            order = Order.objects.get(pk=paid.data['data']['id'])
+            with patch('stores.license_status.status_for_store', side_effect=DatabaseError('isolated VIP outage')):
+                self.assertFalse(self.mature(order))
+            decision = LicenseRefundVipDecision.objects.get(order=order, outcome='UNKNOWN')
+
+        self._assert_pending_vip_review_lock_order(decision, LicenseRefundVipReview, 'license-vip-review')
+
+    def _assert_pending_vip_review_lock_order(self, decision, model, endpoint):
+        from django.db.models import QuerySet
+        from uuid import uuid4
+        from wallet.services import get_wallet
+
+        url = f'/api/admin/platform/store-management/{self.second.pk}/{endpoint}/{decision.pk}/resolve'
+        body = {'request_id': str(uuid4()), 'outcome': 'ALLOW', 'reason': '按原时点核对 VIP 权限'}
+        with patch('stores.license_benefits.check_new_benefits', return_value=('DENY', {'status': 'EXPIRED'})):
+            first = self.platform.post(url, body, format='json')
+        self.assertEqual(first.status_code, 200, first.data)
+        self.assertTrue(first.data['data']['vip_recalculation_pending'])
+        select_for_update = QuerySet.select_for_update
+        locked_reviews = []
+
+        def check_review_lock(query, *args, **kwargs):
+            if query.model is model:
+                wallet.assert_called_once_with(account_id=self.account.pk, for_update=True, create=False)
+                locked_reviews.append(query.model)
+            return select_for_update(query, *args, **kwargs)
+
+        with (patch('wallet.services.get_wallet', wraps=get_wallet) as wallet,
+              patch.object(QuerySet, 'select_for_update', new=check_review_lock)):
+            resolved = self.platform.post(url, body, format='json')
+        self.assertEqual(resolved.status_code, 200, resolved.data)
+        self.assertFalse(resolved.data['data']['vip_recalculation_pending'])
+        self.assertEqual(locked_reviews, [model])
+        with patch('wallet.services.get_wallet', wraps=get_wallet) as wallet:
+            replayed = self.platform.post(url, body, format='json')
+        wallet.assert_not_called()
+        self.assertEqual(replayed.data, resolved.data)
+
     @override_settings(ORDER_SETTLEMENT_MODE='REPORT_APPROVAL')
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
