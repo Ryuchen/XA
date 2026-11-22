@@ -45,7 +45,7 @@ class PlatformTransferFundingScopeTests(SimpleTestCase):
                 replay.side_effect = replay_after_lock
                 with _addon_funding_scope(order.pk, receipt_id, request_key=request_key):
                     transferred.assert_called_once_with(order.pk, phase='settlement', extra_receipt_id=receipt_id,
-                                                        pending_payment_id=pending)
+                                                        pending_payment_id=pending, allocation_request_key=request_key)
                 lock.return_value.filter.assert_called_once_with(pk=order.pk)
                 untransferred.assert_not_called()
                 self.assertEqual(read_guard.call_count, int(receipt_id is None))

@@ -100,7 +100,7 @@ def _checked_points_action(operation, receipt, order_id, amount, *, pending_foll
 
 
 def _checked_points_action_for_locked_order(operation, receipt, order_id, amount, *,
-                                            pending_followup_posting_id=None, action=None):
+                                            pending_followup_posting_id=None, action=None, verified_usage=None):
     # Caller must have locked and authorized the order in this tenant.
     key = f'points:{operation.pk.hex}'
     action = action or OrderPointsFundingAction.objects.select_related('allocation__redemption').filter(request_key=key).first()
@@ -111,13 +111,11 @@ def _checked_points_action_for_locked_order(operation, receipt, order_id, amount
     if receipt.usage_version is not None:
         if pending_followup_posting_id is not None:
             raise RepaymentError('账本尚未接通后续退款', 409, 'POINTS_FUNDING_REVIEW')
-        from users.receipt_usage_guard import isolated_allocation_state_locked
+        from users.receipt_usage_guard import used_allocation_units_locked
         try:
-            ledger = isolated_allocation_state_locked(receipt)
+            pass_used, points_used = used_allocation_units_locked(receipt, verified_usage=verified_usage)
         except ValidationError as exc:
             raise RepaymentError('到账用途账本待核对', 409, 'POINTS_FUNDING_REVIEW') from exc
-        pass_used, points_used = ledger.pass_units, (ledger.order_units + ledger.referral_units
-            - ledger.referral_released_units - ledger.released_units)
     else:
         pass_used = receipt.allocations.aggregate(value=Sum('amount'))['value'] or 0
         from orders.points_funding_release import receipt_points_used_locked
@@ -133,11 +131,11 @@ def _checked_points_action_for_locked_order(operation, receipt, order_id, amount
     return action
 
 
-def _verified_receipt(claim, receipt):
+def _verified_receipt(claim, receipt, *, verified_usage=None):
     operations = list(PlatformPassRepaymentOperation.objects.filter(claim=claim, kind='VERIFY',
         tenant_action_id__isnull=False, completed_at__isnull=False, rejected_at__isnull=True, voided_at__isnull=True))
     for operation in operations:
-        action = _checked_action(operation, receipt, 'VERIFY', None, None)
+        action = _checked_action(operation, receipt, 'VERIFY', None, None, verified_usage=verified_usage)
         if action and action.pk == operation.tenant_action_id:
             return
     raise RepaymentError('到账核实记录不完整，请先核对', 409, 'POINTS_FUNDING_REVIEW')

@@ -24,6 +24,40 @@ class ReceiptUsageLedgerTests(TestCase):
     receipt = pass_tests.PassRefundRepaymentTests.receipt
     refund = pass_tests.PassRefundRepaymentTests.refund
 
+    @override_settings(RECEIPT_USAGE_ALLOCATIONS_INTERNAL_TESTING=True)
+    def test_locked_usage_amounts_require_the_same_receipt_and_read_scope(self):
+        from orders.points_business_access import _scope
+        from users.receipt_usage_guard import capture_allocation_usage_locked, used_allocation_units_locked
+        from users.receipt_usage_sources import verify_allocations_locked
+
+        with store_context(self.store):
+            with transaction.atomic():
+                receipt = self._verified_receipt()
+                initialize_empty_locked(receipt.pk)
+                receipt.refresh_from_db()
+                with patch('users.receipt_usage_sources.verify_allocations_locked', wraps=verify_allocations_locked) as verify:
+                    usage = capture_allocation_usage_locked(receipt)
+                    self.assertEqual(used_allocation_units_locked(receipt, verified_usage=usage), (0, 0))
+                    self.assertEqual(used_allocation_units_locked(receipt, verified_usage=usage), (0, 0))
+                    verify.assert_called_once_with(receipt.pk)
+                    with patch.object(receipt, 'usage_version', 1), self.assertRaises(ValidationError):
+                        used_allocation_units_locked(receipt, verified_usage=usage)
+                    with transaction.atomic(), self.assertRaises(ValidationError):
+                        used_allocation_units_locked(receipt, verified_usage=usage)
+                    token = _scope.set(('tenant', 'store', 2, 1, 3, 'refund', 'addon'))
+                    try:
+                        with self.assertRaises(ValidationError):
+                            used_allocation_units_locked(receipt, verified_usage=usage)
+                    finally:
+                        _scope.reset(token)
+                    other_instance = PassRefundRepaymentReceipt.objects.get(pk=receipt.pk)
+                    with self.assertRaises(ValidationError):
+                        used_allocation_units_locked(other_instance, verified_usage=usage)
+                    self.assertEqual(used_allocation_units_locked(receipt), (0, 0))
+                    self.assertEqual(verify.call_count, 2)
+            with transaction.atomic(), self.assertRaises(ValidationError):
+                used_allocation_units_locked(receipt, verified_usage=usage)
+
     def test_unlocked_current_reads_require_supported_mysql_isolation(self):
         from unittest.mock import MagicMock
         from users.receipt_usage_sources import _require_current_unlocked_reads

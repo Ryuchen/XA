@@ -207,7 +207,7 @@ def _claimed_receipt(claim, slug, receipt=None):
     return receipt
 
 
-def _checked_action(operation, receipt, kind, refund_id, amount, action=None):
+def _checked_action(operation, receipt, kind, refund_id, amount, action=None, *, verified_usage=None):
     action = action or PassRefundRepaymentAction.objects.filter(request_key=f'platform:{operation.pk.hex}').select_related('allocation').first()
     if not action:
         return None
@@ -223,9 +223,9 @@ def _checked_action(operation, receipt, kind, refund_id, amount, action=None):
         if getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is True:
             if receipt.usage_version is None:
                 raise RepaymentError('到账用途账本未建立，请联系平台核对', 409, 'REPAYMENT_REVIEW')
-            from users.receipt_usage_guard import isolated_allocation_state_locked
+            from users.receipt_usage_guard import used_allocation_units_locked
             try:
-                isolated_allocation_state_locked(receipt)
+                used_allocation_units_locked(receipt, verified_usage=verified_usage)
             except ValidationError as exc:
                 raise RepaymentError('到账用途账本待核对', 409, 'REPAYMENT_REVIEW') from exc
     else:

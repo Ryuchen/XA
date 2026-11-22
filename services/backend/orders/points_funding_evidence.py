@@ -101,7 +101,8 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
     if len(receipts) != len(receipt_ids):
         raise PointsFundingPlanError('到账记录缺失，请先核对')
     from django.core.exceptions import ValidationError as DjangoValidationError
-    from users.receipt_usage_guard import reject_unintegrated_locked_receipt
+    from users.receipt_usage_guard import capture_allocation_usage_locked, reject_unintegrated_locked_receipt
+    verified_usage = {}
     try:
         for receipt in receipts.values():
             if (getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is True
@@ -183,7 +184,6 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
             if receipt.usage_version is not None and (_reservation_usage or _main_refund_usage
                                                        or _addon_refund_usage or _transfer_refund_usage or formal_allowed):
                 from .points_checkout_test import require_isolated_checkout
-                from users.receipt_usage_guard import isolated_allocation_state_locked
                 if not formal_allowed:
                     require_isolated_checkout()
                 from .points_receipt_usage import eligible as main_usage_eligible, followup_eligible, transfer_refund_eligible
@@ -195,7 +195,7 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
                 if not (reservation_allowed or main_allowed or addon_allowed or transfer_allowed or formal_allowed):
                     raise DjangoValidationError('该到账用途试验尚未开放')
                 with reuse_history_locked(order, {receipt.pk}):
-                    isolated_allocation_state_locked(receipt)
+                    verified_usage[receipt.pk] = capture_allocation_usage_locked(receipt)
             else:
                 reject_unintegrated_locked_receipt(receipt)
     except DjangoValidationError as exc:
@@ -230,9 +230,10 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
             raise PointsFundingPlanError('补资平台记录未完成，请先核对')
         try:
             _claimed_receipt(operation.claim, current_store().slug, receipt)
-            _verified_receipt(operation.claim, receipt)
+            usage = verified_usage.get(receipt.pk)
+            _verified_receipt(operation.claim, receipt, verified_usage=usage)
             action = _checked_points_action_for_locked_order(operation, receipt, order.pk, allocation.amount,
-                                            pending_followup_posting_id=pending_followup_posting_id)
+                                            pending_followup_posting_id=pending_followup_posting_id, verified_usage=usage)
         except RepaymentError as exc:
             raise PointsFundingPlanError('补资凭证不一致，请先核对') from exc
         digest = _sha(json.dumps([str(operation.claim_id), order.pk, allocation.amount], separators=(',', ':')))
