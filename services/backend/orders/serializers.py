@@ -922,7 +922,9 @@ class OrderSerializer(EntityNumberModelSerializer):
                     and (obj.dispatch_route == Order.DispatchRoute.PUBLIC
                          or OrderGrabPoolSnapshot.objects.filter(order=obj).exists())
                     and obj.provider_id is None
-                    and obj.escort_mode == Order.EscortMode.SINGLE
+                    and (obj.escort_mode == Order.EscortMode.SINGLE
+                         or (obj.escort_mode == Order.EscortMode.DOUBLE
+                             and self.get_audition_recordings_required(obj)))
                     and not obj.source_order_id
                     and not obj.is_gift_snapshot
                     and (obj.requires_boss_selection or self.context.get('_provider_pool_view')

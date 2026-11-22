@@ -75,8 +75,9 @@ def visible_provider_pool(account):
     ).filter(Q(dispatch_route=Order.DispatchRoute.PUBLIC)
              | Q(dispatch_route=Order.DispatchRoute.STAFF, grab_pool_snapshot__isnull=False)
     ).filter(Q(provider_gender='ANY') | Q(provider_gender=profile.gender)).exclude(is_gift_snapshot=True).filter(payment_candidate)
-    # Unsnapshotted paid automatic orders have no round that can accept a grab.
-    eligible_modes = Q(escort_mode=Order.EscortMode.SINGLE, dispatch_route=Order.DispatchRoute.PUBLIC,
+    # Both audition sizes use buyer selection. Automatic orders need an admitting round.
+    eligible_modes = Q(escort_mode__in=(Order.EscortMode.SINGLE, Order.EscortMode.DOUBLE),
+                       dispatch_route=Order.DispatchRoute.PUBLIC,
                        requires_boss_selection=True, grab_pool_snapshot__isnull=True)
     if single_enabled():
         orders = orders.alias(single_round_status=latest_status_for_pool(1))
