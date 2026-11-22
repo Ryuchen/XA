@@ -207,18 +207,23 @@ class PlatformWithdrawalActionView(APIView):
             return fail('操作无效', 404)
         try:
             store = _authorized_store(request, slug, required)
-        except DatabaseError:
+            if store is None:
+                return fail('门店不存在或无权操作', 404)
+            if not _store_ready(store):
+                return fail('门店数据暂不可用', 503)
+        except (DatabaseError, InterfaceError):
             return fail('平台授权服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
-        if store is None:
-            return fail('门店不存在或无权操作', 404)
-        if not _store_ready(store):
-            return fail('门店数据暂不可用', 503)
         if not isinstance(request.data, dict):
             return fail('请求格式无效', 400)
         key = request.data.get('client_request_id')
         if not isinstance(key, str) or not key.strip() or len(key) > 64:
             return fail('请提供有效的操作编号', 400)
-        key = key.strip()
+        try:
+            return self._apply_action(request, store, pk, action, required, key.strip())
+        except (DatabaseError, InterfaceError):
+            return fail('提现操作结果暂不可核验，请使用原操作编号重试', 503, 'WITHDRAWAL_UNAVAILABLE')
+
+    def _apply_action(self, request, store, pk, action, required, key):
         fingerprint = _fingerprint(action, request.data)
         with store_context(store), transaction.atomic():
             provider = None
@@ -240,10 +245,10 @@ class PlatformWithdrawalActionView(APIView):
                 return fail('提现所属陪玩已变化，请重新核对', 409)
             try:
                 actor = account_for_token(request.auth)
-                authorized = platform_may(actor, required, store_slug=slug)
+                authorized = platform_may(actor, required, store_slug=store.slug)
             except TokenError:
                 return fail('平台登录已失效', 401)
-            except DatabaseError:
+            except (DatabaseError, InterfaceError):
                 return fail('平台授权服务暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
             if not authorized:
                 return fail('门店授权已变化', 403)
