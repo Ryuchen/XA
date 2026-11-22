@@ -81,6 +81,100 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
 
     @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
                        PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_single_reopen_near_the_previous_cutoff_keeps_a_full_window(self):
+        self.assert_near_cutoff_reopen(team=False)
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
+    def test_team_reopen_near_the_previous_cutoff_keeps_a_full_window(self):
+        self.assert_near_cutoff_reopen(team=True)
+
+    def assert_near_cutoff_reopen(self, *, team):
+        from orders.grab_receipt_probe import _db_clock, record_intent
+        from orders.grab_round_opening import cutoff_bounds, opening_bounds
+        from orders.tasks import finalize_single_grab, finalize_team_grab
+
+        def wait_past(bound):
+            limit = monotonic() + 10
+            while _db_clock()[0] <= bound:
+                self.assertLess(monotonic(), limit)
+                sleep(.005)
+
+        def enter(round_, key):
+            captain, partner = flow.accounts
+            if team:
+                invitation = record_intent(round_.pk, captain.pk, 'INVITE', key + '-invite',
+                    {'partner_id': partner.pk}, team_flow=True, actor_snapshot=captain)
+                self.assertEqual(invitation.state, 'BEFORE')
+                draft = round_.team_drafts.get(captain=captain, request_key=key + '-invite')
+                result = record_intent(round_.pk, partner.pk, 'CONFIRM', key + '-confirm',
+                    {'team_id': draft.pk}, team_flow=True, actor_snapshot=partner)
+            else:
+                result = record_intent(round_.pk, partner.pk, 'SINGLE', key, {},
+                    single_flow=True, actor_snapshot=partner)
+            self.assertEqual(result.state, 'BEFORE')
+
+        store, flow = self.prepare_flow()
+        # Make overlapping bounds reproducible while keeping every SQL sample real.
+        precision = timedelta(milliseconds=500)
+        finish = finalize_team_grab if team else finalize_single_grab
+        with (store_context(store), patch('orders.grab_team_flow.enqueue'),
+              patch('orders.grab_clock_contract.TOLERANCE_NS', 500_000_000)):
+            if team:
+                flow.service.fulfillment_provider_count = 2
+                flow.service.save(update_fields=['fulfillment_provider_count'])
+            order = self.buy_for_committed_opening(flow, 'near-cutoff-payment', window=4)
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            first = order.grab_pool_snapshot.rounds.get(number=1)
+            wait_past(opening_bounds(first)[1] + precision)
+            enter(first, 'near-cutoff-first')
+            profile = flow.providers[1].escort_profile
+            available = profile.status
+            profile.status = 'OFFLINE'
+            profile.save(update_fields=['status'])
+            previous_cutoff = cutoff_bounds(first, 'OPEN')
+            wait_past(previous_cutoff[1] + timedelta(microseconds=1))
+            self.assertEqual(finish.run(order.pk, first.pk), 'REOPENED')
+            second = order.grab_pool_snapshot.rounds.get(number=2)
+            raw_lower, raw_upper = opening_bounds(second)
+            self.assertLess(raw_lower, previous_cutoff[1])
+            new_cutoff = cutoff_bounds(second, 'OPEN')
+            watermark = first.cutoff_watermark
+            seal_lower = watermark.observed_at - timedelta(microseconds=watermark.precision_us)
+            self.assertGreater(seal_lower, previous_cutoff[1])
+            self.assertEqual(new_cutoff[0], seal_lower + timedelta(seconds=4))
+            self.assertEqual(new_cutoff[1], raw_upper + timedelta(seconds=4))
+            self.assertEqual(cutoff_bounds(first, 'OPEN'), previous_cutoff)
+            self.assertEqual(opening_bounds(second), (raw_lower, raw_upper))
+            with transaction.atomic():
+                type(watermark).objects.filter(pk=watermark.pk).update(receipt_digest='0' * 64)
+                with self.assertRaisesMessage(ValueError, '重开时间与上轮截止区间交叉'):
+                    cutoff_bounds(second, 'OPEN')
+                transaction.set_rollback(True)
+            with transaction.atomic():
+                evidence = second.opening_evidence
+                type(evidence).objects.filter(pk=evidence.pk).update(
+                    activation_lower_at=evidence.activation_lower_at - timedelta(seconds=1),
+                    activation_upper_at=evidence.activation_upper_at - timedelta(seconds=1),
+                )
+                self.assertLess(opening_bounds(second)[1], previous_cutoff[1])
+                with self.assertRaisesMessage(ValueError, '重开时间与上轮截止区间交叉'):
+                    cutoff_bounds(second, 'OPEN')
+                transaction.set_rollback(True)
+            profile.status = available
+            profile.save(update_fields=['status'])
+            wait_past(raw_upper + precision)
+            enter(second, 'near-cutoff-second')
+            wait_past(new_cutoff[1] + timedelta(microseconds=1))
+            self.assertEqual(finish.run(order.pk, first.pk), 'STALE_ROUND')
+            self.assertEqual(finish.run(order.pk, second.pk), 'ASSIGNED')
+            order.refresh_from_db()
+            self.assertEqual(order.status, Order.Status.GRABBED)
+            self.assertEqual(order.providers.count(), 2 if team else 1)
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
     def test_single_reopen_replays_the_original_request_before_accepting_a_new_one(self):
         from orders.grab_receipt_probe import _db_clock
         from orders.grab_round_opening import cutoff_bounds, opening_bounds

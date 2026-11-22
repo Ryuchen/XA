@@ -153,9 +153,8 @@ def _resume_waiting(round_id):
         return
 
 
-def opening_bounds(round_, *, lock=False):
-    """Return conservative bounds, never an invented opening instant."""
-    from .grab_clock_contract import TOLERANCE_NS, database_id, valid_bounds
+def _observed_opening(round_, *, lock):
+    from .grab_clock_contract import database_id, valid_bounds
     observations = OrderGrabRoundOpeningEvidence.objects.filter(round=round_)
     evidence = (observations.select_for_update() if lock else observations).first()
     if (not evidence or evidence.state != 'OBSERVED' or not evidence.upper_at
@@ -167,8 +166,19 @@ def opening_bounds(round_, *, lock=False):
     if not valid_bounds(evidence.activation_lower_at, evidence.activation_upper_at,
                         evidence.activation_clock_evidence, identity=identity):
         raise ValueError('抢单轮次激活提交时钟证据异常')
+    return evidence
+
+
+def _opening_interval(evidence):
+    from .grab_clock_contract import TOLERANCE_NS
+
     precision = timedelta(microseconds=TOLERANCE_NS // 1000)
     return evidence.activation_lower_at - precision, evidence.activation_upper_at + precision
+
+
+def opening_bounds(round_, *, lock=False):
+    """Return conservative bounds, never an invented opening instant."""
+    return _opening_interval(_observed_opening(round_, lock=lock))
 
 
 def provisional_opening_lower(round_):
@@ -187,6 +197,29 @@ def provisional_opening_lower(round_):
     return evidence.activation_lower_at - timedelta(microseconds=TOLERANCE_NS // 1000)
 
 
+def _sealed_reopen_lower(previous, reopened, evidence, *, cutoff, total_lower, lock):
+    from .grab_cutoff_watermark import verified_reopen_seal
+    from .models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
+
+    if (not reopened.simultaneous_visibility or reopened.opened_at <= cutoff
+            or not reopened.opened_at <= evidence.lower_at <= evidence.upper_at <= evidence.activation_lower_at):
+        return None
+    state_model = OrderGrabSingleRoundState if previous.pool.required_provider_count == 1 else OrderGrabTeamRoundState
+    states = state_model.objects.filter(round=previous)
+    state = (states.select_for_update() if lock else states).first()
+    if not state or state.status != 'REOPENED':
+        return None
+    mark = verified_reopen_seal(previous, cutoff=cutoff, reopened_at=reopened.opened_at, lock=lock)
+    if not mark:
+        return None
+    precision = timedelta(microseconds=mark.precision_us)
+    if reopened.opened_at + precision >= total_lower:
+        return None
+    # The order lock places this round after the original seal, even if the
+    # expanded activation interval overlaps the preceding deadline.
+    return mark.observed_at - precision
+
+
 def cutoff_bounds(round_, phase, *, lock=False):
     """Derive earliest/latest cutoff from real opening commit bounds."""
     if phase not in ('OPEN', 'PARKED'):
@@ -201,13 +234,18 @@ def cutoff_bounds(round_, phase, *, lock=False):
     rows = list(rounds.select_for_update() if lock else rounds)
     if len(rows) != round_.number or not rows or rows[-1].pk != round_.pk:
         raise ValueError('抢单轮次历史待核对')
-    total_lower = total_upper = previous_deadline_upper = None
+    total_lower = total_upper = deadline_upper = previous = None
     for number, row in enumerate(rows, 1):
         if row.number != number:
             raise ValueError('抢单轮次历史待核对')
-        lower, upper = opening_bounds(row, lock=lock)
-        if previous_deadline_upper is not None and lower < previous_deadline_upper:
-            raise ValueError('重开时间与上轮截止区间交叉，待核对')
+        evidence = _observed_opening(row, lock=lock)
+        lower, upper = _opening_interval(evidence)
+        if previous is not None and lower < deadline_upper:
+            sealed_lower = _sealed_reopen_lower(previous, row, evidence, cutoff=deadline_upper,
+                                               total_lower=total_lower, lock=lock)
+            if sealed_lower is None or sealed_lower > upper:
+                raise ValueError('重开时间与上轮截止区间交叉，待核对')
+            lower = max(lower, sealed_lower)
         deadline_lower = lower + timedelta(seconds=pool.window_seconds)
         deadline_upper = upper + timedelta(seconds=pool.window_seconds)
         if number == 1:
@@ -216,7 +254,7 @@ def cutoff_bounds(round_, phase, *, lock=False):
         else:
             total_lower = max(total_lower, deadline_lower)
             total_upper = max(total_upper, deadline_upper)
-        previous_deadline_upper = deadline_upper
+        previous = row
     return (deadline_lower, deadline_upper) if phase == 'OPEN' else (total_lower, total_upper)
 
 
