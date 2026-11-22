@@ -1,7 +1,7 @@
 """Handle the buyer's timed cancellation of a single or team grab order."""
 from rest_framework.response import Response
 
-from .grab_customer_review import request_cancellation
+from .grab_customer_review import default_timed_cancel_key, request_cancellation
 from .grab_receipt_probe import GrabRequestConflict, record_intent
 from .grab_round_facts import GrabRoundReviewRequired
 
@@ -25,8 +25,7 @@ def cancel(request, order_id, *, state, enabled, resolve, team):
         request_key = None
     key = request_key
     if key is None:
-        prefix = 'cancel-team' if team else 'cancel'
-        key = f'{prefix}-{order_id}-{request.account.pk}'
+        key = default_timed_cancel_key(order_id, request.account.pk, team=team)
     if not isinstance(key, str) or not key.strip() or len(key) > 64:
         return Response({'code': 400, 'msg': '取消请求编号无效'}, status=400)
     reason = request.data.get('reason') or ''

@@ -2,6 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from time import monotonic, sleep
+from types import SimpleNamespace
 from unittest import skipUnless
 from uuid import uuid4
 
@@ -43,6 +44,61 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             flow.setUp()
             flow.prepare()
         return store, flow
+
+    def test_waiting_staff_refund_cannot_bypass_a_committed_customer_review(self):
+        from club_accounts.tokens import issue_account_tokens
+        from orders.grab_customer_review import request_cancellation
+        from orders.grab_review import mark_round_review
+        from orders.models import OrderGrabReviewCancellation, OrderGrabSingleRoundState
+        from orders.tests.factories import make_console_user
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            save_grab_window(30, 1, lambda *_: None)
+            purchase = flow.create(dispatch_mode='AUTO_GRAB', client_request_id=str(uuid4()))
+            self.assertEqual(purchase.data['code'], 0, purchase.data)
+            order_id = purchase.data['data']['id']
+            state = OrderGrabSingleRoundState.objects.get(round__pool__order_id=order_id)
+            mark_round_review(state, '验证取消核对与退款并发')
+            staff = make_console_user(['order:view', 'order:dispatch', 'order:refund'])
+            staff_account = flow.link(staff)
+            staff.admin_membership.account = staff_account
+            staff.admin_membership.save(update_fields=['account'])
+            staff_token = issue_account_tokens(staff_account)[0]
+
+        def refund():
+            close_old_connections()
+            try:
+                with store_context(store):
+                    client = APIClient(HTTP_HOST='sl.esports.club', HTTP_AUTHORIZATION=f'Bearer {staff_token}')
+                    return client.post(f'/api/admin/orders/{order_id}/refund/', {'reason': '通用退款'}, format='json')
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            with store_context(store), transaction.atomic():
+                Order.objects.select_for_update().get(pk=order_id)
+                pending = executor.submit(refund)
+                wait_until = monotonic() + 10
+                while not mysql_locking_statements(connection, Order._meta.db_table):
+                    self.assertFalse(pending.done(), 'Refund finished before the order lock was released')
+                    self.assertLess(monotonic(), wait_until, 'Refund did not reach the order lock')
+                    sleep(0.05)
+                request = SimpleNamespace(account=flow.boss_account, data={'reason': '请核对原单'})
+                accepted = request_cancellation(request, order_id, request_key='before-staff-refund')
+                self.assertEqual(accepted.data.get('data'), {'status': 'PENDING'}, accepted.data)
+            result = pending.result(timeout=20)
+        self.assertEqual((result.status_code, result.data.get('errorCode')),
+                         (409, 'GRAB_CANCEL_REVIEW_PENDING'), result.data)
+
+        with store_context(store):
+            order = Order.objects.get(pk=order_id)
+            application = OrderGrabReviewCancellation.objects.get(order=order)
+            self.assertEqual((order.status, order.payment_status, application.request_key, application.status),
+                             ('PENDING', 'PAID', 'before-staff-refund', 'PENDING'))
+            flow.wallet.refresh_from_db()
+            self.assertEqual(flow.wallet.balance, 100000 - order.amount)
+            self.assertFalse(order.refund_records.exists())
 
     def test_timeout_waiting_for_order_lock_reads_new_round_before_refunding(self):
         from orders.grab_receipt_probe import record_intent

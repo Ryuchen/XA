@@ -251,31 +251,143 @@ class GrabTeamFlowTest(APITransactionTestCase):
                 self.assertIsNotNone(notice.message_id)
                 self.assertFalse(order.providers.exists())
 
-    def test_cancellation_proven_late_does_not_create_a_review_request(self):
+    def test_proven_late_request_keeps_its_result_through_round_and_review_changes(self):
         from orders.grab_receipt_probe import _db_clock
-        from orders.models import OrderGrabReviewCancellation
+        from orders.models import OrderGrabReviewCancellation, OrderGrabRound
 
         self.service.fulfillment_provider_count = 2
         self.service.save(update_fields=['fulfillment_provider_count'])
         save_grab_window(30, 0, lambda *args: None)
-        bought = self.create(dispatch_mode='AUTO_GRAB', client_request_id='pay-before-late-cancel')
-        self.assertEqual(bought.data['code'], 0, bought.data)
-        order = Order.objects.get(pk=bought.data['data']['id'])
-        state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
-        late = state.round.total_deadline + timedelta(seconds=1)
         _, precision, driver = _db_clock()
-        with patch('orders.grab_receipt_probe._db_clock', return_value=(late, precision, driver)):
-            response = self.client.post(f'/api/orders/orders/{order.pk}/cancel/',
-                                        {'client_request_id': 'proven-late-cancel'}, format='json')
+        for label, payload in (('explicit', {'client_request_id': 'proven-late-cancel'}), ('legacy', {})):
+            with self.subTest(label=label):
+                bought = self.create(dispatch_mode='AUTO_GRAB', client_request_id=f'pay-before-late-cancel-{label}')
+                self.assertEqual(bought.data['code'], 0, bought.data)
+                order = Order.objects.get(pk=bought.data['data']['id'])
+                first = OrderGrabRound.objects.get(pool__order=order)
+                endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+                late = first.total_deadline + timedelta(seconds=1)
+                with patch('orders.grab_receipt_probe._db_clock', return_value=(late, precision, driver)):
+                    response = self.client.post(endpoint, payload, format='json')
+                self.assertEqual((response.status_code, response.data.get('errorCode')),
+                                 (409, 'GRAB_CANCEL_CLOSED'), response.data)
+                self.assertEqual(first.receipt_probes.get(kind='BOSS_CANCEL').state, 'AFTER')
+                self.assertFalse(OrderGrabReviewCancellation.objects.filter(order=order).exists())
 
-        self.assertEqual(response.status_code, 409, response.data)
-        self.assertEqual(response.data.get('errorCode'), 'GRAB_CANCEL_CLOSED')
-        self.assertEqual(state.round.receipt_probes.get(kind='BOSS_CANCEL').state, 'AFTER')
-        self.assertFalse(OrderGrabReviewCancellation.objects.filter(order=order).exists())
-        self.assertFalse(order.refund_records.exists())
+                deadline = first.deadline + timedelta(seconds=first.pool.window_seconds)
+                OrderGrabRound.objects.create(pool=first.pool, number=2, opened_at=first.deadline,
+                    deadline=deadline, total_deadline=max(first.total_deadline, deadline), simultaneous_visibility=True)
+                replay = self.client.post(endpoint, payload, format='json')
+                self.assertEqual((replay.status_code, replay.data.get('errorCode')), (409, 'GRAB_CANCEL_CLOSED'), replay.data)
+                self.assertFalse(OrderGrabReviewCancellation.objects.filter(order=order).exists())
+                manual = self.client.post(endpoint, {'client_request_id': 'separate-review'}, format='json')
+                self.assertEqual(manual.data.get('data'), {'status': 'PENDING'}, manual.data)
+                replay = self.client.post(endpoint, payload, format='json')
+                self.assertEqual((replay.status_code, replay.data.get('errorCode')), (409, 'GRAB_CANCEL_CLOSED'), replay.data)
+                self.assertEqual(OrderGrabReviewCancellation.objects.get(order=order).request_key, 'separate-review')
+                self.assertEqual(first.receipt_probes.count(), 1)
+                self.assertFalse(order.refund_records.exists())
 
     def test_review_cancellation_replays_the_owner_request_without_a_round(self):
         self.assert_review_cancellation_replay(self.paid_order_with_opening_review())
+
+    def test_review_request_stays_in_queue_while_opening_evidence_is_being_recovered(self):
+        from orders.models import OrderGrabPoolOpeningIntent, OrderGrabReviewCancellation
+
+        order = self.paid_order_with_opening_review()
+        endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+        payload = {'client_request_id': 'owner-opening-review', 'reason': '请核对开池记录'}
+        first = self.client.post(endpoint, payload, format='json')
+        self.assertEqual(first.data.get('data'), {'status': 'PENDING'}, first.data)
+        application = OrderGrabReviewCancellation.objects.get(order=order)
+        OrderGrabPoolOpeningIntent.objects.filter(order=order).update(state='PENDING', reason='')
+
+        staff = make_console_user(['order:view'])
+        staff_account = self.link(staff)
+        staff.admin_membership.account = staff_account
+        staff.admin_membership.save(update_fields=['account'])
+        self.auth(staff_account)
+        queue = self.client.get('/api/admin/grab-reviews/').data['data']
+        self.assertIn(order.pk, {row['order_id'] for row in queue}, queue)
+        self.auth(self.boss_account)
+        replay = self.client.post(endpoint, payload, format='json')
+        self.assertEqual(replay.data.get('data'), {'status': 'PENDING'}, replay.data)
+        with patch('orders.grab_customer_review.replay_cancellation', return_value=None):
+            replay = self.client.post(endpoint, payload, format='json')
+        self.assertEqual(replay.data.get('data'), {'status': 'PENDING'}, replay.data)
+        self.assertEqual(OrderGrabReviewCancellation.objects.get(order=order).pk, application.pk)
+        self.assertFalse(order.refund_records.exists())
+
+    @override_settings(CUSTOMER_CANCEL_NOTICE_RECOVERY_ENABLED=True, PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_existing_review_request_owns_the_refund_and_survives_clock_disablement(self):
+        from console.models import AdminAuditLog
+        from orders.grab_review import mark_round_review
+        from orders.models import OrderGrabReviewCancellation
+        from site_messages.models import CustomerCancellationNotice
+
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['fulfillment_provider_count'])
+        save_grab_window(30, 0, lambda *args: None)
+        bought = self.create(dispatch_mode='AUTO_GRAB')
+        self.assertEqual(bought.data['code'], 0, bought.data)
+        order = Order.objects.get(pk=bought.data['data']['id'])
+        state = OrderGrabTeamRoundState.objects.get(round__pool__order=order)
+        mark_round_review(state, '轮次证据待核对')
+        endpoint = f'/api/orders/orders/{order.pk}/cancel/'
+        owner = {'client_request_id': 'owner-review-replay', 'reason': '  请核对原付款  '}
+        accepted = self.client.post(endpoint, owner, format='json')
+        self.assertEqual(accepted.data.get('data'), {'status': 'PENDING'}, accepted.data)
+        application = OrderGrabReviewCancellation.objects.get(order=order)
+        # Simulate the time evidence becoming consistent before the refund is authorized.
+        OrderGrabTeamRoundState.objects.filter(pk=state.pk).update(status='OPEN', reason='')
+
+        def assert_owner_can_replay(status):
+            with self.settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False), \
+                    patch('orders.grab_receipt_probe._db_clock', side_effect=AssertionError('replay sampled the clock')):
+                repeated = self.client.post(endpoint, owner, format='json')
+                self.assertEqual(repeated.data.get('data'), {'status': status}, repeated.data)
+                changed = self.client.post(endpoint, dict(owner, reason='不同原因'), format='json')
+                self.assertEqual((changed.status_code, changed.data.get('errorCode')), (409, 'REQUEST_ID_CONFLICT'))
+                new_key = self.client.post(endpoint, {'client_request_id': 'read-existing-only'}, format='json')
+                self.assertEqual(new_key.data.get('data'), {'status': status}, new_key.data)
+
+        assert_owner_can_replay('PENDING')
+        staff = make_console_user(['order:view', 'order:dispatch', 'order:refund', 'order:cancel'])
+        staff_account = self.link(staff)
+        staff.admin_membership.account = staff_account
+        staff.admin_membership.save(update_fields=['account'])
+        self.auth(staff_account)
+        for action in ('cancel', 'refund'):
+            blocked = self.client.post(f'/api/admin/orders/{order.pk}/{action}/', {'reason': '通用入口'}, format='json')
+            self.assertEqual((blocked.status_code, blocked.data.get('errorCode')),
+                             (409, 'GRAB_CANCEL_REVIEW_PENDING'), blocked.data)
+        order.refresh_from_db()
+        self.wallet.refresh_from_db()
+        self.assertEqual((order.status, order.payment_status, self.wallet.balance), ('PENDING', 'PAID', 100000 - order.amount))
+        self.assertFalse(order.refund_records.exists())
+        self.assertFalse(CustomerCancellationNotice.objects.filter(order=order).exists())
+
+        staff_action = {'action': 'CANCEL', 'reason': '已核实原付款', 'client_request_id': 'staff-review-refund'}
+        attempted_resume = self.client.post(f'/api/admin/grab-reviews/{order.pk}/actions/',
+            dict(staff_action, action='RESUME', client_request_id='staff-review-resume'), format='json')
+        self.assertEqual(attempted_resume.status_code, 409, attempted_resume.data)
+        for _ in range(2):
+            refunded = self.client.post(f'/api/admin/grab-reviews/{order.pk}/actions/', staff_action, format='json')
+            self.assertEqual(refunded.data.get('code'), 0, refunded.data)
+        self.auth(self.boss_account)
+        assert_owner_can_replay('CANCELLED')
+        application.refresh_from_db()
+        self.assertEqual((application.request_key, application.reason, application.status),
+                         ('owner-review-replay', '请核对原付款', 'CANCELLED'))
+        audit = AdminAuditLog.objects.get(resource='grab-review', object_id=str(order.pk))
+        refund = order.refund_records.get()
+        notice = CustomerCancellationNotice.objects.get(order=order)
+        self.assertEqual((refund.amount, refund.operator_account_id), (order.amount, staff_account.pk))
+        self.assertEqual((notice.review_audit_id, notice.refund_id, notice.wallet_transaction_id),
+                         (audit.pk, refund.pk, refund.customer_transaction_id))
+        self.assertCountEqual(order.transactions.values_list('tx_type', 'amount'), [('PAY', -order.amount), ('REFUND', order.amount)])
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 100000)
 
     def paid_order_with_opening_review(self, *, client_request_id='pay-for-opening-review'):
         from console.grab_config import current_rules

@@ -141,10 +141,11 @@ class GrabReviewView(APIView):
                 if pool_exists(order.pk):
                     result.append(_missing_round_review(order))
                     continue
-                opening = OrderGrabPoolOpeningIntent.objects.filter(order=order, state='REVIEW').first()
-                if opening:
+                opening = OrderGrabPoolOpeningIntent.objects.filter(order=order).first()
+                if opening and (opening.state == 'REVIEW' or OrderGrabReviewCancellation.objects.filter(
+                        order=order, status='PENDING').exists()):
                     result.append({'order_id': order.pk, 'round_id': None,
-                                   'status': 'OPENING_REVIEW', 'reason': opening.reason})
+                                   'status': 'OPENING_REVIEW', 'reason': opening.reason or '老板已申请取消，等待客服核对'})
         return Response({'code': 0, 'data': result})
 
 

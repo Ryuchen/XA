@@ -2114,16 +2114,19 @@ class CancelOrderView(APIView):
     permission_classes = [IsClubAccountAuthenticated]
 
     def post(self, request, order_id):
+        from .grab_customer_review import replay_cancellation, request_cancellation
+        replay = replay_cancellation(request, order_id)
+        if replay is not None:
+            return replay
         from .grab_single_flow import applies, cancel
         if applies(order_id):
             return cancel(request, order_id)
         from .grab_team_flow import applies as team_applies, cancel as team_cancel
         if team_applies(order_id):
             return team_cancel(request, order_id)
-        from .models import OrderGrabPoolOpeningIntent
+        from .models import OrderGrabPoolOpeningIntent, OrderGrabReviewCancellation
         if OrderGrabPoolOpeningIntent.objects.filter(order_id=order_id, state='REVIEW',
                                                       order__grab_pool_snapshot__isnull=True).exists():
-            from .grab_customer_review import request_cancellation
             return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'))
         from .direct_payment import DirectPaymentCancellationUnconfirmed, require_cancel_channel_confirmation
         reason = (request.data.get('reason') or '').strip()[:255]
@@ -2145,6 +2148,8 @@ class CancelOrderView(APIView):
                 raise GrabCancellationReroute('single')
             if team_applies(order.pk):
                 raise GrabCancellationReroute('team')
+            if OrderGrabReviewCancellation.objects.select_for_update().filter(order=order, status='PENDING').exists():
+                raise GrabCancellationReroute('review')
             if OrderGrabPoolOpeningIntent.objects.filter(
                     order=order, state='REVIEW', order__grab_pool_snapshot__isnull=True).exists():
                 raise GrabCancellationReroute('review')
@@ -2193,7 +2198,6 @@ class CancelOrderView(APIView):
                 return cancel(request, order_id)
             if exc.route == 'team':
                 return team_cancel(request, order_id)
-            from .grab_customer_review import request_cancellation
             return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'))
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})

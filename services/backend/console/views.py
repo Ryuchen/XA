@@ -3073,7 +3073,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 client_request_id=request.data.get('client_request_id'),
             )
         except RefundError as exc:
-            if exc.code == 'GRAB_ROUND_REVIEW':
+            if exc.code in ('GRAB_ROUND_REVIEW', 'GRAB_CANCEL_REVIEW_PENDING'):
                 return Response({'code': 409, 'errorCode': exc.code, 'msg': str(exc)}, status=409)
             return Response({'code':409 if exc.code in ('REFUND_PLAN_CHANGED','REFUND_REQUEST_CONFLICT') else 400,
                              'errorCode':exc.code,'msg':str(exc),'data':exc.data})
@@ -3192,6 +3192,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         from orders.direct_payment import DirectPaymentCancellationUnconfirmed
+        from orders.grab_customer_review import PendingGrabCancellationReview
         from orders.grab_round_facts import GrabRoundReviewRequired
         order = self.get_object()
         reason = (request.data.get('reason') or '').strip()[:255]
@@ -3209,6 +3210,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             return Response({'code': 409, 'errorCode': 'DIRECT_PAYMENT_CANCELLATION_UNCONFIRMED', 'msg': str(exc)})
         except GrabRoundReviewRequired as exc:
             return Response({'code': 409, 'errorCode': 'GRAB_ROUND_REVIEW', 'msg': str(exc)}, status=409)
+        except PendingGrabCancellationReview as exc:
+            return Response({'code': 409, 'errorCode': 'GRAB_CANCEL_REVIEW_PENDING', 'msg': str(exc)}, status=409)
         except (IllegalTransitionError, SettlementError, WalletAddressingError) as exc:
             return Response({'code': 400, 'msg': str(exc) or '当前状态不允许取消'})
         return Response({'code': 0, 'data': self.get_serializer(order).data, 'msg': '已取消'})
@@ -3241,8 +3244,10 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             if action == OrderStatusLog.Action.CANCEL and order.status != Order.Status.PENDING:
                 raise IllegalTransitionError('仅待接单订单可直接取消，其它状态请用退款')
             if action == OrderStatusLog.Action.CANCEL:
+                from orders.grab_customer_review import require_no_pending_review
                 from orders.grab_round_facts import latest_round_state
                 latest_round_state(order.pk, seats=order.required_provider_count, lock=True)
+                require_no_pending_review(order.pk)
             if order.status == Order.Status.CANCELLED:
                 raise IllegalTransitionError('订单已是终态，无法退款')
             from orders.direct_payment import require_cancel_channel_confirmation

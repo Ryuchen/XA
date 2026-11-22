@@ -5,6 +5,28 @@ from .grab_round_facts import GrabRoundReviewRequired, latest_round_state
 from .models import Order, OrderGrabPoolOpeningIntent, OrderGrabReceiptProbe, OrderGrabReviewCancellation
 
 
+class PendingGrabCancellationReview(ValueError):
+    """The order's original review request must be completed by the review flow."""
+
+
+def require_no_pending_review(order_id):
+    """Recheck while holding the order lock, before an ordinary refund."""
+    if OrderGrabReviewCancellation.objects.select_for_update().filter(order_id=order_id, status='PENDING').exists():
+        raise PendingGrabCancellationReview('老板已提交取消申请，请在抢单核对中处理')
+
+
+def replay_cancellation(request, order_id):
+    if request.account.account_type != 'BOSS' or not OrderGrabReviewCancellation.objects.filter(
+            order_id=order_id, customer=request.account).exists():
+        return None
+    return request_cancellation(request, order_id, request_key=request.data.get('client_request_id'), replay_only=True)
+
+
+def default_timed_cancel_key(order_id, account_id, *, team):
+    prefix = 'cancel-team' if team else 'cancel'
+    return f'{prefix}-{order_id}-{account_id}'
+
+
 def request_cancellation(request, order_id, *, request_key, replay_only=False):
     reason = request.data.get('reason') or ''
     with transaction.atomic():
@@ -14,6 +36,8 @@ def request_cancellation(request, order_id, *, request_key, replay_only=False):
         existing = OrderGrabReviewCancellation.objects.select_for_update().filter(order=order).first()
         if replay_only and existing is None:
             return None
+        if replay_only and request_key == '' and order.required_provider_count == 2:
+            request_key = None
         if request_key is not None and (
                 not isinstance(request_key, str) or not request_key.strip() or len(request_key) > 64):
             return Response({'code': 400, 'msg': '取消请求编号无效'}, status=400)
@@ -26,6 +50,26 @@ def request_cancellation(request, order_id, *, request_key, replay_only=False):
             if request_key is not None and request_key == existing.request_key and reason != existing.reason:
                 return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT',
                                  'msg': '请求编号已用于其他取消原因'}, status=409)
+        if existing is None or request_key != existing.request_key:
+            timed_key = request_key or default_timed_cancel_key(order.pk, request.account.pk,
+                                                               team=order.required_provider_count == 2)
+            prior = list(OrderGrabReceiptProbe.objects.select_for_update().filter(round__pool__order=order,
+                actor=request.account, request_key=timed_key, kind='BOSS_CANCEL').order_by('pk')[:2])
+            if prior:
+                expected_payloads = ({'reason': reason},) if reason else ({'reason': ''}, {})
+                if len(prior) != 1 or prior[0].payload not in expected_payloads:
+                    return Response({'code': 409, 'errorCode': 'REQUEST_ID_CONFLICT',
+                                     'msg': '请求编号已用于其他登记'}, status=409)
+                from .grab_receipt_probe import _effective_state
+                if _effective_state(prior[0], None) == 'AFTER':
+                    return Response({'code': 409, 'errorCode': 'GRAB_CANCEL_CLOSED',
+                                     'msg': '订单取消时限已到'}, status=409)
+                if prior[0].state == 'AFTER' or (existing and not replay_only):
+                    return Response({'code': 409, 'errorCode': 'GRAB_CANCEL_RECEIPT_REVIEW',
+                                     'msg': '原取消登记结果待核对'}, status=409)
+                if replay_only:
+                    return None  # Let the timed flow continue processing its own receipt.
+        if existing:
             return Response({'code': 0, 'msg': '取消申请已提交' if existing.status == 'PENDING' else '订单已取消',
                              'data': {'status': existing.status}})
         if order.status != Order.Status.PENDING:

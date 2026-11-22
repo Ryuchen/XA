@@ -625,11 +625,15 @@ def _apply_admin_refund(order_id,*,reason,operator,operator_account,refund_amoun
     if order.payment_status not in PAID_STATES or order.status == 'CANCELLED':
         raise RefundError('订单当前没有可退余额')
     if order.status == Order.Status.PENDING:
+        from .grab_customer_review import PendingGrabCancellationReview, require_no_pending_review
         from .grab_round_facts import GrabRoundReviewRequired, latest_round_state
         try:
             latest_round_state(order.pk, seats=order.required_provider_count, lock=True)
+            require_no_pending_review(order.pk)
         except GrabRoundReviewRequired as exc:
             raise RefundError(str(exc), code='GRAB_ROUND_REVIEW') from exc
+        except PendingGrabCancellationReview as exc:
+            raise RefundError(str(exc), code='GRAB_CANCEL_REVIEW_PENDING') from exc
     if zero_subsidy and order.status == Order.Status.GRABBED:
         if refund_amount is not None or plan_token:
             raise RefundError('安全箱服务前取消不产生钱包退款，请核对原券')
