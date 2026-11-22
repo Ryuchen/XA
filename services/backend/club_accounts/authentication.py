@@ -1,11 +1,18 @@
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth import get_user_model
+from django.db import DatabaseError, InterfaceError
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import APIException, AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
 from .tokens import ACCOUNT_TOKEN_KIND, account_for_claims
+
+
+class ClubAccountAuthenticationUnavailable(APIException):
+    status_code = 503
+    default_detail = '门店账号服务暂不可用，请稍后重试'
+    default_code = 'club_account_auth_unavailable'
 
 
 class ClubAccountAuthentication(BaseAuthentication):
@@ -33,17 +40,17 @@ class ClubAccountAuthentication(BaseAuthentication):
 
         try:
             account = account_for_claims(token)
+            mapping = getattr(account, 'legacy_mapping', None)
+            legacy_user = (get_user_model().objects.filter(pk=mapping.legacy_user_id).first()
+                           if mapping is not None else None)
         except TokenError as exc:
             raise AuthenticationFailed(str(exc)) from exc
+        except (DatabaseError, InterfaceError) as exc:
+            raise ClubAccountAuthenticationUnavailable() from exc
 
         request.account = account
-        if hasattr(request, '_request'):
-            request._request.account = account
-        mapping = getattr(account, 'legacy_mapping', None)
-        legacy_user = None
-        if mapping is not None:
-            legacy_user = get_user_model().objects.filter(pk=mapping.legacy_user_id).first()
         request.legacy_user = legacy_user
         if hasattr(request, '_request'):
+            request._request.account = account
             request._request.legacy_user = legacy_user
         return AnonymousUser(), token

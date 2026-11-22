@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import DatabaseError, InterfaceError, connection
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
@@ -67,6 +68,44 @@ class ClubAccountAuthenticationTest(APITestCase):
         self.assertEqual(response.data['data']['id'], str(account.id))
         self.assertEqual(response.data['data']['role'], 'provider')
 
+    def test_account_and_legacy_lookup_outages_return_retryable_503(self):
+        account, _ = self.create_account(ClubAccount.AccountType.PROVIDER)
+        access_token, _ = issue_account_tokens(account)
+        headers = {'HTTP_AUTHORIZATION': f'Bearer {access_token}'}
+        for model, error in ((ClubAccount, InterfaceError), (LegacyAccountMap, DatabaseError),
+                             (get_user_model(), InterfaceError)):
+            def disconnect(execute, sql, params, many, context):
+                if sql.lstrip().upper().startswith('SELECT') and model._meta.db_table in sql.lower():
+                    raise error('isolated account lookup failed')
+                return execute(sql, params, many, context)
+
+            with self.subTest(model=model.__name__), connection.execute_wrapper(disconnect):
+                response = self.client.get('/api/users/me/', **headers)
+                self.assertEqual(response.status_code, 503, response.data)
+                self.assertNotIn('data', response.data)
+                self.assertNotIn('WWW-Authenticate', response)
+                self.assertEqual(response.data['errors']['detail'].code, 'club_account_auth_unavailable')
+        restored = self.client.get('/api/users/me/', **headers)
+        self.assertEqual(restored.status_code, 200)
+        self.assertEqual(restored.data['data']['id'], str(account.id))
+
+    def test_store_account_refresh_recovers_after_lookup_disconnect(self):
+        account, _ = self.create_account(ClubAccount.AccountType.PROVIDER)
+        _, refresh_token = issue_account_tokens(account)
+
+        def disconnect(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('SELECT') and ClubAccount._meta.db_table in sql.lower():
+                raise InterfaceError('isolated refresh lookup failed')
+            return execute(sql, params, many, context)
+
+        with connection.execute_wrapper(disconnect):
+            unavailable = self.client.post('/api/users/refresh/', {'refresh': refresh_token}, format='json')
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertNotIn('data', unavailable.data)
+        restored = self.client.post('/api/users/refresh/', {'refresh': refresh_token}, format='json')
+        self.assertEqual(restored.status_code, 200, restored.data)
+        self.assertEqual(AccessToken(restored.data['data']['token'])['account_id'], account.pk)
+
     def test_legacy_django_jwt_is_rejected(self):
         _, legacy_user = self.create_account(ClubAccount.AccountType.PROVIDER)
         legacy_access = RefreshToken.for_user(legacy_user).access_token
@@ -118,6 +157,24 @@ class ConsoleClubAccountAuthenticationTest(APITestCase):
             account=self.staff,
         )
         membership.roles.add(role)
+
+    @override_settings(LOGIN_OTP_REQUIRED=False)
+    def test_console_refresh_preserves_session_on_store_permission_lookup_failure(self):
+        _, refresh_token = issue_account_tokens(self.staff)
+
+        def disconnect(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('SELECT') and AdminMembership._meta.db_table in sql.lower():
+                raise InterfaceError('isolated console permission lookup failed')
+            return execute(sql, params, many, context)
+
+        payload = {'refresh': refresh_token}
+        with connection.execute_wrapper(disconnect):
+            unavailable = self.client.post('/api/admin/auth/refresh', payload, format='json')
+        self.assertEqual(unavailable.status_code, 503, unavailable.data)
+        self.assertNotIn('data', unavailable.data)
+        restored = self.client.post('/api/admin/auth/refresh', payload, format='json')
+        self.assertEqual(restored.status_code, 200, restored.data)
+        self.assertEqual(AccessToken(restored.data['data']['token'])['account_id'], self.staff.pk)
 
     @override_settings(LOGIN_OTP_REQUIRED=True)
     def test_staff_login_returns_club_account_tokens(self):

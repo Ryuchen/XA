@@ -11,7 +11,7 @@ from stores.conf import settings
 from stores.context import current_currency_name
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import IntegrityError
+from django.db import DatabaseError, IntegrityError, InterfaceError
 from stores.db import transaction
 from django.db.models import Case, Count, ExpressionWrapper, F, FloatField, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce, TruncDate
@@ -23,6 +23,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 
+from club_accounts.authentication import ClubAccountAuthenticationUnavailable
 from club_accounts.models import ClubAccount
 from club_accounts.permissions import IsClubAccountAuthenticated, resolve_club_account
 from club_accounts.tokens import refresh_account_access_token
@@ -140,6 +141,8 @@ class AccountRefreshView(APIView):
             return Response({'code': 400, 'msg': '缺少 refresh token'})
         try:
             access_token = refresh_account_access_token(raw_refresh_token)
+        except (DatabaseError, InterfaceError) as exc:
+            raise ClubAccountAuthenticationUnavailable() from exc
         except TokenError:
             return Response(
                 {'code': 401, 'msg': '登录已过期，请重新登录'},
