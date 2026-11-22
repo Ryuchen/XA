@@ -19,7 +19,7 @@ def _sum_segments(rows):
 
 def _same_seat_cross_payment(refund, first, other_handover):
     """Recognize two accepted first handovers from the same actual transfer."""
-    from .models import OrderAddonPayment, OrderOriginalShareTransfer
+    from .models import OrderAddonHandover, OrderAddonPayment, OrderOriginalShareTransfer
     from .points_transfer_refund_access import same_seat_addon_payments
 
     if (not other_handover or first.payment_id != refund.payment_id or first.payment_id == other_handover.payment_id
@@ -35,12 +35,31 @@ def _same_seat_cross_payment(refund, first, other_handover):
     transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
         created_at__lte=refund.created_at).select_related('previous_segment').order_by('pk')[:2])
     paid = list(OrderAddonPayment.objects.filter(intent__order=order,
-        buyer_transaction__created_at__lte=refund.created_at).select_related('intent', 'buyer_transaction')[:3])
-    return (len(transfers) == 1 and transfers[0].previous_segment_id == first.source_segment_id
-            and transfers[0].next_segment_id == first.target_segment_id
-            and transfers[0].created_at < min(first.created_at, other_handover.created_at)
-            and {row.pk for row in paid} == {first.payment_id, other_handover.payment_id}
-            and same_seat_addon_payments(order, paid, transfers[0]))
+        buyer_transaction__created_at__lte=refund.created_at).select_related('intent', 'buyer_transaction')[:4])
+    paid_ids = {row.pk for row in paid}
+    debit_ids = {first.payment_id, other_handover.payment_id}
+    if (len(transfers) != 1 or transfers[0].previous_segment_id != first.source_segment_id
+            or transfers[0].next_segment_id != first.target_segment_id
+            or transfers[0].created_at >= min(first.created_at, other_handover.created_at)
+            or not debit_ids <= paid_ids or not same_seat_addon_payments(order, paid, transfers[0])):
+        return False
+    if paid_ids == debit_ids:
+        return True
+    # This three-payment path consumes earnings from the refunded payment
+    # and the other payment with the lowest ID, following the posting order.
+    if (other_handover.payment_id != min(paid_ids - {first.payment_id})
+            or refund.main_pending_deduction or refund.wallet_deduction or refund.deposit_deduction
+            or refund.earning_deductions.exclude(payment_id__in=debit_ids).exists()):
+        return False
+    remaining_handovers = list(OrderAddonHandover.objects.filter(payment_id__in=paid_ids - debit_ids,
+        status='ACCEPTED', accepted_at__lte=refund.created_at))
+    if len(remaining_handovers) != 1:
+        return False
+    remaining = remaining_handovers[0]
+    return (remaining.kind == 'STANDARD' and not remaining.previous_id
+            and (remaining.source_segment_id, remaining.target_segment_id)
+                == (first.source_segment_id, first.target_segment_id)
+            and transfers[0].created_at < remaining.created_at <= remaining.accepted_at < refund.created_at)
 
 
 def _same_seat_cross_income(refund, deduction, handover, *, receipt_id):

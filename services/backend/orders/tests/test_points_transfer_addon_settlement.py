@@ -193,7 +193,7 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
                 _verify_prior_handover_refund_recovery(refund, first, run)
 
     def test_cross_payment_debit_must_follow_the_same_first_service_transfer(self):
-        from orders.models import OrderAddonPayment, OrderOriginalShareTransfer
+        from orders.models import OrderAddonHandover, OrderAddonPayment, OrderOriginalShareTransfer
         from orders.points_addon_handover_refund_facts import _same_seat_cross_payment
 
         at = timezone.now()
@@ -208,7 +208,9 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
         original = SimpleNamespace(previous_segment_id=8, next_segment_id=9, created_at=at)
         with (patch.object(OrderOriginalShareTransfer.objects, 'filter') as transfers,
               patch.object(OrderAddonPayment.objects, 'filter') as payments,
-              patch('orders.points_transfer_refund_access.same_seat_addon_payments', return_value=True)):
+              patch.object(OrderAddonHandover.objects, 'filter') as handovers,
+              patch('orders.points_transfer_refund_access.same_seat_addon_payments',
+                    side_effect=lambda _order, rows, _event: len(rows) in (2, 3))):
             transfers.return_value.select_related.return_value.order_by.return_value = [original]
             payments.return_value.select_related.return_value = [SimpleNamespace(pk=3), SimpleNamespace(pk=4)]
             self.assertTrue(_same_seat_cross_payment(refund, first, donor))
@@ -222,6 +224,20 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             self.assertFalse(_same_seat_cross_payment(refund, first, donor))
             order.prestart_handoffs.filter.return_value.exists.return_value = False
             transfers.return_value.select_related.return_value.order_by.return_value = [original, Mock()]
+            self.assertFalse(_same_seat_cross_payment(refund, first, donor))
+            transfers.return_value.select_related.return_value.order_by.return_value = [original]
+            payments.return_value.select_related.return_value.append(SimpleNamespace(pk=5))
+            third = SimpleNamespace(**{**vars(first), 'payment_id': 5})
+            refund.main_pending_deduction = refund.wallet_deduction = refund.deposit_deduction = 0
+            refund.earning_deductions = Mock()
+            refund.earning_deductions.exclude.return_value.exists.return_value = False
+            handovers.return_value = [third]
+            self.assertTrue(_same_seat_cross_payment(refund, first, donor))
+            self.assertFalse(_same_seat_cross_payment(refund, first, third))
+            third.accepted_at = refund.created_at
+            self.assertFalse(_same_seat_cross_payment(refund, first, donor))
+            third.accepted_at = first.accepted_at
+            refund.earning_deductions.exclude.return_value.exists.return_value = True
             self.assertFalse(_same_seat_cross_payment(refund, first, donor))
 
     def test_second_handover_checks_each_refund_before_the_next_event(self):
@@ -306,6 +322,36 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             handovers.return_value.values_list.return_value = [3, 4]
             self.assertFalse(scope._supported_addon(order, transfers, allow_handover=True, pending_payment_id=3,
                                                    allow_successive=True))
+            payments.return_value.select_related.return_value.append(SimpleNamespace(intent_id=3))
+            chains[1].append(SimpleNamespace(payment_id=4))
+            chains.append([SimpleNamespace(payment_id=5)])
+            handovers.return_value.values_list.return_value = [5]
+            self.assertFalse(scope._supported_addon(order, transfers, allow_successive=True))
+            self.assertTrue(scope._supported_addon(order, transfers, allow_handover=True, pending_payment_id=5))
+            handovers.return_value.values_list.return_value = []
+            self.assertTrue(scope._supported_addon(order, transfers, allocation_replay=True))
+            chains[-1].append(SimpleNamespace(payment_id=5))
+            self.assertTrue(scope._supported_addon(order, transfers, allow_successive=True))
+
+    def test_three_same_seat_payments_require_all_first_handover_chains(self):
+        from orders import points_transfer_refund_access as scope
+
+        at = timezone.now()
+        order = SimpleNamespace(pk=12, required_provider_count=2, room_required_snapshot=False, customer_account_id=18)
+        origin = SimpleNamespace(pk=8, provider_account_id=20, provider_business_cycle=1,
+                                 started_at=at - timedelta(seconds=3))
+        transfer = SimpleNamespace(previous_segment=origin, created_at=at)
+        intent = SimpleNamespace(order_id=12, buyer_id=18, segment_id=8, provider_id=20)
+        payments = [SimpleNamespace(pk=pk, intent=intent,
+            buyer_transaction=SimpleNamespace(created_at=at - timedelta(seconds=1))) for pk in (3, 4, 5)]
+        chains = [[SimpleNamespace(payment_id=payment.pk)] for payment in payments]
+        with patch.object(scope, '_successive_addon_handovers', side_effect=chains):
+            self.assertEqual(scope._multi_addon_return_chains(order, payments, [transfer]), chains)
+        with patch.object(scope, '_successive_addon_handovers', side_effect=[*chains[:2], []]):
+            self.assertEqual(scope._multi_addon_return_chains(order, payments, [transfer]), [])
+        payments[-1].buyer_transaction.created_at = at
+        with patch.object(scope, '_successive_addon_handovers', side_effect=chains):
+            self.assertEqual(scope._multi_addon_return_chains(order, payments, [transfer]), [])
 
     def test_pending_second_handover_scope_requires_the_recorded_allocation_action(self):
         from orders.models import OrderAddonHandover, OrderPointsFundingAllocation

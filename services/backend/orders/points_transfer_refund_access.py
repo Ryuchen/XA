@@ -642,9 +642,9 @@ def unaffected_addon_for_return(order, payment, payments, first_transfer, *, bou
 
 
 def same_seat_addon_payments(order, payments, first_transfer):
-    """Both original payments belonged to the service segment that transferred."""
+    """Each original payment belonged to the service segment that transferred."""
     origin = first_transfer.previous_segment
-    return (len(payments) == 2 and order.required_provider_count == 2 and not order.room_required_snapshot
+    return (len(payments) in (2, 3) and order.required_provider_count == 2 and not order.room_required_snapshot
             and origin.started_at and origin.provider_business_cycle
             and all(payment.intent.order_id == order.pk and payment.intent.buyer_id == order.customer_account_id
                     and payment.intent.segment_id == origin.pk and payment.intent.provider_id == origin.provider_account_id
@@ -653,7 +653,7 @@ def same_seat_addon_payments(order, payments, first_transfer):
 
 
 def _multi_addon_return_chains(order, payments, transfers, *, allow_waiting=False):
-    if len(payments) != 2 or not 1 <= len(transfers) <= 2:
+    if len(payments) not in (2, 3) or not 1 <= len(transfers) <= 2:
         return []
     if len(transfers) == 2 and (transfers[1].next_segment.provider_account_id !=
                                 transfers[0].previous_segment.provider_account_id):
@@ -763,7 +763,7 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
                 affected = {chain[0].payment_id for chain in chains}
                 if allow_handover and not any(_pending_allowed(pk, pending_payment_id) for pk in affected):
                     return False
-                if len(chains) == 2:
+                if len(chains) > 1:
                     complete = all(len(chain) == 2 for chain in chains)
                     if not (allow_handover or allocation_replay or (allow_successive and complete)):
                         return False
@@ -909,7 +909,7 @@ def transfer_capture(order_id, *, addon_handover=False, pending_payment_id=None,
                     preceding_handovers = [chain[0] for chain in _multi_addon_return_chains(order, payments, transfers)]
             if not preceding_handovers or set(outgoing_accounts) != {transfers[0].next_segment.provider_account_id}:
                 raise ValidationError('加购接替后的再次转单资金尚待核对')
-            if len(payments) == 2:
+            if len(payments) > 1:
                 return_to = transfers[0].previous_segment.provider_account_id
         if len(payments) > 1:
             from .addon_handover import current_responsibilities

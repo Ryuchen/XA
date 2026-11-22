@@ -111,7 +111,8 @@ def facts(row):
                     other_verified = unaffected_addon_for_return(order, by_payment[handovers[0].payment_id], addons,
                                                                   original, boundary=boundary)
                 else:
-                    other_verified = same_seat_addon_payments(order, addons, original)
+                    other_verified = (len(handovers) == len(addons)
+                                      and same_seat_addon_payments(order, addons, original))
                 if not other_verified:
                     raise ValidationError('转单时多项加购的履约或退款范围异常')
             from .addon_handover import verify_handover
