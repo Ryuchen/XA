@@ -422,3 +422,28 @@ class PlatformAuthenticationTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.data['errorCode'], 'PLATFORM_FORBIDDEN')
         self.assertNotIn('data', response.data)
+
+    def test_aggregate_discards_results_when_session_changes_during_read(self):
+        from stores.platform_dashboard import _read_store
+
+        grant = PlatformRoleGrant.objects.create(account=self.account, role='SUPER_ADMIN', scope_slug='*')
+        path = '/api/admin/platform/dashboard'
+        headers = {'HTTP_AUTHORIZATION': 'Bearer ' + self.sms_login()['token']}
+        self.assertEqual(self.client.get(path, **headers).status_code, 200)
+
+        def read_and_rotate_session(store):
+            counts = _read_store(store)
+            if store.pk == self.second.pk:
+                PlatformAccount.objects.filter(pk=self.account.pk).update(security_version=uuid.uuid4())
+            return counts
+
+        with patch('stores.platform_dashboard._read_store', side_effect=read_and_rotate_session):
+            response = self.client.get(path, **headers)
+        grant.refresh_from_db()
+        self.assertTrue(grant.is_active)
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn('data', response.data)
+        retry = self.client.get(path, **headers)
+        self.assertEqual(retry.status_code, 401)
+        self.assertEqual(response.data, retry.data)
+        self.assertEqual(response['WWW-Authenticate'], retry['WWW-Authenticate'])

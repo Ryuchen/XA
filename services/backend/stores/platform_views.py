@@ -3,6 +3,7 @@ from uuid import UUID
 from django.conf import settings
 from django.db import DatabaseError, InterfaceError, transaction
 
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -171,10 +172,14 @@ class PlatformDashboardView(APIView):
         from .platform_dashboard import aggregate_dashboard
         try:
             data = aggregate_dashboard(request.platform_account)
+            # Store reads can finish after the platform session is invalidated.
+            account_for_token(request.auth)
         except PermissionError:
             return fail('无平台汇总权限', 403, 'PLATFORM_FORBIDDEN')
         except (DatabaseError, InterfaceError):
             return fail('平台汇总暂不可用，请稍后重试', 503, 'PLATFORM_UNAVAILABLE')
+        except TokenError as error:
+            raise AuthenticationFailed('平台登录已失效，请重新登录') from error
         return Response({'code': 0, 'data': data})
 
 
