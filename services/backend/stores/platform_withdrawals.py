@@ -2,10 +2,11 @@
 import hashlib
 import json
 from django.conf import settings
-from django.db import DatabaseError, IntegrityError
+from django.db import DatabaseError, IntegrityError, InterfaceError
 from django.db.models import Count
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
@@ -183,10 +184,17 @@ class PlatformWithdrawalActionView(APIView):
                 rows.append({'event_id': event.pk, 'request_id': event.request_id, 'action': event.action,
                     'actor_id': str(event.platform_actor_id), 'actor_name': event.actor_name,
                     'from_status': event.from_status, 'to_status': event.to_status, 'audit_status': audit_status})
+            actor = account_for_token(request.auth)
+            if not platform_stores_for(actor, 'withdraw:view').filter(
+                pk=store.pk, slug=slug, database_alias=store.database_alias, initialized_at__isnull=False,
+            ).exists():
+                return fail('门店不存在或无权查看', 404)
             response = Response({'code': 0, 'data': {'events': rows}})
             response['Cache-Control'] = 'no-store'
             return response
-        except DatabaseError:
+        except TokenError as error:
+            raise AuthenticationFailed('平台登录已失效，请重新登录') from error
+        except (DatabaseError, InterfaceError):
             return fail('平台或门店审计服务暂不可用，请稍后重试', 503, 'AUDIT_UNAVAILABLE')
 
     def post(self, request, slug, pk, action):
@@ -424,7 +432,7 @@ class PlatformWithdrawalActionView(APIView):
             return fail('无权补记该提现事件', 403)
         except ValueError as exc:
             return fail(str(exc), 409, 'AUDIT_REVIEW_REQUIRED')
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             return fail('审计结果暂不可核验，请稍后以原事件重试', 503, 'AUDIT_UNAVAILABLE')
 
 

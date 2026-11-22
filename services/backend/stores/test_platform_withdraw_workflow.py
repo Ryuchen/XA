@@ -2,7 +2,7 @@ import os
 from unittest import skipUnless
 from unittest.mock import patch
 
-from django.db import DatabaseError, connections
+from django.db import DatabaseError, InterfaceError, connections
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -142,6 +142,69 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         with store_context(self.second):
             self.assertEqual(WithdrawalPlatformEvent.objects.filter(withdrawal_id=pk).count(), 1)
             wallet.refresh_from_db(); self.assertEqual((wallet.balance, wallet.frozen_amount), (80000, 20000))
+
+    def test_manual_audit_disconnect_is_retryable_with_the_same_event(self):
+        from stores.models import PlatformAuditEvent, PlatformWithdrawalAuditReceipt
+
+        pk = self.apply()
+        self.initial(pk)
+        key = 'audit-disconnect-approve'
+        approved = self.action(pk, 'approve', client_request_id=key)
+        self.assertEqual(approved.status_code, 200, approved.data)
+        with store_context(self.second):
+            event = WithdrawalPlatformEvent.objects.get(withdrawal_id=pk, action='approve')
+        path = f'/api/admin/platform/withdrawals/xinan/{pk}/audit-recover'
+        data = {'event_id': event.pk, 'client_request_id': key}
+
+        for alias, table in (
+            ('default', 'stores_platformwithdrawalauditreceipt'),
+            (self.second.database_alias, 'wallet_withdrawalplatformevent'),
+        ):
+            def disconnect(execute, sql, params, many, context):
+                if sql.lstrip().upper().startswith('SELECT') and table in sql.lower():
+                    raise InterfaceError('isolated audit connection lost')
+                return execute(sql, params, many, context)
+
+            with self.subTest(alias=alias), connections[alias].execute_wrapper(disconnect):
+                for response in (self.f.get(path), self.f.post(path, data, format='json')):
+                    self.assertEqual(response.status_code, 503, response.data)
+                    self.assertEqual(response.data['errorCode'], 'AUDIT_UNAVAILABLE')
+                    self.assertNotIn('data', response.data)
+        self.assertFalse(PlatformWithdrawalAuditReceipt.objects.filter(store=self.second).exists())
+
+        with self.captureOnCommitCallbacks(using='default', execute=True):
+            recovered = self.f.post(path, data, format='json')
+        self.assertEqual(recovered.status_code, 200, recovered.data)
+        self.assertTrue(recovered.data['data']['recovered'])
+        with self.captureOnCommitCallbacks(using='default', execute=True):
+            replay = self.f.post(path, data, format='json')
+        self.assertFalse(replay.data['data']['recovered'])
+        self.assertEqual(replay.data['data']['audit_id'], recovered.data['data']['audit_id'])
+        self.assertEqual(PlatformWithdrawalAuditReceipt.objects.filter(store=self.second).count(), 1)
+        self.assertEqual(PlatformAuditEvent.objects.filter(
+            target_store_slug=self.second.slug, action='withdraw.approve', target_id=str(pk)).count(), 1)
+
+    def test_manual_audit_read_rechecks_store_scope_after_reading_events(self):
+        from stores.platform_withdrawal_audit import read_event
+
+        pk = self.apply()
+        self.initial(pk)
+        approved = self.action(pk, 'approve', client_request_id='audit-scope-approve')
+        self.assertEqual(approved.status_code, 200, approved.data)
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+        path = f'/api/admin/platform/withdrawals/xinan/{pk}/audit-recover'
+        self.assertEqual(self.f.get(path).status_code, 200)
+
+        def read_then_revoke(store, withdrawal_id, event_id):
+            facts = read_event(store, withdrawal_id, event_id)
+            PlatformRoleGrant.objects.filter(account=self.finance, scope_slug=store.slug).update(is_active=False)
+            return facts
+
+        with patch('stores.platform_withdrawal_audit.read_event', side_effect=read_then_revoke):
+            response = self.f.get(path)
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn('data', response.data)
+        self.assertEqual(self.f.get(path).status_code, 404)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
