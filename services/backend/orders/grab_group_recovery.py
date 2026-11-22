@@ -11,8 +11,9 @@ import logging
 from django.db.models import Q
 from stores.db import transaction
 
-from .dispatching import MODELS, _pool_group_enabled, send_task_safely
+from .dispatching import MODELS, _eligible_timing, _pool_group_enabled, send_task_safely
 from .grab_customer_review import has_pending_review
+from .grab_group_dispatch import GroupRoundWaiting
 from .models import Order
 
 LEASE_SECONDS = 90
@@ -62,11 +63,12 @@ def recover_due(*, limit=100):
             except Exception:
                 logger.exception('重开抢单群发重排待恢复 order_id=%s', order_id)
     for channel, model in MODELS.items():
-        candidates = list(model.objects.filter(eligible_status, lease_expired,
+        candidates = (model.objects.filter(eligible_status, lease_expired,
             content_contract_version=2, pool_delivery_due_at__lte=now)
             .exclude(order__grab_review_cancellation__status='PENDING')
-            .order_by('pool_delivery_due_at', 'pk').values_list('pk', 'order_id')[:limit])
-        for record_id, order_id in candidates:
+            .order_by('pool_delivery_due_at', 'pk').values_list('pk', 'order_id'))
+        claimed = 0
+        for record_id, order_id in candidates.iterator(chunk_size=200):
             with transaction.atomic():
                 # Match the sender and reopening lock order to avoid deadlocks.
                 order = Order.objects.select_for_update().filter(pk=order_id).first()
@@ -79,6 +81,14 @@ def recover_due(*, limit=100):
                         or not (record.status == 'PENDING' or
                                 (record.status == 'FAILED' and record.pool_enqueue_failed))):
                     continue
+                if record.sequence == order.reject_count:
+                    try:
+                        _eligible_timing(order, lock=True)
+                    except GroupRoundWaiting:
+                        continue
+                    except ValueError:
+                        # The sender persists definitive skips and validation failures.
+                        pass
                 record.status = 'PENDING'
                 record.last_error = ''
                 record.pool_enqueue_failed = False
@@ -86,6 +96,9 @@ def recover_due(*, limit=100):
                 record.save(update_fields=['status', 'last_error', 'pool_recovery_lease_until', 'pool_enqueue_failed'])
                 transaction.on_commit(lambda channel=channel, pk=record.pk: send_task_safely(channel, pk))
                 count += 1
+                claimed += 1
+                if claimed >= limit:
+                    break
     # Payment may have committed before the post-commit opening task or a
     # channel record was created. Only create a missing record; never retry a
     # previously attempted external delivery with an unknown outcome.

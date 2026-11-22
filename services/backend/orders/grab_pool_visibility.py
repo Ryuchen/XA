@@ -33,7 +33,7 @@ def _validated_delays(pool):
     return delays
 
 
-def initial_mixed_group_visible_at(pool_id):
+def initial_mixed_group_visible_at(pool_id, *, lock=False):
     """Return the first-round public group time, not authority to send.
 
     A mixed group includes every pass tier and people without a pass. The
@@ -42,7 +42,8 @@ def initial_mixed_group_visible_at(pool_id):
     """
     if type(pool_id) is not int or pool_id <= 0:
         raise ValueError('抢单池无效')
-    pool = OrderGrabPoolSnapshot.objects.filter(pk=pool_id).first()
+    pools = OrderGrabPoolSnapshot.objects.filter(pk=pool_id)
+    pool = (pools.select_for_update() if lock else pools).first()
     if pool is None:
         raise ValueError('本店抢单池不存在')
     delays = _validated_delays(pool)
@@ -51,10 +52,11 @@ def initial_mixed_group_visible_at(pool_id):
     from .grab_clock_contract import production_enabled
     if production_enabled():
         from .grab_round_opening import opening_bounds
-        first = pool.rounds.filter(number=1).first()
+        rounds = pool.rounds.filter(number=1)
+        first = (rounds.select_for_update() if lock else rounds).first()
         if not first:
             raise ValueError('抢单首轮提交证据待核对')
-        return opening_bounds(first)[1] + timedelta(seconds=max(delays.values()))
+        return opening_bounds(first, lock=lock)[1] + timedelta(seconds=max(delays.values()))
     return pool.opened_at + timedelta(seconds=max(delays.values()))
 
 

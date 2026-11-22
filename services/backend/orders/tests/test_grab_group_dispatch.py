@@ -13,8 +13,9 @@ from console.grab_config import save_grab_window
 from orders.dispatching import deliver_dispatch, dispatch_preview, queue_dispatch, reschedule_pool_dispatch
 from orders.grab_pool_snapshot import create_initial_snapshot
 from orders.grab_team_draft import first_round
-from orders.models import Order, OrderGrabRound, WecomDispatchRecord
-from orders.tests.factories import make_order, make_service, make_user
+from orders.models import Order, OrderGrabRound, OrderGrabTeamRoundState
+from orders.tests.factories import configure_isolated_wecom, make_order, make_service, make_user
+from stores.context import resolve_store, store_context
 from stores.db import transaction
 
 
@@ -38,11 +39,11 @@ class GrabGroupTaskEnvelopeTest(SimpleTestCase):
                 self.assertEqual(kwargs['headers']['store_slug'], 'xinan')
 
 
-@override_settings(GRAB_POOL_GROUP_DISPATCH_ENABLED=True,
-    WECOM_DISPATCH_ENABLED=True,
-    WECOM_DISPATCH_WEBHOOK='https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=isolated-test')
+@override_settings(GRAB_POOL_GROUP_DISPATCH_ENABLED=True)
 class GrabGroupDispatchTest(TestCase):
     def setUp(self):
+        self.enterContext(store_context(resolve_store()))
+        configure_isolated_wecom()
         save_grab_window(30, 0, lambda *args: None)
         self.order = make_order(make_user(), service=make_service(), payment_status='PAID',
             original_amount=10000, amount=8000, required_provider_count=2,
@@ -50,6 +51,7 @@ class GrabGroupDispatchTest(TestCase):
         with transaction.atomic():
             self.pool = create_initial_snapshot(self.order.pk)
             self.round = first_round(self.pool.pk)
+            OrderGrabTeamRoundState.objects.create(round=self.round)
             self.order.pool_entered_at = self.pool.opened_at
             self.order.auto_cancel_at = self.pool.total_deadline
             self.order.save(update_fields=['pool_entered_at', 'auto_cancel_at'])
@@ -102,9 +104,10 @@ class GrabGroupDispatchTest(TestCase):
         type(record).objects.filter(pk=record.pk).update(pool_recovery_lease_until=self.due)
         opened = self.round.deadline
         with patch('django.utils.timezone.now', return_value=opened):
-            OrderGrabRound.objects.create(pool=self.pool, number=2, opened_at=opened,
+            reopened = OrderGrabRound.objects.create(pool=self.pool, number=2, opened_at=opened,
                 deadline=opened + timedelta(seconds=30), total_deadline=self.pool.total_deadline,
                 simultaneous_visibility=True)
+            OrderGrabTeamRoundState.objects.create(round=reopened)
             with self.captureOnCommitCallbacks(execute=True):
                 self.assertEqual(reschedule_pool_dispatch(self.order.pk), 1)
             schedule.assert_called_with('WECOM', record.pk, eta=opened)
@@ -158,6 +161,32 @@ class GrabGroupDispatchTest(TestCase):
         self.assertIn('服务原价：1000', content)
         self.assertNotIn('陪玩收益', content)
 
+    @override_settings(KOOK_ENABLED=True, KOOK_BOT_TOKEN='test-token',
+                       KOOK_DISPATCH_CHANNEL_ID='test-channel')
+    @patch('integrations.kook.KookClient.send_channel_message')
+    def test_current_round_missing_state_holds_existing_message_until_recovered(self, send):
+        from integrations.kook import KookMessageResult
+
+        send.return_value = KookMessageResult('test-message')
+        record = queue_dispatch(self.order, 'KOOK')
+        opened = self.round.deadline
+        reopened = OrderGrabRound.objects.create(pool=self.pool, number=2, opened_at=opened,
+            deadline=opened + timedelta(seconds=30), total_deadline=self.pool.total_deadline,
+            simultaneous_visibility=True)
+        with patch('django.utils.timezone.now', return_value=opened):
+            self.assertFalse(dispatch_preview(self.order)['can_send'])
+            self.assertIsNone(queue_dispatch(self.order, 'KOOK'))
+            self.assertEqual(reschedule_pool_dispatch(self.order.pk), 0)
+            self.assertEqual(deliver_dispatch('KOOK', record.pk), 'waiting:round_review')
+            record.refresh_from_db()
+            self.assertEqual((record.status, record.attempts, record.pool_delivery_due_at),
+                             ('PENDING', 0, self.due))
+            send.assert_not_called()
+            OrderGrabTeamRoundState.objects.create(round=reopened)
+            self.assertEqual(reschedule_pool_dispatch(self.order.pk), 1)
+            self.assertEqual(deliver_dispatch('KOOK', record.pk), 'sent:test-message')
+        send.assert_called_once()
+
 
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated databases')
 @override_settings(GRAB_POOL_GROUP_DISPATCH_ENABLED=True)
@@ -165,13 +194,12 @@ class GrabGroupDispatchStoreTest(TransactionTestCase):
     databases = {'default', 'store_b'} if 'store_b' in settings.DATABASES else {'default'}
     reset_sequences = True
 
-    @patch('orders.dispatching.channel_config', return_value=(True, 'test-target', '测试群'))
     @patch('orders.dispatching.send_task_safely')
     @patch('integrations.wecom.WecomClient')
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
-    def test_equal_ids_keep_store_timing_context_and_currency(self, client, schedule, config):
-        from stores.context import current_store, resolve_store, store_context
+    def test_equal_ids_keep_store_timing_context_and_currency(self, client, schedule):
+        from stores.context import current_store
         from stores.tests_hosts import xinan_store
         from wallet.models import SystemConfig
         scheduled = []
@@ -179,6 +207,7 @@ class GrabGroupDispatchStoreTest(TransactionTestCase):
         rows = []
         for store, delay in ((resolve_store(), 300), (xinan_store(), 600)):
             with store_context(store):
+                configure_isolated_wecom(store.slug)
                 save_grab_window(30, 0, lambda *args: None)
                 SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_NONE',
                                                        defaults={'value': str(delay)})
@@ -187,7 +216,7 @@ class GrabGroupDispatchStoreTest(TransactionTestCase):
                     escort_mode='DOUBLE', pending_timeout_minutes=30)
                 with transaction.atomic():
                     pool = create_initial_snapshot(order.pk)
-                    first_round(pool.pk)
+                    OrderGrabTeamRoundState.objects.create(round=first_round(pool.pk))
                     order.pool_entered_at, order.auto_cancel_at = pool.opened_at, pool.total_deadline
                     order.save(update_fields=['pool_entered_at', 'auto_cancel_at'])
                 record = queue_dispatch(order, 'WECOM')

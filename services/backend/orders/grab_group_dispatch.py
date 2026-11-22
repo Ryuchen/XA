@@ -8,8 +8,13 @@ from datetime import timedelta
 from django.utils import timezone
 
 from .grab_pool_visibility import initial_mixed_group_visible_at
+from .grab_round_facts import GrabRoundReviewRequired, current_round, latest_round_state
 from .models import OrderGrabPoolSnapshot
 from .team_rules import required_team_size
+
+
+class GroupRoundWaiting(ValueError):
+    """Keep queued deliveries while the current round cannot authorize them."""
 
 
 def enabled():
@@ -34,7 +39,7 @@ def deadline_reached(deadline):
         return now + timedelta(microseconds=precision) >= deadline
     return timezone.now() >= deadline
 
-def delivery_timing(order):
+def delivery_timing(order, *, lock=False):
     """Return (earliest send time, current total deadline), or reject facts.
 
     Callers modifying/sending an order hold its row lock. A prepared round is
@@ -43,22 +48,34 @@ def delivery_timing(order):
     pool = OrderGrabPoolSnapshot.objects.filter(order_id=order.pk).first()
     if not pool:
         raise ValueError('订单缺少抢单池快照，请先核对')
-    first_visible = initial_mixed_group_visible_at(pool.pk)
-    if (order.pool_entered_at != pool.opened_at or pool.required_provider_count != required_team_size(order)):
+    seats = required_team_size(order)
+    if order.pool_entered_at != pool.opened_at or pool.required_provider_count != seats:
         raise ValueError('订单入池或抢单窗口快照不一致，请先核对')
-    latest = pool.rounds.order_by('-number').first()
-    if not latest:
-        raise ValueError('订单抢单轮次尚未建立')
-    from .grab_round_facts import current_round
-    previous = current_round(pool, latest.pk)
-    if previous.opened_at > current_time() or order.auto_cancel_at != previous.total_deadline:
+    try:
+        state = latest_round_state(order.pk, seats=seats, lock=lock)
+    except GrabRoundReviewRequired as exc:
+        if exc.state is None:
+            raise GroupRoundWaiting(str(exc)) from exc
+        raise
+    if not state or state.status not in ('OPEN', 'PARKED'):
+        raise GroupRoundWaiting('当前抢单轮次待核对，暂不能发单')
+    latest = state.round if lock else current_round(pool, state.round_id)
+    if latest.opened_at > current_time() or order.auto_cancel_at != latest.total_deadline:
         raise ValueError('订单等待期限与抢单轮次不一致，请先核对')
-    from .grab_clock_contract import production_enabled
+    from .grab_clock_contract import production_enabled, round_identity_valid
     if production_enabled():
         from .grab_round_opening import cutoff_bounds, opening_bounds
+        first = latest if latest.number == 1 else pool.rounds.get(number=1)
         # A group must not see a reopened order until activation is certain,
         # and cannot be sent once the earliest possible total deadline arrives.
-        due = opening_bounds(previous)[1] if previous.number > 1 else first_visible
-        deadline = cutoff_bounds(previous, 'PARKED')[0]
+        try:
+            if not round_identity_valid(first, lock=lock):
+                raise ValueError('原付款与首轮激活凭证待核对，暂不能发单')
+            first_visible = initial_mixed_group_visible_at(pool.pk, lock=lock)
+            due = opening_bounds(latest, lock=lock)[1] if latest.number > 1 else first_visible
+            deadline = cutoff_bounds(latest, 'PARKED', lock=lock)[0]
+        except ValueError as exc:
+            raise GroupRoundWaiting(str(exc)) from exc
         return due, deadline
-    return (previous.opened_at if previous.number > 1 else first_visible), previous.total_deadline
+    first_visible = initial_mixed_group_visible_at(pool.pk, lock=lock)
+    return (latest.opened_at if latest.number > 1 else first_visible), latest.total_deadline

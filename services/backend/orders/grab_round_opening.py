@@ -148,10 +148,11 @@ def _resume_waiting(round_id):
         enqueue(round_.pool.order_id, eta=deadline)
 
 
-def opening_bounds(round_):
+def opening_bounds(round_, *, lock=False):
     """Return conservative bounds, never an invented opening instant."""
     from .grab_clock_contract import TOLERANCE_NS, database_id, valid_bounds
-    evidence = OrderGrabRoundOpeningEvidence.objects.filter(round=round_).first()
+    observations = OrderGrabRoundOpeningEvidence.objects.filter(round=round_)
+    evidence = (observations.select_for_update() if lock else observations).first()
     if (not evidence or evidence.state != 'OBSERVED' or not evidence.upper_at
             or not evidence.activation_lower_at or not evidence.activation_upper_at or evidence.reason):
         raise ValueError('抢单轮次提交时间待核对')
@@ -181,7 +182,7 @@ def provisional_opening_lower(round_):
     return evidence.activation_lower_at - timedelta(microseconds=TOLERANCE_NS // 1000)
 
 
-def cutoff_bounds(round_, phase):
+def cutoff_bounds(round_, phase, *, lock=False):
     """Derive earliest/latest cutoff from real opening commit bounds."""
     if phase not in ('OPEN', 'PARKED'):
         raise ValueError('抢单轮次状态待核对')
@@ -191,14 +192,15 @@ def cutoff_bounds(round_, phase):
             or type(pool.window_seconds) is not int or not 1 <= pool.window_seconds <= 86400
             or pool.original_total_deadline != pool.opened_at + timedelta(minutes=timeout_minutes)):
         raise ValueError('抢单总等待快照待核对')
-    rows = list(pool.rounds.filter(number__lte=round_.number).order_by('number'))
+    rounds = pool.rounds.filter(number__lte=round_.number).order_by('number')
+    rows = list(rounds.select_for_update() if lock else rounds)
     if len(rows) != round_.number or not rows or rows[-1].pk != round_.pk:
         raise ValueError('抢单轮次历史待核对')
     total_lower = total_upper = previous_deadline_upper = None
     for number, row in enumerate(rows, 1):
         if row.number != number:
             raise ValueError('抢单轮次历史待核对')
-        lower, upper = opening_bounds(row)
+        lower, upper = opening_bounds(row, lock=lock)
         if previous_deadline_upper is not None and lower < previous_deadline_upper:
             raise ValueError('重开时间与上轮截止区间交叉，待核对')
         deadline_lower = lower + timedelta(seconds=pool.window_seconds)

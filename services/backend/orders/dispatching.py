@@ -7,6 +7,7 @@ from stores.db import transaction
 from django.utils import timezone
 
 from .grab_customer_review import has_pending_review
+from .grab_group_dispatch import GroupRoundWaiting, current_time, deadline_reached, delivery_timing
 from .models import KookDispatchRecord, Order, WecomDispatchRecord
 from integrations.kook_config import get_kook_config, route_for_order
 from stores.conf import store_name
@@ -31,23 +32,31 @@ def _contract_version():
 
 
 def eligibility_error(order, *, lock_review=False):
-    if order.status == Order.Status.PENDING and has_pending_review(order.pk, lock=lock_review):
-        return PENDING_CANCEL_REVIEW
+    try:
+        _eligible_timing(order, lock=lock_review)
+    except ValueError as exc:
+        return str(exc)
+    return ''
+
+
+def _eligible_timing(order, *, lock=False):
+    if order.status == Order.Status.PENDING and has_pending_review(order.pk, lock=lock):
+        raise ValueError(PENDING_CANCEL_REVIEW)
+    if order.status != Order.Status.PENDING or order.payment_status != Order.PaymentStatus.PAID:
+        raise ValueError('仅已支付、待接单的订单可发单')
     pool_group = _pool_group_enabled()
     from .models import OrderGrabPoolOpeningIntent
     if OrderGrabPoolOpeningIntent.objects.filter(order=order).exists():
         if not pool_group:
-            return '抢单订单须使用按通行证可见时间的群发'
+            raise ValueError('抢单订单须使用按通行证可见时间的群发')
         from .grab_single_flow import enabled as single_enabled
         from .grab_team_flow import enabled as team_enabled
         if not (team_enabled() if order.required_provider_count == 2 else single_enabled()):
-            return '抢单窗口尚未开放'
+            raise GroupRoundWaiting('抢单窗口尚未开放')
     if order.dispatch_route != Order.DispatchRoute.PUBLIC and not pool_group:
-        return '该订单由客服派单，不进入接单频道'
-    if order.status != Order.Status.PENDING or order.payment_status != Order.PaymentStatus.PAID:
-        return '仅已支付、待接单的订单可发单'
+        raise ValueError('该订单由客服派单，不进入接单频道')
     if order.requires_boss_selection:
-        return '老板选人订单不进入普通抢单群发'
+        raise ValueError('老板选人订单不进入普通抢单群发')
     from .direct_payment_models import DirectPaymentIntent
     from .direct_payment_quote import quote_matches_intent
     if 'direct_payment' in order._state.fields_cache:
@@ -56,30 +65,26 @@ def eligibility_error(order, *, lock_review=False):
         intent = DirectPaymentIntent.objects.filter(order=order).first()
     if intent and (intent.status != DirectPaymentIntent.Status.PAID or intent.evidence_risk_at
                    or not quote_matches_intent(intent, order)):
-        return '支付证据待核对，不能发单'
+        raise ValueError('支付证据待核对，不能发单')
     if order.provider_id or order.provider_account_id:
-        return '订单已经指定打手'
+        raise ValueError('订单已经指定打手')
     if pool_group and order.providers.filter(released_at__isnull=True).exists():
-        return '订单已经安排陪玩'
+        raise ValueError('订单已经安排陪玩')
     if not order.original_amount:
-        return MISSING_ORIGINAL_PRICE
+        raise ValueError(MISSING_ORIGINAL_PRICE)
     from .team_rules import required_team_size
     if required_team_size(order) != 1 and not pool_group:
-        return '双陪订单暂不支持群发，避免将整单收益误认为单人收益'
+        raise ValueError('双陪订单暂不支持群发，避免将整单收益误认为单人收益')
     if order.source_order_id or order.is_gift_snapshot:
-        return '礼物订单不进入接单频道'
+        raise ValueError('礼物订单不进入接单频道')
     if pool_group:
-        from .grab_group_dispatch import delivery_timing
-        try:
-            _, deadline = delivery_timing(order)
-        except ValueError as exc:
-            return str(exc)
-        from .grab_group_dispatch import deadline_reached
+        due, deadline = delivery_timing(order, lock=lock)
         if deadline_reached(deadline):
-            return '订单接单时间已过期'
+            raise ValueError('订单接单时间已过期')
+        return due, deadline
     elif order.auto_cancel_at and order.auto_cancel_at <= timezone.now():
-        return '订单接单时间已过期'
-    return ''
+        raise ValueError('订单接单时间已过期')
+    return None
 
 
 def _plain(value, limit):
@@ -148,7 +153,12 @@ def prepare_dispatch(order, channel, *, kook_config=None):
 
 def dispatch_preview(order, *, kook_config=None, include_plans=False):
     config = kook_config if kook_config is not None else get_kook_config()
-    reason = eligibility_error(order)
+    timing = None
+    try:
+        timing = _eligible_timing(order)
+        reason = ''
+    except ValueError as exc:
+        reason = str(exc)
     channels = []
     plans = {}
     for channel, model in MODELS.items():
@@ -197,9 +207,8 @@ def dispatch_preview(order, *, kook_config=None, include_plans=False):
         'provider_income': order.provider_income, 'content': build_dispatch_text(order),
         'can_send': not reason, 'reason': reason, 'channels': channels,
     }
-    if _pool_group_enabled() and not reason:
-        from .grab_group_dispatch import delivery_timing
-        data['earliest_delivery_at'] = delivery_timing(order)[0]
+    if timing is not None:
+        data['earliest_delivery_at'] = timing[0]
     return (data, plans) if include_plans else data
 
 
@@ -214,7 +223,9 @@ def queue_dispatch(order, channel, *, manual=False, prepared=None):
         return None
     with transaction.atomic():
         locked = Order.objects.select_for_update().get(pk=order.pk)
-        if eligibility_error(locked, lock_review=True):
+        try:
+            timing = _eligible_timing(locked, lock=True)
+        except ValueError:
             return None
         # Automatic callers build their plan after acquiring the order lock.
         plan = prepared if prepared is not None else prepare_dispatch(locked, channel)
@@ -233,9 +244,8 @@ def queue_dispatch(order, channel, *, manual=False, prepared=None):
             from stores.license_benefits import require_content_operations
             require_content_operations(for_existing_order=True)
         due = None
-        if _pool_group_enabled():
-            from .grab_group_dispatch import delivery_timing
-            due, _ = delivery_timing(locked)
+        if timing is not None:
+            due, _ = timing
             defaults.update(pool_delivery_due_at=due, pool_recovery_lease_until=None, pool_enqueue_failed=False)
         record, created = model.objects.get_or_create(
             order=locked, sequence=locked.reject_count,
@@ -249,7 +259,7 @@ def queue_dispatch(order, channel, *, manual=False, prepared=None):
             record.save(update_fields=['status', 'last_error', *defaults])
             created = True
         if created:
-            if _pool_group_enabled():
+            if timing is not None:
                 transaction.on_commit(lambda: send_task_safely(channel, record.pk, eta=due))
             else:
                 transaction.on_commit(lambda: send_task_safely(channel, record.pk))
@@ -265,12 +275,15 @@ def reschedule_pool_dispatch(order_id):
     """
     if not _pool_group_enabled():
         return 0
-    from .grab_group_dispatch import delivery_timing
     with transaction.atomic():
         order = Order.objects.select_for_update().get(pk=order_id)
-        if eligibility_error(order, lock_review=True):
+        try:
+            timing = _eligible_timing(order, lock=True)
+        except ValueError:
             return 0
-        due, _ = delivery_timing(order)
+        if timing is None:
+            return 0
+        due, _ = timing
         count = 0
         for channel, model in MODELS.items():
             from django.db.models import Q
@@ -335,34 +348,35 @@ def deliver_dispatch(channel, record_id):
     from .kook_dispatch import build_order_card
 
     model = MODELS[channel]
+    order_id = model.objects.filter(pk=record_id).values_list('order_id', flat=True).first()
+    if order_id is None:
+        return 'record_not_found'
     # CAS 在发请求前提交，重复任务不会并行发送；崩溃留下 SENDING，禁止自动重发。
     with transaction.atomic():
-        record = model.objects.filter(pk=record_id).first()
+        order = Order.objects.select_for_update().filter(pk=order_id).first()
+        if order is None:
+            return 'record_not_found'
+        record = model.objects.select_for_update().filter(pk=record_id, order=order).first()
         if record is None:
             return 'record_not_found'
-        order = Order.objects.select_for_update().get(pk=record.order_id)
-        record = model.objects.select_for_update().get(pk=record_id)
         if record.status == 'SENT':
             return f'already_sent:{record.message_id}'
         if record.status != 'PENDING':
             return f'skip:delivery={record.status}'
-        reason = eligibility_error(order, lock_review=True)
+        timing = None
+        try:
+            timing = _eligible_timing(order, lock=True)
+            reason = ''
+        except GroupRoundWaiting as exc:
+            if record.sequence == order.reject_count:
+                return 'waiting:round_review'
+            reason = str(exc)
+        except ValueError as exc:
+            reason = str(exc)
         if reason == PENDING_CANCEL_REVIEW:
             record.status, record.last_error = 'SKIPPED', reason
             record.save(update_fields=['status', 'last_error'])
             return 'skip:pending_cancel_review'
-        if _pool_group_enabled():
-            from .grab_clock_contract import production_enabled
-            from .models import OrderGrabRound
-            if production_enabled():
-                latest = (OrderGrabRound.objects.filter(pool__order=order)
-                          .select_related('opening_evidence').order_by('-number').first())
-                if latest and latest.number > 1:
-                    evidence = getattr(latest, 'opening_evidence', None)
-                    if not evidence or evidence.state != 'OBSERVED':
-                        # Keep the pending delivery recoverable until a real
-                        # activation, rather than sending or marking skipped.
-                        return 'waiting:round_activation'
         if record.sequence != order.reject_count:
             reason = '订单已进入新的派单轮次'
         if reason:
@@ -376,10 +390,8 @@ def deliver_dispatch(channel, record_id):
             record.status, record.last_error = 'FAILED', '旧版群发内容需要重新预览后重试'
             record.save(update_fields=['status', 'last_error'])
             return 'failed:outdated_content'
-        if _pool_group_enabled():
-            from .grab_group_dispatch import delivery_timing
-            due, deadline = delivery_timing(order)
-            from .grab_group_dispatch import current_time, deadline_reached
+        if timing is not None:
+            due, deadline = timing
             now = current_time()
             if deadline_reached(deadline):
                 record.status, record.last_error = 'SKIPPED', '订单接单时间已过期'

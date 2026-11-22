@@ -57,6 +57,116 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
         self.assertFalse(OrderGrabPoolSnapshot.objects.filter(order=order).exists())
         return order
 
+    def configure_group_targets(self):
+        from console.models import KookDispatchConfig
+        from integrations.kook_config import encrypt_token
+        from orders.tests.factories import configure_isolated_wecom
+
+        KookDispatchConfig.objects.create(enabled=True, bot_token_ciphertext=encrypt_token('isolated-kook'),
+            routes=[{'id': 'test', 'name': '验收群', 'enabled': True, 'channel_id': 'isolated',
+                     'mention_role_ids': [], 'template': ''}])
+        configure_isolated_wecom()
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_POOL_GROUP_DISPATCH_ENABLED=True)
+    def test_group_recovery_rebuilds_lost_records_only_when_current_round_can_admit(self):
+        from orders.dispatching import dispatch_preview
+        from orders.grab_group_recovery import recover_due
+        from orders.grab_review import mark_round_review
+        from wallet.models import SystemConfig
+
+        store, flow = self.prepare_flow()
+        with (store_context(store), patch('orders.dispatching.send_task_safely') as enqueue,
+              patch('orders.grab_group_recovery.send_task_safely') as recover):
+            self.configure_group_targets()
+            SystemConfig.objects.filter(key='provider_pass_delay_seconds_NONE').update(value='30')
+            order = self.buy_for_committed_opening(flow, 'formal-group-missing-record')
+            with (patch('orders.kook_dispatch.enqueue_kook_dispatch'),
+                  patch('orders.dispatching.enqueue_wecom_dispatch')):
+                self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            order.refresh_from_db()
+            state = OrderGrabRound.objects.get(pool__order=order).single_state
+            with transaction.atomic():
+                Order.objects.select_for_update().get(pk=order.pk)
+                mark_round_review(state, '待核对原轮候选')
+            with self.subTest('preview'):
+                self.assertFalse(dispatch_preview(order)['can_send'])
+            self.assertEqual(recover_due(), 0)
+            self.assertFalse(order.kook_dispatches.exists() or order.wecom_dispatches.exists())
+            enqueue.assert_not_called()
+            recover.assert_not_called()
+            state.status, state.reason = 'OPEN', ''
+            state.save(update_fields=['status', 'reason'])
+            self.assertEqual(recover_due(), 2)
+            self.assertEqual(recover_due(), 0)
+            self.assertEqual(enqueue.call_count, 2)
+            self.assertEqual(order.kook_dispatches.get().pool_delivery_due_at,
+                             order.wecom_dispatches.get().pool_delivery_due_at)
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_POOL_GROUP_DISPATCH_ENABLED=True)
+    def test_group_sender_waits_for_current_round_state_and_original_payment_and_keeps_one_record(self):
+        from orders.dispatching import deliver_dispatch, dispatch_preview
+        from orders.grab_group_dispatch import current_time
+
+        store, flow = self.prepare_flow()
+        with (store_context(store), patch('orders.dispatching.send_task_safely'),
+              patch('integrations.wecom.WecomClient.send_text') as send):
+            self.configure_group_targets()
+            order = self.buy_for_committed_opening(flow, 'formal-group-hold-send')
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            order.refresh_from_db()
+            record = order.wecom_dispatches.get()
+            latest = OrderGrabRound.objects.get(pool__order=order)
+            state, evidence, intent = latest.single_state, latest.opening_evidence, order.grab_opening_intent
+            deadline = monotonic() + 5
+            while current_time() < record.pool_delivery_due_at:
+                self.assertLess(monotonic(), deadline)
+                sleep(.01)
+
+            def deliver():
+                close_old_connections()
+                try:
+                    with store_context(store):
+                        with connection.cursor() as cursor:
+                            cursor.execute('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ')
+                        return deliver_dispatch('WECOM', record.pk)
+                finally:
+                    connection.close()
+
+            blocks = [
+                (state, {'status': 'REVIEW', 'reason': '候选核对'}, {'status': 'OPEN', 'reason': ''}),
+                (evidence, {'state': 'PREPARED', 'activation_upper_at': None},
+                 {'state': 'OBSERVED', 'activation_upper_at': evidence.activation_upper_at}),
+                (intent, {'state': 'REVIEW', 'reason': '付款时钟核对'}, {'state': 'OBSERVED', 'reason': ''}),
+            ]
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                for row, blocked, restored in blocks:
+                    with self.subTest(model=type(row).__name__):
+                        with transaction.atomic():
+                            Order.objects.select_for_update().get(pk=order.pk)
+                            pending = executor.submit(deliver)
+                            deadline = monotonic() + 10
+                            while not mysql_locking_statements(connection, Order._meta.db_table):
+                                self.assertFalse(pending.done(), 'Sender finished before the order lock was released')
+                                self.assertLess(monotonic(), deadline, 'Sender did not reach the order lock')
+                                sleep(.05)
+                            type(row).objects.filter(pk=row.pk).update(**blocked)
+                        try:
+                            self.assertEqual(pending.result(timeout=20), 'waiting:round_review')
+                            self.assertFalse(dispatch_preview(order)['can_send'])
+                            record.refresh_from_db()
+                            self.assertEqual((record.status, record.attempts), ('PENDING', 0))
+                            send.assert_not_called()
+                        finally:
+                            type(row).objects.filter(pk=row.pk).update(**restored)
+            self.assertEqual(deliver_dispatch('WECOM', record.pk), 'sent:')
+            self.assertEqual(deliver_dispatch('WECOM', record.pk), 'already_sent:')
+            send.assert_called_once()
+            self.assertEqual(list(order.wecom_dispatches.values_list('pk', 'attempts')), [(record.pk, 1)])
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+
     @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
                        PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
     def test_opening_redelivery_preserves_original_activation_even_if_the_clock_changed(self):

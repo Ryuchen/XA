@@ -132,6 +132,16 @@ def make_wallet(user, balance=0, frozen_amount=0):
     return wallet
 
 
+def configure_isolated_wecom(target='isolated-test'):
+    from console.models import WecomDispatchConfig
+    from integrations.kook_config import encrypt_token
+
+    WecomDispatchConfig.objects.update_or_create(pk=1, defaults={
+        'enabled': True, 'auto_new_orders': True,
+        'webhook_ciphertext': encrypt_token(f'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={target}'),
+    })
+
+
 def make_evaluation(order, customer=None, provider=None, score=5, **kwargs):
     """创建评价。customer / provider 默认取订单上的值；三维分缺省回落综合分。"""
     kwargs.setdefault('skill_score', score)
