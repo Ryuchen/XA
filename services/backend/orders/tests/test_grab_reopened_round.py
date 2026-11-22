@@ -54,11 +54,6 @@ class ReopenedRoundTests(TransactionTestCase):
             simultaneous_visibility=True)
         return order, first, round_
 
-    def rank(self, round_, ids):
-        with patch('django.utils.timezone.now', return_value=round_.deadline + timedelta(seconds=1)):
-            with transaction.atomic():
-                return preview(round_.pk, ids)
-
     def create_team_order(self, opened):
         save_grab_window(30, current_rules()['version'], lambda *args: None)
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
@@ -159,7 +154,7 @@ class ReopenedRoundTests(TransactionTestCase):
         self.assertEqual((hint.entry_pass_tier, hint.visible_at), ('', round_.opened_at))
         proof = record_intent(round_.pk, account.pk, 'SINGLE', 'reopened-single', {})
         self.assertEqual(proof.state, 'BEFORE')
-        result = self.rank(round_, [proof.receipt_id])
+        result = fixture.rank(round_, [proof.receipt_id])
         self.assertEqual((result.status, result.winner_id, result.can_assign),
                          ('POTENTIAL_WINNER', proof.receipt_id, False))
         with self.assertRaisesMessage(ValueError, '轮次已结束'):
@@ -181,7 +176,7 @@ class ReopenedRoundTests(TransactionTestCase):
         with transaction.atomic():
             confirm(round_.pk, team.pk, partner.pk)
             attach_pass_evidence(round_.pk, team.pk, accepted.receipt_id)
-        result = self.rank(round_, [team.pk])
+        result = fixture.rank(round_, [team.pk])
         self.assertEqual((result.status, result.winner_id, result.can_assign),
                          ('POTENTIAL_WINNER', team.pk, False))
         self.assertEqual([item.submitted_pass_tier for item in result.candidates[0].members], ['', 'GOLD'])
@@ -264,9 +259,7 @@ class ReopenedRoundStoreTests(TransactionTestCase):
         for store, _, round_id, receipt_id, tier in rows:
             with store_context(store):
                 round_ = OrderGrabRound.objects.get(pk=round_id)
-                with patch('django.utils.timezone.now', return_value=round_.deadline + timedelta(seconds=1)):
-                    with transaction.atomic():
-                        result = preview(round_id, [receipt_id])
+                result = fixture.rank(round_, [receipt_id])
                 self.assertEqual((result.winner_id, result.can_assign), (receipt_id, False))
                 self.assertEqual(result.candidates[0].members[0].submitted_pass_tier, tier)
         with store_context(rows[1][0]):
@@ -276,6 +269,4 @@ class ReopenedRoundStoreTests(TransactionTestCase):
                 preview(bad.pk, [rows[1][3]])
         with store_context(rows[0][0]):
             good = OrderGrabRound.objects.get(pk=rows[0][2])
-            with patch('django.utils.timezone.now', return_value=good.deadline + timedelta(seconds=1)):
-                with transaction.atomic():
-                    self.assertEqual(preview(good.pk, [rows[0][3]]).winner_id, rows[0][3])
+            self.assertEqual(fixture.rank(good, [rows[0][3]]).winner_id, rows[0][3])

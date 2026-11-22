@@ -80,6 +80,82 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
         return order, round_, team, receipt, observe.call_args.args
 
     @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
+    def test_formal_team_receipts_prove_sequence_when_commit_intervals_overlap(self):
+        from orders.grab_bound_ranking import preview
+        from orders.grab_receipt_probe import _db_clock, apply_team_withdrawal, record_intent
+        from orders.grab_round_opening import cutoff_bounds, opening_bounds
+
+        def wait_for_clock(bound):
+            deadline = monotonic() + 10
+            while _db_clock()[0] <= bound:
+                self.assertLess(monotonic(), deadline)
+                sleep(.025)
+
+        def assert_overlapping(first, second):
+            first_upper = first.upper_observed_at + timedelta(microseconds=first.precision_us)
+            second_lower = second.lower_at - timedelta(microseconds=second.precision_us)
+            self.assertGreaterEqual(first_upper, second_lower)
+
+        store, flow = self.prepare_flow()
+        # Widen the uncertainty budget so the test reliably covers overlap.
+        # All clock observations and receipt commits still use real MySQL.
+        with (store_context(store), patch('orders.grab_team_flow.enqueue'),
+              patch('orders.grab_clock_contract.TOLERANCE_NS', 500_000_000)):
+            flow.service.fulfillment_provider_count = 2
+            flow.service.save(update_fields=['fulfillment_provider_count'])
+            order = self.buy_for_committed_opening(flow, 'team-causal', window=4)
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+            round_ = OrderGrabRound.objects.get(pool__order=order)
+            wait_for_clock(opening_bounds(round_)[1] + timedelta(milliseconds=500))
+            captain, partner = flow.accounts
+            invited = record_intent(round_.pk, captain.pk, 'INVITE', 'team-causal-invite',
+                                    {'partner_id': partner.pk}, team_flow=True, actor_snapshot=captain)
+            self.assertEqual(invited.state, 'BEFORE')
+            team = round_.team_drafts.get(captain=captain, request_key='team-causal-invite')
+            confirmed = record_intent(round_.pk, partner.pk, 'CONFIRM', 'team-causal-confirm',
+                                      {'team_id': team.pk}, team_flow=True, actor_snapshot=partner)
+            self.assertEqual(confirmed.state, 'BEFORE')
+            # Leave the withdrawal unapplied so ranking can read the same team first.
+            with patch('orders.grab_receipt_probe.apply_team_withdrawal') as deferred:
+                withdrawn = record_intent(round_.pk, captain.pk, 'WITHDRAW', 'team-causal-withdraw',
+                                          {'team_id': team.pk}, team_flow=True)
+            deferred.assert_called_once()
+            self.assertEqual(withdrawn.state, 'BEFORE')
+            invitation, confirmation, withdrawal = [OrderGrabReceiptProbe.objects.get(pk=receipt.receipt_id)
+                                                     for receipt in (invited, confirmed, withdrawn)]
+            assert_overlapping(invitation, confirmation)
+            assert_overlapping(confirmation, withdrawal)
+            wait_for_clock(cutoff_bounds(round_, 'OPEN')[1] + timedelta(microseconds=1))
+            for receipt, changed in ((invitation, {'cutoff_at': None}),
+                                     (confirmation, {'actor_business_cycle': confirmation.actor_business_cycle + 1})):
+                with self.subTest(receipt=receipt.kind), transaction.atomic():
+                    OrderGrabReceiptProbe.objects.filter(pk=receipt.pk).update(**changed)
+                    result = preview(round_.pk, [team.pk])
+                    self.assertEqual((result.status, result.review_candidate_ids, result.can_assign),
+                                     ('REVIEW', (team.pk,), False))
+                    with self.assertRaisesMessage(ValueError, '退出登记或先前组队证据无法核对'):
+                        apply_team_withdrawal(order, round_, withdrawal)
+                    self.assertEqual(team.occupied_seats.count(), 2)
+                    transaction.set_rollback(True)
+            with transaction.atomic():
+                result = preview(round_.pk, [team.pk])
+            self.assertEqual((result.status, result.winner_id, result.can_assign),
+                             ('POTENTIAL_WINNER', team.pk, False))
+            with transaction.atomic():
+                locked_order = Order.objects.select_for_update().get(pk=order.pk)
+                apply_team_withdrawal(locked_order, round_, withdrawal)
+            replay = record_intent(round_.pk, captain.pk, 'WITHDRAW', 'team-causal-withdraw',
+                                   {'team_id': team.pk}, team_flow=True)
+            self.assertEqual((replay.receipt_id, replay.state, replay.replayed), (withdrawal.pk, 'BEFORE', True))
+            team.refresh_from_db()
+            self.assertEqual((team.status, team.withdrawal_receipt_id, team.occupied_seats.count()),
+                             ('WITHDRAWN', withdrawal.pk, 0))
+            order.refresh_from_db()
+            self.assertEqual(order.status, Order.Status.PENDING)
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
                        PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True,
                        GRAB_INVITE_NOTICE_RECOVERY_ENABLED=True)
     def test_pending_activation_and_review_keep_original_invite_recoverable(self):

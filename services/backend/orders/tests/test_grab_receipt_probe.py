@@ -402,12 +402,14 @@ class ReceiptProbeTest(TransactionTestCase):
     def test_real_mysql_duplicate_registration_keeps_one_evidence_record(self):
         if connection.vendor != 'mysql':
             self.skipTest('requires isolated MySQL row locks')
+        store = resolve_store()
         barrier = Barrier(2)
         def attempt(_):
             close_old_connections()
             try:
-                barrier.wait(timeout=10)
-                return self.record('concurrent-key')
+                with store_context(store):
+                    barrier.wait(timeout=10)
+                    return self.record('concurrent-key')
             finally:
                 close_old_connections()
         with ThreadPoolExecutor(max_workers=2) as executor:

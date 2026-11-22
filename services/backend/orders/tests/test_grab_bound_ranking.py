@@ -1,5 +1,6 @@
 """Ranking preview combines actual store facts and bounded receipt times."""
 import os
+from contextlib import contextmanager
 from datetime import timedelta
 from fractions import Fraction
 from time import sleep
@@ -45,8 +46,9 @@ def pool_for(*, size=1, delays=None):
     for tier, seconds in delays.items():
         SystemConfig.objects.update_or_create(key=f'provider_pass_delay_seconds_{tier}', defaults={'value': str(seconds)})
     save_grab_window(30, current_rules()['version'], lambda *args: None)
-    service = make_service(billing_provider_count=size)
-    order = make_order(make_user(), service=service, payment_status='PAID')
+    service = make_service(billing_provider_count=size, fulfillment_provider_count=size)
+    order = make_order(make_user(), service=service, payment_status='PAID',
+                       escort_mode='DOUBLE' if size == 2 else 'SINGLE')
     if size == 2:
         record(order, capture(service))
     with transaction.atomic():
@@ -55,10 +57,21 @@ def pool_for(*, size=1, delays=None):
     return order, round_
 
 
+@contextmanager
+def after_window(round_):
+    """Advance the inspection clocks after recording the original receipts."""
+    from orders.grab_receipt_probe import _db_clock
+
+    _, precision, driver = _db_clock()
+    now = round_.deadline + timedelta(seconds=3)
+    with (patch('django.utils.timezone.now', return_value=now),
+          patch('orders.grab_receipt_probe._db_clock', return_value=(now, precision, driver))):
+        yield
+
+
 def rank(round_, ids):
-    with patch('django.utils.timezone.now', return_value=round_.deadline + timedelta(seconds=1)):
-        with transaction.atomic():
-            return preview(round_.pk, ids)
+    with after_window(round_), transaction.atomic():
+        return preview(round_.pk, ids)
 
 
 @override_settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=True)

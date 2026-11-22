@@ -46,8 +46,8 @@ class GrabTeamDraftTest(TransactionTestCase):
             profile = user.escort_profile; profile.account = account; profile.wechat_avatar_legacy_exempt = True
             profile.save(update_fields=['account', 'wechat_avatar_legacy_exempt'])
             self.accounts.append(account); self.profiles.append(profile)
-        service = make_service(billing_provider_count=2)
-        self.order = make_order(make_user(), service=service, payment_status='PAID')
+        service = make_service(billing_provider_count=2, fulfillment_provider_count=2)
+        self.order = make_order(make_user(), service=service, payment_status='PAID', escort_mode='DOUBLE')
         record(self.order, capture(service))
         with transaction.atomic():
             self.pool = create_initial_snapshot(self.order.pk)
@@ -259,13 +259,14 @@ class GrabTeamDraftTest(TransactionTestCase):
     def test_real_mysql_two_teams_race_to_confirm_one_partner(self):
         if connection.vendor != 'mysql':
             self.skipTest('requires isolated MySQL row locks')
+        store = resolve_store()
         teams = (self.invitation(), self.invitation(captain=2, key='request-c'))
         barrier = Barrier(2)
         def attempt(team):
             close_old_connections()
             try:
-                with transaction.atomic():
-                    OrderGrabTeamDraft.objects.count()  # establish a repeatable-read snapshot
+                with store_context(store), transaction.atomic():
+                    OrderGrabTeamDraft.objects.count()
                     barrier.wait(timeout=10)
                     try:
                         confirm(self.round.pk, team.pk, self.accounts[1].pk)
@@ -282,12 +283,13 @@ class GrabTeamDraftTest(TransactionTestCase):
     def test_real_mysql_withdraw_and_confirmation_leave_no_seat(self):
         if connection.vendor != 'mysql':
             self.skipTest('requires isolated MySQL row locks')
+        store = resolve_store()
         team = self.invitation()
         barrier = Barrier(2)
         def attempt(action):
             close_old_connections()
             try:
-                with transaction.atomic():
+                with store_context(store), transaction.atomic():
                     OrderGrabTeamDraft.objects.count()
                     barrier.wait(timeout=10)
                     try:
@@ -332,8 +334,9 @@ class GrabTeamDraftMultiStoreTest(TransactionTestCase):
                     profile = user.escort_profile; profile.account = account; profile.wechat_avatar_legacy_exempt = True
                     profile.save(update_fields=['account', 'wechat_avatar_legacy_exempt'])
                     people.append(account.pk)
-                service = make_service(billing_provider_count=2)
-                order = make_order(make_user(), service=service, payment_status='PAID'); record(order, capture(service))
+                service = make_service(billing_provider_count=2, fulfillment_provider_count=2)
+                order = make_order(make_user(), service=service, payment_status='PAID', escort_mode='DOUBLE')
+                record(order, capture(service))
                 with transaction.atomic():
                     pool = create_initial_snapshot(order.pk); round_ = first_round(pool.pk)
                     team = invite(round_.pk, people[0], people[1], 'same-request')
@@ -364,8 +367,9 @@ class GrabTeamDraftMultiStoreTest(TransactionTestCase):
                     profile = user.escort_profile; profile.account = account; profile.wechat_avatar_legacy_exempt = True
                     profile.save(update_fields=['account', 'wechat_avatar_legacy_exempt'])
                     people.append(account.pk)
-                service = make_service(billing_provider_count=2)
-                order = make_order(make_user(), service=service, payment_status='PAID'); record(order, capture(service))
+                service = make_service(billing_provider_count=2, fulfillment_provider_count=2)
+                order = make_order(make_user(), service=service, payment_status='PAID', escort_mode='DOUBLE')
+                record(order, capture(service))
                 with transaction.atomic():
                     pool = create_initial_snapshot(order.pk); round_ = first_round(pool.pk)
                     team = invite(round_.pk, people[0], people[1], 'same-proof-key')

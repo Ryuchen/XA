@@ -14,7 +14,7 @@ from stores.db import transaction
 from .grab_original_facts import original_amount_facts
 from .grab_ranking import PASS_RANK, evaluation_facts
 from .grab_receipt_probe import _effective_state, _lock_round
-from .grab_team_draft import _seats
+from .grab_team_draft import _seats, team_commit_order_proven
 from .models import OrderGrabReceiptProbe, OrderGrabTeamDraft, Reservation
 
 
@@ -154,11 +154,9 @@ def _team(round_, team_id):
     # is not a tie-break between different candidates.
     invite = members[team.captain_id].receipt_pass_evidence.receipt
     confirmation = members[team.partner_id].receipt_pass_evidence.receipt
-    from stores.db import connection
-    causal_order = (connection.vendor == 'mysql' and invite.pk < confirmation.pk
-                    and invite.round_id == confirmation.round_id == team.round_id)
     uncertain = (visibility_uncertain or
-                 (bounds[team.captain_id][1] >= bounds[team.partner_id][0] and not causal_order))
+                 (bounds[team.captain_id][1] >= bounds[team.partner_id][0]
+                  and not team_commit_order_proven(invite, confirmation)))
     return tuple(result), bounds[team.partner_id], uncertain
 
 
