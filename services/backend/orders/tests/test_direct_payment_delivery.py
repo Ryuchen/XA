@@ -34,10 +34,13 @@ class DirectPaymentDeliveryTest(TestCase):
         self.account.openid, self.account.wechat_appid, self.account.is_openid_bound = 'test-openid', 'wx-test', True
         self.account.save(update_fields=['openid', 'wechat_appid', 'is_openid_bound'])
         make_wallet(self.user, balance=50000)
-        service = make_service(price=10000)
+        self.service = make_service(price=10000)
+        self.prepare_intent('delivery-1', 'AUTO_GRAB')
+
+    def prepare_intent(self, request_id, dispatch_mode):
         request = SimpleNamespace(account=self.account, legacy_user=self.user,
-            data={'service_id': service.pk, 'expected_amount': 10000, 'client_request_id': 'delivery-1',
-                  'dispatch_mode': 'AUTO_GRAB'})
+            data={'service_id': self.service.pk, 'expected_amount': 10000, 'client_request_id': request_id,
+                  'dispatch_mode': dispatch_mode})
         self.intent = prepare_direct_order(request, appid='wx-test', mchid='mch-test')
         self.payload = {'appid': 'wx-test', 'mchid': 'mch-test', 'out_trade_no': self.intent.merchant_order_no,
             'transaction_id': 'tx-delivery-1', 'trade_type': 'JSAPI', 'trade_state': 'SUCCESS',
@@ -200,6 +203,7 @@ class DirectPaymentDeliveryTest(TestCase):
         self.assertEqual(order.status, 'IN_SERVICE')
 
     def test_conflict_removes_order_from_provider_pool(self):
+        self.prepare_intent('delivery-audition', 'BOSS_SELECT')
         provider = make_provider(deposit_paid=40000, wechat_avatar_legacy_exempt=True)
         account = get_or_create_account_for_legacy_user(provider)
         account.openid, account.is_openid_bound = 'direct-pool-provider', True

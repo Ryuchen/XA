@@ -911,6 +911,7 @@ class OrderSerializer(EntityNumberModelSerializer):
                 capacity_limit = self.context['_provider_capacity_limit']
                 profile, available, active_count, delay = self.context['_provider_read_state']
                 from .paid_service_scope import acceptance_error
+                from .grab_single_flow import has_admitting_round
                 from .models import OrderGrabPoolSnapshot
                 from .pool_visibility import pending_deadline_expired
                 if (
@@ -924,6 +925,8 @@ class OrderSerializer(EntityNumberModelSerializer):
                     and obj.escort_mode == Order.EscortMode.SINGLE
                     and not obj.source_order_id
                     and not obj.is_gift_snapshot
+                    and (obj.requires_boss_selection or self.context.get('_provider_pool_view')
+                         or has_admitting_round(obj.pk))
                     and pending_deadline_expired(obj) is False
                 ):
                     from .grab_pool_visibility import order_visibility_time

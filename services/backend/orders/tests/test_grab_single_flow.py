@@ -36,8 +36,12 @@ class GrabSingleFlowTest(APITransactionTestCase):
         response = self.create(dispatch_mode='AUTO_GRAB')
         self.assertEqual(response.data['code'], 0, response.data)
         order = Order.objects.get(pk=response.data['data']['id'])
+        self.auth(self.accounts[0])
+        pool = self.client.get('/api/orders/orders/?status=pending')
+        self.assertEqual({row['id']: row['allowed_actions'] for row in pool.data['data']}, {order.pk: ['GRAB']})
         with self.settings(GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False):
-            self.auth(self.accounts[0])
+            pool = self.client.get('/api/orders/orders/?status=pending')
+            self.assertNotIn(order.pk, {row['id'] for row in pool.data['data']})
             grab = self.client.post(f'/api/orders/orders/{order.pk}/grab/', {}, format='json')
             self.assertEqual(grab.status_code, 503, grab.data)
             self.auth(self.boss_account)
@@ -46,6 +50,28 @@ class GrabSingleFlowTest(APITransactionTestCase):
             self.assertEqual(auto_cancel_pending_order.run(order.pk), 'disabled')
         order.refresh_from_db()
         self.assertEqual((order.status, order.provider_account_id, order.payment_status), ('PENDING', None, 'PAID'))
+
+    def test_latest_round_requires_admitting_state_even_if_older_state_is_open(self):
+        self.prepare()
+        self.auth(self.boss_account)
+        response = self.create(dispatch_mode='AUTO_GRAB')
+        self.assertEqual(response.data['code'], 0, response.data)
+        order_id = response.data['data']['id']
+        first = OrderGrabRound.objects.get(pool__order_id=order_id)
+        self.assertEqual(first.single_state.status, 'OPEN')
+        self.auth(self.accounts[0])
+        self.assertEqual(self.client.get(f'/api/orders/orders/{order_id}/').status_code, 200)
+
+        review = OrderGrabRound.objects.create(pool=first.pool, number=first.number + 1,
+            opened_at=first.opened_at, deadline=first.deadline, total_deadline=first.total_deadline)
+        for state in (None, 'REVIEW', 'PARKED'):
+            with self.subTest(state=state):
+                if state:
+                    OrderGrabSingleRoundState.objects.update_or_create(round=review, defaults={'status': state})
+                pool = self.client.get('/api/orders/orders/?status=pending')
+                self.assertEqual(order_id in {row['id'] for row in pool.data['data']}, state == 'PARKED')
+                self.assertEqual(self.client.get(f'/api/orders/orders/{order_id}/').status_code,
+                                 200 if state == 'PARKED' else 404)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单单流程陪玩生命周期核验/窗口决议/双陪自动派单/玩法报价/双小时CONSULT定价属正式契约深水区（18-盘点 抢单池/陪玩生命周期/CONSULT待联调）；最终联调启用')

@@ -127,7 +127,14 @@ class ChatOrderCardTest(APITestCase):
         self.provider_account.is_openid_bound = True
         self.provider_account.openid = 'test-wechat-card'
         self.provider_account.save(update_fields=['is_openid_bound', 'openid'])
-        pool = make_order(self.other_boss, customer_account=self.other_account)
+        automatic = make_order(self.other_boss, customer_account=self.other_account)
+        Order.objects.filter(pk=automatic.pk).update(created_at=timezone.now()-timedelta(hours=2))
+        invalid_ref = self.provider_client.post('/api/chat/send/', {
+            'content': '咨询自动抢单', 'order_ref': automatic.order_no, 'client_message_id': 'automatic-without-round',
+        }, format='json')
+        self.assertEqual(invalid_ref.status_code, 404)
+        self.assertFalse(ChatMessage.objects.filter(related_order=automatic).exists())
+        pool = make_order(self.other_boss, customer_account=self.other_account, requires_boss_selection=True)
         Order.objects.filter(pk=pool.pk).update(created_at=timezone.now()-timedelta(hours=2))
         listing = self.provider_client.get('/api/orders/orders/?status=pending')
         self.assertIn(pool.pk, [row['id'] for row in listing.data['data']])
@@ -168,7 +175,7 @@ class ChatOrderCardTest(APITestCase):
         profile.save(update_fields=['deposit_mode', 'status', 'wechat_avatar_legacy_exempt'])
         self.provider_account.openid = 'test-wechat-image-card'; self.provider_account.is_openid_bound = True
         self.provider_account.save(update_fields=['openid', 'is_openid_bound'])
-        pool = make_order(self.other_boss, customer_account=self.other_account)
+        pool = make_order(self.other_boss, customer_account=self.other_account, requires_boss_selection=True)
         Order.objects.filter(pk=pool.pk).update(created_at=timezone.now()-timedelta(hours=2))
         image = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEklEQVR4nGMUbulhYGBgYgADAA1VASfFeWKjAAAAAElFTkSuQmCC')
         def payload():

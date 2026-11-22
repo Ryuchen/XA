@@ -51,7 +51,7 @@ class ListQueryBoundsTest(APITestCase):
 
     def pending(self):
         order = make_order(self.boss, service=self.service, customer_account=self.boss_account,
-                           payment_status='PAID', provider_income=8000)
+                           payment_status='PAID', provider_income=8000, requires_boss_selection=True)
         Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(hours=1))
         return order
 

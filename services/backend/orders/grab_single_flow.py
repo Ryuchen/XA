@@ -12,6 +12,7 @@ from .models import (Order, OrderGrabReceiptProbe, OrderGrabRound, OrderGrabSing
                      OrderGrabSingleRoundState, OrderStatusLog)
 
 logger = logging.getLogger(__name__)
+ADMISSION_STATES = ('OPEN', 'PARKED')
 
 
 def enabled():
@@ -27,6 +28,14 @@ def applies(order_id):
     # or timeout refund merely because a process loses its clock contract.
     return OrderGrabSingleRoundState.objects.filter(
         round__pool__order_id=order_id, round__pool__required_provider_count=1).exists()
+
+
+def has_admitting_round(order_id):
+    if not enabled():
+        return False
+    status = (OrderGrabRound.objects.filter(pool__order_id=order_id, pool__required_provider_count=1)
+              .order_by('-number').values_list('single_state__status', flat=True).first())
+    return status in ADMISSION_STATES
 
 
 def _latest(order_id):
