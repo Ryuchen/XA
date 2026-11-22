@@ -224,6 +224,7 @@ def _process_order(order_id, *, lifecycle=None):
     # A persisted finalized manifest remains the authority for an in-flight
     # order even when the configuration for newly captured segments changes.
     segment_path = OrderSegmentSettlementManifest.objects.filter(order=order, finalized_at__isnull=False).exists()
+    segment_manifest_verified = False
     order_notification_scheduled = False
     if segment_protected():
         segment_path = (segment_path or OrderSegmentSettlementManifest.objects.filter(order=order).exists()
@@ -277,6 +278,7 @@ def _process_order(order_id, *, lifecycle=None):
             return False
         from orders.segment_settlement import verify_finalized
         verify_finalized(order, manifest)
+        segment_manifest_verified = True
         ready = order.consumption_ready_at
         clock_changed = False
     else:
@@ -325,8 +327,14 @@ def _process_order(order_id, *, lifecycle=None):
     from orders.addon_settlement import enabled as addon_settlement_enabled, has_paid_addons
     if has_paid_addons(order):
         if segment_path:
-            from orders.segment_settlement import verify_finalized
-            verify_finalized(order, manifest)
+            # The ordinary segment branch just verified this manifest under
+            # the same locks. An alternate negotiated path has not done so.
+            if not segment_manifest_verified:
+                manifest = OrderSegmentSettlementManifest.objects.filter(order=order, finalized_at__isnull=False).first()
+                if not manifest:
+                    return False
+                from orders.segment_settlement import verify_finalized
+                verify_finalized(order, manifest)
             terms = manifest.plan if isinstance(manifest.plan, dict) else {}
             funding = terms.get('ordinary_transfer_funding') or terms.get('points_funding') or {}
             if not funding.get('addons') and not funding.get('addon_history'):

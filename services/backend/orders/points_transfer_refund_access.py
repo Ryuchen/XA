@@ -1104,18 +1104,20 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
     receipts = list(PassRefundRepaymentReceipt.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
     if len(receipts) != len(ids):
         raise ValidationError('积分转单到账凭证缺失')
-    try:
-        for receipt in receipts:
-            if receipt.usage_version is None:
-                raise ValidationError('积分转单到账用途账本缺失')
-            isolated_allocation_state_locked(receipt)
-    except DjangoValidationError as exc:
-        raise ValidationError('积分转单到账用途凭证异常') from exc
-    if not _supported_addon(order, transfers, verify=True, allow_handover=bool(pending_payment_id),
-                            pending_payment_id=pending_payment_id, pending_intent_id=pending_intent_id,
-                            allow_voluntary=voluntary_read, allow_successive=phase in ('report', 'settlement'),
-                            allocation_replay=allocation_replay):
-        raise ValidationError('积分转单加购资金范围尚未接通')
+    from .points_addon_receipt_usage import reuse_history_locked
+    with reuse_history_locked(order, ids):
+        try:
+            for receipt in receipts:
+                if receipt.usage_version is None:
+                    raise ValidationError('积分转单到账用途账本缺失')
+                isolated_allocation_state_locked(receipt)
+        except DjangoValidationError as exc:
+            raise ValidationError('积分转单到账用途凭证异常') from exc
+        if not _supported_addon(order, transfers, verify=True, allow_handover=bool(pending_payment_id),
+                                pending_payment_id=pending_payment_id, pending_intent_id=pending_intent_id,
+                                allow_voluntary=voluntary_read, allow_successive=phase in ('report', 'settlement'),
+                                allocation_replay=allocation_replay):
+            raise ValidationError('积分转单加购资金范围尚未接通')
     redemption = OrderPointsRedemption.objects.filter(order=order).first()
     from .points_service_payment import MARKER
     if (not redemption or not isinstance(order.funding_terms, dict)

@@ -26,6 +26,42 @@ from wallet.models import Transaction
 
 
 class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
+    def test_history_reuse_is_limited_to_locked_order_receipt_and_access_scope(self):
+        from orders import points_addon_receipt_usage as usage
+        from orders.points_business_access import _scope
+
+        state = SimpleNamespace(db='tenant')
+        order = SimpleNamespace(pk=12, _state=state)
+        payment = SimpleNamespace(pk=2, _state=state, intent=SimpleNamespace(order_id=order.pk))
+        other = SimpleNamespace(pk=3, _state=state, intent=SimpleNamespace(order_id=13))
+        connection = SimpleNamespace(in_atomic_block=True, alias='tenant', atomic_blocks=[object()])
+        with (patch.object(transaction, 'get_connection', return_value=connection),
+              patch.object(usage, '_payment_facts', side_effect=lambda *args, **kwargs: {'verified': [2]}) as rebuild):
+            with usage.reuse_history_locked(order, {6, 7}):
+                first = usage.payment_facts(payment, read_receipt_id=6)
+                first['verified'].append(3)
+                self.assertEqual(usage.payment_facts(payment, read_receipt_id=6), {'verified': [2]})
+                self.assertEqual(rebuild.call_count, 1)
+                usage.payment_facts(payment, read_receipt_id=6, _event_history=False)
+                usage.payment_facts(payment, read_receipt_id=7)
+                for _ in range(2):
+                    usage.payment_facts(other, read_receipt_id=6)
+                    usage.payment_facts(payment, read_receipt_id=8)
+                    usage.payment_facts(payment)
+                connection.atomic_blocks.append(object())
+                usage.payment_facts(payment, read_receipt_id=6)
+                connection.atomic_blocks.pop()
+                token = _scope.set(('tenant', 'another-context', 12, 8, 3, 'report', 'addon'))
+                try:
+                    usage.payment_facts(payment, read_receipt_id=6)
+                finally:
+                    _scope.reset(token)
+                self.assertEqual(rebuild.call_count, 11)
+
+            rebuild.side_effect = ValidationError('原付款凭证异常')
+            with self.assertRaises(ValidationError):
+                usage.payment_facts(payment, read_receipt_id=6)
+
     def test_formal_transfer_scope_dispatches_paid_addon_to_segment_settlement(self):
         from orders.points_business_access import _bind
         from orders.services import _settle_order

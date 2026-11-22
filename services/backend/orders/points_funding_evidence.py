@@ -183,12 +183,13 @@ def _verified_allocations_for_locked_order(order, *, pending_followup_posting_id
                 from .points_receipt_usage import eligible as main_usage_eligible, followup_eligible, transfer_refund_eligible
                 reservation_allowed = (_reservation_usage and getattr(settings, 'SERVICE_POINTS_RESERVATION_CANCEL_USAGE_TESTING', False))
                 main_allowed = _main_refund_usage and (main_usage_eligible(order) or followup_eligible(order))
-                from .points_addon_receipt_usage import eligible as addon_usage_eligible
+                from .points_addon_receipt_usage import eligible as addon_usage_eligible, reuse_history_locked
                 addon_allowed = _addon_refund_usage and addon_usage_eligible(order)
                 transfer_allowed = _transfer_refund_usage and transfer_refund_eligible(order)
                 if not (reservation_allowed or main_allowed or addon_allowed or transfer_allowed or formal_allowed):
                     raise DjangoValidationError('该到账用途试验尚未开放')
-                isolated_allocation_state_locked(receipt)
+                with reuse_history_locked(order, {receipt.pk}):
+                    isolated_allocation_state_locked(receipt)
             else:
                 reject_unintegrated_locked_receipt(receipt)
     except DjangoValidationError as exc:

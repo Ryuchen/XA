@@ -5,16 +5,59 @@ receipt lock, never acquire another order's locks from this module.
 """
 import hashlib
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
+from copy import deepcopy
 from dataclasses import asdict
 
 from django.conf import settings
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 
+from stores.context import current_store
 from stores.db import transaction
 from .models import (OrderAddonPayment, OrderOriginalShareTransfer, OrderPointsFundingAllocation,
                      OrderPrestartHandoff, OrderSegmentFinancialSnapshot)
+from .points_business_access import _scope as _points_scope
 from .points_checkout_test import require_isolated_checkout
+
+
+_history_reads = ContextVar('points_addon_history_reads', default=None)
+
+
+@contextmanager
+def reuse_history_locked(order, receipt_ids):
+    """Share historical facts while reading one locked order and its locked receipts."""
+    connection = transaction.get_connection()
+    if not connection.in_atomic_block or order._state.db != connection.alias:
+        raise RuntimeError('加购历史复用须在本单事务内执行')
+    state = (connection, tuple(connection.atomic_blocks), current_store(), _points_scope.get(),
+             order.pk, frozenset(receipt_ids), {})
+    token = _history_reads.set(state)
+    try:
+        yield
+    finally:
+        _history_reads.reset(token)
+
+
+def _read_history(rebuild, record, *, read_receipt_id, _event_history):
+    state = _history_reads.get()
+    if state is None:
+        return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    connection, blocks, store, capability, locked_order_id, receipts, results = state
+    if (read_receipt_id not in receipts or record._state.db != connection.alias
+            or transaction.get_connection() is not connection or tuple(connection.atomic_blocks) != blocks
+            or current_store() is not store or _points_scope.get() != capability):
+        return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    order_id = record.order_id if rebuild is _refund_facts else record.intent.order_id
+    if order_id != locked_order_id:
+        return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    key = (rebuild, record.pk, read_receipt_id, _event_history)
+    if key in results:
+        return deepcopy(results[key])
+    result = rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    results[key] = deepcopy(result)
+    return result
 
 
 def _prestart_snapshot_at(order, at):
@@ -209,6 +252,10 @@ def digest(snapshot):
 
 def facts(refund, *, read_receipt_id=None, _event_history=True):
     """Rebuild the narrow frozen facts without SELECT FOR UPDATE."""
+    return _read_history(_refund_facts, refund, read_receipt_id=read_receipt_id, _event_history=_event_history)
+
+
+def _refund_facts(refund, *, read_receipt_id, _event_history):
     from .addon_payment import verify_receipt
     from .points_funding_plan import plan_service_funding, PointsFundingPlanError
     from .settlement import ProviderShare
@@ -650,6 +697,10 @@ def facts(refund, *, read_receipt_id=None, _event_history=True):
 
 def payment_facts(payment, *, read_receipt_id=None, _event_history=True):
     """Rebuild original main/add-on payment facts by receipt-local current read."""
+    return _read_history(_payment_facts, payment, read_receipt_id=read_receipt_id, _event_history=_event_history)
+
+
+def _payment_facts(payment, *, read_receipt_id, _event_history):
     from users.receipt_usage_sources import _require_current_unlocked_reads
     from .addon_payment import verify_receipt
     from .points_funding_plan import plan_service_funding, PointsFundingPlanError

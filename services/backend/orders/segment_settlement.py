@@ -375,7 +375,11 @@ def _points_transfer_terms_verified(order):
         released = (verify_revisions_locked(order)[0] if revision_tables_exist()
                     and OrderPointsTransferFundingRevision.objects.filter(order=order).exists() else {})
         from .addon_funding_release import addon_release_totals
-        addon_released = addon_release_totals(allocations) if combined else {}
+        addon_released = {}
+        if combined:
+            from .points_addon_receipt_usage import reuse_history_locked
+            with reuse_history_locked(order, {row.receipt_id for row in allocations}):
+                addon_released = addon_release_totals(allocations)
     except (PointsFundingPlanError, ValidationError) as exc:
         raise SettlementError(str(exc)) from exc
     if not verified.fully_funded:
