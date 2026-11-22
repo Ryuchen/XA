@@ -1,27 +1,40 @@
 const assert = require('node:assert/strict')
 
-async function checkEntryWithoutScripts(browser, origin, viewport) {
-  const context = await browser.newContext({ viewport, javaScriptEnabled: false, colorScheme: 'dark' })
+async function checkEntryFallback(browser, origin, { viewport, javaScriptEnabled, colorScheme }) {
+  const context = await browser.newContext({ viewport, javaScriptEnabled, colorScheme })
   try {
-    for (const [path, title, help] of [
-      ['/boss/', '老板服务中心', '已有订单或售后问题？'],
-      ['/player/', '陪玩工作台', '有服务正在进行？'],
+    if (javaScriptEnabled) await context.route('**/*', route =>
+      route.request().resourceType() === 'script' ? route.abort() : route.continue())
+    for (const [path, title, help, channel, details] of [
+      ['/boss/', '老板服务中心', '已有订单或售后问题？', '请通过原下单渠道联系本店客服。', '订单编号和需要处理的问题。'],
+      ['/player/', '陪玩工作台', '有服务正在进行？', '如需交接服务或补交报单，请联系本店负责人。', '订单编号、当前服务进度和待交接事项。'],
     ]) {
       const page = await context.newPage()
       const url = origin + path
+      const apiRequests = []
+      page.on('request', request => {
+        if (new URL(request.url()).pathname.startsWith('/api/')) apiRequests.push(request.url())
+      })
       await page.goto(url)
       await page.getByRole('heading', { name: title, exact: true }).waitFor()
       await page.getByRole('heading', { name: help, exact: true }).waitFor()
       await page.getByText('门店状态将在页面载入后显示。', { exact: false }).waitFor()
+      await page.getByText('联系前请准备', { exact: true }).waitFor()
+      await page.getByText(details, { exact: true }).waitFor()
       assert.equal(await page.getByText('门店暂未开放', { exact: true }).count(), 0)
       const fallback = page.locator('.xa-store-entry-fallback')
-      assert.equal(await fallback.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(11, 18, 32)')
+      const background = colorScheme === 'dark' ? 'rgb(11, 18, 32)' : 'rgb(244, 247, 252)'
+      assert.equal(await fallback.evaluate(el => getComputedStyle(el).backgroundColor), background)
       assert.equal(await fallback.evaluate(el => el.scrollWidth), viewport.width)
+      const channelBox = await page.getByText(channel, { exact: true }).boundingBox()
+      assert.ok(channelBox.y + channelBox.height <= viewport.height)
       const reopen = page.getByRole('link', { name: '重新打开门店入口' })
       assert.equal(await reopen.getAttribute('href'), path)
+      assert.ok((await reopen.boundingBox()).height >= 44)
       await page.keyboard.press('Tab')
       assert.equal(await reopen.evaluate(el => el === document.activeElement), true)
       await Promise.all([page.waitForRequest(url), page.keyboard.press('Enter')])
+      assert.deepEqual(apiRequests, [])
       await page.close()
     }
   } finally {
@@ -32,7 +45,8 @@ async function checkEntryWithoutScripts(browser, origin, viewport) {
 // Only the browser sees these store responses. No store state is changed.
 module.exports = async function checkStoreClosed(browser, origin = 'http://sl.esports.club') {
   const viewport = { width: 320, height: 568 }
-  await checkEntryWithoutScripts(browser, origin, viewport)
+  await checkEntryFallback(browser, origin, { viewport, javaScriptEnabled: false, colorScheme: 'dark' })
+  await checkEntryFallback(browser, origin, { viewport: { width: 1366, height: 1024 }, javaScriptEnabled: true, colorScheme: 'light' })
   const context = await browser.newContext({ viewport })
   try {
     const page = await context.newPage()

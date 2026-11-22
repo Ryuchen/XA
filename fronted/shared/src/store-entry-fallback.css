@@ -1,15 +1,14 @@
 .xa-store-entry-fallback {
   --entry-background: #f4f7fc;
   --entry-foreground: #0f172a;
-  --entry-action: #1e40af;
-  --entry-action-foreground: #fff;
-  --entry-focus: #2563eb;
+  --entry-panel: #fff;
+  --entry-secondary: #475569;
   --entry-divider: #cbd5e1;
   color-scheme: light dark;
   min-block-size: 100vh;
   min-block-size: 100dvh;
   box-sizing: border-box;
-  padding: clamp(24px, 5vw, 64px) max(16px, calc((100% - 48rem) / 2));
+  padding: clamp(24px, 5vw, 64px) max(16px, calc((100% - 70rem) / 2));
   background: var(--entry-background);
   color: var(--entry-foreground);
   font: 1rem/1.65 system-ui, sans-serif;
@@ -19,17 +18,41 @@
   .xa-store-entry-fallback {
     --entry-background: #0b1220;
     --entry-foreground: #f8fafc;
-    --entry-action: #bae6fd;
-    --entry-action-foreground: #0f172a;
-    --entry-focus: #38bdf8;
+    --entry-panel: #111c30;
+    --entry-secondary: #cbd5e1;
     --entry-divider: #475569;
   }
+}
+
+.xa-store-entry-hero,
+.xa-store-entry-help {
+  padding: clamp(20px, 4vw, 48px);
+  border-radius: 12px;
+}
+
+.xa-store-entry-hero {
+  background: #0a101e;
+  color: #fff;
+}
+
+@media (min-width: 50rem) {
+  .xa-store-entry-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, .8fr);
+    background-image: linear-gradient(90deg, #0a101e 46%, #0a101e00 80%), url('../assets/store-closed-headset.webp');
+    background-position: center, right 45%;
+    background-size: auto, 52% auto;
+    background-repeat: no-repeat;
+  }
+
+  .xa-store-entry-hero > * { grid-column: 1; justify-self: start; }
 }
 
 .xa-store-entry-fallback h1 {
   margin: 0;
   font-size: clamp(1.875rem, 1.5rem + 2vw, 3rem);
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 .xa-store-entry-fallback h2 {
@@ -42,6 +65,8 @@
   margin: 12px 0 0;
 }
 
+.xa-store-entry-hero p { color: #bae6fd; }
+
 .xa-store-entry-fallback a {
   display: inline-flex;
   align-items: center;
@@ -50,19 +75,25 @@
   margin-block-start: 20px;
   padding: 8px 16px;
   border-radius: 8px;
-  background: var(--entry-action);
-  color: var(--entry-action-foreground);
+  background: #bae6fd;
+  color: #0f172a;
   font-weight: 600;
   text-decoration: none;
 }
 
 .xa-store-entry-fallback a:hover { text-decoration: underline; }
-.xa-store-entry-fallback a:focus-visible { outline: 3px solid var(--entry-focus); outline-offset: 3px; }
+.xa-store-entry-fallback a:focus-visible { outline: 3px solid #38bdf8; outline-offset: 3px; }
 
-.xa-store-entry-fallback section {
-  margin-block-start: 24px;
-  padding-block-start: 20px;
-  border-block-start: 1px solid var(--entry-divider);
+.xa-store-entry-help {
+  margin-block-start: 16px;
+  border: 1px solid var(--entry-divider);
+  background: var(--entry-panel);
+  font-size: .9375rem;
 }
+
+.xa-store-entry-help p { margin-block-start: 8px; }
+.xa-store-entry-help dl { margin: 12px 0 0; }
+.xa-store-entry-help dt { font-weight: 600; }
+.xa-store-entry-help dd { margin: 4px 0 0; color: var(--entry-secondary); }
 
 body:has(.xa-store-entry-fallback) { margin: 0; }
