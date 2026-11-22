@@ -3,6 +3,7 @@ from unittest import skipUnless
 from unittest.mock import patch
 
 from django.db import DatabaseError, InterfaceError, OperationalError, connections
+from django.db import transaction as directory_transaction
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -243,6 +244,96 @@ class PlatformWithdrawalWorkflowTest(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertNotIn('data', response.data)
         self.assertEqual(self.f.get(path).status_code, 404)
+
+    def test_withdrawal_queue_discards_payee_details_if_store_access_is_revoked(self):
+        from stores.models import PlatformAuditEvent
+
+        pk = self.apply()
+        self.initial(pk)
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+        path = '/api/admin/platform/withdrawals/xinan'
+        allowed = self.f.get(path)
+        self.assertEqual(allowed.status_code, 200, allowed.data)
+        self.assertEqual((allowed.data['data']['results'][0]['id'], allowed['Cache-Control']), (pk, 'no-store'))
+        self.assertEqual(allowed.data['data']['results'][0]['payee_account'], 'qa-only')
+        reads = []
+
+        def revoke_after_read(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if sql.lstrip().upper().startswith('SELECT') and 'payee_account' in sql.lower():
+                reads.append(True)
+                PlatformRoleGrant.objects.filter(account=self.finance, scope_slug=self.second.slug).update(is_active=False)
+            return result
+
+        with connections[self.second.database_alias].execute_wrapper(revoke_after_read):
+            response = self.f.get(path)
+        self.assertEqual(reads, [True])
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn('data', response.data)
+        self.assertEqual(PlatformAuditEvent.objects.filter(
+            account=self.finance, action='withdraw.view_queue', target_store_slug=self.second.slug).count(), 1)
+
+    def test_withdrawal_stores_discards_revoked_store_from_final_scope(self):
+        from stores.platform_withdrawals import _read_store
+
+        pk = self.apply()
+        self.initial(pk)
+        self.first.initialized_at = timezone.now()
+        self.first.save(update_fields=['initialized_at'])
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+
+        def revoke_after_read(store):
+            facts = _read_store(store)
+            if store.pk == self.second.pk:
+                self.assertEqual(facts[0], {'STORE_APPROVED': 1})
+                PlatformRoleGrant.objects.filter(account=self.finance, scope_slug=store.slug).update(is_active=False)
+            return facts
+
+        with patch('stores.platform_withdrawals._read_store', side_effect=revoke_after_read):
+            response = self.f.get('/api/admin/platform/withdrawals')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual([item['slug'] for item in response.data['data']['stores']], [self.first.slug])
+
+    def test_withdrawal_list_results_preserve_known_stores_and_require_audit(self):
+        pk = self.apply()
+        self.initial(pk)
+        self.first.initialized_at = timezone.now()
+        self.first.save(update_fields=['initialized_at'])
+        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug=self.first.slug)
+        summary_path = '/api/admin/platform/withdrawals'
+        queue_path = f'{summary_path}/xinan'
+
+        def disconnect(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('SELECT') and 'wallet_withdrawrequest' in sql.lower():
+                raise InterfaceError('isolated store connection lost')
+            return execute(sql, params, many, context)
+
+        with connections[self.second.database_alias].execute_wrapper(disconnect):
+            summary = self.f.get(summary_path)
+            queue = self.f.get(queue_path)
+        self.assertEqual(summary.status_code, 200, summary.data)
+        rows = {row['slug']: row for row in summary.data['data']['stores']}
+        self.assertEqual((rows[self.first.slug]['status'], rows[self.first.slug]['counts']), ('OK', {}))
+        self.assertEqual((rows[self.second.slug]['status'], rows[self.second.slug]['counts'],
+                          rows[self.second.slug]['legacy_pending']), ('UNAVAILABLE', None, None))
+        self.assertEqual(queue.status_code, 503, queue.data)
+        self.assertNotIn('data', queue.data)
+
+        def fail_audit(execute, sql, params, many, context):
+            if sql.lstrip().upper().startswith('INSERT') and 'stores_platformauditevent' in sql.lower():
+                raise InterfaceError('isolated control audit write failure')
+            return execute(sql, params, many, context)
+
+        for path in (summary_path, queue_path):
+            with (self.subTest(path=path), directory_transaction.atomic(using='default'),
+                  connections['default'].execute_wrapper(fail_audit)):
+                response = self.f.get(path)
+                self.assertEqual(response.status_code, 503, response.data)
+                self.assertEqual(response.data['errorCode'], 'PLATFORM_UNAVAILABLE')
+                self.assertNotIn('data', response.data)
+        restored = self.f.get(queue_path)
+        self.assertEqual(restored.status_code, 200, restored.data)
+        self.assertEqual(restored.data['data']['results'][0]['id'], pk)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 'License控制库故障边界/多店隔离/平台财务提现/门店上下文路由属正式契约深水区（18-盘点 License控制库/多店隔离/平台财务待联调）；最终联调启用')
