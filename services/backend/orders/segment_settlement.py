@@ -1188,7 +1188,7 @@ def _settle_due_segment_people(order, *, operator=None, operator_account=None, t
                 if payment_revision:
                     from .points_voluntary_paid_evidence import transition_payment_locked
                     records = transition_payment_locked(order, manifest, plan, terms)
-                elif (points_order and order.status == Order.Status.COMPLETED and order.completed_at
+                elif (points_order and order.status == order.Status.COMPLETED and order.completed_at
                         and manifest.plan.get('completed_at') is None
                         and manifest.paid_handover_revisions.exists()):
                     from .points_followup_paid_handover import transition_completion_locked

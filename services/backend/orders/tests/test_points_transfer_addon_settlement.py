@@ -558,6 +558,9 @@ class PointsTransferAddonSettlementTest(TestCase):
     def test_preexisting_addon_and_funding_are_rebalanced_at_transfer_and_handover(self):
         self._preexisting_addon_and_funding()
 
+    def test_corrupt_open_manifest_blocks_remaining_earnings_without_repaying_first_person(self):
+        self._preexisting_addon_and_funding(check_manifest_integrity=True)
+
     def test_second_transfer_after_addon_handover_preserves_funding_and_settlement(self):
         self._preexisting_addon_and_funding(second_transfer=True)
 
@@ -682,7 +685,7 @@ class PointsTransferAddonSettlementTest(TestCase):
     def _preexisting_addon_and_funding(self, *, second_transfer=False, refund_before_transfer=False,
                                        refund_before_handover=False, license_outage=False, main_burden=False,
                                        unknown_kind='both', review_deny=False, defer_vip=False, audit_failure=False,
-                                       verify_reverse=False, closed_cycle=False):
+                                       verify_reverse=False, closed_cycle=False, check_manifest_integrity=False):
         with TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
             with store_context(self.second):
                 order = Order.objects.get(pk=self.order.pk)
@@ -713,8 +716,10 @@ class PointsTransferAddonSettlementTest(TestCase):
                 new = get_or_create_account_for_legacy_user(replacement)
                 replacement.escort_profile.account = new
                 replacement.escort_profile.save(update_fields=['account'])
-                staff_user = make_console_user(['order:view', 'order:dispatch', 'order:refund', 'order:settle',
-                                                'support:edit', 'report:audit'])
+                permissions = ['order:view', 'order:dispatch', 'order:refund', 'order:settle', 'support:edit', 'report:audit']
+                if closed_cycle:
+                    permissions += ['wallet:view', 'wallet:adjust', 'user:view', 'user:retire']
+                staff_user = make_console_user(permissions)
                 staff = get_or_create_account_for_legacy_user(staff_user)
                 staff_user.admin_membership.account = staff
                 staff_user.admin_membership.save(update_fields=['account'])
@@ -854,7 +859,8 @@ class PointsTransferAddonSettlementTest(TestCase):
                     completing_client = old_client
                 self.assertEqual(completing_client.post(f'/api/orders/orders/{order.pk}/complete/',
                     {'completion_image': screenshot()}, format='multipart').data['code'], 0)
-                for client, participant in participants:
+                from engagement.confirmation import process_order
+                for index, (client, participant) in enumerate(participants):
                     for action, extra in [('open', {}), ('upload', {'image': screenshot()}), ('submit', {'version': 0})]:
                         response = client.post(f'/api/orders/orders/{order.pk}/segment-report/',
                             {'segment_id': participant.pk, 'action': action, 'client_request_id': str(uuid4()), **extra},
@@ -863,8 +869,24 @@ class PointsTransferAddonSettlementTest(TestCase):
                     response = admin.post(f'/api/admin/orders/{order.pk}/segments/{participant.pk}/report-review/',
                         {'action': 'approve', 'version': 1}, format='json')
                     self.assertEqual(response.data['code'], 0, response.data)
-                from engagement.confirmation import process_order
+                    if check_manifest_integrity and index == 0:
+                        from orders.models import OrderSegmentSettlementManifest
+                        with patch('django.utils.timezone.now', return_value=timezone.now() + timedelta(hours=100)):
+                            self.assertFalse(process_order(order.pk))
+                        manifest = OrderSegmentSettlementManifest.objects.get(order=order)
+                        self.assertIsNone(manifest.finalized_at)
+                        income = Transaction.objects.filter(order=order, tx_type='INCOME').order_by('pk')
+                        posted = list(income.values_list('pk', 'wallet__account_id', 'amount'))
+                        self.assertEqual([row[1:] for row in posted], [(old.pk, 1920), (old.pk, 320)])
                 future = timezone.now() + timedelta(hours=100)
+                if check_manifest_integrity:
+                    from orders.settlement import SettlementError
+                    with transaction.atomic(), patch('django.utils.timezone.now', return_value=future):
+                        OrderSegmentSettlementManifest.objects.filter(pk=manifest.pk).update(plan_hash='0' * 64)
+                        with self.assertRaisesMessage(SettlementError, '退款前逐段结算方案待核对'):
+                            process_order(order.pk)
+                        self.assertEqual(list(income.values_list('pk', 'wallet__account_id', 'amount')), posted)
+                        transaction.set_rollback(True)
                 if refund_before_transfer:
                     with patch('django.utils.timezone.now', return_value=future):
                         self.assertFalse(process_order(order.pk))
@@ -883,12 +905,15 @@ class PointsTransferAddonSettlementTest(TestCase):
                               patch('stores.license_benefits.check_new_benefits', side_effect=selective))
                     with override_settings(LICENSE_BENEFIT_ENFORCEMENT_ENABLED=True, LICENSE_SNAPSHOT_CACHE_ENABLED=False), \
                             outage, patch('django.utils.timezone.now', return_value=future):
-                        self.assertTrue(process_order(order.pk))
+                        self.assertEqual(process_order(order.pk), unknown_kind == 'points')
                         self.assertFalse(process_order(order.pk))
                 else:
                     with patch('django.utils.timezone.now', return_value=future):
                         self.assertTrue(process_order(order.pk))
                         self.assertFalse(process_order(order.pk))
+                if check_manifest_integrity:
+                    self.assertEqual(list(income.filter(wallet__account_id=old.pk).values_list(
+                        'pk', 'wallet__account_id', 'amount')), posted)
                 payouts = dict(OrderSegmentAddonSettlement.objects.filter(payment_id=payment_id)
                                .values_list('segment_id', 'amount'))
                 self.assertEqual(payouts, expected_payouts)
@@ -897,7 +922,19 @@ class PointsTransferAddonSettlementTest(TestCase):
                                   order.settlement_addon_contribution),
                                  (4360, 250, 110) if main_burden else (4440, 198, 242) if refund_before_transfer else
                                  (4440, 201, 239) if refund_before_handover else (4440, 180, 260))
-                self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 4000)
+                if license_outage and unknown_kind != 'points':
+                    from engagement.models import LicenseConsumptionPointsDecision, LicenseRefundVipDecision, PointLedger
+                    self.assertIsNotNone(order.settled_at)
+                    self.assertFalse(ConsumptionConfirmation.objects.filter(order=order).exists())
+                    vip = LicenseRefundVipDecision.objects.get(order=order)
+                    self.assertEqual((vip.outcome, vip.paid_units, vip.refunded_units), ('UNKNOWN', 4000, 0))
+                    self.assertEqual(order.funding_benefits_resolved_at, vip.decided_at)
+                    points = LicenseConsumptionPointsDecision.objects.get(order=order)
+                    self.assertEqual(points.outcome, 'UNKNOWN')
+                    self.assertEqual(points.license_evidence['vip_decision_id'], vip.pk)
+                    self.assertFalse(PointLedger.objects.filter(event_key=points.event_key).exists())
+                else:
+                    self.assertEqual(ConsumptionConfirmation.objects.get(order=order).amount, 4000)
                 consumption = OrderAddonConsumption.objects.get(payment_id=payment_id)
                 self.assertEqual((consumption.paid_units, consumption.refunded_units),
                                  (1000, 500 if main_burden else 100 if refund_before_transfer or refund_before_handover else 0))
@@ -935,8 +972,30 @@ class PointsTransferAddonSettlementTest(TestCase):
                 with store_context(self.second):
                     account = consumption.account
                     if closed_cycle:
-                        account.business_cycle += 1
-                        account.save(update_fields=['business_cycle'])
+                        from engagement.models import RetirementAudit
+                        from wallet.services import get_wallet
+                        wallet = get_wallet(account_id=account.pk)
+                        balance = wallet.balance
+                        self.assertGreater(balance, 0)
+                        adjusted = admin.post(f'/api/admin/wallets/{wallet.pk}/adjust/', {
+                            'amount': -balance, 'remark': '归还隔离测试预存余款',
+                            'client_request_id': str(uuid4()),
+                        }, format='json')
+                        self.assertEqual(adjusted.data['code'], 0, adjusted.data)
+                        adjustment = Transaction.objects.get(wallet=wallet, tx_type='ADJUST', operator_account=staff)
+                        self.assertEqual((adjustment.amount, adjustment.balance_before, adjustment.balance_after),
+                                         (-balance, balance, 0))
+                        path = f'/api/admin/users/{account.pk}'
+                        preview = admin.get(f'{path}/retire-preview/')
+                        self.assertEqual(preview.status_code, 200, preview.data)
+                        self.assertTrue(preview.data['data']['can_retire'], preview.data)
+                        retired = admin.post(f'{path}/retire/', {'confirm': True, 'reason': '隔离测试退店',
+                            'confirmation_token': preview.data['data']['confirmation_token']}, format='json')
+                        self.assertEqual(retired.data['code'], 0, retired.data)
+                        account.refresh_from_db()
+                        self.assertEqual(account.business_cycle, consumption.business_cycle + 1)
+                        self.assertTrue(RetirementAudit.objects.filter(account=account, operator=staff,
+                            business_cycle=consumption.business_cycle).exists())
                     before_points = MemberProfile.objects.get(account=account).points_balance
                     before_vip = completed_consumption(account)
                 resolve_url = f'{url}/addons/{consumption.pk}/resolve'
