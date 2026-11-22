@@ -119,33 +119,38 @@ def _observe_activation(evidence_id, order_id, alias, slug, driver):
 
 
 def _resume_waiting(round_id):
-    from .grab_receipt_probe import finalize_opening_waiters
-    finalize_opening_waiters(round_id)
-    round_ = OrderGrabRound.objects.select_related('pool__order').filter(pk=round_id).first()
-    if not round_:
+    from .grab_clock_contract import production_enabled, round_identity_valid
+    from .grab_customer_review import has_pending_review
+    from .grab_receipt_probe import _lock_round, finalize_opening_waiters
+    from .grab_round_facts import current_pending_round_state
+
+    if not production_enabled():
         return
-    # Reopened rounds remove the original pass visibility delay. Only wake
-    # unsent group notices once this round's activation is durable.
-    if round_.number > 1 and OrderGrabRoundOpeningEvidence.objects.filter(
-            round=round_, state='OBSERVED').exists():
-        from .dispatching import reschedule_pool_dispatch
-        try:
-            reschedule_pool_dispatch(round_.pool.order_id)
-        except Exception:
-            # Group delivery is independent of receipt resolution; the
-            # periodic dispatcher retries its persisted pending records.
-            logger.exception('重开抢单群发重排待恢复 order=%s', round_.pool.order_id)
+    finalize_opening_waiters(round_id)
     try:
-        deadline = cutoff_bounds(round_, 'OPEN')[1] + timedelta(seconds=1)
+        with transaction.atomic():
+            order, round_ = _lock_round(round_id)
+            state = current_pending_round_state(order, round_id)
+            if (not state or state.status not in ('OPEN', 'PARKED')
+                    or has_pending_review(order.pk, lock=True) or not round_identity_valid(round_, lock=True)):
+                return
+            deadline = cutoff_bounds(round_, 'OPEN', lock=True)[1] + timedelta(seconds=1)
+            if round_.number > 1:
+                from .dispatching import reschedule_pool_dispatch
+                try:
+                    reschedule_pool_dispatch(order.pk)
+                except Exception:
+                    # The periodic dispatcher can still recover pending group records.
+                    logger.exception('重开抢单群发重排待恢复 order=%s', order.pk)
+            if order.required_provider_count == 1:
+                from .grab_single_flow import enabled, enqueue
+            else:
+                from .grab_team_flow import enabled, enqueue
+            if enabled():
+                transaction.on_commit(lambda: enqueue(order.pk, expected_round_id=round_id), robust=True)
+                transaction.on_commit(lambda: enqueue(order.pk, eta=deadline, expected_round_id=round_id), robust=True)
     except ValueError:
         return
-    if round_.pool.required_provider_count == 1:
-        from .grab_single_flow import enabled, enqueue
-    else:
-        from .grab_team_flow import enabled, enqueue
-    if enabled():
-        enqueue(round_.pool.order_id)
-        enqueue(round_.pool.order_id, eta=deadline)
 
 
 def opening_bounds(round_, *, lock=False):
@@ -215,7 +220,7 @@ def cutoff_bounds(round_, phase, *, lock=False):
     return (deadline_lower, deadline_upper) if phase == 'OPEN' else (total_lower, total_upper)
 
 
-def classify_window(*, lower, upper, precision_us, round_, phase, cancellation=False):
+def classify_window(*, lower, upper, precision_us, round_, phase, cancellation=False, lock=False):
     """Compare a commit interval with a cutoff interval, preserving ambiguity."""
     from datetime import datetime
     if (not isinstance(lower, datetime) or lower.utcoffset() is None
@@ -223,8 +228,10 @@ def classify_window(*, lower, upper, precision_us, round_, phase, cancellation=F
             or type(precision_us) is not int or not 1 <= precision_us <= 1_000_000
             or type(cancellation) is not bool):
         raise ValueError('登记时间证据无效')
-    earliest, latest = cutoff_bounds(round_, phase)
+    earliest, latest = cutoff_bounds(round_, phase, lock=lock)
     quantum = timedelta(microseconds=precision_us)
+    if lower - quantum < round_.opened_at:
+        return 'REVIEW', 'CROSSED_OPENING'
     if (upper + quantum <= earliest if cancellation else upper + quantum < earliest):
         return 'BEFORE', ''
     if (lower - quantum > latest if cancellation else lower - quantum >= latest):

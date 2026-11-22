@@ -47,8 +47,8 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             flow.prepare()
         return store, flow
 
-    def buy_for_committed_opening(self, flow, request_id):
-        save_grab_window(30, 1, lambda *_: None)
+    def buy_for_committed_opening(self, flow, request_id, *, window=30):
+        save_grab_window(window, 1, lambda *_: None)
         with patch.object(open_committed_grab_order, 'delay') as enqueue:
             purchase = flow.create(dispatch_mode='AUTO_GRAB', client_request_id=request_id)
         self.assertEqual(purchase.data['code'], 0, purchase.data)
@@ -56,6 +56,215 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
         enqueue.assert_called_once_with(order.pk)
         self.assertFalse(OrderGrabPoolSnapshot.objects.filter(order=order).exists())
         return order
+
+    def prepare_waiting_team_invite(self, flow, request_id, *, window=30):
+        from orders.grab_receipt_probe import record_intent
+        from orders.models import OrderGrabTeamDraft
+
+        flow.service.fulfillment_provider_count = 2
+        flow.service.save(update_fields=['fulfillment_provider_count'])
+        order = self.buy_for_committed_opening(flow, request_id, window=window)
+        with patch('orders.grab_round_opening._observe_activation') as observe:
+            self.assertEqual(open_committed_grab_order.run(order.pk), 'WAIT_OPENING')
+        observe.assert_called_once()
+        round_ = OrderGrabRound.objects.get(pool__order=order)
+        # Let the conservative 50 ms lower bound follow the persisted round start.
+        sleep(.075)
+        captain, partner = flow.accounts
+        invite = record_intent(round_.pk, captain.pk, 'INVITE', request_id + '-invite',
+                               {'partner_id': partner.pk}, team_flow=True, actor_snapshot=captain)
+        receipt = OrderGrabReceiptProbe.objects.get(pk=invite.receipt_id)
+        self.assertEqual((receipt.state, receipt.opening_prepared_observed), ('WAIT_OPENING', True))
+        self.assertIsNotNone(receipt.upper_observed_at)
+        team = OrderGrabTeamDraft.objects.get(round=round_, captain=captain, request_key=receipt.request_key)
+        return order, round_, team, receipt, observe.call_args.args
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True,
+                       GRAB_INVITE_NOTICE_RECOVERY_ENABLED=True)
+    def test_pending_activation_and_review_keep_original_invite_recoverable(self):
+        from orders.grab_review import mark_round_review
+        from orders.grab_round_opening import _observe_activation
+        from orders.tasks import recover_grab_opening_waiters
+        from orders.tests.factories import make_console_user
+        from site_messages.models import GrabInviteNoticeDelivery
+        from site_messages.tasks import recover_grab_invites
+
+        store, flow = self.prepare_flow()
+        with (store_context(store), patch('orders.grab_team_flow.enqueue') as enqueue,
+              patch('site_messages.notifier.notify_messages_after_commit') as notify):
+            order, round_, _team, receipt, activation = self.prepare_waiting_team_invite(flow, 'live-invite')
+            enqueue.reset_mock()
+            recover_grab_opening_waiters.run(round_.pk)
+            receipt.refresh_from_db()
+            self.assertEqual(receipt.state, 'WAIT_OPENING')
+            state = round_.team_state
+            with transaction.atomic():
+                Order.objects.select_for_update().get(pk=order.pk)
+                mark_round_review(state, '开池激活回执待核对')
+            with patch('orders.grab_round_opening._resume_waiting'):
+                _observe_activation(*activation)
+            with override_settings(PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=False):
+                recover_grab_opening_waiters.run(round_.pk)
+                receipt.refresh_from_db()
+                self.assertEqual(receipt.state, 'WAIT_OPENING')
+            recover_grab_opening_waiters.run(round_.pk)
+            receipt.refresh_from_db()
+            self.assertEqual((receipt.state, receipt.pass_evidence.state), ('BEFORE', 'KNOWN'))
+            recover_grab_invites.run()
+            self.assertFalse(GrabInviteNoticeDelivery.objects.filter(receipt=receipt).exists())
+            enqueue.assert_not_called()
+            notify.assert_not_called()
+            staff = make_console_user(['order:view', 'order:dispatch'])
+            account = flow.link(staff)
+            staff.admin_membership.account = account
+            staff.admin_membership.save(update_fields=['account'])
+            flow.auth(account)
+            with override_settings(GRAB_INVITE_NOTICE_RECOVERY_ENABLED=False):
+                result = flow.client.post(f'/api/admin/grab-reviews/{order.pk}/actions/', {
+                    'action': 'RESUME', 'reason': '已核对原激活凭证', 'client_request_id': 'resume-live-invite',
+                }, format='json')
+            self.assertEqual(result.data.get('code'), 0, result.data)
+            self.assertEqual(recover_grab_invites.run(), 0)
+            notice = GrabInviteNoticeDelivery.objects.get(receipt=receipt)
+            self.assertEqual(notice.message.recipient_account_id, flow.accounts[1].pk)
+            notify.assert_called_once()
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True,
+                       GRAB_INVITE_NOTICE_RECOVERY_ENABLED=True)
+    def test_superseded_opening_receipts_keep_time_facts_without_reopening_old_team(self):
+        from orders.grab_cutoff_watermark import seal
+        from orders.grab_receipt_probe import _db_clock, record_intent
+        from orders.grab_round_opening import _observe_activation, cutoff_bounds
+        from orders.grab_team_flow import _reopen
+        from orders.tasks import finalize_team_grab, recover_grab_opening_waiters
+        from site_messages.models import GrabInviteNoticeDelivery
+        from site_messages.tasks import recover_grab_invites
+
+        store, flow = self.prepare_flow()
+        with (store_context(store), patch('orders.grab_team_flow.enqueue') as enqueue,
+              patch('site_messages.notifier.notify_messages_after_commit') as notify):
+            order, round_, team, invite, activation = self.prepare_waiting_team_invite(flow, 'old-invite', window=2)
+            sleep(.12)
+            withdraw = record_intent(round_.pk, flow.accounts[0].pk, 'WITHDRAW', 'old-withdraw',
+                                     {'team_id': team.pk}, team_flow=True)
+            self.assertEqual(OrderGrabReceiptProbe.objects.get(pk=withdraw.receipt_id).state, 'WAIT_OPENING')
+            with patch('orders.grab_round_opening._resume_waiting'):
+                _observe_activation(*activation)
+                cutoff = cutoff_bounds(round_, 'OPEN')[1]
+                deadline = monotonic() + 6
+                while _db_clock()[0] <= cutoff + timedelta(milliseconds=60):
+                    self.assertLess(monotonic(), deadline)
+                    sleep(.025)
+                with transaction.atomic():
+                    order = Order.objects.select_for_update().get(pk=order.pk)
+                    _reopen(order, round_.team_state, _db_clock()[0])
+            # Reproduce an old state left open by an interrupted historical write.
+            type(round_.team_state).objects.filter(pk=round_.team_state.pk).update(status='OPEN')
+            enqueue.reset_mock()
+            recover_grab_opening_waiters.run(round_.pk)
+            recover_grab_opening_waiters.run(round_.pk)
+            self.assertEqual(list(round_.receipt_probes.order_by('pk').values_list('kind', 'state')),
+                             [('INVITE', 'BEFORE'), ('WITHDRAW', 'BEFORE')])
+            team.refresh_from_db()
+            self.assertEqual((team.status, team.withdrawal_receipt_id, team.occupied_seats.count()),
+                             ('INVITING', None, 1))
+            recover_grab_invites.run()
+            notice = GrabInviteNoticeDelivery.objects.get(receipt=invite)
+            self.assertIsNone(notice.message_id)
+            self.assertTrue(notice.skipped_reason)
+            notify.assert_not_called()
+            enqueue.assert_not_called()
+            flow.auth(flow.accounts[1])
+            result = flow.client.get('/api/orders/grab-team/invitations/')
+            self.assertNotIn(team.pk, [row['team_id'] for row in result.data['data']])
+            flow.auth(flow.accounts[0])
+            result = flow.client.post(f'/api/orders/grab-team/invitations/{team.pk}/withdraw/', {
+                'client_request_id': 'old-withdraw',
+            }, format='json')
+            self.assertEqual(result.status_code, 409, result.data)
+            self.assertEqual(finalize_team_grab.run(order.pk, expected_round_id=round_.pk), 'STALE_ROUND')
+            self.assertEqual(seal(order.pk, team=True, expected_round_id=round_.pk), 'STALE_ROUND')
+            team.refresh_from_db()
+            self.assertIsNone(team.withdrawal_receipt_id)
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
+    def test_periodic_recovery_classifies_terminal_orders_without_republishing(self):
+        from orders.grab_round_opening import _observe_activation
+        from orders.tasks import check_pending_timeouts, recover_grab_opening_waiters
+        from orders.tests.factories import make_console_user
+
+        store, flow = self.prepare_flow()
+        with (store_context(store), patch('orders.grab_team_flow.enqueue') as enqueue,
+              patch('site_messages.grab_invite.schedule') as notify):
+            order, round_, _team, receipt, activation = self.prepare_waiting_team_invite(flow, 'cancelled-invite')
+            with patch('orders.grab_round_opening._resume_waiting'):
+                _observe_activation(*activation)
+            staff = make_console_user(['order:view', 'order:dispatch', 'order:refund'])
+            account = flow.link(staff)
+            staff.admin_membership.account = account
+            staff.admin_membership.save(update_fields=['account'])
+            flow.auth(account)
+            cancelled = flow.client.post(f'/api/admin/grab-reviews/{order.pk}/actions/', {
+                'action': 'CANCEL', 'reason': '取消隔离测试订单', 'client_request_id': 'cancel-by-staff',
+            }, format='json')
+            self.assertEqual(cancelled.data.get('code'), 0, cancelled.data)
+            enqueue.reset_mock()
+            with patch.object(recover_grab_opening_waiters, 'delay') as queue:
+                check_pending_timeouts.run()
+                queue.assert_called_once_with(round_.pk)
+            recover_grab_opening_waiters.run(round_.pk)
+            recover_grab_opening_waiters.run(round_.pk)
+            receipt.refresh_from_db()
+            order.refresh_from_db()
+            flow.wallet.refresh_from_db()
+            self.assertEqual((receipt.state, order.status, flow.wallet.balance), ('BEFORE', 'CANCELLED', 100000))
+            self.assertCountEqual(order.transactions.values_list('tx_type', 'amount'),
+                                  [('PAY', -5000), ('REFUND', 5000)])
+            enqueue.assert_not_called()
+            notify.assert_not_called()
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True, GRAB_TEAM_WINDOW_ENABLED=True)
+    def test_current_review_releases_only_the_seat_of_the_proven_late_confirmation(self):
+        from orders.grab_receipt_probe import _db_clock, record_intent
+        from orders.grab_review import mark_round_review
+        from orders.grab_round_opening import _observe_activation, cutoff_bounds
+        from orders.grab_team_flow import _release_late_team
+
+        store, flow = self.prepare_flow()
+        with (store_context(store), patch('orders.grab_team_flow.enqueue'),
+              patch('site_messages.grab_invite.schedule')):
+            order, round_, team, invite, activation = self.prepare_waiting_team_invite(flow, 'late-confirm', window=2)
+            _observe_activation(*activation)
+            invite.refresh_from_db()
+            self.assertEqual(invite.state, 'BEFORE')
+            cutoff = cutoff_bounds(round_, 'OPEN')[1]
+            deadline = monotonic() + 6
+            while _db_clock()[0] <= cutoff + timedelta(milliseconds=60):
+                self.assertLess(monotonic(), deadline)
+                sleep(.025)
+            partner = flow.accounts[1]
+            with patch('orders.grab_receipt_probe._release_late_team_receipt'):
+                late = record_intent(round_.pk, partner.pk, 'CONFIRM', 'late-confirm-receipt',
+                                     {'team_id': team.pk}, team_flow=True, actor_snapshot=partner)
+            self.assertEqual(late.state, 'AFTER')
+            with transaction.atomic():
+                Order.objects.select_for_update().get(pk=order.pk)
+                mark_round_review(round_.team_state, '核对组队确认时间')
+            _release_late_team(team.pk, confirmation=True, receipt_id=invite.pk)
+            team.refresh_from_db()
+            self.assertEqual((team.status, team.occupied_seats.count()), ('UNVERIFIED', 2))
+            for _ in range(2):
+                _release_late_team(team.pk, confirmation=True, receipt_id=late.receipt_id)
+            team.refresh_from_db()
+            self.assertEqual(team.status, 'INVITING')
+            self.assertEqual(list(team.occupied_seats.values_list('account_id', flat=True)), [flow.accounts[0].pk])
+            self.assertEqual(OrderGrabReceiptProbe.objects.get(pk=late.receipt_id).state, 'AFTER')
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
 
     def configure_group_targets(self):
         from console.models import KookDispatchConfig

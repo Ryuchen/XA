@@ -257,6 +257,11 @@ class GrabReviewActionView(APIView):
                         state.status = phase
                         state.reason = ''
                         state.save(update_fields=['status', 'reason', 'updated_at'])
+                        if team:
+                            from site_messages.grab_invite import schedule
+                            for row in rows:
+                                if row.kind == 'INVITE' and row.state == 'BEFORE':
+                                    schedule(row.pk)
                     transaction.on_commit(lambda: (team_enqueue if team else single_enqueue)(order.pk), robust=True)
             else:
                 from .services import refund_to_customer

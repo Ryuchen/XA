@@ -66,18 +66,20 @@ def verify(round_, rows, *, observed_at, precision_us):
             and mark.receipt_count == count and mark.receipt_digest == digest)
 
 
-def seal(order_id, *, team):
+def seal(order_id, *, team, expected_round_id=None):
     """Freeze OPEN receipt identities after cutoff in an independent transaction."""
     if not enabled():
         return 'DISABLED'
     if transaction.get_connection().in_atomic_block:
         raise RuntimeError('截止水位必须使用独立最外层事务')
     from .grab_receipt_probe import _db_clock
-    from .grab_round_facts import GrabRoundReviewRequired, latest_round_state
+    from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, locked_latest_round_id
     with transaction.atomic():
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order or order.status != Order.Status.PENDING:
             return 'NO_OPEN_ROUND'
+        if expected_round_id is not None and locked_latest_round_id(order.pk) != expected_round_id:
+            return 'STALE_ROUND'
         seats = 2 if team else 1
         if order.required_provider_count != seats:
             return 'REVIEW'

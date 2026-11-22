@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from stores.db import transaction
 
 from .grab_customer_review import PendingGrabCancellationReview
-from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, pool_exists
+from .grab_round_facts import GrabRoundReviewRequired, latest_round_state, locked_latest_round_id, pool_exists
 from .models import (Order, OrderGrabReceiptProbe, OrderGrabRound, OrderGrabSingleAdmission,
                      OrderGrabSingleRoundState, OrderStatusLog)
 
@@ -55,10 +55,11 @@ def _advance_due_round(order_id):
     return _latest(order_id)
 
 
-def enqueue(order_id, *, eta=None):
+def enqueue(order_id, *, eta=None, expected_round_id=None):
     from .tasks import finalize_single_grab
+    args = [order_id] if expected_round_id is None else [order_id, expected_round_id]
     try:
-        finalize_single_grab.apply_async(args=[order_id], eta=eta)
+        finalize_single_grab.apply_async(args=args, eta=eta)
     except Exception:
         logger.exception('抢单轮次任务入队失败，等待定时扫描：order=%s', order_id)
 
@@ -238,7 +239,7 @@ def _reopen(order, state, now):
     transaction.on_commit(lambda: enqueue(order.pk, eta=deadline))
 
 
-def resolve(order_id, *, _cancel_only=False):
+def resolve(order_id, *, _cancel_only=False, expected_round_id=None):
     """Process committed receipts under the order lock; never infer unknown times."""
     if not enabled():
         return 'DISABLED'
@@ -253,13 +254,16 @@ def resolve(order_id, *, _cancel_only=False):
     if (lifecycle or watermark) and not _cancel_only:
         if transaction.get_connection().in_atomic_block:
             raise RuntimeError('抢单分配必须使用独立的最外层事务')
-        outcome = resolve(order_id, _cancel_only=True)
+        outcome = resolve(order_id, _cancel_only=True, expected_round_id=expected_round_id)
         if outcome != 'NO_CANCELLATION':
             return outcome
     if watermark and not _cancel_only:
         from .grab_cutoff_watermark import seal
         try:
-            if seal(order_id, team=False) == 'REVIEW':
+            sealed = seal(order_id, team=False, expected_round_id=expected_round_id)
+            if sealed == 'STALE_ROUND':
+                return sealed
+            if sealed == 'REVIEW':
                 return 'WAIT_WATERMARK_REVIEW'
         except ValueError:
             return 'WAIT_WATERMARK_REVIEW'
@@ -280,6 +284,8 @@ def resolve(order_id, *, _cancel_only=False):
         order = Order.objects.select_for_update().filter(pk=order_id).first()
         if not order:
             return 'NOT_FOUND'
+        if expected_round_id is not None and locked_latest_round_id(order.pk) != expected_round_id:
+            return 'STALE_ROUND'
         if order.status == Order.Status.PENDING:
             from .applications import ApplicationError, _enter_assignment_scope
             try:

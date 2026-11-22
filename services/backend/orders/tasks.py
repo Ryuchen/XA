@@ -182,20 +182,18 @@ def check_pending_timeouts() -> int:
             order__grab_pool_snapshot__isnull=True).order_by('pk').values_list('order_id', flat=True)
         for order_id in pending.iterator(chunk_size=200):
             enqueue_candidate(open_committed_grab_order, order_id)
-    # Activation acknowledgement and receipt classification are separate
-    # commits.  A lost post-commit callback must not strand committed entries.
-    from .models import OrderGrabReceiptProbe
-    waiting_rounds = (OrderGrabReceiptProbe.objects.filter(
-        state='WAIT_OPENING', round__opening_evidence__state='OBSERVED',
-        round__pool__order__status=Order.Status.PENDING)
-        .order_by().values_list('round_id', flat=True).distinct())
-    for round_id in waiting_rounds.iterator(chunk_size=200):
-        enqueue_candidate(recover_grab_opening_waiters, round_id)
     from .grab_single_flow import enabled
     from django.db.models import Q
     from .grab_clock_contract import production_enabled
     if production_enabled():
+        from .models import OrderGrabReceiptProbe
         from .grab_receipt_probe import _db_clock
+        # Recover receipt classification independently of the order's current status.
+        waiting_rounds = (OrderGrabReceiptProbe.objects.filter(
+            state='WAIT_OPENING', round__opening_evidence__state='OBSERVED')
+            .order_by().values_list('round_id', flat=True).distinct())
+        for round_id in waiting_rounds.iterator(chunk_size=200):
+            enqueue_candidate(recover_grab_opening_waiters, round_id)
         clock_now, _, _ = _db_clock()
     else:
         clock_now = timezone.now()
@@ -250,15 +248,15 @@ def open_committed_grab_order(order_id):
 
 
 @shared_task
-def finalize_single_grab(order_id):
+def finalize_single_grab(order_id, expected_round_id=None):
     from .grab_single_flow import resolve
-    return resolve(order_id)
+    return resolve(order_id, expected_round_id=expected_round_id)
 
 
 @shared_task
-def finalize_team_grab(order_id):
+def finalize_team_grab(order_id, expected_round_id=None):
     from .grab_team_flow import resolve
-    return resolve(order_id)
+    return resolve(order_id, expected_round_id=expected_round_id)
 
 
 @shared_task

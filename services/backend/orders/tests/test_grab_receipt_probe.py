@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone as dt_timezone
 from threading import Barrier
 from time import sleep
+from types import SimpleNamespace
 from unittest import TestCase as PureTestCase, skipUnless
 from unittest.mock import patch
 
@@ -25,6 +26,20 @@ from stores.tests_hosts import xinan_store
 
 
 class BoundsTest(PureTestCase):
+    def test_formal_cutoff_classification_preserves_uncertain_opening(self):
+        from orders.grab_round_opening import classify_window
+
+        opened = datetime(2026, 11, 7, 12, tzinfo=dt_timezone.utc)
+        round_ = SimpleNamespace(opened_at=opened)
+        cutoff = opened + timedelta(seconds=30)
+        with patch('orders.grab_round_opening.cutoff_bounds', return_value=(cutoff, cutoff)):
+            lower = opened + timedelta(milliseconds=49)
+            self.assertEqual(classify_window(lower=lower, upper=lower, precision_us=50000,
+                                             round_=round_, phase='OPEN'), ('REVIEW', 'CROSSED_OPENING'))
+            lower = opened + timedelta(milliseconds=50)
+            self.assertEqual(classify_window(lower=lower, upper=lower, precision_us=50000,
+                                             round_=round_, phase='OPEN'), ('BEFORE', ''))
+
     def test_deadline_proof_is_conservative_for_each_kind(self):
         end = datetime(2026, 11, 7, 12, tzinfo=dt_timezone.utc)
         def classify(lo, hi, cancel=False):

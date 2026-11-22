@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from django.db.models import OuterRef, Subquery
 from stores.db import transaction
-from .models import OrderGrabPoolSnapshot, OrderGrabRound, OrderGrabSingleRoundState, OrderGrabTeamRoundState
+from .models import Order, OrderGrabPoolSnapshot, OrderGrabRound, OrderGrabSingleRoundState, OrderGrabTeamRoundState
 
 
 class GrabRoundReviewRequired(ValueError):
@@ -29,6 +29,12 @@ def latest_status_for_pool(seats):
     field = 'single_state__status' if seats == 1 else 'team_state__status'
     latest = OrderGrabRound.objects.filter(pool_id=OuterRef('grab_pool_snapshot__pk')).order_by('-number')
     return Subquery(latest.values(field)[:1])
+
+
+def locked_latest_round_id(order_id):
+    """Read the latest round ID while holding the order lock."""
+    return (OrderGrabRound.objects.select_for_update().filter(pool__order_id=order_id)
+            .order_by('-number').values_list('pk', flat=True).first())
 
 
 def latest_round_state(order_id, *, seats, lock=False):
@@ -59,6 +65,25 @@ def latest_round_state(order_id, *, seats, lock=False):
     except GrabRoundReviewRequired as exc:
         raise GrabRoundReviewRequired(str(exc), state=state) from exc
     return state
+
+
+def paid_pending_grab_order(order):
+    """Check order and assignment facts while holding the order lock."""
+    return (order.status == Order.Status.PENDING and order.payment_status == Order.PaymentStatus.PAID
+            and order.required_provider_count in (1, 2) and not order.provider_id
+            and not order.provider_account_id and not order.requires_boss_selection
+            and not order.providers.select_for_update().exists())
+
+
+def current_pending_round_state(order, round_id):
+    """Read the state authorized to apply effects while holding the order lock."""
+    if not paid_pending_grab_order(order):
+        return None
+    try:
+        state = latest_round_state(order.pk, seats=order.required_provider_count, lock=True)
+    except GrabRoundReviewRequired:
+        return None
+    return state if state and state.round_id == round_id else None
 
 
 def current_round(pool, round_id, *, lock=False):
