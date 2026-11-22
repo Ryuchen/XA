@@ -35,7 +35,7 @@ def _same_seat_cross_handovers(refund, first, other_handover):
     transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
         created_at__lte=refund.created_at).select_related('previous_segment').order_by('pk')[:2])
     paid = list(OrderAddonPayment.objects.filter(intent__order=order,
-        buyer_transaction__created_at__lte=refund.created_at).select_related('intent', 'buyer_transaction')[:4])
+        buyer_transaction__created_at__lte=refund.created_at).select_related('intent', 'buyer_transaction'))
     paid_ids = {row.pk for row in paid}
     debit_ids = {first.payment_id, other_handover.payment_id}
     if (len(transfers) != 1 or transfers[0].previous_segment_id != first.source_segment_id
@@ -47,17 +47,17 @@ def _same_seat_cross_handovers(refund, first, other_handover):
         return first, other_handover
     if refund.main_pending_deduction or refund.wallet_deduction or refund.deposit_deduction:
         return ()
-    remaining_handovers = list(OrderAddonHandover.objects.filter(payment_id__in=paid_ids - debit_ids,
+    handovers = list(OrderAddonHandover.objects.filter(payment_id__in=paid_ids,
         status='ACCEPTED', accepted_at__lte=refund.created_at).select_related('payment__intent'))
-    if len(remaining_handovers) != 1:
+    by_payment = {row.payment_id: row for row in handovers}
+    if (by_payment.keys() != paid_ids or len(by_payment) != len(handovers)
+            or by_payment[first.payment_id].pk != first.pk or by_payment[other_handover.payment_id].pk != other_handover.pk
+            or any(row.kind != 'STANDARD' or row.previous_id
+                   or (row.source_segment_id, row.target_segment_id) != (first.source_segment_id, first.target_segment_id)
+                   or not transfers[0].created_at < row.created_at <= row.accepted_at < refund.created_at
+                   for row in handovers)):
         return ()
-    remaining = remaining_handovers[0]
-    if not (remaining.kind == 'STANDARD' and not remaining.previous_id
-            and (remaining.source_segment_id, remaining.target_segment_id)
-                == (first.source_segment_id, first.target_segment_id)
-            and transfers[0].created_at < remaining.created_at <= remaining.accepted_at < refund.created_at):
-        return ()
-    return first, *sorted((other_handover, remaining), key=lambda item: item.payment_id)
+    return first, *(by_payment[pk] for pk in sorted(paid_ids - {first.payment_id}))
 
 
 def _same_seat_cross_income(refund, handover, segment_id, account_id, *, receipt_id):
@@ -455,7 +455,7 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
                         refund__created_at__lt=refund.created_at).values_list('amount', flat=True))
                     available = sum(row.income for row in matching) - used
                 elif (chain := _same_seat_cross_handovers(refund, handovers[-1], latest)):
-                    if len(chain) == 3:
+                    if len(chain) > 2:
                         _verify_same_seat_debits(refund, chain, person, state, addon_deductions, receipt_id=receipt_id)
                         break
                     available = _same_seat_cross_income(refund, latest, deduction.segment_id,
@@ -871,10 +871,11 @@ def verify_before_second_handover(refund, first, *, before, receipt_id=None):
             or any(row[1] != first.target_segment_id for row in members[0][9])):
         raise ValidationError('再次加购接替的原退款未归属同一履约段')
     other_payments = {row[1] for row in members[0][8] if row[1] != refund.payment_id}
-    for other_id in sorted(other_payments):
-        other = OrderAddonHandover.objects.filter(payment_id=other_id, status='ACCEPTED',
+    if other_payments:
+        other = OrderAddonHandover.objects.filter(payment_id=min(other_payments), status='ACCEPTED',
             accepted_at__lt=refund.created_at).order_by('-accepted_at', '-pk').first()
-        if not _same_seat_cross_handovers(refund, first, other):
+        chain = _same_seat_cross_handovers(refund, first, other)
+        if not other_payments.issubset(row.payment_id for row in chain):
             raise ValidationError('再次加购接替的跨付款扣减不属于同一席')
     if refund.wallet_deduction or refund.deposit_deduction:
         _verify_prior_handover_refund_recovery(refund, first, run)

@@ -165,7 +165,7 @@ def _has_handover_refund_receipt(order, payment_id, proposal_id):
         return False
     payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction'))
     transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order)
-    if len(payments) in (2, 3):
+    if len(payments) > 1:
         from .points_transfer_refund_access import same_seat_addon_payments, unaffected_addon_for_return
         original = transfers.select_related('previous_segment').order_by('created_at', 'pk').first()
         if (not original or original.created_at >= refund.created_at

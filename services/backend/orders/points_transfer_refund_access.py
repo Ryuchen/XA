@@ -644,7 +644,7 @@ def unaffected_addon_for_return(order, payment, payments, first_transfer, *, bou
 def same_seat_addon_payments(order, payments, first_transfer):
     """Each original payment belonged to the service segment that transferred."""
     origin = first_transfer.previous_segment
-    return (len(payments) in (2, 3) and order.required_provider_count == 2 and not order.room_required_snapshot
+    return (len(payments) >= 2 and order.required_provider_count == 2 and not order.room_required_snapshot
             and origin.started_at and origin.provider_business_cycle
             and all(payment.intent.order_id == order.pk and payment.intent.buyer_id == order.customer_account_id
                     and payment.intent.segment_id == origin.pk and payment.intent.provider_id == origin.provider_account_id
@@ -653,7 +653,7 @@ def same_seat_addon_payments(order, payments, first_transfer):
 
 
 def _multi_addon_return_chains(order, payments, transfers, *, allow_waiting=False):
-    if len(payments) not in (2, 3) or not 1 <= len(transfers) <= 2:
+    if len(payments) < 2 or not 1 <= len(transfers) <= 2:
         return []
     if len(transfers) == 2 and (transfers[1].next_segment.provider_account_id !=
                                 transfers[0].previous_segment.provider_account_id):
@@ -661,9 +661,10 @@ def _multi_addon_return_chains(order, payments, transfers, *, allow_waiting=Fals
     chains = [_successive_addon_handovers(order, payment, transfers, allow_waiting=allow_waiting) for payment in payments]
     if all(chains) and same_seat_addon_payments(order, payments, transfers[0]):
         return chains
-    for payment, chain in zip(payments, chains):
-        if chain and unaffected_addon_for_return(order, payment, payments, transfers[0]):
-            return [chain]
+    if len(payments) == 2:
+        for payment, chain in zip(payments, chains):
+            if chain and unaffected_addon_for_return(order, payment, payments, transfers[0]):
+                return [chain]
     return []
 
 
