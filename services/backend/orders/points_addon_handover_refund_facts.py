@@ -17,8 +17,8 @@ def _sum_segments(rows):
     return result
 
 
-def _same_seat_cross_payment(refund, first, other_handover):
-    """Recognize two accepted first handovers from the same actual transfer."""
+def _same_seat_cross_handovers(refund, first, other_handover):
+    """Find the first handovers at the refund boundary in payment posting order."""
     from .models import OrderAddonHandover, OrderAddonPayment, OrderOriginalShareTransfer
     from .points_transfer_refund_access import same_seat_addon_payments
 
@@ -27,11 +27,11 @@ def _same_seat_cross_payment(refund, first, other_handover):
                    or not row.created_at <= row.accepted_at < refund.created_at for row in (first, other_handover))
             or (first.source_segment_id, first.target_segment_id) !=
                (other_handover.source_segment_id, other_handover.target_segment_id)):
-        return False
+        return ()
     order = refund.order
     if (order.refund_records.filter(created_at__lte=refund.created_at).exists()
             or order.prestart_handoffs.filter(created_at__lte=refund.created_at).exists()):
-        return False
+        return ()
     transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
         created_at__lte=refund.created_at).select_related('previous_segment').order_by('pk')[:2])
     paid = list(OrderAddonPayment.objects.filter(intent__order=order,
@@ -42,35 +42,32 @@ def _same_seat_cross_payment(refund, first, other_handover):
             or transfers[0].next_segment_id != first.target_segment_id
             or transfers[0].created_at >= min(first.created_at, other_handover.created_at)
             or not debit_ids <= paid_ids or not same_seat_addon_payments(order, paid, transfers[0])):
-        return False
+        return ()
     if paid_ids == debit_ids:
-        return True
-    # This three-payment path consumes earnings from the refunded payment
-    # and the other payment with the lowest ID, following the posting order.
-    if (other_handover.payment_id != min(paid_ids - {first.payment_id})
-            or refund.main_pending_deduction or refund.wallet_deduction or refund.deposit_deduction
-            or refund.earning_deductions.exclude(payment_id__in=debit_ids).exists()):
-        return False
+        return first, other_handover
+    if refund.main_pending_deduction or refund.wallet_deduction or refund.deposit_deduction:
+        return ()
     remaining_handovers = list(OrderAddonHandover.objects.filter(payment_id__in=paid_ids - debit_ids,
-        status='ACCEPTED', accepted_at__lte=refund.created_at))
+        status='ACCEPTED', accepted_at__lte=refund.created_at).select_related('payment__intent'))
     if len(remaining_handovers) != 1:
-        return False
+        return ()
     remaining = remaining_handovers[0]
-    return (remaining.kind == 'STANDARD' and not remaining.previous_id
+    if not (remaining.kind == 'STANDARD' and not remaining.previous_id
             and (remaining.source_segment_id, remaining.target_segment_id)
                 == (first.source_segment_id, first.target_segment_id)
-            and transfers[0].created_at < remaining.created_at <= remaining.accepted_at < refund.created_at)
+            and transfers[0].created_at < remaining.created_at <= remaining.accepted_at < refund.created_at):
+        return ()
+    return first, *sorted((other_handover, remaining), key=lambda item: item.payment_id)
 
 
-def _same_seat_cross_income(refund, deduction, handover, *, receipt_id):
-    """Rebuild the other payment's earnings before this particular debit."""
+def _same_seat_cross_income(refund, handover, segment_id, account_id, *, receipt_id):
+    """Rebuild another payment's earnings immediately before the refund."""
     from .addon_funding_release import verify_run
     from .addon_handover import verify_handover
     from .models import (OrderAddonFundingReleaseRun, OrderAddonSettlement, OrderPointsFundingAllocation,
                          OrderSegmentAddonSettlement)
 
-    payment = deduction.payment
-    segment_id = deduction.segment_id
+    payment = handover.payment
     run = OrderAddonFundingReleaseRun.objects.filter(handover=handover, created_at__lt=refund.created_at).first()
     if (segment_id != handover.target_segment_id
             or payment.handovers.filter(status='ACCEPTED', accepted_at=refund.created_at).exists()
@@ -90,13 +87,37 @@ def _same_seat_cross_income(refund, deduction, handover, *, receipt_id):
     except RestValidationError as exc:
         raise ValidationError('跨加购原接替份额待核对') from exc
     matching = [row for row in shares if row.segment_id == segment_id
-                and row.segment.provider_account_id == deduction.participant.account_id]
+                and row.segment.provider_account_id == account_id]
     if len(matching) != 1:
         raise ValidationError('跨加购扣减不属于同一陪玩的原履约段')
     used = sum(payment.refund_earning_deductions.filter(segment_id=segment_id,
         refund__created_at__gt=handover.accepted_at,
         refund__created_at__lt=refund.created_at).values_list('amount', flat=True))
     return matching[0].income - used
+
+
+def _verify_same_seat_debits(refund, handovers, person, state, deductions, *, receipt_id):
+    """Replay the posting order, including an earlier payment with no debit row."""
+    segment_id = handovers[0].target_segment_id
+    message = '跨加购待结收益未按原付款顺序扣减'
+    if any(row.segment_id != segment_id for row in deductions):
+        raise ValidationError(message)
+    remaining = person.burden
+    expected = {}
+    for handover in handovers:
+        available = (state.get((segment_id, person.account_id), {}).get('income', -1)
+                     if handover.payment_id == refund.payment_id else
+                     _same_seat_cross_income(refund, handover, segment_id, person.account_id, receipt_id=receipt_id))
+        if available < 0:
+            raise ValidationError(message)
+        amount = min(available, remaining)
+        if amount:
+            expected[handover.payment_id] = amount
+            remaining -= amount
+        if not remaining:
+            break
+    if remaining or expected != {row.payment_id: row.amount for row in deductions}:
+        raise ValidationError(message)
 
 
 def followup_cross_income(refund, deduction, *, receipt_id=None):
@@ -433,8 +454,12 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
                         refund__created_at__gt=other_team.handover.accepted_at,
                         refund__created_at__lt=refund.created_at).values_list('amount', flat=True))
                     available = sum(row.income for row in matching) - used
-                elif _same_seat_cross_payment(refund, handovers[-1], latest):
-                    available = _same_seat_cross_income(refund, deduction, latest, receipt_id=receipt_id)
+                elif (chain := _same_seat_cross_handovers(refund, handovers[-1], latest)):
+                    if len(chain) == 3:
+                        _verify_same_seat_debits(refund, chain, person, state, addon_deductions, receipt_id=receipt_id)
+                        break
+                    available = _same_seat_cross_income(refund, latest, deduction.segment_id,
+                                                        person.account_id, receipt_id=receipt_id)
                     own_income = state.get((deduction.segment_id, person.account_id), {}).get('income')
                     own_used = sum(row.amount for row in addon_deductions if row.payment_id == payment.pk
                                    and row.segment_id == deduction.segment_id)
@@ -849,7 +874,7 @@ def verify_before_second_handover(refund, first, *, before, receipt_id=None):
     for other_id in sorted(other_payments):
         other = OrderAddonHandover.objects.filter(payment_id=other_id, status='ACCEPTED',
             accepted_at__lt=refund.created_at).order_by('-accepted_at', '-pk').first()
-        if not _same_seat_cross_payment(refund, first, other):
+        if not _same_seat_cross_handovers(refund, first, other):
             raise ValidationError('再次加购接替的跨付款扣减不属于同一席')
     if refund.wallet_deduction or refund.deposit_deduction:
         _verify_prior_handover_refund_recovery(refund, first, run)
