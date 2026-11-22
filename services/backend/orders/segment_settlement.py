@@ -384,20 +384,25 @@ def _points_transfer_terms_verified(order):
     if combined:
         from dataclasses import replace
         parts = [asdict(part) for part in combined.addon_parts]
-        from .models import OrderAddonRefund
+        from .models import OrderAddonRefund, OrderAddonRefundEarningDeduction
         handover_refunds = OrderAddonRefund.objects.filter(order=order,
             payment__handovers__status='ACCEPTED').distinct().select_related('payment', 'proposal')
-        for addon_refund in handover_refunds:
+        refund_payments = {refund.payment_id: (refund, refund.payment) for refund in handover_refunds}
+        cross_deductions = OrderAddonRefundEarningDeduction.objects.filter(refund__in=handover_refunds,
+            payment__intent__order=order, payment__handovers__status='ACCEPTED').exclude(payment_id=F('refund__payment_id'))
+        for deduction in cross_deductions.select_related('refund__order', 'payment__intent').order_by('pk').distinct():
+            refund_payments.setdefault(deduction.payment_id, (deduction.refund, deduction.payment))
+        for addon_refund, payment in refund_payments.values():
             from .points_addon_handover_refund_facts import settlement_parts
             from django.core.exceptions import ValidationError as DjangoValidationError
             try:
-                verified_parts = settlement_parts(addon_refund)
+                verified_parts = settlement_parts(addon_refund, payment=payment)
             except (DjangoValidationError, ValidationError) as exc:
                 raise SettlementError('接替后加购退款逐段收益待核对') from exc
             expected = {(row['segment_id'], row['provider_account_id']): row['provider_income_units']
                         for row in verified_parts if row['provider_income_units']}
             actual = {(row['segment_id'], row['provider_account_id']): row['provider_income_units']
-                      for row in parts if row['payment_id'] == addon_refund.payment_id
+                      for row in parts if row['payment_id'] == payment.pk
                       and row['provider_income_units']}
             if expected != actual:
                 raise SettlementError('接替后加购退款与结算分段不一致')

@@ -17,6 +17,69 @@ def _sum_segments(rows):
     return result
 
 
+def _same_seat_cross_payment(refund, first, other_handover):
+    """Recognize two accepted first handovers from the same actual transfer."""
+    from .models import OrderAddonPayment, OrderOriginalShareTransfer
+    from .points_transfer_refund_access import same_seat_addon_payments
+
+    if (not other_handover or first.payment_id != refund.payment_id or first.payment_id == other_handover.payment_id
+            or any(row.kind != 'STANDARD' or row.previous_id or not row.accepted_at
+                   or not row.created_at <= row.accepted_at < refund.created_at for row in (first, other_handover))
+            or (first.source_segment_id, first.target_segment_id) !=
+               (other_handover.source_segment_id, other_handover.target_segment_id)):
+        return False
+    order = refund.order
+    if (order.refund_records.filter(created_at__lte=refund.created_at).exists()
+            or order.prestart_handoffs.filter(created_at__lte=refund.created_at).exists()):
+        return False
+    transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order,
+        created_at__lte=refund.created_at).select_related('previous_segment').order_by('pk')[:2])
+    paid = list(OrderAddonPayment.objects.filter(intent__order=order,
+        buyer_transaction__created_at__lte=refund.created_at).select_related('intent', 'buyer_transaction')[:3])
+    return (len(transfers) == 1 and transfers[0].previous_segment_id == first.source_segment_id
+            and transfers[0].next_segment_id == first.target_segment_id
+            and transfers[0].created_at < min(first.created_at, other_handover.created_at)
+            and {row.pk for row in paid} == {first.payment_id, other_handover.payment_id}
+            and same_seat_addon_payments(order, paid, transfers[0]))
+
+
+def _same_seat_cross_income(refund, deduction, handover, *, receipt_id):
+    """Rebuild the other payment's earnings before this particular debit."""
+    from .addon_funding_release import verify_run
+    from .addon_handover import verify_handover
+    from .models import (OrderAddonFundingReleaseRun, OrderAddonSettlement, OrderPointsFundingAllocation,
+                         OrderSegmentAddonSettlement)
+
+    payment = deduction.payment
+    segment_id = deduction.segment_id
+    run = OrderAddonFundingReleaseRun.objects.filter(handover=handover, created_at__lt=refund.created_at).first()
+    if (segment_id != handover.target_segment_id
+            or payment.handovers.filter(status='ACCEPTED', accepted_at=refund.created_at).exists()
+            or payment.refund_earning_deductions.filter(refund__created_at=handover.accepted_at).exists()
+            or (OrderPointsFundingAllocation.objects.filter(redemption__order=refund.order,
+                    created_at__lte=handover.accepted_at).exists()
+                and (not run or not run.points_handover_hash or not run.points_handover_snapshot))
+            or OrderAddonSettlement.objects.filter(payment=payment, segment_id=segment_id,
+                settled_at__lte=refund.created_at).exists()
+            or OrderSegmentAddonSettlement.objects.filter(payment=payment, segment_id=segment_id,
+                settled_at__lte=refund.created_at).exists()):
+        raise ValidationError('跨加购原接替履约段或资金凭证异常')
+    try:
+        shares = verify_handover(payment, handover, as_of=refund.created_at, receipt_id=receipt_id)
+        if run:
+            verify_run(run, _skip_usage=True, witness_receipt_id=receipt_id)
+    except RestValidationError as exc:
+        raise ValidationError('跨加购原接替份额待核对') from exc
+    matching = [row for row in shares if row.segment_id == segment_id
+                and row.segment.provider_account_id == deduction.participant.account_id]
+    if len(matching) != 1:
+        raise ValidationError('跨加购扣减不属于同一陪玩的原履约段')
+    used = sum(payment.refund_earning_deductions.filter(segment_id=segment_id,
+        refund__created_at__gt=handover.accepted_at,
+        refund__created_at__lt=refund.created_at).values_list('amount', flat=True))
+    return matching[0].income - used
+
+
 def followup_cross_income(refund, deduction, *, receipt_id=None):
     """Prove another payment's net segment income immediately before a refund."""
     from .addon_payment import verify_receipt
@@ -351,6 +414,13 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
                         refund__created_at__gt=other_team.handover.accepted_at,
                         refund__created_at__lt=refund.created_at).values_list('amount', flat=True))
                     available = sum(row.income for row in matching) - used
+                elif _same_seat_cross_payment(refund, handovers[-1], latest):
+                    available = _same_seat_cross_income(refund, deduction, latest, receipt_id=receipt_id)
+                    own_income = state.get((deduction.segment_id, person.account_id), {}).get('income')
+                    own_used = sum(row.amount for row in addon_deductions if row.payment_id == payment.pk
+                                   and row.segment_id == deduction.segment_id)
+                    if (own_used != own_income or (any(amounts[1:]) and deduction.amount != available)):
+                        raise ValidationError('跨加购待结收益未按原付款顺序扣减')
                 else:
                     if (other.handovers.filter(status='ACCEPTED', accepted_at__lt=refund.created_at).exists()
                             or other.intent.segment_id != deduction.segment_id
@@ -733,7 +803,7 @@ def _verify_prior_handover_refund_recovery(refund, first, run):
 def verify_before_second_handover(refund, first, *, before, receipt_id=None):
     """Prove a refund against the first owner's original fulfillment segment."""
     from .addon_funding_release import verify_run
-    from .models import OrderAddonFundingReleaseRun
+    from .models import OrderAddonFundingReleaseRun, OrderAddonHandover
 
     if (refund.payment_id != first.payment_id or refund.order_id != first.payment.intent.order_id
             or first.previous_id or first.kind != 'STANDARD' or not first.accepted_at
@@ -753,9 +823,15 @@ def verify_before_second_handover(refund, first, *, before, receipt_id=None):
     if (proof.get('handover_id') != first.pk or len(members) != 1
             or members[0][1] != first.target_segment.provider_account_id
             or len(members[0][4]) != 1 or members[0][4][0]['segment_id'] != first.target_segment_id
-            or any(row[1:3] != [refund.payment_id, first.target_segment_id] for row in members[0][8])
+            or any(row[2] != first.target_segment_id for row in members[0][8])
             or any(row[1] != first.target_segment_id for row in members[0][9])):
         raise ValidationError('再次加购接替的原退款未归属同一履约段')
+    other_payments = {row[1] for row in members[0][8] if row[1] != refund.payment_id}
+    for other_id in sorted(other_payments):
+        other = OrderAddonHandover.objects.filter(payment_id=other_id, status='ACCEPTED',
+            accepted_at__lt=refund.created_at).order_by('-accepted_at', '-pk').first()
+        if not _same_seat_cross_payment(refund, first, other):
+            raise ValidationError('再次加购接替的跨付款扣减不属于同一席')
     if refund.wallet_deduction or refund.deposit_deduction:
         _verify_prior_handover_refund_recovery(refund, first, run)
     return [refund.pk, run.pk, run.points_addon_hash]
@@ -770,17 +846,20 @@ def verify_refunds_before_second_handover(refunds, first, *, before, receipt_id=
             for refund, boundary in zip(refunds, boundaries)]
 
 
-def settlement_parts(refund, *, before=None, receipt_id=None):
+def settlement_parts(refund, *, payment=None, before=None, receipt_id=None):
     """Verify segment shares at a boundary, or against current obligations."""
     from .addon_handover import current_responsibilities
     from .models import OrderAddonRefund, OrderPointsFundingAllocation, OrderAddonFundingReleaseRun
+    payment = payment or refund.payment
+    if payment.intent.order_id != refund.order_id:
+        raise ValidationError('退款与加购结算不属于同一订单')
     query = OrderAddonRefund.objects.filter(order=refund.order)
     if before is not None:
         if query.filter(created_at=before).exists():
             raise ValidationError('加购退款与结算边界时间无法区分')
         query = query.filter(created_at__lt=before)
     refunds = list(query.select_related('payment', 'proposal', 'order').order_by('created_at', 'pk'))
-    handover_query = refund.payment.handovers.filter(status='ACCEPTED')
+    handover_query = payment.handovers.filter(status='ACCEPTED')
     if before is not None:
         if handover_query.filter(accepted_at=before).exists():
             raise ValidationError('接替与结算边界时间无法区分')
@@ -789,7 +868,7 @@ def settlement_parts(refund, *, before=None, receipt_id=None):
     if not handovers or not handovers[-1].accepted_at:
         raise ValidationError('接替加购履约版本待核对')
     boundary = handovers[-1].accepted_at
-    own = [item for item in refunds if item.payment_id == refund.payment_id and item.created_at > boundary]
+    own = [item for item in refunds if item.payment_id == payment.pk and item.created_at > boundary]
     from django.db.models import Q
     if receipt_id is None:
         receipt_id = OrderPointsFundingAllocation.objects.filter(
@@ -810,7 +889,7 @@ def settlement_parts(refund, *, before=None, receipt_id=None):
                 verify_run(team, _skip_usage=True, witness_receipt_id=receipt_id)
                 shares = list(handovers[-1].shares.select_related('segment').order_by('position'))
             else:
-                shares = verify_handover(refund.payment, handovers[-1], as_of=before, receipt_id=receipt_id)
+                shares = verify_handover(payment, handovers[-1], as_of=before, receipt_id=receipt_id)
         except RestValidationError as exc:
             raise ValidationError('接替加购履约版本待核对') from exc
         original = _sum_segments((row.segment_id, row.segment.provider_account_id, row.basis, row.income)
@@ -818,7 +897,7 @@ def settlement_parts(refund, *, before=None, receipt_id=None):
     for item in refunds:
         if item.created_at == boundary:
             raise ValidationError('接替与退款时序无法区分')
-        if item.payment_id == refund.payment_id and item.created_at > boundary:
+        if item.payment_id == payment.pk and item.created_at > boundary:
             first_refund_facts(item, receipt_id=receipt_id, _memo=memo)
         else:
             from .points_addon_receipt_usage import facts as other_refund_facts
@@ -834,11 +913,11 @@ def settlement_parts(refund, *, before=None, receipt_id=None):
         if item.created_at < boundary:
             continue
         for person in item.proposal.participants.all():
-            if item.payment_id == refund.payment_id:
+            if item.payment_id == payment.pk:
                 for entry in person.share_plan:
                     key = (entry['segment_id'], person.account_id)
                     original[key]['basis'] -= entry['refund_basis']
-            for deduction in person.earning_deductions.filter(payment=refund.payment):
+            for deduction in person.earning_deductions.filter(payment=payment):
                 key = (deduction.segment_id, person.account_id)
                 if key not in original:
                     raise ValidationError('跨加购退款扣减不属于该付款的实际履约段')
@@ -848,7 +927,7 @@ def settlement_parts(refund, *, before=None, receipt_id=None):
            for value in original.values()):
         raise ValidationError('接替退款后逐段净收益不一致')
     if before is None:
-        _, current = current_responsibilities(refund.payment)
+        _, current = current_responsibilities(payment)
         actual = _sum_segments((row['segment_id'], row['provider_id'], row['basis'], row['income']) for row in current)
         if (set(actual) != set(original)
                 or any((actual[key]['basis'], actual[key]['income']) != (value['basis'], value['income'])

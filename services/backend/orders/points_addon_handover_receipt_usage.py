@@ -109,6 +109,20 @@ def facts(run, receipt_id):
         result['prior_handovers'] = prior_facts
     if later:
         result.update(version=2, previous_handover_id=handover.previous_id)
+        from .points_addon_handover_refund_facts import _same_seat_cross_payment, verify_before_second_handover
+        cross_refunds = (order.addon_refunds.filter(earning_deductions__payment=payment,
+            created_at__lt=handover.created_at).exclude(payment=payment).select_related('payment__intent', 'order')
+            .order_by('created_at', 'pk').distinct())
+        cross_evidence = []
+        for refund in cross_refunds:
+            first = refund.payment.handovers.filter(status='ACCEPTED', accepted_at__lt=refund.created_at).order_by(
+                '-accepted_at', '-pk').first()
+            if not first or not _same_seat_cross_payment(refund, first, handover.previous):
+                raise ValidationError('加购再次接替的原跨付款扣减待核对')
+            cross_evidence.append(verify_before_second_handover(refund, first, before=event.created_at,
+                receipt_id=receipt_id))
+        if cross_evidence:
+            result['prior_cross_refunds'] = cross_evidence
     return result
 
 

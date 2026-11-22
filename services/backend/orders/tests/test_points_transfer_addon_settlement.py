@@ -192,6 +192,38 @@ class PointsTransferAddonSettlementDispatchTests(SimpleTestCase):
             with self.assertRaisesMessage(DjangoValidationError, '缺少原退款零余额钱包凭证'):
                 _verify_prior_handover_refund_recovery(refund, first, run)
 
+    def test_cross_payment_debit_must_follow_the_same_first_service_transfer(self):
+        from orders.models import OrderAddonPayment, OrderOriginalShareTransfer
+        from orders.points_addon_handover_refund_facts import _same_seat_cross_payment
+
+        at = timezone.now()
+        order = Mock()
+        order.refund_records.filter.return_value.exists.return_value = False
+        order.prestart_handoffs.filter.return_value.exists.return_value = False
+        refund = SimpleNamespace(payment_id=3, order=order, created_at=at + timedelta(seconds=3))
+        first = SimpleNamespace(payment_id=3, kind='STANDARD', previous_id=None,
+            created_at=at + timedelta(seconds=1), accepted_at=at + timedelta(seconds=2),
+            source_segment_id=8, target_segment_id=9)
+        donor = SimpleNamespace(**{**vars(first), 'payment_id': 4})
+        original = SimpleNamespace(previous_segment_id=8, next_segment_id=9, created_at=at)
+        with (patch.object(OrderOriginalShareTransfer.objects, 'filter') as transfers,
+              patch.object(OrderAddonPayment.objects, 'filter') as payments,
+              patch('orders.points_transfer_refund_access.same_seat_addon_payments', return_value=True)):
+            transfers.return_value.select_related.return_value.order_by.return_value = [original]
+            payments.return_value.select_related.return_value = [SimpleNamespace(pk=3), SimpleNamespace(pk=4)]
+            self.assertTrue(_same_seat_cross_payment(refund, first, donor))
+            donor.target_segment_id = 10
+            self.assertFalse(_same_seat_cross_payment(refund, first, donor))
+            donor.target_segment_id = 9
+            donor.accepted_at = refund.created_at
+            self.assertFalse(_same_seat_cross_payment(refund, first, donor))
+            donor.accepted_at = first.accepted_at
+            order.prestart_handoffs.filter.return_value.exists.return_value = True
+            self.assertFalse(_same_seat_cross_payment(refund, first, donor))
+            order.prestart_handoffs.filter.return_value.exists.return_value = False
+            transfers.return_value.select_related.return_value.order_by.return_value = [original, Mock()]
+            self.assertFalse(_same_seat_cross_payment(refund, first, donor))
+
     def test_second_handover_checks_each_refund_before_the_next_event(self):
         from django.core.exceptions import ValidationError as DjangoValidationError
         from orders.points_addon_handover_refund_facts import verify_refunds_before_second_handover
