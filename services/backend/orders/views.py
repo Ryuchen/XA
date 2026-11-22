@@ -2070,15 +2070,26 @@ class CompleteOrderView(APIView):
                     transaction.on_commit(lambda: notify_order_update(order))
                 return Response({'code': 0, 'msg': '结单凭证已保存，请继续提交房间结单申请',
                     'data': OrderSerializer(order, context={'request': request}).data})
-            order = transition(
-                order_id,
-                Order.Status.COMPLETED,
-                operator=request.legacy_user,
-                operator_account=request.account,
-                pre_check=pre_check,
-                side_effect=finish_order,
-                customer_completion_notice=True,
-            )
+            with transaction.atomic(), ExitStack() as scopes:
+                def check_completion(order):
+                    pre_check(order)
+                    if getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True:
+                        from .models import OrderOriginalShareTransfer
+                        from .points_service_payment import needs_integrated_processing
+                        if needs_integrated_processing(order) and OrderOriginalShareTransfer.objects.filter(
+                                previous_segment__attribution__order=order).exists():
+                            from .points_transfer_refund_access import after_transfer
+                            scopes.enter_context(after_transfer(order.pk, phase='report'))
+
+                order = transition(
+                    order_id,
+                    Order.Status.COMPLETED,
+                    operator=request.legacy_user,
+                    operator_account=request.account,
+                    pre_check=check_completion,
+                    side_effect=finish_order,
+                    customer_completion_notice=True,
+                )
         except Order.DoesNotExist:
             return Response({'code': 404, 'msg': '订单不存在'})
         except IllegalTransitionError as exc:
