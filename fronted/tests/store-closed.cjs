@@ -1,8 +1,38 @@
 const assert = require('node:assert/strict')
 
+async function checkEntryWithoutScripts(browser, origin, viewport) {
+  const context = await browser.newContext({ viewport, javaScriptEnabled: false, colorScheme: 'dark' })
+  try {
+    for (const [path, title, help] of [
+      ['/boss/', '老板服务中心', '已有订单或售后问题？'],
+      ['/player/', '陪玩工作台', '有服务正在进行？'],
+    ]) {
+      const page = await context.newPage()
+      const url = origin + path
+      await page.goto(url)
+      await page.getByRole('heading', { name: title, exact: true }).waitFor()
+      await page.getByRole('heading', { name: help, exact: true }).waitFor()
+      await page.getByText('门店状态将在页面载入后显示。', { exact: false }).waitFor()
+      assert.equal(await page.getByText('门店暂未开放', { exact: true }).count(), 0)
+      const fallback = page.locator('.xa-store-entry-fallback')
+      assert.equal(await fallback.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(11, 18, 32)')
+      assert.equal(await fallback.evaluate(el => el.scrollWidth), viewport.width)
+      const reopen = page.getByRole('link', { name: '重新打开门店入口' })
+      assert.equal(await reopen.getAttribute('href'), path)
+      await page.keyboard.press('Tab')
+      assert.equal(await reopen.evaluate(el => el === document.activeElement), true)
+      await Promise.all([page.waitForRequest(url), page.keyboard.press('Enter')])
+      await page.close()
+    }
+  } finally {
+    await context.close()
+  }
+}
+
 // Only the browser sees these store responses. No store state is changed.
 module.exports = async function checkStoreClosed(browser, origin = 'http://sl.esports.club') {
   const viewport = { width: 320, height: 568 }
+  await checkEntryWithoutScripts(browser, origin, viewport)
   const context = await browser.newContext({ viewport })
   try {
     const page = await context.newPage()

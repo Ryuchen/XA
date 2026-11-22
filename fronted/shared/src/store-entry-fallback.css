@@ -1,0 +1,68 @@
+.xa-store-entry-fallback {
+  --entry-background: #f4f7fc;
+  --entry-foreground: #0f172a;
+  --entry-action: #1e40af;
+  --entry-action-foreground: #fff;
+  --entry-focus: #2563eb;
+  --entry-divider: #cbd5e1;
+  color-scheme: light dark;
+  min-block-size: 100vh;
+  min-block-size: 100dvh;
+  box-sizing: border-box;
+  padding: clamp(24px, 5vw, 64px) max(16px, calc((100% - 48rem) / 2));
+  background: var(--entry-background);
+  color: var(--entry-foreground);
+  font: 1rem/1.65 system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  .xa-store-entry-fallback {
+    --entry-background: #0b1220;
+    --entry-foreground: #f8fafc;
+    --entry-action: #bae6fd;
+    --entry-action-foreground: #0f172a;
+    --entry-focus: #38bdf8;
+    --entry-divider: #475569;
+  }
+}
+
+.xa-store-entry-fallback h1 {
+  margin: 0;
+  font-size: clamp(1.875rem, 1.5rem + 2vw, 3rem);
+  line-height: 1.2;
+}
+
+.xa-store-entry-fallback h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.xa-store-entry-fallback p {
+  max-inline-size: 34rem;
+  margin: 12px 0 0;
+}
+
+.xa-store-entry-fallback a {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-block-size: 48px;
+  margin-block-start: 20px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--entry-action);
+  color: var(--entry-action-foreground);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.xa-store-entry-fallback a:hover { text-decoration: underline; }
+.xa-store-entry-fallback a:focus-visible { outline: 3px solid var(--entry-focus); outline-offset: 3px; }
+
+.xa-store-entry-fallback section {
+  margin-block-start: 24px;
+  padding-block-start: 20px;
+  border-block-start: 1px solid var(--entry-divider);
+}
+
+body:has(.xa-store-entry-fallback) { margin: 0; }
