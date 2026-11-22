@@ -155,7 +155,8 @@
 .xa-store-closed-details h2 { margin: 0; font-size: 1rem; font-weight: 700; text-wrap: balance; }
 .xa-store-closed-details h2:has(svg) { display: flex; align-items: center; gap: 8px; }
 .xa-store-closed-details h2 svg { color: var(--muted-foreground); }
-.xa-store-closed-details p {
+.xa-store-closed-details p,
+.xa-store-closed-help dd {
   margin: 4px 0 0;
   color: var(--muted-foreground);
   font-size: .875rem;
@@ -163,6 +164,14 @@
   text-wrap: pretty;
 }
 .xa-store-closed-help p:first-of-type { margin-block-start: 8px; color: var(--foreground); }
+.xa-store-closed-help dl,
+.xa-store-closed-return {
+  margin: 16px 0 0;
+  padding-block-start: 12px;
+  border-block-start: 1px solid var(--border);
+}
+.xa-store-closed-help dt,
+.xa-store-closed-return h3 { margin: 0; font-size: .875rem; font-weight: 600; }
 .xa-store-closed-services ul {
   list-style: none;
   margin: 12px 0 0;
@@ -176,7 +185,7 @@
 }
 .xa-store-closed-services li + li { border-top: 1px solid var(--border); }
 .xa-store-closed-services li:last-child { padding-block-end: 0; }
-.xa-store-closed-services h3 { margin: 0; font-size: .9375rem; font-weight: 600; }
+.xa-store-closed-services li h3 { margin: 0; font-size: .9375rem; font-weight: 600; }
 .xa-store-closed-services svg { margin-top: 2px; color: var(--muted-foreground); }
 .xa-store-closed-address {
   width: min(100%, 28rem);

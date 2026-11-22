@@ -23,7 +23,8 @@ const entryContent = {
     ] as const,
     helpTitle: "已有订单或售后问题？",
     help: "请通过原下单渠道联系本店客服。",
-    helpDetails: "准备好订单编号和需要处理的问题，方便客服核对。",
+    helpDetails: "订单编号和需要处理的问题。",
+    returnGuide: "打开保存的链接，重新检查门店状态。开放后可使用本店老板账号登录。",
   },
   provider: {
     unavailable: "暂时无法登录、接单或提交报单。",
@@ -34,12 +35,13 @@ const entryContent = {
     ] as const,
     helpTitle: "有服务正在进行？",
     help: "如需交接服务或补交报单，请联系本店负责人。",
-    helpDetails: "准备好订单编号、当前进度和待处理事项。",
+    helpDetails: "订单编号、当前服务进度和待交接事项。",
+    returnGuide: "打开保存的链接，重新检查门店状态。开放后可用本店陪玩账号进入工作台。",
   },
 };
 
 export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry }: Props) {
-  const { services, helpTitle, help, helpDetails, unavailable } = entryContent[role];
+  const { services, helpTitle, help, helpDetails, returnGuide, unavailable } = entryContent[role];
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
   const storeName = brandSlug ? storeNames[brandSlug] : undefined;
@@ -147,7 +149,10 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
             <section className="xa-store-closed-help">
               <h2><MessageCircle size={20} aria-hidden="true" />{helpTitle}</h2>
               <p>{help}</p>
-              <p>{helpDetails}</p>
+              <dl>
+                <dt>联系前请准备</dt>
+                <dd>{helpDetails}</dd>
+              </dl>
             </section>
             {issue?.closed && <section className="xa-store-closed-services">
               <h2>开放后可使用</h2>
@@ -157,6 +162,10 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
                   <div><h3>{label}</h3><p>{description}</p></div>
                 </li>)}
               </ul>
+              {returnUrl && <div className="xa-store-closed-return">
+                <h3>收到开放通知后</h3>
+                <p>{returnGuide}</p>
+              </div>}
             </section>}
           </div>
         </main>

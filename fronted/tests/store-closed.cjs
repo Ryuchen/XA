@@ -63,6 +63,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     const art = page.locator('.xa-store-closed-art')
     const closed = page.getByRole('heading', { name: '门店暂未开放', exact: true })
     const services = page.getByRole('heading', { name: '开放后可使用', exact: true })
+    const returnGuide = page.getByRole('heading', { name: '收到开放通知后', exact: true })
     const help = page.getByRole('heading', { name: '已有订单或售后问题？', exact: true })
     const schedule = page.getByText('开放时间以门店通知为准', { exact: true })
     const helpChannel = page.getByText('请通过原下单渠道联系本店客服。', { exact: true })
@@ -74,6 +75,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(await pending.getAttribute('aria-disabled'), 'true')
     assert.equal(await closed.count(), 0)
     assert.equal(await services.count(), 0)
+    assert.equal(await returnGuide.count(), 0)
     assert.equal(await schedule.count(), 0)
     await page.evaluate(() => {
       Object.defineProperty(navigator, 'clipboard', {
@@ -87,6 +89,8 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     hold.resolve()
     await closed.waitFor()
     await services.waitFor()
+    await returnGuide.waitFor()
+    await page.getByText('开放后可使用本店老板账号登录。', { exact: false }).waitFor()
     await page.getByText('查看自己的订单进度和售后记录。', { exact: true }).waitFor()
     await page.getByText('本店开通自助下单后，可选服务并核对价格。', { exact: true }).waitFor()
     await page.getByText('暂时无法登录、下单或查看订单。', { exact: true }).waitFor()
@@ -96,7 +100,8 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     const channelBox = await helpChannel.boundingBox()
     assert.ok(channelBox.y >= 0 && channelBox.y + channelBox.height <= viewport.height,
       'The support channel is readable above the fold at 320×568')
-    await page.getByText('准备好订单编号和需要处理的问题，方便客服核对。', { exact: true }).waitFor()
+    await page.getByText('联系前请准备', { exact: true }).waitFor()
+    await page.getByText('订单编号和需要处理的问题。', { exact: true }).waitFor()
     assert.ok((await help.boundingBox()).y < (await services.boundingBox()).y, 'Phone users see help before the service preview')
     const copyBox = await copy.boundingBox()
     assert.ok(copyBox.y + copyBox.height <= (await help.boundingBox()).y, 'The return action is in the hero, before the help panel')
@@ -171,6 +176,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await help.waitFor()
     await copy.waitFor()
     assert.equal(await services.count(), 0)
+    assert.equal(await returnGuide.count(), 0)
     assert.equal(await address.count(), 0)
     assert.equal(await page.getByRole('button', { name: '重试', exact: true }).evaluate(element => element === document.activeElement), true)
 
