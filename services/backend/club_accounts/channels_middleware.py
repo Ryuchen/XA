@@ -4,7 +4,7 @@ from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -54,7 +54,7 @@ class ClubAccountTokenAuthMiddleware(BaseMiddleware):
         params = parse_qs(scope.get('query_string', b'').decode('utf-8', errors='replace'), keep_blank_values=True)
         try:
             expected_slug = await database_sync_to_async(websocket_store_slug)(scope, params)
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             await send({'type': 'websocket.close', 'code': 1013})
             return
         except (ValueError, UnicodeDecodeError):
@@ -69,7 +69,7 @@ class ClubAccountTokenAuthMiddleware(BaseMiddleware):
                 if raw_token
                 else (None, None, None, None)
             )
-        except DatabaseError:
+        except (DatabaseError, InterfaceError):
             await send({'type': 'websocket.close', 'code': 1013})
             return
         scope['user'] = AnonymousUser()

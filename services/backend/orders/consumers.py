@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
-from django.db import DatabaseError
+from django.db import DatabaseError, InterfaceError
 from rest_framework_simplejwt.exceptions import TokenError
 from club_accounts.models import ClubAccount
 from club_accounts.tokens import account_for_claims
@@ -23,7 +23,7 @@ def current_socket_account(claims):
             return None
         resolve_store(store_slug, allow_cached=True)
         account = account_for_claims(claims)
-    except (TokenError, ValueError, DatabaseError):
+    except (TokenError, ValueError):
         return None
     if account.account_type == ClubAccount.AccountType.STAFF and not is_console_account(account):
         return None
@@ -177,22 +177,36 @@ def current_withdraw_payload(account, data):
 
 
 class OrderConsumer(AsyncWebsocketConsumer):
+    closing = False
+
+    async def dispatch(self, message):
+        try:
+            await super().dispatch(message)
+        except (DatabaseError, InterfaceError):
+            if message['type'] == 'websocket.disconnect':
+                raise
+            if not self.closing:
+                self.closing = True
+                await self.close(code=1013)
+
     async def connect(self):
-        self.closing = False
         account = await current_socket_account(self.scope.get('account_auth'))
         if account is None:
+            self.closing = True
             await self.close()
             return
 
+        is_staff = account.account_type == ClubAccount.AccountType.STAFF
+        permissions = await database_sync_to_async(get_account_permissions)(account) if is_staff else set()
         self.account = account
         self.account_group = f'account_{account.id}'
         self.operator_group = 'operators'
         self.reviewer_groups = set()
 
         await self.channel_layer.group_add(self.account_group, self.channel_name)
-        if account.account_type == ClubAccount.AccountType.STAFF:
+        if is_staff:
             await self.channel_layer.group_add(self.operator_group, self.channel_name)
-            await self.sync_reviewer_groups(account)
+            await self.sync_reviewer_groups(permissions)
         if account.account_type == ClubAccount.AccountType.PROVIDER:
             await self.channel_layer.group_add('providers', self.channel_name)
         if account.account_type == ClubAccount.AccountType.BOSS:
@@ -200,9 +214,8 @@ class OrderConsumer(AsyncWebsocketConsumer):
 
         await self.accept()
 
-    async def sync_reviewer_groups(self, account):
+    async def sync_reviewer_groups(self, permissions):
         """Keep an open staff connection useful after its role changes."""
-        permissions = await database_sync_to_async(get_account_permissions)(account)
         desired = {group for permission, group in (
             ('report:view', 'report_reviewers'), ('withdraw:view', 'withdraw_reviewers'),
             ('evaluation:view', 'evaluation_reviewers'),
@@ -309,7 +322,8 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 account = await self.active_account()
                 if account is not None:
                     if account.account_type == ClubAccount.AccountType.STAFF:
-                        await self.sync_reviewer_groups(account)
+                        permissions = await database_sync_to_async(get_account_permissions)(account)
+                        await self.sync_reviewer_groups(permissions)
                     await self.send(text_data=json.dumps({'type': 'pong'}))
         except (json.JSONDecodeError, TypeError):
             pass

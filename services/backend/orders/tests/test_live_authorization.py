@@ -6,6 +6,7 @@ from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
 from channels.layers import get_channel_layer
 from channels.testing import WebsocketCommunicator
+from django.db import InterfaceError
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -42,6 +43,30 @@ class LiveAuthorizationTest(TransactionTestCase):
         await get_channel_layer().group_send(group, {
             'type': 'order_status_update', 'data': data,
         })
+
+    def test_staff_permission_read_failure_blocks_subscription_and_order_delivery(self):
+        account, _ = self.staff()
+        token, _ = issue_account_tokens(account)
+
+        async def verify():
+            group = f'account_{account.pk}'
+            with patch('orders.consumers.get_account_permissions', side_effect=InterfaceError('role read failed')):
+                socket = WebsocketCommunicator(application, f'/ws/orders/?token={token}',
+                                               headers=[(b'host', b'sl.esports.club')])
+                self.assertEqual(await socket.connect(), (False, 1013))
+                self.assertFalse(get_channel_layer().groups.get(group))
+                self.assertFalse(get_channel_layer().groups.get('operators'))
+                await socket.disconnect()
+
+            socket = await self.connect(token)
+            try:
+                with patch('orders.consumers.get_account_permissions', side_effect=InterfaceError('role read failed')):
+                    await self.order(group)
+                    self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 1013})
+            finally:
+                await socket.disconnect()
+
+        async_to_sync(verify)()
 
     def test_disabled_provider_cannot_receive_on_an_existing_connection(self):
         account = get_or_create_account_for_legacy_user(make_provider())

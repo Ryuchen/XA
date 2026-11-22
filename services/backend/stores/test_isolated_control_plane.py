@@ -22,16 +22,18 @@ from stores.platform_auth import issue_tokens, start_challenge, verify_challenge
 
 
 class StoreSocketOutageTests(SimpleTestCase):
-    async def test_directory_failure_closes_with_retryable_status(self):
+    async def test_host_directory_failure_closes_with_retryable_status(self):
         from club_accounts.channels_middleware import ClubAccountTokenAuthMiddleware
         downstream, send = AsyncMock(), AsyncMock()
         scope = {'type': 'websocket', 'path': '/ws/orders/', 'query_string': b'token=temporary',
                  'headers': [(b'host', b'xa.esports.club')], 'server': ('xa.esports.club', 80)}
-        with patch('club_accounts.channels_middleware.get_account_context',
-                   new=AsyncMock(side_effect=DatabaseError('simulated directory outage'))):
-            await ClubAccountTokenAuthMiddleware(downstream)(scope, AsyncMock(), send)
-        send.assert_awaited_once_with({'type': 'websocket.close', 'code': 1013})
-        downstream.assert_not_awaited()
+        for error in (DatabaseError, InterfaceError):
+            with self.subTest(error=error), patch('club_accounts.channels_middleware.websocket_store_slug',
+                                                 side_effect=error('simulated directory outage')):
+                await ClubAccountTokenAuthMiddleware(downstream)(scope, AsyncMock(), send)
+                send.assert_awaited_once_with({'type': 'websocket.close', 'code': 1013})
+                downstream.assert_not_awaited()
+                send.reset_mock()
 
 
 class StoreRoutingSnapshotTests(TransactionTestCase):

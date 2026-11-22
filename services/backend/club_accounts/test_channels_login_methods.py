@@ -1,6 +1,9 @@
 """Real WebSocket authentication for the current unified login methods."""
+from unittest.mock import patch
+
 from asgiref.sync import async_to_sync
 from channels.testing import WebsocketCommunicator
+from django.db import InterfaceError, OperationalError
 from django.test import TransactionTestCase, override_settings
 
 from config.asgi import application
@@ -57,6 +60,47 @@ class ChannelLoginMethodTests(TransactionTestCase):
         with store_context(self.store):
             ClubAccount.objects.filter(pk=self.account.pk).update(is_phone_verified=False)
         self.assert_revoked(token)
+
+    def test_store_database_failure_during_socket_authentication_is_retryable(self):
+        with store_context(self.store):
+            token, _ = issue_account_tokens(self.account, auth_method='password_sms')
+
+        async def check(lookup, error):
+            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token,
+                                           headers=[(b'host', b'sl.esports.club')])
+            with patch(lookup, side_effect=error('store connection lost')):
+                self.assertEqual(await socket.connect(), (False, 1013))
+
+        for lookup in ('club_accounts.channels_middleware.account_for_claims', 'orders.consumers.account_for_claims'):
+            for error in (OperationalError, InterfaceError):
+                with self.subTest(lookup=lookup, error=error):
+                    async_to_sync(check)(lookup, error)
+                    self.connect_and_ping(token)
+
+    def test_open_socket_rejects_ping_until_store_database_recovers(self):
+        with store_context(self.store):
+            token, _ = issue_account_tokens(self.account, auth_method='password_sms')
+
+        async def check(error):
+            socket = WebsocketCommunicator(application, '/ws/orders/?token=' + token,
+                                           headers=[(b'host', b'sl.esports.club')])
+            try:
+                connected, _ = await socket.connect()
+                self.assertTrue(connected)
+                with patch('orders.consumers.account_for_claims', side_effect=error('store connection lost')):
+                    await socket.send_json_to({'type': 'ping'})
+                    self.assertEqual(await socket.receive_output(), {'type': 'websocket.close', 'code': 1013})
+                with patch('orders.consumers.account_for_claims') as lookup:
+                    await socket.send_json_to({'type': 'ping'})
+                    self.assertTrue(await socket.receive_nothing())
+                    lookup.assert_not_called()
+            finally:
+                await socket.disconnect()
+
+        for error in (OperationalError, InterfaceError):
+            with self.subTest(error=error):
+                async_to_sync(check)(error)
+                self.connect_and_ping(token)
 
     def test_password_otp_socket_rechecks_authenticator_binding(self):
         from .otp import encrypt_secret
