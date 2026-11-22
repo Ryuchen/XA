@@ -1252,8 +1252,10 @@ class CreateOrderSerializer(serializers.Serializer):
 
         if attrs['dispatch_mode'] == 'AUTO_GRAB' and service.fulfillment_provider_count != 1:
             from .grab_team_flow import enabled as team_grab_enabled
-            if service.fulfillment_provider_count != 2 or not team_grab_enabled():
+            if service.fulfillment_provider_count != 2:
                 raise serializers.ValidationError('多人服务自动抢单尚未开放')
+            if not team_grab_enabled():
+                raise serializers.ValidationError('多人服务自动抢单尚未开放', code='GRAB_WINDOW_UNAVAILABLE')
 
         # 指定陪玩下单（可选）：需在解析抽成率前确定，等级抽成依赖陪玩
         provider_id = attrs.get('provider_id')
@@ -1273,7 +1275,7 @@ class CreateOrderSerializer(serializers.Serializer):
                 else:
                     from .grab_team_flow import enabled as grab_enabled
                 if not grab_enabled():
-                    raise serializers.ValidationError('客服安排暂不可用，请稍后重试')
+                    raise serializers.ValidationError('客服安排暂不可用，请稍后重试', code='GRAB_WINDOW_UNAVAILABLE')
         if len(set(selected_ids)) != len(selected_ids):
             raise serializers.ValidationError('不能重复选择同一位陪玩')
         if selected_ids and len(selected_ids) != service.fulfillment_provider_count:

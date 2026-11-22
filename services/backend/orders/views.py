@@ -13,6 +13,7 @@ from rest_framework import serializers as rest_serializers
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.settings import api_settings
 from rest_framework.views import APIView
 
 from club_accounts.models import ClubAccount, LegacyAccountMap
@@ -624,7 +625,12 @@ class CreateOrderView(APIView):
                              'msg': '积分支付尚未开放，请移除积分试算后重新确认'}, status=400)
         serializer = CreateOrderSerializer(data=request.data, context={'request': request})
         if not serializer.is_valid():
-            return Response({'code': 400, 'msg': _format_serializer_errors(serializer.errors)})
+            errors = serializer.errors
+            if any(getattr(error, 'code', None) == 'GRAB_WINDOW_UNAVAILABLE'
+                   for error in errors.get(api_settings.NON_FIELD_ERRORS_KEY, ())):
+                return Response({'code': 503, 'msg': '抢单暂不可用，请稍后下单或联系客服',
+                                 'errorCode': 'GRAB_WINDOW_UNAVAILABLE'}, status=503)
+            return Response({'code': 400, 'msg': _format_serializer_errors(errors)})
 
         data = serializer.validated_data
         # Do not take payment for an order that must enter an automatic pool

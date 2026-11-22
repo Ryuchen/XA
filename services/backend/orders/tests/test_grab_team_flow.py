@@ -4,6 +4,7 @@ import time
 from datetime import timedelta
 from unittest.mock import patch
 
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
@@ -781,7 +782,8 @@ class GrabTeamFlowTest(APITransactionTestCase):
         if not with_game:
             self.service.game_category = None
         self.service.billing_provider_count = 2
-        self.service.save(update_fields=['game_category', 'billing_provider_count'])
+        self.service.fulfillment_provider_count = 2
+        self.service.save(update_fields=['game_category', 'billing_provider_count', 'fulfillment_provider_count'])
         save_grab_window(1, 0, lambda *args: None)
         save_capacity(3, 0, lambda *args: None)
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
@@ -811,6 +813,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_full_team_is_ranked_and_both_members_receive_the_order(self):
         self.prepare()
         team_id = self.invite()
@@ -830,6 +833,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_invitee_cannot_see_order_before_delay_and_may_complete_after_empty_round(self):
         self.prepare(partner_delay=2)
         team_id = self.invite()
@@ -852,6 +856,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_first_winning_team_loses_eligibility_and_reopens(self):
         self.prepare()
         team_id = self.invite()
@@ -870,6 +875,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_two_full_teams_are_ranked_and_both_winning_members_notified(self):
         self.prepare()
         for index, tier in enumerate(('GOLD', 'SILVER'), start=2):
@@ -911,6 +917,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_boss_cancellation_refunds_a_pending_team(self):
         self.prepare()
         team_id = self.invite()
@@ -940,6 +947,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_team_member_withdraws_before_switching_to_another_team(self):
         self.prepare()
         user = make_provider(deposit_mode='EARNINGS', pass_tier='GOLD',
@@ -975,6 +983,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_invitation_never_reveals_order_to_currently_ineligible_partner(self):
         self.prepare()
         self.invite()
@@ -989,6 +998,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_incomplete_team_does_not_block_timeout_refund(self):
         from orders.models import OrderGrabPoolSnapshot, OrderGrabRound
         self.prepare()
@@ -1006,6 +1016,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_persisted_withdrawal_is_applied_before_allocating_team(self):
         from orders.grab_receipt_probe import record_intent
         from orders.models import OrderGrabTeamDraft
@@ -1017,22 +1028,29 @@ class GrabTeamFlowTest(APITransactionTestCase):
         self.assertEqual(result.status_code, 200, result.data)
         time.sleep(0.01)
         team = OrderGrabTeamDraft.objects.get(pk=team_id)
-        receipt = record_intent(team.round_id, self.accounts[1].pk, 'WITHDRAW', 'withdraw-retry',
-                                {'team_id': team_id}, team_flow=True)
+        with patch('orders.grab_receipt_probe.apply_team_withdrawal'):
+            receipt = record_intent(team.round_id, self.accounts[1].pk, 'WITHDRAW', 'withdraw-retry',
+                                    {'team_id': team_id}, team_flow=True)
         self.assertEqual(receipt.state, 'BEFORE')
         time.sleep(1.05)
-        self.assertEqual(resolve(self.order.pk), 'WAIT_APPLY')
+        with patch('orders.grab_team_draft.withdraw_with_receipt', side_effect=ValueError('退出应用暂不可用')):
+            self.assertEqual(resolve(self.order.pk), 'WAIT_APPLY')
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.PENDING)
+        self.assertEqual(team.occupied_seats.count(), 2)
         retried = self.client.post(f'/api/orders/grab-team/invitations/{team_id}/withdraw/',
                                    {'client_request_id': 'withdraw-retry'}, format='json')
         self.assertEqual(retried.status_code, 200, retried.data)
+        team.refresh_from_db()
+        self.assertEqual(team.withdrawal_receipt_id, receipt.receipt_id)
+        self.assertFalse(team.occupied_seats.exists())
         self.assertEqual(resolve(self.order.pk), 'PARKED')
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.PENDING)
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_parked_disqualified_team_can_form_again_after_eligibility_recovers(self):
         from orders.grab_receipt_probe import record_intent
         from orders.models import OrderGrabTeamDraft
@@ -1042,7 +1060,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
         team_id = self.invite()
         team = OrderGrabTeamDraft.objects.get(pk=team_id)
         result = record_intent(team.round_id, self.accounts[1].pk, 'CONFIRM', 'before-disqualification',
-                               {'team_id': team_id}, team_flow=True)
+                               {'team_id': team_id}, team_flow=True, actor_snapshot=self.accounts[1])
         self.assertEqual(result.state, 'BEFORE')
         profile = self.providers[0].escort_profile
         profile.status = 'OFFLINE'
@@ -1066,6 +1084,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
 
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_staff_arranged_and_staff_created_double_orders_enter_team_pool(self):
         from orders.models import OrderGrabPoolSnapshot
         self.prepare()
@@ -1102,6 +1121,7 @@ class GrabTeamFlowTest(APITransactionTestCase):
     @override_settings(GAME_COMMISSION_PAYMENT_ENABLED=True)
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '抢单池窗口决议/绑定排名/团队抢单/分组派单/入场快照属正式契约深水区（18-盘点 抢单池/陪玩生命周期待联调）；最终联调启用')
+    @skipUnless(connection.vendor == 'mysql', '陪玩声明须使用真实 MySQL 生命周期锁')
     def test_double_assignment_uses_payment_time_game_commission_snapshot(self):
         self.prepare(with_game=True)
         team_id = self.invite()
