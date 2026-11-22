@@ -796,9 +796,23 @@ class CreateOrderView(APIView):
             locked_service = ServiceItem.objects.select_for_update().get(pk=service.pk)
             if locked_service.game_category_id != service.game_category_id:
                 return Response({'code': 409, 'errorCode': 'SERVICE_CHANGED', 'msg': '服务资料规则已变化，请重新核对'}, status=409)
-            if (locked_service.price != service.price
-                    or locked_service.billing_provider_count != service.billing_provider_count
-                    or locked_service.fulfillment_provider_count != serializer.validated_data['required_provider_count']):
+
+            def service_terms(item):
+                return {'name': item.name, 'price_unit': item.price_unit,
+                        'service_type': item.service_type, 'game_category': item.game_category_id,
+                        'billing_provider_count': item.billing_provider_count,
+                        'fulfillment_provider_count': item.fulfillment_provider_count, 'unit_price': item.price,
+                        'gameplay': item.gameplay_id, 'platform': item.platform,
+                        'security_level': item.security_level, 'provider_kind': item.provider_kind,
+                        'provider_grade': item.provider_grade, 'required_level': item.required_level_id,
+                        'service_category': item.service_category_id, 'purchase_mode': item.purchase_mode,
+                        'is_addon': item.is_addon, 'experience_kind': item.experience_kind,
+                        'allows_discount_coupons': item.allows_discount_coupons}
+
+            current_terms = service_terms(locked_service)
+            expected_service = serializer.validated_data.get('expected_service', {})
+            if (not locked_service.is_active or current_terms != service_terms(service)
+                    or any(current_terms[key] != value for key, value in expected_service.items())):
                 return Response({'code': 400, 'errorCode': 'SERVICE_CHANGED',
                                  'msg': '商品信息已变化，请刷新报价后重新确认'})
             from .account_fields import lock_and_validate
@@ -816,26 +830,6 @@ class CreateOrderView(APIView):
                 # Keep the same service -> provider -> game rule lock order as
                 # reservation conversion and staff dispatch.
                 ServiceItem.objects.select_for_update().get(pk=service.pk)
-            expected_service = serializer.validated_data.get('expected_service')
-            if expected_service is not None:
-                # Serialize admin edits with the final snapshot check and debit.
-                locked_service = ServiceItem.objects.select_for_update().get(pk=service.pk)
-                def snapshot(item):
-                    return {'name': item.name, 'price_unit': item.price_unit,
-                            'service_type': item.service_type, 'game_category': item.game_category_id,
-                            'billing_provider_count': item.billing_provider_count, 'fulfillment_provider_count': item.fulfillment_provider_count, 'unit_price': item.price,
-                            'gameplay': item.gameplay_id, 'platform': item.platform,
-                            'security_level': item.security_level, 'provider_kind': item.provider_kind,
-                            'provider_grade': item.provider_grade, 'required_level': item.required_level_id,
-                            'service_category': item.service_category_id, 'purchase_mode': item.purchase_mode,
-                            'is_addon': item.is_addon, 'experience_kind': item.experience_kind,
-                            'allows_discount_coupons': item.allows_discount_coupons}
-                current = snapshot(locked_service)
-                if (not locked_service.is_active
-                        or any(current[key] != value for key, value in expected_service.items())
-                        or current != snapshot(service)):
-                    return Response({'code': 400, 'errorCode': 'SERVICE_CHANGED',
-                                     'msg': '商品信息已变化，请刷新报价后重新确认'})
             expected_quote = serializer.validated_data.get('expected_quote')
             if expected_quote is not None and any(
                     serializer.validated_data[key] != value for key, value in expected_quote.items()):
