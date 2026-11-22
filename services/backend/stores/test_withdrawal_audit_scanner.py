@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.db import DatabaseError, InterfaceError, connections
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
+from kombu.exceptions import OperationalError as BrokerOperationalError
 
 from stores import test_platform_withdraw_workflow as fixture
 from stores.context import store_context
@@ -158,3 +159,44 @@ class WithdrawalAuditScannerTests(TransactionTestCase):
             wallet = get_wallet(account=self.account)
             self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
                              ('PAYMENT_UNKNOWN', 'PENDING', 80000, 20000))
+
+    def test_dispatch_retries_same_batch_after_unconfirmed_publish(self):
+        cursor = PlatformWithdrawalAuditDispatchCursor.objects.create(pk=1, last_store_id=self.first.pk)
+        third = Store.objects.create(slug='audit-third', name='隔离第三店', database_alias='store_a',
+                                     status=Store.Status.ACTIVE, initialized_at=timezone.now())
+        fourth = Store.objects.create(slug='audit-fourth', name='隔离第四店', database_alias='store_new',
+                                      status=Store.Status.ACTIVE, initialized_at=timezone.now())
+        self.second.status = Store.Status.DISABLED
+        self.second.save(update_fields=['status'])
+        with (patch('stores.withdrawal_audit_tasks.MAX_STORES', 2),
+              patch('stores.withdrawal_audit_tasks.scan_store.apply_async',
+                    side_effect=[None, BrokerOperationalError('publisher lost its connection')]) as send):
+            result = dispatch.run()
+        self.assertEqual(result, {'status': 'ENQUEUE_UNCONFIRMED', 'queued': 1, 'enqueue_unknown': [third.pk]})
+        self.assertEqual([call.kwargs['args'][0] for call in send.call_args_list], [self.second.pk, third.pk])
+        cursor.refresh_from_db()
+        self.assertEqual(cursor.last_store_id, self.first.pk)
+
+        with (patch('stores.withdrawal_audit_tasks.MAX_STORES', 2),
+              patch('stores.withdrawal_audit_tasks.scan_store.apply_async') as send):
+            self.assertEqual(dispatch.run(), {'status': 'OK', 'queued': 2, 'next_after': third.pk})
+            self.assertEqual(dispatch.run(), {'status': 'OK', 'queued': 1, 'next_after': 0})
+        self.assertEqual([call.kwargs['args'][0] for call in send.call_args_list],
+                         [self.second.pk, third.pk, fourth.pk])
+
+    def test_dispatch_reports_confirmed_sends_if_control_cursor_cannot_be_saved(self):
+        cursor = PlatformWithdrawalAuditDispatchCursor.objects.create(pk=1, last_store_id=self.first.pk)
+
+        def fail_cursor_update(execute, sql, params, many, context):
+            if (sql.lstrip().upper().startswith('UPDATE')
+                    and 'stores_platformwithdrawalauditdispatchcursor' in sql.lower()):
+                raise InterfaceError('control connection lost after publish')
+            return execute(sql, params, many, context)
+
+        with (patch('stores.withdrawal_audit_tasks.scan_store.apply_async') as send,
+              connections['default'].execute_wrapper(fail_cursor_update)):
+            result = dispatch.run()
+        self.assertEqual(result, {'status': 'CONTROL_UNAVAILABLE', 'queued': 1})
+        send.assert_called_once_with(args=[self.second.pk])
+        cursor.refresh_from_db()
+        self.assertEqual(cursor.last_store_id, self.first.pk)

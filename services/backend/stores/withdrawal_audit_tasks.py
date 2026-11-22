@@ -4,6 +4,8 @@ import logging
 from celery import Task, shared_task
 from django.conf import settings
 from django.db import DatabaseError, InterfaceError, transaction
+from kombu.exceptions import OperationalError as BrokerOperationalError
+from redis.exceptions import RedisError
 
 from .context import store_context
 from .dynamic_database import discover_store_connection
@@ -84,6 +86,7 @@ def scan_store(store_id):
 def dispatch():
     if not getattr(settings, 'WITHDRAW_AUDIT_AUTO_RECOVERY_ENABLED', False):
         return {'status': 'DISABLED', 'queued': 0}
+    queued = 0
     try:
         with transaction.atomic(using='default'):
             from .database_identity import lock_store_registration
@@ -94,10 +97,19 @@ def dispatch():
                        .order_by('pk').values_list('pk', flat=True)[:MAX_STORES + 1])
             selected = ids[:MAX_STORES]
             for store_id in selected:
-                scan_store.apply_async(args=[store_id])
+                try:
+                    scan_store.apply_async(args=[store_id])
+                except (BrokerOperationalError, RedisError, OSError):
+                    # Redis may already have accepted the message. Revisit this
+                    # page on the next dispatch; the tenant scan deduplicates.
+                    transaction.set_rollback(True, using='default')
+                    logger.warning('Withdrawal audit enqueue unconfirmed for store %s after %s confirmed sends',
+                                   store_id, queued)
+                    return {'status': 'ENQUEUE_UNCONFIRMED', 'queued': queued, 'enqueue_unknown': [store_id]}
+                queued += 1
             cursor.last_store_id = selected[-1] if len(ids) > MAX_STORES else 0
             cursor.save(update_fields=['last_store_id', 'updated_at'])
-        return {'status': 'OK', 'queued': len(selected), 'next_after': cursor.last_store_id}
+        return {'status': 'OK', 'queued': queued, 'next_after': cursor.last_store_id}
     except (DatabaseError, InterfaceError):
-        logger.warning('Withdrawal audit dispatcher could not reach platform control')
-        return {'status': 'CONTROL_UNAVAILABLE', 'queued': 0}
+        logger.warning('Withdrawal audit dispatcher could not reach platform control after %s confirmed sends', queued)
+        return {'status': 'CONTROL_UNAVAILABLE', 'queued': queued}
