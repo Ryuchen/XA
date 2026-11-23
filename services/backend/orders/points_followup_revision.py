@@ -27,12 +27,27 @@ FIELDS = ('net_paid_units', 'principal_units', 'gift_units', 'compensation_units
           'prior_required_units', 'allocated_units', 'required_units', 'release_units', 'shortfall_units')
 
 
-def _digest(posting, prior_settlement_id, paid_person_id, allocations, releases, values, addon_snapshot=None):
+def _digest(posting, prior_settlement_id, paid_person_id, allocations, releases, values, addon_snapshot=None,
+            *, sort_keys=True):
     payload = [posting.pk, posting.terms_hash, posting.points_refund_id, prior_settlement_id,
                paid_person_id, allocations, releases, values]
     if addon_snapshot is not None:
         payload.append(addon_snapshot)
-    return hashlib.sha256(json.dumps(payload, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps(payload, separators=(',', ':'), ensure_ascii=True,
+                                     sort_keys=sort_keys).encode()).hexdigest()
+
+
+def revision_hash_matches(row, posting, values, rebuilt_addons):
+    """Check the persisted snapshot against the rebuilt facts, including older hashes."""
+    facts = (posting, row.prior_settlement_id, row.paid_person_id, row.allocations, row.releases, values)
+    rebuilt_hash = _digest(*facts, rebuilt_addons)
+    if row.addon_snapshot is not None or rebuilt_addons is not None:
+        if _digest(*facts, row.addon_snapshot) != rebuilt_hash:
+            return False
+    return (row.evidence_hash == rebuilt_hash
+            or (rebuilt_addons is not None and row.evidence_hash in (
+                _digest(*facts, row.addon_snapshot, sort_keys=False),
+                _digest(*facts, rebuilt_addons, sort_keys=False))))
 
 
 def _facts(projected, revision, prior_required):
@@ -232,6 +247,7 @@ def _verify_followup_revision_locked(row):
         pending_deduction_units=sum(item.pending_deduction for item in first_shares + second_shares),
         provider_external_units=sum(item.wallet_deduction + item.deposit_deduction for item in first_shares + second_shares),
         rounding_reserved_units=first.rounding_to_store_units + second.rounding_to_store_units)
+    actual_addons = None
     if row.addon_snapshot is not None:
         actual, actual_addons = _with_addons(order, actual, snapshots, first_shares + second_shares, second.created_at)
         if actual_addons != row.addon_snapshot:
@@ -259,8 +275,7 @@ def _verify_followup_revision_locked(row):
     actual_values = tuple(getattr(row, field) for field in FIELDS)
     release_rows = [list(item) for item in revision.releases]
     if (actual_values != values or row.releases != release_rows
-            or row.evidence_hash != _digest(second, row.prior_settlement_id, row.paid_person_id,
-                                            row.allocations, row.releases, list(values), row.addon_snapshot)):
+            or not revision_hash_matches(row, second, list(values), actual_addons)):
         raise ValidationError('后续退款资金版本凭证不一致')
     return revision
 

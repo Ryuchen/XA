@@ -13,7 +13,7 @@ from .models import OrderPointsFundingAllocation, OrderPointsFundingRelease, Poi
 
 def facts(row):
     from users.receipt_usage_sources import _digest, first_negotiation_release_facts
-    from .points_followup_revision import FIELDS, _digest as revision_digest, _facts
+    from .points_followup_revision import FIELDS, _facts, revision_hash_matches
     from .points_funding_revision import plan_unpaid_funding_revision, plan_funding_revision
     from .points_negotiation_execution import participant_digest
     from .points_negotiation_preview import asset_digest, funding_after_refund
@@ -522,6 +522,7 @@ def facts(row):
             pending_deduction_units=sum(s.pending_deduction for s in first_shares + second_shares),
             provider_external_units=sum(s.wallet_deduction + s.deposit_deduction for s in first_shares + second_shares),
             rounding_reserved_units=first.rounding_to_store_units + second.rounding_to_store_units)
+        projected_addons = None
         if revision.addon_snapshot is not None:
             from .points_followup_revision import _with_addons
             before, before_addons = _with_addons(order, before, list(snapshots.values()), first_shares, second.created_at)
@@ -566,8 +567,7 @@ def facts(row):
     if ([getattr(revision, field) for field in FIELDS] != numeric
             or revision.releases != [list(item) for item in plan.releases]
             or actual_rows != list(plan.releases)
-            or revision.evidence_hash != revision_digest(second, revision.prior_settlement_id, revision.paid_person_id, revision.allocations,
-                                                         revision.releases, numeric, revision.addon_snapshot)):
+            or not revision_hash_matches(revision, second, numeric, projected_addons)):
         raise ValidationError('后续退款释放与资金版本不一致')
     payload = ['points-followup-release', row.pk, row.amount, allocation.pk, allocation.receipt_id,
                 first_fact, second.pk, second.terms_hash, second.participants_hash, terms.evidence_hash,

@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -22,6 +23,36 @@ from wallet.services import get_wallet
 
 
 class RefundFundingCalculationTests(TestCase):
+    def test_addon_snapshot_digest_ignores_json_object_key_order(self):
+        from orders.points_followup_revision import _digest, revision_hash_matches
+
+        posting = SimpleNamespace(pk=14, terms_hash='terms', points_refund_id=20)
+        addon_snapshot = {
+            'addon_history': [{'payment_id': 9, 'paid_units': 100, 'provider_units': 80}],
+            'main_deductions': [],
+        }
+        reordered = {
+            'main_deductions': [],
+            'addon_history': [{'paid_units': 100, 'payment_id': 9, 'provider_units': 80}],
+        }
+        facts = (posting, 12, 13, [[5, 8, 215, 40]], [[5, 8, 20]], [155])
+        canonical = _digest(*facts, addon_snapshot)
+        self.assertEqual(canonical, _digest(*facts, reordered))
+        self.assertEqual(_digest(*facts), _digest(*facts, sort_keys=False))
+        row = SimpleNamespace(prior_settlement_id=12, paid_person_id=13, allocations=facts[3],
+                              releases=facts[4], addon_snapshot=reordered)
+        legacy = _digest(*facts, addon_snapshot, sort_keys=False)
+        self.assertNotEqual(canonical, legacy)
+        for stored_hash in (canonical, legacy, _digest(*facts, reordered, sort_keys=False)):
+            with self.subTest(stored_hash=stored_hash):
+                row.evidence_hash = stored_hash
+                self.assertTrue(revision_hash_matches(row, posting, facts[5], addon_snapshot))
+                self.assertFalse(revision_hash_matches(row, posting, [156], addon_snapshot))
+                for invalid_units in (81, 80.0):
+                    row.addon_snapshot['addon_history'][0]['provider_units'] = invalid_units
+                    self.assertFalse(revision_hash_matches(row, posting, facts[5], addon_snapshot))
+                row.addon_snapshot['addon_history'][0]['provider_units'] = 80
+
     def test_followup_before_any_payout_keeps_partial_funding_and_release_separate(self):
         from dataclasses import replace
         from orders.points_funding_allocation import PointsFundingAllocationError
