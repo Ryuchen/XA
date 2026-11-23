@@ -1732,11 +1732,38 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                                 self.assertEqual(order.refund_records.count(), before_closure[0])
                             executed_followup = client.post(execution_url, second_request, format='json')
                             self.assertEqual(executed_followup.data['code'], 0, executed_followup.data)
-                            self.assertEqual(executed_followup.data['data']['refund_coin_units'], 730)
-                            self.assertEqual(client.get(execution_url, second_request).data['data']['execution_id'],
-                                             executed_followup.data['data']['execution_id'])
-                            self.assertEqual(client.post(execution_url, second_request, format='json').data['data']['execution_id'],
-                                             executed_followup.data['data']['execution_id'])
+                            receipt = executed_followup.data['data']
+                            self.assertEqual(receipt['refund_coin_units'], 730)
+                            self.assertEqual(client.get(execution_url, second_request).data['data'], receipt)
+                            self.assertEqual(client.post(execution_url, second_request, format='json').data['data'], receipt)
+
+                            peer_user = make_console_user(['order:view', 'support:edit', 'order:refund'])
+                            peer_account = get_or_create_account_for_legacy_user(peer_user)
+                            peer_user.admin_membership.account = peer_account
+                            peer_user.admin_membership.save(update_fields=['account'])
+                            self.assertNotEqual(peer_account.pk, staff.pk)
+                            peer = APIClient(HTTP_HOST='admin.esports.club',
+                                HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(peer_account)[0])
+                            self.assertEqual(peer.get(execution_url).data['data']['proposal']['id'], new_id)
+                            competing = {**second_request, 'client_request_id': 'followup-peer-refund'}
+                            before_replays = (order.refund_records.count(), Transaction.objects.count(), PointLedger.objects.count())
+                            for rejected in (peer.get(execution_url, competing),
+                                             peer.post(execution_url, competing, format='json')):
+                                self.assertEqual(rejected.status_code, 409, rejected.data)
+                                self.assertEqual(rejected.data['errorCode'], 'REFUND_REQUEST_CONFLICT')
+                                self.assertNotIn('data', rejected.data)
+                            for rejected in (peer.get(execution_url, second_request),
+                                             peer.post(execution_url, second_request, format='json')):
+                                self.assertEqual(rejected.status_code, 400, rejected.data)
+                                self.assertNotIn('errorCode', rejected.data)
+                                self.assertNotIn('data', rejected.data)
+                            self.assertEqual((order.refund_records.count(), Transaction.objects.count(),
+                                              PointLedger.objects.count()), before_replays)
+                            from console.models import AdminAuditLog
+                            refund = order.refund_records.get(pk=receipt['refund_id'])
+                            audit = AdminAuditLog.objects.get(path=execution_url, request_body__refund_id=refund.pk)
+                            self.assertEqual(refund.operator_account_id, staff.pk)
+                            self.assertEqual(audit.operator_account_id, staff.pk)
                             with override_settings(SERVICE_POINTS_FOLLOWUP_ENDPOINT_TESTING=False,
                                                    SERVICE_POINTS_FOLLOWUP_REVISION_TESTING=False,
                                                    SERVICE_POINTS_FOLLOWUP_RELEASE_TESTING=False):
