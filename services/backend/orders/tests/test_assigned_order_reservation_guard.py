@@ -1,8 +1,6 @@
 """Assigned orders cannot be rejected and paid appointments keep their slot."""
 import json
-import os
 from datetime import timedelta
-from unittest import skipUnless
 
 from django.test import override_settings
 from django.utils import timezone
@@ -158,39 +156,63 @@ class AssignedOrderReservationGuardTest(APITransactionTestCase):
         self.assertEqual(Order.objects.get(pk=order_id).payment_status, 'REFUNDED')
         self.assertEqual(Transaction.objects.filter(order_id=order_id, tx_type='REFUND').count(), 1)
 
-    @skipUnless(os.environ.get('XA_SEGMENT_TRANSFER_FORMAL') == '1',
-                '转单先校验转入陪玩抽成快照（原预约时段冲突校验在其后）属转单正式契约深水区（18-盘点 转单抽成快照待联调）；最终联调启用')
+    @override_settings(ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,
+                       SEGMENT_STANDARD_TRANSFER_ENABLED=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True)
     def test_transfer_checks_original_slot_and_moves_its_lock(self):
         replacement = make_provider(deposit_mode='EARNINGS')
         self.accounts[replacement.pk] = get_or_create_account_for_legacy_user(replacement)
         replacement.escort_profile.account = self.accounts[replacement.pk]
         replacement.escort_profile.save(update_fields=['account'])
         self.ok(self.recharge())
-        start = (timezone.now() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+        now = timezone.localtime()
+        start = (now + timedelta(days=2)).replace(hour=23, minute=30, second=0, microsecond=0)
+        end = start + timedelta(hours=1)
         booking_id, order_id = self.book(self.provider, start, 'reservation-transfer-1')
         self.login(self.provider)
         self.ok(self.client.post(f'/api/orders/orders/{order_id}/start/', {'entry_image': flow.screenshot()}, format='multipart'))
         self.login(self.boss)
         competing = self.ok(self.client.post('/api/orders/reservations/', {
             'service_id': self.service.pk, 'provider_account_id': self.accounts[replacement.pk].pk,
-            'start_time': start.isoformat(), 'end_time': (start + timedelta(hours=1)).isoformat(),
+            'start_time': start.isoformat(), 'end_time': end.isoformat(),
         }, format='json'))
-        payload = {'transfers': [{'old_provider_id': self.accounts[self.provider.pk].pk,
-            'new_provider_id': self.accounts[replacement.pk].pk, 'split_type': 'PERCENT',
-            'split_value': 0, 'penalty_amount': 0}]}
+        payload = {'reason': '客服协调原预约转单', 'transfers': [{'old_provider_id': self.accounts[self.provider.pk].pk,
+            'new_provider_id': self.accounts[replacement.pk].pk,
+            'original_share': {'retained': 4000, 'transferred': 6000, 'agreement': '双方确认原价份额'}}]}
+        transfer_url = f'/api/admin/orders/{order_id}/transfer/'
         self.login(self.admin)
-        blocked = self.client.post(f'/api/admin/orders/{order_id}/transfer/', payload, format='json')
+        blocked = self.client.post(transfer_url, payload, format='json')
         self.assertNotEqual(blocked.data['code'], 0, blocked.data)
         self.assertIn('原预约时段', blocked.data['msg'])
         self.assertEqual(Order.objects.get(pk=order_id).provider_account_id, self.accounts[self.provider.pk].pk)
         self.login(self.boss)
         self.ok(self.client.post(f"/api/orders/reservations/{competing['id']}/cancel/", {}, format='json'))
+
+        schedule_url = '/api/users/escorts/schedule/'
+        today_slot = {'weekday': now.weekday(), 'start_minute': 0, 'end_minute': 1440}
+        overnight_slot = {'weekday': start.weekday(), 'start_minute': 1410, 'end_minute': 15}
+        self.login(replacement)
+        self.ok(self.client.put(schedule_url, {'slots': [today_slot, overnight_slot]}, format='json'))
+        orig = Order.objects.get(pk=order_id)
+        tx_before = list(orig.transactions.values_list('pk', 'amount'))
+        transfers_before = orig.status_logs.filter(action='TRANSFER').count()
         self.login(self.admin)
-        self.ok(self.client.post(f'/api/admin/orders/{order_id}/transfer/', payload, format='json'))
-        self.assertFalse(find_conflicting_reservations(self.accounts[self.provider.pk], start,
-                                                      start + timedelta(hours=1)).exists())
-        self.assertTrue(find_conflicting_reservations(self.accounts[replacement.pk], start,
-            start + timedelta(hours=1)).filter(pk=booking_id).exists())
+        blocked = self.client.post(transfer_url, payload, format='json')
+        self.assertEqual(blocked.data['code'], 400, blocked.data)
+        self.assertIn('未覆盖原预约时段', blocked.data['msg'])
+        orig.refresh_from_db()
+        self.assertEqual((orig.status, orig.provider_account_id), ('IN_SERVICE', self.accounts[self.provider.pk].pk))
+        self.assertEqual(list(orig.transactions.values_list('pk', 'amount')), tx_before)
+        self.assertEqual(orig.status_logs.filter(action='TRANSFER').count(), transfers_before)
+        self.assertTrue(find_conflicting_reservations(self.accounts[self.provider.pk], start, end).filter(pk=booking_id).exists())
+        self.assertFalse(find_conflicting_reservations(self.accounts[replacement.pk], start, end).exists())
+
+        self.login(replacement)
+        self.ok(self.client.put(schedule_url, {'slots': [today_slot, {**overnight_slot, 'end_minute': 30}]}, format='json'))
+        self.login(self.admin)
+        self.ok(self.client.post(transfer_url, payload, format='json'))
+        self.assertFalse(find_conflicting_reservations(self.accounts[self.provider.pk], start, end).exists())
+        self.assertTrue(find_conflicting_reservations(self.accounts[replacement.pk], start, end).filter(pk=booking_id).exists())
+        self.assertEqual(list(orig.transactions.values_list('pk', 'amount')), tx_before)
         self.assertEqual(Reservation.objects.get(pk=booking_id).status, 'CONVERTED')
         self.login(replacement)
         detail = self.ok(self.client.get(f'/api/orders/orders/{order_id}/'))

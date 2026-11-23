@@ -1840,9 +1840,8 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 # an old wallet first would invert that order even at zero fine.
                 profile_user_ids = {row.provider_id for row in rows.values() if row.provider_id}
                 profile_user_ids.update(cmd['new_provider'].pk for cmd in parsed)
-                list(EscortProfile.objects.select_for_update().filter(
-                    user_id__in=profile_user_ids,
-                ).order_by('user_id'))
+                locked_profiles = {profile.user_id: profile for profile in
+                    EscortProfile.objects.select_for_update().filter(user_id__in=profile_user_ids).order_by('user_id')}
 
                 # A converted reservation still owns its original time slot.
                 # Check the incoming provider while holding the same profile
@@ -1853,9 +1852,18 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 booking = Reservation.objects.filter(order_id=locked_order.pk,
                     status=Reservation.Status.CONVERTED).first()
                 if booking:
-                    from orders.reservation_services import find_conflicting_reservations
+                    from orders.reservation_services import (ReservationError, find_conflicting_reservations,
+                                                             validate_reservation_schedule)
                     for cmd in parsed:
-                        if find_conflicting_reservations(cmd['new_provider_account'], booking.start_time,
+                        account = cmd['new_provider_account']
+                        profile = locked_profiles.get(cmd['new_provider'].pk)
+                        if not profile or profile.account_id != account.pk:
+                            raise IllegalTransitionError('转入陪玩档案已变化，请刷新后重试')
+                        try:
+                            validate_reservation_schedule(profile, booking.start_time, booking.end_time)
+                        except ReservationError as exc:
+                            raise IllegalTransitionError('转入陪玩设置的接单档期未覆盖原预约时段') from exc
+                        if find_conflicting_reservations(account, booking.start_time,
                                 booking.end_time, exclude_id=booking.pk).select_for_update().exists():
                             raise IllegalTransitionError('转入陪玩在原预约时段已有其他预约')
 
