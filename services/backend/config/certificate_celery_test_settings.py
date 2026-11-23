@@ -35,6 +35,11 @@ CELERY_TASK_DEFAULT_ROUTING_KEY = _queue
 CELERY_TASK_QUEUES = (Queue(_queue, Exchange(_queue), routing_key=_queue),)
 CELERY_BROKER_TRANSPORT_OPTIONS = {'global_keyprefix': _queue + ':'}
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {'global_keyprefix': _queue + ':'}
+if os.environ.get('XA_SA14_CELERY_REDIS_CHANNELS') == '1':
+    STORE_CHANNEL_LAYER = {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {'hosts': [f'{_url}/2'], 'prefix': _queue + ':channels'},
+    }
 _beat_entry = os.environ.get('XA_SA14_CELERY_BEAT_ENTRY', 'confirm-member-consumption')
 if _beat_entry not in {'confirm-member-consumption', 'recover-addon-refund-notices'}:
     raise ImproperlyConfigured('Celery CLI 只能调度已登记的隔离验收任务')

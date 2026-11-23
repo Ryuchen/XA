@@ -402,6 +402,180 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                         .order_by('pk').values_list('pk', 'recipient_account_id', 'recipient_business_cycle'))}
         return facts
 
+    @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None) and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None),
+                'Requires a registered disposable Redis broker and independent MySQL control instance')
+    def test_consultation_refund_notice_refreshes_real_store_websockets(self):
+        import asyncio
+        import socket
+        import subprocess
+        import sys
+
+        from celery import Celery
+        from club_accounts.tokens import issue_account_tokens
+        from stores.test_certificate_admission_mysql import _celery_process, _registered_redis_urls
+
+        self.assertFalse(any(os.environ.get(key) for key in ('CELERY_BROKER_URL', 'CELERY_BROKER_READ_URL',
+            'CELERY_BROKER_WRITE_URL', 'CELERY_RESULT_BACKEND')))
+        broker, backend = _registered_redis_urls()
+        cases, identities = [], {}
+
+        def save_account(label, account):
+            token, _ = issue_account_tokens(account)
+            identities[label] = (self.store_host, account.pk, account.business_cycle, token)
+
+        def prepare_sockets():
+            refund = self.exercise_paid_addon_consultation(leave_notices_pending=True)
+            cases.append((self.store, refund.pk))
+            for role, account in (('buyer', self.buyer), ('replacement', self.replacement), ('original', self.original)):
+                save_account((self.store.slug, role), account)
+            if self.store.slug == 'xinan':
+                same_id = identities['shenglang', 'buyer'][1]
+                peer = ClubAccount.objects.filter(pk=same_id).first()
+                if peer is None:
+                    peer = ClubAccount.objects.create_account(username='refund-socket-same-id', pk=same_id, account_type='BOSS')
+                save_account(('xinan', 'same_id'), peer)
+
+        self.run_in_stores(prepare_sockets)
+        self.assertCountEqual([store.slug for store, _ in cases], ['shenglang', 'xinan'])
+        self.assertEqual(identities['shenglang', 'buyer'][1:3], identities['xinan', 'same_id'][1:3])
+        before = self.refund_notice_worker_facts(cases)
+        self.assertTrue(all(len(row['intents']) == 2 and not row['messages'] for row in before.values()))
+        directory = Path(os.environ['XA_SA14_MYSQL_REGISTRATION']).resolve().parent
+        work = Path(mkdtemp(prefix='addon-refund-socket-', dir=directory))
+        queue = f'xa_sa14_cli_{uuid4().hex}'
+        env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.certificate_celery_test_settings',
+               'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media'),
+               'XA_SA14_CELERY_REDIS_CHANNELS': '1', 'ADDON_REFUND_NOTICE_RECOVERY_ENABLED': '1',
+               'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED': '1'}
+        command = ['worker', '-P', 'solo', '-l', 'INFO', '--without-mingle', '--without-gossip', '--without-heartbeat']
+        worker_log = work / 'worker.log'
+        with (Celery(queue, broker=broker, backend=backend, set_as_current=False) as publisher,
+              _celery_process(command, env=env, log=worker_log) as worker):
+            publisher.conf.update(task_default_queue=queue, task_default_exchange=queue, task_default_routing_key=queue,
+                                 broker_transport_options={'global_keyprefix': queue + ':'},
+                                 result_backend_transport_options={'global_keyprefix': queue + ':'})
+            deadline = monotonic() + 20
+            while worker.poll() is None and monotonic() < deadline:
+                if ' ready.' in worker_log.read_text():
+                    break
+                sleep(.1)
+            else:
+                self.fail(f'退款通知 worker 未就绪，见 {worker_log}')
+            with socket.socket() as listener, (work / 'asgi.log').open('wb') as output:
+                listener.bind(('127.0.0.1', 0))
+                listener.listen()
+                port = listener.getsockname()[1]
+                process = subprocess.Popen([sys.executable, '-m', 'daphne', '--fd', str(listener.fileno()),
+                    '-v', '0', 'config.asgi:application'], cwd=Path(__file__).resolve().parents[2], env=env,
+                    pass_fds=(listener.fileno(),), stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT)
+                listener.close()
+                try:
+                    asyncio.run(self.check_refund_notice_socket_events(port, identities, publisher))
+                    self.assertIsNone(process.poll(), f'ASGI 提前退出，见 {work}')
+                    print(f'退款通知 ASGI PID={process.pid} port={port} worker PID={worker.pid} logs={work.name}', flush=True)
+                finally:
+                    if process.poll() is None:
+                        process.terminate()
+                    try:
+                        process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=10)
+                self.assertEqual(process.returncode, 0)
+        self.assertEqual(worker.returncode, 0)
+        after = self.refund_notice_worker_facts(cases)
+        for slug, case in after.items():
+            self.assertEqual(case['refund'], before[slug]['refund'])
+            self.assertCountEqual([row[:4] for row in case['intents']], [row[:4] for row in before[slug]['intents']])
+            self.assertCountEqual(case['messages'], [(message, account, cycle)
+                                  for _, account, cycle, _, message, _, _ in case['intents']])
+            for role in ('buyer', 'replacement'):
+                host, account, _, token = identities[slug, role]
+                message_id = next(message for message, recipient, _ in case['messages'] if recipient == account)
+                client = APIClient(HTTP_HOST=host, HTTP_AUTHORIZATION='Bearer ' + token)
+                detail = self.ok(client.get(f'/api/messages/{message_id}/'))
+                self.assertEqual((detail['related_order_id'], detail['cycle_relation']), (case['order'], 'CURRENT'))
+            print(f'{slug} order={case["order"]} refund={case["refund"][0]} messages={case["messages"]}', flush=True)
+
+    async def check_refund_notice_socket_events(self, port, identities, publisher):
+        import asyncio
+        import json
+
+        from autobahn.asyncio.websocket import WebSocketClientFactory, WebSocketClientProtocol
+
+        loop = asyncio.get_running_loop()
+
+        class Socket(WebSocketClientProtocol):
+            def __init__(self):
+                super().__init__()
+                self.opened = loop.create_future()
+                self.notifications = asyncio.Queue()
+                self.pong = asyncio.Event()
+
+            def onOpen(self):
+                self.opened.set_result(True)
+
+            def onClose(self, _was_clean, _code, _reason):
+                if not self.opened.done():
+                    self.opened.set_result(False)
+
+            def onMessage(self, payload, _is_binary):
+                frame = json.loads(payload)
+                if frame.get('type') == 'site_message_update':
+                    self.notifications.put_nowait(frame)
+                elif frame.get('type') == 'pong':
+                    self.pong.set()
+
+        sockets, transports = {}, []
+
+        async def connect(host, token):
+            factory = WebSocketClientFactory(f'ws://{host}:{port}/ws/orders/?token={token}')
+            factory.protocol = Socket
+            transport, peer = await loop.create_connection(factory, '127.0.0.1', port)
+            transports.append(transport)
+            return peer
+
+        async def check_pong(peer):
+            peer.pong.clear()
+            peer.sendMessage(b'{"type":"ping"}')
+            await asyncio.wait_for(peer.pong.wait(), timeout=8)
+
+        async def check_quiet(key, peer):
+            try:
+                frame = await asyncio.wait_for(peer.notifications.get(), timeout=.7)
+            except TimeoutError:
+                return
+            self.fail(f'{key} 收到多余的退款通知刷新 {frame}')
+
+        def recover(slug):
+            task = publisher.send_task(recover_addon_refund_notices.name, headers={'store_slug': slug})
+            result = task.get(timeout=20)
+            print(f'{slug} 实时退款通知任务 {task.id} 回收 {result}', flush=True)
+            return result
+
+        try:
+            for key, (host, _, _, token) in identities.items():
+                peer = await connect(host, token)
+                self.assertTrue(await asyncio.wait_for(peer.opened, timeout=15), key)
+                sockets[key] = peer
+            wrong = await connect(identities['xinan', 'buyer'][0], identities['shenglang', 'buyer'][3])
+            self.assertFalse(await asyncio.wait_for(wrong.opened, timeout=8))
+            update = {'type': 'site_message_update', 'data': {}}
+            for slug, count in (('shenglang', 2), ('xinan', 2), ('shenglang', 0), ('xinan', 0)):
+                self.assertEqual(await asyncio.to_thread(recover, slug), count)
+                if count:
+                    accounts = {identities[slug, role][1] for role in ('buyer', 'replacement')}
+                    expected = [key for key in sockets if key[0] == slug and identities[key][1] in accounts]
+                    frames = await asyncio.gather(*(asyncio.wait_for(sockets[key].notifications.get(), timeout=8)
+                                                    for key in expected))
+                    self.assertEqual(frames, [update] * len(expected))
+                    print(f'{slug} 收到退款刷新 {expected}', flush=True)
+                await asyncio.gather(*(check_quiet(key, peer) for key, peer in sockets.items()))
+                await asyncio.gather(*(check_pong(peer) for peer in sockets.values()))
+        finally:
+            for transport in transports:
+                transport.close()
+
     def transfer_and_join(self):
         self.ok(self.transfer(self.api(self.staff)))
         revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
