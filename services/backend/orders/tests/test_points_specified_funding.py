@@ -1,6 +1,7 @@
 """Real specified-team checkout, finance allocation and settlement across two stores."""
 import tempfile
 from datetime import timedelta
+from itertools import count
 from unittest import skipUnless
 from unittest.mock import patch
 from uuid import uuid4
@@ -676,7 +677,10 @@ class SpecifiedPointsFundingTests(TestCase):
                     self.assertEqual(opened.status_code, 200, opened.data)
                     next_case = opened.data['data']['id']
                     if paid_first:
-                        time_patch = self.enterContext(patch('django.utils.timezone.now', return_value=first_time + timedelta(hours=73)))
+                        now = first_time + timedelta(hours=73)
+                        ticks = count()
+                        self.enterContext(patch('django.utils.timezone.now',
+                            side_effect=lambda: now + timedelta(microseconds=next(ticks))))
                         self.assertFalse(process_order(order_id))
                         from orders.models import OrderPointsRefundSettlement
                         prior_settlement = OrderPointsRefundSettlement.objects.get(posting__proposal_id=proposal_id)
@@ -704,11 +708,8 @@ class SpecifiedPointsFundingTests(TestCase):
                         candidates = [SubmittedCandidate(1, (SubmittedMember(self.accounts[0].pk, 'GOLD'),), timezone.now()),
                                       SubmittedCandidate(2, (SubmittedMember(self.accounts[1].pk, 'GOLD'),), timezone.now())]
                         self.assertEqual(decide(build_rankable_candidates(candidates, as_of=timezone.now())).winner_id, 2)
-                        from itertools import count
                         from users.models import EscortProfile
                         from wallet.models import SystemConfig
-                        ticks = count()
-                        time_patch.side_effect = lambda: first_time + timedelta(hours=73, microseconds=next(ticks))
                         profile = EscortProfile.objects.get(account=self.accounts[1])
                         profile.deposit_mode = 'CASH'
                         profile.deposit_paid = 0
@@ -721,10 +722,6 @@ class SpecifiedPointsFundingTests(TestCase):
                             'client_request_id': 'full-main-addon-deposit'}, format='multipart')
                         self.assertEqual(topup.data['code'], 0, topup.data)
                     if addon_deduction_after_first:
-                        if paid_first:
-                            from itertools import count
-                            ticks = count()
-                            time_patch.side_effect = lambda: first_time + timedelta(hours=73, microseconds=next(ticks))
                         addon_refund_url = f'/api/admin/orders/{order_id}/addons/payments/{second_payment_id}/refund-proposals/'
                         addon_proposal = admin.post(addon_refund_url, {'request_id': 'later-addon-refund',
                             'amount_raw': 500, 'case_id': next_case, 'explanation': '加购未履行退款'}, format='json')
@@ -833,10 +830,12 @@ class SpecifiedPointsFundingTests(TestCase):
                                          {(self.accounts[1].pk, retained_units)} if paid_first else
                                          {(self.accounts[0].pk, 5750), (self.accounts[1].pk, 4900 if addon_deduction_after_first else 5000)})
                         if paid_first:
+                            second_addon = settlement.addon_settlements.get(payment_id=second_payment_id)
                             if addon_deduction_after_first:
-                                self.assertFalse(settlement.addon_settlements.filter(payment_id=second_payment_id).exists())
+                                self.assertEqual(second_addon.amount, 0)
+                                self.assertIsNone(second_addon.income_transaction_id)
                             else:
-                                self.assertEqual(settlement.addon_settlements.get(payment_id=second_payment_id).amount, 400)
+                                self.assertEqual(second_addon.amount, 400)
                             self.assertEqual(prior_settlement.addon_settlements.get(payment_id=payment_id).amount, 450)
                         else:
                             self.assertEqual(settlement.addon_settlements.get(payment_id=payment_id).amount, 450)

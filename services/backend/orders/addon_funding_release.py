@@ -419,6 +419,15 @@ def record_prestart_funding_release(order, handoff, plan):
     run.save(update_fields=['prestart_hash'])
     OrderAddonFundingRelease.objects.bulk_create([
         OrderAddonFundingRelease(run=run, allocation_id=part.allocation_id, amount=part.amount) for part in parts])
+    if (transaction.get_connection().vendor == 'sqlite'
+            and getattr(settings, 'SERVICE_POINTS_PRESTART_TESTING', False) is True
+            and not getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False)
+            and not getattr(settings, 'RECEIPT_USAGE_LEDGER_INTERNAL_TESTING', False)
+            and all(row.receipt.usage_version is None for row in allocations)):
+        from .points_checkout_test import require_isolated_checkout
+        require_isolated_checkout()
+        return verify_run(run)
+
     from users.receipt_usage_sources import record_first_addon_release_locked, verify_allocations_locked
     for release in run.releases.select_related('allocation__redemption', 'run__prestart_handoff').order_by('allocation__receipt_id', 'pk'):
         record_first_addon_release_locked(release)

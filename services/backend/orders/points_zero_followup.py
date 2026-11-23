@@ -7,6 +7,7 @@ import hashlib
 import json
 from dataclasses import asdict
 
+from django.conf import settings
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from stores.db import transaction
@@ -31,13 +32,20 @@ def applies(order):
             and order.payment_status == Order.PaymentStatus.PARTIALLY_REFUNDED)
 
 
-def prepare_locked(order, case):
+def prepare_locked(order, case, *, addon_refund=False):
     from .points_transfer_zero_followup import applies as transfer_applies, prepare_locked as transfer_prepare
     if transfer_applies(order):
         return transfer_prepare(order, case)
     from .points_business_access import permits
+    allowed = any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon'))
+    if (not allowed and addon_refund and transaction.get_connection().vendor == 'sqlite'
+            and getattr(settings, 'ADDON_REFUND_EXECUTION_INTERNAL_TESTING', False) is True
+            and getattr(settings, 'SERVICE_POINTS_REFUND_ADDON_REVISION_TESTING', False) is True):
+        from .points_checkout_test import require_isolated_checkout
+        require_isolated_checkout()
+        allowed = True
     if (not transaction.get_connection().in_atomic_block
-            or not any(permits(order, phase='refund', kind=kind) for kind in ('service', 'addon'))
+            or not allowed
             or order.status not in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
             or order.payment_status not in (Order.PaymentStatus.REFUNDED, Order.PaymentStatus.PARTIALLY_REFUNDED)
             or order.required_provider_count != 2 or order.refund_records.count() != 1

@@ -14,6 +14,8 @@ from console.capacity_config import save_capacity
 from console.grab_config import save_grab_window
 from coupons.models import UserCoupon
 from engagement.models import PointFundingLot, PointLedger
+from orders.capacity import current_capacity_rules
+from orders.grab_config import current_rules as current_grab_rules
 from orders.grab_team_flow import resolve
 from orders.models import (Order, OrderGrabPoolSnapshot, OrderGrabRound, OrderPointsRedemption,
                            OrderPointsRefund, OrderSegmentFinancialCoverage, OrderSegmentFinancialSnapshot)
@@ -44,10 +46,11 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
         self.wallet.balance = 25000
         self.wallet.save(update_fields=['balance'])
         self.service.billing_provider_count = team_size
+        self.service.fulfillment_provider_count = team_size
         self.service.commission_policy = 'REGULAR'
-        self.service.save(update_fields=['billing_provider_count', 'commission_policy'])
-        save_grab_window(1, 0, lambda *args: None)
-        save_capacity(3, 0, lambda *args: None)
+        self.service.save(update_fields=['billing_provider_count', 'fulfillment_provider_count', 'commission_policy'])
+        save_grab_window(1, current_grab_rules()['version'], lambda *args: None)
+        save_capacity(3, current_capacity_rules()['version'], lambda *args: None)
         for tier in ('BLACK', 'GOLD', 'SILVER', 'BRONZE', 'NONE'):
             SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_' + tier, defaults={'value': '0'})
         if high_discount:
@@ -82,8 +85,11 @@ class GrabTeamPointsFlowTest(APITransactionTestCase):
                 PointFundingLot.objects.create(account=self.account, source_key=f'team-points-{kind}',
                                                kind=kind, remaining=amount)
             payload.update(gift_balance_amount=600, compensation_balance_amount=400)
+        else:
+            quote_fixture.seed_recharge(self.wallet)
         quote = self.client.post('/api/orders/quote/', payload, format='json')
         self.assertEqual(quote.status_code, 200, quote.data)
+        self.assertEqual(quote.data['code'], 0, quote.data)
         token = quote.data['data']['points_preview']['checkout_test_token']
         if before_payment:
             before_payment()

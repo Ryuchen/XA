@@ -451,7 +451,7 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
             paid_followup_event = True
         else:
             from .points_zero_followup import prepare_locked as prepare_unaffected_settlement
-            _, assignment, _, _, _ = prepare_unaffected_settlement(order, case)
+            _, assignment, _, _, _ = prepare_unaffected_settlement(order, case, addon_refund=True)
         from .addon_handover import current_responsibilities
         _, unpaid_responsibilities = current_responsibilities(payment, lock=True)
         if (case.affected_provider_account_ids != [assignment.provider_account_id]
