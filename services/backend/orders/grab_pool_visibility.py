@@ -19,10 +19,10 @@ class InitialVisibility:
     opening_pending: bool = False
 
 
-def _validated_delays(pool):
+def _validated_delays(pool, *, entry_count=None):
     """Validate the immutable entry evidence before using its timing rules."""
     if (not pool.pass_snapshot_complete or pool.pass_snapshot_count is None
-            or pool.entry_passes.count() != pool.pass_snapshot_count):
+            or (pool.entry_passes.count() if entry_count is None else entry_count) != pool.pass_snapshot_count):
         raise ValueError('订单入池通行证快照不完整，请先核对')
     delays = pool.visibility_delays
     tiers = ('BLACK', 'GOLD', 'SILVER', 'BRONZE', '')
@@ -69,7 +69,6 @@ def initial_visibility(pool_id, account_id):
     if pool is None or profile is None:
         raise ValueError('本店抢单池或陪玩账号不存在')
     delays = _validated_delays(pool)
-    tiers = ('BLACK', 'GOLD', 'SILVER', 'BRONZE', '')
     entry = OrderGrabPoolPassSnapshot.objects.filter(pool=pool, profile_id_snapshot=profile.pk).first()
     from .grab_clock_contract import production_enabled
     lower = upper = pool.opened_at
@@ -84,10 +83,15 @@ def initial_visibility(pool_id, account_id):
         except ValueError:
             lower = upper = provisional_opening_lower(first)
             opening_pending = True
+    return visibility_from_entry(pool, profile, entry, delays, lower=lower, upper=upper,
+                                 opening_pending=opening_pending)
+
+
+def visibility_from_entry(pool, profile, entry, delays, *, lower, upper, opening_pending):
     tier = ''
     if entry:
-        if (entry.user_id_snapshot != profile.user_id or entry.account_id_snapshot != account_id
-                or entry.tier not in tiers[:-1] or entry.expires_at <= pool.opened_at):
+        if (entry.user_id_snapshot != profile.user_id or entry.account_id_snapshot != profile.account_id
+                or entry.tier not in ('BLACK', 'GOLD', 'SILVER', 'BRONZE') or entry.expires_at <= pool.opened_at):
             raise ValueError('订单入池时陪玩通行证归属无法核对')
         if opening_pending or entry.expires_at > upper:
             tier = entry.tier

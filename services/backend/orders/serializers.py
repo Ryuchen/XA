@@ -422,6 +422,9 @@ class OrderSerializer(EntityNumberModelSerializer):
         return {**reservation_origin(reservation), 'can_open': can_open}
 
     def get_pending_deadline_expired(self, obj):
+        deadlines = self.context.get('_provider_pool_deadlines', {})
+        if obj.pk in deadlines:
+            return deadlines[obj.pk]
         now = self.context.get('_pending_deadline_now')
         if now is None:
             now = self.context['_pending_deadline_now'] = timezone.now()
@@ -935,7 +938,8 @@ class OrderSerializer(EntityNumberModelSerializer):
                 from .models import OrderGrabPoolSnapshot
                 if (
                     can_assign and available
-                    and not acceptance_error(profile, obj, allow_refund_recovery=True)
+                    and not acceptance_error(profile, obj, allow_refund_recovery=True,
+                                             refund_deficits=self.context.get('_provider_pool_refund_deficits'))
                     and (obj.provider_gender == "ANY" or obj.provider_gender == profile.gender)
                     and obj.payment_status == Order.PaymentStatus.PAID
                     and (obj.dispatch_route == Order.DispatchRoute.PUBLIC

@@ -402,6 +402,8 @@ class OrderListView(APIView):
                     context['_provider_read_state'] = read_state[:4]
                     context['_provider_capacity_limit'] = read_state.capacity_limit
                     context['_provider_pool_visibility'] = read_state.visibility_times
+                    context['_provider_pool_deadlines'] = read_state.deadline_states
+                    context['_provider_pool_refund_deficits'] = read_state.refund_deficits
 
             else:
                 # A rejected assignment is retained for history but has no
@@ -555,12 +557,16 @@ class OrderDetailView(APIView):
             # Deep links must show exactly the same public facts as the pool;
             # never turn knowledge of an ID into access to an invisible order.
             from .pool_visibility import visible_provider_pool
-            pool, read_state = visible_provider_pool(account)
-            order = pool.select_related('customer', 'customer__boss_type', 'provider', 'service',
+            pool, read_state = visible_provider_pool(account, order_id=order_id)
+            order = pool.annotate(_pool_snapshot_exists=Q(grab_pool_snapshot__isnull=False)).select_related(
+                'customer', 'customer__boss_type', 'provider', 'service',
                 'source_order', 'service__service_category', 'support_contact').prefetch_related('evaluations').filter(pk=order_id).first()
             if order is not None and read_state is not None:
                 context.update(_provider_pool_view=True, _provider_read_state=read_state[:4],
-                               _provider_capacity_limit=read_state.capacity_limit)
+                               _provider_capacity_limit=read_state.capacity_limit,
+                               _provider_pool_visibility=read_state.visibility_times,
+                               _provider_pool_deadlines=read_state.deadline_states,
+                               _provider_pool_refund_deficits=read_state.refund_deficits)
         if order is None:
             return Response({'code': 404, 'msg': '订单不存在或无权查看'}, status=404)
         return Response({'code': 0, 'data': OrderSerializer(

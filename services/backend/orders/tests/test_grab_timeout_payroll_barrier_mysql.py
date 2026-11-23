@@ -9,8 +9,9 @@ from unittest.mock import patch
 from uuid import uuid4
 
 from django.core.management import call_command
-from django.db import close_old_connections, connection
+from django.db import DatabaseError, close_old_connections, connection
 from django.test import TransactionTestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APIClient
 from common.mysql_test_support import mysql_locking_statements, require_disposable_mysql
@@ -81,6 +82,104 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
 
     @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
                        PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_formal_pool_queries_are_bounded_for_committed_rounds(self):
+        from orders.grab_round_opening import opening_bounds
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            save_grab_window(30, 1, lambda *_: None)
+
+            def open_order(index):
+                flow.auth(flow.boss_account)
+                with patch.object(open_committed_grab_order, 'delay') as enqueue:
+                    purchase = flow.create(dispatch_mode='AUTO_GRAB', client_request_id=f'pool-query-{index}')
+                self.assertEqual(purchase.data['code'], 0, purchase.data)
+                order = Order.objects.get(pk=purchase.data['data']['id'])
+                enqueue.assert_called_once_with(order.pk)
+                self.assertEqual(open_committed_grab_order.run(order.pk), 'OPENED')
+                return order
+
+            def read_pool(expected):
+                flow.auth(flow.accounts[0])
+                with CaptureQueriesContext(connection) as queries:
+                    result = flow.client.get('/api/orders/orders/?status=pending')
+                    self.assertEqual(result.data['code'], 0, result.data)
+                rows = {row['id']: row for row in result.data['data']}
+                self.assertEqual(set(rows), expected)
+                for row in rows.values():
+                    self.assertIs(row['pending_deadline_expired'], False)
+                    self.assertIn('GRAB', row['allowed_actions'])
+                return len(queries), sum('UTC_TIMESTAMP(6)' in item['sql'] for item in queries)
+
+            def wait_visible(order):
+                from orders.grab_receipt_probe import _db_clock
+                upper = opening_bounds(OrderGrabRound.objects.get(pool__order=order))[1]
+                deadline = monotonic() + 3
+                while _db_clock()[0] <= upper + timedelta(microseconds=1):
+                    self.assertLess(monotonic(), deadline)
+                    sleep(.005)
+
+            first = open_order(0)
+            wait_visible(first)
+            small, first_clocks = read_pool({first.pk})
+            orders = [first] + [open_order(index) for index in range(1, 20)]
+            wait_visible(orders[-1])
+            large, clocks = read_pool({order.pk for order in orders})
+            print(f'Formal pool read: one={small}/{first_clocks} clock, twenty={large}/{clocks} clock', flush=True)
+            self.assertLessEqual(large, small + 1)
+            self.assertEqual((first_clocks, clocks), (1, 1))
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
+    def test_formal_pool_prepared_cutoff_and_damaged_opening_evidence(self):
+        from orders.grab_round_opening import _observe_activation
+
+        store, flow = self.prepare_flow()
+        with store_context(store):
+            flow.auth(flow.boss_account)
+            order = self.buy_for_committed_opening(flow, 'pool-prepared-read')
+            with patch('orders.grab_round_opening._observe_activation') as activate:
+                self.assertEqual(open_committed_grab_order.run(order.pk), 'WAIT_OPENING')
+            activate.assert_called_once()
+            evidence = OrderGrabRound.objects.get(pool__order=order).opening_evidence
+            self.assertEqual(evidence.state, 'PREPARED')
+            sleep(.075)
+            flow.auth(flow.accounts[0])
+            result = flow.client.get('/api/orders/orders/?status=pending')
+            row, = result.data['data']
+            self.assertEqual(row['id'], order.pk)
+            self.assertIsNone(row['pending_deadline_expired'])
+            self.assertNotIn('GRAB', row['allowed_actions'])
+            # The provisional order timestamp cannot substitute for the missing activation.
+            Order.objects.filter(pk=order.pk).update(auto_cancel_at=timezone.now() - timedelta(seconds=1))
+            self.assertEqual(flow.client.get('/api/orders/orders/?status=pending').data['data'], [])
+            _observe_activation(*activate.call_args.args)
+            evidence.refresh_from_db()
+            self.assertEqual(evidence.state, 'OBSERVED')
+            sleep(.075)
+            result = flow.client.get('/api/orders/orders/?status=pending')
+            row, = result.data['data']
+            self.assertIs(row['pending_deadline_expired'], False)
+            self.assertIn('GRAB', row['allowed_actions'])
+            with CaptureQueriesContext(connection) as queries:
+                detail = flow.client.get(f'/api/orders/orders/{order.pk}/')
+                self.assertEqual(detail.status_code, 200, detail.data)
+            self.assertIn('GRAB', detail.data['data']['allowed_actions'])
+            self.assertIs(detail.data['data']['pending_deadline_expired'], False)
+            self.assertEqual(sum('SELECT @@server_uuid' in item['sql'] for item in queries), 0)
+            with patch('orders.grab_pool_clock_read.formal_pool_times', side_effect=DatabaseError('clock read interrupted')):
+                failed = flow.client.get('/api/orders/orders/?status=pending')
+            self.assertEqual(failed.status_code, 503)
+            self.assertNotIn('data', failed.data)
+            type(evidence).objects.filter(pk=evidence.pk).update(clock_evidence={})
+            self.assertEqual(flow.client.get('/api/orders/orders/?status=pending').data['data'], [])
+            self.assertEqual(flow.client.get(f'/api/orders/orders/{order.pk}/').status_code, 404)
+            order.refresh_from_db()
+            self.assertEqual(order.status, Order.Status.PENDING)
+            self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
+
+    @override_settings(GRAB_COMMITTED_OPENING_ENABLED=True, GRAB_DB_CLOCK_TRUSTED_FOR_TESTS_ONLY=False,
+                       PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=True)
     def test_single_reopen_near_the_previous_cutoff_keeps_a_full_window(self):
         self.assert_near_cutoff_reopen(team=False)
 
@@ -90,6 +189,8 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
         self.assert_near_cutoff_reopen(team=True)
 
     def assert_near_cutoff_reopen(self, *, team):
+        from orders.grab_clock_contract import sample
+        from orders.grab_pool_clock_read import formal_pool_times
         from orders.grab_receipt_probe import _db_clock, record_intent
         from orders.grab_round_opening import cutoff_bounds, opening_bounds
         from orders.tasks import finalize_single_grab, finalize_team_grab
@@ -146,10 +247,14 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
             self.assertEqual(new_cutoff[1], raw_upper + timedelta(seconds=4))
             self.assertEqual(cutoff_bounds(first, 'OPEN'), previous_cutoff)
             self.assertEqual(opening_bounds(second), (raw_lower, raw_upper))
+            wait_past(raw_upper + precision)
+            timing = formal_pool_times([order.pk], profile, sample())[order.pk]
+            self.assertEqual((timing.round_id, timing.visible_at, timing.expired), (second.pk, raw_upper, False))
             with transaction.atomic():
                 type(watermark).objects.filter(pk=watermark.pk).update(receipt_digest='0' * 64)
                 with self.assertRaisesMessage(ValueError, '重开时间与上轮截止区间交叉'):
                     cutoff_bounds(second, 'OPEN')
+                self.assertIsNone(formal_pool_times([order.pk], profile, sample())[order.pk].expired)
                 transaction.set_rollback(True)
             with transaction.atomic():
                 evidence = second.opening_evidence
@@ -163,7 +268,6 @@ class GrabTimeoutPayrollBarrierMySQLTest(TransactionTestCase):
                 transaction.set_rollback(True)
             profile.status = available
             profile.save(update_fields=['status'])
-            wait_past(raw_upper + precision)
             enter(second, 'near-cutoff-second')
             wait_past(new_cutoff[1] + timedelta(microseconds=1))
             self.assertEqual(finish.run(order.pk, first.pk), 'STALE_ROUND')

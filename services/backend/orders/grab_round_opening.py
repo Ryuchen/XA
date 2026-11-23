@@ -154,13 +154,17 @@ def _resume_waiting(round_id):
 
 
 def _observed_opening(round_, *, lock):
-    from .grab_clock_contract import database_id, valid_bounds
     observations = OrderGrabRoundOpeningEvidence.objects.filter(round=round_)
     evidence = (observations.select_for_update() if lock else observations).first()
+    return validated_opening(evidence)
+
+
+def validated_opening(evidence, *, identity=None):
+    from .grab_clock_contract import database_id, valid_bounds
     if (not evidence or evidence.state != 'OBSERVED' or not evidence.upper_at
             or not evidence.activation_lower_at or not evidence.activation_upper_at or evidence.reason):
         raise ValueError('抢单轮次提交时间待核对')
-    identity = database_id()
+    identity = database_id() if identity is None else identity
     if not valid_bounds(evidence.lower_at, evidence.upper_at, evidence.clock_evidence, identity=identity):
         raise ValueError('抢单轮次提交时钟证据异常')
     if not valid_bounds(evidence.activation_lower_at, evidence.activation_upper_at,
@@ -183,12 +187,16 @@ def opening_bounds(round_, *, lock=False):
 
 def provisional_opening_lower(round_):
     """Return only a lower bound while activation acknowledgement is pending."""
-    from .grab_clock_contract import TOLERANCE_NS, database_id, valid_bounds
     evidence = OrderGrabRoundOpeningEvidence.objects.filter(round=round_).first()
+    return provisional_lower(evidence)
+
+
+def provisional_lower(evidence, *, identity=None):
+    from .grab_clock_contract import TOLERANCE_NS, database_id, valid_bounds
     if (not evidence or evidence.state != 'PREPARED' or evidence.reason or not evidence.upper_at
             or not evidence.activation_lower_at or not isinstance(evidence.activation_clock_evidence, dict)):
         raise ValueError('抢单轮次激活提交证据待核对')
-    identity = database_id()
+    identity = database_id() if identity is None else identity
     sample = evidence.activation_clock_evidence.get('lower')
     if (not valid_bounds(evidence.lower_at, evidence.upper_at, evidence.clock_evidence, identity=identity)
             or not isinstance(sample, dict) or sample.get('database_identity') != identity
@@ -197,19 +205,22 @@ def provisional_opening_lower(round_):
     return evidence.activation_lower_at - timedelta(microseconds=TOLERANCE_NS // 1000)
 
 
-def _sealed_reopen_lower(previous, reopened, evidence, *, cutoff, total_lower, lock):
+def _verified_reopen(previous, cutoff, reopened_at, *, lock):
     from .grab_cutoff_watermark import verified_reopen_seal
     from .models import OrderGrabSingleRoundState, OrderGrabTeamRoundState
-
-    if (not reopened.simultaneous_visibility or reopened.opened_at <= cutoff
-            or not reopened.opened_at <= evidence.lower_at <= evidence.upper_at <= evidence.activation_lower_at):
-        return None
     state_model = OrderGrabSingleRoundState if previous.pool.required_provider_count == 1 else OrderGrabTeamRoundState
     states = state_model.objects.filter(round=previous)
     state = (states.select_for_update() if lock else states).first()
     if not state or state.status != 'REOPENED':
         return None
-    mark = verified_reopen_seal(previous, cutoff=cutoff, reopened_at=reopened.opened_at, lock=lock)
+    return verified_reopen_seal(previous, cutoff=cutoff, reopened_at=reopened_at, lock=lock)
+
+
+def _sealed_reopen_lower(previous, reopened, evidence, *, cutoff, total_lower, read_seal):
+    if (not reopened.simultaneous_visibility or reopened.opened_at <= cutoff
+            or not reopened.opened_at <= evidence.lower_at <= evidence.upper_at <= evidence.activation_lower_at):
+        return None
+    mark = read_seal(previous, cutoff, reopened.opened_at)
     if not mark:
         return None
     precision = timedelta(microseconds=mark.precision_us)
@@ -222,6 +233,18 @@ def _sealed_reopen_lower(previous, reopened, evidence, *, cutoff, total_lower, l
 
 def cutoff_bounds(round_, phase, *, lock=False):
     """Derive earliest/latest cutoff from real opening commit bounds."""
+    def read_rounds():
+        rounds = round_.pool.rounds.filter(number__lte=round_.number).order_by('number')
+        return list(rounds.select_for_update() if lock else rounds)
+
+    return cutoff_bounds_from_rounds(
+        round_, phase, read_rounds,
+        read_opening=lambda row: _observed_opening(row, lock=lock),
+        read_seal=lambda previous, cutoff, reopened_at: _verified_reopen(previous, cutoff, reopened_at, lock=lock),
+    )
+
+
+def cutoff_bounds_from_rounds(round_, phase, read_rounds, *, read_opening, read_seal):
     if phase not in ('OPEN', 'PARKED'):
         raise ValueError('抢单轮次状态待核对')
     pool = round_.pool
@@ -230,19 +253,18 @@ def cutoff_bounds(round_, phase, *, lock=False):
             or type(pool.window_seconds) is not int or not 1 <= pool.window_seconds <= 86400
             or pool.original_total_deadline != pool.opened_at + timedelta(minutes=timeout_minutes)):
         raise ValueError('抢单总等待快照待核对')
-    rounds = pool.rounds.filter(number__lte=round_.number).order_by('number')
-    rows = list(rounds.select_for_update() if lock else rounds)
+    rows = read_rounds()
     if len(rows) != round_.number or not rows or rows[-1].pk != round_.pk:
         raise ValueError('抢单轮次历史待核对')
     total_lower = total_upper = deadline_upper = previous = None
     for number, row in enumerate(rows, 1):
         if row.number != number:
             raise ValueError('抢单轮次历史待核对')
-        evidence = _observed_opening(row, lock=lock)
+        evidence = read_opening(row)
         lower, upper = _opening_interval(evidence)
         if previous is not None and lower < deadline_upper:
             sealed_lower = _sealed_reopen_lower(previous, row, evidence, cutoff=deadline_upper,
-                                               total_lower=total_lower, lock=lock)
+                                               total_lower=total_lower, read_seal=read_seal)
             if sealed_lower is None or sealed_lower > upper:
                 raise ValueError('重开时间与上轮截止区间交叉，待核对')
             lower = max(lower, sealed_lower)

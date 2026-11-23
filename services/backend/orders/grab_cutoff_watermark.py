@@ -45,10 +45,10 @@ def _facts(rows):
     return len(facts), hashlib.sha256(encoded).hexdigest()
 
 
-def _matches_seal(mark, rows, *, cutoff, observed_at, precision_us):
+def matches_seal(mark, rows, *, cutoff, observed_at, precision_us, identity=None):
     count, digest = _facts(rows)
     return (mark.cutoff_at == cutoff and mark.precision_us == precision_us
-            and mark.clock_vendor == connection.vendor and mark.server_id == _server_id()
+            and mark.clock_vendor == connection.vendor and mark.server_id == (_server_id() if identity is None else identity)
             and mark.observed_at - timedelta(microseconds=mark.precision_us) > mark.cutoff_at
             and observed_at + timedelta(microseconds=precision_us) >= mark.observed_at
             and mark.receipt_count == count and mark.receipt_digest == digest)
@@ -65,7 +65,7 @@ def verified_reopen_seal(round_, *, cutoff, reopened_at, lock):
     receipts = OrderGrabReceiptProbe.objects.filter(round=round_, round_phase='OPEN').order_by('pk')
     rows = receipts.select_for_update() if lock else receipts
     _, precision_us, _ = _db_clock()
-    if _matches_seal(mark, rows, cutoff=cutoff, observed_at=reopened_at, precision_us=precision_us):
+    if matches_seal(mark, rows, cutoff=cutoff, observed_at=reopened_at, precision_us=precision_us):
         return mark
     return None
 
@@ -83,7 +83,7 @@ def verify(round_, rows, *, observed_at, precision_us):
         cutoff = cutoff_bounds(round_, 'OPEN')[1]
     else:
         cutoff = round_.deadline
-    return _matches_seal(mark, rows, cutoff=cutoff, observed_at=observed_at, precision_us=precision_us)
+    return matches_seal(mark, rows, cutoff=cutoff, observed_at=observed_at, precision_us=precision_us)
 
 
 def seal(order_id, *, team, expected_round_id=None):

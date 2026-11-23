@@ -390,9 +390,16 @@ class EscortProfile(models.Model):
             return True
         return self.level_rank >= required.sort_order
 
+    def open_refund_deficits(self, *, lock=False):
+        from wallet.models import RefundDepositDeficit
+        rows = RefundDepositDeficit.objects.filter(account_id=self.account_id, remaining__gt=0)
+        if lock:
+            rows = rows.select_for_update().order_by('created_at', 'pk')
+        return list(rows.values('profile_id', 'remaining', 'created_at'))
+
     def order_acceptance_error(self, service=None, *, club_rules_enabled=None, provider_gender="ANY", allow_refund_recovery=False,
                                refund_recovery_order_id=None, deposit_required_override=None, reservation_confirmed_at=None,
-                               lock_refund_recovery=False, require_current_schedule=True):
+                               lock_refund_recovery=False, require_current_schedule=True, refund_deficits=None):
         """老板指定、客服派单和抢单共用准入；BUSY 不替代并发名额校验。"""
         account = self.account if self.account_id else None
         if (account and (not account.is_active or not account.can_login)) or not self.user.is_active:
@@ -413,11 +420,8 @@ class EscortProfile(models.Model):
         from wallet.refund_deposit import protection_enabled
         recovery_eligible = False
         if protection_enabled() and self.account_id:
-            from wallet.models import RefundDepositDeficit
-            deficit_query = RefundDepositDeficit.objects.filter(account_id=self.account_id, remaining__gt=0)
-            if lock_refund_recovery:
-                deficit_query = deficit_query.select_for_update().order_by('created_at', 'pk')
-            deficits = list(deficit_query.values('profile_id', 'remaining', 'created_at'))
+            deficits = (self.open_refund_deficits(lock=lock_refund_recovery)
+                        if lock_refund_recovery or refund_deficits is None else refund_deficits)
             if deficits:
                 if (reservation_confirmed_at is not None
                         and all(row['profile_id'] == self.pk and row['created_at'] > reservation_confirmed_at
