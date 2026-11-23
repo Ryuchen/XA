@@ -4,8 +4,7 @@ from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 
 from stores.db import transaction
-from .models import (Order, OrderOriginalShareTransfer, OrderPointsFundingReleaseEvidence,
-                     PointsNegotiationPosting)
+from .models import Order, OrderOriginalShareTransfer, PointsNegotiationPosting
 from .points_checkout_test import require_isolated_checkout
 from .points_funding_plan import PointsFundingPlanError
 
@@ -116,12 +115,7 @@ def first_refund_funding_basis(order_id, *, allow_finalized=False):
     if len(postings) != 1:
         raise PointsFundingPlanError('退款后协商记录待核对')
     try:
-        posting = verify_termination_locked(postings[0])
-        evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
-        if not evidence:
-            raise ValidationError('退款后补资释放凭证缺失')
-        from .points_funding_release import verify_release_locked
-        original = verify_release_locked(evidence)
+        posting, evidence, original = verify_termination_locked(postings[0], include_release=True)
         runs = later_addon_runs(order, posting)
         if not runs:
             return original, evidence, runs

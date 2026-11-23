@@ -176,8 +176,8 @@ def _verify_transfer_termination_segments(order, posting, shares):
                 raise ValidationError('积分转单历史履约终止时间不一致')
 
 
-def verify_termination_locked(posting, *, allow_verified_later_final=False):
-    """Reconcile completion and scoped closure even after a later case opens."""
+def verify_termination_locked(posting, *, allow_verified_later_final=False, include_release=False):
+    """Verify closure and optionally return its verified release evidence and plan."""
     from .points_transfer_refund_access import require_refund_or_isolated
     from .points_business_access import permits as service_permits
     if not (service_permits(posting.proposal.case.order, phase='payment', kind='addon') or any(service_permits(posting.proposal.case.order, phase=phase, kind=kind)
@@ -187,10 +187,11 @@ def verify_termination_locked(posting, *, allow_verified_later_final=False):
         raise ValidationError('积分协商终止凭证必须在门店事务内核对')
     posting = verify_posting_locked(posting)
     return _verify_termination_from_verified_posting(posting,
-        allow_verified_later_final=allow_verified_later_final)
+        allow_verified_later_final=allow_verified_later_final, include_release=include_release)
 
 
-def _verify_termination_from_verified_posting(posting, *, allow_verified_later_final=False, facts_only=False):
+def _verify_termination_from_verified_posting(posting, *, allow_verified_later_final=False, facts_only=False,
+                                              include_release=False):
     """Check the recorded closure; caller must first verify the posting."""
     from .points_transfer_refund_access import permits
     if facts_only and not (permits(phase='refund') or permits(phase='settlement')
@@ -307,7 +308,7 @@ def _verify_termination_from_verified_posting(posting, *, allow_verified_later_f
     if (len(audits) != 1 or audits[0].request_body != expected or audits[0].operator_account_id != posting.operator_id
             or audits[0].operator_id != refund.operator_id or audits[0].method != 'POST' or audits[0].status_code != 200):
         raise ValidationError('积分协商退款审计凭证不一致')
-    if OrderPointsFundingAllocation.objects.filter(redemption__order=order).exists():
+    if include_release or OrderPointsFundingAllocation.objects.filter(redemption__order=order).exists():
         evidence = OrderPointsFundingReleaseEvidence.objects.filter(posting=posting).first()
         if not evidence:
             raise ValidationError('积分协商退款补资释放凭证缺失')
@@ -316,7 +317,9 @@ def _verify_termination_from_verified_posting(posting, *, allow_verified_later_f
             _verify_release_facts_locked(evidence)
         else:
             from .points_funding_release import verify_release_locked
-            verify_release_locked(evidence)
+            release_plan = verify_release_locked(evidence)
+            if include_release:
+                return posting, evidence, release_plan
     return posting
 
 
