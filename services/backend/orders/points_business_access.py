@@ -1086,11 +1086,13 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
     receipts = list(PassRefundRepaymentReceipt.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
     if len(receipts) != len(ids):
         raise ValidationError('积分订单到账凭证缺失')
+    from .points_addon_receipt_usage import reuse_history_locked
     try:
         for receipt in receipts:
             if receipt.usage_version is None:
                 raise ValidationError('积分订单到账用途账本缺失')
-            isolated_allocation_state_locked(receipt)
+            with reuse_history_locked(order, {receipt.pk}):
+                isolated_allocation_state_locked(receipt)
     except DjangoValidationError as exc:
         raise ValidationError('积分订单到账用途凭证异常') from exc
     from club_accounts.models import ClubAccount
