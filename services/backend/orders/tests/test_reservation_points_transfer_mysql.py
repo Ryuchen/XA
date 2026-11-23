@@ -259,6 +259,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
         self.run_in_stores(self.exercise_paid_addon_consultation)
 
+    def test_consultation_refund_notice_waits_for_buyer_retirement(self):
+        self.run_in_stores(lambda: self.exercise_paid_addon_consultation(retire_buyer=True))
+
     def transfer_and_join(self):
         self.ok(self.transfer(self.api(self.staff)))
         revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
@@ -349,7 +352,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
                        SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
                        AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True, ADDON_REFUND_NOTICE_RECOVERY_ENABLED=True)
-    def exercise_paid_addon_consultation(self):
+    def exercise_paid_addon_consultation(self, *, retire_buyer=False):
         PayrollEventBarrier.objects.get_or_create(pk=1)
         self.transfer_and_join()
         transfer = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id).last_transfer
@@ -419,8 +422,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          self.funding_before)
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
         refund, refund_waits = self.execute_consultation_addon_refund(staff, row, payment, proposal, events_before)
-        notice_wait, messages = self.recover_consultation_addon_refund_notices(refund)
-        paid_addon = self.settle_consultation_addon_refund(staff, transfer, refund)
+        if retire_buyer:
+            paid_addon = self.settle_consultation_addon_refund(staff, transfer, refund)
+            with patch('django.utils.timezone.now', return_value=paid_addon.settled_at + timedelta(minutes=1)):
+                notice_wait, messages = self.recover_notices_during_buyer_retirement(refund)
+        else:
+            notice_wait, messages = self.recover_consultation_addon_refund_notices(refund)
+            paid_addon = self.settle_consultation_addon_refund(staff, transfer, refund)
         print(f'{self.store.slug} order={self.order_id} addon_payment={payment.pk} addon_segment={payment.intent.segment_id} '
               f'chat_message={message.pk} aftersale={row.pk} proposal={proposal["id"]} refund={refund.pk} '
               f'buyer_refund_transaction={refund.buyer_transaction_id} payroll_wait={payroll_waited} '
@@ -543,11 +551,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         ])
         messages = Message.objects.filter(related_order_id=self.order_id, title='加购退款已处理')
         self.assertFalse(messages.exists())
-
-        def recover_notices():
-            return recover_addon_refund_notices.apply(headers={'store_slug': self.store.slug}, throw=True).result
-
-        recovered, waited = self.while_funding_reads_order(recover_notices, funding_units=1100)
+        recovered, waited = self.while_funding_reads_order(self.recover_refund_notices, funding_units=1100)
         self.assertEqual(recovered, 2)
         deliveries = list(notices.values_list('account_id', 'message_id', 'completed_at', 'skipped_reason'))
         self.assertTrue(all(message_id and completed and not skipped for _, message_id, completed, skipped in deliveries))
@@ -560,12 +564,92 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                              (message_ids[account.pk], self.order_id, 'CURRENT'))
         denied = self.api(self.original).get(f'/api/messages/{message_ids[self.replacement.pk]}/')
         self.assertEqual(denied.data['code'], 404)
-        self.assertEqual(recover_notices(), 0)
+        self.assertEqual(self.recover_refund_notices(), 0)
         for intent_id, *_ in pending:
             deliver_addon_refund_notice(intent_id)
         self.assertEqual(list(notices.values_list('account_id', 'message_id', 'completed_at', 'skipped_reason')), deliveries)
         self.assertEqual(messages.count(), 2)
         return waited, list(message_ids.values())
+
+    def recover_refund_notices(self):
+        return recover_addon_refund_notices.apply(headers={'store_slug': self.store.slug}, throw=True).result
+
+    def recover_notices_during_buyer_retirement(self, refund):
+        user = make_console_user(['user:retire', 'wallet:adjust'])
+        operator = get_or_create_account_for_legacy_user(user)
+        user.admin_membership.account = operator
+        user.admin_membership.save(update_fields=['account'])
+        retirement = self.api(operator)
+        self.buyer.phone = '13800001234'
+        self.buyer.is_phone_verified = True
+        self.buyer.set_password('isolated-buyer-password')
+        self.buyer.save(update_fields=['phone', 'is_phone_verified', 'password'])
+        buyer = self.api(self.buyer)
+        cycle = self.buyer.business_cycle
+        wallet = Wallet.objects.get(account=self.buyer)
+        # Clear the remaining isolated test credit through its regular ledger entry.
+        self.ok(retirement.post(f'/api/admin/wallets/{wallet.pk}/adjust/', {'amount': -wallet.balance,
+            'remark': '冲回隔离测试本金及赠额', 'client_request_id': 'consultation-notice-retire-adjust'}, format='json'))
+        adjustment = wallet.transactions.get(tx_type=Transaction.TxType.ADJUST, operator_account=operator)
+        self.assertEqual((adjustment.amount, adjustment.balance_before, adjustment.balance_after),
+                         (-wallet.balance, wallet.balance, 0))
+        path = f'/api/admin/users/{self.buyer.pk}/'
+        preview = self.ok(retirement.get(path + 'retire-preview/'))
+        self.assertTrue(preview['can_retire'], preview['facts']['blocking_reasons'])
+        self.assertEqual((preview['facts']['wallet_balance'], preview['facts']['wallet_frozen']), (0, 0))
+        pending = refund.notice_intents.filter(completed_at__isnull=True)
+        self.assertEqual(pending.count(), 2)
+
+        table = ClubAccount._meta.db_table
+        attempts = Queue()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with transaction.atomic(using=self.store.database_alias):
+                retired = self.ok(retirement.post(path + 'retire/', {'confirm': True, 'reason': '隔离退店周期核对',
+                    'confirmation_token': preview['confirmation_token']}, format='json'))
+                self.assertEqual(retired['business_cycle'], cycle + 1)
+                recovery = pool.submit(self.independent_request, self.recover_refund_notices,
+                    self.observe_lock_attempt(attempts, table, 'for update', account_id=self.buyer.pk))
+                waited = self.wait_for_lock(recovery, attempts, table=table)
+            self.assertEqual(recovery.result(timeout=15), 2)
+
+        self.buyer.refresh_from_db()
+        self.assertEqual((self.buyer.business_cycle, self.buyer.license_membership_active), (cycle + 1, False))
+        audit = RetirementAudit.objects.get(account=self.buyer, business_cycle=cycle)
+        self.assertEqual(audit.operator_id, operator.pk)
+        self.assertEqual(buyer.get('/api/messages/').status_code, 401)
+        skipped = refund.notice_intents.get(account=self.buyer)
+        self.assertEqual(skipped.business_cycle, cycle)
+        self.assertIsNotNone(skipped.completed_at)
+        self.assertIsNone(skipped.message_id)
+        self.assertIn('周期已变化', skipped.skipped_reason)
+        provider = refund.notice_intents.get(account=self.replacement)
+        message = self.ok(self.api(self.replacement).get(f'/api/messages/{provider.message_id}/'))
+        self.assertEqual((message['related_order_id'], message['cycle_relation']), (self.order_id, 'CURRENT'))
+        rejoined = APIClient(HTTP_HOST=self.store_host)
+        credentials = {'audience': 'boss', 'username': self.buyer.username, 'password': 'isolated-buyer-password'}
+        delivered_codes = []
+        login = '/api/users/password-login/'
+        with patch('users.password_login.send_verification_code', side_effect=lambda _, code: delivered_codes.append(code)):
+            challenge = self.ok(rejoined.post(login, credentials, format='json'))
+            self.assertTrue(challenge['requiresSms'])
+            signed = self.ok(rejoined.post(login, {**credentials, 'smsChallenge': challenge['smsChallenge'],
+                'smsCode': delivered_codes[0]}, format='json'))
+        rejoined.credentials(HTTP_AUTHORIZATION='Bearer ' + signed['token'])
+        fresh = self.ok(rejoined.get('/api/messages/', {'type': 'ORDER'}))
+        self.assertFalse(any(message['related_order_id'] == self.order_id and message['title'] == skipped.title
+                             for message in fresh['messages']))
+        self.buyer.refresh_from_db()
+        self.assertEqual((self.buyer.business_cycle, self.buyer.license_membership_active), (cycle + 1, True))
+        self.assertEqual(buyer.get('/api/messages/').status_code, 401)
+        self.assertEqual(self.recover_refund_notices(), 0)
+        deliver_addon_refund_notice(skipped.pk)
+        self.assertEqual(list(Message.objects.filter(related_order_id=self.order_id, title=skipped.title)
+                              .values_list('pk', flat=True)), [provider.message_id])
+        self.assertEqual(list(refund.payment.refund_records.values_list('pk', 'amount')), [(refund.pk, 500)])
+        self.assertEqual(Wallet.objects.get(pk=wallet.pk).balance, 0)
+        print(f'{self.store.slug} refund={refund.pk} adjustment={adjustment.pk} buyer_retirement={audit.pk} cycle={cycle}->{cycle + 1} '
+              f'skipped_notice={skipped.pk} retirement_wait={waited}', flush=True)
+        return waited, [provider.message_id]
 
     def settle_consultation_addon_refund(self, staff, transfer, refund):
         first_report = self.approve_report(self.original, transfer.previous_segment_id)
