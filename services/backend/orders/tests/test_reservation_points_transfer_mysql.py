@@ -270,7 +270,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None) and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None),
                 'Requires a registered disposable Redis broker and independent MySQL control instance')
-    def test_consultation_refund_notices_recover_on_independent_worker(self):
+    def test_consultation_refund_notices_recover_on_independent_beat_and_worker(self):
+        import re
+        import shelve
+
         from celery import Celery
         from stores.test_certificate_admission_mysql import _celery_process, _registered_redis_urls
 
@@ -294,11 +297,20 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         directory = Path(os.environ['XA_SA14_MYSQL_REGISTRATION']).resolve().parent
         work = Path(mkdtemp(prefix='addon-refund-worker-', dir=directory))
         queue = f'xa_sa14_cli_{uuid4().hex}'
+        beat_entry = 'recover-addon-refund-notices'
+        schedule = work / 'celerybeat-schedule'
         env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.certificate_celery_test_settings',
                'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media'),
-               'ADDON_REFUND_NOTICE_RECOVERY_ENABLED': '1', 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED': '1'}
+               'XA_SA14_CELERY_BEAT_ENTRY': beat_entry, 'ADDON_REFUND_NOTICE_RECOVERY_ENABLED': '1',
+               'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED': '1'}
         command = ['worker', '-P', 'solo', '-l', 'INFO', '--without-mingle', '--without-gossip', '--without-heartbeat']
         task_name = recover_addon_refund_notices.name
+        interval = settings.CELERY_BEAT_SCHEDULE[beat_entry]['schedule']
+        self.assertEqual(settings.CELERY_BEAT_SCHEDULE[beat_entry]['task'], task_name)
+        self.assertEqual(interval, 60.0)
+        sent = re.compile(re.escape(task_name) + r' sent\. id->([0-9a-f-]{36})')
+        seen = set()
+        beat_log = work / 'beat.log'
         print(f'加购退款通知 worker 日志目录 {work.name}', flush=True)
 
         def wait_until_ready(worker, log):
@@ -314,15 +326,27 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                                  task_default_routing_key=queue, broker_transport_options={'global_keyprefix': queue + ':'},
                                  result_backend_transport_options={'global_keyprefix': queue + ':'})
 
-            def dispatch_periodic(expected):
-                parent = publisher.send_task(task_name, queue=queue)
-                fanout = parent.get(timeout=20)
+            def receive_scheduled_dispatch(worker, beat, expected):
+                deadline = monotonic() + interval + 20
+                while monotonic() < deadline:
+                    self.assertIsNone(worker.poll(), f'退款通知 worker 提前退出，见 {work}')
+                    self.assertIsNone(beat.poll(), f'退款通知 Beat 提前退出，见 {beat_log}')
+                    task_id = next((item for item in sent.findall(beat_log.read_text()) if item not in seen), None)
+                    if task_id:
+                        observed = monotonic()
+                        break
+                    sleep(.15)
+                else:
+                    self.fail(f'退款通知 Beat 未在规定时限派发，见 {beat_log}')
+                seen.add(task_id)
+                fanout = publisher.AsyncResult(task_id).get(timeout=20)
                 self.assertEqual((fanout['enqueue_unknown'], fanout['directory_fallback']), ([], False))
                 self.assertCountEqual([job['store'] for job in fanout['stores']], list(expected))
                 results = {job['store']: publisher.AsyncResult(job['task_id']).get(timeout=20)
                            for job in fanout['stores']}
                 self.assertEqual(results, expected)
-                print(f'退款通知父任务 {parent.id} 子任务 {fanout["stores"]} 扫描数 {results}', flush=True)
+                print(f'退款通知 Beat 父任务 {task_id} 子任务 {fanout["stores"]} 扫描数 {results}', flush=True)
+                return observed
 
             log = work / 'worker-first.log'
             with _celery_process(command, env=env, log=log) as worker:
@@ -339,9 +363,18 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             with _celery_process(command, env=env, log=log) as restarted:
                 wait_until_ready(restarted, log)
                 print(f'退款通知 worker 重启 PID={restarted.pid}', flush=True)
-                dispatch_periodic({'shenglang': 0, 'xinan': 2})
-                delivered = self.refund_notice_worker_facts(cases)
-                dispatch_periodic({'shenglang': 0, 'xinan': 0})
+                started = monotonic()
+                with _celery_process(['beat', '-l', 'DEBUG', '--schedule', str(schedule)], env=env, log=beat_log) as beat:
+                    first_dispatch = receive_scheduled_dispatch(restarted, beat, {'shenglang': 0, 'xinan': 2})
+                    self.assertGreaterEqual(first_dispatch - started, interval - 2)
+                    delivered = self.refund_notice_worker_facts(cases)
+                    second_dispatch = receive_scheduled_dispatch(restarted, beat, {'shenglang': 0, 'xinan': 0})
+                    self.assertAlmostEqual(second_dispatch - first_dispatch, interval, delta=5)
+                    print(f'退款通知 Beat PID={beat.pid} 首次派发 {first_dispatch - started:.2f}s '
+                          f'两轮间隔 {second_dispatch - first_dispatch:.2f}s', flush=True)
+                self.assertEqual(beat.returncode, 0)
+                with shelve.open(str(schedule), flag='r') as saved:
+                    self.assertEqual(saved['entries'][beat_entry].total_run_count, 2)
             self.assertEqual(restarted.returncode, 0)
             self.assertEqual(self.refund_notice_worker_facts(cases), delivered)
 

@@ -577,7 +577,8 @@ class CertificateAdmissionMySQLTests(TransactionTestCase):
         worker_log = work / 'worker.log'
         queue = f'xa_sa14_cli_{uuid4().hex}'
         env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.certificate_celery_test_settings',
-               'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media')}
+               'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media'),
+               'XA_SA14_CELERY_BEAT_ENTRY': 'confirm-member-consumption'}
         key = 'confirm-member-consumption'
         entry = settings.CELERY_BEAT_SCHEDULE[key]
         interval = entry['schedule']

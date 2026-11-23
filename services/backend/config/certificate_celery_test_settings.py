@@ -35,7 +35,10 @@ CELERY_TASK_DEFAULT_ROUTING_KEY = _queue
 CELERY_TASK_QUEUES = (Queue(_queue, Exchange(_queue), routing_key=_queue),)
 CELERY_BROKER_TRANSPORT_OPTIONS = {'global_keyprefix': _queue + ':'}
 CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {'global_keyprefix': _queue + ':'}
-CELERY_BEAT_SCHEDULE = {'confirm-member-consumption': CELERY_BEAT_SCHEDULE['confirm-member-consumption']}
+_beat_entry = os.environ.get('XA_SA14_CELERY_BEAT_ENTRY', 'confirm-member-consumption')
+if _beat_entry not in {'confirm-member-consumption', 'recover-addon-refund-notices'}:
+    raise ImproperlyConfigured('Celery CLI 只能调度已登记的隔离验收任务')
+CELERY_BEAT_SCHEDULE = {_beat_entry: CELERY_BEAT_SCHEDULE[_beat_entry]}
 CELERY_WORKER_ENABLE_REMOTE_CONTROL = False
 
 MEDIA_ROOT = _media
