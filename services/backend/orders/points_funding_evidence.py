@@ -62,6 +62,7 @@ class VerifiedOrderFundingWithAllocations(VerifiedOrderFunding):
 class VerifiedFirstRefundFunding(VerifiedOrderFundingWithAllocations):
     plan: 'RefundedFunding'
     addon_history: tuple[dict, ...]
+    last_addon_run_id: int | None
 
 
 def verified_order_allocations_locked(order, *, pending_followup_posting_id=None, allocation_ids=None,
@@ -639,6 +640,7 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
             if first_refund_basis is not None:
                 from .points_negotiation_preview import RefundedFunding
                 if isinstance(plan, RefundedFunding):
-                    return VerifiedFirstRefundFunding(*result, plan, verified_addon_history)
+                    return VerifiedFirstRefundFunding(*result, plan, verified_addon_history,
+                                                      later_runs[-1].pk if later_runs else None)
             return VerifiedOrderFundingWithAllocations(*result)
         return VerifiedOrderFunding(plan.additional_store_funding_units, total, remaining, remaining == 0)

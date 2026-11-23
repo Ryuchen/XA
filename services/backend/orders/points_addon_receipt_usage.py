@@ -246,7 +246,8 @@ def prelock(order):
                         points_addon_snapshot__isnull=False).exists():
                     raise ValidationError('该加购退款到账用途尚未接入')
             try:
-                isolated_allocation_state_locked(receipt)
+                with reuse_history_locked(order, {receipt.pk}):
+                    isolated_allocation_state_locked(receipt)
             except DjangoValidationError as exc:
                 raise ValidationError('加购退款到账用途凭证异常') from exc
     return involved

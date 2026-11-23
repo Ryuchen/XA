@@ -767,13 +767,17 @@ def _record_after_main_refund(order, *, refund=None, handover=None, payment=None
     else:
         verified = verify_run(run, _skip_usage=formal)
     if formal:
-        from users.receipt_usage_sources import record_first_addon_release_locked, verify_allocations_locked
-        rows = list(run.releases.select_related('allocation__receipt', 'run').order_by('allocation__receipt_id', 'pk'))
-        touched = set()
-        for row in rows:
-            if row.allocation.receipt.usage_version is not None:
+        from users.receipt_usage_sources import (record_first_addon_release_locked,
+                                                 record_first_addon_releases_locked, verify_allocations_locked)
+        from .points_addon_receipt_usage import reuse_history_locked
+        rows = [row for row in run.releases.select_related('allocation__receipt', 'run')
+                .order_by('allocation__receipt_id', 'pk') if row.allocation.receipt.usage_version is not None]
+        if formal_refund and not transferred and len(rows) > 1:
+            record_first_addon_releases_locked(order, rows)
+        else:
+            for row in rows:
                 record_first_addon_release_locked(row)
-                touched.add(row.allocation.receipt_id)
-        for receipt_id in sorted(touched):
-            verify_allocations_locked(receipt_id)
+        for receipt_id in sorted({row.allocation.receipt_id for row in rows}):
+            with reuse_history_locked(order, {receipt_id}):
+                verify_allocations_locked(receipt_id)
     return verified

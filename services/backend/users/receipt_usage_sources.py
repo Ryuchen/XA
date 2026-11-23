@@ -923,14 +923,27 @@ def record_third_addon_release_locked(row):
                          amount=amount, source_digest=digest)
 
 
-def record_first_addon_release_locked(row):
+def _first_addon_release_event_locked(row):
     if row._state.db != transaction.get_connection().alias:
         raise ValidationError('加购退款释放不属于当前门店')
     receipt = _locked_receipt(row.allocation.receipt_id)
     _require_current_unlocked_reads()
     kind, key, request, amount, digest = _addon_release_facts(row)
-    return append_locked(receipt.pk, request_key=request, kind=kind, allocation_key=key,
-                         amount=amount, source_digest=digest)
+    return dict(receipt_id=receipt.pk, request_key=request, kind=kind, allocation_key=key,
+                amount=amount, source_digest=digest)
+
+
+def record_first_addon_release_locked(row):
+    return append_locked(**_first_addon_release_event_locked(row))
+
+
+def record_first_addon_releases_locked(order, rows):
+    """Check persisted sources together before any append changes a receipt version."""
+    from orders.points_addon_receipt_usage import reuse_history_locked
+    with reuse_history_locked(order, {row.allocation.receipt_id for row in rows}):
+        events = [_first_addon_release_event_locked(row) for row in rows]
+    for event in events:
+        append_locked(**event)
 
 
 def record_followup_release_locked(row):
