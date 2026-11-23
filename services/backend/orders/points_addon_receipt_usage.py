@@ -40,15 +40,23 @@ def reuse_history_locked(order, receipt_ids):
         _history_reads.reset(token)
 
 
-def _read_history(rebuild, record, *, read_receipt_id, _event_history):
+def _history_scope(read_receipt_id, record):
     state = _history_reads.get()
     if state is None:
-        return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+        return None
     connection, blocks, store, capability, locked_order_id, receipts, results = state
     if (read_receipt_id not in receipts or record._state.db != connection.alias
             or transaction.get_connection() is not connection or tuple(connection.atomic_blocks) != blocks
             or current_store() is not store or _points_scope.get() != capability):
+        return None
+    return locked_order_id, results
+
+
+def _read_history(rebuild, record, *, read_receipt_id, _event_history):
+    scope = _history_scope(read_receipt_id, record)
+    if scope is None:
         return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
+    locked_order_id, results = scope
     order_id = record.order_id if rebuild is _refund_facts else record.intent.order_id
     if order_id != locked_order_id:
         return rebuild(record, read_receipt_id=read_receipt_id, _event_history=_event_history)
