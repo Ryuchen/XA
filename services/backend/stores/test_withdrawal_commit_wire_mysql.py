@@ -1,4 +1,4 @@
-"""One-shot MySQL reply loss on an explicitly registered test shop connection."""
+"""One-shot MySQL reply loss on explicitly registered test connections."""
 from select import select
 import socket
 from socketserver import BaseRequestHandler, ThreadingTCPServer
@@ -25,6 +25,7 @@ from stores.models import (PlatformAccount, PlatformAuditEvent, PlatformOtpCrede
                            PlatformWithdrawalAuditReceipt, Store)
 from wallet.models import IdempotencyKey, SystemConfig, Transaction, WithdrawalPlatformEvent, WithdrawalRelease, WithdrawRequest
 from wallet.services import get_wallet
+
 
 def _receive_exact(source, size):
     data = bytearray()
@@ -140,15 +141,18 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
             staff.admin_membership.save(update_fields=['account'])
             self.bind_otp(account)
         self.staff = self.sign_in('admin.esports.club', '/api/admin/auth/password-login', f'xinan/{account.username}')
-        self.finance = PlatformAccount(username='wire-platform-finance')
-        self.finance.set_password(self.password)
-        self.finance.save()
-        PlatformRoleGrant.objects.create(account=self.finance, role='FINANCE', scope_slug='xinan')
-        PlatformOtpCredential.objects.create(account=self.finance, secret_ciphertext=encrypt_secret(self.otp_secret))
-        self.financial = self.sign_in('admin.esports.club', '/api/admin/auth/password-login', self.finance.username)
+        self.finance, self.financial = self.sign_in_finance('wire-platform-finance')
 
     def bind_otp(self, account):
         OtpCredential.objects.create(account=account, secret_ciphertext=encrypt_secret(self.otp_secret))
+
+    def sign_in_finance(self, username):
+        account = PlatformAccount(username=username)
+        account.set_password(self.password)
+        account.save()
+        PlatformRoleGrant.objects.create(account=account, role='FINANCE', scope_slug='xinan')
+        PlatformOtpCredential.objects.create(account=account, secret_ciphertext=encrypt_secret(self.otp_secret))
+        return account, self.sign_in('admin.esports.club', '/api/admin/auth/password-login', account.username)
 
     def sign_in(self, host, path, username, **hints):
         client = APIClient(HTTP_HOST=host)
@@ -165,9 +169,11 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
         client.credentials(HTTP_AUTHORIZATION='Bearer ' + response.data['data']['token'])
         return client
 
-    def interrupt_commit(self, operation, *, after_commit, platform=False, encrypted=False):
+    def interrupt_commit(self, operation, *, after_commit, write_model=IdempotencyKey, encrypted=False):
         self.assertTrue(after_commit or not encrypted, 'The command-before-server control uses the plain test connection')
-        connection = connections['store_b']
+        self.assertIn(write_model, (IdempotencyKey, WithdrawalPlatformEvent, PlatformWithdrawalAuditReceipt))
+        alias = 'default' if write_model is PlatformWithdrawalAuditReceipt else 'store_b'
+        connection = connections[alias]
         require_disposable_mysql(connection)
         self.assertTrue(connection.get_autocommit())
         port = connection.settings_dict['PORT']
@@ -175,8 +181,8 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
         original_commit = connection._commit
         client_errors = []
         commit_ready = False
-        table = WithdrawalPlatformEvent._meta.db_table if platform else IdempotencyKey._meta.db_table
-        verb = 'INSERT INTO' if platform else 'UPDATE'
+        table = write_model._meta.db_table
+        verb = 'UPDATE' if write_model is IdempotencyKey else 'INSERT INTO'
         with ThreadingTCPServer(('127.0.0.1', 0), _CommitRelay) as relay:
             relay.daemon_threads = True
             relay.upstream = ('127.0.0.1', int(port))
@@ -203,7 +209,7 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
                 if not commit_ready:
                     return original_commit()
                 commit_ready = False
-                self.assertIsNone(relay.target_peer, 'Expected a single outer store COMMIT')
+                self.assertIsNone(relay.target_peer, 'Expected a single outer COMMIT for the target write')
                 raw = connection.connection._sock
                 self.assertEqual(isinstance(raw, SSLSocket), encrypted)
                 self.assertEqual(raw.getpeername(), relay.server_address)
@@ -230,14 +236,25 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
             self.assertEqual(relay.observed, expected)
         self.assertEqual(client_errors, [2013])
         self.assertEqual(response.status_code, 503, response.data)
-        self.assertEqual(response.data['errorCode'], 'WITHDRAWAL_UNAVAILABLE')
+        self.assertEqual(response.data['errorCode'], 'AUDIT_UNAVAILABLE' if alias == 'default' else 'WITHDRAWAL_UNAVAILABLE')
         self.assertNotIn('fundResult', response.data)
         self.assertNotIn('data', response.data)
-        print(f'wire cut {" ".join(relay.observed)} driver=2013 http=503 alias=store_b', flush=True)
+        print(f'wire cut {" ".join(relay.observed)} driver=2013 http=503 alias={alias}', flush=True)
 
     def submit(self, slug, request_id, amount):
         return self.clients[slug].post(self.path, {'client_request_id': request_id, 'amount': amount,
             'payee_method': 'WECHAT', 'payee_account': f'isolated-{slug}', 'payee_name': '隔离收款人'}, format='json')
+
+    def reviewed_application(self, request_id):
+        response = self.submit('xinan', request_id, 20000)
+        self.assertEqual(response.data['code'], 0, response.data)
+        row_id = response.data['data']['request']['id']
+        claim = self.staff.post(f'/api/admin/withdrawals/{row_id}/claim/').data
+        self.assertEqual(claim['code'], 0, claim)
+        reviewed = self.staff.post(f'/api/admin/withdrawals/{row_id}/approve/',
+            {'expected_claimed_at': claim['data']['claimed_at']}, format='json')
+        self.assertEqual(reviewed.data['code'], 0, reviewed.data)
+        return row_id
 
     def facts(self, slug, request_status, ledger_status, balance, frozen):
         with store_context(self.stores[slug]):
@@ -336,13 +353,7 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
     def check_platform_recovery(self, *, encrypted):
         apply_id = 'wire-platform-source'
         peer_id = self.peer_application(apply_id)
-        response = self.submit('xinan', apply_id, 20000)
-        row_id = response.data['data']['request']['id']
-        claim = self.staff.post(f'/api/admin/withdrawals/{row_id}/claim/').data
-        self.assertEqual(claim['code'], 0, claim)
-        reviewed = self.staff.post(f'/api/admin/withdrawals/{row_id}/approve/',
-            {'expected_claimed_at': claim['data']['claimed_at']}, format='json')
-        self.assertEqual(reviewed.data['code'], 0, reviewed.data)
+        row_id = self.reviewed_application(apply_id)
         path = f'/api/admin/platform/withdrawals/xinan/{row_id}'
         store = self.stores['xinan']
         for action, status, ledger, balance, frozen, fields in (
@@ -353,7 +364,7 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
                 request_id = f'wire-platform-{action}'
                 payload = {'client_request_id': request_id, **fields}
                 self.interrupt_commit(lambda: self.financial.post(f'{path}/{action}', payload, format='json'),
-                                      after_commit=True, platform=True, encrypted=encrypted)
+                                      after_commit=True, write_model=WithdrawalPlatformEvent, encrypted=encrypted)
                 row = self.facts('xinan', status, ledger, balance, frozen)
                 with store_context(store):
                     event = WithdrawalPlatformEvent.objects.get(withdrawal=row, request_id=request_id)
@@ -388,3 +399,80 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
             self.assertEqual(WithdrawalPlatformEvent.objects.filter(withdrawal_id=row_id).count(), 2)
             titles = Message.objects.filter(recipient_account=self.owners['xinan']).values_list('title', flat=True)
             self.assertCountEqual(titles, ['提现申请已提交', '提现门店初审通过', '提现平台终审通过', '提现审核未通过'])
+
+    def test_manual_audit_recovers_after_plain_control_commit_confirmation_is_lost(self):
+        self.check_manual_audit_recovery(after_commit=True)
+
+    def test_manual_audit_recovers_after_encrypted_control_commit_confirmation_is_lost(self):
+        self.check_manual_audit_recovery(after_commit=True, encrypted=True)
+
+    def test_manual_audit_creates_only_after_retry_if_control_commit_was_not_sent(self):
+        self.check_manual_audit_recovery(after_commit=False)
+
+    def check_manual_audit_recovery(self, *, after_commit, encrypted=False):
+        apply_id = 'wire-manual-audit-source'
+        peer_id = self.peer_application(apply_id)
+        row_id = self.reviewed_application(apply_id)
+        endpoint = f'/api/admin/platform/withdrawals/xinan/{row_id}'
+        request_id = 'wire-manual-audit-original-approval'
+        self.interrupt_commit(lambda: self.financial.post(f'{endpoint}/approve', {'client_request_id': request_id}, format='json'),
+                              after_commit=True, write_model=WithdrawalPlatformEvent)
+        store = self.stores['xinan']
+        row = self.facts('xinan', 'PLATFORM_APPROVED', 'PENDING', 80000, 20000)
+        with store_context(store):
+            event = WithdrawalPlatformEvent.objects.get(withdrawal=row, request_id=request_id)
+            notice_ids = list(Message.objects.filter(recipient_account=self.owners['xinan']).order_by('id').values_list('id', flat=True))
+            self.assertEqual(len(notice_ids), 3)
+        reviewer, recovery = self.sign_in_finance('wire-audit-recovery-finance')
+        receipts = PlatformWithdrawalAuditReceipt.objects.filter(store=store, tenant_event_id=event.pk).select_related('audit')
+        audits = PlatformAuditEvent.objects.filter(action='withdraw.approve', target_store_slug=store.slug, target_id=str(row_id))
+        path = f'{endpoint}/audit-recover'
+        payload = {'client_request_id': request_id, 'event_id': event.pk}
+
+        def recover():
+            return recovery.post(path, payload, format='json')
+
+        def audit_status():
+            response = recovery.get(path)
+            self.assertEqual(response.status_code, 200, response.data)
+            found, = response.data['data']['events']
+            self.assertEqual((found['event_id'], found['request_id']), (event.pk, request_id))
+            return found['audit_status']
+
+        self.assertEqual(audit_status(), 'MISSING')
+        self.assertFalse(receipts.exists() or audits.exists())
+        self.interrupt_commit(recover, after_commit=after_commit, write_model=PlatformWithdrawalAuditReceipt, encrypted=encrypted)
+        observed = receipts.get().audit_id if after_commit else None
+        if not after_commit:
+            self.assertFalse(receipts.exists() or audits.exists())
+        self.assertEqual(audit_status(), 'RECORDED' if after_commit else 'MISSING')
+        wrong = recovery.post(path, {**payload, 'client_request_id': 'other-wire-audit-operation'}, format='json')
+        self.assertEqual(wrong.status_code, 409)
+        self.assertEqual(receipts.count(), int(after_commit))
+        for created in (not after_commit, False):
+            reply = recover()
+            receipt = receipts.get()
+            self.assertEqual(reply.status_code, 200, reply.data)
+            self.assertEqual(reply.data['data'], {'audit_recorded': True, 'audit_status': 'RECORDED', 'event_id': event.pk,
+                'audit_id': receipt.audit_id, 'recovered': created})
+            if observed is not None:
+                self.assertEqual(receipt.audit_id, observed)
+            observed = receipt.audit_id
+        audit = audits.get()
+        self.assertEqual((audit.pk, audit.account_id), (observed, self.finance.pk))
+        self.assertEqual((audit.detail['event_id'], audit.detail['request_id'], audit.detail['request_fingerprint'], audit.detail['recovered_by']),
+            (event.pk, request_id, event.request_fingerprint, str(reviewer.pk)))
+        self.assertEqual(audit_status(), 'RECORDED')
+        result = self.facts('xinan', 'PLATFORM_APPROVED', 'PENDING', 80000, 20000)
+        self.assertEqual(result.transaction_id, row.transaction_id)
+        with store_context(store):
+            self.assertEqual(list(WithdrawalPlatformEvent.objects.filter(withdrawal=result).values_list('pk', flat=True)), [event.pk])
+            self.assertFalse(WithdrawalRelease.objects.filter(withdrawal=result).exists())
+            self.assertEqual(list(Message.objects.filter(recipient_account=self.owners['xinan']).order_by('id').values_list('id', flat=True)), notice_ids)
+        self.assert_peer(peer_id, apply_id)
+        peer_path = f'/api/admin/platform/withdrawals/shenglang/{peer_id}/audit-recover'
+        self.assertEqual(recovery.get(peer_path).status_code, 404)
+        self.assertEqual(recovery.post(peer_path, payload, format='json').status_code, 404)
+        print(f'manual audit wire recovery store=xinan withdrawal={row_id} event={event.pk} request={request_id} '
+              f'audit={audit.pk} original_actor={self.finance.pk} recovery_actor={reviewer.pk} committed={after_commit} '
+              f'tls={encrypted} ledger={row.transaction_id}/PENDING balance=80000 frozen=20000 peer={peer_id}', flush=True)
