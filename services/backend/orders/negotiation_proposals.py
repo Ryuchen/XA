@@ -464,11 +464,9 @@ def _proposal_calculation(order, case, scope, refund_units, requested_terms=None
                 raise ValidationError('积分订单后续协商方案尚未开放')
             from .points_followup_preview import preview_followup
             calculation = preview_followup(case.pk, refund_equivalent_units=refund_units)
-            if formal and calculation['prior_paid']:
-                from .points_followup_termination import endpoint_available
-                if (not endpoint_available(calculation['prior_refund_id'], prior_paid=True)
-                        or calculation['conditional_funding'].remaining_units):
-                    raise ValidationError('已有陪玩结算的后续退款须先完成资金核对')
+            from .points_followup_termination import formal_followup_funding_ready
+            if formal and not formal_followup_funding_ready(calculation):
+                raise ValidationError('已有陪玩结算的后续退款须先完成资金核对')
             if (not formal and not calculation['prior_paid']
                     and not getattr(settings, 'SERVICE_POINTS_UNPAID_FOLLOWUP_AGREEMENT_TESTING', False)):
                 raise ValidationError('原陪玩未结算的后续协商暂仅支持预览')

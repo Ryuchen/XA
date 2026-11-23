@@ -64,6 +64,14 @@ def endpoint_available(prior_refund_id, *, prior_paid=None):
     return all(getattr(settings, key, False) for key in switches)
 
 
+def formal_followup_funding_ready(calculation):
+    """Require full projected funding once one provider's income is posted."""
+    if not calculation['prior_paid']:
+        return True
+    return (calculation['conditional_funding'].remaining_units == 0
+            and endpoint_available(calculation['prior_refund_id'], prior_paid=True))
+
+
 def addon_followup_available(order, previous, *, prior_paid):
     """Expose the corresponding isolated add-on settlement path only when wired."""
     from .addon_settlement import has_paid_addons

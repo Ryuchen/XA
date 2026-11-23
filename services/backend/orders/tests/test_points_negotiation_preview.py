@@ -88,6 +88,22 @@ class RefundFundingCalculationTests(TestCase):
         self.assertEqual((result.remaining_provider_units, result.release_units, result.shortfall_units), (150, 0, 70))
         self.assertEqual(result.releases, ())
 
+    def test_formal_followup_checks_projected_funding_if_prior_provider_was_paid(self):
+        from types import SimpleNamespace
+        from orders.points_followup_termination import formal_followup_funding_ready
+
+        proposal = {'prior_refund_id': 8, 'prior_paid': True,
+                    'conditional_funding': SimpleNamespace(remaining_units=70)}
+        with patch('orders.points_followup_termination.endpoint_available', return_value=True) as available:
+            self.assertFalse(formal_followup_funding_ready(proposal))
+            self.assertTrue(formal_followup_funding_ready({**proposal, 'prior_paid': False}))
+            available.assert_not_called()
+            proposal['conditional_funding'].remaining_units = 0
+            self.assertTrue(formal_followup_funding_ready(proposal))
+            available.assert_called_once_with(8, prior_paid=True)
+            available.return_value = False
+            self.assertFalse(formal_followup_funding_ready(proposal))
+
     def test_user_confirmed_partial_refund_recomputes_unpaid_commission(self):
         # RMB amounts converted to ledger units: 1 yuan = 10 coins = 100 units.
         # The 7.5-yuan points returned do not reduce the 127.5-yuan net coin paid.
@@ -338,6 +354,14 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                     fact = original_amount_facts([assignment.provider_account_id], as_of=timezone.now())[assignment.provider_account_id]
                     # The 1,000-equivalent main refund is offset by the paid 1,000 add-on.
                     self.assertEqual(fact.amount, segment.original_share)
+                    with transaction.atomic(), override_settings(SERVICE_POINTS_FOLLOWUP_PREVIEW_TESTING=True):
+                        AfterSale.objects.filter(pk=case_id).update(
+                            status='OPEN', addon_payment_id=paid.data['data']['payment_id'])
+                        for suffix in ('negotiation-preview/', 'negotiation-funding/'):
+                            response = admin.get(case_path + suffix, {'refund_units': 1000})
+                            self.assertEqual(response.status_code, 400, response.data)
+                            self.assertIn('该售后仅适用于指定加购', response.data['msg'])
+                        transaction.set_rollback(True)
                     from engagement.models import PointLedger
                     with transaction.atomic():
                         refund_ledger = PointLedger.objects.get(order=order, kind='ORDER_POINTS_RETURN')
@@ -1153,6 +1177,15 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                     unpaid_preview = client.get(f'/api/admin/aftersales/{case_id}/negotiation-preview/', {'refund_units': 10})
                     self.assertTrue(unpaid_preview.data['data']['agreement_available'])
                     self.assertTrue(unpaid_preview.data['data']['execution_available'])
+                    funds_url = f'/api/admin/aftersales/{case_id}/negotiation-funding/'
+                    checked = client.get(funds_url, {'refund_units': 10})
+                    self.assertEqual(checked.data['code'], 0, checked.data)
+                    self.assertTrue(checked.data['data']['execution_check_required'])
+                    self.assertTrue(checked.data['data']['executable'])
+                    self.assertEqual(checked.data['data']['providers'], [{
+                        'account_id': accounts[1].pk, 'pending_income_units': 10,
+                        'wallet_units': 0, 'deposit_units': 0, 'shortfall_units': 0,
+                    }])
                     proposal_url = f'/api/admin/aftersales/{case_id}/negotiation-proposal/'
                     proposal_body = {
                         'request_id': 'unpaid-internal-proposal', 'expected_version': 1, 'refund_units': 10,
@@ -1419,6 +1452,17 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                                   public['conditional_funding']['release_units']), (0, 110))
                 self.assertNotIn('conditional_funding_revision', public)
                 self.assertNotEqual(players[1].get(endpoint, {'refund_units': 1000}).status_code, 200)
+                funds_url = f'/api/admin/aftersales/{case_id}/negotiation-funding/'
+                checked = client.get(funds_url, {'refund_units': 1000})
+                self.assertEqual(checked.data['code'], 0, checked.data)
+                self.assertTrue(checked.data['data']['book_amounts_sufficient'])
+                self.assertTrue(checked.data['data']['execution_check_required'])
+                self.assertFalse(checked.data['data']['executable'])
+                self.assertEqual(checked.data['data']['providers'], [{
+                    'account_id': accounts[1].pk, 'pending_income_units': 1000,
+                    'wallet_units': 0, 'deposit_units': 0, 'shortfall_units': 0,
+                }])
+                self.assertEqual(players[1].get(funds_url, {'refund_units': 1000}).status_code, 403)
                 with override_settings(NEGOTIATION_FOLLOWUP_ENABLED=True,
                                        NEGOTIATION_COMPLETED_FOLLOWUP_PREVIEW_ENABLED=True,
                                        NEGOTIATION_COMPLETED_FOLLOWUP_EXECUTION_TESTING=True):

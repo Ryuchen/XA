@@ -53,6 +53,9 @@ def prepare_followup_locked(case_id, proposal_id, *, operator):
         calculation = transfer_followup_preview(case.pk, refund_equivalent_units=proposal.refund_units)
     else:
         calculation = preview_followup(case.pk, refund_equivalent_units=proposal.refund_units)
+        from .points_followup_termination import formal_followup_funding_ready
+        if formal and not formal_followup_funding_ready(calculation):
+            raise ValidationError('已有陪玩结算的后续退款须先完成资金核对')
     if (calculation['provider_terms'] != proposal.provider_terms
             or verified_asset_terms(proposal) != asset_terms(calculation)):
         raise ValidationError('后续协商金额或退款构成已变化')
