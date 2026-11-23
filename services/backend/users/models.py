@@ -464,8 +464,14 @@ class EscortProfile(models.Model):
 
     def wechat_acceptance_error(self):
         account = self.account if self.account_id else None
-        if not account or not account.is_openid_bound or not (account.openid or account.wechat_identities.exists()):
+        if not account or not account.is_openid_bound:
             return '请先绑定本人微信后接单'
+        if not account.openid:
+            has_identity = getattr(self, 'has_wechat_identity', None)
+            if has_identity is None:
+                has_identity = account.wechat_identities.exists()
+            if not has_identity:
+                return '请先绑定本人微信后接单'
         if not (self.wechat_avatar_legacy_exempt or self.wechat_avatar_verified_at):
             return '首次接单前请从本人微信获取头像'
         return ''

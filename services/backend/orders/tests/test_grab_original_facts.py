@@ -139,12 +139,29 @@ class GrabOriginalFactsFlowTest(APITransactionTestCase):
         from wallet.models import ProviderReport
         account = self.accounts[self.provider.pk]
         order = make_order(self.boss, provider=self.provider, provider_account=account,
-                           status='GRABBED', payment_status='PAID')
+                           status='GRABBED', payment_status='PAID', amount=10000, original_amount=10000)
         ProviderReport.objects.create(order=order, provider=self.provider, provider_account=account,
             game_name='隔离双陪入队', amount=100, entry_image='reports/entry/isolated.png')
-        result = original_amount_facts([account.pk], as_of=timezone.now())[account.pk]
-        self.assertIsNone(result.amount)
-        self.assertEqual(result.review_order_ids, (order.pk,))
+        accepted_at = timezone.now()
+        as_of = accepted_at + timedelta(minutes=1)
+        result = original_amount_facts([account.pk], as_of=as_of)[account.pk]
+        self.assertEqual((result.amount, result.review_order_ids), (None, (order.pk,)))
+        attribution = OrderOriginalAttribution.objects.create(
+            order=order, original_amount=order.original_amount, status='ACTIVE',
+        )
+        segment = OrderParticipationSegment.objects.create(
+            attribution=attribution, provider_account=account, slot=1,
+            original_share=order.original_amount, accepted_at=accepted_at,
+        )
+        # An existing segment without a timely start cannot clear a legacy entry report.
+        for started_at in (None, as_of + timedelta(seconds=1)):
+            with self.subTest(started_at=started_at):
+                OrderParticipationSegment.objects.filter(pk=segment.pk).update(started_at=started_at)
+                result = original_amount_facts([account.pk], as_of=as_of)[account.pk]
+                self.assertEqual((result.amount, result.review_order_ids), (None, (order.pk,)))
+        OrderParticipationSegment.objects.filter(pk=segment.pk).update(started_at=as_of)
+        result = original_amount_facts([account.pk], as_of=as_of)[account.pk]
+        self.assertEqual((result.amount, result.review_order_ids), (order.original_amount, ()))
 
     def test_thirty_day_boundary_uses_each_segments_acceptance_time(self):
         order = self.new_order()

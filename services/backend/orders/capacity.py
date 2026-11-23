@@ -25,18 +25,19 @@ def parse_rules(raw):
         raise ValueError('本店接单名额配置异常，请联系管理员核对') from None
 
 
-def current_capacity_rules():
+def current_capacity_rules(*, config_values=None):
     locked = getattr(connection, '_xa_capacity_rule_snapshot', None)
     if connection.in_atomic_block and locked and locked[0] in connection.atomic_blocks:
         # A locking read sees the latest committed value even under MySQL
         # REPEATABLE READ; a later ordinary SELECT could use an older snapshot.
         return parse_rules(locked[1])
-    raw = SystemConfig.objects.filter(key=CONFIG_KEY).values_list('value', flat=True).first()
+    raw = (SystemConfig.objects.filter(key=CONFIG_KEY).values_list('value', flat=True).first()
+           if config_values is None else config_values.get(CONFIG_KEY))
     return parse_rules(raw)
 
 
-def current_capacity_limit():
-    return current_capacity_rules()['max_concurrent_orders']
+def current_capacity_limit(*, config_values=None):
+    return current_capacity_rules(config_values=config_values)['max_concurrent_orders']
 
 
 def ensure_capacity_rule():

@@ -9,13 +9,15 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from club_accounts.models import ClubAccount
+from club_accounts.models import ClubAccount, WechatIdentity
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
-from engagement.models import ClubOperationConfig, PointFundingLot
+from engagement.models import ClubOperationConfig, MemberTag, PointFundingLot, ProviderNaming
+from orders.capacity import CONFIG_KEY as CAPACITY_KEY
 from orders.models import Order, OrderProvider, OrderSegmentSettlementManifest
 from orders.tests.factories import make_order, make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile, EscortSchedule
+from wallet.club_rules import DEPOSIT_TARGET_KEY
 from wallet.models import SystemConfig
 
 
@@ -67,9 +69,63 @@ class ListQueryBoundsTest(APITestCase):
         rows, larger_queries = self.read('/api/users/escorts/')
         self.assertEqual((len(first), len(rows)), (1, 21))
         self.assertLessEqual(larger_queries, queries + 1)
-        # The fixed budget includes current store deposit configuration and
-        # the batched WeChat-identity prefetch and the store capacity setting.
+        # Keep the original ceiling including tenant settings and eligibility.
         self.assertLessEqual(larger_queries, 16)
+
+    @override_settings(PROVIDER_WECHAT_GATE_ENABLED=True)
+    def test_provider_list_refreshes_eligibility_and_preserves_public_labels(self):
+        user, account = self.provider()
+        _, unbound = self.provider()
+        account.is_openid_bound = True
+        account.save(update_fields=['is_openid_bound'])
+        identity = WechatIdentity.objects.create(
+            account=account, channel='OFFICIAL_H5', appid='wx-roster', openid='roster-fixture',
+        )
+        profile = user.escort_profile
+        profile.deposit_mode = 'CASH'
+        profile.deposit_paid = 40000
+        profile.wechat_avatar_legacy_exempt = True
+        profile.save(update_fields=['deposit_mode', 'deposit_paid', 'wechat_avatar_legacy_exempt'])
+        now = timezone.now()
+        visible_name = ProviderNaming.objects.create(
+            provider=account, sponsor=self.boss_account, provider_business_cycle=account.business_cycle,
+            title='当前称号', expires_at=now + timedelta(days=1),
+        )
+        ProviderNaming.objects.create(
+            provider=account, sponsor=self.boss_account, provider_business_cycle=account.business_cycle + 1,
+            title='其他周期的称号', expires_at=now + timedelta(days=2),
+        )
+        tags = [MemberTag.objects.create(
+            account=account, event_key=f'roster-approved-{index}', title=f'已审核 {index}',
+            reviewed_at=now, highlighted=index == 2,
+        ) for index in range(4)]
+        MemberTag.objects.create(account=account, event_key='roster-unreviewed', title='待审核')
+        self.login(self.boss_account)
+
+        rows, query_count = self.read('/api/users/escorts/')
+        self.assertEqual([row['id'] for row in rows], [account.pk])
+        self.assertLessEqual(query_count, 16)
+        self.assertEqual([name['id'] for name in rows[0]['namings']], [visible_name.pk])
+        self.assertEqual(
+            [(tag['id'], tag['highlighted']) for tag in rows[0]['display_tags']],
+            [(tag.pk, tag.highlighted) for tag in reversed(tags[1:])],
+        )
+
+        make_order(self.boss, service=self.service, provider=user, provider_account=account,
+                   status='GRABBED', payment_status='PAID')
+        capacity = SystemConfig.objects.create(key=CAPACITY_KEY, value='{"max_concurrent_orders":1,"version":1}')
+        self.assertEqual(self.read('/api/users/escorts/')[0], [])
+        capacity.value = '{"max_concurrent_orders":2,"version":2}'
+        capacity.save(update_fields=['value'])
+        deposit = SystemConfig.objects.create(
+            key=DEPOSIT_TARGET_KEY, value='{"cash_target":40001,"earnings_target":80000,"version":1}',
+        )
+        self.assertEqual(self.read('/api/users/escorts/')[0], [])
+        deposit.value = '{"cash_target":40000,"earnings_target":80000,"version":2}'
+        deposit.save(update_fields=['value'])
+        self.assertEqual([row['id'] for row in self.read('/api/users/escorts/')[0]], [account.pk])
+        WechatIdentity.objects.filter(pk=identity.pk).update(account=unbound)
+        self.assertEqual(self.read('/api/users/escorts/')[0], [])
 
     def test_provider_list_keeps_legacy_double_and_released_capacity_rules(self):
         full_user, full = self.provider()
