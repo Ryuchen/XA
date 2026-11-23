@@ -3,30 +3,14 @@ from django.conf import settings
 
 from club_accounts.models import ClubAccount
 from club_accounts.provider_lifecycle import (ProviderLifecycleError, ensure_provider_lifecycle,
-    lock_provider_operations, provider_membership_current)
-from stores.db import transaction
+    lock_provider_accounts_for_read, lock_provider_operations, provider_membership_current)
 
 from .state_machine import IllegalTransitionError
 
 
 def lock_incoming_cycles(account_ids):
     """Keep the incoming cycle stable while allowing schedule foreign-key reads."""
-    connection = transaction.get_connection()
-    if not connection.in_atomic_block:
-        raise RuntimeError('转单账号周期必须在门店事务内锁定')
-    ids = sorted(set(account_ids))
-    if not ids:
-        return {}
-    if connection.vendor != 'mysql':
-        return dict(ClubAccount.objects.select_for_update().filter(pk__in=ids,
-            account_type=ClubAccount.AccountType.PROVIDER).order_by('pk').values_list('pk', 'business_cycle'))
-    table = connection.ops.quote_name(ClubAccount._meta.db_table)
-    placeholders = ', '.join(['%s'] * len(ids))
-    with connection.cursor() as cursor:
-        cursor.execute(f'SELECT id, business_cycle FROM {table} WHERE id IN ({placeholders}) '
-                       'AND account_type = %s ORDER BY id LOCK IN SHARE MODE',
-                       [*ids, ClubAccount.AccountType.PROVIDER])
-        return dict(cursor.fetchall())
+    return {pk: account.business_cycle for pk, account in lock_provider_accounts_for_read(account_ids).items()}
 
 
 def capture(commands):

@@ -27,6 +27,29 @@ def _connection():
     return transaction.get_connection()
 
 
+def lock_provider_accounts_for_read(account_ids):
+    """Read current provider identity fields without excluding foreign-key locks."""
+    connection = _connection()
+    if not connection.in_atomic_block:
+        raise ProviderLifecycleError('陪玩账号状态必须在门店事务内锁定')
+    ids = sorted(set(account_ids))
+    if not ids:
+        return {}
+    providers = ClubAccount.objects.using(connection.alias)
+    if connection.vendor == 'mysql':
+        table = connection.ops.quote_name(ClubAccount._meta.db_table)
+        placeholders = ', '.join(['%s'] * len(ids))
+        accounts = providers.raw(
+            f'SELECT id, account_type, business_cycle, is_active, can_login FROM {table} '
+            f'WHERE id IN ({placeholders}) AND account_type = %s ORDER BY id LOCK IN SHARE MODE',
+            [*ids, ClubAccount.AccountType.PROVIDER],
+        )
+    else:
+        accounts = providers.select_for_update().filter(
+            pk__in=ids, account_type=ClubAccount.AccountType.PROVIDER).order_by('pk')
+    return {account.pk: account for account in accounts}
+
+
 def ensure_provider_lifecycle(account):
     """Verify the row exists before a business transaction; never create it."""
     connection = _connection()

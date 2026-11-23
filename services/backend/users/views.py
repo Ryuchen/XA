@@ -899,11 +899,12 @@ class ProviderPassView(APIView):
             point_terms = None
             point_profile = None
             if points_token is not None:
+                from club_accounts.provider_lifecycle import lock_provider_accounts_for_read
                 from engagement.services import locked_profile as locked_points_profile
                 from .pass_points import lock_and_verify
-                locked_account = ClubAccount.objects.select_for_update().get(pk=request.account.pk)
-                if (locked_account.account_type != ClubAccount.AccountType.PROVIDER
-                        or not locked_account.is_active or not locked_account.can_login):
+                locked_account = lock_provider_accounts_for_read([request.account.pk]).get(request.account.pk)
+                if (not locked_account or not locked_account.is_active or not locked_account.can_login
+                        or locked_account.business_cycle != request.account.business_cycle):
                     from rest_framework.exceptions import ValidationError
                     raise ValidationError('陪玩账号状态已变化，请重新登录')
                 point_profile = locked_points_profile(locked_account)

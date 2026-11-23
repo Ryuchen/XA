@@ -15,6 +15,8 @@ from rest_framework.test import APIClient
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
 from common.mysql_test_support import mysql_locking_statements, require_disposable_mysql
+from console.points_redemption_config import save_points_terms
+from engagement.models import MemberProfile, PointLedger
 from orders.models import Order, Reservation
 from orders.reservation_services import find_conflicting_reservations
 from orders.tests import test_assigned_order_reservation_guard as booking_flow
@@ -22,9 +24,12 @@ from orders.tests import test_release_flow as release_flow
 from orders.tests.factories import make_provider, make_service, make_user
 from stores.context import resolve_store, store_context
 from stores.models import Store
-from wallet.models import Wallet
+from users.models import ProviderPassPurchase
+from wallet.models import Transaction, Wallet, get_platform_wallet
+from wallet.services import get_wallet
 
 SCHEDULE = '/api/users/escorts/schedule/'
+PASS = '/api/users/provider-pass/'
 RESERVATIONS = '/api/orders/reservations/'
 PROFILE_TABLE = 'users_escortprofile'
 ACCOUNT_TABLE = 'club_accounts_clubaccount'
@@ -227,4 +232,84 @@ class ReservationTransferScheduleMySQLTest(TransactionTestCase):
             result = transfer.result(timeout=10)
         self.ok(result)
         self.report_wait(waiting, result)
+        self.assert_occupancy(self.replacement, self.original, 1)
+
+    @override_settings(PROVIDER_PASS_POINTS_PAYMENT_ENABLED=True, POINTS_USAGE_SWITCHES_ENABLED=True)
+    def test_points_pass_and_transfer_commit_with_only_one_debit(self):
+        self.run_in_stores(self.exercise_points_pass)
+
+    def exercise_points_pass(self):
+        wallet = get_wallet(account=self.replacement)
+        wallet.balance = 1000
+        wallet.save(update_fields=['balance'])
+        points = MemberProfile.objects.create(account=self.replacement, points_balance=30000)
+        save_points_terms(group_point_hundredths=10000, group_coin_units=10,
+                          max_ratio_basis_points=5000, version=0, audit=lambda *_: None)
+        store_wallet = get_platform_wallet()
+        store_balance = store_wallet.balance
+        escort, staff = self.api(self.replacement), self.api(self.staff)
+        quote = self.ok(escort.post(PASS + 'points-quote/',
+            {'tier': 'BRONZE', 'selected_point_hundredths': 20000}, format='json'))
+        self.assertEqual((quote['daily_price'], quote['discount_units'], quote['payable_units']), (200, 20, 180))
+        payload = {'tier': 'BRONZE', 'days': 1, 'expected_daily_price': 200,
+                   'points_quote_token': quote['quote_token'], 'client_request_id': 'transfer-points-pass'}
+
+        account_locked, profile_locked = Event(), Event()
+        resume_transfer, resume_purchase = Event(), Event()
+        attempts = Queue()
+        observe_profile_lock = self.observe_profile_lock(attempts)
+
+        def pause_transfer(execute, sql, params, many, context):
+            result = observe_profile_lock(execute, sql, params, many, context)
+            query = sql.lower()
+            if not account_locked.is_set() and f'`{ACCOUNT_TABLE}`' in query and 'lock in share mode' in query:
+                self.assertIn(self.replacement.pk, params)
+                account_locked.set()
+                self.assertTrue(resume_transfer.wait(6), '购卡未获得档案锁')
+            return result
+
+        def pause_purchase(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            query = sql.lower()
+            if not profile_locked.is_set() and f'`{PROFILE_TABLE}`' in query and 'for update' in query:
+                profile_locked.set()
+                self.assertTrue(resume_purchase.wait(6), '转单未到达档案锁')
+            return result
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            transfer = pool.submit(self.independent_request,
+                lambda: staff.post(self.transfer_path, self.transfer_payload, format='json'), pause_transfer)
+            try:
+                self.assertTrue(account_locked.wait(3), '转单未读取接替陪玩账号')
+                purchase = pool.submit(self.independent_request,
+                    lambda: escort.post(PASS, payload, format='json'), pause_purchase)
+                self.assertTrue(profile_locked.wait(3), purchase.result().data if purchase.done() else '购卡未加锁档案')
+                resume_transfer.set()
+                waiting = self.wait_for_lock(transfer, attempts)
+            finally:
+                resume_transfer.set()
+                resume_purchase.set()
+            purchase_response = purchase.result(timeout=10)
+            transfer_response = transfer.result(timeout=10)
+        self.ok(purchase_response)
+        self.ok(transfer_response)
+        self.report_wait(waiting, transfer_response)
+
+        replay = escort.post(PASS, payload, format='json')
+        self.assertEqual(replay.data['errorCode'], 'FUND_ALREADY_PROCESSED', replay.data)
+        self.assertEqual(replay.data['fundResult']['msg'], purchase_response.data['msg'])
+        bought = ProviderPassPurchase.objects.get(account=self.replacement)
+        self.assertEqual((bought.business_cycle, bought.paid_amount, bought.point_discount_amount),
+                         (self.replacement.business_cycle, 180, 20))
+        redemption = bought.point_redemption
+        self.assertEqual((redemption.points_hundredths, redemption.ledger.amount), (20000, -20000))
+        self.assertEqual(PointLedger.objects.filter(account=self.replacement, kind='PASS_POINTS').count(), 1)
+        self.assertEqual(Transaction.objects.filter(wallet=wallet, tx_type='PASS_PURCHASE').get().pk,
+                         bought.transaction_id)
+        self.assertEqual(Transaction.objects.get(wallet=store_wallet, external_tx_id=bought.transaction.tx_no,
+                                                 tx_type='PASS_INCOME').amount, 180)
+        wallet.refresh_from_db()
+        points.refresh_from_db()
+        store_wallet.refresh_from_db()
+        self.assertEqual((wallet.balance, points.points_balance, store_wallet.balance), (820, 10000, store_balance + 180))
         self.assert_occupancy(self.replacement, self.original, 1)
