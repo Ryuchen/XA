@@ -183,10 +183,10 @@ class TeamPackageAdmissionTest(APITestCase):
     @skipUnless(os.environ.get('XA_ORDINARY_SETTLEMENT_FORMAL') == '1',
                 '双陪团队下单/履约/退款/评价资金来源匹配与分账属正式资金契约深水区（18-盘点 双陪资金组合待联调）；最终联调启用')
     def test_double_self_quote_and_create_keep_two_seats_with_per_person_or_total_price(self):
-        self.auth(self.boss_account)
         with patch('orders.views._schedule_auto_cancel'):
             for billing_count, amount in ((2, 10000), (1, 5000)):
                 with self.subTest(billing_count=billing_count):
+                    self.auth(self.boss_account)
                     self.double.billing_provider_count = billing_count
                     self.double.save(update_fields=['billing_provider_count'])
                     payload = {'service_id': self.double.pk, 'dispatch_mode': 'BOSS_SELECT',
@@ -200,5 +200,14 @@ class TeamPackageAdmissionTest(APITestCase):
                     self.assertEqual((order.required_provider_count, order.status, order.amount), (2, 'PENDING', amount))
                     self.assertTrue(order.requires_boss_selection)
                     self.assertFalse(order.providers.exists())
+                    endpoint = f'/api/orders/orders/{order.pk}/teammates/'
+                    denied = self.client.get(endpoint)
+                    self.assertEqual(denied.data['code'], 403)
+                    self.assertNotIn('data', denied.data)
+                    self.auth(self.accounts[0])
+                    candidates = self.client.get(endpoint)
+                    self.assertEqual(candidates.data['code'], 0, candidates.data)
+                    self.assertEqual([row['id'] for row in candidates.data['data']], [self.accounts[1].pk])
+                    self.assertFalse(order.applications.exists())
                     self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -amount)])
         self.assertEqual(Wallet.objects.get(user=self.boss).balance,85000)

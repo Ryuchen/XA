@@ -9,11 +9,14 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
+from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
+from engagement.models import ClubOperationConfig, PointFundingLot
 from orders.models import Order, OrderProvider, OrderSegmentSettlementManifest
-from orders.tests.factories import make_order, make_provider, make_service, make_user
+from orders.tests.factories import make_order, make_provider, make_service, make_user, make_wallet
 from users.models import EscortProfile, EscortSchedule
+from wallet.models import SystemConfig
 
 
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False)
@@ -190,20 +193,34 @@ class ListQueryBoundsTest(APITestCase):
         self.assertIsNone(row['expected_income'])
         self.assertIs(row['my_assignment_settled'], False)
 
+    @override_settings(REFUND_DEPOSIT_DEFICIT_ENFORCE_ENABLED=True)
     def test_teammate_picker_queries_are_bounded_and_respect_capacity_and_schedule(self):
-        requester_user, requester = self.provider()
+        _, requester = self.provider()
         first_user, first = self.provider()
-        service = make_service(name='双陪测试', billing_provider_count=2)
-        order = make_order(self.boss, service=service, customer_account=self.boss_account,
-                           payment_status='PAID', requires_boss_selection=True)
-        Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(hours=1))
+        service = make_service(name='双陪整队计价', price=5000, billing_provider_count=1, fulfillment_provider_count=2)
+        wallet = make_wallet(self.boss, balance=100000)
+        wallet.account = self.boss_account
+        wallet.save(update_fields=['account'])
+        ClubOperationConfig.objects.get_or_create(pk=1)
+        PointFundingLot.objects.create(account=self.boss_account, source_key='teammate-picker-principal',
+                                       kind=PointFundingLot.Kind.PREPAID, remaining=100000)
+        SystemConfig.objects.update_or_create(key='provider_pass_delay_seconds_NONE', defaults={'value': '0'})
+        self.login(self.boss_account)
+        purchase = self.client.post('/api/orders/create/', {
+            'service_id': service.pk, 'dispatch_mode': 'BOSS_SELECT', 'client_request_id': 'teammate-picker-order',
+        }, format='json')
+        self.assertEqual(purchase.data['code'], 0, purchase.data)
+        order = Order.objects.get(pk=purchase.data['data']['id'])
+        self.assertEqual((order.escort_mode, order.required_provider_count), (Order.EscortMode.DOUBLE, 2))
+        self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
         self.login(requester)
         url = f'/api/orders/orders/{order.pk}/teammates/'
         initial, queries = self.read(url)
         added = [self.provider() for _ in range(19)]
         rows, larger_queries = self.read(url)
-        self.assertEqual(len(initial), 1)
-        self.assertEqual(len(rows), 20)
+        self.assertEqual([row['id'] for row in initial], [first.pk])
+        candidate_ids = {first.pk, *(account.pk for _, account in added)}
+        self.assertEqual({row['id'] for row in rows}, candidate_ids)
         self.assertLessEqual(larger_queries, queries + 2)
         # Full-capacity and off-shift teammates must disappear on the next read.
         for _ in range(Order.MAX_CONCURRENT_ORDERS):
@@ -213,8 +230,22 @@ class ListQueryBoundsTest(APITestCase):
                                       weekday=(timezone.localdate().weekday() + 1) % 7,
                                       start_minute=0, end_minute=1440)
         rows, _ = self.read(url)
-        self.assertNotIn(first.pk, {row['id'] for row in rows})
-        self.assertNotIn(off.pk, {row['id'] for row in rows})
+        self.assertEqual({row['id'] for row in rows}, candidate_ids - {first.pk, off.pk})
+        EscortProfile.objects.filter(account_id__in=candidate_ids).update(deposit_mode='CASH')
+        rows, cash_queries = self.read(url)
+        self.assertEqual(rows, [])
+        self.assertLessEqual(cash_queries, larger_queries + 1)
+        ClubAccount.objects.filter(pk__in=candidate_ids).update(license_membership_active=False)
+        _, earnings = self.provider()
+        SystemConfig.objects.update_or_create(key='provider_deposit_targets', defaults={'value': 'invalid'})
+        rows, _ = self.read(url)
+        self.assertEqual([row['id'] for row in rows], [earnings.pk])
+        SystemConfig.objects.filter(key='provider_pass_delay_seconds_NONE').update(value='3600')
+        early = self.client.get(url)
+        self.assertEqual(early.data['code'], 404)
+        self.assertNotIn('data', early.data)
+        self.assertFalse(order.applications.exists())
+        self.assertEqual(list(order.transactions.values_list('tx_type', 'amount')), [('PAY', -5000)])
 
     def test_prefetched_income_is_personal_and_does_not_leak_other_provider_share(self):
         first_user, first = self.provider()
