@@ -26,6 +26,7 @@ from orders.tests import test_assigned_order_reservation_guard as reservation_fi
 from orders.tests import test_release_flow as release_fixture
 from orders.tests import test_reservation_transfer_schedule_mysql as transfer_fixture
 from orders.tests.factories import make_console_user, make_order, make_provider
+from site_messages.models import AfterSaleOpenNotice
 from stores.models import PlatformAccount, PlatformRoleGrant
 from users.models import PassRefundRepaymentReceipt, PassReceiptUsageEvent
 from wallet.models import IdempotencyKey, Transaction, Wallet
@@ -246,6 +247,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_aftersale_reconciles_original_message_and_payroll(self):
         self.run_in_stores(self.exercise_consultation_aftersale)
 
+    def test_consultation_aftersale_rechecks_staff_permission_after_payroll_wait(self):
+        self.run_in_stores(self.exercise_consultation_permission_change)
+
     def transfer_and_join(self):
         self.ok(self.transfer(self.api(self.staff)))
         revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
@@ -296,30 +300,52 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assert_occupancy(self.replacement, self.original, 1)
         print(f'{self.store.slug} order={self.order_id} chat_message={stored.pk} chat_waiting={waited}', flush=True)
 
-    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True)
-    def exercise_consultation_aftersale(self):
+    def prepare_consultation(self):
         PayrollEventBarrier.objects.get_or_create(pk=1)
         self.transfer_and_join()
-        buyer = self.api(self.buyer)
-        message = ChatMessage.objects.get(pk=self.ok(self.send_order_card(buyer, 'transfer-consultation-card'))['id'])
+        sent = self.ok(self.send_order_card(self.api(self.buyer), 'transfer-consultation-card'))
+        message = ChatMessage.objects.get(pk=sent['id'])
         operator = make_console_user(['order:view', 'support:edit', 'chat:view', 'chat:reply'])
         account = get_or_create_account_for_legacy_user(operator)
-        operator.admin_membership.account = account
-        operator.admin_membership.save(update_fields=['account'])
-        staff = self.api(account)
+        membership = operator.admin_membership
+        membership.account = account
+        membership.save(update_fields=['account'])
+        return self.api(account), membership, message
+
+    def consultation_payload(self, message):
+        return {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
+                'client_request_id': 'transfer-consultation-aftersale', 'affected_provider_account_ids': [self.replacement.pk]}
+
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True)
+    def exercise_consultation_aftersale(self):
+        staff, _, message = self.prepare_consultation()
+        buyer = self.api(self.buyer)
         consultation_url = f'/api/admin/chat-sessions/{message.session_id}/'
         path = '/api/admin/aftersales/open-negotiation/'
-        payload = {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
-                   'client_request_id': 'transfer-consultation-aftersale', 'affected_provider_account_ids': [self.replacement.pk]}
-        self.assertEqual(staff.post(path, payload, format='json').status_code, 400)
+        payload = self.consultation_payload(message)
+        unclaimed = staff.post(path, payload, format='json')
+        self.assertEqual(unclaimed.status_code, 400, unclaimed.data)
+        missing = staff.post(path, {**payload, 'chat_message_id': 9223372036854775807}, format='json')
+        self.assertEqual((missing.status_code, missing.data), (400, unclaimed.data))
+        message_rows = ChatMessage.objects.filter(pk=message.pk)
+        message_rows.update(notification_recipient_cycle=self.buyer.business_cycle + 1)
+        try:
+            hidden = staff.post(path, payload, format='json')
+            self.assertEqual((hidden.status_code, hidden.data), (400, unclaimed.data))
+            self.ok(staff.post(consultation_url + 'claim/', {'expected_version': 0}, format='json'))
+            authorized = staff.post(path, payload, format='json')
+            self.assertEqual((authorized.status_code, authorized.data['msg']), (400, '咨询原账号或业务周期待核对'))
+        finally:
+            message_rows.update(notification_recipient_cycle=message.notification_recipient_cycle)
         self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
-        self.ok(staff.post(consultation_url + 'claim/', {'expected_version': 0}, format='json'))
         response, waited = self.while_funding_reads_order(lambda: staff.post(path, payload, format='json'))
         case = self.ok(response)
         source = {'consultation_message_id': message.pk, 'consultation_session_id': message.session_id,
                   'consultation_account_id': self.buyer.pk, 'consultation_business_cycle': self.buyer.business_cycle}
         self.assertEqual({key: case['history'][-1].get(key) for key in source}, source)
-        replay, payroll_wait = self.replay_consultation_during_payroll(staff, path, payload, message)
+        replay, payroll_wait = self.consultation_during_payroll(
+            self.prepare_consultation_payroll(), staff, path, payload, message)
+        replay = self.ok(replay)
         self.assertEqual(replay['id'], case['id'])
         self.assertEqual({key: replay['history'][-1].get(key) for key in source}, source)
         changed = self.ok(self.send_order_card(buyer, 'another-consultation-card'))
@@ -337,12 +363,76 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} order={self.order_id} chat_message={message.pk} aftersale={row.pk} '
               f'consultation_waiting={waited} payroll_waiting={payroll_wait}', flush=True)
 
-    def replay_consultation_during_payroll(self, staff, path, payload, message):
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
+                       AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True)
+    def exercise_consultation_permission_change(self):
+        staff, membership, message = self.prepare_consultation()
+        consultation_url = f'/api/admin/chat-sessions/{message.session_id}/'
+        self.ok(staff.post(consultation_url + 'claim/', {'expected_version': 0}, format='json'))
+        path = '/api/admin/aftersales/open-negotiation/'
+        payload = self.consultation_payload(message)
+        manager = make_console_user(['role:edit', 'admin:edit'])
+        manager_account = get_or_create_account_for_legacy_user(manager)
+        manager.admin_membership.account = manager_account
+        manager.admin_membership.save(update_fields=['account'])
+        manager_client = self.api(manager_account)
+        role = membership.roles.get()
+        read_permissions = ['order:view', 'chat:view', 'chat:reply']
+        reader_role = make_console_user(read_permissions).admin_membership.roles.get()
+        role_url = f'/api/admin/roles/{role.pk}/'
+        membership_url = f'/api/admin/admins/{membership.pk}/'
+        payroll = self.prepare_consultation_payroll()
+        changes = (
+            ('role_edit', role_url, {'permissions': read_permissions}, {'permissions': role.permissions}, 200),
+            ('role_assignment', membership_url, {'roles': [reader_role.pk]}, {'roles': [role.pk]}, 200),
+            ('membership_suspension', membership_url, {'is_active': False}, {'is_active': True}, 403),
+        )
+
+        def apply_change(url, change, readable):
+            self.ok(manager_client.patch(url, change, format='json'))
+            access = staff.get(consultation_url + 'messages/')
+            self.assertEqual(access.status_code, readable, access.data)
+
+        for label, url, revoke, restore, readable in changes:
+            response, waited = self.consultation_during_payroll(payroll, staff, path, payload, message,
+                while_waiting=lambda: apply_change(url, revoke, readable))
+            self.assertEqual(response.status_code, 403, response.data)
+            self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
+            self.assertFalse(AfterSaleOpenNotice.objects.filter(case__order_id=self.order_id).exists())
+            self.ok(manager_client.patch(url, restore, format='json'))
+            print(f'{self.store.slug} order={self.order_id} message={message.pk} membership={membership.pk} '
+                  f'change={label} waiting_session={waited} aftersale_status=403', flush=True)
+
+        opened = self.ok(staff.post(path, payload, format='json'))
+        notices = AfterSaleOpenNotice.objects.filter(case_id=opened['id'])
+        initial_notices = dict(notices.values_list('account_id', 'pk'))
+        self.assertCountEqual(initial_notices, [self.buyer.pk, self.replacement.pk])
+        response, waited = self.consultation_during_payroll(payroll, staff, path, payload, message,
+            while_waiting=lambda: apply_change(role_url, {'permissions': read_permissions}, 200))
+        self.assertEqual(response.status_code, 403, response.data)
+        self.assertNotIn('data', response.data)
+        self.ok(manager_client.patch(role_url, {'permissions': role.permissions}, format='json'))
+        replay = self.ok(staff.post(path, payload, format='json'))
+        self.assertEqual(replay['id'], opened['id'])
+        case = AfterSale.objects.get(pk=opened['id'])
+        self.assertEqual(len(case.history), 1)
+        self.assertEqual(case.history[0]['consultation_message_id'], message.pk)
+        self.assertEqual(dict(notices.values_list('account_id', 'pk')), initial_notices)
+        self.assertEqual(ChatSession.objects.get(pk=message.session_id).claimed_by_id, membership.account_id)
+        self.assert_occupancy(self.replacement, self.original, 1)
+        print(f'{self.store.slug} order={self.order_id} aftersale={case.pk} replay_waiting={waited} '
+              'revoked_replay_status=403 restored_replay_status=200', flush=True)
+
+    def prepare_consultation_payroll(self):
         payroll = payroll_fixture.LateActivityPayrollTest()
         payroll.setUp()
         payroll.assign(payroll.original_text)
         preview = payroll.preview(payroll.original_text)
         self.assertTrue(preview['can_confirm'], preview['warnings'])
+        return payroll, preview
+
+    def consultation_during_payroll(self, payroll_preview, staff, path, payload, message, *, while_waiting=None):
+        payroll, preview = payroll_preview
         payroll_url = '/api/admin/payroll/confirm/'
         confirm_payload = {'month': payroll.original_text, 'fingerprint': preview['fingerprint']}
         held, resume = Event(), Event()
@@ -361,10 +451,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                     ClubAccount.objects.select_for_update(nowait=True).get(pk=self.buyer.pk)
                     ChatSession.objects.select_for_update(nowait=True).get(pk=message.session_id)
                     ChatMessage.objects.select_for_update(nowait=True).get(pk=message.pk)
+                if while_waiting is not None:
+                    while_waiting()
             finally:
                 resume.set()
             self.assertEqual(self.ok(confirming.result(timeout=10))['totals'], preview['totals'])
-            return self.ok(replay.result(timeout=10)), waited
+            return replay.result(timeout=10), waited
 
     @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
                        SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)

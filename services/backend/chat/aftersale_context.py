@@ -11,16 +11,21 @@ def lookup(message_id):
         raise ValidationError('请选择有效的咨询订单消息')
     hint = ChatMessage.objects.filter(pk=message_id).values('session_id', 'session__account_id').first()
     if not hint or not hint['session__account_id']:
-        raise ValidationError('咨询消息或所属账号待核对')
+        raise ValidationError('咨询不存在、归属已变化或无权处理')
     return hint
 
 
-def lock_context(hint, message_id, actor):
+def lock_context(hint, message_id):
     # Linked actions lock the order first. The conversation itself still
     # follows the chat owner -> session -> message order.
     owner = ClubAccount.objects.select_for_update().filter(pk=hint['session__account_id']).first()
     session = ChatSession.objects.select_for_update().filter(pk=hint['session_id'], account=owner).first()
     message = ChatMessage.objects.select_for_update().filter(pk=message_id, session=session).first() if session else None
+    return owner, session, message
+
+
+def verify_order(context, order, scope, *, actor):
+    owner, session, message = context
     if not owner or not session or not message or not can_read_session(actor, session):
         raise ValidationError('咨询不存在、归属已变化或无权处理')
     if (owner.account_type not in ('BOSS', 'PROVIDER') or not owner.license_membership_active
@@ -29,11 +34,6 @@ def lock_context(hint, message_id, actor):
             or type(message.notification_recipient_cycle) is not int
             or message.notification_recipient_cycle != owner.business_cycle):
         raise ValidationError('咨询原账号或业务周期待核对')
-    return owner, session, message
-
-
-def verify_order(context, order, scope):
-    owner, session, message = context
     if message.related_order_id != order.pk:
         raise ValidationError('咨询消息未正式关联该订单')
     if owner.account_type == 'BOSS':

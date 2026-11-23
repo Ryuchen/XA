@@ -1187,6 +1187,10 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
     @scoped_transfer_open_action
     def open_negotiation(self, request):
         """Record a customer's request for an in-service negotiation, not agreement or refund."""
+        from club_accounts.models import ClubAccount
+        from console.permissions import get_account_permissions, is_console_account
+        from rest_framework.exceptions import PermissionDenied
+
         order_id = serializers.IntegerField(min_value=1).run_validation(request.data.get('order_id'))
         reason = serializers.CharField(min_length=2, max_length=1000).run_validation(request.data.get('reason'))
         request_id = serializers.CharField(min_length=1, max_length=64).run_validation(request.data.get('client_request_id'))
@@ -1198,17 +1202,30 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         if not scope:
             raise serializers.ValidationError('请选择受影响的陪玩')
         order = get_object_or_404(Order.objects.select_for_update(), pk=order_id)
-        consultation = None
+        context = None
         consultation_hint = getattr(request, '_consultation_aftersale_hint', None)
         if consultation_hint is not None:
-            from chat.aftersale_context import lock_context, verify_order
+            from chat.aftersale_context import lock_context
             from .financial_lock import lock_order_money
             # Enter the order's funding scope before locking the chat owner.
             lock_order_money()
             message_id, hint = consultation_hint
-            context = lock_context(hint, message_id, request.account)
-            consultation = verify_order(context, order, scope)
+            context = lock_context(hint, message_id)
         case = order.aftersales.select_for_update().first()
+
+        # Staff access may have changed while waiting for the store's locks.
+        original_actor = request.account
+        actor = (ClubAccount.objects.select_related('admin_membership').prefetch_related('admin_membership__roles')
+                 .filter(pk=original_actor.pk, business_cycle=original_actor.business_cycle).first())
+        if actor is not None and getattr(original_actor, '_legacy_is_superuser', False):
+            actor._legacy_is_superuser = True
+        if not is_console_account(actor) or 'support:edit' not in get_account_permissions(actor):
+            raise PermissionDenied('当前账号无权登记售后')
+        request.account = actor
+        consultation = None
+        if context is not None:
+            from chat.aftersale_context import verify_order
+            consultation = verify_order(context, order, scope, actor=actor)
         prior = next((entry for entry in case.history if entry.get('client_request_id') == request_id), None) if case else None
         if prior:
             if (prior.get('reason') != reason or prior.get('affected_provider_account_ids') != scope
