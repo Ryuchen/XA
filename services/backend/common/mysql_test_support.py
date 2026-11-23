@@ -28,7 +28,7 @@ def require_disposable_mysql(connection):
                              f'host={database.get("HOST")!r}')
 
 
-def mysql_locking_statements(observer, table, *, session_id=None):
+def mysql_locking_statements(observer, table, *, session_id=None, include_shared=False):
     """Count this test account's active locking SQL for a known held-row table.
 
     Call only while the test holds the target row lock. SHOW FULL PROCESSLIST
@@ -51,7 +51,8 @@ def mysql_locking_statements(observer, table, *, session_id=None):
         query = str(process[7] or '').upper()
         if f'`{table.upper()}`' not in query:
             continue
-        if 'FOR UPDATE' in query or re.match(r'\s*(?:UPDATE|INSERT|DELETE)\b', query):
+        if ('FOR UPDATE' in query or re.match(r'\s*(?:UPDATE|INSERT|DELETE)\b', query)
+                or (include_shared and 'LOCK IN SHARE MODE' in query)):
             count += 1
     return count
 
