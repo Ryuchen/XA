@@ -73,17 +73,9 @@ def _serialize(row):
     rewards = list(row.rewards.select_related('transaction__wallet').order_by('pk'))
     reward_data = []
     for reward in rewards:
-        tx = reward.transaction
-        people = [item for item in (row.participants if isinstance(row.participants, list) else [])
-                  if isinstance(item, dict) and item.get('provider_account_id') == reward.provider_id]
-        valid = bool(tx.order_id == row.continuation_order_id and tx.wallet.account_id == reward.provider_id
-            and len(people) == 1 and people[0].get('provider_business_cycle') == reward.provider_business_cycle
-            and tx.wallet.user_id == people[0].get('provider_id')
-            and tx.tx_type == 'REWARD' and tx.status == 'SUCCESS' and tx.amount == reward.amount == 500
-            and not tx.reversal_of_id and not tx.reversals.exists()
-            and tx.balance_after == tx.balance_before + tx.amount)
+        valid = reward.has_verified_payment()
         reward_data.append({'provider_id': reward.provider_id, 'amount': reward.amount if valid else None,
-            'transaction_id': tx.pk if valid else None, 'created_at': reward.created_at,
+            'transaction_id': reward.transaction_id if valid else None, 'created_at': reward.created_at,
             'evidence_status': 'VERIFIED' if valid else 'REVIEW',
             'notice_status': ('SENT' if reward.notice_message_id else
                               'SKIPPED' if reward.notice_completed_at else
@@ -283,6 +275,8 @@ def award_one(claim_id):
             if row.rewards.count() != len(ids):
                 raise ValueError('续单奖励记录不完整，请核对')
             return False
+        if not row.has_staff_verification():
+            raise ValueError('续单缺少客服核实凭证')
         # Add-on refunds and rewards both serialize on the same order row.
         # With no reward receipt under that lock, an independently verified
         # refund is necessarily earlier than any future reward payment.

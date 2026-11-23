@@ -18,6 +18,9 @@ class OrderContinuation(models.Model):
     reward_state = models.CharField(max_length=16, default='PENDING')
     reward_review_reason = models.CharField(max_length=255, blank=True, default='')
 
+    def has_staff_verification(self):
+        return self.status == 'VERIFIED' and self.verified_by_id is not None and self.verified_at is not None
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['customer', 'business_cycle', 'request_id'], name='continuation_customer_request_unique'),
@@ -40,3 +43,24 @@ class OrderContinuationReward(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['continuation', 'provider'], name='continuation_reward_provider_unique')]
+
+    def has_verified_payment(self):
+        """Check the recorded recipient and wallet posting for this reward."""
+        claim, tx = self.continuation, self.transaction
+        participants = claim.participants if isinstance(claim.participants, list) else []
+        expected = [item for item in participants
+                    if isinstance(item, dict) and item.get('provider_account_id') == self.provider_id]
+        if len(expected) != 1:
+            return False
+        recipient = expected[0]
+        identity = (recipient.get('provider_account_id'), recipient.get('provider_id'),
+                    recipient.get('provider_business_cycle'))
+        if any(type(value) is not int or value <= 0 for value in identity):
+            return False
+        return (claim.has_staff_verification() and claim.reward_state == 'PAID'
+                and recipient['provider_business_cycle'] == self.provider_business_cycle
+                and tx.order_id == claim.continuation_order_id and tx.wallet.account_id == self.provider_id
+                and tx.wallet.user_id == recipient['provider_id']
+                and tx.tx_type == 'REWARD' and tx.status == 'SUCCESS' and tx.amount == self.amount == 500
+                and tx.balance_after == tx.balance_before + tx.amount
+                and not tx.reversal_of_id and not tx.reversals.exists())
