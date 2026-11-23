@@ -1,0 +1,230 @@
+"""Observe the real profile lock shared by a shift edit, transfer, and booking."""
+from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
+from queue import Empty, Queue
+from threading import Event
+from time import monotonic, sleep
+from unittest import skipUnless
+
+from django.conf import settings
+from django.db import connection, connections, transaction
+from django.test import TransactionTestCase, override_settings
+from django.utils import timezone
+from rest_framework.test import APIClient
+
+from club_accounts.services import get_or_create_account_for_legacy_user
+from club_accounts.tokens import issue_account_tokens
+from common.mysql_test_support import mysql_locking_statements, require_disposable_mysql
+from orders.models import Order, Reservation
+from orders.reservation_services import find_conflicting_reservations
+from orders.tests import test_assigned_order_reservation_guard as booking_flow
+from orders.tests import test_release_flow as release_flow
+from orders.tests.factories import make_provider, make_service, make_user
+from stores.context import resolve_store, store_context
+from stores.models import Store
+from wallet.models import Wallet
+
+SCHEDULE = '/api/users/escorts/schedule/'
+RESERVATIONS = '/api/orders/reservations/'
+PROFILE_TABLE = 'users_escortprofile'
+ACCOUNT_TABLE = 'club_accounts_clubaccount'
+
+
+@skipUnless(connection.vendor == 'mysql', 'Requires real MySQL profile row locks')
+@override_settings(**booking_flow.AssignedOrderReservationGuardTest._overridden_settings,
+                   ORIGINAL_ATTRIBUTION_ENABLED=True, SEGMENT_ECONOMICS_CAPTURE_ENABLED=True,
+                   SEGMENT_STANDARD_TRANSFER_ENABLED=True, PRESTART_SCOPE_SNAPSHOT_ENABLED=True,
+                   PROVIDER_LIFECYCLE_INTEGRATION_ENABLED=False)
+class ReservationTransferScheduleMySQLTest(TransactionTestCase):
+    routes = (
+        (('shenglang', 'sl.esports.club', 'store_a'), ('xinan', 'xa.esports.club', 'store_b'))
+        if settings.ISOLATED_CONTROL_PLANE else (('shenglang', 'sl.esports.club', 'default'),)
+    )
+    databases = {'default', *(alias for _, _, alias in routes)}
+
+    login = booking_flow.AssignedOrderReservationGuardTest.login
+    ok = booking_flow.AssignedOrderReservationGuardTest.ok
+    recharge = booking_flow.AssignedOrderReservationGuardTest.recharge
+    book = booking_flow.AssignedOrderReservationGuardTest.book
+
+    def prepare(self):
+        booking_flow.AssignedOrderReservationGuardTest.setUp(self)
+        replacement = make_provider(deposit_mode='EARNINGS')
+        self.replacement = get_or_create_account_for_legacy_user(replacement)
+        replacement.escort_profile.account = self.replacement
+        replacement.escort_profile.save(update_fields=['account'])
+        self.original = self.accounts[self.provider.pk]
+        self.buyer = self.accounts[self.boss.pk]
+        self.staff = self.accounts[self.admin.pk]
+        self.ok(self.recharge())
+        now = timezone.localtime()
+        self.start = (now + timedelta(days=2)).replace(hour=23, minute=30, second=0, microsecond=0)
+        self.end = self.start + timedelta(hours=1)
+        self.reservation_id, self.order_id = self.book(self.provider, self.start, 'schedule-transfer-payment')
+        self.login(self.provider)
+        self.ok(self.client.post(f'/api/orders/orders/{self.order_id}/start/',
+                                 {'entry_image': release_flow.screenshot()}, format='multipart'))
+        self.transfer_path = f'/api/admin/orders/{self.order_id}/transfer/'
+        self.transfer_payload = {'reason': '协调履约中的原预约', 'transfers': [{
+            'old_provider_id': self.original.pk, 'new_provider_id': self.replacement.pk,
+            'original_share': {'retained': 4000, 'transferred': 6000, 'agreement': '双方同意原价份额'},
+        }]}
+        self.today_slot = {'weekday': now.weekday(), 'start_minute': 0, 'end_minute': 1440}
+        self.original_slot = {'weekday': self.start.weekday(), 'start_minute': 1410, 'end_minute': 30}
+        self.funding_before = list(Order.objects.get(pk=self.order_id).transactions.values_list('pk', 'tx_type', 'amount'))
+        self.balance_before = Wallet.objects.get(account=self.buyer).balance
+
+    def api(self, account):
+        token = issue_account_tokens(account)[0]
+        return APIClient(HTTP_HOST=self.store_host, HTTP_AUTHORIZATION='Bearer ' + token)
+
+    def run_in_stores(self, exercise):
+        for alias in self.databases:
+            require_disposable_mysql(connections[alias])
+        for slug, host, alias in self.routes:
+            with self.subTest(store=slug):
+                Store.objects.update_or_create(slug=slug, defaults={
+                    'name': slug, 'database_alias': alias, 'status': Store.Status.ACTIVE,
+                    'initialized_at': timezone.now(),
+                })
+                self.store = resolve_store(slug)
+                self.store_host = host
+                with store_context(self.store):
+                    self.client = APIClient(HTTP_HOST=host)
+                    self.prepare()
+                    exercise()
+
+    @staticmethod
+    def observe_profile_lock(attempts):
+        def observe_lock(execute, sql, params, many, context):
+            normalized = sql.lower()
+            if f'`{PROFILE_TABLE}`' in normalized and 'for update' in normalized:
+                attempts.put(context['connection'].connection.thread_id())
+            return execute(sql, params, many, context)
+        return observe_lock
+
+    def independent_request(self, request, wrapper):
+        try:
+            with store_context(self.store), connections[self.store.database_alias].execute_wrapper(wrapper):
+                return request()
+        finally:
+            connections.close_all()
+
+    def wait_for_lock(self, competing, attempts):
+        observer = connections[self.store.database_alias].copy()
+        try:
+            entered = set()
+            deadline = monotonic() + 4
+            while not competing.done() and monotonic() < deadline:
+                try:
+                    entered.add(attempts.get_nowait())
+                except Empty:
+                    pass
+                for session in entered:
+                    if mysql_locking_statements(observer, PROFILE_TABLE, session_id=session):
+                        self.assertFalse(competing.done())
+                        return session
+                sleep(.03)
+            detail = competing.result().data if competing.done() else '请求仍未完成'
+            self.fail(f'未观察到实际锁等待: {entered!r}, {detail}')
+        finally:
+            observer.close()
+
+    def report_wait(self, session, result):
+        print(f'{self.store.slug} reservation={self.reservation_id} order={self.order_id} '
+              f'waiting_session={session} lock={PROFILE_TABLE} competing_code={result.data["code"]}', flush=True)
+
+    def while_profile_locked(self, first_request, competing_request):
+        attempts = Queue()
+        with ThreadPoolExecutor(max_workers=1) as worker:
+            with transaction.atomic(using=self.store.database_alias):
+                self.ok(first_request())
+                competing = worker.submit(self.independent_request, competing_request,
+                                          self.observe_profile_lock(attempts))
+                waiting = self.wait_for_lock(competing, attempts)
+            result = competing.result(timeout=10)
+        self.report_wait(waiting, result)
+        return result
+
+    def assert_occupancy(self, holder, other, transfer_count):
+        booking = Reservation.objects.get(pk=self.reservation_id)
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual((booking.status, booking.order_id, booking.provider_account_id),
+                         ('CONVERTED', order.pk, self.original.pk))
+        self.assertEqual((order.status, order.provider_account_id), ('IN_SERVICE', holder.pk))
+        self.assertEqual(list(order.providers.filter(released_at__isnull=True).values_list('provider_account_id', flat=True)),
+                         [holder.pk])
+        self.assertTrue(find_conflicting_reservations(holder, self.start, self.end).filter(pk=booking.pk).exists())
+        self.assertFalse(find_conflicting_reservations(other, self.start, self.end).exists())
+        self.assertEqual(order.status_logs.filter(action='TRANSFER').count(), transfer_count)
+        self.assertEqual(list(order.transactions.values_list('pk', 'tx_type', 'amount')), self.funding_before)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before)
+
+    def test_transfer_waits_for_shorter_schedule_and_keeps_original_assignment(self):
+        self.run_in_stores(self.exercise_schedule_edit)
+
+    def exercise_schedule_edit(self):
+        escort, staff = self.api(self.replacement), self.api(self.staff)
+        full = [self.today_slot, self.original_slot]
+        shorter = [self.today_slot, {**self.original_slot, 'end_minute': 15}]
+        self.ok(escort.put(SCHEDULE, {'slots': full}, format='json'))
+        result = self.while_profile_locked(lambda: escort.put(SCHEDULE, {'slots': shorter}, format='json'),
+                                           lambda: staff.post(self.transfer_path, self.transfer_payload, format='json'))
+        self.assertEqual(result.data['code'], 400, result.data)
+        self.assertIn('未覆盖原预约时段', result.data['msg'])
+        self.assertEqual(self.ok(escort.get(SCHEDULE)), sorted(shorter, key=lambda slot: slot['weekday']))
+        self.assert_occupancy(self.original, self.replacement, 0)
+        self.ok(escort.put(SCHEDULE, {'slots': full}, format='json'))
+        self.ok(staff.post(self.transfer_path, self.transfer_payload, format='json'))
+        self.assert_occupancy(self.replacement, self.original, 1)
+
+    def test_overlapping_reservation_waits_for_transfer_and_sees_shift_occupied(self):
+        self.run_in_stores(self.exercise_new_reservation)
+
+    def exercise_new_reservation(self):
+        other_buyer = get_or_create_account_for_legacy_user(make_user())
+        other_service = make_service()
+        staff, buyer = self.api(self.staff), self.api(other_buyer)
+        payload = {'provider_account_id': self.replacement.pk, 'service_id': other_service.pk,
+                   'start_time': self.start.isoformat(), 'end_time': self.end.isoformat()}
+        result = self.while_profile_locked(lambda: staff.post(self.transfer_path, self.transfer_payload, format='json'),
+                                           lambda: buyer.post(RESERVATIONS, payload, format='json'))
+        self.assertEqual(result.data['code'], 409, result.data)
+        self.assertFalse(Reservation.objects.filter(customer_account=other_buyer).exists())
+        self.assert_occupancy(self.replacement, self.original, 1)
+
+    def test_edit_and_transfer_use_compatible_account_and_profile_lock_order(self):
+        self.run_in_stores(self.exercise_transfer_lock_order)
+
+    def exercise_transfer_lock_order(self):
+        escort, staff = self.api(self.replacement), self.api(self.staff)
+        held = Event()
+        resume = Event()
+        attempts = Queue()
+        observe_profile_lock = self.observe_profile_lock(attempts)
+
+        def pause_after_account_lock(execute, sql, params, many, context):
+            result = observe_profile_lock(execute, sql, params, many, context)
+            normalized = sql.lower()
+            if (not held.is_set() and f'`{ACCOUNT_TABLE}`' in normalized and 'lock in share mode' in normalized
+                    and self.replacement.pk in (params or ())):
+                held.set()
+                if not resume.wait(timeout=6):
+                    raise AssertionError('未等到档期编辑加锁查询')
+            return result
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            transfer = pool.submit(self.independent_request,
+                lambda: staff.post(self.transfer_path, self.transfer_payload, format='json'), pause_after_account_lock)
+            try:
+                self.assertTrue(held.wait(timeout=3), '转单未取得接替陪玩共享账号锁')
+                with transaction.atomic(using=self.store.database_alias):
+                    self.ok(escort.put(SCHEDULE, {'slots': [self.today_slot, self.original_slot]}, format='json'))
+                    resume.set()
+                    waiting = self.wait_for_lock(transfer, attempts)
+            finally:
+                resume.set()
+            result = transfer.result(timeout=10)
+        self.ok(result)
+        self.report_wait(waiting, result)
+        self.assert_occupancy(self.replacement, self.original, 1)

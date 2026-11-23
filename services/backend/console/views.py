@@ -1648,6 +1648,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         try:
             from orders.points_transfer_revision_scope import revision_scope, active as funding_revision_active
             from orders.transfer_lifecycle import capture as capture_transfer_lifecycle, lock as lock_transfer_lifecycle
+            from orders.transfer_lifecycle import lock_incoming_cycles
             lifecycle = capture_transfer_lifecycle([
                 (cmd['old_provider_account_id'], cmd['new_provider_account'].pk) for cmd in parsed
             ])
@@ -1664,10 +1665,7 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                 from orders.financial_lock import lock_order_money
                 lock_order_money()
                 incoming_ids = {cmd['new_provider_account'].pk for cmd in parsed}
-                incoming_cycles = (lifecycle_cycles if lifecycle_cycles is not None else dict(
-                    ClubAccount.objects.select_for_update().filter(pk__in=incoming_ids,
-                        account_type=ClubAccount.AccountType.PROVIDER).order_by('pk')
-                    .values_list('pk', 'business_cycle')))
+                incoming_cycles = lifecycle_cycles if lifecycle_cycles is not None else lock_incoming_cycles(incoming_ids)
                 if any(type(incoming_cycles.get(pk)) is not int or incoming_cycles[pk] <= 0 for pk in incoming_ids):
                     raise IllegalTransitionError('转入陪玩业务周期待核对')
                 from orders.points_addon_receipt_usage import prelock as prelock_order_receipts
