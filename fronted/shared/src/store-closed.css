@@ -183,6 +183,23 @@
 .xa-store-closed-services li:last-child { padding-block-end: 0; }
 .xa-store-closed-services li h3 { margin: 0; font-size: .9375rem; font-weight: 600; }
 .xa-store-closed-services svg { margin-top: 2px; color: var(--muted-foreground); }
+
+.xa-store-closed-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 44px;
+  border-radius: 6px;
+  color: var(--foreground);
+  font-size: .875rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--muted-foreground);
+  text-underline-offset: .25em;
+}
+.xa-store-closed-footer a:hover { text-decoration-color: currentColor; }
+.xa-store-closed-footer a:focus-visible { outline: 3px solid hsl(var(--ocean-400)); outline-offset: 3px; }
+
 .xa-store-closed-address {
   width: min(100%, 28rem);
   min-block-size: 44px;
@@ -216,7 +233,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(90deg, hsl(var(--ocean-950)), hsl(var(--ocean-950) / .32));
+  background: linear-gradient(90deg, hsl(var(--ocean-950)), hsl(var(--ocean-950) / .68) 60%, hsl(var(--ocean-950) / .2));
   content: "";
 }
 
@@ -242,6 +259,13 @@
   }
 
   .xa-store-closed-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .xa-store-closed-details h2 svg {
+    box-sizing: content-box;
+    padding: 6px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
   .xa-store-closed-help:only-child { grid-column: 1 / -1; }
   .xa-store-closed-details .xa-store-closed-return {
     border-block-start: 0;

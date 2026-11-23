@@ -82,6 +82,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     const schedule = page.getByText('开放时间以门店通知为准', { exact: true })
     const helpChannel = page.getByText('请通过原下单渠道联系本店客服。', { exact: true })
     const copy = page.getByRole('button', { name: '复制入口链接' })
+    const otherEntry = page.getByRole('link', { name: '本店陪玩工作台', exact: true })
     const pending = page.getByRole('button', { name: '正在检查…', exact: true })
     await art.waitFor()
     await help.waitFor()
@@ -91,6 +92,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(await services.count(), 0)
     assert.equal(await returnGuide.count(), 0)
     assert.equal(await schedule.count(), 0)
+    assert.equal(await otherEntry.count(), 0)
     await page.evaluate(() => {
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
@@ -104,6 +106,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await closed.waitFor()
     await services.waitFor()
     await returnGuide.waitFor()
+    assert.equal(await otherEntry.getAttribute('href'), '/player/')
     await page.getByText('开放后可使用本店老板账号登录。', { exact: false }).waitFor()
     await page.getByText('查看自己的订单进度和售后记录。', { exact: true }).waitFor()
     await page.getByText('本店开通自助下单后，可选服务并核对价格。', { exact: true }).waitFor()
@@ -190,6 +193,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(reads, before + 1)
     assert.equal(await closed.count(), 0)
     assert.equal(await schedule.count(), 0)
+    assert.equal(await otherEntry.count(), 0)
     await art.waitFor()
     await help.waitFor()
     await copy.waitFor()

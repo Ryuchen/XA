@@ -1,4 +1,4 @@
-import { CalendarClock, Check, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { hostStoreSlug, storeBrandLogo } from "./store.ts";
 import headsetImage from "../assets/store-closed-headset.webp";
@@ -25,6 +25,8 @@ const entryContent = {
     help: "请通过原下单渠道联系本店客服。",
     helpDetails: "订单编号和需要处理的问题。",
     returnGuide: "打开保存的链接，重新检查门店状态。开放后可使用本店老板账号登录。",
+    entryPath: "/boss/",
+    otherEntry: { path: "/player/", label: "本店陪玩工作台" },
   },
   provider: {
     unavailable: "暂时无法登录、接单或提交报单。",
@@ -37,15 +39,18 @@ const entryContent = {
     help: "如需交接服务或补交报单，请联系本店负责人。",
     helpDetails: "订单编号、当前服务进度和待交接事项。",
     returnGuide: "打开保存的链接，重新检查门店状态。开放后可用本店陪玩账号进入工作台。",
+    entryPath: "/player/",
+    otherEntry: { path: "/boss/", label: "本店老板服务中心" },
   },
 };
 
 export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry }: Props) {
-  const { services, helpTitle, help, helpDetails, returnGuide, unavailable } = entryContent[role];
+  const { services, helpTitle, help, helpDetails, returnGuide, unavailable, entryPath, otherEntry } = entryContent[role];
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
   const storeName = brandSlug ? storeNames[brandSlug] : undefined;
   const returnUrl = brandSlug ? new URL(import.meta.env.BASE_URL, window.location.origin).href : null;
+  const showOtherEntry = brandSlug && import.meta.env.BASE_URL === entryPath;
   const showArt = Boolean(brandSlug || issue?.closed);
   const copyStatusId = useId();
   const address = useRef<HTMLInputElement>(null);
@@ -168,6 +173,9 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
               </ul>
             </section>}
           </div>
+          {issue?.closed && showOtherEntry && <footer className="xa-store-closed-footer">
+            <a href={otherEntry.path}>{otherEntry.label}<ArrowRight size={16} aria-hidden="true" /></a>
+          </footer>}
         </main>
       </div>
     </div>
