@@ -583,7 +583,7 @@ def _followup_transfer_handover_scope(order, *, pending_payment_id=None):
                     and any(row[0] == item.payment_id for row in frozen) for item in pending))
 
 
-def _successive_addon_handovers(order, payment, transfers, *, allow_waiting=False):
+def _successive_addon_handovers(order, payment, transfers, *, allow_waiting=False, check_refund_times=True):
     """The handovers without main refunds must follow actual same-seat transfers."""
     if (not 1 <= len(transfers) <= 2 or order.room_required_snapshot or order.refund_records.exists()
             or order.prestart_handoffs.exists()):
@@ -605,6 +605,8 @@ def _successive_addon_handovers(order, payment, transfers, *, allow_waiting=Fals
                     (event.previous_segment_id, event.next_segment_id)):
             return []
         previous = handover
+    if not check_refund_times:
+        return accepted
     refund_times = list(payment.refund_records.order_by('created_at', 'pk').values_list('created_at', flat=True))
     if refund_times and (refund_times[0] <= accepted[0].accepted_at
                         or len(set(refund_times)) != len(refund_times)
@@ -805,10 +807,15 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
                 verify_receipt(payment)
         return True
     successive = []
+    returned = None
     if len(payments) == 1 and not post_history and payments[0].handovers.filter(status='ACCEPTED').count() > 1:
         successive = _successive_addon_handovers(order, payments[0], transfers) if allow_successive else []
         if not successive:
-            return False
+            from .points_returned_addon_refund import returned_handover
+            returned = (returned_handover(order, payment_id=payments[0].pk, transfers=transfers)
+                        if allow_successive and payments[0].refund_records.exists() else None)
+            if not returned:
+                return False
     elif (len(payments) == 1 and len(transfers) == 2 and allow_handover
             and _pending_allowed(payments[0].pk, pending_payment_id) and not order.refund_records.exists()
             and payments[0].refund_records.exists()
@@ -826,7 +833,7 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
             or (payments[0].refund_records.exists() and payments[0].handovers.filter(status='ACCEPTED').exists()
                 and not first_handover_refund(order, transfers)
                 and not single_post_refund_handover(order, pending_payment_id=pending_payment_id)
-                and not post_history and not origin_history and not successive)
+                and not post_history and not origin_history and not successive and not returned)
             or (not allow_handover and payments[0].handovers.filter(status='PENDING').exists())
             or not payments[0].buyer_transaction.created_at
             or any(payments[0].buyer_transaction.created_at == event.created_at for event in transfers)):
@@ -838,6 +845,9 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
             from .addon_handover import verify_transferred_handover_funding
             for handover in successive:
                 verify_transferred_handover_funding(order, payments[0], handover)
+        if returned:
+            from .points_returned_addon_refund import verify_funding
+            verify_funding(order, returned)
     return True
 
 

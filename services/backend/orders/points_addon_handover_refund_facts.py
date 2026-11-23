@@ -285,6 +285,27 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
         if any(min(row['basis'], row['income']) < 0 for row in state.values()):
             raise ValidationError('此前退款已超出履约段份额')
     participants = list(proposal.participants.select_related('provider_transaction__wallet').order_by('account_id'))
+    returned_segment = None
+    if len(handovers) > 1 and handovers[-1].kind == 'STANDARD' and not team_run and not order.refund_records.exists():
+        from .points_returned_addon_refund import require_opening, returned_handover
+
+        returned = returned_handover(order, payment_id=payment.pk)
+        if not returned or returned.pk != handovers[-1].pk or proposal.case.order_id != order.pk:
+            raise ValidationError('转回段加购退款的接替凭证异常')
+        try:
+            require_opening(proposal.case, returned, request_id=proposal.case_request_id,
+                            opened_at=proposal.case_opened_at)
+        except RestValidationError as exc:
+            raise ValidationError('转回段加购退款的原售后范围待核对') from exc
+        returned_segment = returned.target_segment_id
+        if len(participants) != 1 or participants[0].account_id != returned.target_segment.provider_account_id:
+            raise ValidationError('转回段加购退款责任人待核对')
+        person = participants[0]
+        if (person.addon_pending_deduction != person.burden or person.excess_burden
+                or person.main_pending_deduction or person.wallet_deduction or person.deposit_deduction
+                or list(person.earning_deductions.values_list('payment_id', 'segment_id', 'amount'))
+                != [(payment.pk, returned_segment, person.burden)]):
+            raise ValidationError('转回段加购退款只能扣减本人该段待结收益')
     if team_run:
         from .models import OrderPointsRefundSettlementPerson
         if OrderPointsRefundSettlementPerson.objects.filter(
@@ -304,14 +325,16 @@ def first_refund_facts(refund, *, receipt_id=None, _memo=None):
     # than trusting persisted participant amounts or the current net shares.
     from .addon_refund import _allocate_refund_basis, _allocate_segment_burden
     selected = [person.account_id for person in participants]
-    weights = {account: sum(row['basis'] for (_, owner), row in state.items() if owner == account)
+    scoped = (state if returned_segment is None else {key: row for key, row in state.items()
+                                                      if key[0] == returned_segment})
+    weights = {account: sum(row['basis'] for (_, owner), row in scoped.items() if owner == account)
                for account in selected}
     total = sum(weights.values())
     if not total or refund.amount > total or any(not basis for basis in weights.values()):
         raise ValidationError('接替后退款责任份额异常')
     refund_by_person = _allocate_refund_basis(refund.amount, sorted(weights.items()))
     for person in participants:
-        rows = [(segment_id, row) for (segment_id, account), row in state.items()
+        rows = [(segment_id, row) for (segment_id, account), row in scoped.items()
                 if account == person.account_id and row['basis']]
         allocations = _allocate_refund_basis(refund_by_person[person.account_id],
                                             [(segment_id, row['basis']) for segment_id, row in rows])

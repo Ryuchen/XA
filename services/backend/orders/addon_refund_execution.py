@@ -479,6 +479,7 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator, re
             from .points_zero_followup import verify_record_locked
             verify_record_locked(zero)
     first_transfer_handover = False
+    returned = None
     if (needs_integrated_processing(order) and payment.handovers.exists()
             and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
         from .models import OrderAddonHandover
@@ -487,8 +488,10 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator, re
         from .points_voluntary_handover_event import entry_matches
         from .points_transfer_followup_addon_version import refund_preflight_active
         from .points_third_addon_refund import active as third_refund_active
+        from .points_returned_addon_refund import returned_handover
         transfers = list(OrderOriginalShareTransfer.objects.filter(
             previous_segment__attribution__order=order).order_by('pk'))
+        returned = returned_handover(order, payment_id=payment.pk, transfers=transfers)
         other_pending = other_pending_payment_id(order, payment.pk)
         from .points_transfer_addon_liability import first_refund_active
         if first_refund_active(order, payment.pk):
@@ -498,7 +501,7 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator, re
         if not (first_handover or single_post_refund_handover(order, pending_payment_id=other_pending)
                 or post_refund_handover_history(order, pending_payment_id=other_pending)
                 or entry_matches(order, payment.pk) or refund_preflight_active(order, payment)
-                or third_refund_active(order, payment)):
+                or third_refund_active(order, payment) or returned):
             raise ValidationError('已接替加购的独立退款资金尚未接入')
         first_transfer_handover = (first_handover and len(transfers) == 1 and not order.refund_records.exists()
             and payment.handovers.filter(status='ACCEPTED', kind='STANDARD', previous__isnull=True,
@@ -596,7 +599,8 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator, re
         for addon in addons:
             grouped = {}
             for share in responsibility[addon.pk]:
-                if share['provider_id'] == person.account_id:
+                if (share['provider_id'] == person.account_id and (not returned
+                        or (addon.pk == payment.pk and share['segment_id'] == returned.target_segment_id))):
                     grouped[share['segment_id']] = grouped.get(share['segment_id'], 0) + share['income']
             for segment_id, income in sorted(grouped.items()):
                 if (OrderAddonSettlement.objects.filter(payment=addon, segment_id=segment_id).exists()
@@ -638,6 +642,8 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator, re
                     break
             if not outstanding:
                 break
+        if returned and outstanding:
+            raise ValidationError('转回段待结加购收益不足，不能扣减其他履约收益')
         main_pending = 0
         if outstanding:
             from .points_service_payment import needs_integrated_processing

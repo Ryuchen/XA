@@ -25,7 +25,14 @@ def _responsibilities_locked(order, payment):
 
 
 def resolve_case_segments_locked(order, payment, accounts, requested):
+    from .points_returned_addon_refund import returned_handover
+
     shares = _responsibilities_locked(order, payment)
+    returned = returned_handover(order, payment_id=payment.pk)
+    if returned:
+        if requested != [returned.target_segment_id] or payment.refund_records.exists():
+            raise ValidationError('本次加购售后只能选择尚未退款的转回段')
+        shares = [share for share in shares if share['segment_id'] == returned.target_segment_id]
     assigned = {(share['segment_id'], share['provider_id']) for share in shares
                 if share['basis'] > 0 and share['provider_id'] in accounts}
     segments = sorted({segment for segment, _ in assigned})
@@ -137,9 +144,27 @@ def _allocate_segment_burden(entries, burden, latest_first):
     return extra
 
 
+def case_opening_records(case, payment_id, request_id, opened_at):
+    if not isinstance(case.history, list) or any(not isinstance(entry, dict) for entry in case.history):
+        raise ValidationError('加购售后原履约段记录待核对')
+    opened_at_text = opened_at.isoformat()
+    return [entry for entry in case.history if entry.get('status') == 'OPEN'
+            and entry.get('client_request_id') == request_id and entry.get('addon_payment_id') == payment_id
+            and entry.get('created_at') == opened_at_text]
+
+
 def _participants(payment, case, amount, selected):
     """Split the actual refund by agreed unpaid work; round each burden up to one coin."""
-    shares = _responsibilities_locked(payment.intent.order, payment)
+    from .points_returned_addon_refund import require_opening, returned_handover
+
+    order = payment.intent.order
+    shares = _responsibilities_locked(order, payment)
+    returned = returned_handover(order, payment_id=payment.pk)
+    if returned:
+        if case.addon_payment_id != payment.pk or payment.refund_records.exists():
+            raise ValidationError('转回段加购退款须使用原付款的未处理售后')
+        require_opening(case, returned, request_id=case.client_request_id, opened_at=case.created_at)
+        shares = [share for share in shares if share['segment_id'] == returned.target_segment_id]
     people = {}
     for share in shares:
         if share['basis']:
@@ -168,13 +193,7 @@ def _participants(payment, case, amount, selected):
         raise ValidationError('售后范围未覆盖全部受影响陪玩')
     if case.addon_payment_id == payment.pk:
         # A later low rating can change the case's current scope.
-        if not isinstance(case.history, list) or any(not isinstance(entry, dict) for entry in case.history):
-            raise ValidationError('加购售后原履约段记录待核对')
-        opened_at = case.created_at.isoformat()
-        openings = [entry for entry in case.history if entry.get('status') == 'OPEN'
-                    and entry.get('client_request_id') == case.client_request_id
-                    and entry.get('addon_payment_id') == payment.pk
-                    and entry.get('created_at') == opened_at]
+        openings = case_opening_records(case, payment.pk, case.client_request_id, case.created_at)
         if len(openings) > 1:
             raise ValidationError('加购售后原履约段记录待核对')
         opening = openings[0] if openings else None
@@ -206,6 +225,8 @@ def _participants(payment, case, amount, selected):
         segment_rows = OrderParticipationSegment.objects.filter(pk__in=segments).order_by('-started_at', '-accepted_at', '-pk')
         latest = [row.pk for row in segment_rows]
         excess = _allocate_segment_burden(entries, burden, latest)
+        if returned and (excess or burden > sum(row['income'] for row in segments.values())):
+            raise ValidationError('退款金额超过转回段待结加购收益')
         result.append({'account_id': account, 'basis': basis, 'burden': burden,
                        'excess_burden': excess, 'share_plan': entries})
     return result

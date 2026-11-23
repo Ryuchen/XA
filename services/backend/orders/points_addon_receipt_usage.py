@@ -163,11 +163,12 @@ def eligible(order):
     after_transfer_refund = (formal and transferred and transfer_permits(order, phase='refund')
                              and (order.refund_records.count() == 1 or transfer_followup))
     transfers = list(OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).order_by('pk'))
+    from .points_returned_addon_refund import returned_handover
     supported_handover = formal and (independent_refund_after_handovers(order, transfers)
                                      or first_handover_refund(order, transfers)
                                      or single_post_refund_handover(order, pending_payment_id=pending_scope)
                                      or post_refund_handover_history(order, pending_payment_id=pending_scope)
-                                     or post_transfer_history)
+                                     or post_transfer_history or returned_handover(order, transfers=transfers))
     if formal and transfer_followup and postsecond_payment:
         supported_handover = supported_handover or OrderAddonFundingReleaseRun.objects.filter(
             handover__payment__intent__order=order, handover__status='ACCEPTED',

@@ -30,7 +30,7 @@ from console.points_redemption_config import save_points_terms
 from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, RetirementAudit
 from engagement.tasks import confirm_due_consumption
 from orders.addon_funding_release import record_addon_funding_release
-from orders.models import (AfterSale, GameCategory, Order, OrderAddonHandover, OrderAddonPayment, OrderAddonRefund,
+from orders.models import (AfterSale, GameCategory, Order, OrderAddonFundingReleaseRun, OrderAddonHandover, OrderAddonPayment, OrderAddonRefund,
                            OrderAddonConsumption, OrderFinancialLock, OrderPointsRedemption,
                            OrderSegmentAddonSettlement,
                            OrderPointsTransferFundingRevision, OrderSegmentReportSubmission, OrderSegmentSettlementManifest,
@@ -269,7 +269,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
         self.run_in_stores(self.exercise_paid_addon_consultation)
 
-    def test_returned_addon_consultation_preserves_three_confirmed_segments(self):
+    def test_returned_addon_consultation_refunds_only_the_returned_segment(self):
         self.run_in_stores(self.exercise_returned_addon_consultation)
 
     def test_consultation_refund_notice_waits_for_buyer_retirement(self):
@@ -904,6 +904,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                   (transfer_back.previous_segment_id, self.replacement.pk, 200, 140),
                   (transfer_back.next_segment_id, self.original.pk, 400, 280)]
         self.assertCountEqual(second.shares.values_list('segment_id', 'segment__provider_account_id', 'basis', 'income'), shares)
+        handover_runs = OrderAddonFundingReleaseRun.objects.filter(handover__in=[first, second]).order_by('pk')
+        handover_hashes = list(handover_runs.values_list('pk', 'points_handover_hash'))
+        self.assertEqual(len(handover_hashes), 2)
         self.ok(original.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
             'client_request_id': 'consultation-returned-addon-complete'}, format='multipart'))
         staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
@@ -912,10 +915,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         buyer_balance = Wallet.objects.get(account=self.buyer).balance
         usage = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
         ledger = list(usage.values_list('pk', 'kind', 'amount'))
-        denied = staff.post('/api/admin/aftersales/open-negotiation/', {**self.consultation_payload(message),
+        case_url = '/api/admin/aftersales/open-negotiation/'
+        case_payload = {**self.consultation_payload(message),
             'addon_payment_id': payment.pk, 'affected_provider_account_ids': [self.original.pk],
-            'affected_segment_ids': [transfer_back.next_segment_id]}, format='json')
-        self.assertEqual((denied.status_code, denied.data['msg']), (400, '订单不在积分加购资金范围'))
+            'affected_segment_ids': [transfer_back.next_segment_id]}
+        for wrong_segments in ([transfer_out.previous_segment_id], None):
+            denied = staff.post(case_url, {**case_payload, 'affected_segment_ids': wrong_segments}, format='json')
+            self.assertEqual(denied.status_code, 400, denied.data)
         self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
         self.assertFalse(payment.refund_proposals.exists())
         self.assertFalse(payment.refund_records.exists())
@@ -923,22 +929,83 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, buyer_balance)
         self.assertEqual(list(usage.values_list('pk', 'kind', 'amount')), ledger)
 
+        opened = self.ok(staff.post(case_url, case_payload, format='json'))
+        self.assertEqual(opened['affected_segment_ids'], [transfer_back.next_segment_id])
+        self.assertEqual(self.ok(staff.post(case_url, case_payload, format='json'))['id'], opened['id'])
+        proposal_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/'
+        proposal_payload = {'request_id': 'consultation-returned-addon-refund', 'case_id': opened['id'],
+                            'amount_raw': 100, 'explanation': '只退转回后未完成的加购部分'}
+        over = staff.post(proposal_url, {**proposal_payload, 'amount_raw': 290}, format='json')
+        self.assertEqual(over.status_code, 400, over.data)
+        self.assertFalse(payment.refund_proposals.exists())
+        proposal = self.ok(staff.post(proposal_url, proposal_payload, format='json'))
+        self.assertEqual([(person['account_id'], row['segment_id'], row['refund_basis'])
+                          for person in proposal['participants'] for row in person['share_plan']],
+                         [(self.original.pk, transfer_back.next_segment_id, 100)])
+        decision = path + f'addons/payments/{payment.pk}/refund-proposals/{proposal["id"]}/'
+        self.assertEqual(replacement.post(decision, {'accepted': True}, format='json').status_code, 404)
+        for actor in (buyer, original):
+            self.ok(actor.post(decision, {'accepted': True}, format='json'))
+        execute_url = proposal_url + f'{proposal["id"]}/execute/'
+        receipt = self.ok(staff.post(execute_url, {}, format='json'))
+        self.assertEqual(self.ok(staff.post(execute_url, {}, format='json')), receipt)
+        refund = payment.refund_records.get()
+        self.assertEqual((refund.amount, refund.buyer_transaction.amount, refund.addon_pending_deduction,
+                         refund.main_pending_deduction, refund.wallet_deduction, refund.deposit_deduction),
+                         (100, 100, 100, 0, 0, 0))
+        self.assertEqual(list(refund.earning_deductions.values_list('payment_id', 'segment_id', 'amount')),
+                         [(payment.pk, transfer_back.next_segment_id, 100)])
+        self.assertEqual((refund.funding_release_run.required_amount, refund.funding_release_run.released_amount),
+                         (1140, 0))
+        self.assertEqual(list(usage.values_list('pk', 'kind', 'amount')), ledger)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, buyer_balance + 100)
+        self.ok(dispatch.post(f'/api/admin/aftersales/{opened["id"]}/resolve/',
+            {'resolution': '按原方案退回转回段未完成的加购'}, format='json'))
+        self.assertEqual(self.ok(staff.post(case_url, case_payload, format='json'))['id'], opened['id'])
+        repeat_case = staff.post(case_url, {**case_payload, 'client_request_id': 'new-returned-addon-case'}, format='json')
+        self.assertEqual(repeat_case.status_code, 400, repeat_case.data)
+
         reports = [self.approve_report(account, segment) for account, segment in (
             (self.original, transfer_out.previous_segment_id), (self.replacement, transfer_back.previous_segment_id),
             (self.original, transfer_back.next_segment_id))]
         order = Order.objects.get(pk=self.order_id)
         due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
+        funding_url = f'/api/admin/platform/points-funding/{self.store.slug}/orders/{self.order_id}'
+        funding = self.ok(self.finance_client.get(funding_url))
+        self.assertEqual((funding['required_units'], funding['allocated_units']), (1140, 1140))
         with patch('django.utils.timezone.now', return_value=due):
+            run = refund.funding_release_run
+            runs = OrderAddonFundingReleaseRun.objects.filter(pk=run.pk)
+            runs.update(points_addon_hash='0' * 64)
+            try:
+                review = self.finance_client.get(funding_url)
+                self.assertEqual((review.status_code, review.data['errorCode']), (409, 'POINTS_FUNDING_REVIEW'))
+                self.assertEqual(staff.post(execute_url, {}, format='json').status_code, 400)
+                with self.assertLogs('engagement.tasks', level='ERROR') as blocked:
+                    self.assertEqual(confirm_due_consumption.run(), 0)
+                self.assertIn('积分加购退款补资快照异常', '\n'.join(blocked.output))
+                self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
+            finally:
+                runs.update(points_addon_hash=run.points_addon_hash)
             self.assertEqual(confirm_due_consumption.run(), 1)
             self.assertEqual(confirm_due_consumption.run(), 0)
         order.refresh_from_db()
         self.assertEqual((order.provider_income, order.settlement_store_funding), (7400, 1140))
         self.assertCountEqual(OrderSegmentAddonSettlement.objects.filter(payment=payment).values_list('segment_id', 'amount'),
-                              [(segment, income) for segment, _, _, income in shares])
+                              [(transfer_out.previous_segment_id, 320), (transfer_back.previous_segment_id, 140),
+                               (transfer_back.next_segment_id, 180)])
         consumption = OrderAddonConsumption.objects.get(payment=payment)
-        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, 0))
+        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, 100))
+        self.assertEqual(self.ok(staff.post(execute_url, {}, format='json')), receipt)
+        self.assertEqual(payment.refund_records.count(), 1)
+        for handover, actor in ((first, replacement), (second, original)):
+            handover_response = self.ok(actor.post(path + f'addons/payments/{payment.pk}/handovers/{handover.pk}/decision/',
+                {'accepted': True}, format='json'))
+            self.assertEqual((handover_response['id'], handover_response['status']), (handover.pk, 'ACCEPTED'))
+        self.assertEqual(list(handover_runs.values_list('pk', 'points_handover_hash')), handover_hashes)
         print(f'{self.store.slug} order={order.pk} consultation={message.pk} payment={payment.pk} '
-              f'handovers={[first.pk, second.pk]} segments={shares} open_case_status={denied.status_code} '
+              f'handovers={[first.pk, second.pk]} segments={shares} case={opened["id"]} proposal={proposal["id"]} '
+              f'refund={refund.pk} buyer_transaction={refund.buyer_transaction_id} '
               f'funding={order.settlement_store_funding} consumption={consumption.pk}', flush=True)
 
     def execute_consultation_addon_refund(self, staff, case, payment, proposal, events_before):

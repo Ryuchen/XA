@@ -483,8 +483,10 @@ def _record_funding_release(order, *, refund=None, handover=None, payment=None):
     )
     from .ordinary_refunded_addon_paid_revision import posting_refund_active
     ordinary_paid_refund = bool(refund is not None and posting_refund_active(refund))
+    from .points_returned_addon_refund import returned_handover
+    returned_refund = refund is not None and returned_handover(order, payment_id=refund.payment_id)
     if (not OrderPointsFundingAllocation.objects.filter(owner).exists()
-            and not team_refund and not zero_allocation_transfer_refund and not ordinary_paid_refund):
+            and not team_refund and not zero_allocation_transfer_refund and not ordinary_paid_refund and not returned_refund):
         return None
     from .ordinary_addon_production import eligible as ordinary_addon_eligible
     if (refund is not None and not needs_integrated_processing(order) and order.refund_records.count() == 1

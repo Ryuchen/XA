@@ -822,6 +822,9 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
     else:
         provider_count_valid = order.providers.count() in (1, 2)
     transfer_addon = bool(addon and phase in ('payment', 'refund') and transfers and not order.refund_records.exists())
+    from .points_returned_addon_refund import returned_handover
+    returned = (returned_handover(order, payment_id=refund_payment_id, transfers=transfers)
+                if transfer_addon and phase == 'refund' and refund_payment_id is not None else None)
     pending_other_refund = False
     invalidated_handover_history = False
     if transfer_addon:
@@ -1028,7 +1031,7 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
         independent_handover_refund = (phase == 'refund' and transfer_addon
                                       and (independent_refund_after_handovers(order, transfers)
                                            or first_handover_refund(order, transfers) or pending_other_refund
-                                           or invalidated_handover_history))
+                                           or invalidated_handover_history or returned))
         multiple_transfer_addon = transfer_addon and (not prestarts or independent_handover_refund)
         multiple_after_followup = False
         if not transfers and order.refund_records.count() == 2:
@@ -1152,6 +1155,9 @@ def service_order(order_id, *, phase, addon=False, combined=False, extra_receipt
         raise ValidationError('积分订单尚未完成，不能结算')
     with _bind(phase=phase, kind='addon' if addon else 'service', order_id=order.pk,
                account_id=buyer.pk, service_id=order.service_id):
+        if returned:
+            from .points_returned_addon_refund import verify_funding
+            verify_funding(order, returned)
         if team_invalidations:
             from .points_handover_refund_invalidation import _verify_facts
             witness = OrderPointsFundingAllocation.objects.filter(

@@ -1255,6 +1255,8 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             lock_order_money()
             payment = OrderAddonPayment.objects.select_for_update().select_related('intent').filter(
                 pk=addon_payment_id, intent__order=order).first()
+            from .points_returned_addon_refund import returned_handover
+            returned = returned_handover(order, payment_id=payment.pk) if payment else None
             deadline = aftersale_deadline(order)
             eligible_state = ((order.required_provider_count == 1 and order.status == Order.Status.COMPLETED
                                and deadline and timezone.now() < deadline)
@@ -1297,7 +1299,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                     if not team_run and not (first_handover_refund(order, transfers)
                                              or single_post_refund_handover(order, pending_payment_id=other_pending)
                                              or post_refund_handover_history(order, pending_payment_id=other_pending)
-                                             or refund_preflight_active(order, payment) or third_addon):
+                                             or refund_preflight_active(order, payment) or third_addon or returned):
                         raise serializers.ValidationError('该加购接替后的退款范围尚未接通')
                     if team_run:
                         from .addon_funding_release import verify_run
@@ -1447,7 +1449,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                                 and not order.providers.filter(provider_account_id=payment.intent.provider_id,
                                     released_at__isnull=True, settled_at__isnull=True).exists())):
                             raise serializers.ValidationError('加购负责人或主单协商凭证待核对')
-            if requested_segments is not None:
+            if requested_segments is not None or returned:
                 from .addon_refund import resolve_case_segments_locked
                 addon_segments = resolve_case_segments_locked(order, payment, scope, requested_segments)
         completed_transfer_case = False
