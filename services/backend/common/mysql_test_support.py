@@ -28,7 +28,7 @@ def require_disposable_mysql(connection):
                              f'host={database.get("HOST")!r}')
 
 
-def mysql_locking_statements(observer, table):
+def mysql_locking_statements(observer, table, *, session_id=None):
     """Count this test account's active locking SQL for a known held-row table.
 
     Call only while the test holds the target row lock. SHOW FULL PROCESSLIST
@@ -44,6 +44,8 @@ def mysql_locking_statements(observer, table):
         processes = cursor.fetchall()
     count = 0
     for process in processes:
+        if session_id is not None and process[0] != session_id:
+            continue
         if process[3] != observer.settings_dict['NAME'] or process[4] != 'Query':
             continue
         query = str(process[7] or '').upper()
