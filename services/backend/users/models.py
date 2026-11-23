@@ -399,7 +399,8 @@ class EscortProfile(models.Model):
 
     def order_acceptance_error(self, service=None, *, club_rules_enabled=None, provider_gender="ANY", allow_refund_recovery=False,
                                refund_recovery_order_id=None, deposit_required_override=None, reservation_confirmed_at=None,
-                               lock_refund_recovery=False, require_current_schedule=True, refund_deficits=None):
+                               lock_refund_recovery=False, require_current_schedule=True, refund_deficits=None,
+                               recovery_offer_read=None):
         """老板指定、客服派单和抢单共用准入；BUSY 不替代并发名额校验。"""
         account = self.account if self.account_id else None
         if (account and (not account.is_active or not account.can_login)) or not self.user.is_active:
@@ -420,9 +421,16 @@ class EscortProfile(models.Model):
         from wallet.refund_deposit import protection_enabled
         recovery_eligible = False
         if protection_enabled() and self.account_id:
-            deficits = (self.open_refund_deficits(lock=lock_refund_recovery)
-                        if lock_refund_recovery or refund_deficits is None else refund_deficits)
-            if deficits:
+            deficits = refund_deficits
+            if lock_refund_recovery or reservation_confirmed_at is not None or refund_recovery_order_id is not None:
+                recovery_offer_read = None
+            if recovery_offer_read is None:
+                if lock_refund_recovery or deficits is None:
+                    deficits = self.open_refund_deficits(lock=lock_refund_recovery)
+                has_deficit = bool(deficits)
+            else:
+                has_deficit = recovery_offer_read.has_account_deficit
+            if has_deficit:
                 if (reservation_confirmed_at is not None
                         and all(row['profile_id'] == self.pk and row['created_at'] > reservation_confirmed_at
                                 for row in deficits)
@@ -436,7 +444,8 @@ class EscortProfile(models.Model):
                 else:
                     from wallet.refund_recovery_order import eligibility_error
                     reason = eligibility_error(self, existing_order_id=refund_recovery_order_id,
-                                               lock_current=lock_refund_recovery)
+                                               lock_current=lock_refund_recovery, offer_read=recovery_offer_read,
+                                               deposit_required_override=deposit_required_override)
                     if reason:
                         return reason
                     recovery_eligible = True

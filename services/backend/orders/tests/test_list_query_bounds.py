@@ -1,5 +1,6 @@
 """List cost must not grow one query per provider/order; eligibility stays intact."""
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.conf import settings
@@ -71,6 +72,89 @@ class ListQueryBoundsTest(APITestCase):
         self.assertLessEqual(larger_queries, queries + 1)
         # Keep the original ceiling including tenant settings and eligibility.
         self.assertLessEqual(larger_queries, 16)
+
+    @override_settings(REFUND_DEPOSIT_DEFICIT_ENABLED=True, REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=True)
+    def test_provider_list_refund_gap_reads_are_bounded_and_respect_permits(self):
+        from orders.services import ensure_provider_dispatch_locks, lock_provider_dispatch
+        from orders.state_machine import transition
+        from stores.db import transaction
+        from wallet.models import RefundDepositDeficit, RefundDepositRecoveryPermit, Transaction, get_platform_wallet
+        from wallet.refund_recovery_order import reserve
+        from wallet.services import get_wallet
+        from wallet.test_refund_deposit_deficit import RefundDepositDeficitTest
+
+        platform = get_platform_wallet()
+        platform.balance = 10000
+        platform.save(update_fields=['balance'])
+
+        def add_cash_candidate():
+            user, account = self.provider()
+            profile = user.escort_profile
+            profile.deposit_mode = 'CASH'
+            profile.deposit_paid = 40000
+            profile.save(update_fields=['deposit_mode', 'deposit_paid'])
+            old = timezone.now() - timedelta(days=62)
+            order = make_order(
+                self.boss, service=self.service, provider=user, provider_account=account,
+                status='COMPLETED', payment_status='PAID', in_service_at=old, completed_at=old,
+            )
+            fixture = SimpleNamespace(
+                profile=profile, wallet=get_wallet(account=account, user=user), platform=platform,
+                order=order, assertEqual=self.assertEqual,
+            )
+            RefundDepositDeficitTest.deficit(fixture, 200)
+            return user, account
+
+        user, account = add_cash_candidate()
+        self.login(self.boss_account)
+        first, queries = self.read('/api/users/escorts/')
+        expected = {add_cash_candidate()[1].pk for _ in range(20)}
+        expected.add(account.pk)
+        ledger = list(Transaction.objects.values_list('pk', 'amount', 'balance_after'))
+        deficits = list(RefundDepositDeficit.objects.values_list('pk', 'remaining'))
+        rows, larger_queries = self.read('/api/users/escorts/')
+        self.assertEqual([row['id'] for row in first], [account.pk])
+        self.assertEqual({row['id'] for row in rows}, expected)
+        self.assertLessEqual(larger_queries, queries + 1)
+        self.assertLessEqual(larger_queries, 16)
+        self.assertFalse(RefundDepositRecoveryPermit.objects.exists())
+        self.assertEqual(list(Transaction.objects.values_list('pk', 'amount', 'balance_after')), ledger)
+        self.assertEqual(list(RefundDepositDeficit.objects.values_list('pk', 'remaining')), deficits)
+
+        profile = user.escort_profile
+        profile.refresh_from_db()
+        detail = f'/api/users/escorts/{account.pk}/'
+        EscortProfile.objects.filter(pk=profile.pk).update(deposit_paid=39799)
+        self.assertIn('非退款造成的押金不足', self.read(detail)[0]['order_unavailable_reason'])
+        EscortProfile.objects.filter(pk=profile.pk).update(deposit_paid=39800)
+        self.assertTrue(self.read(detail)[0]['can_order'])
+        active = make_order(
+            self.boss, service=self.service, provider=user, provider_account=account, status='GRABBED',
+            payment_status='PAID',
+        )
+        ensure_provider_dispatch_locks([account.pk])
+        with transaction.atomic():
+            lock_provider_dispatch([account.pk])
+            permit = reserve(profile, active)
+        self.assertNotIn(account.pk, {row['id'] for row in self.read('/api/users/escorts/')[0]})
+        self.assertIn('补差订单尚未完成结算', self.read(detail)[0]['order_unavailable_reason'])
+        transition(active.pk, Order.Status.CANCELLED, reason='隔离测试未开始取消')
+        permit.refresh_from_db()
+        self.assertEqual(permit.close_reason, 'CANCELLED_UNSTARTED')
+        self.assertIn(account.pk, {row['id'] for row in self.read('/api/users/escorts/')[0]})
+
+        make_order(self.boss, service=self.service, provider=user, provider_account=account,
+                   status='GRABBED', payment_status='PAID')
+        SystemConfig.objects.update_or_create(
+            key=CAPACITY_KEY, defaults={'value': '{"max_concurrent_orders":1,"version":1}'},
+        )
+        self.assertIn('接单已满', self.read(detail)[0]['order_unavailable_reason'])
+        with self.settings(REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=False):
+            self.assertIn('补差接单功能尚未开放', self.read(detail)[0]['order_unavailable_reason'])
+        other_profile = EscortProfile.objects.get(account_id=min(expected - {account.pk}))
+        # Historical records with conflicting profile ownership must stay blocked.
+        RefundDepositDeficit.objects.filter(account=account).update(profile=other_profile)
+        self.assertIn('退款押金缺口已变化', self.read(detail)[0]['order_unavailable_reason'])
 
     @override_settings(PROVIDER_WECHAT_GATE_ENABLED=True)
     def test_provider_list_refreshes_eligibility_and_preserves_public_labels(self):

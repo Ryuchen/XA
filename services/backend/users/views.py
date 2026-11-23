@@ -440,8 +440,12 @@ class EscortProfileListView(APIView):
         from orders.capacity import CONFIG_KEY as CAPACITY_KEY, current_capacity_limit
         from wallet.club_rules import DEPOSIT_TARGET_KEY, parse_deposit_targets
         from wallet.models import SystemConfig
-        from wallet.refund_recovery_order import enabled as recovery_order_enabled
+        from wallet.refund_deposit import protection_enabled
+        from wallet.refund_recovery_order import RecoveryOfferRead, annotate_recovery_offer, enabled as recovery_order_enabled
         allow_refund_recovery = recovery_order_enabled()
+        read_recovery_offer = protection_enabled()
+        if read_recovery_offer:
+            profiles = annotate_recovery_offer(profiles, allow_recovery=allow_refund_recovery)
         config_values = None
         cash_target = None
         if not directory:
@@ -541,8 +545,10 @@ class EscortProfileListView(APIView):
             # Historical shortcuts may show availability, but never grant a new service qualification.
             if shortcuts and service and (not p.can_take_service(service) or not service_skill(p,service)):
                 continue
+            recovery_offer = RecoveryOfferRead.from_roster(p) if read_recovery_offer else None
             acceptance_error = p.order_acceptance_error(service, provider_gender=gender,
                                                        deposit_required_override=cash_target,
+                                                       recovery_offer_read=recovery_offer,
                                                        allow_refund_recovery=allow_refund_recovery)
             if not acceptance_error and p.active_order_count >= capacity_limit:
                 acceptance_error = '该陪玩当前接单已满，请稍后再约'
@@ -598,6 +604,7 @@ class EscortProfileListView(APIView):
                         if p.status != EscortProfile.Status.OFFLINE
                         and p.active_order_count < capacity_limit
                         and not p.order_acceptance_error(variant, provider_gender=gender,
+                                                         recovery_offer_read=recovery_offer,
                                                          allow_refund_recovery=allow_refund_recovery)]
             data.append(item)
             listed_profiles.append(p)
