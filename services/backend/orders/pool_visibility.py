@@ -1,6 +1,7 @@
 """Existing provider pool visibility shared by listing and order consultation."""
-from datetime import timedelta
-from django.db.models import F, Q
+from datetime import datetime, timedelta
+from typing import NamedTuple
+from django.db.models import Exists, F, OuterRef, Q, Subquery, Value
 from django.db import DatabaseError
 from django.utils import timezone
 from .models import Order, OrderGrabRound
@@ -9,12 +10,46 @@ from .capacity import current_capacity_limit
 from users.models import EscortProfile
 
 
+class PoolReadState(NamedTuple):
+    profile: EscortProfile
+    available: bool
+    active_count: int
+    delay: int
+    capacity_limit: int
+    visibility_times: dict[int, datetime]
+
+
+def with_pool_display_evidence(orders, account_id):
+    """Load the provider's list evidence with the order rows."""
+    from .models import (OrderApplication, OrderOriginalAttribution, OrderParticipationSegment,
+                         OrderSegmentSettlementManifest, OrderStatusLog, OrderWorkStint)
+    from .segment_financial_capture import covered_transfers
+    order_id = OuterRef('pk')
+    return orders.annotate(
+        _pool_evidence_account_id=Value(account_id),
+        _pool_snapshot_exists=Q(grab_pool_snapshot__isnull=False),
+        _pool_other_assignment=(
+            Q(grab_opening_intent__isnull=False) | Q(grab_pool_snapshot__isnull=False)
+            | Exists(OrderStatusLog.objects.filter(order_id=order_id, action='ASSIGN', reason='老板指定陪玩'))
+        ),
+        _pool_has_applications=Exists(OrderApplication.objects.filter(order_id=order_id)),
+        _pool_has_manifest=Exists(OrderSegmentSettlementManifest.objects.filter(order_id=order_id)),
+        _pool_has_covered_transfer=Exists(covered_transfers(order_id, account_id)),
+        _pool_has_my_segments=Exists(OrderParticipationSegment.objects.filter(
+            attribution__order_id=order_id, provider_account_id=account_id)),
+        _pool_has_attribution=Exists(OrderOriginalAttribution.objects.filter(order_id=order_id)),
+        _pool_pending_work_stint=Subquery(OrderWorkStint.objects.filter(order_id=order_id,
+            account_id=account_id, incoming__isnull=False, started_at__isnull=True,
+            released_at__isnull=True).order_by('pk').values('pk')[:1]),
+    )
+
+
 def pending_deadline_expired(order, *, now=None):
     """Return True/False, or None when a real pool cutoff is uncertain."""
     if order.status != Order.Status.PENDING:
         return False
     from .grab_clock_contract import production_enabled
-    if production_enabled():
+    if production_enabled() and getattr(order, '_pool_snapshot_exists', True):
         round_ = (OrderGrabRound.objects.filter(pool__order_id=order.pk)
                   .select_related('pool__order').order_by('-number').first())
         if round_:
@@ -79,18 +114,19 @@ def visible_provider_pool(account):
     eligible_modes = Q(escort_mode__in=(Order.EscortMode.SINGLE, Order.EscortMode.DOUBLE),
                        dispatch_route=Order.DispatchRoute.PUBLIC,
                        requires_boss_selection=True, grab_pool_snapshot__isnull=True)
-    if single_enabled():
+    single_automatic, team_automatic = single_enabled(), team_enabled()
+    if single_automatic:
         orders = orders.alias(single_round_status=latest_status_for_pool(1))
         eligible_modes |= Q(escort_mode=Order.EscortMode.SINGLE, requires_boss_selection=False,
                             grab_pool_snapshot__required_provider_count=1,
                             single_round_status__in=ADMISSION_STATES)
-    if team_enabled():
+    if team_automatic:
         orders = orders.alias(team_round_status=latest_status_for_pool(2))
         eligible_modes |= Q(escort_mode=Order.EscortMode.DOUBLE, requires_boss_selection=False,
             grab_pool_snapshot__required_provider_count=2,
             team_round_status__in=ADMISSION_STATES)
     orders = orders.filter(eligible_modes).exclude(grab_review_cancellation__status='PENDING')
-    if production_enabled():
+    if production_enabled() and (single_automatic or team_automatic):
         from .grab_round_opening import cutoff_bounds
         # Only orders excluded by the provisional timestamp need this extra
         # check. Missing activation evidence cannot extend their visibility.
@@ -111,7 +147,9 @@ def visible_provider_pool(account):
         orders = orders.filter(Q(auto_cancel_at__isnull=True) | Q(auto_cancel_at__gt=now)
                                | Q(pk__in=still_open))
     from .grab_pool_visibility import visibility_for_orders
-    times = visibility_for_orders(orders.values_list('pk', flat=True), profile)
+    times = {}
+    if single_automatic or team_automatic:
+        times = visibility_for_orders(orders.values_list('pk', flat=True), profile)
     visible_ids = [order_id for order_id, at in times.items() if at <= visible_now]
     legacy = (Q(grab_pool_snapshot__isnull=True, grab_opening_intent__isnull=True)
               & (Q(pool_entered_at__lte=visible_before) | Q(pool_entered_at__isnull=True, created_at__lte=visible_before)))
@@ -128,4 +166,4 @@ def visible_provider_pool(account):
                                Q(pk__in=eligible_ids))
     else:
         orders = orders.filter(qualified_order_q(profile)).filter(authorized_skill_q(profile))
-    return orders.distinct(), (profile, available, active_count, delay, capacity_limit)
+    return orders.distinct(), PoolReadState(profile, available, active_count, delay, capacity_limit, times)

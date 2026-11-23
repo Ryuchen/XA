@@ -11,7 +11,7 @@ from rest_framework.test import APITestCase
 
 from club_accounts.services import get_or_create_account_for_legacy_user
 from club_accounts.tokens import issue_account_tokens
-from orders.models import Order, OrderProvider
+from orders.models import Order, OrderProvider, OrderSegmentSettlementManifest
 from orders.tests.factories import make_order, make_provider, make_service, make_user
 from users.models import EscortProfile, EscortSchedule
 
@@ -167,12 +167,28 @@ class ListQueryBoundsTest(APITestCase):
         self.service.save(update_fields=['commission_policy'])
         self.login(account)
         self.pending()
-        _, initial_queries = self.read('/api/orders/orders/?status=pending')
+        first, initial_queries = self.read('/api/orders/orders/?status=pending')
         for _ in range(19):
             self.pending()
         rows, larger_queries = self.read('/api/orders/orders/?status=pending')
         self.assertEqual(len(rows), 20)
+        self.assertTrue(all(row['expected_income'] == first[0]['expected_income'] for row in rows))
         self.assertLessEqual(larger_queries, initial_queries + 1)
+
+    @override_settings(SEGMENT_SETTLEMENT_ENFORCE_ENABLED=True)
+    def test_pool_preserves_unknown_income_for_inconsistent_segment_evidence(self):
+        _, account = self.provider()
+        order = self.pending()
+        self.login(account)
+        initial, _ = self.read('/api/orders/orders/?status=pending')
+        self.assertEqual(initial[0]['expected_income'], 8000)
+        OrderSegmentSettlementManifest.objects.create(order=order, plan={}, plan_hash='unverified')
+        rows, _ = self.read('/api/orders/orders/?status=pending')
+        row, = rows
+        self.assertEqual(row['id'], order.pk)
+        self.assertEqual(row['settlement_status'], 'REVIEW')
+        self.assertIsNone(row['expected_income'])
+        self.assertIs(row['my_assignment_settled'], False)
 
     def test_teammate_picker_queries_are_bounded_and_respect_capacity_and_schedule(self):
         requester_user, requester = self.provider()

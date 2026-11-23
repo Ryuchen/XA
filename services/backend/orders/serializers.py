@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from users.qualifications import service_skill
 from rest_framework import serializers
 from identifiers.serializers import EntityNumberModelSerializer, EntityNumberListSerializer
@@ -250,7 +252,9 @@ class OrderListSerializer(EntityNumberListSerializer):
         # current primary provider and active team members.
         from .models import OrderProvider
         provider_ids = {row.provider_account_id for row in rows if row.provider_account_id}
-        provider_ids.update(OrderProvider.objects.filter(order_id__in=[row.pk for row in rows],
+        provider_ids.update(member.provider_account_id for row in rows for member in getattr(row, 'active_participants', ())
+                            if member.provider_account_id)
+        provider_ids.update(OrderProvider.objects.filter(order_id__in=[row.pk for row in rows if not hasattr(row, 'active_participants')],
             released_at__isnull=True, provider_account_id__isnull=False).values_list('provider_account_id', flat=True))
         from common.catalog_images import bounded_public_image_url
         self.child.context['_provider_avatar_map'] = {
@@ -422,15 +426,27 @@ class OrderSerializer(EntityNumberModelSerializer):
         if now is None:
             now = self.context['_pending_deadline_now'] = timezone.now()
         from .pool_visibility import pending_deadline_expired
-        return pending_deadline_expired(obj, now=now)
+        cache = self.context.setdefault('_pending_deadlines', {})
+        if obj.pk not in cache:
+            cache[obj.pk] = pending_deadline_expired(obj, now=now)
+        return cache[obj.pk]
+
+    def _verified_person_credit(self, obj, account_id):
+        if getattr(obj, '_pool_has_manifest', None) is False:
+            return False, None
+        from .segment_settlement import verified_person_credit
+        cache = self.context.setdefault('_verified_person_credits', {})
+        key = (obj.pk, account_id)
+        if key not in cache:
+            cache[key] = verified_person_credit(obj, account_id)
+        return cache[key]
 
     def get_settlement_status(self, obj):
         from wallet.settlement_display import order_settlement_status
         from .segment_financial_capture import transfer_income_pending
         account = getattr(self.context.get('request'), 'account', None)
         account_id = account.pk if account and account.account_type == ClubAccount.AccountType.PROVIDER else None
-        from .segment_settlement import verified_person_credit
-        segmented, amount = verified_person_credit(obj, account_id)
+        segmented, amount = self._verified_person_credit(obj, account_id)
         if segmented:
             return 'SETTLED' if amount is not None else 'REVIEW'
         if transfer_income_pending(obj, account_id):
@@ -553,6 +569,9 @@ class OrderSerializer(EntityNumberModelSerializer):
         account = getattr(self.context.get('request'), 'account', None)
         if not account or account.account_type != ClubAccount.AccountType.PROVIDER:
             return None
+        if hasattr(obj, '_pool_has_attribution'):
+            stint_id = obj._pool_pending_work_stint
+            return {'id': stint_id} if not obj._pool_has_attribution and stint_id else None
         from .models import OrderOriginalAttribution, OrderWorkStint
         if OrderOriginalAttribution.objects.filter(order=obj).exists():
             return None
@@ -562,7 +581,8 @@ class OrderSerializer(EntityNumberModelSerializer):
 
     def _my_participation(self, obj):
         account = getattr(self.context.get('request'), 'account', None)
-        if not account or account.account_type != ClubAccount.AccountType.PROVIDER:
+        if (not account or account.account_type != ClubAccount.AccountType.PROVIDER
+                or getattr(obj, '_pool_has_my_segments', None) is False):
             return []
         cache = self.context.setdefault('_my_participation_segments', {})
         key = (obj.pk, account.pk)
@@ -693,8 +713,8 @@ class OrderSerializer(EntityNumberModelSerializer):
 
     def get_my_assignment_settled(self, obj):
         account = getattr(self.context.get('request'), 'account', None)
-        from .segment_settlement import verified_person_credit
-        segmented, amount = verified_person_credit(obj, account.pk if account and account.account_type == ClubAccount.AccountType.PROVIDER else None)
+        account_id = account.pk if account and account.account_type == ClubAccount.AccountType.PROVIDER else None
+        segmented, amount = self._verified_person_credit(obj, account_id)
         if segmented:
             return amount is not None
         assignment = self._requester_assignment(obj)
@@ -913,14 +933,14 @@ class OrderSerializer(EntityNumberModelSerializer):
                 from .paid_service_scope import acceptance_error
                 from .grab_single_flow import has_admitting_round
                 from .models import OrderGrabPoolSnapshot
-                from .pool_visibility import pending_deadline_expired
                 if (
                     can_assign and available
                     and not acceptance_error(profile, obj, allow_refund_recovery=True)
                     and (obj.provider_gender == "ANY" or obj.provider_gender == profile.gender)
                     and obj.payment_status == Order.PaymentStatus.PAID
                     and (obj.dispatch_route == Order.DispatchRoute.PUBLIC
-                         or OrderGrabPoolSnapshot.objects.filter(order=obj).exists())
+                         or (obj._pool_snapshot_exists if hasattr(obj, '_pool_snapshot_exists')
+                             else OrderGrabPoolSnapshot.objects.filter(order=obj).exists()))
                     and obj.provider_id is None
                     and (obj.escort_mode == Order.EscortMode.SINGLE
                          or (obj.escort_mode == Order.EscortMode.DOUBLE
@@ -929,13 +949,18 @@ class OrderSerializer(EntityNumberModelSerializer):
                     and not obj.is_gift_snapshot
                     and (obj.requires_boss_selection or self.context.get('_provider_pool_view')
                          or has_admitting_round(obj.pk))
-                    and pending_deadline_expired(obj) is False
+                    and self.get_pending_deadline_expired(obj) is False
                 ):
-                    from .grab_pool_visibility import order_visibility_time
-                    try:
-                        visible_at = order_visibility_time(obj, profile)
-                    except ValueError:
-                        visible_at = None
+                    visibility_times = self.context.get('_provider_pool_visibility')
+                    if visibility_times is not None:
+                        visible_at = (visibility_times.get(obj.pk) if obj._pool_snapshot_exists
+                                      else (obj.pool_entered_at or obj.created_at) + timedelta(seconds=delay))
+                    else:
+                        from .grab_pool_visibility import order_visibility_time
+                        try:
+                            visible_at = order_visibility_time(obj, profile)
+                        except ValueError:
+                            visible_at = None
                     if (active_count < capacity_limit and visible_at is not None
                             and timezone.now() >= visible_at):
                         # A malformed direct-payment quote can pass the pool's
@@ -1023,12 +1048,11 @@ class OrderSerializer(EntityNumberModelSerializer):
             return None
         request = self.context.get('request')
         if request and getattr(request, 'account', None):
-            from .segment_settlement import verified_person_credit
-            segmented, amount = verified_person_credit(obj, request.account.pk if request.account.account_type == ClubAccount.AccountType.PROVIDER else None)
+            account_id = request.account.pk if request.account.account_type == ClubAccount.AccountType.PROVIDER else None
+            segmented, amount = self._verified_person_credit(obj, account_id)
             if segmented:
                 return amount
             from .segment_financial_capture import transfer_income_pending
-            account_id = request.account.pk if request.account.account_type == ClubAccount.AccountType.PROVIDER else None
             if transfer_income_pending(obj, account_id):
                 return None
             if (request.account.account_type == ClubAccount.AccountType.PROVIDER

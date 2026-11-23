@@ -77,8 +77,11 @@ class CrossEndOrderLifecycleTest(APITestCase):
         grabbed = self.client.post(f'/api/orders/orders/{order.id}/grab/',
                                    {'recording_id': voice.data['data']['id']}, format='json')
         self.assertEqual(grabbed.data['code'], 0, grabbed.data)
-        self.login(self.customer)
         application_id = grabbed.data['data']['my_applications'][0]['id']
+        pool = self.client.get('/api/orders/orders/?status=pending')
+        pool_order, = pool.data['data']
+        self.assertEqual([row['id'] for row in pool_order['my_applications']], [application_id])
+        self.login(self.customer)
         self.assertEqual(self.client.post(f'/api/orders/orders/{order.id}/applications/{application_id}/select/').data['code'],0)
         self.login(self.provider)
         order.refresh_from_db()

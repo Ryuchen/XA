@@ -74,9 +74,12 @@ def audition_recordings_required(order):
     # The same flag also enables two-person evidence after automatic or
     # directly specified assignment. Those assignments are not auditions.
     from .models import OrderGrabPoolOpeningIntent, OrderGrabPoolSnapshot
-    if (OrderGrabPoolOpeningIntent.objects.filter(order=order).exists()
+    other_assignment = getattr(order, '_pool_other_assignment', None)
+    if other_assignment is None:
+        other_assignment = (OrderGrabPoolOpeningIntent.objects.filter(order=order).exists()
             or OrderGrabPoolSnapshot.objects.filter(order=order).exists()
-            or order.status_logs.filter(action='ASSIGN', reason='老板指定陪玩').exists()):
+            or order.status_logs.filter(action='ASSIGN', reason='老板指定陪玩').exists())
+    if other_assignment:
         return False
     if order.status == Order.Status.PENDING:
         # In a newly created public order this saved flag represents the

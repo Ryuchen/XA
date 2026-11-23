@@ -60,7 +60,13 @@ def prepare_order_settlement_display(orders, *, points_prepared=False, order_lis
         refund_ids = set()
         legacy_accounts = {}
         if eligible_ids:
-            refund_ids = set(OrderRefund.objects.filter(order_id__in=eligible_ids).values_list('order_id', flat=True))
+            # OrderListSerializer already loads the complete refund collection.
+            known_refunds = {order.pk: bool(order.refund_records.all()) for order in chunk
+                             if order_list_only and order.pk in eligible_ids
+                             and 'refund_records' in getattr(order, '_prefetched_objects_cache', {})}
+            refund_ids = {pk for pk, has_refund in known_refunds.items() if has_refund}
+            refund_ids.update(OrderRefund.objects.filter(order_id__in=eligible_ids - known_refunds.keys())
+                              .values_list('order_id', flat=True))
             for row in OrderProvider.objects.filter(order_id__in=detailed_ids).only(
                     'id', 'order_id', 'provider_id', 'provider_account_id', 'settlement_base',
                     'provider_income', 'settled_at', 'released_at'):

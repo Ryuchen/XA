@@ -395,11 +395,13 @@ class OrderListView(APIView):
             if status_filter == 'pending':
                 # 待接单池：返回尚未被接单的 PENDING 订单，供陪玩抢单
                 context['_provider_pool_view'] = True
-                from .pool_visibility import visible_provider_pool
+                from .pool_visibility import visible_provider_pool, with_pool_display_evidence
                 orders, read_state = visible_provider_pool(account)
+                orders = with_pool_display_evidence(orders, account.pk)
                 if read_state is not None:
                     context['_provider_read_state'] = read_state[:4]
-                    context['_provider_capacity_limit'] = read_state[4]
+                    context['_provider_capacity_limit'] = read_state.capacity_limit
+                    context['_provider_pool_visibility'] = read_state.visibility_times
 
             else:
                 # A rejected assignment is retained for history but has no
@@ -477,6 +479,10 @@ class OrderListView(APIView):
         rejection_actor = Q(operator_account=account)
         if account.account_type == ClubAccount.AccountType.PROVIDER and request.legacy_user:
             rejection_actor |= Q(operator_account__isnull=True, operator=request.legacy_user)
+        application_fetch = Prefetch('applications', queryset=OrderApplication.objects.select_related(
+            'applicant__escort_profile__level', 'partner__escort_profile__level').prefetch_related('voices__recording'),
+            to_attr='application_list')
+        is_pool = context.get('_provider_pool_view', False)
         orders = orders.select_related(
             'customer', 'customer__boss_type', 'provider', 'service', 'source_order',
             'service__service_category', 'service__gameplay', 'service__game_category',
@@ -485,7 +491,9 @@ class OrderListView(APIView):
             'providers', queryset=OrderProvider.objects.filter(
                 requester_assignments | Q(released_at__isnull=True)).order_by('pk'),
             to_attr='_visible_participants',
-        ), Prefetch('applications', queryset=OrderApplication.objects.select_related('applicant__escort_profile__level','partner__escort_profile__level').prefetch_related('voices__recording'), to_attr='application_list')).order_by('-created_at', '-pk')
+        )).order_by('-created_at', '-pk')
+        if not is_pool:
+            orders = orders.prefetch_related(application_fetch)
         from .paid_service_scope import enabled as paid_scope_enabled
         if paid_scope_enabled():
             orders = orders.select_related('paid_service_scope')
@@ -494,6 +502,11 @@ class OrderListView(APIView):
             page = min(page, max(1, (total + page_size - 1) // page_size))
             orders = orders[(page - 1) * page_size:page * page_size]
         orders = list(orders)
+        if is_pool:
+            prefetch_related_objects([order for order in orders if order._pool_has_applications], application_fetch)
+            for order in orders:
+                if not order._pool_has_applications:
+                    order.application_list = []
         legacy_id = getattr(request.legacy_user, 'pk', None) if account.account_type == ClubAccount.AccountType.PROVIDER else None
         for order in orders:
             order.requester_assignments = [row for row in order._visible_participants
@@ -547,7 +560,7 @@ class OrderDetailView(APIView):
                 'source_order', 'service__service_category', 'support_contact').prefetch_related('evaluations').filter(pk=order_id).first()
             if order is not None and read_state is not None:
                 context.update(_provider_pool_view=True, _provider_read_state=read_state[:4],
-                               _provider_capacity_limit=read_state[4])
+                               _provider_capacity_limit=read_state.capacity_limit)
         if order is None:
             return Response({'code': 404, 'msg': '订单不存在或无权查看'}, status=404)
         return Response({'code': 0, 'data': OrderSerializer(
