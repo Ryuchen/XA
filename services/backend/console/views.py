@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from contextlib import ExitStack
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
@@ -1652,9 +1653,11 @@ class OrderViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             lifecycle = capture_transfer_lifecycle([
                 (cmd['old_provider_account_id'], cmd['new_provider_account'].pk) for cmd in parsed
             ])
-            with transaction.atomic(), revision_scope(order.pk,
-                    outgoing_accounts={cmd['old_provider_account_id'] for cmd in parsed}):
+            with transaction.atomic(), ExitStack() as scopes:
+                # The formal points scope already locks the order and store funds.
                 lock_transfer_lifecycle(lifecycle)
+                scopes.enter_context(revision_scope(order.pk,
+                    outgoing_accounts={cmd['old_provider_account_id'] for cmd in parsed}))
                 lifecycle_cycles = ({account.pk: account.business_cycle for account in lifecycle[0]}
                                     if lifecycle is not None else None)
                 locked_order = Order.objects.select_for_update().get(pk=order.pk)
