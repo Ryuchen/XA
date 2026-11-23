@@ -143,15 +143,15 @@
 .xa-store-closed-details {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--card);
+  gap: 12px;
 }
 .xa-store-closed-details section {
   min-width: 0;
   padding: clamp(16px, 3vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
 }
-.xa-store-closed-details section + section { border-block-start: 1px solid var(--border); }
 .xa-store-closed-details h2 { margin: 0; font-size: 1rem; font-weight: 700; text-wrap: balance; }
 .xa-store-closed-details h2:has(svg) { display: flex; align-items: center; gap: 8px; }
 .xa-store-closed-details h2 svg { color: var(--muted-foreground); }
@@ -168,6 +168,32 @@
 .xa-store-closed-return > p { max-inline-size: 24rem; }
 .xa-store-closed-help dl { margin: 12px 0 0; }
 .xa-store-closed-help dt { margin: 0; font-size: .875rem; font-weight: 600; }
+
+.xa-store-closed-return-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-block-size: 44px;
+  margin-block-start: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--muted);
+  color: var(--foreground);
+  font-size: .875rem;
+  text-decoration: none;
+}
+.xa-store-closed-return-link:hover { background: var(--accent); }
+.xa-store-closed-return-link strong { display: block; font-weight: 600; }
+.xa-store-closed-return-link strong + span {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--muted-foreground);
+  font-size: .8125rem;
+  overflow-wrap: anywhere;
+}
+
 .xa-store-closed-services ul {
   list-style: none;
   margin: 12px 0 0;
@@ -198,7 +224,7 @@
   text-underline-offset: .25em;
 }
 .xa-store-closed-footer a:hover { text-decoration-color: currentColor; }
-.xa-store-closed-footer a:focus-visible { outline: 3px solid hsl(var(--ocean-400)); outline-offset: 3px; }
+.xa-store-closed a:focus-visible { outline: 3px solid hsl(var(--ocean-400)); outline-offset: 3px; }
 
 .xa-store-closed-address {
   width: min(100%, 28rem);
@@ -258,18 +284,14 @@
     background: linear-gradient(to right, hsl(var(--ocean-950)), hsl(var(--ocean-950) / .6) 10%, transparent 40%);
   }
 
-  .xa-store-closed-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .xa-store-closed-details { gap: 16px; }
+  .xa-store-closed-details:has(> .xa-store-closed-return) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .xa-store-closed-details h2 svg {
     box-sizing: content-box;
     padding: 6px;
     border-radius: 8px;
     background: var(--accent);
     color: var(--accent-foreground);
-  }
-  .xa-store-closed-help:only-child { grid-column: 1 / -1; }
-  .xa-store-closed-details .xa-store-closed-return {
-    border-block-start: 0;
-    border-inline-start: 1px solid var(--border);
   }
   .xa-store-closed-services { grid-column: 1 / -1; }
   .xa-store-closed-services ul {

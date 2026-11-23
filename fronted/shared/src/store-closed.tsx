@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarClock, Check, ClipboardList, Copy, Gamepad2, Globe2, Headphones, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, ClipboardList, Copy, Gamepad2, Globe2, Headphones, Link2, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { hostStoreSlug, storeBrandLogo } from "./store.ts";
 import headsetImage from "../assets/store-closed-headset.webp";
@@ -24,7 +24,7 @@ const entryContent = {
     helpTitle: "已有订单或售后问题？",
     help: "请通过原下单渠道联系本店客服。",
     helpDetails: "订单编号和需要处理的问题。",
-    returnGuide: "打开保存的链接，重新检查门店状态。开放后可使用本店老板账号登录。",
+    returnGuide: "保存下方地址。开放后可使用本店老板账号登录。",
     entryPath: "/boss/",
     otherEntry: { path: "/player/", label: "本店陪玩工作台" },
   },
@@ -38,7 +38,7 @@ const entryContent = {
     helpTitle: "有服务正在进行？",
     help: "如需交接服务或补交报单，请联系本店负责人。",
     helpDetails: "订单编号、当前服务进度和待交接事项。",
-    returnGuide: "打开保存的链接，重新检查门店状态。开放后可用本店陪玩账号进入工作台。",
+    returnGuide: "保存下方地址。开放后可用本店陪玩账号进入工作台。",
     entryPath: "/player/",
     otherEntry: { path: "/boss/", label: "本店老板服务中心" },
   },
@@ -162,6 +162,14 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
             {issue?.closed && returnUrl && <section className="xa-store-closed-return">
               <h2><CalendarClock size={20} aria-hidden="true" />收到开放通知后</h2>
               <p>{returnGuide}</p>
+              <a className="xa-store-closed-return-link" href={returnUrl}>
+                <Link2 size={18} aria-hidden="true" />
+                <span>
+                  <strong>{entryName}</strong>
+                  <span dir="ltr">{returnUrl}</span>
+                </span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </a>
             </section>}
             {issue?.closed && <section className="xa-store-closed-services">
               <h2>开放后可使用</h2>

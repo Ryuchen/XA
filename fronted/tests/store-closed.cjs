@@ -78,6 +78,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     const closed = page.getByRole('heading', { name: '门店暂未开放', exact: true })
     const services = page.getByRole('heading', { name: '开放后可使用', exact: true })
     const returnGuide = page.getByRole('heading', { name: '收到开放通知后', exact: true })
+    const returnEntry = page.getByRole('link', { name: /^老板服务中心 http/ })
     const help = page.getByRole('heading', { name: '已有订单或售后问题？', exact: true })
     const schedule = page.getByText('开放时间以门店通知为准', { exact: true })
     const helpChannel = page.getByText('请通过原下单渠道联系本店客服。', { exact: true })
@@ -91,6 +92,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(await closed.count(), 0)
     assert.equal(await services.count(), 0)
     assert.equal(await returnGuide.count(), 0)
+    assert.equal(await returnEntry.count(), 0)
     assert.equal(await schedule.count(), 0)
     assert.equal(await otherEntry.count(), 0)
     await page.evaluate(() => {
@@ -106,6 +108,8 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await closed.waitFor()
     await services.waitFor()
     await returnGuide.waitFor()
+    assert.equal(await returnEntry.getAttribute('href'), origin + '/boss/')
+    assert.equal(await returnEntry.getByText(origin + '/boss/', { exact: true }).count(), 1)
     assert.equal(await otherEntry.getAttribute('href'), '/player/')
     await page.getByText('开放后可使用本店老板账号登录。', { exact: false }).waitFor()
     await page.getByText('查看自己的订单进度和售后记录。', { exact: true }).waitFor()
@@ -199,6 +203,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     await copy.waitFor()
     assert.equal(await services.count(), 0)
     assert.equal(await returnGuide.count(), 0)
+    assert.equal(await returnEntry.count(), 0)
     assert.equal(await address.count(), 0)
     assert.equal(await page.getByRole('button', { name: '重试', exact: true }).evaluate(element => element === document.activeElement), true)
 
