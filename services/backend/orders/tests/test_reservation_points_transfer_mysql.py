@@ -7,7 +7,7 @@ from unittest import skipUnless
 from unittest.mock import patch
 from uuid import uuid4
 
-from django.db import connection, transaction
+from django.db import connection, connections, transaction
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -237,11 +237,57 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             {'action': 'approve', 'version': 1}, format='json'))
         return OrderSegmentReportSubmission.objects.get(report__segment_id=segment_id, version=1)
 
+    def assert_preview(self, order, change, first_due, second_due):
+        detail_url = f'/api/admin/orders/{order.pk}/'
+        url = detail_url + 'segment-settlement-plan/'
+        self.assertEqual(self.api(self.original).get(url).status_code, 403)
+        alias = self.store.database_alias
+
+        def reject_writes(execute, sql, params, many, context):
+            verb = sql.lstrip().split(maxsplit=1)[0].upper()
+            self.assertNotIn(verb, ('INSERT', 'UPDATE', 'DELETE', 'REPLACE'), '预览禁止写入本店记录')
+            return execute(sql, params, many, context)
+
+        with patch('django.utils.timezone.now', return_value=first_due - timedelta(seconds=1)):
+            staff = self.api(self.staff)
+            with connections[alias].execute_wrapper(reject_writes):
+                preview = self.ok(staff.get(url))
+            with override_settings(ORDINARY_SERVICE_FUNDING_ENABLED=True, ORDINARY_TRANSFER_REFUND_MYSQL_ENABLED=True,
+                                   NEGOTIATION_PROPOSAL_ENABLED=True, NEGOTIATION_REFUND_EXECUTION_ENABLED=True):
+                with connections[alias].execute_wrapper(reject_writes):
+                    self.assertEqual(preview, self.ok(staff.get(url)))
+                detail = self.ok(staff.get(detail_url))
+                segments = detail['original_attribution']['segments']
+                self.assertEqual({part['id']: (part.get('segment_report') or {}).get('status') for part in segments},
+                                 {change.previous_segment_id: 'APPROVED', change.next_segment_id: 'APPROVED'})
+
+        self.assertEqual((preview['deal_amount'], preview['inviter_income'], preview['store_income']), (10000, 0, 0))
+        self.assertEqual({part['segment_id']: (part['account_id'], part['basis'], part['fee'], part['income'])
+                          for part in preview['segments']}, {
+            change.previous_segment_id: (self.original.pk, 4000, 800, 3200),
+            change.next_segment_id: (self.replacement.pk, 6000, 1800, 4200),
+        })
+        self.assertEqual({person['account_id']: person['freeze_until'] for person in preview['persons']},
+                         {self.original.pk: first_due, self.replacement.pk: second_due})
+        for person in preview['persons']:
+            self.assertIn('本人报单冻结期尚未结束', person['blockers'])
+
+        with transaction.atomic(using=alias):
+            OrderFinancialLock.objects.filter(pk=1).update(id=2)
+            with connections[alias].execute_wrapper(reject_writes):
+                unavailable = self.api(self.staff).get(url)
+            self.assertEqual(unavailable.status_code, 409, unavailable.data)
+            self.assertIn('订单资金互斥记录缺失', unavailable.data['msg'])
+            self.assertFalse(OrderFinancialLock.objects.filter(pk=1).exists())
+            transaction.set_rollback(True, using=alias)
+
     def exercise_settlement_after_transfer(self):
         self.ok(self.transfer(self.api(self.staff)))
         revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
         change = revision.last_transfer
         path = f'/api/orders/orders/{self.order_id}/'
+        preview_url = f'/api/admin/orders/{self.order_id}/segment-settlement-plan/'
+        self.assertEqual(self.api(self.staff).get(preview_url).status_code, 409)
         original = self.api(self.original)
         evidence_key = 'points-transfer-original-evidence'
 
@@ -275,6 +321,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         income = order.transactions.filter(tx_type=Transaction.TxType.INCOME).order_by('pk')
         consumption = ConsumptionConfirmation.objects.filter(order=order)
         loyalty_points = PointLedger.objects.filter(order=order, kind='CONSUMPTION')
+        self.assert_preview(order, change, first_due, second_due)
+        self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
         with patch('django.utils.timezone.now', return_value=first_due - timedelta(seconds=1)):
             self.assertEqual(confirm_due_consumption.run(), 0)
         self.assertFalse(income.exists())
@@ -283,6 +331,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         with patch('django.utils.timezone.now', return_value=first_due):
             self.assertEqual(confirm_due_consumption.run(), 0)
             self.assertEqual(confirm_due_consumption.run(), 0)
+            self.assertEqual(self.api(self.staff).get(preview_url).status_code, 409)
         manifest = OrderSegmentSettlementManifest.objects.get(order=order)
         self.assertIsNone(manifest.finalized_at)
         original = manifest.people.get()
@@ -316,6 +365,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         events = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
         self.assertEqual(list(events.values_list('kind', 'amount')), [('ORDER', 2000), ('RELEASE', 600)])
         print(f'{self.store.slug} reservation={self.reservation_id} order={order.pk} '
+              f'preview_segments={change.previous_segment_id},{change.next_segment_id} '
               f'first_income={original.income_transaction_id}:3200 second_income={replacement_payment.income_transaction_id}:4200 '
               f'first_due={first_due.isoformat()} second_due={second_due.isoformat()} consumption={confirmed.pk}:6000',
               flush=True)

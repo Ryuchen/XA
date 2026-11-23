@@ -9,11 +9,14 @@ from dataclasses import dataclass
 from dataclasses import asdict
 from datetime import timedelta
 
+from django.conf import settings
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from .models import (OrderOriginalAttribution, OrderOriginalShareTransfer,
                      OrderSegmentFinancialCoverage, OrderSegmentFinancialSnapshot,
                      OrderSegmentReport, OrderSegmentTransferBasis)
+from .points_funding_plan import PointsFundingPlanError
 from .settlement import SettlementError, compute_provider_income
 from .transfer_economics import allocate_same_rule_fixed_seat, allocate_transfer_basis
 
@@ -353,21 +356,40 @@ class SegmentSettlementPlanView(APIView):
     def get(self, request, order_id):
         from .segment_reports import enabled, supports
         from .models import Order
+        from .points_service_payment import needs_integrated_processing
         if not enabled():
             return Response({'code':404, 'msg':'当前不支持逐段收益核对'}, status=404)
         if not is_console_account(request.account) or not {'order:view', 'report:view'}.issubset(get_account_permissions(request.account)):
             return Response({'code':403, 'msg':'查看收益核对需要订单及报单查看权限'}, status=403)
         with transaction.atomic():
             order = Order.objects.select_for_update().filter(pk=order_id).first()
-            if not order or not supports(order):
+            if not order:
                 return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
             try:
                 from .segment_settlement import _ordinary_transfer_refund
-                if _ordinary_transfer_refund(order):
+                if (getattr(settings, 'SERVICE_POINTS_MYSQL_ENABLED', False) is True
+                        and order.status in (Order.Status.IN_SERVICE, Order.Status.COMPLETED)
+                        and needs_integrated_processing(order)
+                        and OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()):
+                    from .addon_settlement import has_paid_addons
+                    from .points_transfer_funding import plan_points_transfer
+                    from .points_transfer_refund_access import after_transfer
+                    if (order.payment_status != Order.PaymentStatus.PAID or order.refund_records.exists()
+                            or has_paid_addons(order)):
+                        raise SettlementError('积分转单的付款、退款或加购须先核对，不能生成逐段收益')
+                    with after_transfer(order.pk, phase='report', read_only=True):
+                        plan = plan_points_transfer(order.pk, read_only=True).segments
+                elif not supports(order):
+                    return Response({'code':404, 'msg':'订单当前不支持逐段收益核对'}, status=404)
+                elif _ordinary_transfer_refund(order):
                     from .negotiation_transfer_settlement import build_locked
                     plan, _ = build_locked(order)
                 else:
                     plan = build_segment_settlement_plan(order)
-            except SettlementError as exc:
+            except ValidationError as exc:
+                detail = exc.detail
+                message = str(detail[0]) if isinstance(detail, list) and len(detail) == 1 else '积分转单凭证待核对'
+                return Response({'code':409, 'msg':message}, status=409)
+            except (SettlementError, PointsFundingPlanError) as exc:
                 return Response({'code':409, 'msg':str(exc)}, status=409)
             return Response({'code':0, 'data':asdict(plan)})
