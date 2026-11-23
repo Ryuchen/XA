@@ -19,6 +19,8 @@ def revision_scope(order_id, *, outgoing_accounts=()):
         order = Order.objects.filter(pk=order_id).first()
         if order and needs_integrated_processing(order):
             if getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
+                # The caller holds the lifecycle locks. Take the payroll
+                # barrier before the capability locks the order and funds.
                 from console.payroll_event_barrier import lock_payment_refund_events
                 lock_payment_refund_events()
             from .points_transfer_refund_access import transfer_capture, post_refund_transfer, third_refund_transfer

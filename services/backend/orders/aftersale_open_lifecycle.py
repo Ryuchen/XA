@@ -16,6 +16,19 @@ def _provider_ids(order, scope):
     return ids if scope is None else ids.intersection(scope)
 
 
+def _lock_points_payroll_barrier(order):
+    if not getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
+        return
+    from .points_business_access import configured
+    from .points_service_payment import needs_integrated_processing
+    if configured() and needs_integrated_processing(order):
+        from console.payroll_event_barrier import lock_payment_refund_events
+        # Confirmation takes the exclusive barrier before locking paid orders.
+        # A later transfer or refund can change the case's scope, so take the
+        # shared barrier before inspecting the case under its order lock.
+        lock_payment_refund_events()
+
+
 def protect_open(*, staff=False):
     def decorator(fn):
         @wraps(fn)
@@ -49,6 +62,7 @@ def protect_open(*, staff=False):
             # read-only, preserving an already committed request's replay.
             if chat_hint is None:
                 with transaction.atomic():
+                    _lock_points_payroll_barrier(order)
                     locked = query.select_for_update().first()
                     case = locked.aftersales.first() if locked else None
                     key = request.data.get('client_request_id')
@@ -73,6 +87,7 @@ def protect_open(*, staff=False):
                 with transaction.atomic():
                     if guarded:
                         lock_provider_operations(accounts)
+                    _lock_points_payroll_barrier(order)
                     context = None
                     if chat_hint is not None:
                         from chat.aftersale_context import lock_context

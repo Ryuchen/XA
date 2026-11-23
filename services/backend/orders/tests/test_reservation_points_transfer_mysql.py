@@ -13,10 +13,12 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from club_accounts.services import get_or_create_account_for_legacy_user
+from console import test_payroll_late_activity as payroll_fixture
+from console.payroll_models import PayrollEventBarrier, PayrollRun
 from console.points_redemption_config import save_points_terms
 from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, RetirementAudit
 from engagement.tasks import confirm_due_consumption
-from orders.models import (Order, OrderFinancialLock, OrderPointsRedemption, OrderPointsTransferFundingRevision,
+from orders.models import (AfterSale, Order, OrderFinancialLock, OrderPointsRedemption, OrderPointsTransferFundingRevision,
                            OrderSegmentReportSubmission, OrderSegmentSettlementManifest)
 from orders.tests import test_assigned_order_reservation_guard as reservation_fixture
 from orders.tests import test_release_flow as release_fixture
@@ -158,7 +160,187 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.retirement_race = True
         self.run_in_stores(self.exercise_retirement_and_points_transfer)
 
+    def test_funded_points_transfer_waits_for_payroll_while_retirement_waits_for_transfer(self):
+        self.retirement_race = True
+        self.run_in_stores(self.exercise_payroll_and_transfer)
+
+    @staticmethod
+    def pause_payroll_barrier(held, resume):
+        table = PayrollEventBarrier._meta.db_table
+
+        def pause(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if not held.is_set() and f'`{table}`' in sql.lower() and 'for update' in sql.lower():
+                held.set()
+                if not resume.wait(8):
+                    raise AssertionError('工资屏障等待未在测试时限内结束')
+            return result
+        return pause
+
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True)
+    def exercise_payroll_and_transfer(self):
+        PayrollEventBarrier.objects.get_or_create(pk=1)
+        payroll = payroll_fixture.LateActivityPayrollTest()
+        payroll.setUp()
+        payroll.assign(payroll.original_text)
+        preview = payroll.preview(payroll.original_text)
+        self.assertTrue(preview['can_confirm'], preview['warnings'])
+        payroll_url = '/api/admin/payroll/confirm/'
+        payload = {'month': payroll.original_text, 'fingerprint': preview['fingerprint']}
+        table = PayrollEventBarrier._meta.db_table
+        lifecycle_table = transfer_fixture.LIFECYCLE_TABLE
+        held, resume = Event(), Event()
+        payroll_attempts, retirement_attempts = Queue(), Queue()
+
+        transfer_client = self.api(self.staff)
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            confirming = pool.submit(self.independent_request,
+                lambda: payroll.client.post(payroll_url, payload, format='json'), self.pause_payroll_barrier(held, resume))
+            try:
+                self.assertTrue(held.wait(3), '工资确认未取得独占屏障')
+                transfer = pool.submit(self.independent_request, lambda: self.transfer(transfer_client),
+                    self.observe_lock_attempt(payroll_attempts, table, 'lock in share mode'))
+                waited_for_payroll = self.wait_for_lock(transfer, payroll_attempts, table=table, include_shared=True)
+                retiring = pool.submit(self.independent_request,
+                    lambda: self.retirement_client.post(self.retirement_url, self.retirement_payload, format='json'),
+                    self.observe_lock_attempt(retirement_attempts, lifecycle_table, 'for update', account_id=self.original.pk))
+                waited_for_transfer = self.wait_for_lock(retiring, retirement_attempts, table=lifecycle_table)
+                with transaction.atomic(using=self.store.database_alias):
+                    Order.objects.select_for_update(nowait=True).get(pk=self.order_id)
+                    OrderFinancialLock.objects.select_for_update(nowait=True).get(pk=1)
+                    self.assertFalse(PayrollRun.objects.filter(month=payroll.original).exists())
+                    self.assertFalse(OrderPointsTransferFundingRevision.objects.filter(order_id=self.order_id).exists())
+                self.assertFalse(transfer.done())
+                self.assertFalse(retiring.done())
+            finally:
+                resume.set()
+            confirmation = self.ok(confirming.result(timeout=10))
+            self.ok(transfer.result(timeout=10))
+            retirement = retiring.result(timeout=10)
+
+        run = PayrollRun.objects.get(month=payroll.original)
+        self.assertEqual((confirmation['run_id'], run.fingerprint), (run.pk, preview['fingerprint']))
+        replay = self.ok(payroll.client.post(payroll_url, payload, format='json'))
+        self.assertEqual((replay['run_id'], replay['totals']), (run.pk, preview['totals']))
+        self.assertEqual(retirement.status_code, 400, retirement.data)
+        self.assertIn('注销内容已变化', retirement.data['msg'])
+        self.assertFalse(RetirementAudit.objects.filter(account=self.original).exists())
+        self.assert_occupancy(self.replacement, self.original, 1)
+        self.assertEqual(list(PointLedger.objects.filter(order_id=self.order_id).values_list('amount', flat=True)), [-10000])
+        revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
+        self.assertEqual((revision.after_funding['additional_store_funding_units'], revision.releases.get().amount), (1400, 600))
+        usage = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
+        self.assertEqual(list(usage.values_list('kind', 'amount')), [('ORDER', 2000), ('RELEASE', 600)])
+        print(f'{self.store.slug} reservation={self.reservation_id} order={self.order_id} '
+              f'payroll_run={run.pk} transfer_waiting={waited_for_payroll} '
+              f'retirement_waiting={waited_for_transfer} retirement=400 transfer=0', flush=True)
+
+    def test_transferred_points_aftersale_waits_for_payroll_before_locking_order(self):
+        self.run_in_stores(self.exercise_payroll_and_aftersale)
+
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
+                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)
+    def exercise_payroll_and_aftersale(self):
+        PayrollEventBarrier.objects.get_or_create(pk=1)
+        self.ok(self.transfer(self.api(self.staff)))
+        revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
+        replacement = self.api(self.replacement)
+        self.join_replacement(replacement, revision.last_transfer)
+        order_url = f'/api/orders/orders/{self.order_id}/'
+        self.ok(replacement.post(order_url + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'points-after-transfer-complete'}, format='multipart'))
+        buyer = self.api(self.buyer)
+        buyer_url = order_url + 'aftersale/'
+        payload = {'reason': '核对接替段服务', 'client_request_id': 'points-after-transfer-payroll',
+                   'affected_provider_account_ids': [self.replacement.pk]}
+
+        operator = make_console_user(['order:view', 'support:edit'])
+        operator_account = get_or_create_account_for_legacy_user(operator)
+        operator.admin_membership.account = operator_account
+        operator.admin_membership.save(update_fields=['account'])
+        staff = self.api(operator_account)
+        staff_payload = {**payload, 'order_id': self.order_id, 'client_request_id': 'points-after-transfer-staff'}
+        staff_url = '/api/admin/aftersales/open-negotiation/'
+
+        payroll = payroll_fixture.LateActivityPayrollTest()
+        payroll.setUp()
+        payroll.assign(payroll.original_text)
+        preview = payroll.preview(payroll.original_text)
+        self.assertTrue(preview['can_confirm'], preview['warnings'])
+        payroll_url = '/api/admin/payroll/confirm/'
+        payroll_payload = {'month': payroll.original_text, 'fingerprint': preview['fingerprint']}
+        table = PayrollEventBarrier._meta.db_table
+        case_id = None
+        opens = ((buyer, buyer_url, payload, 200), (buyer, buyer_url, payload, 200),
+                 (staff, staff_url, staff_payload, 409))
+        for actor, url, body, expected in opens:
+            creating = case_id is None
+            held, resume = Event(), Event()
+            creation_ready, continue_creation = Event(), Event()
+            attempts = Queue()
+            observe_payroll = self.observe_lock_attempt(attempts, table, 'lock in share mode')
+
+            def observe_case(execute, sql, params, many, context):
+                query = sql.lower()
+                if (creating and not creation_ready.is_set() and f'`{transfer_fixture.LIFECYCLE_TABLE}`' in query
+                        and 'lock in share mode' in query and self.replacement.pk in (params or ())):
+                    # The first read of the case has finished. Start payroll now
+                    # so it competes with the separate creation transaction.
+                    creation_ready.set()
+                    self.assertTrue(continue_creation.wait(8), '售后创建等待未在测试时限内结束')
+                return observe_payroll(execute, sql, params, many, context)
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                try:
+                    if creating:
+                        aftersale = pool.submit(self.independent_request,
+                            lambda: actor.post(url, body, format='json'), observe_case)
+                        self.assertTrue(creation_ready.wait(3), '售后未进入创建事务')
+                    confirmation = pool.submit(self.independent_request,
+                        lambda: payroll.client.post(payroll_url, payroll_payload, format='json'),
+                        self.pause_payroll_barrier(held, resume))
+                    self.assertTrue(held.wait(3), '工资确认未取得独占屏障')
+                    if creating:
+                        continue_creation.set()
+                    else:
+                        aftersale = pool.submit(self.independent_request,
+                            lambda: actor.post(url, body, format='json'), observe_case)
+                    waited = self.wait_for_lock(aftersale, attempts, table=table, include_shared=True)
+                    with transaction.atomic(using=self.store.database_alias):
+                        Order.objects.select_for_update(nowait=True).get(pk=self.order_id)
+                        current = AfterSale.objects.select_for_update(nowait=True).filter(order_id=self.order_id).first()
+                        self.assertEqual(current.pk if current else None, case_id)
+                    self.assertFalse(aftersale.done())
+                finally:
+                    continue_creation.set()
+                    resume.set()
+                confirmed = self.ok(confirmation.result(timeout=10))
+                response = aftersale.result(timeout=10)
+            self.assertEqual(confirmed['totals'], preview['totals'])
+            self.assertEqual(response.status_code, expected, response.data)
+            if expected == 200:
+                result = self.ok(response)
+                if case_id is None:
+                    case_id = result['id']
+                self.assertEqual(result['id'], case_id)
+            else:
+                self.assertEqual(response.data['errorCode'], 'AFTERSALE_ALREADY_OPEN')
+            print(f'{self.store.slug} order={self.order_id} payroll_run={confirmed["run_id"]} '
+                  f'aftersale={case_id} creating={creating} waiting_session={waited} aftersale_status={expected}', flush=True)
+        case = AfterSale.objects.get(order_id=self.order_id)
+        changed = buyer.post(buyer_url, {**payload, 'reason': '用原编号改写本次申请'}, format='json')
+        self.assertEqual((changed.status_code, changed.data['errorCode']), (409, 'AFTERSALE_REQUEST_CONFLICT'))
+        self.assertEqual((case.pk, case.client_request_id, case.affected_provider_account_ids),
+                         (case_id, payload['client_request_id'], [self.replacement.pk]))
+        self.assertEqual(len(case.history), 1)
+        order = Order.objects.get(pk=self.order_id)
+        self.assertEqual((order.status, order.provider_account_id), (Order.Status.COMPLETED, self.replacement.pk))
+        self.assertEqual(list(order.transactions.values_list('pk', 'tx_type', 'amount')), self.funding_before)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before)
+
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True)
     def exercise_retirement_and_points_transfer(self):
+        PayrollEventBarrier.objects.get_or_create(pk=1)
         held, resume = Event(), Event()
         attempts = Queue()
         lifecycle_table = transfer_fixture.LIFECYCLE_TABLE
@@ -184,6 +366,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                     self.observe_lock_attempt(attempts, lifecycle_table, 'lock in share mode', account_id=self.original.pk))
                 waited = self.wait_for_lock(transfer, attempts, table=lifecycle_table, include_shared=True)
                 with transaction.atomic(using=self.store.database_alias):
+                    PayrollEventBarrier.objects.select_for_update(nowait=True).get(pk=1)
                     Order.objects.select_for_update(nowait=True).get(pk=self.order_id)
                     OrderFinancialLock.objects.select_for_update(nowait=True).get(pk=1)
             finally:
