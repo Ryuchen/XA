@@ -8,6 +8,8 @@ from time import time
 from unittest import skipUnless
 from unittest.mock import patch
 
+from celery.contrib.testing.worker import start_worker
+from django.conf import settings
 from django.db import OperationalError, connections
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
@@ -22,7 +24,9 @@ from orders.tests.factories import make_console_user
 from site_messages.models import Message
 from stores.context import store_context
 from stores.models import (PlatformAccount, PlatformAuditEvent, PlatformOtpCredential, PlatformRoleGrant,
-                           PlatformWithdrawalAuditReceipt, Store)
+                           PlatformWithdrawalAuditReceipt, PlatformWithdrawalAuditScanCursor, Store)
+from stores.test_certificate_admission_mysql import _store_task_app
+from stores.withdrawal_audit_tasks import scan_store
 from wallet.models import IdempotencyKey, SystemConfig, Transaction, WithdrawalPlatformEvent, WithdrawalRelease, WithdrawRequest
 from wallet.services import get_wallet
 
@@ -171,8 +175,9 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
 
     def interrupt_commit(self, operation, *, after_commit, write_model=IdempotencyKey, encrypted=False):
         self.assertTrue(after_commit or not encrypted, 'The command-before-server control uses the plain test connection')
-        self.assertIn(write_model, (IdempotencyKey, WithdrawalPlatformEvent, PlatformWithdrawalAuditReceipt))
-        alias = 'default' if write_model is PlatformWithdrawalAuditReceipt else 'store_b'
+        control_writes = (PlatformWithdrawalAuditReceipt, PlatformWithdrawalAuditScanCursor)
+        self.assertIn(write_model, (IdempotencyKey, WithdrawalPlatformEvent, *control_writes))
+        alias = 'default' if write_model in control_writes else 'store_b'
         connection = connections[alias]
         require_disposable_mysql(connection)
         self.assertTrue(connection.get_autocommit())
@@ -182,7 +187,7 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
         client_errors = []
         commit_ready = False
         table = write_model._meta.db_table
-        verb = 'UPDATE' if write_model is IdempotencyKey else 'INSERT INTO'
+        verb = 'UPDATE' if write_model in (IdempotencyKey, PlatformWithdrawalAuditScanCursor) else 'INSERT INTO'
         with ThreadingTCPServer(('127.0.0.1', 0), _CommitRelay) as relay:
             relay.daemon_threads = True
             relay.upstream = ('127.0.0.1', int(port))
@@ -235,11 +240,17 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
             expected = ['TLS_SERVER_RECORD_WITHHELD'] if encrypted else ['COMMIT', 'OK_WITHHELD' if after_commit else 'COMMIT_NOT_SENT']
             self.assertEqual(relay.observed, expected)
         self.assertEqual(client_errors, [2013])
-        self.assertEqual(response.status_code, 503, response.data)
-        self.assertEqual(response.data['errorCode'], 'AUDIT_UNAVAILABLE' if alias == 'default' else 'WITHDRAWAL_UNAVAILABLE')
-        self.assertNotIn('fundResult', response.data)
-        self.assertNotIn('data', response.data)
-        print(f'wire cut {" ".join(relay.observed)} driver=2013 http=503 alias={alias}', flush=True)
+        if write_model is PlatformWithdrawalAuditScanCursor:
+            self.assertEqual(response, {'status': 'CONTROL_UNAVAILABLE', 'store_id': self.stores['xinan'].pk})
+            outcome = 'task=CONTROL_UNAVAILABLE'
+        else:
+            self.assertEqual(response.status_code, 503, response.data)
+            self.assertEqual(response.data['errorCode'], 'AUDIT_UNAVAILABLE' if alias == 'default' else 'WITHDRAWAL_UNAVAILABLE')
+            self.assertNotIn('fundResult', response.data)
+            self.assertNotIn('data', response.data)
+            outcome = 'http=503'
+        print(f'wire cut {" ".join(relay.observed)} driver=2013 {outcome} alias={alias}', flush=True)
+        return response
 
     def submit(self, slug, request_id, amount):
         return self.clients[slug].post(self.path, {'client_request_id': request_id, 'amount': amount,
@@ -476,3 +487,109 @@ class WithdrawalCommitWireMySQLTest(TransactionTestCase):
         print(f'manual audit wire recovery store=xinan withdrawal={row_id} event={event.pk} request={request_id} '
               f'audit={audit.pk} original_actor={self.finance.pk} recovery_actor={reviewer.pk} committed={after_commit} '
               f'tls={encrypted} ledger={row.transaction_id}/PENDING balance=80000 frozen=20000 peer={peer_id}', flush=True)
+
+    def test_auto_scan_resumes_after_plain_control_commit_confirmation_is_lost(self):
+        self.check_automatic_scan_recovery(after_commit=True)
+
+    def test_auto_scan_resumes_after_encrypted_control_commit_confirmation_is_lost(self):
+        self.check_automatic_scan_recovery(after_commit=True, encrypted=True)
+
+    def test_auto_scan_revisits_first_event_if_control_commit_was_not_sent(self):
+        self.check_automatic_scan_recovery(after_commit=False)
+
+    @override_settings(WITHDRAW_AUDIT_AUTO_RECOVERY_ENABLED=True)
+    def check_automatic_scan_recovery(self, *, after_commit, encrypted=False):
+        apply_id = 'wire-auto-scan-source'
+        peer_id = self.peer_application(apply_id)
+        row_id = self.reviewed_application(apply_id)
+        store = self.stores['xinan']
+        endpoint = f'/api/admin/platform/withdrawals/xinan/{row_id}'
+        for action, fields in (('approve', {}), ('mark-unknown', {'reason': '隔离核对原付款结果'})):
+            payload = {'client_request_id': f'wire-auto-scan-{action}', **fields}
+            self.interrupt_commit(lambda: self.financial.post(f'{endpoint}/{action}', payload, format='json'),
+                                  after_commit=True, write_model=WithdrawalPlatformEvent)
+        row = self.facts('xinan', 'PAYMENT_UNKNOWN', 'PENDING', 80000, 20000)
+        with store_context(store):
+            first, second = WithdrawalPlatformEvent.objects.filter(withdrawal=row).order_by('pk')
+            notice_ids = list(Message.objects.filter(recipient_account=self.owners['xinan']).order_by('id').values_list('pk', flat=True))
+        self.assertEqual((first.action, second.action), ('approve', 'mark-unknown'))
+        self.assertEqual(len(notice_ids), 4)
+        cursor = PlatformWithdrawalAuditScanCursor.objects.create(store=store, last_event_id=0)
+        original_updated_at = cursor.updated_at
+        receipts = PlatformWithdrawalAuditReceipt.objects.filter(store=store).select_related('audit')
+        audits = PlatformAuditEvent.objects.filter(target_store_slug=store.slug, target_id=str(row_id), action__startswith='withdraw.')
+        self.assertFalse(receipts.exists() or audits.exists())
+        registered_redis = bool(getattr(settings, 'SA14_TEST_REDIS', None))
+
+        with _store_task_app(registered_redis=registered_redis) as (app, queue):
+            app.finalize()
+            task = app.tasks[scan_store.name]
+            original_run = task.run
+            cut_next = True
+
+            def run_in_worker(store_id):
+                nonlocal cut_next
+                try:
+                    if cut_next:
+                        self.assertEqual(store_id, store.pk)
+                        cut_next = False
+                        # Django connections are local to the worker thread.
+                        return self.interrupt_commit(lambda: original_run(store_id), after_commit=after_commit,
+                                                     write_model=PlatformWithdrawalAuditScanCursor, encrypted=encrypted)
+                    return original_run(store_id)
+                finally:
+                    connections.close_all()
+
+            def check_page(expected_after, recovered, already_recorded):
+                result = task.delay(store.pk).get(timeout=15, disable_sync_subtasks=False)
+                self.assertEqual(result, {'status': 'OK', 'store_id': store.pk, 'scanned': 1,
+                    'recovered': recovered, 'already_recorded': already_recorded, 'review': 0,
+                    'review_events': [], 'next_after': expected_after})
+                cursor.refresh_from_db()
+                self.assertEqual(cursor.last_event_id, expected_after)
+
+            with (patch.object(task, 'run', run_in_worker), patch('stores.withdrawal_audit_tasks.MAX_EVENTS', 1),
+                  start_worker(app, pool='solo', queues=[queue], perform_ping_check=False,
+                               without_heartbeat=True, loglevel='WARNING')):
+                failed = task.delay(store.pk)
+                self.assertEqual(failed.get(timeout=15, disable_sync_subtasks=False),
+                                 {'status': 'CONTROL_UNAVAILABLE', 'store_id': store.pk})
+                cursor.refresh_from_db()
+                first_position = first.pk if after_commit else 0
+                self.assertEqual(cursor.last_event_id, first_position)
+                if after_commit:
+                    initial_audit = receipts.get(tenant_event_id=first.pk).audit_id
+                    self.assertEqual(list(audits.values_list('pk', flat=True)), [initial_audit])
+                else:
+                    self.assertEqual(cursor.updated_at, original_updated_at)
+                    self.assertFalse(receipts.exists() or audits.exists())
+                    check_page(first.pk, recovered=1, already_recorded=0)
+                    initial_audit = receipts.get(tenant_event_id=first.pk).audit_id
+                self.assertFalse(receipts.filter(tenant_event_id=second.pk).exists())
+                check_page(0, recovered=1, already_recorded=0)
+                check_page(first.pk, recovered=0, already_recorded=1)
+                check_page(0, recovered=0, already_recorded=1)
+
+        recorded = {receipt.tenant_event_id: receipt.audit for receipt in receipts}
+        self.assertEqual(set(recorded), {first.pk, second.pk})
+        self.assertEqual(recorded[first.pk].pk, initial_audit)
+        self.assertEqual(audits.count(), 2)
+        for event in (first, second):
+            audit = recorded[event.pk]
+            self.assertEqual((audit.account_id, audit.action), (self.finance.pk, f'withdraw.{event.action}'))
+            self.assertEqual((audit.detail['event_id'], audit.detail['request_id'], audit.detail['request_fingerprint'], audit.detail['recovered_by']),
+                (event.pk, event.request_id, event.request_fingerprint, None))
+        result = self.facts('xinan', 'PAYMENT_UNKNOWN', 'PENDING', 80000, 20000)
+        self.assertEqual(result.transaction_id, row.transaction_id)
+        with store_context(store):
+            self.assertEqual(list(WithdrawalPlatformEvent.objects.filter(withdrawal=result).order_by('id').values_list('pk', flat=True)),
+                             [first.pk, second.pk])
+            self.assertFalse(WithdrawalRelease.objects.filter(withdrawal=result).exists())
+            self.assertEqual(list(Message.objects.filter(recipient_account=self.owners['xinan']).order_by('id').values_list('pk', flat=True)), notice_ids)
+        self.assert_peer(peer_id, apply_id)
+        self.assertFalse(PlatformWithdrawalAuditReceipt.objects.filter(store=self.stores['shenglang']).exists())
+        broker = 'redis' if registered_redis else 'memory'
+        print(f'auto audit wire recovery store=xinan withdrawal={row_id} events={first.pk},{second.pk} '
+              f'audits={recorded[first.pk].pk},{recorded[second.pk].pk} actor={self.finance.pk} cursor={first_position}->0 '
+              f'tls={encrypted} broker={broker} task={failed.id} ledger={row.transaction_id}/PENDING '
+              f'balance=80000 frozen=20000 peer={peer_id}', flush=True)
