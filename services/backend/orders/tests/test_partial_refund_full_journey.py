@@ -36,7 +36,7 @@ class PartialRefundFullJourneyTest(APITestCase):
         setting = override_settings(MEDIA_ROOT=media.name)
         setting.enable()
         self.addCleanup(setting.disable)
-        self.boss, self.provider = make_user(), make_provider()
+        self.boss, self.provider = make_user(), make_provider(deposit_paid=40000)
         self.admin = make_console_user(['dashboard:view', 'wallet:recharge', 'report:view',
                                         'report:audit', 'order:dispatch', 'order:view',
                                         'order:refund', 'order:settle'])
@@ -51,8 +51,10 @@ class PartialRefundFullJourneyTest(APITestCase):
         profile.account = self.accounts[self.provider.pk]
         profile.save(update_fields=['account'])
         self.service = make_service(price=10000, commission_rate=20)
-        self.card = SupportContactCard.objects.create(name='客服', wecom_corp_id='wwtest',
-            wecom_service_url='https://work.weixin.qq.com/kfid/kf-test')
+        self.card = SupportContactCard.objects.create(
+            name='客服', staff_account=self.accounts[self.admin.pk], wecom_corp_id='wwtest',
+            wecom_service_url='https://work.weixin.qq.com/kfid/kf-test',
+        )
 
     def login(self, user):
         token, _ = issue_account_tokens(self.accounts[user.pk])
@@ -412,6 +414,9 @@ class PartialRefundFullJourneyTest(APITestCase):
         self.assertEqual(order_counts[0], order_counts[1], order_counts)
 
     def test_real_order_approval_partial_then_remaining_refund(self):
+        from engagement.models import RechargePackage
+
+        RechargePackage.objects.create(amount=20000, gift_amount=1000, active=True)
         self.login(self.admin)
         self.ok(self.client.post('/api/admin/wallets/recharge/', {
             'account_id': self.accounts[self.boss.pk].pk, 'amount': 20000, 'gift_amount': 1000,
