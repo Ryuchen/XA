@@ -263,26 +263,74 @@ function stable(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 const funds = new Map<string, Promise<any>>();
+
+export type PendingFundRequest = {
+  key: string;
+  path: string;
+  payload: Record<string, unknown>;
+  requestId: string;
+};
+
+const fundStoragePrefix = (role: Role, userId: string | number) =>
+  storeStorageKey(`xa:fronted:fund:${role}:${userId}:`);
+
+export function listPendingFundRequests(role: Role, matchesPath: (path: string) => boolean): PendingFundRequest[] {
+  const { user } = getSession(role);
+  if (!user) return [];
+  const prefix = fundStoragePrefix(role, user.id);
+  const pending: PendingFundRequest[] = [];
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (!key?.startsWith(prefix)) continue;
+    const boundary = key.indexOf(":{", prefix.length);
+    if (boundary === -1) continue;
+    const path = key.slice(prefix.length, boundary);
+    if (!matchesPath(path)) continue;
+    const requestId = localStorage.getItem(key);
+    if (!requestId || requestId.trim() !== requestId || requestId.length > 64) continue;
+    try {
+      const encoded = key.slice(boundary + 1);
+      const payload = JSON.parse(encoded) as Record<string, unknown>;
+      if (Object.hasOwn(payload, "client_request_id") || stable(payload) !== encoded) continue;
+      pending.push({ key, path, payload, requestId });
+    } catch {
+      // A damaged entry is not eligible to issue a request.
+    }
+  }
+  return pending;
+}
+
+export function retryPendingFundRequest<T>(role: Role, pending: PendingFundRequest, accepts: (data: T) => boolean): Promise<T> {
+  return fundRequest(role, pending.path, pending.payload, {}, { pending, accepts });
+}
+
 export function fundRequest<T = any>(
   role: Role,
   path: string,
   payload: Record<string, unknown>,
-  options: RequestOptions = {},
+  options: RequestOptions & { keepOriginalOnFailure?: boolean } = {},
+  recovery?: { pending: PendingFundRequest; accepts: (data: T) => boolean },
 ): Promise<T> {
+  const { keepOriginalOnFailure, ...requestOptions } = options;
   const session = getSession(role);
   if (!session.user) return Promise.reject(new ApiError("请先登录", 401));
   const store = getStoreSlug();
-  const key = storeStorageKey(
-    `xa:fronted:fund:${role}:${session.user.id}:${path}:${stable(payload)}`,
-  );
-  if (funds.has(key)) return funds.get(key) as Promise<T>;
+  const key = `${fundStoragePrefix(role, session.user.id)}${path}:${stable(payload)}`;
+  if (!recovery && funds.has(key)) return funds.get(key) as Promise<T>;
   let id = String(payload.client_request_id || "");
   let hadPending = false;
   try {
     const previousId = localStorage.getItem(key);
     hadPending = !!previousId;
-    id ||= previousId || `fund-${randomUuid()}`;
-    localStorage.setItem(key, id);
+    if (recovery) {
+      if (!previousId || key !== recovery.pending.key || previousId !== recovery.pending.requestId || funds.has(key)) {
+        return Promise.reject(new ApiError("原操作记录已变化，请重新核对钱包。", 409, { errorCode: "FUND_RECOVERY_CHANGED" }));
+      }
+      id = previousId;
+    } else {
+      id ||= previousId || `fund-${randomUuid()}`;
+      localStorage.setItem(key, id);
+    }
   } catch {
     return Promise.reject(
       new Error("无法保存交易请求，请检查浏览器存储后重试"),
@@ -290,21 +338,23 @@ export function fundRequest<T = any>(
   }
   const discard = () => {
     try {
-      localStorage.removeItem(key);
+      if (localStorage.getItem(key) === id) localStorage.removeItem(key);
     } catch {
       /* Reusing an old key is safer than losing a pending write. */
     }
   };
+  const complete = (data: T) => {
+    if (recovery && !recovery.accepts(data)) throw new ApiError("原操作返回的结果暂不可核对，请保留原编号。");
+    discard();
+    return data;
+  };
   const operation = createApiClient(role)
     .request<T>(path, {
-      ...options,
-      method: options.method || "POST",
+      ...requestOptions,
+      method: requestOptions.method || "POST",
       data: { ...payload, client_request_id: id },
     })
-    .then((data) => {
-      discard();
-      return data;
-    })
+    .then(complete)
     .catch((error: ApiError) => {
       if (
         getStoreSlug() !== store ||
@@ -315,10 +365,10 @@ export function fundRequest<T = any>(
         error.errorCode === "FUND_ALREADY_PROCESSED" &&
         error.fundResult?.code === 0
       ) {
-        discard();
-        return error.fundResult.data as T;
+        return complete(error.fundResult.data as T);
       }
       if (
+        !keepOriginalOnFailure &&
         !hadPending &&
         typeof error.code === "number" &&
         error.code >= 400 &&
