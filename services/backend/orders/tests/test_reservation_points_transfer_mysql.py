@@ -12,6 +12,8 @@ from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from chat.models import ChatMessage, ChatSession
+from club_accounts.models import ClubAccount
 from club_accounts.services import get_or_create_account_for_legacy_user
 from console import test_payroll_late_activity as payroll_fixture
 from console.payroll_models import PayrollEventBarrier, PayrollRun
@@ -237,6 +239,132 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     def test_transferred_points_aftersale_waits_for_payroll_before_locking_order(self):
         self.run_in_stores(self.exercise_payroll_and_aftersale)
+
+    def test_order_card_waits_for_funding_without_locking_buyer(self):
+        self.run_in_stores(self.exercise_chat_funding_race)
+
+    def test_consultation_aftersale_reconciles_original_message_and_payroll(self):
+        self.run_in_stores(self.exercise_consultation_aftersale)
+
+    def transfer_and_join(self):
+        self.ok(self.transfer(self.api(self.staff)))
+        revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
+        self.join_replacement(self.api(self.replacement), revision.last_transfer)
+
+    def while_funding_reads_order(self, request):
+        held, resume = Event(), Event()
+        attempts = Queue()
+        table = Order._meta.db_table
+
+        def pause_funding(execute, sql, params, many, context):
+            result = execute(sql, params, many, context)
+            if (not held.is_set() and f'`{table}`' in sql.lower() and 'for update' in sql.lower()
+                    and self.order_id in (params or ())):
+                held.set()
+                self.assertTrue(resume.wait(8), '资金接口等待未在测试时限内结束')
+            return result
+
+        funding_url = f'/api/admin/platform/points-funding/{self.store.slug}/orders/{self.order_id}'
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            funding = pool.submit(self.independent_request, lambda: self.finance_client.get(funding_url), pause_funding)
+            try:
+                self.assertTrue(held.wait(3), '平台资金接口未锁定原订单')
+                pending = pool.submit(self.independent_request, request,
+                    self.observe_lock_attempt(attempts, table, 'for update'))
+                waited = self.wait_for_lock(pending, attempts, table=table)
+                with transaction.atomic(using=self.store.database_alias):
+                    ClubAccount.objects.select_for_update(nowait=True).get(pk=self.buyer.pk)
+            finally:
+                resume.set()
+            status = self.ok(funding.result(timeout=10))
+            self.assertEqual((status['required_units'], status['allocated_units'], status['remaining_units']), (1400, 1400, 0))
+            return pending.result(timeout=10), waited
+
+    def send_order_card(self, buyer, key):
+        return buyer.post('/api/chat/send/', {'content': '请核对本单接替服务', 'order_ref': str(self.order_id),
+                                              'client_message_id': key}, format='json')
+
+    def exercise_chat_funding_race(self):
+        self.transfer_and_join()
+        buyer = self.api(self.buyer)
+        key = 'transfer-chat-funding-race'
+        response, waited = self.while_funding_reads_order(lambda: self.send_order_card(buyer, key))
+        stored = ChatMessage.objects.get(pk=self.ok(response)['id'])
+        replay = self.ok(self.send_order_card(buyer, key))
+        self.assertEqual((stored.related_order_id, stored.sender_account_id, replay['id']),
+                         (self.order_id, self.buyer.pk, stored.pk))
+        self.assert_occupancy(self.replacement, self.original, 1)
+        print(f'{self.store.slug} order={self.order_id} chat_message={stored.pk} chat_waiting={waited}', flush=True)
+
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True)
+    def exercise_consultation_aftersale(self):
+        PayrollEventBarrier.objects.get_or_create(pk=1)
+        self.transfer_and_join()
+        buyer = self.api(self.buyer)
+        message = ChatMessage.objects.get(pk=self.ok(self.send_order_card(buyer, 'transfer-consultation-card'))['id'])
+        operator = make_console_user(['order:view', 'support:edit', 'chat:view', 'chat:reply'])
+        account = get_or_create_account_for_legacy_user(operator)
+        operator.admin_membership.account = account
+        operator.admin_membership.save(update_fields=['account'])
+        staff = self.api(account)
+        consultation_url = f'/api/admin/chat-sessions/{message.session_id}/'
+        path = '/api/admin/aftersales/open-negotiation/'
+        payload = {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
+                   'client_request_id': 'transfer-consultation-aftersale', 'affected_provider_account_ids': [self.replacement.pk]}
+        self.assertEqual(staff.post(path, payload, format='json').status_code, 400)
+        self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
+        self.ok(staff.post(consultation_url + 'claim/', {'expected_version': 0}, format='json'))
+        response, waited = self.while_funding_reads_order(lambda: staff.post(path, payload, format='json'))
+        case = self.ok(response)
+        source = {'consultation_message_id': message.pk, 'consultation_session_id': message.session_id,
+                  'consultation_account_id': self.buyer.pk, 'consultation_business_cycle': self.buyer.business_cycle}
+        self.assertEqual({key: case['history'][-1].get(key) for key in source}, source)
+        replay, payroll_wait = self.replay_consultation_during_payroll(staff, path, payload, message)
+        self.assertEqual(replay['id'], case['id'])
+        self.assertEqual({key: replay['history'][-1].get(key) for key in source}, source)
+        changed = self.ok(self.send_order_card(buyer, 'another-consultation-card'))
+        conflict = staff.post(path, {**payload, 'chat_message_id': changed['id']}, format='json')
+        self.assertEqual((conflict.status_code, conflict.data['errorCode']), (409, 'AFTERSALE_REQUEST_CONFLICT'))
+
+        self.ok(staff.post(consultation_url + 'release/', {'expected_version': 1}, format='json'))
+        self.assertEqual(staff.post(path, payload, format='json').status_code, 400)
+        detail = self.ok(staff.get(f'/api/admin/aftersales/{case["id"]}/'))
+        self.assertFalse(set(source).intersection(detail['history'][-1]))
+        row = AfterSale.objects.get(order_id=self.order_id)
+        self.assertEqual(len(row.history), 1)
+        self.assertEqual({key: row.history[-1].get(key) for key in source}, source)
+        self.assert_occupancy(self.replacement, self.original, 1)
+        print(f'{self.store.slug} order={self.order_id} chat_message={message.pk} aftersale={row.pk} '
+              f'consultation_waiting={waited} payroll_waiting={payroll_wait}', flush=True)
+
+    def replay_consultation_during_payroll(self, staff, path, payload, message):
+        payroll = payroll_fixture.LateActivityPayrollTest()
+        payroll.setUp()
+        payroll.assign(payroll.original_text)
+        preview = payroll.preview(payroll.original_text)
+        self.assertTrue(preview['can_confirm'], preview['warnings'])
+        payroll_url = '/api/admin/payroll/confirm/'
+        confirm_payload = {'month': payroll.original_text, 'fingerprint': preview['fingerprint']}
+        held, resume = Event(), Event()
+        attempts = Queue()
+        table = PayrollEventBarrier._meta.db_table
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            confirming = pool.submit(self.independent_request,
+                lambda: payroll.client.post(payroll_url, confirm_payload, format='json'), self.pause_payroll_barrier(held, resume))
+            try:
+                self.assertTrue(held.wait(3), '工资确认未取得独占屏障')
+                replay = pool.submit(self.independent_request, lambda: staff.post(path, payload, format='json'),
+                    self.observe_lock_attempt(attempts, table, 'lock in share mode'))
+                waited = self.wait_for_lock(replay, attempts, table=table, include_shared=True)
+                with transaction.atomic(using=self.store.database_alias):
+                    Order.objects.select_for_update(nowait=True).get(pk=self.order_id)
+                    ClubAccount.objects.select_for_update(nowait=True).get(pk=self.buyer.pk)
+                    ChatSession.objects.select_for_update(nowait=True).get(pk=message.session_id)
+                    ChatMessage.objects.select_for_update(nowait=True).get(pk=message.pk)
+            finally:
+                resume.set()
+            self.assertEqual(self.ok(confirming.result(timeout=10))['totals'], preview['totals'])
+            return self.ok(replay.result(timeout=10)), waited
 
     @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
                        SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True)

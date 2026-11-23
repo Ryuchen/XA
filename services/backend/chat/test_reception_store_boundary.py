@@ -11,6 +11,9 @@ from stores.context import resolve_store, store_context
 from stores.models import Store
 
 
+STORE_HOSTS = {'shenglang': 'sl.esports.club', 'xinan': 'xa.esports.club'}
+
+
 @override_settings(LEGACY_FORCE_AUTH_COMPAT=False, KOOK_ENABLED=False, WECOM_DISPATCH_ENABLED=False)
 @skipUnless('store_b' in settings.DATABASES, 'requires two isolated store databases')
 class ReceptionStoreBoundaryTest(APITestCase):
@@ -28,7 +31,7 @@ class ReceptionStoreBoundaryTest(APITestCase):
                 user.admin_membership.save(update_fields=['account'])
                 boss = ClubAccount.objects.create_account(username='history-boss', account_type='BOSS')
                 ChatSession.objects.create(pk=87123, account=boss)
-                client = APIClient(HTTP_X_STORE_SLUG=store.slug)
+                client = APIClient(HTTP_HOST=STORE_HOSTS[store.slug])
                 client.credentials(HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
                 clients[store.slug] = client
                 result = client.post('/api/admin/chat-sessions/87123/claim/',
@@ -54,7 +57,7 @@ class ReceptionStoreBoundaryTest(APITestCase):
                 session = ChatSession.objects.create(pk=87123, account=boss, last_message=store.slug)
                 ChatMessage.objects.create(session=session, sender_account=boss, content=store.slug)
                 token = issue_account_tokens(staff)[0]
-                client = APIClient(HTTP_X_STORE_SLUG=store.slug)
+                client = APIClient(HTTP_HOST=STORE_HOSTS[store.slug])
                 client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
                 clients[store.slug] = client
         with store_context(branch):
@@ -79,10 +82,15 @@ class ReceptionStoreBoundaryTest(APITestCase):
                 service = make_service(name=f'{store.slug}-服务')
                 make_order(None, service=service, customer_account=boss, pk=88122, order_no='ORD' + 'A' * 20)
                 token = issue_account_tokens(boss)[0]
-                client = APIClient(HTTP_X_STORE_SLUG=store.slug)
+                client = APIClient(HTTP_HOST=STORE_HOSTS[store.slug])
                 client.credentials(HTTP_AUTHORIZATION='Bearer ' + token)
                 clients[store.slug] = client
         with store_context(branch):
+            wrong_store = clients[original.slug].post('/api/chat/send/', {
+                'content': '错店咨询', 'order_ref': 'ORD' + 'A' * 20, 'client_message_id': 'wrong-store-chat',
+            }, HTTP_HOST=STORE_HOSTS[branch.slug], format='json')
+            self.assertEqual(wrong_store.status_code, 401)
+            self.assertFalse(ChatMessage.objects.filter(related_order_id=88122).exists())
             result = clients[branch.slug].post('/api/chat/send/', {'content': '兴安咨询', 'order_ref': 'ORD' + 'A' * 20, 'client_message_id': 'same-chat-retry'}, format='json')
             self.assertEqual(result.status_code, 200, result.data)
             self.assertEqual(result.data['data']['order_card']['service_name'], 'xinan-服务')

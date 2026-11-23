@@ -38,7 +38,10 @@ def resolve_order(account, reference, *, lock=False):
         query = Q(order_no=reference.upper())
     else:
         return None
-    return chat_order_queryset(account, lock=lock).select_related('service').filter(query).first()
+    orders = chat_order_queryset(account, lock=lock)
+    if not lock:
+        orders = orders.select_related('service')
+    return orders.filter(query).first()
 
 
 def visible_order_queryset(account, *, lock=False):

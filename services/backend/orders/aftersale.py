@@ -1192,13 +1192,22 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         request_id = serializers.CharField(min_length=1, max_length=64).run_validation(request.data.get('client_request_id'))
         scope = normalize_scope(request.data.get('affected_provider_account_ids'))
         requested_segments = normalize_scope(request.data.get('affected_segment_ids'))
-        consultation = getattr(request, '_consultation_aftersale_source', None)
         addon_payment_id = request.data.get('addon_payment_id')
         if addon_payment_id is not None and (type(addon_payment_id) is not int or addon_payment_id <= 0):
             raise serializers.ValidationError('请选择有效的加购付款')
         if not scope:
             raise serializers.ValidationError('请选择受影响的陪玩')
         order = get_object_or_404(Order.objects.select_for_update(), pk=order_id)
+        consultation = None
+        consultation_hint = getattr(request, '_consultation_aftersale_hint', None)
+        if consultation_hint is not None:
+            from chat.aftersale_context import lock_context, verify_order
+            from .financial_lock import lock_order_money
+            # Enter the order's funding scope before locking the chat owner.
+            lock_order_money()
+            message_id, hint = consultation_hint
+            context = lock_context(hint, message_id, request.account)
+            consultation = verify_order(context, order, scope)
         case = order.aftersales.select_for_update().first()
         prior = next((entry for entry in case.history if entry.get('client_request_id') == request_id), None) if case else None
         if prior:

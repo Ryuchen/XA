@@ -16,8 +16,8 @@ def lookup(message_id):
 
 
 def lock_context(hint, message_id, actor):
-    # Chat writes use owner -> session -> order. Keep that direction when
-    # subsequently invoking the existing order aftersale transaction.
+    # Linked actions lock the order first. The conversation itself still
+    # follows the chat owner -> session -> message order.
     owner = ClubAccount.objects.select_for_update().filter(pk=hint['session__account_id']).first()
     session = ChatSession.objects.select_for_update().filter(pk=hint['session_id'], account=owner).first()
     message = ChatMessage.objects.select_for_update().filter(pk=message_id, session=session).first() if session else None

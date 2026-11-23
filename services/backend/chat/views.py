@@ -149,6 +149,11 @@ class ChatSendView(APIView):
                 image.seek(0)
 
         with transaction.atomic():
+            order = None
+            if order_ref:
+                # Funding reconciliation locks the order before the buyer.
+                from .order_context import resolve_order
+                order = resolve_order(request.account, order_ref, lock=True)
             session = account_chat_session(request.account, request.legacy_user)
             if client_id:
                 existing = session.messages.select_related('related_order').filter(
@@ -163,12 +168,8 @@ class ChatSendView(APIView):
                     if existing.message_fingerprint != digest.hexdigest():
                         return Response({'code': 409, 'msg': '消息内容已变化，请重新发送'}, status=409)
                     return Response({'code': 0, 'data': ChatMessageSerializer(existing, context={'request': request}).data})
-            order = None
-            if order_ref:
-                from .order_context import resolve_order
-                order = resolve_order(request.account, order_ref, lock=True)
-                if order is None:
-                    return Response({'code': 404, 'msg': '订单不存在或无权关联'}, status=404)
+            if order_ref and order is None:
+                return Response({'code': 404, 'msg': '订单不存在或无权关联'}, status=404)
             if digest and order:
                 digest.update(b'\x00order:')
                 digest.update(str(order.pk).encode('ascii'))
