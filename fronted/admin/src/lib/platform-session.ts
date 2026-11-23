@@ -1,4 +1,5 @@
 import { clearSession, isAdminEntry } from "@xa/shared"
+import { withdrawalIntentKey } from "./withdrawal-intent"
 
 const key = "xa:fronted:platform:session:v1"
 export type PlatformProfile = { id: string; username: string; nickname?: string; identity_type: "platform"; grants: { role: string; scope_slug: string }[]; capabilities?: string[] }
@@ -18,12 +19,22 @@ export function platformSession(): PlatformSession | null {
 }
 export function savePlatformSession(value: { token: string; refresh: string; profile: PlatformProfile }) {
   if (!isAdminEntry() || !value.token || !value.refresh || value.profile?.identity_type !== "platform") throw new Error("平台登录身份无效")
+  const previous = platformSession()
   const sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`
   sessionStorage.setItem(key, JSON.stringify({ ...value, sessionId }))
+  removeWithdrawalIntents(previous)
   clearSession("admin")
 }
 export function clearPlatformSession() {
-  try { sessionStorage.removeItem(key) } catch { /* The next request still revalidates authorization. */ }
+  const session = platformSession()
+  try { sessionStorage.removeItem(key) } catch { return /* The next request still revalidates authorization. */ }
+  removeWithdrawalIntents(session)
+}
+
+function removeWithdrawalIntents(session: PlatformSession | null) {
+  if (!session) return
+  try { sessionStorage.removeItem(withdrawalIntentKey(session.profile.id, session.sessionId)) }
+  catch { /* A different session cannot read this session's markers. */ }
 }
 export async function platformRequest<T>(path: "profile" | "stores" | "dashboard" | "auth/otp-setup" | "accounts" | `accounts/${string}` | "store-management" | `store-management/${string}` | "pass-refund-shortfalls" | `pass-refund-shortfalls/${string}` | `pass-refund-repayments/${string}` | "withdrawals" | `withdrawals/${string}` | `saas/modules/${string}` | `orders?${string}` | `orders/${string}`, options: { method?: "GET" | "POST" | "PUT" | "PATCH"; data?: unknown } = {}): Promise<T> {
   const session = platformSession()
