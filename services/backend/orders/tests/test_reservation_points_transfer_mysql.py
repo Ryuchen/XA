@@ -1,12 +1,17 @@
 """Verify formal points funding and the lifecycle lock order on a paid reservation."""
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+import os
+from pathlib import Path
 from queue import Queue
+from tempfile import mkdtemp
 from threading import Event
+from time import monotonic, sleep
 from unittest import skipUnless
 from unittest.mock import patch
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import connection, connections, transaction
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
@@ -23,7 +28,7 @@ from console.points_redemption_config import save_points_terms
 from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, RetirementAudit
 from engagement.tasks import confirm_due_consumption
 from orders.addon_funding_release import record_addon_funding_release
-from orders.models import (AfterSale, GameCategory, Order, OrderAddonPayment, OrderFinancialLock, OrderPointsRedemption,
+from orders.models import (AfterSale, GameCategory, Order, OrderAddonPayment, OrderAddonRefund, OrderFinancialLock, OrderPointsRedemption,
                            OrderPointsTransferFundingRevision, OrderSegmentReportSubmission, OrderSegmentSettlementManifest,
                            ServiceAddonConfiguration, ServiceAddonPriceOption)
 from orders.tests import test_assigned_order_reservation_guard as reservation_fixture
@@ -33,6 +38,7 @@ from orders.tests.factories import make_console_user, make_order, make_provider,
 from site_messages.addon_refund_notice import deliver as deliver_addon_refund_notice
 from site_messages.models import AfterSaleOpenNotice, Message
 from site_messages.tasks import recover_addon_refund_notices
+from stores.context import store_context
 from stores.models import PlatformAccount, PlatformRoleGrant
 from users.models import PassRefundRepaymentReceipt, PassReceiptUsageEvent
 from wallet.models import IdempotencyKey, Transaction, Wallet
@@ -262,6 +268,107 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_refund_notice_waits_for_buyer_retirement(self):
         self.run_in_stores(lambda: self.exercise_paid_addon_consultation(retire_buyer=True))
 
+    @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None) and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None),
+                'Requires a registered disposable Redis broker and independent MySQL control instance')
+    def test_consultation_refund_notices_recover_on_independent_worker(self):
+        from celery import Celery
+        from stores.test_certificate_admission_mysql import _celery_process, _registered_redis_urls
+
+        self.assertFalse(any(os.environ.get(key) for key in ('CELERY_BROKER_URL', 'CELERY_BROKER_READ_URL',
+            'CELERY_BROKER_WRITE_URL', 'CELERY_RESULT_BACKEND')))
+        broker, backend = _registered_redis_urls()
+        cases = []
+
+        def prepare_notice():
+            refund = self.exercise_paid_addon_consultation(leave_notices_pending=True)
+            cases.append((self.store, refund.pk))
+
+        self.run_in_stores(prepare_notice)
+        self.assertCountEqual([store.slug for store, _ in cases], ['shenglang', 'xinan'])
+        before = self.refund_notice_worker_facts(cases)
+        for case in before.values():
+            self.assertEqual(len(case['intents']), 2)
+            self.assertTrue(all(notice[-3:] == (None, None, '') for notice in case['intents']))
+            self.assertEqual(case['messages'], [])
+
+        directory = Path(os.environ['XA_SA14_MYSQL_REGISTRATION']).resolve().parent
+        work = Path(mkdtemp(prefix='addon-refund-worker-', dir=directory))
+        queue = f'xa_sa14_cli_{uuid4().hex}'
+        env = {**os.environ, 'DJANGO_SETTINGS_MODULE': 'config.certificate_celery_test_settings',
+               'XA_SA14_CELERY_QUEUE': queue, 'XA_SA14_CELERY_MEDIA': str(work / 'media'),
+               'ADDON_REFUND_NOTICE_RECOVERY_ENABLED': '1', 'PROVIDER_LIFECYCLE_INTEGRATION_ENABLED': '1'}
+        command = ['worker', '-P', 'solo', '-l', 'INFO', '--without-mingle', '--without-gossip', '--without-heartbeat']
+        task_name = recover_addon_refund_notices.name
+        print(f'加购退款通知 worker 日志目录 {work.name}', flush=True)
+
+        def wait_until_ready(worker, log):
+            deadline = monotonic() + 20
+            while worker.poll() is None and monotonic() < deadline:
+                if ' ready.' in log.read_text():
+                    return
+                sleep(.1)
+            self.fail(f'退款通知 worker 未就绪，见 {log}')
+
+        with Celery(queue, broker=broker, backend=backend, set_as_current=False) as publisher:
+            publisher.conf.update(task_default_queue=queue, task_default_exchange=queue,
+                                 task_default_routing_key=queue, broker_transport_options={'global_keyprefix': queue + ':'},
+                                 result_backend_transport_options={'global_keyprefix': queue + ':'})
+
+            def dispatch_periodic(expected):
+                parent = publisher.send_task(task_name, queue=queue)
+                fanout = parent.get(timeout=20)
+                self.assertEqual((fanout['enqueue_unknown'], fanout['directory_fallback']), ([], False))
+                self.assertCountEqual([job['store'] for job in fanout['stores']], list(expected))
+                results = {job['store']: publisher.AsyncResult(job['task_id']).get(timeout=20)
+                           for job in fanout['stores']}
+                self.assertEqual(results, expected)
+                print(f'退款通知父任务 {parent.id} 子任务 {fanout["stores"]} 扫描数 {results}', flush=True)
+
+            log = work / 'worker-first.log'
+            with _celery_process(command, env=env, log=log) as worker:
+                wait_until_ready(worker, log)
+                first = publisher.send_task(task_name, headers={'store_slug': 'shenglang'}, queue=queue)
+                self.assertEqual(first.get(timeout=20), 2)
+                partial = self.refund_notice_worker_facts(cases)
+                self.assertEqual(partial['xinan'], before['xinan'])
+                self.assertEqual(len(partial['shenglang']['messages']), 2)
+                print(f'退款通知 worker PID={worker.pid} 声浪任务 {first.id}', flush=True)
+            self.assertEqual(worker.returncode, 0)
+
+            log = work / 'worker-restarted.log'
+            with _celery_process(command, env=env, log=log) as restarted:
+                wait_until_ready(restarted, log)
+                print(f'退款通知 worker 重启 PID={restarted.pid}', flush=True)
+                dispatch_periodic({'shenglang': 0, 'xinan': 2})
+                delivered = self.refund_notice_worker_facts(cases)
+                dispatch_periodic({'shenglang': 0, 'xinan': 0})
+            self.assertEqual(restarted.returncode, 0)
+            self.assertEqual(self.refund_notice_worker_facts(cases), delivered)
+
+        self.assertEqual(delivered['shenglang'], partial['shenglang'])
+        for slug, case in delivered.items():
+            self.assertEqual(case['refund'], before[slug]['refund'])
+            self.assertCountEqual([row[:4] for row in case['intents']], [row[:4] for row in before[slug]['intents']])
+            self.assertTrue(all(message and completed and not skipped for *_, message, completed, skipped in case['intents']))
+            self.assertCountEqual(case['messages'], [(message, account, cycle)
+                                  for _, account, cycle, _, message, _, _ in case['intents']])
+            print(f'{slug} order={case["order"]} refund={case["refund"][0]} messages={case["messages"]}', flush=True)
+
+    def refund_notice_worker_facts(self, cases):
+        facts = {}
+        for store, refund_id in cases:
+            with store_context(store):
+                refund = OrderAddonRefund.objects.select_related('buyer_transaction', 'funding_release_run').get(pk=refund_id)
+                facts[store.slug] = {'order': refund.order_id,
+                    'refund': (refund.pk, refund.amount, refund.buyer_transaction_id, refund.funding_release_run.required_amount,
+                               Wallet.objects.get(pk=refund.buyer_transaction.wallet_id).balance,
+                               refund.payment.refund_records.count()),
+                    'intents': list(refund.notice_intents.order_by('pk').values_list('pk', 'account_id', 'business_cycle',
+                        'role', 'message_id', 'completed_at', 'skipped_reason')),
+                    'messages': list(Message.objects.filter(related_order_id=refund.order_id, title='加购退款已处理')
+                        .order_by('pk').values_list('pk', 'recipient_account_id', 'recipient_business_cycle'))}
+        return facts
+
     def transfer_and_join(self):
         self.ok(self.transfer(self.api(self.staff)))
         revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
@@ -352,7 +459,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
                        SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
                        AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True, ADDON_REFUND_NOTICE_RECOVERY_ENABLED=True)
-    def exercise_paid_addon_consultation(self, *, retire_buyer=False):
+    def exercise_paid_addon_consultation(self, *, retire_buyer=False, leave_notices_pending=False):
         PayrollEventBarrier.objects.get_or_create(pk=1)
         self.transfer_and_join()
         transfer = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id).last_transfer
@@ -422,6 +529,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          self.funding_before)
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
         refund, refund_waits = self.execute_consultation_addon_refund(staff, row, payment, proposal, events_before)
+        if leave_notices_pending:
+            return refund
         if retire_buyer:
             paid_addon = self.settle_consultation_addon_refund(staff, transfer, refund)
             with patch('django.utils.timezone.now', return_value=paid_addon.settled_at + timedelta(minutes=1)):
