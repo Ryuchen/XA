@@ -30,7 +30,9 @@ from orders.tests import test_assigned_order_reservation_guard as reservation_fi
 from orders.tests import test_release_flow as release_fixture
 from orders.tests import test_reservation_transfer_schedule_mysql as transfer_fixture
 from orders.tests.factories import make_console_user, make_order, make_provider, make_service
-from site_messages.models import AfterSaleOpenNotice
+from site_messages.addon_refund_notice import deliver as deliver_addon_refund_notice
+from site_messages.models import AfterSaleOpenNotice, Message
+from site_messages.tasks import recover_addon_refund_notices
 from stores.models import PlatformAccount, PlatformRoleGrant
 from users.models import PassRefundRepaymentReceipt, PassReceiptUsageEvent
 from wallet.models import IdempotencyKey, Transaction, Wallet
@@ -345,7 +347,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         return OrderAddonPayment.objects.select_related('intent', 'buyer_transaction').get(pk=paid['payment_id'])
 
     @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
-                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True, AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True)
+                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+                       AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True, ADDON_REFUND_NOTICE_RECOVERY_ENABLED=True)
     def exercise_paid_addon_consultation(self):
         PayrollEventBarrier.objects.get_or_create(pk=1)
         self.transfer_and_join()
@@ -416,11 +419,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          self.funding_before)
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
         refund, refund_waits = self.execute_consultation_addon_refund(staff, row, payment, proposal, events_before)
+        notice_wait, messages = self.recover_consultation_addon_refund_notices(refund)
         paid_addon = self.settle_consultation_addon_refund(staff, transfer, refund)
         print(f'{self.store.slug} order={self.order_id} addon_payment={payment.pk} addon_segment={payment.intent.segment_id} '
               f'chat_message={message.pk} aftersale={row.pk} proposal={proposal["id"]} refund={refund.pk} '
               f'buyer_refund_transaction={refund.buyer_transaction_id} payroll_wait={payroll_waited} '
               f'funding_wait={funding_waited} refund_waits={refund_waits} '
+              f'notice_wait={notice_wait} refund_messages={messages} '
               f'addon_income_transaction={paid_addon.income_transaction_id}:{paid_addon.amount}', flush=True)
 
     def execute_consultation_addon_refund(self, staff, case, payment, proposal, events_before):
@@ -465,8 +470,23 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((source.refunded_amount, source.lot.remaining), (0, lot_before))
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
 
+        message_insert = f'insert into `{Message._meta.db_table}`'
+        failed_deliveries = []
+
+        def fail_first_delivery(intent_id):
+            def fail_after_insert(execute, sql, params, many, context):
+                result = execute(sql, params, many, context)
+                if sql.lstrip().lower().startswith(message_insert):
+                    failed_deliveries.append(intent_id)
+                    raise RuntimeError('隔离测试消息写入后投递失败')
+                return result
+
+            with connections[self.store.database_alias].execute_wrapper(fail_after_insert):
+                deliver_addon_refund_notice(intent_id)
+
         table = Order._meta.db_table
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        with (patch('site_messages.addon_refund_notice.deliver', side_effect=fail_first_delivery) as first_send,
+              self.assertLogs('django.db.backends.base', level='ERROR'), ThreadPoolExecutor(max_workers=2) as pool):
             with transaction.atomic(using=self.store.database_alias):
                 Order.objects.select_for_update().get(pk=self.order_id)
                 requests = []
@@ -477,6 +497,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                     requests.append((pending, attempts))
                 waits = [self.wait_for_lock(pending, attempts, table=table) for pending, attempts in requests]
             posted = [self.ok(pending.result(timeout=15)) for pending, _ in requests]
+        self.assertEqual(first_send.call_count, 2)
+        self.assertCountEqual(failed_deliveries, [call.args[0] for call in first_send.call_args_list])
         self.assertEqual(posted[0], posted[1])
         self.assertEqual((posted[0]['id'], posted[0]['refund_executed'], posted[0]['provider_income_raw']),
                          (proposal_id, True, 200))
@@ -511,6 +533,39 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         audit = AdminAuditLog.objects.get(path=execute_path, resource='addon-refund', status_code=200)
         self.assertEqual((audit.object_id, audit.operator_account_id), (str(refund.pk), case.operator_id))
         return refund, waits
+
+    def recover_consultation_addon_refund_notices(self, refund):
+        notices = refund.notice_intents.order_by('account_id')
+        pending = list(notices.values_list('pk', 'account_id', 'role', 'amount', 'completed_at', 'message_id'))
+        self.assertEqual(len(pending), 2)
+        self.assertCountEqual([entry[1:] for entry in pending], [
+            (self.buyer.pk, 'BOSS', 500, None, None), (self.replacement.pk, 'PROVIDER', 500, None, None),
+        ])
+        messages = Message.objects.filter(related_order_id=self.order_id, title='加购退款已处理')
+        self.assertFalse(messages.exists())
+
+        def recover_notices():
+            return recover_addon_refund_notices.apply(headers={'store_slug': self.store.slug}, throw=True).result
+
+        recovered, waited = self.while_funding_reads_order(recover_notices, funding_units=1100)
+        self.assertEqual(recovered, 2)
+        deliveries = list(notices.values_list('account_id', 'message_id', 'completed_at', 'skipped_reason'))
+        self.assertTrue(all(message_id and completed and not skipped for _, message_id, completed, skipped in deliveries))
+        message_ids = {account: message_id for account, message_id, _, _ in deliveries}
+        self.assertEqual(dict(messages.values_list('recipient_account_id', 'pk')), message_ids)
+        self.assertEqual(messages.count(), 2)
+        for account in (self.buyer, self.replacement):
+            own = self.ok(self.api(account).get(f'/api/messages/{message_ids[account.pk]}/'))
+            self.assertEqual((own['id'], own['related_order_id'], own['cycle_relation']),
+                             (message_ids[account.pk], self.order_id, 'CURRENT'))
+        denied = self.api(self.original).get(f'/api/messages/{message_ids[self.replacement.pk]}/')
+        self.assertEqual(denied.data['code'], 404)
+        self.assertEqual(recover_notices(), 0)
+        for intent_id, *_ in pending:
+            deliver_addon_refund_notice(intent_id)
+        self.assertEqual(list(notices.values_list('account_id', 'message_id', 'completed_at', 'skipped_reason')), deliveries)
+        self.assertEqual(messages.count(), 2)
+        return waited, list(message_ids.values())
 
     def settle_consultation_addon_refund(self, staff, transfer, refund):
         first_report = self.approve_report(self.original, transfer.previous_segment_id)
