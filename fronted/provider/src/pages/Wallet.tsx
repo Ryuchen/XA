@@ -166,15 +166,21 @@ export function WalletPage() {
   const [pending, setPending] = useState<PendingWithdrawal[]>([])
   const [recovery, setRecovery] = useState<PendingWithdrawal | null>(null)
   const [recoveryIssue, setRecoveryIssue] = useState("")
+  const pendingRead = useRef(0)
 
   function reloadPending() {
-    try { setPending(readPendingWithdrawals()) }
-    catch { setPending([]) }
+    const attempt = ++pendingRead.current
+    void readPendingWithdrawals().then(items => {
+      if (attempt === pendingRead.current) setPending(items)
+    })
   }
   useEffect(() => {
     reloadPending()
     window.addEventListener("storage", reloadPending)
-    return () => window.removeEventListener("storage", reloadPending)
+    return () => {
+      pendingRead.current++
+      window.removeEventListener("storage", reloadPending)
+    }
   }, [store.slug, session.user?.id])
 
   const data = useLoad(async () => {

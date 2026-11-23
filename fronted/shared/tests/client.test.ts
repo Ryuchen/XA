@@ -248,6 +248,17 @@ test("a first withdrawal rejection leaves the shared number for another tab with
   assert.equal(listPendingFundRequests("provider", () => true)[0].requestId, pending.requestId);
 });
 
+test("a coordinated confirmation that cannot open browser storage never falls back to POST", async () => {
+  login();
+  let attempts = 0;
+  globalThis.fetch = (async () => { attempts++; return ok({ id: 11 }); }) as typeof fetch;
+
+  await assert.rejects(fundRequest("provider", "/wallet/withdraw/", { amount: 500 }, { coordinateAcrossTabs: true }),
+    (error: { errorCode: string }) => error.errorCode === "FUND_STORAGE_UNAVAILABLE");
+  assert.equal(attempts, 0);
+  assert.deepEqual(listPendingFundRequests("provider", () => true), []);
+});
+
 test("multipart upload leaves boundary selection to the browser transport", async () => {
   login();
   const body = new FormData();
