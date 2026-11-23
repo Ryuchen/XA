@@ -1067,11 +1067,16 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                         if OrderRefund.objects.filter(order=order, client_request_id=request_id).exists():
                             raise serializers.ValidationError('操作凭证已用于其他退款')
                         return Response({'code':0, 'data':{'status':'NOT_FOUND'}, 'msg':'未查到退款记录，请使用原操作凭证重试'})
+                    from .models import OrderOriginalShareTransfer
+                    transferred_followup = is_points_followup and OrderOriginalShareTransfer.objects.filter(
+                        previous_segment__attribution__order=order).exists()
+                    if is_points_followup and not transferred_followup:
+                        from .points_followup_termination import require_followup_request_locked
+                        require_followup_request_locked(receipt, request_id)
                     if receipt.operator_id != request.account.pk or receipt.points_refund.refund.client_request_id != request_id:
                         raise serializers.ValidationError('退款操作凭证不匹配，请联系原经办人核对')
                     if is_points_followup:
-                        from .models import OrderOriginalShareTransfer
-                        if OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists():
+                        if transferred_followup:
                             from .models import PointsRefundRoundEvidence
                             if (getattr(getattr(receipt.proposal, 'points_terms', None), 'round_context', None)
                                     is not None):

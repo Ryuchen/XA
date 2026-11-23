@@ -40,8 +40,15 @@ export function reviewActive(key: string) {
     return false
   }
 }
-export function clearReview(key: string) {
-  localStorage.removeItem(storageKey(key))
+export function clearReview(key: string, requestId?: string) {
+  const storage = storageKey(key)
+  if (requestId !== undefined) {
+    try {
+      const current = JSON.parse(localStorage.getItem(storage) || "null")
+      if (current?.requestId !== requestId) return
+    } catch { return }
+  }
+  localStorage.removeItem(storage)
   changed()
 }
 export function reviewDescriptor(
@@ -207,20 +214,16 @@ export async function trackReview<T>(
     throw new Error(
       "同一项操作有一笔结果待核对，请先使用页面上方的处理记录核对并解除限制。"
     )
-  localStorage.setItem(
-    storage,
-    JSON.stringify({
-      key,
-      ...descriptor,
-      startedAt: new Date().toISOString(),
-      requestId,
-    } satisfies PendingReview)
-  )
+  const saved = JSON.stringify({ key, ...descriptor, startedAt: new Date().toISOString(), requestId } satisfies PendingReview)
+  localStorage.setItem(storage, saved)
+  function clearOwnReview() {
+    if (localStorage.getItem(storage) === saved) localStorage.removeItem(storage)
+  }
   active.add(storage)
   changed()
   try {
     const result = await run()
-    localStorage.removeItem(storage)
+    clearOwnReview()
     return result
   } catch (cause: any) {
     const status = cause.status >= 400 ? cause.status : cause.code
@@ -230,7 +233,7 @@ export async function trackReview<T>(
       status < 500 &&
       ![408, 409, 429].includes(status)
     )
-      localStorage.removeItem(storage)
+      clearOwnReview()
     throw cause
   } finally {
     active.delete(storage)

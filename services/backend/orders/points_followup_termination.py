@@ -6,7 +6,7 @@ entire operation remains confined to the isolated checkout test databases.
 from django.conf import settings
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 
 from stores.db import transaction
 from .financial_lock import lock_order_money
@@ -15,6 +15,12 @@ from .negotiation_proposals import _lock_case
 from .points_checkout_test import require_isolated_checkout
 from .points_followup_execution import post_followup_locked
 from .points_negotiation_execution import verify_posting_locked
+
+
+class FollowupRefundRequestConflict(APIException):
+    status_code = 409
+    default_code = 'REFUND_REQUEST_CONFLICT'
+    default_detail = '该方案已由另一请求处理，本次退款请求未执行。'
 
 
 def endpoint_enabled():
@@ -166,6 +172,12 @@ def verify_followup_termination_locked(posting):
             or audits[0].operator_id != refund.operator_id or audits[0].method != 'POST' or audits[0].status_code != 200):
         raise ValidationError('后续积分协商退款审计凭证不一致')
     return posting
+
+
+def require_followup_request_locked(posting, request_id):
+    if posting.points_refund.refund.client_request_id != request_id:
+        verify_followup_termination_locked(posting)
+        raise FollowupRefundRequestConflict()
 
 
 @transaction.atomic

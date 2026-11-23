@@ -1238,6 +1238,18 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                     self.assertEqual(posted.data['data']['execution_id'], posting_unpaid.pk)
                     self.assertEqual(client.post(execution_url, unpaid_request, format='json').data['data']['execution_id'], posting_unpaid.pk)
                     self.assertEqual(client.get(execution_url, unpaid_request).data['data']['execution_id'], posting_unpaid.pk)
+                    competing = {**unpaid_request, 'client_request_id': 'competing-unpaid-refund'}
+                    for rejected in (client.post(execution_url, competing, format='json'),
+                                     client.get(execution_url, competing)):
+                        self.assertEqual(rejected.status_code, 409, rejected.data)
+                        self.assertEqual(rejected.data['errorCode'], 'REFUND_REQUEST_CONFLICT')
+                        self.assertNotIn('data', rejected.data)
+                    with transaction.atomic():
+                        AfterSale.objects.filter(pk=case_id).update(history=[])
+                        unknown = client.get(execution_url, competing)
+                        self.assertEqual(unknown.status_code, 400, unknown.data)
+                        self.assertNotIn('errorCode', unknown.data)
+                        transaction.set_rollback(True)
                     revision_unpaid = posting_unpaid.followup_funding_revision
                     self.assertEqual(AfterSale.objects.get(pk=case_id).status, 'PARTIALLY_REFUNDED')
                     self.assertIsNone(revision_unpaid.prior_settlement_id)

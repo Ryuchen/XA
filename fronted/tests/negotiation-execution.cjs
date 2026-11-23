@@ -10,6 +10,7 @@ const ticket = { id: 19, status: 'OPEN', affected_provider_account_ids: [8], aff
 const execution = '/api/admin/aftersales/19/negotiation-execution/'
 const funding = '/api/admin/aftersales/19/negotiation-funding/'
 const intentKey = 'xa:negotiation-refund:shenglang:7:19'
+const reviewKey = 'xa:store:shenglang:xa:fronted:admin:review:7:/admin/aftersales/19/negotiation-execution/'
 
 async function exercise(browser) {
   const context = await browser.newContext({ viewport: { width: 1366, height: 1024 } })
@@ -27,6 +28,7 @@ async function exercise(browser) {
     const errors = [], mutations = [], queries = []
     page.on('pageerror', error => errors.push(error.message))
     let amount = 300, points = true, estimate, held, lost = false, receipt = null, fundingReads = 0
+    let queryError, writeError, queryHold, queryEntered
 
     function estimateFor(overrides = {}, msg) {
       return { code: 0, msg, data: {
@@ -45,6 +47,7 @@ async function exercise(browser) {
         assert.equal(path, execution, 'Only the simulated refund can be submitted')
         const body = req.postDataJSON()
         mutations.push(body)
+        if (writeError) return route.fulfill(writeError)
         receipt = { status: 'COMPLETED', execution_id: 31, refund_units: amount === 0 ? 0 : 240 }
         if (lost) return route.abort('failed')
         return route.fulfill({ json: { code: 0, data: receipt } })
@@ -52,6 +55,11 @@ async function exercise(browser) {
       if (path === execution) {
         if (url.searchParams.has('client_request_id')) {
           queries.push(Object.fromEntries(url.searchParams))
+          if (queryHold) {
+            queryEntered.resolve()
+            await queryHold.promise
+          }
+          if (queryError) return route.fulfill(queryError)
           return route.fulfill({ json: { code: 0, data: receipt ?? { status: 'NOT_FOUND' } } })
         }
         return route.fulfill({ json: { code: 0, data: {
@@ -181,6 +189,61 @@ async function exercise(browser) {
     assert.deepEqual(queries[1], { proposal_id: String(pending.proposal_id), client_request_id: pending.client_request_id })
     assert.deepEqual(mutations[1], pending)
 
+    async function savePending(intent) {
+      await page.evaluate(({intentKey, reviewKey, intent}) => {
+        localStorage.setItem(intentKey, JSON.stringify(intent))
+        localStorage.setItem(reviewKey, JSON.stringify({ key: '/admin/aftersales/19/negotiation-execution/',
+          description: '退款', path: '/orders', startedAt: new Date().toISOString(), requestId: intent.client_request_id }))
+      }, { intentKey, reviewKey, intent })
+    }
+    const storedRequest = key => page.evaluate(key => JSON.parse(localStorage.getItem(key)), key)
+    const rejectedIntent = { proposal_id: 26, client_request_id: 'fixture-conflicting-receipt' }
+    const conflictMessage = '该方案已由另一请求处理，本次退款请求未执行。'
+    const conflict = { status: 409, json: { code: 409, errorCode: 'REFUND_REQUEST_CONFLICT', msg: conflictMessage } }
+    await savePending(rejectedIntent)
+    queryError = { status: 409, json: { code: 409, msg: '资金结果待核对' } }
+    await page.reload()
+    dialog = await open('核对协商处理')
+    await review(dialog)
+    await confirm(dialog, '查询并重试原请求').click()
+    await dialog.getByRole('alert').filter({ hasText: '资金结果待核对' }).waitFor()
+    assert.deepEqual(await storedRequest(intentKey), rejectedIntent)
+    assert.equal((await storedRequest(reviewKey)).requestId, rejectedIntent.client_request_id)
+    queryError = conflict
+    await confirm(dialog, '查询并重试原请求').click()
+    await dialog.getByRole('checkbox', { name: /已核对当事人/ }).waitFor({ state: 'hidden' })
+    assert.equal(await storedRequest(intentKey), null)
+    assert.equal(await storedRequest(reviewKey), null)
+    assert.equal(mutations.length, 2, 'A terminal reply to lookup must not submit a refund')
+
+    await savePending(rejectedIntent)
+    queryHold = Promise.withResolvers()
+    queryEntered = Promise.withResolvers()
+    await page.reload()
+    dialog = await open('核对协商处理')
+    await review(dialog)
+    await confirm(dialog, '查询并重试原请求').click()
+    await queryEntered.promise
+    const replacement = { proposal_id: 27, client_request_id: 'fixture-another-tab' }
+    await savePending(replacement)
+    queryHold.resolve()
+    await dialog.getByRole('checkbox', { name: /已核对当事人/ }).waitFor({ state: 'hidden' })
+    assert.deepEqual(await storedRequest(intentKey), replacement)
+    assert.equal((await storedRequest(reviewKey)).requestId, replacement.client_request_id)
+    assert.equal(mutations.length, 2)
+    await page.evaluate(keys => keys.forEach(key => localStorage.removeItem(key)), [intentKey, reviewKey])
+
+    writeError = conflict
+    await page.reload()
+    dialog = await open()
+    await dialog.getByRole('status').filter({ hasText: '账面金额可覆盖' }).waitFor()
+    await review(dialog)
+    await confirm(dialog).click()
+    await dialog.getByRole('checkbox', { name: /已核对当事人/ }).waitFor({ state: 'hidden' })
+    assert.equal(await storedRequest(intentKey), null)
+    assert.equal(await storedRequest(reviewKey), null)
+    assert.equal(mutations.length, 3)
+
     for (const legacyAmount of [300, 0]) {
       amount = legacyAmount
       points = false
@@ -193,9 +256,9 @@ async function exercise(browser) {
         'An unmarked preview retains the ordinary or zero-refund behavior')
       await close(dialog)
     }
-    assert.equal(mutations.length, 2)
+    assert.equal(mutations.length, 3)
     assert.deepEqual(errors, [])
-    console.log('协商退款弹窗验收通过，已覆盖四种资金读态、原号查单、相同编号重试和普通及零元兼容。')
+    console.log('协商退款弹窗验收通过，已覆盖资金读态、原号恢复、异号冲突清理和普通及零元兼容。')
   } catch (error) {
     console.error(page.url(), [...new Set(paths)], (await page.locator('body').innerText()).slice(0, 1400))
     throw error

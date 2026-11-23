@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { coinUnit, formatMoney, getSession, getStoreSlug } from "@xa/shared"
+import { ApiError, coinUnit, formatMoney, getSession, getStoreSlug } from "@xa/shared"
 import { Button } from "@/components/ui/button"
 import { Feedback, MutationDialog, useLoad, type Row } from "@/components/business"
 import { request, requestId } from "@/api/request"
@@ -18,9 +18,9 @@ const path = (id: number) => `/aftersales/${id}/negotiation-execution/`
 function storageKey(id: number) {
   return `xa:negotiation-refund:${getStoreSlug()}:${getSession("admin").user?.id}:${id}`
 }
-function readIntent(id: number): Intent | "invalid" | null {
+function readIntent(key: string): Intent | "invalid" | null {
   try {
-    const saved = localStorage.getItem(storageKey(id))
+    const saved = localStorage.getItem(key)
     if (!saved) return null
     const value = JSON.parse(saved)
     return value && Number.isSafeInteger(value.proposal_id) && value.proposal_id > 0 &&
@@ -29,10 +29,16 @@ function readIntent(id: number): Intent | "invalid" | null {
   } catch { return "invalid" }
 }
 
+function clearIntent(key: string, intent: Intent) {
+  const saved = readIntent(key)
+  if (saved && saved !== "invalid" && saved.proposal_id === intent.proposal_id && saved.client_request_id === intent.client_request_id)
+    localStorage.removeItem(key)
+}
+
 export function NegotiationExecutionEntry({ ticket, open }: { ticket: Row; open: (proposal: Row | null) => void }) {
   const [state, setState] = useState<"loading" | "ready" | "hidden" | "error">("loading")
   const [proposal, setProposal] = useState<Row | null>(null)
-  const pending = readIntent(ticket.id)
+  const pending = readIntent(storageKey(ticket.id))
   useEffect(() => {
     let active = true
     request<Row>({ url: path(ticket.id), silent: true }).then(result => {
@@ -59,7 +65,8 @@ export function NegotiationExecutionEntry({ ticket, open }: { ticket: Row; open:
 export function NegotiationExecutionDialog({ ticket, proposal, onClose, onSaved }: {
   ticket: Row; proposal: Row | null; onClose: () => void; onSaved: () => void
 }) {
-  const [pending, setPending] = useState<Intent | "invalid" | null>(() => readIntent(ticket.id))
+  const intentKey = storageKey(ticket.id)
+  const [pending, setPending] = useState<Intent | "invalid" | null>(() => readIntent(intentKey))
   const [reviewed, setReviewed] = useState(false)
   const matches = proposal && (!pending || (pending !== "invalid" && proposal.id === pending.proposal_id))
   const zero = proposal?.refund_units === 0
@@ -97,25 +104,40 @@ export function NegotiationExecutionDialog({ ticket, proposal, onClose, onSaved 
       if (!intent) {
         if (!canStart || !proposal) throw new Error("请先核对方案和资金。")
         intent = { proposal_id: proposal.id, client_request_id: requestId("negotiation-refund") }
-        try { localStorage.setItem(storageKey(ticket.id), JSON.stringify(intent)) }
+        try { localStorage.setItem(intentKey, JSON.stringify(intent)) }
         catch { throw new Error("无法保存协商操作凭证，请检查浏览器存储。") }
         setPending(intent)
       }
       if (intent === "invalid") throw new Error("原操作凭证无法读取，请联系管理员核对。")
-      if (pending) {
-        const reviewKey = `/admin${path(ticket.id)}`
-        if (reviewActive(reviewKey)) throw new Error("原请求仍在提交，请稍后核对。")
-        const result = await request<Row>({ url: path(ticket.id), params: intent })
-        if (result.data.status === "COMPLETED") {
-          clearReview(reviewKey)
-          localStorage.removeItem(storageKey(ticket.id)); toast.success(result.data.refund_units === 0 ? "协商终止已完成" : "协商退款已完成"); onSaved(); return
-        }
-        if (result.data.status !== "NOT_FOUND") throw new Error("协商处理结果待核对，请联系管理员。")
-        clearReview(reviewKey)
+      const submitted = intent
+      const reviewKey = `/admin${path(ticket.id)}`
+      function finish(refundUnits: number) {
+        clearIntent(intentKey, submitted)
+        toast.success(refundUnits === 0 ? "协商终止已完成" : "协商退款已完成")
+        onSaved()
       }
-      const result = await request<Row>({ url: path(ticket.id), method: "POST", data: intent })
-      if (result.data.status !== "COMPLETED") throw new Error("协商处理结果待核对，请联系管理员。")
-      localStorage.removeItem(storageKey(ticket.id)); toast.success(result.data.refund_units === 0 ? "协商终止已完成" : "协商退款已完成"); onSaved()
+      try {
+        if (pending) {
+          if (reviewActive(reviewKey)) throw new Error("原请求仍在提交，请稍后核对。")
+          const result = await request<Row>({ url: path(ticket.id), params: submitted })
+          if (result.data.status === "COMPLETED") {
+            clearReview(reviewKey, submitted.client_request_id)
+            finish(result.data.refund_units)
+            return
+          }
+          if (result.data.status !== "NOT_FOUND") throw new Error("协商处理结果待核对，请联系管理员。")
+          clearReview(reviewKey, submitted.client_request_id)
+        }
+        const result = await request<Row>({ url: path(ticket.id), method: "POST", data: submitted })
+        if (result.data.status !== "COMPLETED") throw new Error("协商处理结果待核对，请联系管理员。")
+        finish(result.data.refund_units)
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 409 || error.errorCode !== "REFUND_REQUEST_CONFLICT") throw error
+        clearReview(reviewKey, submitted.client_request_id)
+        clearIntent(intentKey, submitted)
+        toast.info(error.message)
+        onSaved()
+      }
     }}>
     {matches && proposal && <div className="space-y-1 rounded-md border p-3 text-sm">
       <p>已确认方案第 {proposal.version} 版</p>

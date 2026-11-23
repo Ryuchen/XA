@@ -137,7 +137,9 @@ def _post_followup_locked(case_id, proposal_id, *, operator, legacy_operator, re
     existing = PointsNegotiationPosting.objects.select_for_update().filter(
         proposal_id=proposal_id, proposal__case=case).first()
     if existing:
-        if (existing.operator_id != operator.pk or existing.points_refund.refund.client_request_id != request_id
+        from .points_followup_termination import require_followup_request_locked
+        require_followup_request_locked(existing, request_id)
+        if (existing.operator_id != operator.pk
                 or existing.points_refund.refund.operator_id != getattr(legacy_operator, 'pk', None)):
             raise ValidationError('该方案已处理，请核对原退款记录')
         verified = verify_posting_locked(existing)

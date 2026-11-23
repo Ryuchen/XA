@@ -26,6 +26,8 @@ def console_exception_handler(exc, context):
         'msg': msg,
         'errors': detail,
     }
+    if response.status_code == 409 and getattr(exc, 'default_code', None) == 'REFUND_REQUEST_CONFLICT':
+        response.data['errorCode'] = exc.default_code
     if response.status_code == 429:
         import math
         wait = max(1, math.ceil(getattr(exc, 'wait', None) or 1))
