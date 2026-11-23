@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta, timezone as fixed_timezone
 from unittest import skipUnless
 from unittest.mock import patch
 
@@ -404,11 +405,7 @@ class PlatformWithdrawalWorkflowTest(TestCase):
             wallet = get_wallet(account=self.account)
             self.assertEqual((wallet.balance, wallet.frozen_amount), (100000, 0))
 
-    def test_dashboard_keeps_unconfirmed_payouts_out_of_a_complete_total(self):
-        pk = self.apply()
-        self.initial(pk)
-        self.assertEqual(self.action(pk, 'approve', client_request_id='dashboard-approve').status_code, 200)
-
+    def dashboard_client(self):
         actor = PlatformAccount(username='qa-dashboard-admin', phone='13800003333')
         actor.set_password('test-only-dashboard-password')
         actor.save()
@@ -425,6 +422,13 @@ class PlatformWithdrawalWorkflowTest(TestCase):
                                             'smsCode': delivered[0]}, format='json')
             self.assertEqual(signed.status_code, 200, signed.data)
         dashboard.credentials(HTTP_AUTHORIZATION='Bearer ' + signed.data['data']['token'])
+        return dashboard
+
+    def test_dashboard_keeps_unconfirmed_payouts_out_of_a_complete_total(self):
+        pk = self.apply()
+        self.initial(pk)
+        self.assertEqual(self.action(pk, 'approve', client_request_id='dashboard-approve').status_code, 200)
+        dashboard = self.dashboard_client()
         path = '/api/admin/platform/dashboard'
         zero = {'count': 0, 'actual_amount_fen': 0}
         approved = dashboard.get(path).data['data']
@@ -468,6 +472,71 @@ class PlatformWithdrawalWorkflowTest(TestCase):
             wallet.refresh_from_db()
             self.assertEqual((row.status, row.transaction.status, wallet.balance, wallet.frozen_amount),
                              ('REJECTED', 'FAILED', 100000, 0))
+
+    def test_dashboard_requires_matching_paid_event_and_wallet_posting(self):
+        pk = self.apply()
+        self.initial(pk)
+        self.assertEqual(self.action(pk, 'approve', client_request_id='dashboard-event-approve').status_code, 200)
+        paid_at = timezone.now().astimezone(fixed_timezone(timedelta(hours=8)))
+        paid = self.action(pk, 'paid', client_request_id='dashboard-event-paid', payout_reference='QA-PAID-DASHBOARD',
+                           paid_amount_fen=19000, paid_at=paid_at.isoformat())
+        self.assertEqual(paid.status_code, 200, paid.data)
+        dashboard = self.dashboard_client()
+
+        def totals():
+            response = dashboard.get('/api/admin/platform/dashboard')
+            self.assertEqual(response.status_code, 200, response.data)
+            return response.data['data']
+
+        def assert_needs_review():
+            data = totals()
+            stores = {row['slug']: row['counts']['paid_withdrawals'] for row in data['stores']}
+            self.assertEqual(stores[self.second.slug],
+                             {'status': 'REVIEW', 'count': None, 'actual_amount': None, 'actual_amount_fen': None})
+            self.assertFalse(data['complete'])
+            self.assertEqual(data['partial_paid_withdrawals'], {'count': 0, 'actual_amount_fen': 0})
+
+        with CaptureQueriesContext(connections[self.second.database_alias]) as queries:
+            valid = totals()
+        self.assertEqual(sum(query['sql'].lstrip().upper().startswith('SELECT')
+                             and 'wallet_withdrawrequest' in query['sql'].lower() for query in queries), 1)
+        self.assertTrue(valid['complete'])
+        self.assertEqual(valid['partial_paid_withdrawals'], {'count': 1, 'actual_amount_fen': 19000})
+
+        with store_context(self.second):
+            event = WithdrawalPlatformEvent.objects.get(withdrawal_id=pk, action='paid')
+            event.action = 'approve'
+            event.save(update_fields=['action'])
+        assert_needs_review()
+
+        for changes in ({'paid_amount_fen': 19001}, {'paid_amount_fen': '19000'},
+                        {'payout_reference': 'QA-WRONG'}, {'paid_at': (paid_at + timedelta(microseconds=1)).isoformat()}):
+            with self.subTest(changes=changes):
+                with store_context(self.second):
+                    WithdrawalPlatformEvent.objects.filter(pk=event.pk).update(action='paid', detail={**event.detail, **changes})
+                assert_needs_review()
+
+        with store_context(self.second):
+            legacy_detail = {key: value for key, value in event.detail.items() if key != 'paid_amount_fen'}
+            WithdrawalPlatformEvent.objects.filter(pk=event.pk).update(detail=legacy_detail)
+        assert_needs_review()
+
+        with store_context(self.second):
+            WithdrawalPlatformEvent.objects.filter(pk=event.pk).update(detail=event.detail)
+            row = WithdrawRequest.objects.get(pk=pk)
+            original_balance = row.transaction.balance_after
+            Transaction.objects.filter(pk=row.transaction_id).update(balance_after=original_balance + 1)
+        assert_needs_review()
+        with store_context(self.second):
+            Transaction.objects.filter(pk=row.transaction_id).update(balance_after=original_balance)
+        restored = totals()
+        self.assertEqual(restored['partial_paid_withdrawals'], valid['partial_paid_withdrawals'])
+
+        with store_context(self.second):
+            WithdrawalPlatformEvent.objects.create(withdrawal_id=pk, action='paid', from_status=event.from_status,
+                to_status=event.to_status, platform_actor_id=event.platform_actor_id, actor_name=event.actor_name,
+                request_id='duplicate-paid-event-test', request_fingerprint=event.request_fingerprint, detail=event.detail)
+        assert_needs_review()
 
     def test_old_pending_record_cannot_be_mistaken_for_unpaid(self):
         pk = self.apply()
