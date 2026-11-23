@@ -30,7 +30,9 @@ from console.points_redemption_config import save_points_terms
 from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, RetirementAudit
 from engagement.tasks import confirm_due_consumption
 from orders.addon_funding_release import record_addon_funding_release
-from orders.models import (AfterSale, GameCategory, Order, OrderAddonPayment, OrderAddonRefund, OrderFinancialLock, OrderPointsRedemption,
+from orders.models import (AfterSale, GameCategory, Order, OrderAddonHandover, OrderAddonPayment, OrderAddonRefund,
+                           OrderAddonConsumption, OrderFinancialLock, OrderPointsRedemption,
+                           OrderSegmentAddonSettlement,
                            OrderPointsTransferFundingRevision, OrderSegmentReportSubmission, OrderSegmentSettlementManifest,
                            ServiceAddonConfiguration, ServiceAddonPriceOption)
 from orders.tests import test_assigned_order_reservation_guard as reservation_fixture
@@ -266,6 +268,9 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
         self.run_in_stores(self.exercise_paid_addon_consultation)
+
+    def test_returned_addon_consultation_preserves_three_confirmed_segments(self):
+        self.run_in_stores(self.exercise_returned_addon_consultation)
 
     def test_consultation_refund_notice_waits_for_buyer_retirement(self):
         self.run_in_stores(lambda: self.exercise_paid_addon_consultation(retire_buyer=True))
@@ -748,7 +753,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         return {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
                 'client_request_id': 'transfer-consultation-aftersale', 'affected_provider_account_ids': [self.replacement.pk]}
 
-    def pay_addon_after_transfer(self):
+    def pay_consultation_addon(self, provider):
         game = GameCategory.objects.create(name='咨询售后加购项目')
         self.service.game_category = game
         self.service.save(update_fields=['game_category'])
@@ -759,7 +764,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         buyer = self.api(self.buyer)
         path = f'/api/orders/orders/{self.order_id}/addons/intents/'
         intent = self.ok(buyer.post(path, {'addon_id': addon.pk, 'unit': 'HOUR', 'quantity': 1,
-            'configuration_version': 1, 'provider_account_id': self.replacement.pk,
+            'configuration_version': 1, 'provider_account_id': provider.pk,
             'request_id': 'consultation-addon-confirm', 'expected_amount': 1000, 'gift_balance_amount': 0,
             'compensation_balance_amount': 0}, format='json'))
         paid = self.ok(buyer.post(path + f'{intent["id"]}/pay/', {}, format='json'))
@@ -776,7 +781,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.ok(self.api(self.original).post(f'/api/orders/orders/{self.order_id}/participation-evidence/',
             {'segment_id': transfer.previous_segment_id, 'completion_image': release_fixture.screenshot(),
              'client_request_id': 'consultation-addon-original-evidence'}, format='multipart'))
-        payment = self.pay_addon_after_transfer()
+        payment = self.pay_consultation_addon(self.replacement)
         self.assertEqual((payment.principal, payment.provider_income, payment.commission_fee,
                           payment.buyer_transaction.amount), (1000, 700, 300, -1000))
         self.ok(self.api(self.replacement).post(f'/api/orders/orders/{self.order_id}/complete/',
@@ -819,7 +824,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         opening = row.history[0]
         missing_scope = {key: value for key, value in opening.items() if key != 'affected_segment_ids'}
         damaged_histories = ([], {}, [None], [missing_scope], [{**opening, 'affected_segment_ids': None}],
-                             [{**opening, 'affected_segment_ids': 'unknown'}])
+                             [{**opening, 'affected_segment_ids': 'unknown'}],
+                             [opening, {**opening, 'affected_segment_ids': [transfer.previous_segment_id]}])
         for damaged in damaged_histories:
             AfterSale.objects.filter(pk=row.pk).update(history=damaged)
             try:
@@ -857,6 +863,84 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
               f'notice_wait={notice_wait} refund_messages={messages} '
               f'addon_income_transaction={paid_addon.income_transaction_id}:{paid_addon.amount}', flush=True)
 
+    @override_settings(SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True,
+                       AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True)
+    def exercise_returned_addon_consultation(self):
+        payment = self.pay_consultation_addon(self.original)
+        dispatch = self.api(self.staff)
+        buyer, original, replacement = (self.api(account) for account in (self.buyer, self.original, self.replacement))
+        path = f'/api/orders/orders/{self.order_id}/'
+        handover_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/handovers/'
+
+        def hand_over(target, retained, request_id):
+            proposal = self.ok(dispatch.post(handover_url, {'request_id': request_id,
+                'target_provider_account_id': target.pk, 'retained_basis_raw': retained,
+                'completed_work': '已完成的加购内容', 'remaining_work': '接替人继续完成剩余加购'}, format='json'))
+            decision = path + f'addons/payments/{payment.pk}/handovers/{proposal["id"]}/decision/'
+            for actor in (buyer, original, replacement):
+                self.ok(actor.post(decision, {'accepted': True}, format='json'))
+            return OrderAddonHandover.objects.get(pk=proposal['id'], status='ACCEPTED')
+
+        self.transfer_and_join()
+        transfer_out = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id).last_transfer
+        self.ok(original.post(path + 'participation-evidence/', {'segment_id': transfer_out.previous_segment_id,
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-first-leg-evidence'},
+            format='multipart'))
+        first = hand_over(self.replacement, 400, 'consultation-addon-first-handover')
+        self.ok(dispatch.post(f'/api/admin/orders/{self.order_id}/transfer/', {
+            'reason': '由原陪玩接回剩余服务', 'transfers': [{
+                'old_provider_id': self.replacement.pk, 'new_provider_id': self.original.pk,
+                'original_share': {'retained': 2000, 'transferred': 4000, 'agreement': '双方确认实际原价份额'},
+            }]}, format='json'))
+        transfer_back = OrderPointsTransferFundingRevision.objects.filter(order_id=self.order_id).latest('pk').last_transfer
+        self.ok(replacement.post(path + 'participation-evidence/', {'segment_id': transfer_back.previous_segment_id,
+            'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-second-leg-evidence'},
+            format='multipart'))
+        self.join_replacement(original, transfer_back)
+        second = hand_over(self.original, 200, 'consultation-addon-return-handover')
+        self.assertEqual((first.target_segment_id, second.previous_id, second.target_segment_id),
+                         (transfer_back.previous_segment_id, first.pk, transfer_back.next_segment_id))
+        shares = [(transfer_out.previous_segment_id, self.original.pk, 400, 320),
+                  (transfer_back.previous_segment_id, self.replacement.pk, 200, 140),
+                  (transfer_back.next_segment_id, self.original.pk, 400, 280)]
+        self.assertCountEqual(second.shares.values_list('segment_id', 'segment__provider_account_id', 'basis', 'income'), shares)
+        self.ok(original.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
+            'client_request_id': 'consultation-returned-addon-complete'}, format='multipart'))
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+
+        buyer_balance = Wallet.objects.get(account=self.buyer).balance
+        usage = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
+        ledger = list(usage.values_list('pk', 'kind', 'amount'))
+        denied = staff.post('/api/admin/aftersales/open-negotiation/', {**self.consultation_payload(message),
+            'addon_payment_id': payment.pk, 'affected_provider_account_ids': [self.original.pk],
+            'affected_segment_ids': [transfer_back.next_segment_id]}, format='json')
+        self.assertEqual((denied.status_code, denied.data['msg']), (400, '订单不在积分加购资金范围'))
+        self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
+        self.assertFalse(payment.refund_proposals.exists())
+        self.assertFalse(payment.refund_records.exists())
+        self.assertFalse(AfterSaleOpenNotice.objects.filter(case__order_id=self.order_id).exists())
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, buyer_balance)
+        self.assertEqual(list(usage.values_list('pk', 'kind', 'amount')), ledger)
+
+        reports = [self.approve_report(account, segment) for account, segment in (
+            (self.original, transfer_out.previous_segment_id), (self.replacement, transfer_back.previous_segment_id),
+            (self.original, transfer_back.next_segment_id))]
+        order = Order.objects.get(pk=self.order_id)
+        due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
+        with patch('django.utils.timezone.now', return_value=due):
+            self.assertEqual(confirm_due_consumption.run(), 1)
+            self.assertEqual(confirm_due_consumption.run(), 0)
+        order.refresh_from_db()
+        self.assertEqual((order.provider_income, order.settlement_store_funding), (7400, 1140))
+        self.assertCountEqual(OrderSegmentAddonSettlement.objects.filter(payment=payment).values_list('segment_id', 'amount'),
+                              [(segment, income) for segment, _, _, income in shares])
+        consumption = OrderAddonConsumption.objects.get(payment=payment)
+        self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, 0))
+        print(f'{self.store.slug} order={order.pk} consultation={message.pk} payment={payment.pk} '
+              f'handovers={[first.pk, second.pk]} segments={shares} open_case_status={denied.status_code} '
+              f'funding={order.settlement_store_funding} consumption={consumption.pk}', flush=True)
+
     def execute_consultation_addon_refund(self, staff, case, payment, proposal, events_before):
         proposal_id = proposal['id']
         path = f'/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/{proposal_id}/'
@@ -880,6 +964,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         lot_before = source.lot.remaining
         refund_transactions = Transaction.objects.filter(wallet__account=self.buyer, tx_type=Transaction.TxType.REFUND)
         self.assertFalse(refund_transactions.exists())
+
+        opening = case.history[0]
+        conflict = {**opening, 'affected_segment_ids': None}
+        AfterSale.objects.filter(pk=case.pk).update(history=[opening, conflict])
+        try:
+            blocked = staff.post(execute_path, {}, format='json')
+            self.assertEqual((blocked.status_code, blocked.data['msg']), (400, '加购售后原履约段记录待核对'))
+            self.assertFalse(payment.refund_records.exists())
+            self.assertFalse(refund_transactions.exists())
+        finally:
+            AfterSale.objects.filter(pk=case.pk).update(history=case.history)
 
         def fail_funding(order, refund):
             self.assertEqual(refund.buyer_transaction.amount, 500)

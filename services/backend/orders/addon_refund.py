@@ -170,10 +170,14 @@ def _participants(payment, case, amount, selected):
         # A later low rating can change the case's current scope.
         if not isinstance(case.history, list) or any(not isinstance(entry, dict) for entry in case.history):
             raise ValidationError('加购售后原履约段记录待核对')
-        opening = next((entry for entry in case.history
-                        if entry.get('client_request_id') == case.client_request_id
-                        and entry.get('addon_payment_id') == payment.pk
-                        and entry.get('created_at') == case.created_at.isoformat()), None)
+        opened_at = case.created_at.isoformat()
+        openings = [entry for entry in case.history if entry.get('status') == 'OPEN'
+                    and entry.get('client_request_id') == case.client_request_id
+                    and entry.get('addon_payment_id') == payment.pk
+                    and entry.get('created_at') == opened_at]
+        if len(openings) > 1:
+            raise ValidationError('加购售后原履约段记录待核对')
+        opening = openings[0] if openings else None
         agreed = normalize_scope(opening.get('affected_segment_ids')) if opening is not None else None
         if agreed is None and case.affected_segment_ids is not None:
             raise ValidationError('加购售后原履约段记录待核对')
