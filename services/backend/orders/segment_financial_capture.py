@@ -118,13 +118,13 @@ def transfer_income_pending(order, account_id=None):
     from .segment_settlement import protection_enabled
     if protection_enabled():
         from .models import OrderSegmentSettlementManifest
-        has_manifest = getattr(order, '_pool_has_manifest', None)
+        has_manifest = getattr(order, '_provider_has_manifest', None)
         if has_manifest is None:
             has_manifest = OrderSegmentSettlementManifest.objects.filter(order=order).exists()
         if has_manifest:
             return True  # Old person/order amounts cannot represent segmented credits.
-    covered = (order._pool_has_covered_transfer
-               if account_id and account_id == getattr(order, '_pool_evidence_account_id', None) else None)
+    covered = (order._provider_has_covered_transfer
+               if account_id and account_id == getattr(order, '_provider_display_account_id', None) else None)
     if order.settled_at or covered is False:
         return False
     if account_id is not None:

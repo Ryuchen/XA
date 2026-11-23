@@ -503,6 +503,9 @@ class OrderListView(APIView):
             total = orders.count()
             page = min(page, max(1, (total + page_size - 1) // page_size))
             orders = orders[(page - 1) * page_size:page * page_size]
+        if account.account_type == ClubAccount.AccountType.PROVIDER and not is_pool:
+            from .pool_visibility import with_provider_list_evidence
+            orders = with_provider_list_evidence(orders, account.pk)
         orders = list(orders)
         if is_pool:
             prefetch_related_objects([order for order in orders if order._pool_has_applications], application_fetch)

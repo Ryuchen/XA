@@ -370,13 +370,16 @@ class PartialRefundFullJourneyTest(APITestCase):
         self.assertEqual(stats['total_income'], wallet['total_income'])
 
     def test_refunded_report_list_batches_real_income_evidence(self):
+        from identifiers.services import cache_store, get_entity_number
+
         self.login(self.admin)
         self.ok(self.client.post('/api/admin/wallets/recharge/', {
             'account_id': self.accounts[self.boss.pk].pk, 'amount': 50000, 'gift_amount': 0,
             'trade_no': 'batch-refund-receipt', 'proof_image': screenshot(),
             'client_request_id': 'batch-refund-recharge',
         }, format='multipart'))
-        report_counts, order_counts = [], []
+        counts = {}
+        order_numbers = {}
         for n in range(2):
             self.login(self.boss)
             created = self.ok(self.client.post('/api/orders/create/', {
@@ -399,19 +402,24 @@ class PartialRefundFullJourneyTest(APITestCase):
                 'refund_amount': 2500, 'reason': '隔离退款批量验收', 'resolution': '部分退款',
                 'client_request_id': f'batch-refund-{n}', 'plan_token': preview['plan_token'],
             }, format='json'))
+            order_numbers[order.pk] = get_entity_number(order)
             self.login(self.provider)
-            with CaptureQueriesContext(connection) as queries:
-                rows = self.ok(self.client.get('/api/wallet/reports/'))
-            report_counts.append(len(queries))
-            self.assertEqual(len(rows), n + 1)
-            self.assertTrue(all(row['refund_summary']['net_income'] == 6000 for row in rows))
-            with CaptureQueriesContext(connection) as queries:
-                orders = self.ok(self.client.get('/api/orders/orders/', {'status': 'completed'}))
-            order_counts.append(len(queries))
-            self.assertEqual(len(orders), n + 1)
-            self.assertTrue(all(row['refund_summary']['net_income'] == 6000 for row in orders))
-        self.assertEqual(report_counts[0], report_counts[1], report_counts)
-        self.assertEqual(order_counts[0], order_counts[1], order_counts)
+            for path, filters, order_key, number_key in (
+                ('/api/wallet/reports/', {}, 'order_id', 'order_entity_no'),
+                ('/api/orders/orders/', {'status': 'completed'}, 'id', 'entity_no'),
+            ):
+                for pagination in ({}, {'page': '1', 'page_size': '20'}):
+                    with patch.dict(cache_store(), clear=True), CaptureQueriesContext(connection) as queries:
+                        data = self.ok(self.client.get(path, {**filters, **pagination}))
+                    rows = data['list'] if pagination else data
+                    if pagination:
+                        self.assertEqual(data['total'], n + 1)
+                    self.assertEqual(len(rows), n + 1)
+                    self.assertEqual({row[order_key]: row[number_key] for row in rows}, order_numbers)
+                    self.assertTrue(all(row['refund_summary']['net_income'] == 6000 for row in rows))
+                    counts.setdefault((path, bool(pagination)), []).append(len(queries))
+        for scope, (one, two) in counts.items():
+            self.assertEqual(one, two, scope)
 
     def test_real_order_approval_partial_then_remaining_refund(self):
         from engagement.models import RechargePackage

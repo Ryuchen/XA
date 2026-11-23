@@ -64,11 +64,12 @@ def prime_entity_numbers(instances, using=None):
         label, entity_id = entity_key(instance)
         groups.setdefault((alias, label), set()).add(entity_id)
     for (alias, label), entity_ids in groups.items():
-        rows = EntityNumber.objects.using(alias).filter(
+        rows = dict(EntityNumber.objects.using(alias).filter(
             entity_type=label, entity_id__in=entity_ids,
-        ).values_list('entity_id', 'code')
-        for entity_id, code in rows:
-            cache_store()[(alias, label, entity_id)] = code
+        ).values_list('entity_id', 'code'))
+        cache = cache_store()
+        for entity_id in entity_ids:
+            cache[(alias, label, entity_id)] = rows.get(entity_id, '')
 
 
 def get_entity_number(instance):

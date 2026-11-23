@@ -799,8 +799,10 @@ def refund_summary(order,*,detailed=False,account=None,customer_owner=False,prov
             rows = [row for row in rows if row.pk not in marked or row.pk in own_refunds]
         # Points negotiations use distinct posting evidence.  Never expose
         # another teammate's reason or amount through the generic summary.
-        from .points_service_payment import needs_integrated_processing
-        if rows and needs_integrated_processing(order):
+        from .points_service_payment import display_has_points, needs_integrated_processing
+        has_points = (display_has_points if hasattr(order, '_display_points_evidence')
+                      else needs_integrated_processing)
+        if rows and has_points(order):
             from .models import PointsNegotiationPosting, PointsNegotiationPostingShare
             from stores.db import connection
             with connection.cursor() as cursor:

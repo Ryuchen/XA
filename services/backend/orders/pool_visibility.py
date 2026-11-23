@@ -29,25 +29,33 @@ class PoolClockUnavailable(APIException):
 
 
 def with_pool_display_evidence(orders, account_id):
-    """Load the provider's list evidence with the order rows."""
-    from .models import (OrderApplication, OrderOriginalAttribution, OrderParticipationSegment,
-                         OrderSegmentSettlementManifest, OrderStatusLog, OrderWorkStint)
-    from .segment_financial_capture import covered_transfers
+    """Load additional assignment facts for the pool."""
+    from .models import OrderApplication, OrderStatusLog
     order_id = OuterRef('pk')
-    return orders.annotate(
-        _pool_evidence_account_id=Value(account_id),
+    return with_provider_list_evidence(orders, account_id).annotate(
         _pool_snapshot_exists=Q(grab_pool_snapshot__isnull=False),
         _pool_other_assignment=(
             Q(grab_opening_intent__isnull=False) | Q(grab_pool_snapshot__isnull=False)
             | Exists(OrderStatusLog.objects.filter(order_id=order_id, action='ASSIGN', reason='老板指定陪玩'))
         ),
         _pool_has_applications=Exists(OrderApplication.objects.filter(order_id=order_id)),
-        _pool_has_manifest=Exists(OrderSegmentSettlementManifest.objects.filter(order_id=order_id)),
-        _pool_has_covered_transfer=Exists(covered_transfers(order_id, account_id)),
-        _pool_has_my_segments=Exists(OrderParticipationSegment.objects.filter(
+    )
+
+
+def with_provider_list_evidence(orders, account_id):
+    """Follow the requesting provider's fulfillment and settlement evidence."""
+    from .models import (OrderOriginalAttribution, OrderParticipationSegment,
+                         OrderSegmentSettlementManifest, OrderWorkStint)
+    from .segment_financial_capture import covered_transfers
+    order_id = OuterRef('pk')
+    return orders.annotate(
+        _provider_display_account_id=Value(account_id),
+        _provider_has_manifest=Exists(OrderSegmentSettlementManifest.objects.filter(order_id=order_id)),
+        _provider_has_covered_transfer=Exists(covered_transfers(order_id, account_id)),
+        _provider_has_segments=Exists(OrderParticipationSegment.objects.filter(
             attribution__order_id=order_id, provider_account_id=account_id)),
-        _pool_has_attribution=Exists(OrderOriginalAttribution.objects.filter(order_id=order_id)),
-        _pool_pending_work_stint=Subquery(OrderWorkStint.objects.filter(order_id=order_id,
+        _provider_has_attribution=Exists(OrderOriginalAttribution.objects.filter(order_id=order_id)),
+        _provider_pending_work_stint=Subquery(OrderWorkStint.objects.filter(order_id=order_id,
             account_id=account_id, incoming__isnull=False, started_at__isnull=True,
             released_at__isnull=True).order_by('pk').values('pk')[:1]),
     )

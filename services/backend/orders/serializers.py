@@ -435,7 +435,7 @@ class OrderSerializer(EntityNumberModelSerializer):
         return cache[obj.pk]
 
     def _verified_person_credit(self, obj, account_id):
-        if getattr(obj, '_pool_has_manifest', None) is False:
+        if getattr(obj, '_provider_has_manifest', None) is False:
             return False, None
         from .segment_settlement import verified_person_credit
         cache = self.context.setdefault('_verified_person_credits', {})
@@ -572,9 +572,9 @@ class OrderSerializer(EntityNumberModelSerializer):
         account = getattr(self.context.get('request'), 'account', None)
         if not account or account.account_type != ClubAccount.AccountType.PROVIDER:
             return None
-        if hasattr(obj, '_pool_has_attribution'):
-            stint_id = obj._pool_pending_work_stint
-            return {'id': stint_id} if not obj._pool_has_attribution and stint_id else None
+        if getattr(obj, '_provider_display_account_id', None) == account.pk:
+            stint_id = obj._provider_pending_work_stint
+            return {'id': stint_id} if not obj._provider_has_attribution and stint_id else None
         from .models import OrderOriginalAttribution, OrderWorkStint
         if OrderOriginalAttribution.objects.filter(order=obj).exists():
             return None
@@ -584,8 +584,10 @@ class OrderSerializer(EntityNumberModelSerializer):
 
     def _my_participation(self, obj):
         account = getattr(self.context.get('request'), 'account', None)
-        if (not account or account.account_type != ClubAccount.AccountType.PROVIDER
-                or getattr(obj, '_pool_has_my_segments', None) is False):
+        if not account or account.account_type != ClubAccount.AccountType.PROVIDER:
+            return []
+        if (getattr(obj, '_provider_display_account_id', None) == account.pk
+                and not obj._provider_has_segments):
             return []
         cache = self.context.setdefault('_my_participation_segments', {})
         key = (obj.pk, account.pk)

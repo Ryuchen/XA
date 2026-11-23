@@ -884,20 +884,34 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
     def test_double_order_requires_only_boss_and_affected_provider(self):
         import tempfile
         from console.points_redemption_config import save_points_terms
+        from console.room_confirmation_config import save_room_confirmation
         from coupons.models import Coupon, UserCoupon
         from orders.points_redemption_config import current_rules
+        from orders.room_confirmation_config import current_rules as room_rules
         from orders.tests.factories import make_boss_type
+        from orders.tests.test_points_checkout_integration import upload_recording
         from users.models import EscortLevel, EscortProfile
         with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media), store_context(self.second):
             buyer = make_user(); account = get_or_create_account_for_legacy_user(buyer)
             account.boss_type = make_boss_type(discount_rate=90); account.save(update_fields=['boss_type'])
-            wallet = get_wallet(user=buyer, account=account); wallet.balance = 25000; wallet.save(update_fields=['balance'])
+            admin = make_console_user(['order:view', 'support:edit', 'order:refund', 'order:settle',
+                                       'escort:view', 'escort:deposit_topup', 'wallet:recharge'])
+            staff = get_or_create_account_for_legacy_user(admin)
+            admin.admin_membership.account = staff; admin.admin_membership.save(update_fields=['account'])
+            client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
+            recharge = client.post('/api/admin/wallets/recharge/', {
+                'account_id': account.pk, 'amount': 25000, 'gift_amount': 0,
+                'trade_no': 'points-double-recharge', 'proof_image': screenshot(),
+                'client_request_id': 'points-double-recharge',
+            }, format='multipart')
+            self.assertEqual(recharge.data['code'], 0, recharge.data)
             MemberProfile.objects.create(account=account, points_balance=15000)
-            service = make_service(price=10000); service.billing_provider_count = 2
+            service = make_service(price=10000, billing_provider_count=2, fulfillment_provider_count=2)
             service.commission_policy = 'REGULAR'
             if getattr(self, '_exercise_room_continuation', False):
                 service.room_enabled = True
-            service.save(update_fields=['billing_provider_count', 'commission_policy', 'room_enabled'])
+                save_room_confirmation(30, room_rules()['version'], lambda *_: None)
+            service.save(update_fields=['commission_policy', 'room_enabled'])
             coupon = Coupon.objects.create(name='双陪积分退款测试', discount_type='DIRECT', amount=3000)
             UserCoupon.objects.create(account=account, coupon=coupon)
             save_points_terms(group_point_hundredths=10000, group_coin_units=4000,
@@ -905,7 +919,7 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
             boss = APIClient(HTTP_HOST='xa.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(account)[0])
             options = boss.post('/api/orders/discount-options-preview/', {'service_id': service.pk}, format='json')
             self.assertEqual(options.data['code'], 0, options.data)
-            payload = {'service_id': service.pk, 'preview_points_hundredths': 10000,
+            payload = {'service_id': service.pk, 'preview_points_hundredths': 10000, 'dispatch_mode': 'BOSS_SELECT',
                        'discount_selection_token': options.data['data']['options'][0]['selection_token'],
                        'client_request_id': 'points-double-agreement'}
             quote = boss.post('/api/orders/quote/', payload, format='json')
@@ -927,12 +941,14 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                 accounts.append(provider_account)
                 players.append(APIClient(HTTP_HOST='xa.esports.club',
                     HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(provider_account)[0]))
-            result = players[0].post(f'/api/orders/orders/{order.pk}/grab/',
-                                     {'team_size': 2, 'partner_id': accounts[1].pk}, format='json')
+            recordings = [upload_recording(player) for player in players]
+            result = players[0].post(f'/api/orders/orders/{order.pk}/grab/', {
+                'team_size': 2, 'partner_id': accounts[1].pk, 'recording_id': recordings[0],
+            }, format='json')
             self.assertEqual(result.data['code'], 0, result.data)
             application = OrderApplication.objects.get(order=order, applicant=accounts[0])
             result = players[1].post(f'/api/orders/orders/{order.pk}/applications/{application.pk}/action/',
-                                     {'action': 'CONFIRM_TEAM'}, format='json')
+                                     {'action': 'CONFIRM_TEAM', 'recording_id': recordings[1]}, format='json')
             self.assertEqual(result.data['code'], 0, result.data)
             result = boss.post(f'/api/orders/orders/{order.pk}/applications/{application.pk}/select/', {}, format='json')
             self.assertEqual(result.data['code'], 0, result.data)
@@ -943,11 +959,6 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
             if getattr(self, '_exercise_preapproved_unpaid', False):
                 from orders.tests.points_preapproved_unpaid_flow import complete_and_preapprove
                 preapproved = complete_and_preapprove(self, order=order, accounts=accounts, players=players)
-            admin = make_console_user(['order:view', 'support:edit', 'order:refund', 'order:settle',
-                                       'escort:view', 'escort:deposit_topup'])
-            staff = get_or_create_account_for_legacy_user(admin)
-            admin.admin_membership.account = staff; admin.admin_membership.save(update_fields=['account'])
-            client = APIClient(HTTP_HOST='admin.esports.club', HTTP_AUTHORIZATION='Bearer ' + issue_account_tokens(staff)[0])
             if getattr(self, '_exercise_double_addon_burden', False):
                 from orders.tests.points_double_addon_refund_flow import exercise
                 exercise(self, order=order, service=service, buyer=buyer, account=account,
@@ -1046,9 +1057,6 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                                         {'completion_image': screenshot()}, format='multipart')
             self.assertEqual(continued.data['code'], 0, continued.data)
             if getattr(self, '_exercise_room_continuation', False):
-                from wallet.models import SystemConfig
-                SystemConfig.objects.update_or_create(key='room_confirmation_deadline',
-                    defaults={'value': '{"minutes":30,"version":1}'})
                 order.refresh_from_db(); self.assertEqual(order.status, 'IN_SERVICE')
                 room_url = f'/api/orders/orders/{order.pk}/room/completion-requests/'
                 submitted = players[1].post(room_url,
@@ -1063,6 +1071,26 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                     {'client_request_id':'points-room-confirm'}, format='json')
                 self.assertEqual(confirmed.status_code, 200, confirmed.data)
             order.refresh_from_db(); self.assertEqual(order.status, 'COMPLETED')
+            from orders.points_service_payment import MARKER
+            refund = order.refund_records.get()
+            with transaction.atomic():
+                terms = dict(order.funding_terms)
+                del terms[MARKER]
+                Order.objects.filter(pk=order.pk).update(funding_terms=terms)
+                for player, affected in zip(players, (True, False)):
+                    for path, filters in (('/api/orders/orders/', {'status': 'completed'}),
+                                          ('/api/wallet/reports/', {'order_id': order.pk})):
+                        result = player.get(path, filters)
+                        self.assertEqual(result.data['code'], 0, result.data)
+                        rows = result.data['data']
+                        self.assertEqual(len(rows), 1, (path, affected, rows))
+                        summary = rows[0]['refund_summary']
+                        if affected:
+                            self.assertEqual((summary['amount'], summary['reason'], summary['refund_count']),
+                                             (refund.amount, refund.reason, 1))
+                        else:
+                            self.assertIsNone(summary, path)
+                transaction.set_rollback(True)
             rejected = boss.post(f'/api/orders/orders/{order.pk}/aftersale/', {
                 'reason': '已终止的范围不能重开', 'affected_provider_account_ids': [accounts[0].pk],
                 'client_request_id': 'closed-points-scope'}, format='json')
