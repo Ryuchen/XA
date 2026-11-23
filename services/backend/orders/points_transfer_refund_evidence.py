@@ -53,7 +53,7 @@ def _facts_without_receipt_locked(order):
     """Current facts for a bound order with no allocation at all."""
     from django.db.models import Q
     from users.receipt_usage_sources import _require_current_unlocked_reads
-    from .financial_lock import lock_order_money
+    from .financial_lock import lock_existing_order_money, lock_order_money
     from .models import OrderPointsFundingAllocation
     from .points_business_access import permits
     connection = transaction.get_connection()
@@ -62,12 +62,15 @@ def _facts_without_receipt_locked(order):
             or store.database_alias != connection.alias
             or not any(permits(order, phase=phase, kind=kind)
                        for phase, kind in (('payment', 'addon'), ('refund', 'addon'),
-                                           ('refund', 'transfer'), ('settlement', 'transfer'),
+                                           ('refund', 'transfer'), ('report', 'transfer'), ('settlement', 'transfer'),
                                            ('transfer', 'transfer')))):
         raise ValidationError('无到账的订单资金事实须在本单授权事务内核验')
     if not Order.objects.select_for_update().filter(pk=order.pk).exists():
         raise ValidationError('无到账的订单不存在')
-    lock_order_money()
+    if permits(order, phase='report', kind='transfer'):
+        lock_existing_order_money()
+    else:
+        lock_order_money()
     if OrderPointsFundingAllocation.objects.filter(
             Q(redemption__order_id=order.pk) | Q(service_order_id=order.pk)).exists():
         raise ValidationError('订单已有到账分配，须使用到账用途凭证')

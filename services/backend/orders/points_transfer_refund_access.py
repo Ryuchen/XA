@@ -1115,7 +1115,10 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
     if len(receipts) != len(ids):
         raise ValidationError('积分转单到账凭证缺失')
     from .points_addon_receipt_usage import reuse_history_locked
-    with reuse_history_locked(order, ids):
+    from .points_business_access import _bind
+    with (_bind(phase=phase, kind='transfer', order_id=order.pk,
+                account_id=order.customer_account_id, service_id=order.service_id),
+          reuse_history_locked(order, ids)):
         try:
             for receipt in receipts:
                 if receipt.usage_version is None:
@@ -1163,7 +1166,6 @@ def after_transfer(order_id, *, phase, allow_addon_completion=False, pending_pay
             or any(row.account_id not in expected or row.user_id != expected[row.account_id] or not row.is_active
                    for row in wallets) or (len(members) > 1 and len(wallets) != len(members))):
         raise ValidationError('积分转单陪玩钱包或账号待核对')
-    from .points_business_access import _bind
     with _bind(phase=phase, kind='transfer', order_id=order.pk,
                account_id=order.customer_account_id, service_id=order.service_id):
         if refund_count == 1:

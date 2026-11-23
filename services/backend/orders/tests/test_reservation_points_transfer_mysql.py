@@ -31,7 +31,7 @@ from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedge
 from engagement.tasks import confirm_due_consumption
 from orders.addon_funding_release import record_addon_funding_release
 from orders.models import (AfterSale, GameCategory, Order, OrderAddonFundingReleaseRun, OrderAddonHandover, OrderAddonPayment, OrderAddonRefund,
-                           OrderAddonConsumption, OrderFinancialLock, OrderPointsRedemption,
+                           OrderAddonConsumption, OrderFinancialLock, OrderOriginalShareTransfer, OrderPointsRedemption,
                            OrderParticipationSegment, OrderSegmentAddonSettlement, OrderSegmentPersonSettlement,
                            OrderPointsTransferFundingRevision, OrderSegmentReportSubmission, OrderSegmentSettlementManifest,
                            ServiceAddonConfiguration, ServiceAddonPriceOption)
@@ -71,6 +71,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     assert_occupancy = transfer_fixture.ReservationTransferScheduleMySQLTest.assert_occupancy
     retirement_race = False
     team_returned_addon = False
+    defer_funding = False
 
     def prepare(self):
         reservation_fixture.AssignedOrderReservationGuardTest.setUp(self)
@@ -189,7 +190,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.finance_client = client
         self.funding_url = f'{url}{claim}/points-allocation'
         self.funding_payload = {'request_id': str(uuid4()), 'amount': 2000, 'order_id': self.order_id}
-        self.original_allocation = self.ok(client.post(self.funding_url, self.funding_payload, format='json'))
+        self.original_allocation = (None if self.defer_funding else
+                                    self.ok(client.post(self.funding_url, self.funding_payload, format='json')))
         return PassRefundRepaymentReceipt.objects.get(external_reference=f'POINTS-TRANSFER-{self.store.slug}')
 
     def test_retirement_and_funded_points_transfer_lock_lifecycle_before_money(self):
@@ -291,6 +293,11 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     def test_team_returned_addon_refund_does_not_interrupt_teammate(self):
         self.team_returned_addon = True
+        self.run_in_stores(self.exercise_returned_addon_consultation)
+
+    def test_team_returned_addon_refund_preserves_unfunded_snapshot_after_allocation(self):
+        self.team_returned_addon = True
+        self.defer_funding = True
         self.run_in_stores(self.exercise_returned_addon_consultation)
 
     def test_consultation_refund_notice_waits_for_buyer_retirement(self):
@@ -907,8 +914,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 self.ok(actor.post(decision, {'accepted': True}, format='json'))
             return OrderAddonHandover.objects.get(pk=proposal['id'], status='ACCEPTED')
 
-        self.transfer_and_join(share=(4 * seat_share // 10, 6 * seat_share // 10))
-        transfer_out = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id).last_transfer
+        transfers = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order_id=self.order_id)
+        self.ok(self.transfer(dispatch, share=(4 * seat_share // 10, 6 * seat_share // 10)))
+        transfer_out = transfers.get()
+        self.join_replacement(replacement, transfer_out)
         self.ok(original.post(path + 'participation-evidence/', {'segment_id': transfer_out.previous_segment_id,
             'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-first-leg-evidence'},
             format='multipart'))
@@ -919,7 +928,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 'original_share': {'retained': 2 * seat_share // 10, 'transferred': 4 * seat_share // 10,
                                    'agreement': '双方确认实际原价份额'},
             }]}, format='json'))
-        transfer_back = OrderPointsTransferFundingRevision.objects.filter(order_id=self.order_id).latest('pk').last_transfer
+        transfer_back = transfers.exclude(pk=transfer_out.pk).get()
+        revisions = OrderPointsTransferFundingRevision.objects.filter(order_id=self.order_id).order_by('pk')
+        self.assertEqual(list(revisions.values_list('last_transfer_id', flat=True)),
+                         [] if self.defer_funding else [transfer_out.pk, transfer_back.pk])
         self.ok(replacement.post(path + 'participation-evidence/', {'segment_id': transfer_back.previous_segment_id,
             'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-second-leg-evidence'},
             format='multipart'))
@@ -933,7 +945,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertCountEqual(second.shares.values_list('segment_id', 'segment__provider_account_id', 'basis', 'income'), shares)
         handover_runs = OrderAddonFundingReleaseRun.objects.filter(handover__in=[first, second]).order_by('pk')
         handover_hashes = list(handover_runs.values_list('pk', 'points_handover_hash'))
-        self.assertEqual(len(handover_hashes), 2)
+        self.assertEqual(len(handover_hashes), 0 if self.defer_funding else 2)
         def complete(actor, request_id):
             return self.ok(actor.post(path + 'complete/', {'completion_image': release_fixture.screenshot(),
                 'client_request_id': request_id}, format='multipart'))
@@ -951,6 +963,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         buyer_balance = Wallet.objects.get(account=self.buyer).balance
         usage = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
         ledger = list(usage.values_list('pk', 'kind', 'amount'))
+        if self.defer_funding:
+            self.assertEqual(ledger, [])
         case_url = '/api/admin/aftersales/open-negotiation/'
         case_payload = {**self.consultation_payload(message),
             'addon_payment_id': payment.pk, 'affected_provider_account_ids': [self.original.pk],
@@ -1019,6 +1033,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                          [(payment.pk, transfer_back.next_segment_id, 100)])
         self.assertEqual((refund.funding_release_run.required_amount, refund.funding_release_run.released_amount),
                          (required_funding, 0))
+        refund_runs = OrderAddonFundingReleaseRun.objects.filter(refund=refund)
+        version_fields = ('pk', 'allocated_before', 'allocation_snapshot', 'points_addon_snapshot', 'points_addon_hash')
+        version = refund_runs.values(*version_fields).get()
+        if self.defer_funding:
+            self.assertEqual((version['allocated_before'], version['allocation_snapshot']), (0, []))
+            self.assertTrue(version['points_addon_hash'])
         self.assertEqual(list(usage.values_list('pk', 'kind', 'amount')), ledger)
         self.assertEqual(Wallet.objects.get(account=self.buyer).balance, buyer_balance + 100)
         if teammate_client:
@@ -1048,8 +1068,16 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         due = max(report.submitted_at for report in reports) + timedelta(hours=order.service_freeze_hours)
         funding_url = f'/api/admin/platform/points-funding/{self.store.slug}/orders/{self.order_id}'
         funding = self.ok(self.finance_client.get(funding_url))
-        self.assertEqual((funding['required_units'], funding['allocated_units']), (required_funding, required_funding))
+        self.assertEqual((funding['required_units'], funding['allocated_units']),
+                         (required_funding, 0 if self.defer_funding else required_funding))
         with patch('django.utils.timezone.now', return_value=due):
+            if self.defer_funding:
+                funding_receipts = self.allocate_funding_after_returned_addon_refund(
+                    order, funding_url, refund.created_at, required_funding)
+                self.assertEqual(self.ok(staff.post(execute_url, {}, format='json')), receipt)
+                self.assertEqual(refund_runs.values(*version_fields).get(), version)
+                self.assertEqual(list(usage.values_list('kind', 'amount')),
+                                 [('ORDER', required_funding - 10), ('ORDER', 10)])
             run = refund.funding_release_run
             runs = OrderAddonFundingReleaseRun.objects.filter(pk=run.pk)
             runs.update(points_addon_hash='0' * 64)
@@ -1080,6 +1108,15 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         consumption = OrderAddonConsumption.objects.get(payment=payment)
         self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, 100))
         self.assertEqual(self.ok(staff.post(execute_url, {}, format='json')), receipt)
+        self.assertEqual(refund_runs.values(*version_fields).get(), version)
+        if self.defer_funding:
+            for payload, result in funding_receipts:
+                self.assertEqual(self.ok(self.finance_client.post(self.funding_url, payload, format='json')), result)
+            funding = self.ok(self.finance_client.get(funding_url))
+            self.assertEqual((funding['required_units'], funding['allocated_units'], funding['remaining_units']),
+                             (required_funding, required_funding, 0))
+            self.assertEqual(list(usage.values_list('kind', 'amount')),
+                             [('ORDER', required_funding - 10), ('ORDER', 10)])
         self.assertEqual(payment.refund_records.count(), 1)
         self.assertEqual(AdminAuditLog.objects.filter(path=execute_url, resource='addon-refund', status_code=200).count(), 1)
         for handover, actor in ((first, replacement), (second, original)):
@@ -1091,6 +1128,29 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
               f'handovers={[first.pk, second.pk]} segments={shares} case={opened["id"]} proposal={proposal["id"]} '
               f'refund={refund.pk} buyer_transaction={refund.buyer_transaction_id} '
               f'funding={order.settlement_store_funding} consumption={consumption.pk} order_waits={waits}', flush=True)
+
+    def allocate_funding_after_returned_addon_refund(self, order, funding_url, refund_at, required):
+        first = {**self.funding_payload, 'amount': required - 10}
+        last = {**self.funding_payload, 'request_id': str(uuid4()), 'amount': 10}
+        receipts = []
+        for payload, before in ((first, 0), (last, required - 10)):
+            funding = self.ok(self.finance_client.get(funding_url))
+            self.assertEqual((funding['allocated_units'], funding['remaining_units']), (before, required - before))
+            self.assertEqual(confirm_due_consumption.run(), 0)
+            self.assertFalse(OrderSegmentSettlementManifest.objects.filter(order=order).exists())
+            self.assertFalse(order.transactions.filter(tx_type=Transaction.TxType.INCOME).exists())
+            record = self.ok(self.finance_client.post(self.funding_url, payload, format='json'))
+            self.assertEqual(self.ok(self.finance_client.post(self.funding_url, payload, format='json')), record)
+            allocation = order.points_redemption.funding_allocations.get(pk=record['allocation_id'])
+            self.assertEqual((allocation.receipt_id, allocation.amount), (self.funding_receipt.pk, payload['amount']))
+            self.assertGreater(allocation.created_at, refund_at)
+            receipts.append((payload, record))
+        funding = self.ok(self.finance_client.get(funding_url))
+        self.assertEqual((funding['allocated_units'], funding['remaining_units']), (required, 0))
+        print(f'{self.store.slug} deferred_funding_order={order.pk} '
+              f'allocations={[record["allocation_id"] for _, record in receipts]} '
+              f'allocated={required} requests={[first["request_id"], last["request_id"]]}', flush=True)
+        return receipts
 
     def execute_consultation_addon_refund(self, staff, case, payment, proposal, events_before):
         proposal_id = proposal['id']
