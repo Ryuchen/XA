@@ -268,6 +268,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_refund_notice_waits_for_buyer_retirement(self):
         self.run_in_stores(lambda: self.exercise_paid_addon_consultation(retire_buyer=True))
 
+    def test_consultation_refund_notice_waits_for_provider_retirement(self):
+        self.run_in_stores(lambda: self.exercise_provider_retirement_notice_race(retirement_first=True))
+
+    def test_provider_retirement_waits_for_consultation_refund_notice(self):
+        self.run_in_stores(lambda: self.exercise_provider_retirement_notice_race(retirement_first=False))
+
     @skipUnless(getattr(settings, 'SA14_TEST_REDIS', None) and getattr(settings, 'SA14_TEST_CONTROL_INSTANCE', None),
                 'Requires a registered disposable Redis broker and independent MySQL control instance')
     def test_consultation_refund_notices_recover_on_independent_beat_and_worker(self):
@@ -1120,6 +1126,112 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         print(f'{self.store.slug} refund={refund.pk} adjustment={adjustment.pk} buyer_retirement={audit.pk} cycle={cycle}->{cycle + 1} '
               f'skipped_notice={skipped.pk} retirement_wait={waited}', flush=True)
         return waited, [provider.message_id]
+
+    @override_settings(SEGMENT_SETTLEMENT_ENABLED=True, ADDON_REFUND_NOTICE_RECOVERY_ENABLED=True)
+    def exercise_provider_retirement_notice_race(self, *, retirement_first):
+        refund = self.exercise_paid_addon_consultation(leave_notices_pending=True, settle_before_recovery=True)
+        settled_at = refund.payment.segment_settlements.get().settled_at
+        cases = [(self.store, refund.pk)]
+        provider = self.replacement
+        cycle = provider.business_cycle
+        old = self.api(provider)
+        buyer_notice = refund.notice_intents.get(account=self.buyer)
+        provider_notice = refund.notice_intents.get(account=provider)
+        self.assertEqual(refund.notice_intents.filter(completed_at__isnull=True).count(), 2)
+        self.assertEqual(provider_notice.business_cycle, cycle)
+
+        with patch('django.utils.timezone.now', return_value=settled_at + timedelta(days=8)):
+            submit, adjustment = self.prepare_refund_provider_retirement(settled_at)
+            before = self.refund_notice_worker_facts(cases)[self.store.slug]
+            wallet_ledger = adjustment.wallet.transactions.order_by('pk').values_list(
+                'pk', 'tx_type', 'amount', 'balance_before', 'balance_after', 'deposit_business_cycle')
+            ledger_before = list(wallet_ledger)
+            # Leave only the provider's intent pending so the observed order lock is for that delivery.
+            deliver_addon_refund_notice(buyer_notice.pk)
+            buyer_notice.refresh_from_db()
+            self.assertIsNotNone(buyer_notice.message_id)
+
+            table = Order._meta.db_table
+            attempts = Queue()
+            held, resume = Event(), Event()
+            if retirement_first:
+                first, second = submit, self.recover_refund_notices
+                pause_table, pause_sql, pause_pk = table, 'for update', refund.order_id
+            else:
+                first, second = self.recover_refund_notices, submit
+                pause_table, pause_pk = provider_notice._meta.db_table, provider_notice.pk
+                pause_sql = f'update `{pause_table}` set '
+
+            def pause_first(execute, sql, params, many, context):
+                result = execute(sql, params, many, context)
+                normalized = sql.lower()
+                if (not held.is_set() and f'`{pause_table}`' in normalized and pause_sql in normalized
+                        and pause_pk in (params or ())):
+                    held.set()
+                    if not resume.wait(8):
+                        raise AssertionError('首个退款通知或注销事务未在时限内放行')
+                return result
+
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                holding = pool.submit(self.independent_request, first, pause_first)
+                try:
+                    self.assertTrue(held.wait(5), '未观察到首个事务持有订单锁')
+                    waiting = pool.submit(self.independent_request, second,
+                        self.observe_lock_attempt(attempts, table, 'for update', account_id=refund.order_id))
+                    waited = self.wait_for_lock(waiting, attempts, table=table)
+                finally:
+                    resume.set()
+                results = (holding.result(timeout=15), waiting.result(timeout=15))
+            audit, recovered = results if retirement_first else results[::-1]
+            self.assertEqual(recovered, 1)
+
+            provider.refresh_from_db()
+            self.assertEqual((provider.business_cycle, provider.license_membership_active), (cycle + 1, False))
+            self.assertEqual(old.get('/api/messages/').status_code, 401)
+            self.assertEqual(RetirementAudit.objects.filter(account=provider, business_cycle=cycle).count(), 1)
+            rejoined, _ = self.login_refund_account_after_retirement(provider, self.store_host, 'provider')
+            provider.refresh_from_db()
+            self.assertEqual((provider.business_cycle, provider.license_membership_active), (cycle + 2, True))
+            self.assertEqual(old.get('/api/messages/').status_code, 401)
+
+            provider_notice.refresh_from_db()
+            self.assertIsNotNone(provider_notice.completed_at)
+            self.assertEqual(provider_notice.business_cycle, cycle)
+            fresh = self.ok(rejoined.get('/api/messages/', {'type': 'ORDER'}))
+            own_refunds = [row for row in fresh['messages'] if row['related_order_id'] == refund.order_id
+                           and row['title'] == provider_notice.title]
+            expected_ids = [buyer_notice.message_id]
+            if retirement_first:
+                self.assertIsNone(provider_notice.message_id)
+                self.assertIn('周期已变化', provider_notice.skipped_reason)
+                self.assertEqual(own_refunds, [])
+            else:
+                self.assertFalse(provider_notice.skipped_reason)
+                message_id = provider_notice.message_id
+                self.assertIsNotNone(message_id)
+                expected_ids.append(message_id)
+                self.assertEqual([(row['id'], row['cycle_relation']) for row in own_refunds],
+                                 [(message_id, 'PREVIOUS')])
+                own = self.ok(rejoined.get(f'/api/messages/{message_id}/'))
+                self.assertEqual((own['related_order_id'], own['cycle_relation']), (refund.order_id, 'PREVIOUS'))
+                denied = self.api(self.original).get(f'/api/messages/{message_id}/')
+                self.assertEqual(denied.data['code'], 404)
+            buyer = self.ok(self.api(self.buyer).get(f'/api/messages/{buyer_notice.message_id}/'))
+            self.assertEqual((buyer['related_order_id'], buyer['cycle_relation']), (refund.order_id, 'CURRENT'))
+            after = self.refund_notice_worker_facts(cases)[self.store.slug]
+            self.assertEqual(after['refund'], before['refund'])
+            self.assertCountEqual([row[:4] for row in after['intents']], [row[:4] for row in before['intents']])
+            self.assertCountEqual([message for message, _, _ in after['messages']], expected_ids)
+            self.assertEqual(self.recover_refund_notices(), 0)
+            deliver_addon_refund_notice(provider_notice.pk)
+            self.assertEqual(self.refund_notice_worker_facts(cases)[self.store.slug], after)
+            self.assertEqual(list(wallet_ledger.all()), ledger_before)
+            self.assertEqual(Wallet.objects.get(pk=adjustment.wallet_id).balance, 0)
+            self.assertEqual(EscortProfile.objects.get(account=provider).deposit_paid, 0)
+
+        print(f'{self.store.slug} order={refund.order_id} refund={refund.pk} adjustment={adjustment.pk} '
+              f'provider_retirement={audit.pk} cycle={cycle}->{cycle + 1}->{cycle + 2} retirement_first={retirement_first} '
+              f'order_wait={waited} provider_intent={provider_notice.pk} messages={expected_ids}', flush=True)
 
     def settle_consultation_addon_refund(self, staff, transfer, refund):
         first_report = self.approve_report(self.original, transfer.previous_segment_id)

@@ -138,7 +138,10 @@ class ReservationTransferScheduleMySQLTest(TransactionTestCase):
                         self.assertFalse(competing.done())
                         return session
                 sleep(.03)
-            detail = competing.result().data if competing.done() else '请求仍未完成'
+            detail = '请求仍未完成'
+            if competing.done():
+                result = competing.result()
+                detail = getattr(result, 'data', result)
             self.fail(f'未观察到实际锁等待: {entered!r}, {detail}')
         finally:
             observer.close()
