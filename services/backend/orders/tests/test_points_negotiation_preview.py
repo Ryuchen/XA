@@ -1153,16 +1153,25 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                     unpaid_preview = client.get(f'/api/admin/aftersales/{case_id}/negotiation-preview/', {'refund_units': 10})
                     self.assertTrue(unpaid_preview.data['data']['agreement_available'])
                     self.assertTrue(unpaid_preview.data['data']['execution_available'])
-                    proposal_response = client.post(f'/api/admin/aftersales/{case_id}/negotiation-proposal/', {
+                    proposal_url = f'/api/admin/aftersales/{case_id}/negotiation-proposal/'
+                    proposal_body = {
                         'request_id': 'unpaid-internal-proposal', 'expected_version': 1, 'refund_units': 10,
                         'provider_terms': [{'account_id': accounts[1].pk, 'retained_units': 5240}],
-                        'explanation': '未结算的后续售后隔离测试'}, format='json')
+                        'explanation': '未结算的后续售后隔离测试',
+                    }
+                    proposal_response = client.post(proposal_url, proposal_body, format='json')
                     self.assertEqual(proposal_response.data['code'], 0, proposal_response.data)
                     self.assertTrue(proposal_response.data['data']['points_execution_available'])
                     unpaid_proposal = proposal_response.data['data']['id']
+                    replay = client.post(proposal_url, proposal_body, format='json')
+                    self.assertEqual(replay.data['data']['id'], unpaid_proposal)
+                    different = {**proposal_body, 'explanation': '同号换成另一份协商说明'}
+                    self.assertNotEqual(client.post(proposal_url, different, format='json').data.get('code'), 0)
+                    decision_url = f'/api/orders/orders/{order.pk}/negotiation-proposal/'
+                    decision = {'proposal_id': unpaid_proposal, 'accepted': True}
+                    self.assertEqual(players[0].post(decision_url, decision, format='json').status_code, 404)
                     for actor in (boss, players[1]):
-                        confirmation = actor.post(f'/api/orders/orders/{order.pk}/negotiation-proposal/',
-                            {'proposal_id': unpaid_proposal, 'accepted': True}, format='json')
+                        confirmation = actor.post(decision_url, decision, format='json')
                         self.assertEqual(confirmation.data['code'], 0, confirmation.data)
                     from orders.points_followup_execution import post_followup_locked
                     from orders.points_followup_termination import execute_followup_and_close
@@ -1374,7 +1383,8 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
             funded = self.fund({'request_id': str(uuid4()), 'order_id': order.pk, 'amount': funding.remaining})
             self.assertEqual(funded.status_code, 200, funded.data)
             first_ready = reports[0].submitted_at + timedelta(hours=73)
-            with patch('django.utils.timezone.now', return_value=first_ready):
+            followup_time = first_ready
+            with patch('django.utils.timezone.now', side_effect=lambda: followup_time):
                 with transaction.atomic():
                     self.assertEqual(settle_order(Order.objects.select_for_update().get(pk=order.pk)), [reports[0].provider_id])
                 self.assertEqual(verified_person_settlement_display(reports[0])[0], 'SETTLED')
@@ -1405,7 +1415,8 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                 self.assertFalse(public['agreement_available'])
                 self.assertFalse(public['execution_available'])
                 self.assertNotIn('settled_other_provider_units', public)
-                self.assertNotIn('conditional_funding', public)
+                self.assertEqual((public['conditional_funding']['required_units'],
+                                  public['conditional_funding']['release_units']), (0, 110))
                 self.assertNotIn('conditional_funding_revision', public)
                 self.assertNotEqual(players[1].get(endpoint, {'refund_units': 1000}).status_code, 200)
                 with override_settings(NEGOTIATION_FOLLOWUP_ENABLED=True,
@@ -1446,6 +1457,7 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                     for actor in (boss, players[1]):
                         confirmed = actor.post(final_url, {'proposal_id': final_data['id'], 'accepted': True}, format='json')
                         self.assertEqual(confirmed.data['code'], 0, confirmed.data)
+                    followup_time += timedelta(seconds=1)
                     from orders.points_followup_execution import prepare_followup_locked
                     target_assignment = OrderProvider.objects.get(order=order, provider_account=accounts[1])
                     target_wallet = get_wallet(account_id=accounts[1].pk, user_id=target_assignment.provider_id)
@@ -1462,6 +1474,7 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                                            SERVICE_POINTS_FOLLOWUP_REVISION_TESTING=True,
                                            SERVICE_POINTS_FOLLOWUP_RELEASE_TESTING=True,
                                            REFUND_DEPOSIT_DEFICIT_ENABLED=True,
+                                           REFUND_DEPOSIT_RECOVERY_GRAB_ENABLED=True,
                                            SERVICE_POINTS_REFUND_DEPOSIT_TESTING=True):
                         with self.assertRaisesMessage(ValidationError, '不足'):
                             prepare_followup_locked(case_id, final_data['id'], operator=staff)
@@ -1604,6 +1617,7 @@ class PointsNegotiationPreviewTwoStoreTests(TestCase):
                         response = actor.post(agreement_url, {'proposal_id': new_id, 'accepted': True}, format='json')
                         self.assertEqual(response.data['code'], 0, response.data)
                     self.assertEqual(response.data['data']['status'], 'ACCEPTED')
+                    followup_time += timedelta(seconds=1)
                     from orders.points_followup_execution import prepare_followup_locked
                     with self.assertRaises(ValidationError):
                         prepare_followup_locked(case_id, new_id, operator=staff)

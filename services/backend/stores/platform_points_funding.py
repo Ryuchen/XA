@@ -109,8 +109,10 @@ def _checked_points_action_for_locked_order(operation, receipt, order_id, amount
     allocation = action.allocation
     expected = {'receipt_id': receipt.pk, 'allocation_id': allocation.pk, 'order_id': order_id, 'amount': amount}
     if receipt.usage_version is not None:
-        if pending_followup_posting_id is not None:
-            raise RepaymentError('账本尚未接通后续退款', 409, 'POINTS_FUNDING_REVIEW')
+        # A pending refund can verify the receipt only with the current
+        # locked usage proof prepared by the follow-up revision verifier.
+        if pending_followup_posting_id is not None and verified_usage is None:
+            raise RepaymentError('后续退款缺少已核对的到账用途', 409, 'POINTS_FUNDING_REVIEW')
         from users.receipt_usage_guard import used_allocation_units_locked
         try:
             pass_used, points_used = used_allocation_units_locked(receipt, verified_usage=verified_usage)

@@ -47,9 +47,9 @@ def _scope(order, case, *, zero=False):
             from .points_transfer_zero_followup import applies as transfer_zero_applies, prepare_locked as transfer_zero_prepare
             if transfer_zero_applies(order):
                 return [transfer_zero_prepare(order, case)[4]['account_id']]
-        from .points_zero_followup import applies as points_zero_applies, prepare_locked as prepare_points_zero
-        if points_zero_applies(order):
-            return [prepare_points_zero(order, case)[4]['account_id']]
+            from .points_zero_followup import applies as points_zero_applies, prepare_locked as prepare_points_zero
+            if points_zero_applies(order):
+                return [prepare_points_zero(order, case)[4]['account_id']]
         from .models import OrderOriginalShareTransfer
         from .points_business_access import permits as points_permits
         transferred = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
