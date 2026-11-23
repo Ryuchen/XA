@@ -9,6 +9,7 @@ import json
 from uuid import UUID
 
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError
 from django.db.migrations.recorder import MigrationRecorder
 from django.db.models import Q
@@ -206,6 +207,21 @@ def verify_release_locked(evidence, *, _skip_usage=False):
     from stores.models import PlatformPointsFundingOperation
     from stores.platform_pass_repayment import RepaymentError, _claimed_receipt, _sha
     from stores.platform_points_funding import _verified_receipt
+    from users.models import PassRefundRepaymentReceipt
+    from users.receipt_usage_guard import capture_allocation_usage_locked, isolated_allocation_state_locked
+    from .points_addon_receipt_usage import reuse_history_locked
+
+    receipt_ids = {item[2] for item in items}
+    ledger_enabled = getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False) is True
+    # Several allocations can share a receipt. Verify its tenant ledger once
+    # under the existing locks and still check each platform operation.
+    locked_receipts = {}
+    if ledger_enabled:
+        locked_receipts = {receipt.pk: receipt for receipt in PassRefundRepaymentReceipt.objects.select_for_update()
+                           .filter(pk__in=receipt_ids).order_by('pk')}
+        if set(locked_receipts) != receipt_ids:
+            raise ValidationError('补资释放原到账凭证缺失')
+    verified_usage = {}
     for allocation in OrderPointsFundingAllocation.objects.filter(pk__in=[item[0] for item in items]).select_related('receipt'):
         key = allocation.request_key
         try:
@@ -226,10 +242,14 @@ def verify_release_locked(evidence, *, _skip_usage=False):
                 or action.result != expected_action or operation.payload_digest != _sha(json.dumps(
                     [str(operation.claim_id), order.pk, allocation.amount], separators=(',', ':')))):
             raise ValidationError('补资释放原平台分配凭证异常')
+        receipt = locked_receipts.get(allocation.receipt_id, allocation.receipt)
         try:
-            _claimed_receipt(operation.claim, current_store().slug, allocation.receipt)
-            _verified_receipt(operation.claim, allocation.receipt)
-        except RepaymentError as exc:
+            _claimed_receipt(operation.claim, current_store().slug, receipt)
+            if ledger_enabled and receipt.pk not in verified_usage:
+                with reuse_history_locked(order, {receipt.pk}):
+                    verified_usage[receipt.pk] = capture_allocation_usage_locked(receipt)
+            _verified_receipt(operation.claim, receipt, verified_usage=verified_usage.get(receipt.pk))
+        except (RepaymentError, DjangoValidationError) as exc:
             raise ValidationError('补资释放原到账核实凭证异常') from exc
     settlement = OrderPointsSettlement.objects.filter(order=order).first()
     from .models import PointsFirstRefundPaidPersonEvidence
@@ -259,7 +279,6 @@ def verify_release_locked(evidence, *, _skip_usage=False):
             raise ValidationError('退款前的补资预留或收益结算异常')
         if prior_people.exists():
             from .points_first_paid_source import verify_current
-            from django.core.exceptions import ValidationError as DjangoValidationError
             try:
                 verify_current(posting, evidence)
             except DjangoValidationError as exc:
@@ -279,11 +298,10 @@ def verify_release_locked(evidence, *, _skip_usage=False):
             or rows != [(item.allocation_id, item.amount) for item in expected]):
         raise ValidationError('补资释放金额与退款结果不一致')
     if not _skip_usage and (formal_service or getattr(settings, 'SERVICE_POINTS_FIRST_REFUND_USAGE_TESTING', False)):
-        from users.models import PassRefundRepaymentReceipt
-        from users.receipt_usage_guard import isolated_allocation_state_locked
         for receipt in PassRefundRepaymentReceipt.objects.select_for_update().filter(
-                pk__in=sorted({item[2] for item in items})).order_by('pk'):
-            isolated_allocation_state_locked(receipt)
+                pk__in=receipt_ids - verified_usage.keys()).order_by('pk'):
+            with reuse_history_locked(order, {receipt.pk}):
+                isolated_allocation_state_locked(receipt)
     return result
 
 
