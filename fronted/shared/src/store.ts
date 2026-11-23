@@ -3,6 +3,7 @@ export const STORE_HOSTS: Record<string, string> = {
   "sl.esports.club": "shenglang",
   "xa.esports.club": "xinan",
 };
+const storeBrandNames: Partial<Record<string, string>> = { shenglang: "声浪电竞", xinan: "兴安电竞" };
 const ADMIN_STORE_KEY = "xa:fronted:admin:active-store:v1";
 /** The platform console chooses its tenant only after account authentication. */
 export function isAdminEntry(): boolean {
@@ -32,6 +33,10 @@ export function hostStoreSlug(host: string): string | undefined {
   // An unknown tenant domain must never fall back to the default business DB.
   if (hostname === "esports.club" || hostname.endsWith(".esports.club")) return "";
   return undefined;
+}
+export function hostStoreBrandName(host: string): string | undefined {
+  const slug = hostStoreSlug(host);
+  return slug ? storeBrandNames[slug] : undefined;
 }
 export const validStoreSlug = (value: string) => /^[a-z][a-z0-9-]{0,47}$/.test(value);
 const currencyNames = new Map<string, string>();

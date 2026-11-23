@@ -106,6 +106,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     assert.equal(await page.evaluate(() => window.copiedEntryLink), origin + '/boss/')
     hold.resolve()
     await closed.waitFor()
+    assert.equal(await page.title(), '声浪电竞 · 门店暂未开放 · 老板服务中心')
     await services.waitFor()
     await returnGuide.waitFor()
     assert.equal(await returnEntry.getAttribute('href'), origin + '/boss/')
@@ -194,6 +195,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     response = { status: 503, json: { code: 503, msg: '门店服务暂不可用，请稍后重试' } }
     hold.resolve()
     await page.getByRole('alert').filter({ hasText: response.json.msg }).waitFor()
+    assert.equal(await page.title(), '声浪电竞 · 暂时无法进入门店 · 老板服务中心')
     assert.equal(reads, before + 1)
     assert.equal(await closed.count(), 0)
     assert.equal(await schedule.count(), 0)
@@ -218,6 +220,7 @@ module.exports = async function checkStoreClosed(browser, origin = 'http://sl.es
     } } }
     await page.getByRole('button', { name: '重试', exact: true }).click()
     await page.getByRole('heading', { name: '老板账号登录', exact: true }).waitFor()
+    assert.equal(await page.title(), '契约验证门店 · 老板服务中心')
     assert.equal(page.url(), url)
     assert.deepEqual(errors, [])
 

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, createApiClient } from "./client.ts";
 import { clearSession, useSession, type Role } from "./session.ts";
-import { adoptLegacyStoreStorage, canonicalizeStoreUrl, getStoreSlug, hostStoreSlug, isAdminEntry, registerStoreCurrency, storeBrandLogo, switchStore, validStoreSlug } from "./store.ts";
+import { adoptLegacyStoreStorage, canonicalizeStoreUrl, getStoreSlug, hostStoreBrandName, hostStoreSlug, isAdminEntry, registerStoreCurrency, storeBrandLogo, switchStore, validStoreSlug } from "./store.ts";
 import type { H5Entitlement, H5Branding } from "./saas";
 import { StoreEntryStatusPage } from "./store-closed";
 
@@ -117,7 +117,9 @@ export function StoreGate({ role, children }: { role: Role; children: ReactNode 
     function fail(message: string, closed = false) {
       setStore(null);
       setFailure({ scope, attempt: retry, message, closed, checkedAt: new Date() });
-      document.title = `${closed ? "门店暂未开放" : "暂时无法进入门店"} · ${entryNames[role]}`;
+      const title = `${closed ? "门店暂未开放" : "暂时无法进入门店"} · ${entryNames[role]}`;
+      const brandName = role === "admin" ? undefined : hostStoreBrandName(location.hostname);
+      document.title = brandName ? `${brandName} · ${title}` : title;
       if (closed && role !== "admin" && hostStoreSlug(location.hostname) === slug) applyStoreFavicon({ slug });
     }
     if (neutralAdmin) {

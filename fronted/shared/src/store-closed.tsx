@@ -1,6 +1,6 @@
 import { ArrowRight, CalendarClock, Check, ClipboardList, Copy, Gamepad2, Globe2, Headphones, Link2, MessageCircle, RefreshCw, ShoppingBag, UserCircle } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
-import { hostStoreSlug, storeBrandLogo } from "./store.ts";
+import { hostStoreBrandName, hostStoreSlug, storeBrandLogo } from "./store.ts";
 import headsetImage from "../assets/store-closed-headset.webp";
 import "./store-closed.css";
 
@@ -12,7 +12,6 @@ type Props = {
   onRetry: () => void;
 };
 
-const storeNames: Record<string, string> = { shenglang: "声浪电竞", xinan: "兴安电竞" };
 const entryContent = {
   boss: {
     unavailable: "暂时无法登录、下单或查看订单。",
@@ -48,7 +47,7 @@ export function StoreEntryStatusPage({ role, entryName, issue, checking, onRetry
   const { services, helpTitle, help, helpDetails, returnGuide, unavailable, entryPath, otherEntry } = entryContent[role];
   const hostname = window.location.hostname;
   const brandSlug = hostStoreSlug(hostname);
-  const storeName = brandSlug ? storeNames[brandSlug] : undefined;
+  const storeName = hostStoreBrandName(hostname);
   const returnUrl = brandSlug ? new URL(import.meta.env.BASE_URL, window.location.origin).href : null;
   const showOtherEntry = brandSlug && import.meta.env.BASE_URL === entryPath;
   const showArt = Boolean(brandSlug || issue?.closed);
