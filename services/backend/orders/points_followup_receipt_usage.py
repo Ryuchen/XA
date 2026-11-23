@@ -89,6 +89,7 @@ def facts(row):
         after_main_addon_release_facts(SimpleNamespace(run=payment_run, allocation=initial, pk=0, amount=0),
                                        witness_receipt_id=allocation.receipt_id)
         payment_event_facts.append([payment_run.pk, payment_run.points_payment_hash])
+    from .models import OrderAddonRefund
     team_event_facts = []
     if team:
         from .addon_funding_release import verify_run
@@ -104,7 +105,6 @@ def facts(row):
                            or item.handover.accepted_at >= revision.paid_person.settled_at
                            or item.created_at >= revision.paid_person.settled_at)) for item in team_runs)):
             raise ValidationError('后续退款的同单接替顺序待核对')
-        from .models import OrderAddonRefund
         if (OrderAddonRefund.objects.filter(order=order, created_at=second.created_at).exists()
                 or OrderAddonFundingReleaseRun.objects.filter(handover__payment__intent__order=order,
                     handover__accepted_at=second.created_at).exists()):
@@ -168,6 +168,21 @@ def facts(row):
             previous_at = run.created_at
         team_event_facts.extend([[run.pk, run.points_handover_hash] for run in team_runs])
         team_event_facts.extend(refund_run_facts)
+    else:
+        refunds = OrderAddonRefund.objects.filter(order=order)
+        if refunds.filter(created_at__in=(first.created_at, second.created_at)).exists():
+            raise ValidationError('后续退款与加购事件时间无法区分')
+        earlier_refunds = refunds.filter(created_at__gt=first.created_at, created_at__lt=second.created_at)
+        for refund in earlier_refunds.select_related('funding_release_run').order_by('created_at', 'pk'):
+            run = getattr(refund, 'funding_release_run', None)
+            if (not run or not isinstance(run.refunded_main_snapshot, dict)
+                    or run.refunded_main_snapshot.get('posting_id') != first.pk
+                    or not refund.created_at <= run.created_at < second.created_at):
+                raise ValidationError('后续退款的加购资金版本缺失')
+            # Nonzero releases are verified with their allocation rows below.
+            if not run.released_amount or not run.releases.exists():
+                after_main_addon_release_facts(SimpleNamespace(run=run, allocation=initial, pk=0, amount=0),
+                                               witness_receipt_id=allocation.receipt_id)
     if (proposal.status != 'ACCEPTED' or second.accepted_at != proposal.accepted_at
             or second.terms_hash != proposal.terms_hash or not isinstance(second.participants, list)
             or second.participants_hash != participant_digest(proposal, second.participants)

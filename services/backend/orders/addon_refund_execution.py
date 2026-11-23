@@ -266,6 +266,17 @@ def execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
         if _has_transfer_addon_refund_receipt(order, payment_id, proposal_id):
             return _replay_transfer_addon_refund(order_id, payment_id, proposal_id, operator)
         transferred = OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
+        if not transferred and order.refund_records.count() == 2:
+            from .models import OrderPointsFollowupFundingRevision
+            followup_at = OrderPointsFollowupFundingRevision.objects.filter(
+                posting__points_refund__redemption__order=order).values_list('posting__created_at', flat=True).first()
+            if followup_at and OrderAddonRefund.objects.filter(
+                    order=order, payment_id=payment_id, proposal_id=proposal_id, proposal__status='ACCEPTED',
+                    created_at__lt=followup_at, funding_release_run__refunded_main_snapshot__isnull=False).exists():
+                # Verify the original refund without entering the preflight for a new add-on change.
+                with service_order(order_id, phase='refund', addon=True, combined=True):
+                    return _execute(order_id, payment_id, proposal_id, operator=operator,
+                                    legacy_operator=legacy_operator, replay_only=True), None
         scope = (transferred_refunded_addon(order_id, payment_id, replay_proposal_id=proposal_id)
                  if transferred and order.refund_records.exists()
                  else service_order(order_id, phase='refund', addon=True, refund_payment_id=payment_id))
@@ -274,7 +285,7 @@ def execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
     return _execute(order_id, payment_id, proposal_id, operator=operator, legacy_operator=legacy_operator), None
 
 
-def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
+def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator, replay_only=False):
     if getattr(settings, 'PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED', False):
         from console.payroll_event_barrier import lock_payment_refund_events
         lock_payment_refund_events()
@@ -295,6 +306,8 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
         raise ValidationError('加购退款和整单结算尚未开放')
     previous = (OrderAddonRefund.objects.select_for_update().filter(
         order=order, payment_id=payment_id, proposal_id=proposal_id).first())
+    if replay_only and not previous:
+        raise ValidationError('原加购退款凭证缺失')
     if previous:
         from .models import OrderAddonFundingReleaseRun
         from .models import OrdinaryAddonPaidRefundEvidence
@@ -374,7 +387,7 @@ def _execute(order_id, payment_id, proposal_id, *, operator, legacy_operator):
                 from .ordinary_addon_prior_refund import verify_locked as verify_prior
                 verify_prior(order, boundary=main.created_at)
                 return previous
-        if usage_receipts or team_prior or ordinary_receipt or ordinary_after_main:
+        if usage_receipts or replay_only or team_prior or ordinary_receipt or ordinary_after_main:
             from .addon_funding_release import verify_run
             if not run or not (run.points_addon_snapshot or run.points_followup_snapshot
                                or ordinary_receipt or ordinary_after_main):

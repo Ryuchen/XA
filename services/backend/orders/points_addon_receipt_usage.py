@@ -199,11 +199,18 @@ def eligible(order):
         if order.refund_records.count() == 2 and not payments.filter(handovers__isnull=False).exists():
             paid_plain_followup = OrderPointsFollowupFundingRevision.objects.filter(
                 posting__points_refund__redemption__order=order, paid_person__isnull=False).exists()
+    provider_count = order.providers.count()
+    providers_valid = provider_count in (1, 2) or (formal and transferred
+                                                   and 1 <= provider_count <= 3 * order.required_provider_count)
+    if (not providers_valid and formal and not transferred and not prestart_after_payment
+            and order.required_provider_count == 2 and OrderPrestartHandoff.objects.filter(order=order).exists()):
+        from .points_service_participation import service_snapshots
+        snapshots = service_snapshots(order)
+        providers_valid = len(snapshots) == 2 and len({row.segment.provider_account_id for row in snapshots}) == 2
     return bool(needs_integrated_processing(order) and not order.is_gift_snapshot and not order.source_order_id
         and (not order.refund_records.exists() or (formal and order.refund_records.count() == 1)
              or team_followup or transfer_followup or paid_plain_followup)
-        and (order.providers.count() in (1, 2) or (formal and transferred
-             and 1 <= order.providers.count() <= 3 * order.required_provider_count))
+        and providers_valid
         and bool(payment_rows)
         and (supported_handover or not payments.filter(handovers__isnull=False).exists())
         and (not transferred or (formal and (not order.refund_records.exists() or after_transfer_refund)))
