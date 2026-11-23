@@ -759,6 +759,18 @@ def _supported_addon(order, transfers, *, verify=False, allow_handover=False, pe
                                           pending_intent_id=pending_intent_id, allow_voluntary=allow_voluntary)
     if len(payments) > 1:
         if len(transfers) == 2:
+            if len(payments) == 2 and allow_successive and pending_intent_id is None:
+                from .points_returned_addon_refund import returned_handover, verify_funding
+                returned = returned_handover(order, transfers=transfers)
+                if returned and returned.payment.refund_records.exists():
+                    if pending_payment_id and not _pending_allowed(returned.payment_id, pending_payment_id):
+                        return False
+                    if verify:
+                        from .addon_payment import verify_receipt
+                        for payment in payments:
+                            verify_receipt(payment)
+                        verify_funding(order, returned)
+                    return True
             chains = _multi_addon_return_chains(order, payments, transfers, allow_waiting=True)
             if len(chains) == 1 and not (allow_handover or (allow_successive and len(chains[0]) == 2)):
                 chains = []  # Keep the existing entry for the unrelated add-on.

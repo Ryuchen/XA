@@ -71,6 +71,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     assert_occupancy = transfer_fixture.ReservationTransferScheduleMySQLTest.assert_occupancy
     retirement_race = False
     team_returned_addon = False
+    teammate_paid_addon = False
     defer_funding = False
 
     def prepare(self):
@@ -293,6 +294,17 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
 
     def test_team_returned_addon_refund_does_not_interrupt_teammate(self):
         self.team_returned_addon = True
+        self.run_in_stores(self.exercise_returned_addon_consultation)
+
+    def test_team_returned_addon_refund_preserves_teammate_paid_addon(self):
+        self.team_returned_addon = True
+        self.teammate_paid_addon = True
+        self.run_in_stores(self.exercise_returned_addon_consultation)
+
+    def test_unfunded_team_returned_addon_refund_preserves_teammate_paid_addon(self):
+        self.team_returned_addon = True
+        self.teammate_paid_addon = True
+        self.defer_funding = True
         self.run_in_stores(self.exercise_returned_addon_consultation)
 
     def test_team_returned_addon_refund_preserves_unfunded_snapshot_after_allocation(self):
@@ -781,7 +793,7 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         return {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
                 'client_request_id': 'transfer-consultation-aftersale', 'affected_provider_account_ids': [self.replacement.pk]}
 
-    def pay_consultation_addon(self, provider):
+    def make_consultation_addon(self):
         game = GameCategory.objects.create(name='咨询售后加购项目')
         self.service.game_category = game
         self.service.save(update_fields=['game_category'])
@@ -789,11 +801,16 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         config = ServiceAddonConfiguration.objects.create(service=self.service, addon=addon,
             enabled=True, condition_mode='NONE', conditions='', version=1)
         ServiceAddonPriceOption.objects.create(configuration=config, unit='HOUR', price=1000)
+        return addon
+
+    def pay_consultation_addon(self, provider, *, addon=None, request_id='consultation-addon-confirm'):
+        if addon is None:
+            addon = self.make_consultation_addon()
         buyer = self.api(self.buyer)
         path = f'/api/orders/orders/{self.order_id}/addons/intents/'
         intent = self.ok(buyer.post(path, {'addon_id': addon.pk, 'unit': 'HOUR', 'quantity': 1,
             'configuration_version': 1, 'provider_account_id': provider.pk,
-            'request_id': 'consultation-addon-confirm', 'expected_amount': 1000, 'gift_balance_amount': 0,
+            'request_id': request_id, 'expected_amount': 1000, 'gift_balance_amount': 0,
             'compensation_balance_amount': 0}, format='json'))
         paid = self.ok(buyer.post(path + f'{intent["id"]}/pay/', {}, format='json'))
         return OrderAddonPayment.objects.select_related('intent', 'buyer_transaction').get(pk=paid['payment_id'])
@@ -899,7 +916,19 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         seat_share = self.service.price
         expected_main = 7700 if self.teammate else 7400
         required_funding = expected_main - 6000 - 260
-        payment = self.pay_consultation_addon(self.original)
+        addon = self.make_consultation_addon()
+        payment = self.pay_consultation_addon(self.original, addon=addon)
+        teammate_payment = None
+        if self.teammate_paid_addon:
+            teammate_payment = self.pay_consultation_addon(
+                self.teammate, addon=addon, request_id='consultation-teammate-addon-confirm')
+            self.assertEqual((teammate_payment.principal, teammate_payment.provider_income,
+                              teammate_payment.buyer_transaction.amount), (1000, 800, -1000))
+            required_funding -= 200
+            allocation_fields = ('pk', 'lot_id', 'kind', 'amount', 'refunded_amount')
+            teammate_allocations = list(teammate_payment.allocations.order_by('pk').values_list(*allocation_fields))
+            self.assertEqual(sum(row[3] for row in teammate_allocations), 1000)
+            self.assertTrue(all(row[4] == 0 for row in teammate_allocations))
         dispatch = self.api(self.staff)
         buyer, original, replacement = (self.api(account) for account in (self.buyer, self.original, self.replacement))
         path = f'/api/orders/orders/{self.order_id}/'
@@ -972,6 +1001,13 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         for wrong_segments in ([transfer_out.previous_segment_id], None):
             denied = staff.post(case_url, {**case_payload, 'affected_segment_ids': wrong_segments}, format='json')
             self.assertEqual(denied.status_code, 400, denied.data)
+        if teammate_payment:
+            self.assertEqual(teammate_payment.intent.segment_id, teammate_segment.pk)
+            for change in ({'addon_payment_id': teammate_payment.pk},
+                           {'affected_segment_ids': [teammate_segment.pk]},
+                           {'affected_segment_ids': [transfer_back.next_segment_id, teammate_segment.pk]}):
+                denied = staff.post(case_url, {**case_payload, **change}, format='json')
+                self.assertEqual(denied.status_code, 400, denied.data)
         self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
         self.assertFalse(payment.refund_proposals.exists())
         self.assertFalse(payment.refund_records.exists())
@@ -990,6 +1026,10 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         proposal_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/'
         proposal_payload = {'request_id': 'consultation-returned-addon-refund', 'case_id': opened['id'],
                             'amount_raw': 100, 'explanation': '只退转回后未完成的加购部分'}
+        if teammate_payment:
+            wrong_payment_url = f'/api/admin/orders/{self.order_id}/addons/payments/{teammate_payment.pk}/refund-proposals/'
+            denied = staff.post(wrong_payment_url, proposal_payload, format='json')
+            self.assertEqual(denied.status_code, 400, denied.data)
         over = staff.post(proposal_url, {**proposal_payload, 'amount_raw': 290}, format='json')
         self.assertEqual(over.status_code, 400, over.data)
         self.assertFalse(payment.refund_proposals.exists())
@@ -1001,6 +1041,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual(replacement.post(decision, {'accepted': True}, format='json').status_code, 404)
         if teammate_client:
             self.assertEqual(teammate_client.get(decision).status_code, 404)
+            if teammate_payment:
+                self.assertEqual(teammate_client.post(decision, {'accepted': True}, format='json').status_code, 404)
         for actor in (buyer, original):
             self.ok(actor.post(decision, {'accepted': True}, format='json'))
         execute_url = proposal_url + f'{proposal["id"]}/execute/'
@@ -1078,6 +1120,14 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
                 self.assertEqual(refund_runs.values(*version_fields).get(), version)
                 self.assertEqual(list(usage.values_list('kind', 'amount')),
                                  [('ORDER', required_funding - 10), ('ORDER', 10)])
+                if teammate_payment:
+                    source = teammate_payment.allocations.filter(pk=teammate_allocations[0][0])
+                    source.update(refunded_amount=1)
+                    try:
+                        self.assert_returned_refund_blocks_settlement(
+                            order, staff, execute_url, funding_url, '加购退款与原资金来源不一致')
+                    finally:
+                        source.update(refunded_amount=0)
             run = refund.funding_release_run
             runs = OrderAddonFundingReleaseRun.objects.filter(pk=run.pk)
             allocation_error = '转回段加购退款的补资分配时序或范围异常'
@@ -1122,6 +1172,25 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
         self.assertEqual((consumption.paid_units, consumption.refunded_units), (1000, 100))
         self.assertEqual(self.ok(staff.post(execute_url, {}, format='json')), receipt)
         self.assertEqual(refund_runs.values(*version_fields).get(), version)
+        if teammate_payment:
+            untouched = OrderAddonPayment.objects.select_related('intent', 'buyer_transaction').get(pk=teammate_payment.pk)
+            self.assertEqual((untouched.intent.segment_id, untouched.buyer_transaction_id, untouched.buyer_transaction.amount),
+                             (teammate_segment.pk, teammate_payment.buyer_transaction_id, -1000))
+            self.assertEqual(list(untouched.allocations.order_by('pk').values_list(*allocation_fields)), teammate_allocations)
+            self.assertFalse(untouched.handovers.exists())
+            self.assertFalse(untouched.refund_proposals.exists())
+            self.assertFalse(untouched.refund_records.exists())
+            self.assertFalse(untouched.refund_earning_deductions.exists())
+            payout = untouched.segment_settlements.get()
+            self.assertEqual((payout.segment_id, payout.report_id, payout.amount, payout.income_transaction.amount,
+                              payout.income_transaction.wallet.account_id),
+                             (teammate_segment.pk, reports[-1].report_id, 800, 800, self.teammate.pk))
+            teammate_consumption = OrderAddonConsumption.objects.get(payment=untouched)
+            self.assertEqual((teammate_consumption.paid_units, teammate_consumption.refunded_units), (1000, 0))
+            print(f'{self.store.slug} order={order.pk} teammate_payment={untouched.pk} '
+                  f'teammate_segment={teammate_segment.pk} teammate_debit={untouched.buyer_transaction_id} '
+                  f'teammate_report={reports[-1].pk} teammate_income={payout.income_transaction_id}:{payout.amount} '
+                  f'teammate_consumption={teammate_consumption.pk}', flush=True)
         if self.defer_funding:
             for payload, result in funding_receipts:
                 self.assertEqual(self.ok(self.finance_client.post(self.funding_url, payload, format='json')), result)

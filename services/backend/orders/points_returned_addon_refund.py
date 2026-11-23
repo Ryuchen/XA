@@ -10,7 +10,7 @@ from .models import (OrderAddonPayment, OrderAddonFundingReleaseRun, OrderOrigin
 def returned_handover(order, *, payment_id=None, transfers=None):
     from .points_business_access import configured
     from .points_service_payment import needs_integrated_processing
-    from .points_transfer_refund_access import _successive_addon_handovers
+    from .points_transfer_refund_access import _successive_addon_handovers, unaffected_addon_for_return
 
     if (not configured() or not getattr(settings, 'RECEIPT_USAGE_LEDGER_ENABLED', False)
             or not needs_integrated_processing(order) or order.is_gift_snapshot or order.source_order_id
@@ -21,7 +21,9 @@ def returned_handover(order, *, payment_id=None, transfers=None):
                          .order_by('pk')[:3])
     if len(transfers) != 2:
         return None
-    payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction')[:2])
+    payments = list(OrderAddonPayment.objects.filter(intent__order=order).select_related('buyer_transaction')[:3])
+    if len(payments) == 2:
+        payments = [payment for payment in payments if unaffected_addon_for_return(order, payment, payments, transfers[0])]
     if len(payments) != 1 or (payment_id is not None and payment_id != payments[0].pk):
         return None
     payment = payments[0]
