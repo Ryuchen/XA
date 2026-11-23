@@ -1228,8 +1228,10 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
             consultation = verify_order(context, order, scope, actor=actor)
         prior = next((entry for entry in case.history if entry.get('client_request_id') == request_id), None) if case else None
         if prior:
+            segments_changed = ((addon_payment_id is not None or requested_segments is not None)
+                                and prior.get('affected_segment_ids') != requested_segments)
             if (prior.get('reason') != reason or prior.get('affected_provider_account_ids') != scope
-                    or (requested_segments is not None and prior.get('affected_segment_ids') != requested_segments)
+                    or segments_changed
                     or prior.get('addon_payment_id') != addon_payment_id
                     or prior.get('consultation_message_id') != (consultation.get('message_id') if consultation else None)
                     or prior.get('operator_id') != request.account.pk):
@@ -1245,6 +1247,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         from .aftersale_segment_scope import resolve_locked as resolve_segments
         segments = resolve_segments(order, scope, requested_segments) if addon_payment_id is None else None
         addon_only = False
+        addon_segments = None
         if addon_payment_id is not None:
             from .financial_lock import lock_order_money
             from .models import NegotiationExecution, OrderAddonPayment
@@ -1444,6 +1447,9 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
                                 and not order.providers.filter(provider_account_id=payment.intent.provider_id,
                                     released_at__isnull=True, settled_at__isnull=True).exists())):
                             raise serializers.ValidationError('加购负责人或主单协商凭证待核对')
+            if requested_segments is not None:
+                from .addon_refund import resolve_case_segments_locked
+                addon_segments = resolve_case_segments_locked(order, payment, scope, requested_segments)
         completed_transfer_case = False
         if order.status == Order.Status.COMPLETED and segments is not None and not order.settled_at:
             deadline = aftersale_deadline(order)
@@ -1552,7 +1558,7 @@ class AfterSaleViewSet(EnvelopeViewSetMixin, ReadOnlyModelViewSet):
         case.operator = request.account
         case.client_request_id = request_id
         case.affected_provider_account_ids = scope
-        case.affected_segment_ids = segments
+        case.affected_segment_ids = addon_segments if addon_only else segments
         case.addon_payment_id = addon_payment_id if addon_only else None
         case.save()
         append_history(case)

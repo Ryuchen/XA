@@ -8,11 +8,35 @@ from rest_framework.views import APIView
 from club_accounts.permissions import IsClubAccountAuthenticated
 from console.permissions import IsConsoleUser, get_account_permissions
 from stores.db import transaction
-from .aftersale_scope import applies_to
+from .aftersale_scope import applies_to, normalize_scope
 from .points_business_access import scoped_addon_refund_action
 from .addon_refund_lifecycle import protect_addon_refund
 from .models import (AfterSale, Order, OrderAddonPayment, OrderAddonRefundDecision, OrderAddonRefundParticipant,
-                     OrderAddonRefundProposal)
+                     OrderAddonRefundProposal, OrderParticipationSegment)
+
+
+def _responsibilities_locked(order, payment):
+    from .points_service_payment import needs_integrated_processing
+    if needs_integrated_processing(order) and order.refund_records.count() >= 3:
+        from .points_third_addon_responsibilities import current as current_responsibilities
+    else:
+        from .addon_handover import current_responsibilities
+    return current_responsibilities(payment, lock=True)[1]
+
+
+def resolve_case_segments_locked(order, payment, accounts, requested):
+    shares = _responsibilities_locked(order, payment)
+    assigned = {(share['segment_id'], share['provider_id']) for share in shares
+                if share['basis'] > 0 and share['provider_id'] in accounts}
+    segments = sorted({segment for segment, _ in assigned})
+    if requested != segments or {account for _, account in assigned} != set(accounts):
+        raise ValidationError('所选履约段与该笔加购付款的实际负责范围不一致')
+    actual = set(OrderParticipationSegment.objects.filter(
+        pk__in=segments, attribution__order=order, started_at__isnull=False
+    ).values_list('pk', 'provider_account_id'))
+    if actual != assigned:
+        raise ValidationError('加购履约段归属待核对')
+    return segments
 
 
 def _locked(order_id, payment_id, *, case_id=None):
@@ -46,7 +70,7 @@ def _locked(order_id, payment_id, *, case_id=None):
         if (ordinary_addon_eligible(order, allow_open=True)
                 and any(isinstance(accounts, list) and payment.intent.provider_id in accounts for accounts in affected)):
             raise ValidationError('已终止主单后的加购退款须使用指定加购售后')
-    from .addon_handover import assert_no_pending_handover, current_responsibilities
+    from .addon_handover import assert_no_pending_handover
     from .points_followup_handover_invalidation import may_refund_pending_target
     from .points_handover_refund_invalidation import permits_other_payment_locked
     from .points_business_access import permits as points_permits
@@ -60,10 +84,7 @@ def _locked(order_id, payment_id, *, case_id=None):
     if (not may_refund_pending_target(order, payment) and not ordinary_pending_permits(order, payment, pending)
             and not team_pending and not third_pending):
         assert_no_pending_handover(payment)
-    from .points_service_payment import needs_integrated_processing
-    if needs_integrated_processing(order) and order.refund_records.count() >= 3:
-        from .points_third_addon_responsibilities import current as current_responsibilities
-    current_responsibilities(payment, lock=True)
+    _responsibilities_locked(order, payment)
     return order, case, payment
 
 
@@ -118,12 +139,7 @@ def _allocate_segment_burden(entries, burden, latest_first):
 
 def _participants(payment, case, amount, selected):
     """Split the actual refund by agreed unpaid work; round each burden up to one coin."""
-    from .points_service_payment import needs_integrated_processing
-    if needs_integrated_processing(payment.intent.order) and payment.intent.order.refund_records.count() >= 3:
-        from .points_third_addon_responsibilities import current as current_responsibilities
-    else:
-        from .addon_handover import current_responsibilities
-    _, shares = current_responsibilities(payment, lock=True)
+    shares = _responsibilities_locked(payment.intent.order, payment)
     people = {}
     for share in shares:
         if share['basis']:
@@ -150,6 +166,19 @@ def _participants(payment, case, amount, selected):
         raise ValidationError('退款责任人不属于该加购的有效履约份额')
     if any(not applies_to(case, item) for item in selected):
         raise ValidationError('售后范围未覆盖全部受影响陪玩')
+    if case.addon_payment_id == payment.pk:
+        # A later low rating can change the case's current scope.
+        if not isinstance(case.history, list) or any(not isinstance(entry, dict) for entry in case.history):
+            raise ValidationError('加购售后原履约段记录待核对')
+        opening = next((entry for entry in case.history
+                        if entry.get('client_request_id') == case.client_request_id
+                        and entry.get('addon_payment_id') == payment.pk
+                        and entry.get('created_at') == case.created_at.isoformat()), None)
+        agreed = normalize_scope(opening.get('affected_segment_ids')) if opening is not None else None
+        if agreed is None and case.affected_segment_ids is not None:
+            raise ValidationError('加购售后原履约段记录待核对')
+        if agreed is not None and any(people[account].keys() - agreed for account in selected):
+            raise ValidationError('加购退款履约段超出原售后范围，请刷新核对')
     selected = sorted(selected)
     total = sum(sum(row['basis'] for row in people[account].values()) for account in selected)
     if amount > total:
@@ -170,7 +199,6 @@ def _participants(payment, case, amount, selected):
             entries.append({'segment_id': segment_id, 'basis': facts['basis'],
                             'income': facts['income'], 'refund_basis': segment_refunds[segment_id],
                             'burden_capacity': capacity})
-        from .models import OrderParticipationSegment
         segment_rows = OrderParticipationSegment.objects.filter(pk__in=segments).order_by('-started_at', '-accepted_at', '-pk')
         latest = [row.pk for row in segment_rows]
         excess = _allocate_segment_burden(entries, burden, latest)

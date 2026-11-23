@@ -20,12 +20,13 @@ from console.payroll_models import PayrollEventBarrier, PayrollRun
 from console.points_redemption_config import save_points_terms
 from engagement.models import ConsumptionConfirmation, MemberProfile, PointLedger, RetirementAudit
 from engagement.tasks import confirm_due_consumption
-from orders.models import (AfterSale, Order, OrderFinancialLock, OrderPointsRedemption, OrderPointsTransferFundingRevision,
-                           OrderSegmentReportSubmission, OrderSegmentSettlementManifest)
+from orders.models import (AfterSale, GameCategory, Order, OrderAddonPayment, OrderFinancialLock, OrderPointsRedemption,
+                           OrderPointsTransferFundingRevision, OrderSegmentReportSubmission, OrderSegmentSettlementManifest,
+                           ServiceAddonConfiguration, ServiceAddonPriceOption)
 from orders.tests import test_assigned_order_reservation_guard as reservation_fixture
 from orders.tests import test_release_flow as release_fixture
 from orders.tests import test_reservation_transfer_schedule_mysql as transfer_fixture
-from orders.tests.factories import make_console_user, make_order, make_provider
+from orders.tests.factories import make_console_user, make_order, make_provider, make_service
 from site_messages.models import AfterSaleOpenNotice
 from stores.models import PlatformAccount, PlatformRoleGrant
 from users.models import PassRefundRepaymentReceipt, PassReceiptUsageEvent
@@ -250,12 +251,15 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def test_consultation_aftersale_rechecks_staff_permission_after_payroll_wait(self):
         self.run_in_stores(self.exercise_consultation_permission_change)
 
+    def test_consultation_addon_aftersale_binds_paid_segment_without_repeating_writes(self):
+        self.run_in_stores(self.exercise_paid_addon_consultation)
+
     def transfer_and_join(self):
         self.ok(self.transfer(self.api(self.staff)))
         revision = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id)
         self.join_replacement(self.api(self.replacement), revision.last_transfer)
 
-    def while_funding_reads_order(self, request):
+    def while_funding_reads_order(self, request, *, funding_units=1400):
         held, resume = Event(), Event()
         attempts = Queue()
         table = Order._meta.db_table
@@ -281,7 +285,8 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
             finally:
                 resume.set()
             status = self.ok(funding.result(timeout=10))
-            self.assertEqual((status['required_units'], status['allocated_units'], status['remaining_units']), (1400, 1400, 0))
+            self.assertEqual((status['required_units'], status['allocated_units'], status['remaining_units']),
+                             (funding_units, funding_units, 0))
             return pending.result(timeout=10), waited
 
     def send_order_card(self, buyer, key):
@@ -303,9 +308,12 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def prepare_consultation(self):
         PayrollEventBarrier.objects.get_or_create(pk=1)
         self.transfer_and_join()
+        return self.order_consultation()
+
+    def order_consultation(self, *, extra_permissions=()):
         sent = self.ok(self.send_order_card(self.api(self.buyer), 'transfer-consultation-card'))
         message = ChatMessage.objects.get(pk=sent['id'])
-        operator = make_console_user(['order:view', 'support:edit', 'chat:view', 'chat:reply'])
+        operator = make_console_user(['order:view', 'support:edit', 'chat:view', 'chat:reply', *extra_permissions])
         account = get_or_create_account_for_legacy_user(operator)
         membership = operator.admin_membership
         membership.account = account
@@ -315,6 +323,95 @@ class ReservationPointsTransferMySQLTest(TransactionTestCase):
     def consultation_payload(self, message):
         return {'reason': '根据订单咨询登记售后', 'order_id': self.order_id, 'chat_message_id': message.pk,
                 'client_request_id': 'transfer-consultation-aftersale', 'affected_provider_account_ids': [self.replacement.pk]}
+
+    def pay_addon_after_transfer(self):
+        game = GameCategory.objects.create(name='咨询售后加购项目')
+        self.service.game_category = game
+        self.service.save(update_fields=['game_category'])
+        addon = make_service(name='咨询售后测试加购', is_addon=True, game_category=game)
+        config = ServiceAddonConfiguration.objects.create(service=self.service, addon=addon,
+            enabled=True, condition_mode='NONE', conditions='', version=1)
+        ServiceAddonPriceOption.objects.create(configuration=config, unit='HOUR', price=1000)
+        buyer = self.api(self.buyer)
+        path = f'/api/orders/orders/{self.order_id}/addons/intents/'
+        intent = self.ok(buyer.post(path, {'addon_id': addon.pk, 'unit': 'HOUR', 'quantity': 1,
+            'configuration_version': 1, 'provider_account_id': self.replacement.pk,
+            'request_id': 'consultation-addon-confirm', 'expected_amount': 1000, 'gift_balance_amount': 0,
+            'compensation_balance_amount': 0}, format='json'))
+        paid = self.ok(buyer.post(path + f'{intent["id"]}/pay/', {}, format='json'))
+        return OrderAddonPayment.objects.select_related('intent', 'buyer_transaction').get(pk=paid['payment_id'])
+
+    @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True,
+                       SEGMENT_REPORT_ENABLED=True, SEGMENT_SETTLEMENT_ENABLED=True, AFTERSALE_OPEN_NOTICE_RECOVERY_ENABLED=True)
+    def exercise_paid_addon_consultation(self):
+        PayrollEventBarrier.objects.get_or_create(pk=1)
+        self.transfer_and_join()
+        payment = self.pay_addon_after_transfer()
+        self.assertEqual((payment.principal, payment.provider_income, payment.commission_fee,
+                          payment.buyer_transaction.amount), (1000, 700, 300, -1000))
+        self.ok(self.api(self.replacement).post(f'/api/orders/orders/{self.order_id}/complete/',
+            {'completion_image': release_fixture.screenshot(), 'client_request_id': 'consultation-addon-complete'},
+            format='multipart'))
+        staff, _, message = self.order_consultation(extra_permissions=['order:refund'])
+        self.ok(staff.post(f'/api/admin/chat-sessions/{message.session_id}/claim/', {'expected_version': 0}, format='json'))
+        path = '/api/admin/aftersales/open-negotiation/'
+        payload = {**self.consultation_payload(message), 'addon_payment_id': payment.pk,
+                   'affected_segment_ids': [payment.intent.segment_id]}
+        transfer = OrderPointsTransferFundingRevision.objects.get(order_id=self.order_id).last_transfer
+        wrong_segment = {**payload, 'affected_segment_ids': [transfer.previous_segment_id]}
+        rejected = staff.post(path, wrong_segment, format='json')
+        self.assertEqual(rejected.status_code, 400, rejected.data)
+        self.assertFalse(AfterSale.objects.filter(order_id=self.order_id).exists())
+
+        payment_events = PassReceiptUsageEvent.objects.filter(state__receipt=self.funding_receipt).order_by('version')
+        events_before = list(payment_events.values_list('kind', 'amount'))
+        self.assertEqual(events_before, [('ORDER', 2000), ('RELEASE', 600), ('RELEASE', 300)])
+        response, payroll_waited = self.consultation_during_payroll(
+            self.prepare_consultation_payroll(), staff, path, payload, message)
+        opened = self.ok(response)
+        self.assertEqual((opened['addon_payment'], opened['affected_segment_ids']), (payment.pk, [payment.intent.segment_id]))
+        notice_ids = list(AfterSaleOpenNotice.objects.filter(case_id=opened['id']).order_by('pk').values_list('pk', flat=True))
+        self.assertEqual(len(notice_ids), 2)
+        replay, funding_waited = self.while_funding_reads_order(lambda: staff.post(path, payload, format='json'),
+                                                               funding_units=1100)
+        self.assertEqual(self.ok(replay)['id'], opened['id'])
+        for changed in (wrong_segment, {key: value for key, value in payload.items() if key != 'affected_segment_ids'}):
+            conflict = staff.post(path, changed, format='json')
+            self.assertEqual((conflict.status_code, conflict.data['errorCode']), (409, 'AFTERSALE_REQUEST_CONFLICT'))
+        row = AfterSale.objects.get(order_id=self.order_id)
+        self.assertEqual(len(row.history), 1)
+        self.assertEqual((row.history[0]['consultation_message_id'], row.history[0]['addon_payment_id'],
+                          row.history[0]['affected_segment_ids']), (message.pk, payment.pk, [payment.intent.segment_id]))
+        self.assertEqual(list(row.open_notice_intents.order_by('pk').values_list('pk', flat=True)), notice_ids)
+
+        proposal_url = f'/api/admin/orders/{self.order_id}/addons/payments/{payment.pk}/refund-proposals/'
+        proposal_payload = {'request_id': 'consultation-addon-proposal', 'amount_raw': 500,
+                            'case_id': row.pk, 'explanation': '请双方确认加购退款方案'}
+        opening = row.history[0]
+        missing_scope = {key: value for key, value in opening.items() if key != 'affected_segment_ids'}
+        damaged_histories = ([], {}, [None], [missing_scope], [{**opening, 'affected_segment_ids': None}],
+                             [{**opening, 'affected_segment_ids': 'unknown'}])
+        for damaged in damaged_histories:
+            AfterSale.objects.filter(pk=row.pk).update(history=damaged)
+            try:
+                blocked = staff.post(proposal_url, proposal_payload, format='json')
+                self.assertEqual(blocked.status_code, 400, blocked.data)
+                self.assertFalse(payment.refund_proposals.exists())
+            finally:
+                AfterSale.objects.filter(pk=row.pk).update(history=row.history)
+        proposal = self.ok(staff.post(proposal_url, proposal_payload, format='json'))
+        self.assertEqual((proposal['status'], proposal['payment_id'], proposal['case_id']), ('PENDING', payment.pk, row.pk))
+        self.assertEqual([(person['account_id'], share['segment_id'], share['refund_basis'])
+                          for person in proposal['participants'] for share in person['share_plan']],
+                         [(self.replacement.pk, payment.intent.segment_id, 500)])
+        self.assertFalse(payment.refund_records.exists())
+        self.assertEqual(list(payment_events.values_list('kind', 'amount')), events_before)
+        self.assertEqual(list(Order.objects.get(pk=self.order_id).transactions.values_list('pk', 'tx_type', 'amount')),
+                         self.funding_before)
+        self.assertEqual(Wallet.objects.get(account=self.buyer).balance, self.balance_before - 1000)
+        print(f'{self.store.slug} order={self.order_id} addon_payment={payment.pk} addon_segment={payment.intent.segment_id} '
+              f'chat_message={message.pk} aftersale={row.pk} proposal={proposal["id"]} '
+              f'payroll_wait={payroll_waited} funding_wait={funding_waited}', flush=True)
 
     @override_settings(PAYROLL_EVENT_BARRIER_INTEGRATION_ENABLED=True, PAYROLL_REFUND_ACCOUNTING_ENABLED=True)
     def exercise_consultation_aftersale(self):
