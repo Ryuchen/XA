@@ -1,4 +1,4 @@
-"""Test-only funding basis after one fully evidenced points negotiation."""
+"""Funding basis after one fully evidenced points negotiation."""
 from django.conf import settings
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
@@ -74,6 +74,12 @@ def later_addon_runs(order, posting, *, before=None):
 
 def plan_refunded_order(order_id, *, allow_finalized=False):
     """Return verified post-refund cash needs, not an allocation or payout."""
+    plan, _, _ = first_refund_funding_basis(order_id, allow_finalized=allow_finalized)
+    return plan
+
+
+def first_refund_funding_basis(order_id, *, allow_finalized=False):
+    """Return the plan, its release evidence and the verified later add-on runs."""
     from .points_business_access import permits
     formal = (permits(phase='payment', kind='addon') or any(permits(phase=phase, kind=kind)
               for kind in ('service', 'addon') for phase in ('funding', 'refund', 'report', 'settlement')))
@@ -118,8 +124,8 @@ def plan_refunded_order(order_id, *, allow_finalized=False):
         original = verify_release_locked(evidence)
         runs = later_addon_runs(order, posting)
         if not runs:
-            return original
+            return original, evidence, runs
         from .points_negotiation_preview import RefundedFunding
-        return RefundedFunding(**runs[-1].refunded_main_snapshot['funding'])
+        return RefundedFunding(**runs[-1].refunded_main_snapshot['funding']), evidence, runs
     except ValidationError as exc:
         raise PointsFundingPlanError('退款后资金与协商凭证待核对') from exc

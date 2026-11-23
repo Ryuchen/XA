@@ -142,9 +142,8 @@ def digest(proposal, prior, assignment, segment, operator, request_id, snapshot)
 def reconcile_unaffected_settlement_locked(order):
     """Advance only the unpaid funding header after B's add-on refund."""
     from .models import OrderPointsRefundSettlementFunding, PointsNegotiationPosting
-    from .points_refunded_funding import plan_refunded_order
-    from .points_funding_evidence import verify_order_funding
-    from .points_refunded_settlement import _addon_facts, _check_person, _facts, _funding_rows
+    from .points_funding_evidence import VerifiedFirstRefundFunding, verify_order_funding
+    from .points_refunded_settlement import _addon_facts_from_history, _check_person, _facts
     from .points_service_participation import service_snapshots
     from .addon_settlement import verify_addon_records
     if not transaction.get_connection().in_atomic_block or order.status != Order.Status.COMPLETED or order.settled_at:
@@ -159,10 +158,12 @@ def reconcile_unaffected_settlement_locked(order):
     if not snapshot or snapshot.segment.provider_account_id != share.account_id:
         raise ValidationError('已结算陪玩的收益归属待核对')
     _check_person(order, prior, person, snapshot, share.assignment)
-    plan, funding = plan_refunded_order(order.pk), verify_order_funding(order.pk)
+    funding = verify_order_funding(order.pk, include_net_allocations=True)
+    if not isinstance(funding, VerifiedFirstRefundFunding):
+        raise ValidationError('缺少首退后逐笔补资凭证')
     if not funding.fully_funded:
         raise ValidationError('加购退款后的整单补资不足')
-    addon, parts = _addon_facts(order, prior)
+    addon, parts = _addon_facts_from_history(order, funding.addon_history)
     expected = {(part.payment_id, part.segment_id) for part in parts if part.segment_id == person.segment_id}
     if verify_addon_records(order, settlement, parts, [person]) != expected:
         raise ValidationError('已结算陪玩的加购收益已变化')
@@ -170,13 +171,13 @@ def reconcile_unaffected_settlement_locked(order):
              'funding_units', 'provider_units', 'inviter_units', 'store_units', 'addon_paid_units',
              'addon_principal_units', 'addon_gift_units', 'addon_compensation_units',
              'addon_recovered_units', 'addon_provider_units')
-    for name, value in zip(names, _facts(plan, addon)):
+    for name, value in zip(names, _facts(funding.plan, addon)):
         setattr(settlement, name, value)
     settlement.save(update_fields=list(names))
     settlement.funding_uses.all().delete()
     OrderPointsRefundSettlementFunding.objects.bulk_create([
         OrderPointsRefundSettlementFunding(settlement=settlement, allocation_id=pk, amount=amount)
-        for pk, amount in _funding_rows(order)])
+        for pk, _, amount in funding.net_allocations if amount])
 
 
 def verify_proposal(case, proposal):

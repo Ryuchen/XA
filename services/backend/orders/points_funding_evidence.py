@@ -3,6 +3,7 @@ import json
 from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from django.conf import settings
@@ -17,6 +18,9 @@ from .ordinary_funding_continuation import finalized_read_active
 from .models import Order, OrderPointsFundingAction, OrderPointsFundingAllocation
 from .points_checkout_test import require_order_funding_access, ordinary_refund_production_order
 from .points_funding_plan import PointsFundingPlanError, plan_verified_order
+
+if TYPE_CHECKING:
+    from .points_negotiation_preview import RefundedFunding
 
 _ordinary_handover_read = ContextVar('ordinary_handover_funding_read', default=None)
 _ordinary_addon_refund_read = ContextVar('ordinary_addon_refund_funding_read', default=None)
@@ -52,6 +56,12 @@ class VerifiedOrderFunding:
 class VerifiedOrderFundingWithAllocations(VerifiedOrderFunding):
     # (allocation ID, receipt ID, net amount), in original allocation order.
     net_allocations: tuple[tuple[int, int, int], ...]
+
+
+@dataclass(frozen=True)
+class VerifiedFirstRefundFunding(VerifiedOrderFundingWithAllocations):
+    plan: 'RefundedFunding'
+    addon_history: tuple[dict, ...]
 
 
 def verified_order_allocations_locked(order, *, pending_followup_posting_id=None, allocation_ids=None,
@@ -444,6 +454,8 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                 except (SettlementError, ValidationError, DjangoValidationError) as exc:
                     raise PointsFundingPlanError('退款后的个人结算凭证待核对') from exc
             return VerifiedOrderFunding(plan.required, plan.allocated, plan.remaining, plan.remaining == 0)
+        first_refund_basis = None
+        verified_addon_history = ()
         if refunded_points:
             if transferred:
                 if order.refund_records.count() == 2:
@@ -458,8 +470,9 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                 if order.refund_records.count() == 2:
                     from .points_followup_funding import verify_followup_funding
                     return verify_followup_funding(order_id)
-                from .points_refunded_funding import plan_refunded_order
-                plan = plan_refunded_order(order_id, allow_finalized=allow_finalized)
+                from .points_refunded_funding import first_refund_funding_basis
+                plan, evidence, later_runs = first_refund_funding_basis(order_id, allow_finalized=allow_finalized)
+                first_refund_basis = evidence, later_runs
         elif needs_integrated_processing(order):
             if transferred:
                 from .points_transfer_funding import plan_points_transfer
@@ -476,15 +489,14 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
             # The refund release already includes the add-ons present at its
             # posting time. Do not count them a second time. Until later add-on
             # changes have their own refund revision, require the facts to match.
-            from .models import OrderPointsFundingReleaseEvidence
-            evidence = OrderPointsFundingReleaseEvidence.objects.filter(
-                posting__points_refund__redemption__order=order).first()
-            from .points_refunded_funding import later_addon_runs
-            if evidence and transferred:
-                from .points_transfer_addon_events import later_runs as transfer_later_runs
-                later_runs = transfer_later_runs(order, evidence.posting)
+            if first_refund_basis is not None:
+                evidence, later_runs = first_refund_basis
             else:
-                later_runs = later_addon_runs(order, evidence.posting) if evidence else []
+                from .models import OrderPointsFundingReleaseEvidence
+                from .points_transfer_addon_events import later_runs as transfer_later_runs
+                evidence = OrderPointsFundingReleaseEvidence.objects.filter(
+                    posting__points_refund__redemption__order=order).first()
+                later_runs = transfer_later_runs(order, evidence.posting) if evidence else []
             followup_addon = None
             if transferred and order.refund_records.count() == 2:
                 from .models import OrderPointsTransferFollowupFundingRevision
@@ -540,6 +552,7 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                             else evidence.addon_funding_snapshot)
                 if history.get('addon_history') != expected:
                     raise PointsFundingPlanError('主单退款后的加购变化尚待重新核对')
+                verified_addon_history = tuple(expected or ())
             else:
                 from .addon_funding import include_paid_addons
                 plan = include_paid_addons(order, plan)
@@ -622,6 +635,10 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
             raise PointsFundingPlanError('补资超出订单实际缺口，请先核对')
         remaining = plan.additional_store_funding_units - total
         if include_net_allocations:
-            return VerifiedOrderFundingWithAllocations(plan.additional_store_funding_units, total, remaining,
-                                                       remaining == 0, tuple(net_allocations))
+            result = (plan.additional_store_funding_units, total, remaining, remaining == 0, tuple(net_allocations))
+            if first_refund_basis is not None:
+                from .points_negotiation_preview import RefundedFunding
+                if isinstance(plan, RefundedFunding):
+                    return VerifiedFirstRefundFunding(*result, plan, verified_addon_history)
+            return VerifiedOrderFundingWithAllocations(*result)
         return VerifiedOrderFunding(plan.additional_store_funding_units, total, remaining, remaining == 0)
