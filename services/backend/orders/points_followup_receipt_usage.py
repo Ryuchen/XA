@@ -299,10 +299,12 @@ def facts(row):
                 paid_addon_facts.append([item.pk, item.payment_id, item.segment_id, item.report_id, item.amount,
                     item.settled_at.isoformat(), [tx.pk, tx.wallet_id, tx.order_id, tx.amount,
                     tx.balance_before, tx.balance_after] if tx else None])
-    from .models import OrderSegmentFinancialSnapshot
-    snapshots = {item.pk: item for item in OrderSegmentFinancialSnapshot.objects.filter(
-        segment__attribution__order=order).select_related('segment')}
-    if len(snapshots) != 2:
+    from .points_service_participation import service_snapshots
+    try:
+        snapshots = {item.pk: item for item in service_snapshots(order)}
+    except RestValidationError as exc:
+        raise ValidationError('双陪收益快照不完整') from exc
+    if len(snapshots) != 2 or len({row.segment.provider_account_id for row in snapshots.values()}) != 2:
         raise ValidationError('双陪收益快照不完整')
     for posting, shares in ((first, first_shares), (second, second_shares)):
         p, share, refund = posting.proposal, shares[0], posting.points_refund.refund

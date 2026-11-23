@@ -516,6 +516,14 @@ class SpecifiedPointsFundingTests(TestCase):
                 self.assertEqual(transferred.data['code'], 0, transferred.data)
                 with transaction.atomic():
                     self.assertEqual(plan_verified_order(order_id).additional_store_funding_units, 4750)
+                    from orders.points_receipt_usage import followup_eligible
+                    from orders.points_service_participation import service_snapshots
+                    self.assertEqual(self.order.providers.count(), 3)
+                    self.assertEqual([row.segment.provider_account_id for row in service_snapshots(self.order)],
+                                     [account.pk for account in self.accounts])
+                    with override_settings(SERVICE_POINTS_FIRST_REFUND_USAGE_TESTING=True,
+                                           SERVICE_POINTS_FOLLOWUP_RECEIPT_USAGE_TESTING=True):
+                        self.assertFalse(followup_eligible(self.order))
             extra = self.client.post(url, {'request_id': str(uuid4()), 'order_id': order_id, 'amount': 1500},
                                      format='json', HTTP_AUTHORIZATION='Bearer ' + self.token)
             self.assertEqual(extra.status_code, 200, extra.data)

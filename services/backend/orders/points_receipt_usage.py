@@ -33,12 +33,19 @@ def followup_eligible(order):
         return False
     if not formal:
         require_isolated_checkout()
+    if (not order or order.is_gift_snapshot or order.source_order_id
+            or (not formal and order.addon_intents.exists())
+            or OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
+            or order.refund_records.count() > 2):
+        return False
     from .models import OrderPrestartHandoff
-    return bool(order and not order.is_gift_snapshot and not order.source_order_id
-        and order.providers.count() == 2 and (formal or not order.addon_intents.exists())
-        and not OrderOriginalShareTransfer.objects.filter(previous_segment__attribution__order=order).exists()
-        and not OrderPrestartHandoff.objects.filter(order=order).exists()
-        and order.refund_records.count() <= 2)
+    if not OrderPrestartHandoff.objects.filter(order=order).exists():
+        return order.providers.count() == 2
+    if not formal or order.required_provider_count != 2:
+        return False
+    from .points_service_participation import service_snapshots
+    snapshots = service_snapshots(order)
+    return len(snapshots) == 2 and len({row.segment.provider_account_id for row in snapshots}) == 2
 
 
 def transfer_refund_eligible(order):
