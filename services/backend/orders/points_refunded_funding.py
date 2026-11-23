@@ -9,7 +9,7 @@ from .points_checkout_test import require_isolated_checkout
 from .points_funding_plan import PointsFundingPlanError
 
 
-def later_addon_runs(order, posting, *, before=None):
+def later_addon_runs(order, posting, *, before=None, _verified_first_release=None, _verified_rows=None):
     """Verify add-on events after refund one and before a later main refund."""
     from .models import OrderAddonFundingReleaseRun, OrderAddonPayment, OrderAddonRefund, OrderAddonHandover
     following = PointsNegotiationPosting.objects.filter(
@@ -67,7 +67,7 @@ def later_addon_runs(order, posting, *, before=None):
         raise ValidationError('加购资金版本与实际事件顺序不一致')
     from .addon_funding_release import verify_run
     for run in runs:
-        verify_run(run)
+        verify_run(run, _verified_first_release=_verified_first_release, _verified_rows=_verified_rows)
     return runs
 
 
@@ -77,7 +77,7 @@ def plan_refunded_order(order_id, *, allow_finalized=False):
     return plan
 
 
-def first_refund_funding_basis(order_id, *, allow_finalized=False):
+def first_refund_funding_basis(order_id, *, allow_finalized=False, _verified_rows=None):
     """Return the plan, its release evidence and the verified later add-on runs."""
     from .points_business_access import permits
     formal = (permits(phase='payment', kind='addon') or any(permits(phase=phase, kind=kind)
@@ -116,7 +116,8 @@ def first_refund_funding_basis(order_id, *, allow_finalized=False):
         raise PointsFundingPlanError('退款后协商记录待核对')
     try:
         posting, evidence, original = verify_termination_locked(postings[0], include_release=True)
-        runs = later_addon_runs(order, posting)
+        # Both verifiers run under this order's money lock without intervening writes.
+        runs = later_addon_runs(order, posting, _verified_first_release=evidence, _verified_rows=_verified_rows)
         if not runs:
             return original, evidence, runs
         from .points_negotiation_preview import RefundedFunding

@@ -456,6 +456,7 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                     raise PointsFundingPlanError('退款后的个人结算凭证待核对') from exc
             return VerifiedOrderFunding(plan.required, plan.allocated, plan.remaining, plan.remaining == 0)
         first_refund_basis = None
+        verified_addon_releases = {}
         verified_addon_history = ()
         if refunded_points:
             if transferred:
@@ -472,7 +473,8 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
                     from .points_followup_funding import verify_followup_funding
                     return verify_followup_funding(order_id)
                 from .points_refunded_funding import first_refund_funding_basis
-                plan, evidence, later_runs = first_refund_funding_basis(order_id, allow_finalized=allow_finalized)
+                plan, evidence, later_runs = first_refund_funding_basis(
+                    order_id, allow_finalized=allow_finalized, _verified_rows=verified_addon_releases)
                 first_refund_basis = evidence, later_runs
         elif needs_integrated_processing(order):
             if transferred:
@@ -606,7 +608,7 @@ def verify_order_funding(order_id, *, allow_finalized=False, allow_unstarted=Fal
         try:
             with (reuse_history_locked(order, {row.receipt_id for row in allocations})
                   if include_net_allocations else nullcontext()):
-                addon_releases = addon_release_totals(allocations)
+                addon_releases = addon_release_totals(allocations, _verified_rows=verified_addon_releases)
         except ValidationError as exc:
             raise PointsFundingPlanError('加购补资释放凭证待核对') from exc
         total = 0
